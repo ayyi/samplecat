@@ -1,0 +1,16 @@
+functionality:
+	-show files
+		-name
+		-path
+		-category / keywords
+		-waveform overview
+	-preview files (ideally internally)
+	-import
+		-scan directories
+		-scan dvd's/cdr's
+		-drag n drop
+	export
+		-seismix
+		-ardour/rosegarden etc
+		-drag n drop
+
