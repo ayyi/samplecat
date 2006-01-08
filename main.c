@@ -6,17 +6,24 @@
 		filename text NOT NULL,
 		filedir text,
 		keywords varchar(60) default '',
+		pixbuf BLOB,
 		PRIMARY KEY  (id)
 	) TYPE=MyISAM;"
+
+	BLOB can handle up to 64k.
+
 	*/
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <getopt.h>
+#include <my_global.h>   // for strmov
+#include <m_string.h>    // for strmov
 #include <sndfile.h>
 #include <gtk/gtk.h>
 
+#include <gdk-pixbuf/gdk-pixdata.h>
 #include <libart_lgpl/libart.h>
 #include <libgnomevfs/gnome-vfs.h>
 
@@ -39,7 +46,8 @@ char bold  [16];
 //treeview/store layout:
 enum
 {
-  COL_NAME = 0,
+  COL_IDX = 0,
+  COL_NAME,
   COL_FNAME,
   COL_KEYWORDS,
   COL_OVERVIEW,
@@ -116,9 +124,7 @@ main(int argc, char* *argv)
  
 	scan_dir();
 
-	MYSQL *mysql;
-
-	app.store = gtk_list_store_new(NUM_COLS, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING, GDK_TYPE_PIXBUF);
+	app.store = gtk_list_store_new(NUM_COLS, G_TYPE_INT, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING, GDK_TYPE_PIXBUF);
 	//gtk_list_store_append(store, &iter);
 	//gtk_list_store_set(store, &iter, COL_NAME, "row 1", -1);
  
@@ -137,6 +143,7 @@ main(int argc, char* *argv)
 			unsigned int port, const char *unix_socket, unsigned int client_flag)
 	*/
 
+	MYSQL *mysql;
 	if(db_connect()){
 		mysql = &app.mysql;
 
@@ -147,27 +154,39 @@ main(int argc, char* *argv)
  
 	GtkWidget *view = gtk_tree_view_new_with_model(GTK_TREE_MODEL(app.store));
 
-	GtkTreeViewColumn *column;
+	GtkCellRenderer* cell0 = gtk_cell_renderer_text_new();
+	GtkTreeViewColumn *col0 = gtk_tree_view_column_new_with_attributes("Id", cell0, "text", COL_IDX, NULL);
+	gtk_tree_view_append_column(GTK_TREE_VIEW(view), col0);
+
 	GtkCellRenderer* cell1 = gtk_cell_renderer_text_new();
-	column = gtk_tree_view_column_new_with_attributes("Sample Name", cell1, "text", COL_NAME, NULL);
-	gtk_tree_view_append_column(GTK_TREE_VIEW(view), column);
-	gtk_tree_view_column_set_sort_column_id(column, COL_NAME);
+	GtkTreeViewColumn *col1 = gtk_tree_view_column_new_with_attributes("Sample Name", cell1, "text", COL_NAME, NULL);
+	gtk_tree_view_append_column(GTK_TREE_VIEW(view), col1);
+	gtk_tree_view_column_set_sort_column_id(col1, COL_NAME);
+	gtk_tree_view_column_set_resizable(col1, TRUE);
+	gtk_tree_view_column_set_reorderable(col1, TRUE);
 	
 	GtkCellRenderer *cell2 = gtk_cell_renderer_text_new();
-	GtkTreeViewColumn *column2 = gtk_tree_view_column_new_with_attributes("File", cell2, "text", COL_FNAME, NULL);
+	GtkTreeViewColumn *column2 = gtk_tree_view_column_new_with_attributes("Path", cell2, "text", COL_FNAME, NULL);
 	gtk_tree_view_append_column(GTK_TREE_VIEW(view), column2);
 	gtk_tree_view_column_set_sort_column_id(column2, COL_FNAME);
+	gtk_tree_view_column_set_resizable(column2, TRUE);
+	gtk_tree_view_column_set_reorderable(column2, TRUE);
 
 	GtkCellRenderer *cell3 = gtk_cell_renderer_text_new();
 	GtkTreeViewColumn *column3 = gtk_tree_view_column_new_with_attributes("Keywords", cell3, "text", COL_KEYWORDS, NULL);
 	gtk_tree_view_append_column(GTK_TREE_VIEW(view), column3);
 	gtk_tree_view_column_set_sort_column_id(column3, COL_KEYWORDS);
+	gtk_tree_view_column_set_resizable(column3, TRUE);
+	gtk_tree_view_column_set_reorderable(column3, TRUE);
+	g_object_set(cell3, "editable", TRUE, NULL);
+	g_signal_connect(cell3, "edited", (GCallback) keywords_on_edited, NULL);
 
 	GtkCellRenderer *cell4 = gtk_cell_renderer_pixbuf_new();
 	GtkTreeViewColumn *col4 = gtk_tree_view_column_new_with_attributes("Overview", cell4, "pixbuf", COL_OVERVIEW, NULL);
 	gtk_tree_view_append_column(GTK_TREE_VIEW(view), col4);
 	//g_object_set(cell4,   "cell-background", "Orange",     "cell-background-set", TRUE,  NULL);
 	g_object_set(G_OBJECT(cell4), "xalign", 0.0, NULL);
+	gtk_tree_view_column_set_resizable(col4, TRUE);
 
 	window_new(); 
 	filter_new();
@@ -229,9 +248,12 @@ do_search(char *search)
 
 	MYSQL_RES *result;
 	MYSQL_ROW row;
+	unsigned long *lengths;
 	unsigned int num_fields;
 	char query[1024];
 	char where[512]="";
+	GdkPixbuf* pixbuf  = NULL;
+	GdkPixdata pixdata;
 
 	MYSQL *mysql;
 	mysql=&app.mysql;
@@ -244,7 +266,7 @@ do_search(char *search)
 		printf("%s\n", query);
 	}
 
-	if(mysql_exec_sql(mysql, query)==0)/*success*/{
+	if(mysql_exec_sql(mysql, query)==0){ //success
 		
 		//problem with wierd mysql int type:
 		//printf( "%ld Records Found\n", (long) mysql_affected_rows(&mysql));
@@ -257,14 +279,26 @@ do_search(char *search)
 		result = mysql_store_result(mysql);
 		if(result){// there are rows
 			num_fields = mysql_num_fields(result);
-			while((row = mysql_fetch_row(result))){ 
+			while((row = mysql_fetch_row(result))){
+				lengths = mysql_fetch_lengths(result); //free? 
 				for(i = 0; i < num_fields; i++){ 
 					//printf("[%.*s] ", (int) lengths[i], row[i] ? row[i] : "NULL"); 
 					printf("[%s] ", row[i] ? row[i] : "NULL"); 
 				}
-				gtk_list_store_append(app.store, &iter); 
-				gtk_list_store_set(app.store, &iter, COL_NAME, row[1], COL_FNAME, row[2], COL_KEYWORDS, row[3], -1);
 				printf("\n"); 
+
+				//deserialise the pixbuf field:
+				pixbuf = NULL;
+				if(row[4]){
+					//printf("do_search(): deserializing...\n"); 
+					if(gdk_pixdata_deserialize(&pixdata, lengths[4], (guint8*)row[4], NULL)){
+						printf("do_search(): extracting pixbuf...\n"); 
+						pixbuf = gdk_pixbuf_from_pixdata(&pixdata, TRUE, NULL);
+					}
+				}
+
+				gtk_list_store_append(app.store, &iter); 
+				gtk_list_store_set(app.store, &iter, COL_IDX, atoi(row[0]), COL_NAME, row[1], COL_FNAME, row[2], COL_KEYWORDS, row[3], COL_OVERVIEW, pixbuf, -1);
 			}
 			mysql_free_result(result);
 		}
@@ -382,6 +416,21 @@ db_connect()
  
 
 gboolean
+db_insert(char *qry)
+{
+	MYSQL *mysql = &app.mysql;
+
+	if(mysql_exec_sql(mysql, qry)==0)/*success*/{
+		printf("db_insert(): ok!\n");
+	}else{
+		printf("db_insert(): not ok...\n");
+		return FALSE;
+	}
+	return TRUE;
+}
+
+
+gboolean
 new_search(GtkWidget *widget, gpointer userdata)
 {
 	//the search box focus-out signal ocurred.
@@ -452,14 +501,35 @@ add_file(char *uri)
   sample sample;
   sample.filename = uri;
 
-  char sql[1024];
+  #define SQL_LEN 66000
+  char sql[1024], sql2[SQL_LEN];
+  guint8 blob[SQL_LEN];
   //strcpy(sql, "INSERT samples SET ");
   gchar* filedir = g_path_get_dirname(uri);
   gchar* filename = g_path_get_basename(uri);
   snprintf(sql, 1024, "INSERT samples SET filename='%s', filedir='%s'", filename, filedir);
 
+  /* better way to do the string appending (or use glib?):
+  tmppos = strmov(tmp, "INSERT INTO test_blob (a_blob) VALUES ('");
+  tmppos += mysql_real_escape_string(conn, tmppos, fbuffer, fsize);
+  tmppos = strmov(tmppos, "')");
+  *tmppos++ = (char)0;
+  mysql_query(conn, tmp);
+  */
+
   GdkPixbuf* pixbuf = make_overview(&sample);
   if(pixbuf){
+
+	//serialise the pixbuf:
+	GdkPixdata pixdata;
+	gdk_pixdata_from_pixbuf(&pixdata, pixbuf, 0);
+	guint length;
+	guint8* ser = gdk_pixdata_serialize(&pixdata, &length);
+	mysql_real_escape_string(&app.mysql, blob, ser, length);
+	printf("add_file() serial length: %i, strlen: %i\n", length, strlen(ser));
+
+	snprintf(sql2, SQL_LEN, "%s, pixbuf='%s'", sql, blob);
+
     GtkTreeIter iter;
     gtk_list_store_append(app.store, &iter);
     gtk_list_store_set(app.store, &iter,
@@ -470,9 +540,11 @@ add_file(char *uri)
 
     //at this pt, refcount should be two, we make it 1 so that pixbuf is destroyed with the row:
     g_object_unref(pixbuf);
-  }
+	free(ser);
+  } else strcpy(sql2, sql);
 
-  printf("add_file(): sql=%s\n", sql);
+  //printf("add_file(): sql=%s\n", sql2);
+  db_insert(sql2);
   g_free(filedir);
   g_free(filename);
 }
@@ -538,7 +610,7 @@ make_overview(sample* sample)
   int srcidx_stop =0;
   short min;                //negative peak value for each pixel.
   short max;                //positive peak value for each pixel.
-  short sample;
+  short sample_val;
 
   while ((readcount = sf_read_short(sffile, data, buffer_len))){
     //if(readcount < buffer_len) printf("EOF %i<%i\n", readcount, buffer_len);
@@ -553,10 +625,9 @@ make_overview(sample* sample)
       for(ch=0;ch<sfinfo.channels;ch++){
         
         if(frame * sfinfo.channels + ch > buffer_len){ printf("index error!\n"); break; }    
-        sample = data[frame * sfinfo.channels + ch];
-        max = MAX(max, sample);
-        //if(sample < min) min = sample;
-        min = MIN(min, sample);
+        sample_val = data[frame * sfinfo.channels + ch];
+        max = MAX(max, sample_val);
+        min = MIN(min, sample_val);
       }
     }
 
@@ -575,6 +646,42 @@ make_overview(sample* sample)
   //printf("end of loop...\n");
   free(data);
   return pixbuf;
+}
+
+
+void
+keywords_on_edited(GtkCellRendererText *cell, gchar *path_string, gchar *new_text, gpointer user_data)
+{
+	printf("cell_edited_callback()...\n");
+	//GtkTreeModel* model = GTK_TREE_MODEL();
+	GtkTreeIter iter;
+	int idx;
+	gchar *filename;
+	//GtkListStore *store = app.store;
+	GtkTreeModel* store = GTK_TREE_MODEL(app.store);
+	GtkTreePath* path = gtk_tree_path_new_from_string(path_string);
+	gtk_tree_model_get_iter(store, &iter, path);
+	gtk_tree_model_get(store, &iter, COL_IDX, &idx,  COL_NAME, &filename, -1);
+	printf("cell_edited_callback(): filename=%s\n", filename);
+
+	char sql[1024];
+	char* tmppos;
+	tmppos = strmov(sql, "UPDATE samples SET keywords='");
+	//tmppos += mysql_real_escape_string(conn, tmppos, fbuffer, fsize);
+	tmppos = strmov(tmppos, new_text);
+	tmppos = strmov(tmppos, "' WHERE id=");
+	char idx_str[64];
+	snprintf(idx_str, 64, "%i", idx);
+	tmppos = strmov(tmppos, idx_str);
+	*tmppos++ = (char)0;
+	printf("keywords_on_edited(): sql=%s\n", sql);
+	if(mysql_query(&app.mysql, sql)){
+		printf("keywords_on_edited(): update failed! sql=%s\n", sql);
+		return;
+	}
+
+	//update the store:
+	gtk_list_store_set(app.store, &iter, COL_KEYWORDS, new_text, -1);
 }
 
 
