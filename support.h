@@ -45,4 +45,12 @@ GnomeVFSToplevelURI *gnome_vfs_uri_get_toplevel(const GnomeVFSURI *uri);
 const gchar* vfs_get_method_string(const gchar *substring, gchar **method_string);
 #endif
 
+void         pixbuf_clear(GdkPixbuf *pixbuf, GdkColor *colour);
 void         pixbuf_draw_line(GdkPixbuf *pixbuf, struct _ArtDRect *pts, double line_width, GdkColor *colour);
+
+void         colour_get_style_fg(GdkColor *color, int state);
+void         colour_get_style_bg(GdkColor *color, int state);
+
+void         format_time(char* length, char* milliseconds);
+void         format_time_int(char* length, int milliseconds);
+
