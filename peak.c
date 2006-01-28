@@ -59,7 +59,7 @@ peak is likely to be higher than this. I dont consider this a problem.
 
 */
 
-
+/*
 //void*
 short*
 peak_load(struct _pool_item *pool_item)
@@ -118,7 +118,7 @@ peak_load(struct _pool_item *pool_item)
     while(read(fp,&c,count) == count){
       read_tot += 1;
       buf[i] = c;
-      if(++i >= len){/*printf("%s peak_load(): buffer full!\n", smerr);*/ break;}
+      if(++i >= len){ break;}
     }
   
     close(fp);
@@ -129,8 +129,9 @@ peak_load(struct _pool_item *pool_item)
   
   return buf;
 }
+*/
 
-
+/*
 void
 peak2pic(struct _gpart *part)
 {
@@ -256,16 +257,6 @@ peak2pic(struct _gpart *part)
   //draw the waveform onto the drawable:
  
   if(!dont_draw){
-    /*
-    so lets get some proper x scaling happening.....
-
-    -assume zoom = 1.
-    -xmag=1 means 1 sample  per pixel.
-    -xmag=2 means 2 samples per pixel.
-    -mapping is defined by: PX_PER_BEAT.
-
-
-    */
     float onepx = beats2samples(1) / PX_PER_BEAT; //units = samples.
     //printf("peak2pic(): 1px==%.0fsamples\n", onepx);
 
@@ -327,6 +318,7 @@ peak2pic(struct _gpart *part)
   g_object_unref(pixmap);
   //printf("peak2pic(): done.\n");
 }
+    */
 
 
 void
