@@ -15,6 +15,9 @@
 #include "support.h"
 //#include "gnome-vfs-uri.h"
 
+extern struct _app app;
+
+
 void
 errprintf(char *format, ...)
 {
@@ -243,6 +246,13 @@ gnome_vfs_uri_get_toplevel (const GnomeVFSURI *uri)
 #endif
 
 
+void
+pixbuf_clear(GdkPixbuf *pixbuf, GdkColor *colour)
+{
+	guint32 colour_rgba = ((colour->red/256)<< 24) | ((colour->green/256)<<16) | ((colour->blue/256)<<8) | (0xff); //
+	gdk_pixbuf_fill(pixbuf, colour_rgba);
+}
+
 
 void
 pixbuf_draw_line(GdkPixbuf *pixbuf, struct _ArtDRect *pts, double line_width, GdkColor *colour)
@@ -256,7 +266,7 @@ pixbuf_draw_line(GdkPixbuf *pixbuf, struct _ArtDRect *pts, double line_width, Gd
   //printf("pixbuf_draw_line(): pixbuf width=%i height=%i\n", bufwidth, bufheight);
   art_u32 color_fg = ((colour->red/256)<< 24) | ((colour->green/256)<<16) | ((colour->blue/256)<<8) | (0xff); //
 
-  //make vector:
+  //define the line as a libart vector:
   ArtVpath *vec = art_new(ArtVpath, 10);
   vec[0].code = ART_MOVETO;
   vec[0].x = pts->x0;
@@ -268,17 +278,73 @@ pixbuf_draw_line(GdkPixbuf *pixbuf, struct _ArtDRect *pts, double line_width, Gd
 
   ArtSVP *svp = art_svp_vpath_stroke(vec,
                              ART_PATH_STROKE_JOIN_ROUND,//ArtPathStrokeJoinType join,
-                             ART_PATH_STROKE_CAP_BUTT,//ArtPathStrokeCapType cap,
-                             line_width,//double line_width,
-                             1.0, //??????? double miter_limit,
-                             1.0);//double flatness
+                             ART_PATH_STROKE_CAP_BUTT,  //ArtPathStrokeCapType cap,
+                             line_width,                //double line_width,
+                             1.0,                       //??????? double miter_limit,
+                             1.0);                      //double flatness
   //render to buffer:
   art_rgb_svp_alpha(svp, 0, 0,
-                    bufwidth, bufheight,//width, height,
+                    bufwidth, bufheight,                //width, height,
                     color_fg, buffer,
-                    rowstride,//number of bytes in each row.
+                    rowstride,                          //number of bytes in each row.
                     NULL);
   free(vec);
   free(svp);
 }
+
+
+void
+colour_get_style_fg(GdkColor *color, int state)
+{
+  //gives the default style foreground colour for the given widget state.
+
+  //GtkStyle *style = NULL;
+  //style = gtk_widget_get_default_style();
+  GtkStyle *style = gtk_style_copy(gtk_widget_get_style(app.window));
+  color->red   = style->fg[state].red;
+  color->green = style->fg[state].green;
+  color->blue  = style->fg[state].blue;
+  g_free(style);
+}
+
+void
+colour_get_style_bg(GdkColor *color, int state)
+{
+  //gives the default style foreground colour for the given widget state.
+
+  GtkWidget *widget = app.window;
+
+  GtkStyle *style = gtk_style_copy(gtk_widget_get_style(widget));
+  //GtkStyle *style = NULL;
+  //style = gtk_widget_get_default_style();
+  color->red   = style->bg[state].red;
+  color->green = style->bg[state].green;
+  color->blue  = style->bg[state].blue;
+
+  g_free(style);
+}
+
+
+void
+format_time(char* length, char* milliseconds)
+{
+	if(!length){ errprintf("format_time()!\n"); return; }
+	if(!milliseconds){ snprintf(length, 64, " "); return; }
+
+	int t = atoi(milliseconds);
+	snprintf(length, 64, "%i.%03i", t / 1000, t % 1000);
+	//printf("format_time(): %s\n", length);
+}
+
+
+void
+format_time_int(char* length, int milliseconds)
+{
+	if(!length){ errprintf("format_time()!\n"); return; }
+	//if(!milliseconds){ snprintf(length, 64, " "); return; }
+
+	snprintf(length, 64, "%i.%03i", milliseconds / 1000, milliseconds % 1000);
+	//printf("format_time(): %s\n", length);
+}
+
 
