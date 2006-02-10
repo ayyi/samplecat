@@ -31,9 +31,14 @@
 #include "main.h"
 #include "support.h"
 #include "audio.h"
+
+#include "rox_global.h"
+#include "type.h"
+#include "pixmaps.h"
 //#include "gnome-vfs-uri.h"
 
 struct _app app;
+GList* mime_types; // list of *MIME_type
 
 char database_name[64] = "samplelib";
 
@@ -47,7 +52,8 @@ char bold  [16];
 //treeview/store layout:
 enum
 {
-  COL_IDX = 0,
+  COL_ICON = 0,
+  COL_IDX,
   COL_NAME,
   COL_FNAME,
   COL_KEYWORDS,
@@ -55,8 +61,13 @@ enum
   COL_LENGTH,
   COL_SAMPLERATE,
   COL_CHANNELS,
+  COL_MIMETYPE,
   NUM_COLS
 };
+
+//mysql table layout:
+#define MYSQL_ONLINE 8
+#define MYSQL_MIMETYPE 10
 
 //dnd:
 GtkTargetEntry dnd_file_drag_types[] = {
@@ -105,6 +116,8 @@ int
 main(int argc, char* *argv)
 {
 	gtk_init(&argc, &argv);
+	type_init();
+	pixmaps_init();
 
 	//init console escape commands:
 	sprintf(white,  "%c[0;39m", 0x1b);
@@ -130,7 +143,7 @@ main(int argc, char* *argv)
  
 	scan_dir();
 
-	app.store = gtk_list_store_new(NUM_COLS, G_TYPE_INT, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING, GDK_TYPE_PIXBUF, G_TYPE_STRING, G_TYPE_INT, G_TYPE_INT);
+	app.store = gtk_list_store_new(NUM_COLS, GDK_TYPE_PIXBUF, G_TYPE_INT, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING, GDK_TYPE_PIXBUF, G_TYPE_STRING, G_TYPE_INT, G_TYPE_INT, G_TYPE_STRING);
 	//gtk_list_store_append(store, &iter);
 	//gtk_list_store_set(store, &iter, COL_NAME, "row 1", -1);
  
@@ -160,6 +173,14 @@ main(int argc, char* *argv)
  
 	GtkWidget *view = app.view = gtk_tree_view_new_with_model(GTK_TREE_MODEL(app.store));
 	//gtk_tree_view_set_fixed_height_mode(GTK_TREE_VIEW(view), TRUE); //supposed to be faster. gtk >= 2.6
+
+	GtkCellRenderer *cell9 = gtk_cell_renderer_pixbuf_new();
+	GtkTreeViewColumn *col9 /*= app.col_icon*/ = gtk_tree_view_column_new_with_attributes("Icon", cell9, "pixbuf", COL_ICON, NULL);
+	gtk_tree_view_append_column(GTK_TREE_VIEW(view), col9);
+	//g_object_set(cell4,   "cell-background", "Orange",     "cell-background-set", TRUE,  NULL);
+	g_object_set(G_OBJECT(cell9), "xalign", 0.0, NULL);
+	gtk_tree_view_column_set_resizable(col9, TRUE);
+	gtk_tree_view_column_set_min_width(col9, 0);
 
 	GtkCellRenderer* cell0 = gtk_cell_renderer_text_new();
 	GtkTreeViewColumn *col0 = gtk_tree_view_column_new_with_attributes("Id", cell0, "text", COL_IDX, NULL);
@@ -230,6 +251,14 @@ main(int argc, char* *argv)
 	gtk_tree_view_column_set_reorderable(col7, TRUE);
 	gtk_tree_view_column_set_min_width(col7, 0);
 	g_object_set(G_OBJECT(cell7), "xalign", 1.0, NULL);
+
+	GtkCellRenderer* cell8 = gtk_cell_renderer_text_new();
+	GtkTreeViewColumn *col8 = gtk_tree_view_column_new_with_attributes("Mimetype", cell8, "text", COL_MIMETYPE, NULL);
+	gtk_tree_view_append_column(GTK_TREE_VIEW(view), col8);
+	gtk_tree_view_column_set_resizable(col8, TRUE);
+	gtk_tree_view_column_set_reorderable(col8, TRUE);
+	gtk_tree_view_column_set_min_width(col8, 0);
+	//g_object_set(G_OBJECT(cell8), "xalign", 1.0, NULL);
 
 	GtkTreeSelection* selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(app.view));
 	gtk_tree_selection_set_mode(selection, GTK_SELECTION_MULTIPLE);
@@ -305,7 +334,9 @@ do_search(char *search)
 	char query[1024];
 	char where[512]="";
 	GdkPixbuf* pixbuf  = NULL;
+	GdkPixbuf* iconbuf = NULL;
 	GdkPixdata pixdata;
+	gboolean online = FALSE;
 
 	MYSQL *mysql;
 	mysql=&app.mysql;
@@ -333,10 +364,9 @@ do_search(char *search)
 			while((row = mysql_fetch_row(result))){
 				lengths = mysql_fetch_lengths(result); //free? 
 				for(i = 0; i < num_fields; i++){ 
-					//printf("[%.*s] ", (int) lengths[i], row[i] ? row[i] : "NULL"); 
-					printf("[%s] ", row[i] ? row[i] : "NULL"); 
+					//printf("[%s] ", row[i] ? row[i] : "NULL"); 
 				}
-				printf("\n"); 
+				//printf("\n"); 
 
 				//deserialise the pixbuf field:
 				pixbuf = NULL;
@@ -351,10 +381,20 @@ do_search(char *search)
 				//if(row[5]==NULL) length     = 0; else length     = atoi(row[5]);
 				if(row[6]==NULL) samplerate = 0; else samplerate = atoi(row[6]);
 				if(row[7]==NULL) channels   = 0; else channels   = atoi(row[7]);
+				if(row[MYSQL_ONLINE]==NULL) online = 0; else online = atoi(row[MYSQL_ONLINE]);
+
+				//icon (dont show if the sound file is not available):
+				if(online){
+	  				MIME_type* mime_type = mime_type_lookup(row[MYSQL_MIMETYPE]);
+					/*MaskedPixmap* pixmap =*/ type_to_icon(mime_type);
+					if ( mime_type->image == NULL ) printf("do_search(): no icon.\n");
+					iconbuf = mime_type->image->sm_pixbuf;
+				} else iconbuf = NULL;
 
 				gtk_list_store_append(app.store, &iter); 
-				gtk_list_store_set(app.store, &iter, COL_IDX, atoi(row[0]), COL_NAME, row[1], COL_FNAME, row[2], COL_KEYWORDS, row[3], 
-                                                     COL_OVERVIEW, pixbuf, COL_LENGTH, length, COL_SAMPLERATE, samplerate, COL_CHANNELS, channels, -1);
+				gtk_list_store_set(app.store, &iter, COL_ICON, iconbuf, COL_IDX, atoi(row[0]), COL_NAME, row[1], COL_FNAME, row[2], COL_KEYWORDS, row[3], 
+                                                     COL_OVERVIEW, pixbuf, COL_LENGTH, length, COL_SAMPLERATE, samplerate, COL_CHANNELS, channels, 
+													 COL_MIMETYPE, row[MYSQL_MIMETYPE], -1);
 			}
 			mysql_free_result(result);
 		}
@@ -604,6 +644,11 @@ add_file(char *uri)
   gchar* filename = g_path_get_basename(uri_unescaped);
   snprintf(sql, 1024, "INSERT samples SET filename='%s', filedir='%s'", filename, filedir);
 
+  MIME_type* mime_type = type_from_path(filename);
+  char mime_string[64];
+  snprintf(mime_string, 64, "%s/%s", mime_type->media_type, mime_type->subtype);
+  printf("add_file() mimetype: %s\n", mime_string);
+
   /* better way to do the string appending (or use glib?):
   tmppos = strmov(tmp, "INSERT INTO test_blob (a_blob) VALUES ('");
   tmppos += mysql_real_escape_string(conn, tmppos, fbuffer, fsize);
@@ -623,7 +668,7 @@ add_file(char *uri)
 	mysql_real_escape_string(&app.mysql, blob, ser, length);
 	printf("add_file() serial length: %i, strlen: %i\n", length, strlen(ser));
 
-	snprintf(sql2, SQL_LEN, "%s, pixbuf='%s', length=%i, sample_rate=%i, channels=%i ", sql, blob, sample.length, sample.sample_rate, sample.channels);
+	snprintf(sql2, SQL_LEN, "%s, pixbuf='%s', length=%i, sample_rate=%i, channels=%i, mimetype='%s/%s' ", sql, blob, sample.length, sample.sample_rate, sample.channels, mime_type->media_type, mime_type->subtype);
 	format_time_int(length_ms, sample.length);
 
     GtkTreeIter iter;
@@ -635,6 +680,7 @@ add_file(char *uri)
 	                  COL_LENGTH, length_ms,
                       COL_SAMPLERATE, sample.sample_rate,
 	                  COL_CHANNELS, sample.channels,
+	                  COL_MIMETYPE, mime_string,
                       -1);
 
     //at this pt, refcount should be two, we make it 1 so that pixbuf is destroyed with the row:
@@ -831,6 +877,51 @@ delete_row(GtkWidget *widget, gpointer user_data)
 void
 update_row(GtkWidget *widget, gpointer user_data)
 {
+	printf("update_row()...\n");
+	GtkTreeIter iter;
+	GtkTreeModel *model = gtk_tree_view_get_model(GTK_TREE_VIEW(app.view));
+
+	GtkTreeSelection* selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(app.view));
+	GList* selectionlist = gtk_tree_selection_get_selected_rows(selection, &(model));
+	if(!selectionlist){ errprintf("update_row(): no files selected?\n"); return; }
+	printf("update_row(): %i rows selected.\n", g_list_length(selectionlist));
+
+	//GDate* date = g_date_new();
+	//g_get_current_time(date);
+
+	int i, id; gchar *fname; gchar *fdir; gchar *mimetype; gchar path[256];
+	GdkPixbuf* iconbuf;
+	gboolean online;
+	for(i=0;i<g_list_length(selectionlist);i++){
+		GtkTreePath *treepath_selection = g_list_nth_data(selectionlist, i);
+
+		gtk_tree_model_get_iter(model, &iter, treepath_selection);
+		gtk_tree_model_get(model, &iter, COL_NAME, &fname, COL_FNAME, &fdir, COL_MIMETYPE, &mimetype, COL_IDX, &id, -1);
+
+		snprintf(path, 256, "%s/%s", fdir, fname);
+		if(file_exists(path)){
+			online=1;
+
+	  		MIME_type* mime_type = mime_type_lookup(mimetype);
+			type_to_icon(mime_type);
+			if ( mime_type->image == NULL ) printf("do_search(): no icon.\n");
+			iconbuf = mime_type->image->sm_pixbuf;
+
+		}else{
+			online=0;
+			iconbuf = NULL;
+		}
+		gtk_list_store_set(app.store, &iter, COL_ICON, iconbuf, -1);
+
+		char sql[1024];
+		snprintf(sql, 1024, "UPDATE samples SET online=%i, last_checked=NOW() WHERE id=%i", online, id);
+		printf("update_row(): row: %s path=%s sql=%s\n", fname, path, sql);
+		if(mysql_query(&app.mysql, sql)){
+			errprintf("update_row(): update failed! sql=%s\n", sql);
+		}
+	}
+	g_list_free(selectionlist);
+	//g_date_free(date);
 }
 
 
