@@ -2,6 +2,9 @@
 void         errprintf(char *fmt, ...);
 void         warnprintf(char *format, ...);
 
+gint         strcmp2(gconstpointer a, gconstpointer b);
+GPtrArray*   list_dir(const guchar *path);
+gboolean     file_exists(const char *path);
 
 //-----------------------------------------------------------------
 
@@ -47,6 +50,8 @@ const gchar* vfs_get_method_string(const gchar *substring, gchar **method_string
 
 void         pixbuf_clear(GdkPixbuf *pixbuf, GdkColor *colour);
 void         pixbuf_draw_line(GdkPixbuf *pixbuf, struct _ArtDRect *pts, double line_width, GdkColor *colour);
+GdkPixbuf*   scale_pixbuf(GdkPixbuf *src, int max_w, int max_h);
+GdkPixbuf*   scale_pixbuf_up(GdkPixbuf *src, int max_w, int max_h);
 
 void         colour_get_style_fg(GdkColor *color, int state);
 void         colour_get_style_bg(GdkColor *color, int state);

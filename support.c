@@ -49,6 +49,62 @@ warnprintf(char *format, ...)
 }
 
 
+/* Used as the sort function for sorting GPtrArrays */
+gint 
+strcmp2(gconstpointer a, gconstpointer b)
+{
+	const char *aa = *(char **) a;
+	const char *bb = *(char **) b;
+
+	return g_strcasecmp(aa, bb);
+}
+
+/* Returns an array listing all the names in the directory 'path'.
+ * The array is sorted.
+ * '.' and '..' are skipped.
+ * On error, the error is reported with g_warning and NULL is returned.
+ */
+GPtrArray*
+list_dir(const guchar *path)
+{
+	GDir *dir;
+	GError *error = NULL;
+	const char *leaf;
+	GPtrArray *names;
+	
+	dir = g_dir_open(path, 0, &error);
+	if (error)
+	{
+		g_warning("Can't list directory:\n%s", error->message);
+		g_error_free(error);
+		return NULL;
+	}
+
+	names = g_ptr_array_new();
+
+	while ((leaf = g_dir_read_name(dir))) {
+		if (leaf[0] != '.')
+			g_ptr_array_add(names, g_strdup(leaf));
+	}
+
+	g_dir_close(dir);
+
+	g_ptr_array_sort(names, strcmp2);
+
+	return names;
+}
+
+/* Returns TRUE if the object exists, FALSE if it doesn't.
+ * For symlinks, the file pointed to must exist.
+ */
+gboolean 
+file_exists(const char *path)
+{
+	struct stat info;
+
+	return !stat(path, &info);
+}
+
 #ifdef NEVER
 //below is stuff from gnome-vfs-uri.c
 //-i think eventually we might as well statically link the whole file.
@@ -292,6 +348,66 @@ pixbuf_draw_line(GdkPixbuf *pixbuf, struct _ArtDRect *pts, double line_width, Gd
   free(svp);
 }
 
+
+/* Scale src down to fit in max_w, max_h and return the new pixbuf.
+ * If src is small enough, then ref it and return that.
+ */
+GdkPixbuf*
+scale_pixbuf(GdkPixbuf *src, int max_w, int max_h)
+{
+	int	w, h;
+
+	w = gdk_pixbuf_get_width(src);
+	h = gdk_pixbuf_get_height(src);
+
+	if (w <= max_w && h <= max_h)
+	{
+		gdk_pixbuf_ref(src);
+		return src;
+	}
+	else
+	{
+		float scale_x = ((float) w) / max_w;
+		float scale_y = ((float) h) / max_h;
+		float scale = MAX(scale_x, scale_y);
+		int dest_w = w / scale;
+		int dest_h = h / scale;
+		
+		return gdk_pixbuf_scale_simple(src,
+						MAX(dest_w, 1),
+						MAX(dest_h, 1),
+						GDK_INTERP_BILINEAR);
+	}
+}
+
+/* Scale src up to fit in max_w, max_h and return the new pixbuf.
+ * If src is that size or bigger, then ref it and return that.
+ */
+GdkPixbuf*
+scale_pixbuf_up(GdkPixbuf *src, int max_w, int max_h)
+{
+	int	w, h;
+
+	w = gdk_pixbuf_get_width(src);
+	h = gdk_pixbuf_get_height(src);
+
+	if (w == 0 || h == 0 || w >= max_w || h >= max_h)
+	{
+		gdk_pixbuf_ref(src);
+		return src;
+	}
+	else
+	{
+		float scale_x = max_w / ((float) w);
+		float scale_y = max_h / ((float) h);
+		float scale = MIN(scale_x, scale_y);
+		
+		return gdk_pixbuf_scale_simple(src,
+						w * scale,
+						h * scale,
+						GDK_INTERP_BILINEAR);
+	}
+}
 
 void
 colour_get_style_fg(GdkColor *color, int state)
