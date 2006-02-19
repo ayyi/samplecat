@@ -1,3 +1,7 @@
+dependencies:
+	-gnome-vfs
+	-mysql
+
 functionality:
 	-show files
 		-name
@@ -14,3 +18,5 @@ functionality:
 		-ardour/rosegarden etc
 		-drag n drop
 
+
+-papers on automatic metadata and searching: http://audioclas.iua.upf.edu/documents.shtml
