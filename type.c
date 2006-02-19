@@ -206,12 +206,12 @@ static MIME_type*
 get_mime_type(const gchar *type_name, gboolean can_create)
 {
 	//printf("get_mime_type()...\n");
+	if(!type_name){ errprintf("get_mime_type(): bad arg: type_name NULL\n"); return NULL; }
 	MIME_type *mtype = NULL;
 	gchar *slash;
 
 	//mtype = g_hash_table_lookup(type_hash, type_name);
-	if (mtype || !can_create)
-		return mtype;
+	if (mtype || !can_create) return mtype;
 
 	slash = strchr(type_name, '/');
 	g_return_val_if_fail(slash != NULL, NULL);     // XXX: Report nicely
@@ -614,9 +614,9 @@ static void set_action_response(GtkWidget *dialog, gint response, gpointer data)
  * radio setting.
  * NULL if nothing is defined for it.
  */
+	/*
 static guchar *handler_for_radios(GObject *dialog)
 {
-	/*
 	Radios	*radios;
 	MIME_type *type;
 
@@ -646,9 +646,9 @@ static guchar *handler_for_radios(GObject *dialog)
 			g_warning("Bad type");
 			return NULL;
 	}
-	*/
 	return NULL;
 }
+	*/
 
 /* (radios can be NULL if called from clear_run_action) */
 	/*
@@ -817,9 +817,9 @@ static char **get_xdg_data_dirs(int *n_dirs)
 }
 
 /* Try to fill in 'type->comment' from this document */
+	/*
 static void get_comment(MIME_type *type, const guchar *path)
 {
-	/*
 	xmlNode *node;
 	XMLwrapper *doc;
 	
@@ -839,9 +839,9 @@ static void get_comment(MIME_type *type, const guchar *path)
 	}
 
 	g_object_unref(doc);
-	*/
 	return;
 }
+	*/
 
 const char *mime_type_comment(MIME_type *type)
 {
