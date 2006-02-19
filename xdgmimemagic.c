@@ -39,6 +39,7 @@
 #include <ctype.h>
 #include <errno.h>
 #include <limits.h>
+//#include <gtk/gtk.h>
 
 #ifndef	FALSE
 #define	FALSE	(0)
