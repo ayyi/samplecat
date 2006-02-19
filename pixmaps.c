@@ -867,7 +867,8 @@ static GType masked_pixmap_get_type(void)
 MaskedPixmap*
 masked_pixmap_new(GdkPixbuf *full_size)
 {
-	printf("masked_pixmap_new()...\n");
+	//printf("masked_pixmap_new()...\n");
+
 	GdkPixbuf	*src_pixbuf, *normal_pixbuf;
 
 	g_return_val_if_fail(full_size != NULL, NULL);
