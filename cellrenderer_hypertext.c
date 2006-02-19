@@ -25,8 +25,10 @@
 #include "cellrenderer_hypertext.h"
 
 #include <gtk/gtk.h>
+#include <libart_lgpl/libart.h>
 #include "mysql/mysql.h"
 #include "main.h"
+#include "support.h"
 extern struct _app app;
 
 static void gtk_cell_renderer_hyper_text_get_size (GtkCellRenderer *cell,
@@ -265,10 +267,12 @@ gtk_cell_renderer_hyper_text_render(GtkCellRenderer      *cell,
   GtkStateType state;
   gint x_offset;
   gint y_offset;
+  if(!celltext->text){/* errprintf("cell_renderer_hyper_text_render(): text NULL\n");*/ return; }
 
   //get_layout is what determines the colour/style of the text:
   //PangoLayout *layout = get_layout(hypercell, widget, TRUE, flags);
   PangoLayout *layout = get_layout(hypercell, widget, TRUE, 0);
+  if(!layout){ errprintf("cell_renderer_hyper_text_render(): layout NULL\n"); return; }
 
   gtk_cell_renderer_hyper_text_get_size(cell, widget, cell_area, &x_offset, &y_offset, NULL, NULL);
 
