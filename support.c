@@ -49,6 +49,17 @@ warnprintf(char *format, ...)
 }
 
 
+void
+samplerate_format(char* str, int samplerate)
+{
+	snprintf(str, 32, "%f", ((float)samplerate) / 1000);
+	while(str[strlen(str)-1]=='0'){
+		str[strlen(str)-1] = '\0';
+	}
+	if(str[strlen(str)-1]=='.') str[strlen(str)-1] = '\0';
+}
+
+
 /* Used as the sort function for sorting GPtrArrays */
 gint 
 strcmp2(gconstpointer a, gconstpointer b)
@@ -447,8 +458,18 @@ format_time(char* length, char* milliseconds)
 	if(!length){ errprintf("format_time()!\n"); return; }
 	if(!milliseconds){ snprintf(length, 64, " "); return; }
 
+	gchar secs_str[64] = "";
+	gchar mins_str[64] = "";
 	int t = atoi(milliseconds);
-	snprintf(length, 64, "%i.%03i", t / 1000, t % 1000);
+	int secs = t / 1000;
+	int mins = secs / 60;
+	if(mins){
+		snprintf(mins_str, 64, "%i:", mins);
+		secs = secs % 60;
+		snprintf(secs_str, 64, "%02i", secs);
+	}else snprintf(secs_str, 64, "%i", secs);
+	
+	snprintf(length, 64, "%s%s.%03i", mins_str, secs_str, t % 1000);
 	//printf("format_time(): %s\n", length);
 }
 

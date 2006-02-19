@@ -2,6 +2,7 @@
 void         errprintf(char *fmt, ...);
 void         warnprintf(char *format, ...);
 
+void         samplerate_format(char* str, int samplerate);
 gint         strcmp2(gconstpointer a, gconstpointer b);
 GPtrArray*   list_dir(const guchar *path);
 gboolean     file_exists(const char *path);
