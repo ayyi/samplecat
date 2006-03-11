@@ -37,6 +37,8 @@ struct _app
 	GtkTreeViewColumn* col_pixbuf;
 	GtkTreeViewColumn* col_tags;
 
+	GtkTreeRowReference* mouseover_row_ref;
+
 	GdkColor fg_colour;
 	GdkColor bg_colour;
 
@@ -95,4 +97,5 @@ gboolean    treeview_on_motion(GtkWidget *widget, GdkEventMotion *event, gpointe
 gboolean    treeview_get_cell(GtkTreeView *view, guint x, guint y, GtkCellRenderer **cell);
 gboolean    treeview_get_tags_cell(GtkTreeView *view, guint x, guint y, GtkCellRenderer **cell);
 
+gint        get_mouseover_row();
 void        tag_cell_data(GtkTreeViewColumn *tree_column, GtkCellRenderer *cell, GtkTreeModel *tree_model, GtkTreeIter *iter, gpointer data);
