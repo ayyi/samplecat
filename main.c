@@ -228,10 +228,10 @@ main(int argc, char* *argv)
 	gtk_tree_view_column_set_min_width(column3, 0);
 	g_object_set(cell3, "editable", TRUE, NULL);
 	g_signal_connect(cell3, "edited", (GCallback)keywords_on_edited, NULL);
-	//g_object_set(cell3, "ypad", 0, NULL);
+	gtk_tree_view_column_add_attribute(column3, cell3, "markup", COL_KEYWORDS);
 
 	//GtkTreeCellDataFunc
-	//gtk_tree_view_column_set_cell_data_func(column3, cell3, tag_cell_data, NULL, NULL);
+	gtk_tree_view_column_set_cell_data_func(column3, cell3, tag_cell_data, NULL, NULL);
 
 	GtkCellRenderer *cell4 = gtk_cell_renderer_pixbuf_new();
 	GtkTreeViewColumn *col4 = app.col_pixbuf = gtk_tree_view_column_new_with_attributes("Overview", cell4, "pixbuf", COL_OVERVIEW, NULL);
@@ -296,54 +296,177 @@ main(int argc, char* *argv)
 	exit(0);
 }
 
+gint
+get_mouseover_row()
+{
+	//get the row number the mouse is currently over from the stored row_reference.
+	gint row_num = -1;
+	GtkTreePath* path;
+	GtkTreeIter iter;
+	if((path = gtk_tree_row_reference_get_path(app.mouseover_row_ref))){
+		gtk_tree_model_get_iter(GTK_TREE_MODEL(app.store), &iter, path);
+		gchar* path_str = gtk_tree_model_get_string_from_iter(GTK_TREE_MODEL(app.store), &iter);
+		row_num = atoi(path_str);
+
+		g_free(path_str);
+		gtk_tree_path_free(path);
+	}
+	return row_num;
+}
+
 void
 tag_cell_data(GtkTreeViewColumn *tree_column, GtkCellRenderer *cell, GtkTreeModel *tree_model, GtkTreeIter *iter, gpointer data)
 {
-	//handle translation of model data to display format for "tag" data.
+	/*
+	handle translation of model data to display format for "tag" data.
 
- 	GtkCellRendererText *celltext = (GtkCellRendererText *) cell;
+	note: some stuff here is duplicated in the custom cellrenderer - not sure exactly what happens where!
+
+	mouseovers:
+		-usng this fn to do mousovers is slightly difficult.
+		-fn is called when mouse enters or leaves a cell. 
+			However, because of padding (appears to be 1 pixel), it is not always inside the cell area when this callback occurs!!
+	*/
+	//printf("tag_cell_data()...\n");
+
+ 	GtkCellRendererText *celltext = (GtkCellRendererText *)cell;
 	GtkCellRendererHyperText *hypercell = (GtkCellRendererHyperText *)cell;
+	GtkTreePath* path = gtk_tree_model_get_path(GTK_TREE_MODEL(app.store), iter);
+	GdkRectangle cellrect;
 
-	printf("tag_cell_data()...\n");
-	if(strlen(celltext->text)){
-		const gchar *str = celltext->text;//"<b>pre</b> light";
-		//split the string:
-		gchar** split = g_strsplit(str, " ", 100);
-		//printf("split: [%s] %p %p %p %s\n", str, split[0], split[1], split[2], split[0]);
-		int word_index = 0;
-		gchar* joined = NULL;
-		if(split[word_index]){
-			gchar word[64];
-			snprintf(word, 64, "<u>%s</u>", split[word_index]);
-			//g_free(split[word_index]);
-			split[word_index] = word;
-			joined = g_strjoinv(" ", split);
-			printf("tag_cell_data(): joined: %s\n", joined);
+	gint mouse_row_num = get_mouseover_row();
+
+	gchar* path_str = gtk_tree_model_get_string_from_iter(GTK_TREE_MODEL(app.store), iter);
+	gint cell_row_num = atoi(path_str);
+
+	//----------------------
+
+	//get the coords for this cell:
+	gtk_tree_view_get_cell_area(GTK_TREE_VIEW(app.view), path, tree_column, &cellrect);
+	gtk_tree_path_free(path);
+	//printf("tag_cell_data(): %s mouse_y=%i cell_y=%i-%i.\n", path_str, app.mouse_y, cellrect.y, cellrect.y + cellrect.height);
+	//if(//(app.mouse_x > cellrect.x) && (app.mouse_x < (cellrect.x + cellrect.width)) &&
+	//			(app.mouse_y >= cellrect.y) && (app.mouse_y <= (cellrect.y + cellrect.height))){
+	if(cell_row_num == mouse_row_num){
+	if((app.mouse_x > cellrect.x) && (app.mouse_x < (cellrect.x + cellrect.width))){
+		//printf("tag_cell_data(): mouseover! row_num=%i\n", mouse_row_num);
+		//printf("tag_cell_data():  inside: x=%i y=%i\n", cellrect.x, cellrect.y);
+
+		if(strlen(celltext->text)){
+			g_strstrip(celltext->text);//trim
+
+			gint mouse_cell_x = app.mouse_x - cellrect.x;
+
+			//make a layout to find word sizes:
+
+			PangoContext* context = gtk_widget_get_pango_context(app.view); //free?
+			PangoLayout* layout = pango_layout_new(context);
+			pango_layout_set_text(layout, celltext->text, strlen(celltext->text));
+
+			int line_num = 0;
+			PangoLayoutLine* layout_line = pango_layout_get_line(layout, line_num);
+			int char_pos;
+			gboolean trailing = 0;
+			printf("tag_cell_data(): line len: %i\n", layout_line->length);
+			int i;
+			for(i=0;i<layout_line->length;i++){
+				//pango_layout_line_index_to_x(layout_line, i, trailing, &char_pos);
+				//printf("tag_cell_data(): x=%i\n", (int)(char_pos/PANGO_SCALE));
+			}
+
+			//-------------------------
+
+			//split the string into words:
+
+			const gchar *str = celltext->text;
+			gchar** split = g_strsplit(str, " ", 100);
+			//printf("split: [%s] %p %p %p %s\n", str, split[0], split[1], split[2], split[0]);
+			int char_index = 0;
+			int word_index = 0;
+			int mouse_word = 0;
+			gchar formatted[256] = "";
+			char word[256] = "";
+			while(split[word_index]){
+				char_index += strlen(split[word_index]);
+
+				pango_layout_line_index_to_x(layout_line, char_index, trailing, &char_pos);
+				printf("tag_cell_data(): char_pos=%i mouse_cell_x=%i\n", char_pos/PANGO_SCALE, mouse_cell_x);
+				if(char_pos/PANGO_SCALE > mouse_cell_x){
+					mouse_word = word_index;
+					printf("tag_cell_data(): word=%i\n", word_index);
+
+					snprintf(word, 256, "<u>%s</u> ", split[word_index]);
+					g_strlcat(formatted, word, 256);
+					//g_free(split[word_index]);
+					//split[word_index] = word;
+
+					while(split[++word_index]){
+						//snprintf(formatted, 256, "%s ", split[word_index]);
+						snprintf(word, 256, "%s ", split[word_index]);
+						g_strlcat(formatted, word, 256);
+					}
+
+					break;
+				}
+
+				snprintf(word, 256, "%s ", split[word_index]);
+				g_strlcat(formatted, word, 256);
+
+				word_index++;
+			}
+			printf("tag_cell_data(): joined: %s\n", formatted);
+
+			g_object_unref(layout);
+
+			//-------------------------
+
+			//set new markup:
+
+			//g_object_set();
+			gchar *text = NULL;
+			GError *error = NULL;
+			PangoAttrList *attrs = NULL;
+
+			if (formatted && !pango_parse_markup(formatted, -1, 0, &attrs, &text, NULL, &error)){
+				g_warning("Failed to set cell text from markup due to error parsing markup: %s", error->message);
+				g_error_free(error);
+				return;
+			}
+			//if (joined) g_free(joined);
+			if (celltext->text) g_free(celltext->text);
+			if (celltext->extra_attrs) pango_attr_list_unref(celltext->extra_attrs);
+
+			//setting text here doesnt seem to work (text is set but not displayed), but setting markup does.
+			//printf("tag_cell_data(): setting text: %s\n", text);
+			celltext->text = text;
+			celltext->extra_attrs = attrs;
+			hypercell->markup_set = TRUE;
 		}
-		//g_strfreev(split); //segfault - doesnt like reassigning split[word_index] ?
-
-		//g_object_set();
-		gchar *text = NULL;
-		GError *error = NULL;
-		PangoAttrList *attrs = NULL;
-
-		if (joined && !pango_parse_markup(joined, -1, 0, &attrs, &text, NULL, &error)){
-			g_warning("Failed to set cell text from markup due to error parsing markup: %s", error->message);
-			g_error_free(error);
-			return;
-		}
-		if (joined) g_free(joined);
-
-		if (celltext->text) g_free (celltext->text);
-
-		if (celltext->extra_attrs) pango_attr_list_unref (celltext->extra_attrs);
-
-		//setting text here doesnt seem to work (text is set but not displayed), but setting markup does.
-		printf("tag_cell_data(): setting text: %s\n", text);
-		celltext->text = text;
-		celltext->extra_attrs = attrs;
-		hypercell->markup_set = TRUE;
 	}
+	}
+	//else g_object_set(cell, "markup", "outside", NULL);
+	//else hypercell->markup_set = FALSE;
+
+	g_free(path_str);
+
+
+/*
+			gchar *text = NULL;
+			GError *error = NULL;
+			PangoAttrList *attrs = NULL;
+			
+			printf("tag_cell_data(): text=%s\n", celltext->text);
+			if (!pango_parse_markup(celltext->text, -1, 0, &attrs, &text, NULL, &error)){
+				g_warning("Failed to set cell text from markup due to error parsing markup: %s", error->message);
+				g_error_free(error);
+				return;
+			}
+			//if (celltext->text) g_free (celltext->text);
+			//if (celltext->extra_attrs) pango_attr_list_unref (celltext->extra_attrs);
+			celltext->text = text;
+			celltext->extra_attrs = attrs;
+	hypercell->markup_set = TRUE;
+	*/
 }
 
 void
@@ -1225,6 +1348,9 @@ on_row_clicked(GtkWidget *widget, GdkEventButton *event, gpointer user_data)
 gboolean
 treeview_on_motion(GtkWidget *widget, GdkEventMotion *event, gpointer user_data)
 {
+	//static gint prev_row_num = 0;
+	static GtkTreeRowReference* prev_row_ref = NULL;
+	static gchar prev_text[256] = "";
 	app.mouse_x = event->x;
 	app.mouse_y = event->y;
 	//gdouble x = event->x; //distance from left edge of treeview.
@@ -1246,6 +1372,102 @@ treeview_on_motion(GtkWidget *widget, GdkEventMotion *event, gpointer user_data)
 
 	//printf("treeview_on_motion(): x=%f y=%f. l=%i\n", x, y, rect.x, rect.width);
 
+
+	//which row are we on?
+	GtkTreePath* path;
+	GtkTreeIter iter, prev_iter;
+	//GtkTreeRowReference* row_ref = NULL;
+	if(gtk_tree_view_get_path_at_pos(GTK_TREE_VIEW(app.view), (gint)event->x, (gint)event->y, &path, NULL, NULL, NULL)){
+
+		gtk_tree_model_get_iter(GTK_TREE_MODEL(app.store), &iter, path);
+		gchar* path_str = gtk_tree_model_get_string_from_iter(GTK_TREE_MODEL(app.store), &iter);
+
+		if(prev_row_ref){
+			GtkTreePath* prev_path;
+			if((prev_path = gtk_tree_row_reference_get_path(prev_row_ref))){
+			
+				gtk_tree_model_get_iter(GTK_TREE_MODEL(app.store), &prev_iter, prev_path);
+				gchar* prev_path_str = gtk_tree_model_get_string_from_iter(GTK_TREE_MODEL(app.store), &prev_iter);
+
+				//if(row_ref != prev_row_ref){
+				//if(prev_path && (path != prev_path)){
+				if(prev_path && (atoi(path_str) != atoi(prev_path_str))){
+					printf("treeview_on_motion() new row! path=%p (%s) prev_path=%p (%s)\n", path, path_str, prev_path, prev_path_str);
+
+					//restore text to previous row:
+					gtk_list_store_set(app.store, &prev_iter, COL_KEYWORDS, prev_text, -1);
+
+					//store original text:
+					gchar* txt;
+					gtk_tree_model_get(GTK_TREE_MODEL(app.store), &iter, COL_KEYWORDS, &txt, -1);
+					printf("treeview_on_motion(): text=%s\n", prev_text);
+					snprintf(prev_text, 256, "%s", txt);
+					g_free(txt);
+
+					/*
+					//split by word, etc:
+					if(strlen(prev_text)){
+						g_strstrip(prev_text);
+						const gchar *str = prev_text;//"<b>pre</b> light";
+						//split the string:
+						gchar** split = g_strsplit(str, " ", 100);
+						//printf("split: [%s] %p %p %p %s\n", str, split[0], split[1], split[2], split[0]);
+						int word_index = 0;
+						gchar* joined = NULL;
+						if(split[word_index]){
+							gchar word[64];
+							snprintf(word, 64, "<u>%s</u>", split[word_index]);
+							//g_free(split[word_index]);
+							split[word_index] = word;
+							joined = g_strjoinv(" ", split);
+							printf("treeview_on_motion(): joined: %s\n", joined);
+						}
+						//g_strfreev(split); //segfault - doesnt like reassigning split[word_index] ?
+
+						//g_object_set();
+						gchar *text = NULL;
+						GError *error = NULL;
+						PangoAttrList *attrs = NULL;
+
+						if (joined && !pango_parse_markup(joined, -1, 0, &attrs, &text, NULL, &error)){
+							g_warning("Failed to set cell text from markup due to error parsing markup: %s", error->message);
+							g_error_free(error);
+							return FALSE;
+						}
+
+						//if (celltext->text) g_free (celltext->text);
+						//if (celltext->extra_attrs) pango_attr_list_unref (celltext->extra_attrs);
+
+						printf("treeview_on_motion(): setting text: %s\n", text);
+						//celltext->text = text;
+						//celltext->extra_attrs = attrs;
+						//hypercell->markup_set = TRUE;
+						gtk_list_store_set(app.store, &iter, COL_KEYWORDS, joined, -1);
+
+						if (joined) g_free(joined);
+					}
+						*/
+
+					g_free(prev_row_ref);
+					prev_row_ref = gtk_tree_row_reference_new(GTK_TREE_MODEL(app.store), path);
+					//prev_row_ref = row_ref;
+				}
+			}else{
+				//table has probably changed. previous row is not available.
+				g_free(prev_row_ref);
+				prev_row_ref = NULL;
+			}
+
+			gtk_tree_path_free(prev_path);
+
+		}else{
+			prev_row_ref = gtk_tree_row_reference_new(GTK_TREE_MODEL(app.store), path);
+		}
+
+		gtk_tree_path_free(path);
+	}
+
+	app.mouseover_row_ref = prev_row_ref;
 	return FALSE;
 }
 
