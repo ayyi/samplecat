@@ -60,3 +60,6 @@ void         colour_get_style_bg(GdkColor *color, int state);
 void         format_time(char* length, char* milliseconds);
 void         format_time_int(char* length, int milliseconds);
 
+gint         treecell_get_row(GtkWidget *widget, GdkRectangle *cell_area);
+void         statusbar_print(int n, char *s);
+

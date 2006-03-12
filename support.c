@@ -485,3 +485,46 @@ format_time_int(char* length, int milliseconds)
 }
 
 
+gint
+treecell_get_row(GtkWidget *widget, GdkRectangle *cell_area)
+{
+	//return the row number for the cell with the given area.
+
+	GtkTreePath *path;
+	gint x = cell_area->x + 1;
+	gint y = cell_area->y + 1;
+	gint *cell_x = NULL; //not used.
+	gint *cell_y = NULL;
+	if(gtk_tree_view_get_path_at_pos(GTK_TREE_VIEW(app.view), x, y, &path, NULL, cell_x, cell_y)){
+		gint *i;
+		i = gtk_tree_path_get_indices(path);
+		printf("treecell_get_row() i[0]=%i.\n", i[0]);
+		gint row = i[0];
+		gtk_tree_path_free(path);
+		return row;
+	}
+	else warnprintf("treecell_get_row() no row found.\n");
+	return 0;
+}
+
+
+void
+statusbar_print(int n, char *s)
+{
+  //prints to one of the root statusbar contexts.
+  GtkWidget *statusbar = NULL;
+  if     (n==1) statusbar = app.statusbar;
+  else if(n==2) statusbar = app.statusbar2;
+  else {errprintf("statusbar_print(): bad statusbar index (%i)\n", n); n=1;}
+
+  if((int)statusbar<1024) return; //window may not be open.
+  //printf("statusbar_print(): statusbar=%p\n", statusbar);
+
+  gchar buff[128];
+  gint cid = gtk_statusbar_get_context_id(GTK_STATUSBAR(statusbar), "Song");
+  snprintf(buff, 128, "  %s", s); //experimental padding.
+  //printf("statusbar_print(): n=%i cid=%i '%s'\n", n, cid, buff);
+  gtk_statusbar_push(GTK_STATUSBAR(statusbar), cid, buff);
+}
+
+
