@@ -141,6 +141,10 @@ get_layout (GtkCellRendererHyperText *cellhypertext,
 {
   //this is a static function from the parent class - i couldnt work out how to call it directly.
 
+  //normally is called when mouse enters a new row.
+
+  //printf("get_layout()...\n");
+
   /*
   PangoLayout *layout;
   layout = ( * GTK_CELL_RENDERER_TEXT_CLASS(parent_class)->get_layout)(celltext, widget, will_render, flags);
@@ -267,29 +271,33 @@ gtk_cell_renderer_hyper_text_render(GtkCellRenderer      *cell,
   GtkStateType state;
   gint x_offset;
   gint y_offset;
+  //static gint prev_row_num = 0;
+
+  //correct for scrollwindow:
+  /*
+  gint tx;
+  gint ty;
+  gtk_tree_view_widget_to_tree_coords(app.view, cell_area->x, cell_area->y, &tx, &ty);
+  printf("gtk_cell_renderer_hyper_text_render(): y=%i.\n", ty);
+  */
+
   if(!celltext->text){/* errprintf("cell_renderer_hyper_text_render(): text NULL\n");*/ return; }
 
   //get_layout is what determines the colour/style of the text:
+  //(it renders the text freshly each time!)
   //PangoLayout *layout = get_layout(hypercell, widget, TRUE, flags);
   PangoLayout *layout = get_layout(hypercell, widget, TRUE, 0);
   if(!layout){ errprintf("cell_renderer_hyper_text_render(): layout NULL\n"); return; }
 
   gtk_cell_renderer_hyper_text_get_size(cell, widget, cell_area, &x_offset, &y_offset, NULL, NULL);
 
-  //as prelight doesnt seem to be working, lets do our own mouseover detection:
   /*
-  GtkCellRenderer *cell_renderer = NULL;
-  if(treeview_get_tags_cell(GTK_TREE_VIEW(widget), (gint)event->x, (gint)event->y, &cell_renderer)){
-    printf("treeview_on_motion() tags cell found!\n");
-    //g_object_set(cell, "markup", "<b>important</b>", "text", NULL, NULL);
-    pango_layout_set_markup(layout, "<b>important</b>", -1);
-  }
-  */
-
   if((app.mouse_x > cell_area->x) && (app.mouse_x < (cell_area->x + cell_area->width)) && (app.mouse_y > cell_area->y) && (app.mouse_y < (cell_area->y + cell_area->height))){
     //printf("gtk_cell_renderer_hyper_text_render(): x=%i y=%i\n", app.mouse_x, app.mouse_y);
     //pango_layout_set_markup(layout, "<b>important</b>", -1);
+    printf("gtk_cell_renderer_hyper_text_render(): inside cell!\n");
   }
+  */
 
 
 
@@ -302,45 +310,70 @@ gtk_cell_renderer_hyper_text_render(GtkCellRenderer      *cell,
                                                               state = GTK_STATE_PRELIGHT;
                                                  //               state = GTK_STATE_NORMAL;
 
-		//this should be moved to get_layout? ****************
-		if(strlen(celltext->text)){
-			const gchar *str = celltext->text;//"<b>pre</b> light";
-			//split the string:
-			gchar** split = g_strsplit(str, " ", 100);
-			//printf("gtk_cell_renderer_hyper_text_render(): split: [%s] %p %p %p %s\n", str, split[0], split[1], split[2], split[0]);
-			int word_index = 0;
-			gchar* joined = NULL;
-			if(split[word_index]){
-				gchar word[64];
-				snprintf(word, 64, "<u>%s</u>", split[word_index]);
-				//g_free(split[word_index]);
-				split[word_index] = word;
-				joined = g_strjoinv(" ", split);
-				//printf("gtk_cell_renderer_hyper_text_render(): GTK_STATE_PRELIGHT: joined: %s\n", joined);
+			/*
+        gint row_num = treecell_get_row(widget, cell_area);
+		if ( row_num != prev_row_num ) {
+			//printf("gtk_cell_renderer_hyper_text_render() new row (%i)! cell=%p %s\n", row_num, celltext->text, celltext->text);
+
+			//FIXME only do this if x is inside the cell.
+			gchar path_string[256];
+			snprintf(path_string, 256, "%i", prev_row_num);
+			GtkTreeIter iter;
+			if(gtk_tree_model_get_iter_from_string(GTK_TREE_MODEL(app.store), &iter, path_string)){
+			  snprintf(path_string, 256, "<u>o</u>ld %i", prev_row_num);
+			  //4 = COL_KEYWORDS
+			  gtk_list_store_set(app.store, &iter, 4, path_string, -1); //FIXME its the _attributes_ we need to reset.
+
+			  //this will affect ALL rows!?
+			  g_object_set(cell, "attributes", NULL, NULL);
 			}
-			//g_strfreev(split); //segfault - doesnt like reassigning split[word_index] ?
+			else warnprintf("gtk_cell_renderer_hyper_text_render(): failed to get iter. string=%s\n", path_string);
+		}
+        prev_row_num = row_num;
+			*/
 
-			//g_object_set();
-			gchar *text = NULL;
-			GError *error = NULL;
-			PangoAttrList *attrs = NULL;
+		if(app.mouse_x < (cell_area->x + cell_area->width)){ 
 
-			if (joined && !pango_parse_markup(joined, -1, 0, &attrs, &text, NULL, &error)){
-				g_warning("Failed to set cell text from markup due to error parsing markup: %s", error->message);
-				g_error_free(error);
-				return;
+			if(strlen(celltext->text)){
+				g_strstrip(celltext->text);
+				const gchar *str = celltext->text;//"<b>pre</b> light";
+				//split the string:
+				gchar** split = g_strsplit(str, " ", 100);
+				//printf("gtk_cell_renderer_hyper_text_render(): split: [%s] %p %p %p %s\n", str, split[0], split[1], split[2], split[0]);
+				int word_index = 0;
+				gchar* joined = NULL;
+				if(split[word_index]){
+					gchar word[64];
+					snprintf(word, 64, "<u>%s</u>", split[word_index]);
+					//g_free(split[word_index]);
+					split[word_index] = word;
+					joined = g_strjoinv(" ", split);
+					//printf("gtk_cell_renderer_hyper_text_render(): GTK_STATE_PRELIGHT: joined: %s\n", joined);
+				}
+				//g_strfreev(split); //segfault - doesnt like reassigning split[word_index] ?
+
+				//g_object_set();
+				gchar *text = NULL;
+				GError *error = NULL;
+				PangoAttrList *attrs = NULL;
+
+				if (joined && !pango_parse_markup(joined, -1, 0, &attrs, &text, NULL, &error)){
+					g_warning("Failed to set cell text from markup due to error parsing markup: %s", error->message);
+					g_error_free(error);
+					return;
+				}
+				if (joined) g_free(joined);
+
+				if (celltext->text) g_free (celltext->text);
+
+				if (celltext->extra_attrs) pango_attr_list_unref (celltext->extra_attrs);
+
+				//setting text here doesnt seem to work (text is set but not displayed), but setting markup does.
+				printf("  render(): prelight! setting text: %s\n", text);
+				celltext->text = text;
+				celltext->extra_attrs = attrs;
+				hypercell->markup_set = TRUE;
 			}
-			if (joined) g_free(joined);
-
-			if (celltext->text) g_free (celltext->text);
-
-			if (celltext->extra_attrs) pango_attr_list_unref (celltext->extra_attrs);
-
-			//setting text here doesnt seem to work (text is set but not displayed), but setting markup does.
-			printf("  prelight! setting text: %s\n", text);
-			celltext->text = text;
-			celltext->extra_attrs = attrs;
-			hypercell->markup_set = TRUE;
 		}
 
   } else {
@@ -349,6 +382,14 @@ gtk_cell_renderer_hyper_text_render(GtkCellRenderer      *cell,
 		//if (celltext->text) printf("gtk_cell_renderer_hyper_text_render(): STATE_NORMAL.........%s\n", celltext->text);
       }
   }
+
+  /*
+  if ((flags & GTK_CELL_RENDERER_PRELIT) != GTK_CELL_RENDERER_PRELIT){
+	printf("gtk_cell_renderer_hyper_text_render(): not prelit.\n");
+    //celltext->extra_attrs = NULL;
+    //hypercell->markup_set = FALSE;
+  }
+  */
 
   if (celltext->background_set && state != GTK_STATE_SELECTED) {
       GdkColor color;
@@ -374,10 +415,10 @@ gtk_cell_renderer_hyper_text_render(GtkCellRenderer      *cell,
                           background_area->height);
       if(expose_area) gdk_gc_set_clip_rectangle (gc, NULL);
       g_object_unref(gc);
-    }
+  }
 
-  	//printf("gtk_cell_renderer_hyper_text_render(): state=%i.\n", state);
-	gtk_paint_layout(widget->style,
+  //printf("gtk_cell_renderer_hyper_text_render(): state=%i.\n", state);
+  gtk_paint_layout(widget->style,
                     window, //drawable to paint onto
                     //state,
                     //GTK_STATE_ACTIVE,
@@ -391,7 +432,7 @@ gtk_cell_renderer_hyper_text_render(GtkCellRenderer      *cell,
                     cell_area->y + y_offset + cell->ypad,
                     layout);
 
-	g_object_unref(layout);
+  g_object_unref(layout);
 }
 
 GtkCellRenderer*
