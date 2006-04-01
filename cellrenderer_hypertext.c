@@ -27,6 +27,7 @@
 #include <gtk/gtk.h>
 #include <libart_lgpl/libart.h>
 #include "mysql/mysql.h"
+#include "dh-link.h"
 #include "main.h"
 #include "support.h"
 extern struct _app app;

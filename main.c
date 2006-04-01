@@ -28,11 +28,13 @@
 #include <libgnomevfs/gnome-vfs.h>
 
 #include "mysql/mysql.h"
+#include "dh-link.h"
 #include "main.h"
 #include "support.h"
 #include "audio.h"
 #include "overview.h"
 #include "cellrenderer_hypertext.h"
+#include "tree.h"
 
 #include "rox_global.h"
 #include "type.h"
@@ -70,6 +72,7 @@ enum
 //mysql table layout:
 #define MYSQL_ONLINE 8
 #define MYSQL_MIMETYPE 10
+#define MYSQL_KEYWORDS 3
 
 //dnd:
 GtkTargetEntry dnd_file_drag_types[] = {
@@ -115,9 +118,26 @@ mysql_exec_sql(MYSQL *mysql, const char *create_definition)
 }
 
 
+void
+app_init()
+{
+	//app.fg_colour.pixel = 0;
+	app.dir_tree = NULL;
+	app.statusbar = NULL;
+	app.statusbar2 = NULL;
+	//sprintf(app.search_phrase, "");
+	app.search_phrase[0] = 0;
+	app.search_dir = NULL;
+	app.search_category = NULL;
+}
+
+
 int 
 main(int argc, char* *argv)
 {
+	//make gdb break on g errors:
+    g_log_set_always_fatal( G_LOG_FLAG_RECURSION | G_LOG_FLAG_FATAL | G_LOG_LEVEL_ERROR | G_LOG_LEVEL_CRITICAL | G_LOG_LEVEL_WARNING );
+
 	//init console escape commands:
 	sprintf(white,  "%c[0;39m", 0x1b);
 	sprintf(red,    "%c[1;31m", 0x1b);
@@ -127,7 +147,7 @@ main(int argc, char* *argv)
 	sprintf(err,    "%serror!%s", red, white);
 	sprintf(warn,   "%swarning:%s", yellow, white);
 
-	//app.fg_colour.pixel = 0;
+	app_init();
 
 	printf("%s%s. Version %s%s\n", yellow, app_name, app_version, white);
 
@@ -177,7 +197,7 @@ main(int argc, char* *argv)
 	if(db_connect()){
 		mysql = &app.mysql;
 
-		do_search("");
+		do_search(app.search_phrase, NULL);
 	}
 	//how many rows are in the list?
 
@@ -219,7 +239,7 @@ main(int argc, char* *argv)
 	//g_object_set(cell2, "ypad", 0, NULL);
 
 	//GtkCellRenderer *cell3 /*= app.cell_tags*/ = gtk_cell_renderer_text_new();
-	GtkCellRenderer *cell3 /*= app.cell_tags*/ = gtk_cell_renderer_hyper_text_new();
+	GtkCellRenderer *cell3 = app.cell_tags = gtk_cell_renderer_hyper_text_new();
 	GtkTreeViewColumn *column3 = app.col_tags = gtk_tree_view_column_new_with_attributes("Keywords", cell3, "text", COL_KEYWORDS, NULL);
 	gtk_tree_view_append_column(GTK_TREE_VIEW(view), column3);
 	gtk_tree_view_column_set_sort_column_id(column3, COL_KEYWORDS);
@@ -284,6 +304,7 @@ main(int argc, char* *argv)
 
 	window_new(); 
 	filter_new();
+	tagshow_selector_new();
 	tag_selector_new();
  
 	//gtk_box_pack_start(GTK_BOX(app.vbox), view, EXPAND_TRUE, FILL_TRUE, 0);
@@ -296,6 +317,135 @@ main(int argc, char* *argv)
 	exit(0);
 }
 
+
+gboolean
+window_new()
+{
+/*
+window
++--paned
+   +--dir tree
+   |
+   +--vbox
+      +--search box
+      |  +--label
+      |  +--text entry
+      |
+      +--edit metadata hbox
+      |
+      |--hpaned
+      +--scrollwin
+      |  +--treeview
+      |
+      +--statusbar hbox
+         +--statusbar	
+         +--statusbar2
+
+*/
+	printf("window_new().\n");
+	
+	GtkWidget *window = app.window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+	g_signal_connect(window, "destroy", gtk_main_quit, NULL);
+
+	GtkWidget *vbox = app.vbox = gtk_vbox_new(FALSE, 0);
+	gtk_widget_show(vbox);
+	gtk_container_add(GTK_CONTAINER(window), vbox);
+
+	GtkWidget *hbox_statusbar = gtk_hbox_new(FALSE, 0);
+	gtk_widget_show(hbox_statusbar);
+	gtk_box_pack_end(GTK_BOX(vbox), hbox_statusbar, EXPAND_FALSE, FALSE, 0);
+
+	GtkWidget *hpaned = gtk_hpaned_new();
+	gtk_box_pack_end(GTK_BOX(vbox), hpaned, EXPAND_TRUE, TRUE, 0);
+	gtk_widget_show(hpaned);
+
+	GtkWidget* tree = left_pane();
+	gtk_paned_add1(GTK_PANED(hpaned), tree);
+
+	GtkWidget *scroll = app.scroll = gtk_scrolled_window_new(NULL, NULL);  //adjustments created automatically.
+	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
+	gtk_widget_show(scroll);
+	//gtk_box_pack_end(GTK_BOX(vbox), scroll, EXPAND_TRUE, TRUE, 0);
+	gtk_paned_add2(GTK_PANED(hpaned), scroll);
+
+	GtkWidget *statusbar = app.statusbar = gtk_statusbar_new();
+	printf("statusbar=%p\n", app.statusbar);
+	//gtk_statusbar_set_has_resize_grip(GTK_STATUSBAR(statusbar), TRUE);	//why does give a warning??????
+	gtk_statusbar_set_has_resize_grip(GTK_STATUSBAR(statusbar), FALSE);
+	gtk_box_pack_start(GTK_BOX(hbox_statusbar), statusbar, EXPAND_TRUE, FILL_TRUE, 0);
+	gtk_widget_show(statusbar);
+
+	GtkWidget *statusbar2 = app.statusbar2 = gtk_statusbar_new();
+	//gtk_statusbar_set_has_resize_grip(GTK_STATUSBAR(statusbar), TRUE);	//why does give a warning??????
+	gtk_statusbar_set_has_resize_grip(GTK_STATUSBAR(statusbar2), FALSE);
+	gtk_box_pack_start(GTK_BOX(hbox_statusbar), statusbar2, EXPAND_TRUE, FILL_TRUE, 0);
+	gtk_widget_show(statusbar2);
+
+	g_signal_connect(G_OBJECT(window), "size-allocate", G_CALLBACK(window_on_realise), NULL);
+
+	gtk_widget_show_all(window);
+
+	dnd_setup();
+
+	return TRUE;
+}
+
+
+void
+window_on_realise(GtkWidget *win, gpointer user_data)
+{
+	#define SCROLLBAR_WIDTH_HACK 32
+	static gboolean done = FALSE;
+	if(!app.view->requisition.width) return;
+
+	if(!done){
+		//printf("window_new(): wid=%i\n", app.view->requisition.width);
+		gtk_widget_set_size_request(win, app.view->requisition.width + SCROLLBAR_WIDTH_HACK, app.view->requisition.height);
+		done = TRUE;
+	}else{
+		//now reduce the request to allow the user to manually make the window smaller.
+		gtk_widget_set_size_request(win, 100, 100);
+	}
+
+	colour_get_style_bg(&app.bg_colour, GTK_STATE_NORMAL);
+	colour_get_style_fg(&app.fg_colour, GTK_STATE_NORMAL);
+
+
+	//set column colours:
+	//printf("window_on_realise(): fg_color: %x %x %x\n", app.fg_colour.red, app.fg_colour.green, app.fg_colour.blue);
+	g_object_set(app.cell1, "cell-background-gdk", &app.fg_colour, "cell-background-set", TRUE, NULL);
+	g_object_set(app.cell1, "foreground-gdk", &app.bg_colour, "foreground-set", TRUE, NULL);
+}
+
+
+GtkWidget*
+left_pane()
+{
+	//examples of file navigation: nautilus? (rox has no tree)
+
+	app.dir_tree = g_node_new(NULL);
+
+	db_get_dirs();
+
+	GtkWidget* tree = dh_book_tree_new(app.dir_tree);
+	gtk_widget_show(tree);
+
+	g_signal_connect(tree, "link_selected", G_CALLBACK(tree_on_link_selected), NULL);
+
+	return tree;
+}
+
+
+gboolean
+tree_on_link_selected(GObject *ignored, DhLink *link, gpointer data)
+{
+	if((unsigned int)link<1024){ errprintf("tree_on_link_selected(): bad link arg.\n"); return FALSE; }
+	printf("tree_on_link_selected()...uri=%s\n", link->uri);
+	app.search_dir = link->uri;
+	do_search("", link->uri);
+	return FALSE; //?
+}
+
 gint
 get_mouseover_row()
 {
@@ -303,7 +453,7 @@ get_mouseover_row()
 	gint row_num = -1;
 	GtkTreePath* path;
 	GtkTreeIter iter;
-	if((path = gtk_tree_row_reference_get_path(app.mouseover_row_ref))){
+	if((app.mouseover_row_ref && (path = gtk_tree_row_reference_get_path(app.mouseover_row_ref)))){
 		gtk_tree_model_get_iter(GTK_TREE_MODEL(app.store), &iter, path);
 		gchar* path_str = gtk_tree_model_get_string_from_iter(GTK_TREE_MODEL(app.store), &iter);
 		row_num = atoi(path_str);
@@ -326,6 +476,7 @@ tag_cell_data(GtkTreeViewColumn *tree_column, GtkCellRenderer *cell, GtkTreeMode
 		-usng this fn to do mousovers is slightly difficult.
 		-fn is called when mouse enters or leaves a cell. 
 			However, because of padding (appears to be 1 pixel), it is not always inside the cell area when this callback occurs!!
+			!!!!cell_area.background_area <----try this.
 	*/
 	//printf("tag_cell_data()...\n");
 
@@ -367,7 +518,7 @@ tag_cell_data(GtkTreeViewColumn *tree_column, GtkCellRenderer *cell, GtkTreeMode
 			PangoLayoutLine* layout_line = pango_layout_get_line(layout, line_num);
 			int char_pos;
 			gboolean trailing = 0;
-			printf("tag_cell_data(): line len: %i\n", layout_line->length);
+			//printf("tag_cell_data(): line len: %i\n", layout_line->length);
 			int i;
 			for(i=0;i<layout_line->length;i++){
 				//pango_layout_line_index_to_x(layout_line, i, trailing, &char_pos);
@@ -390,7 +541,6 @@ tag_cell_data(GtkTreeViewColumn *tree_column, GtkCellRenderer *cell, GtkTreeMode
 				char_index += strlen(split[word_index]);
 
 				pango_layout_line_index_to_x(layout_line, char_index, trailing, &char_pos);
-				printf("tag_cell_data(): char_pos=%i mouse_cell_x=%i\n", char_pos/PANGO_SCALE, mouse_cell_x);
 				if(char_pos/PANGO_SCALE > mouse_cell_x){
 					mouse_word = word_index;
 					printf("tag_cell_data(): word=%i\n", word_index);
@@ -511,7 +661,7 @@ scan_dir()
 
 
 void
-do_search(char *search)
+do_search(char *search, char *dir)
 {
 	//fill the display with the results for the given search phrase.
 
@@ -526,6 +676,8 @@ do_search(char *search)
 	unsigned int num_fields;
 	char query[1024];
 	char where[512]="";
+	char category[256]="";
+	//char phrase[256]="";
 	GdkPixbuf* pixbuf  = NULL;
 	GdkPixbuf* iconbuf = NULL;
 	GdkPixdata pixdata;
@@ -534,14 +686,23 @@ do_search(char *search)
 	MYSQL *mysql;
 	mysql=&app.mysql;
 
-	//strmov(query_def, "SELECT * FROM samples"); //where is this defined?
-	strcpy(query, "SELECT * FROM samples ");
-	if(strlen(search)){ 
-		snprintf(where, 512, "WHERE filename LIKE '%%%s%%' OR filedir LIKE '%%%s%%' OR keywords LIKE '%%%s%%'", search, search, search);
-		snprintf(query, 1024, "SELECT * FROM samples  %s", where);
-		printf("%s\n", query);
-	}
+	//lets assume that the search_phrase filter should *always* be in effect.
 
+	//FIXME should we use SET datatype for keywords?
+	if (app.search_category) snprintf(category, 256, "AND keywords LIKE '%%%s%%' ", app.search_category);
+
+	//strmov(query_def, "SELECT * FROM samples"); //where is this defined?
+	//strcpy(query, "SELECT * FROM samples WHERE 1 ");
+	if(strlen(search)){ 
+		snprintf(where, 512, "AND (filename LIKE '%%%s%%' OR filedir LIKE '%%%s%%' OR keywords LIKE '%%%s%%') ", search, search, search); //FIXME duplicate category LIKE's
+		//snprintf(query, 1024, "SELECT * FROM samples WHERE 1 %s", where);
+	}
+	if(dir && strlen(dir)){
+		snprintf(where, 512, "AND filedir='%s' %s ", dir, category);
+	}
+	snprintf(query, 1024, "SELECT * FROM samples WHERE 1 %s", where);
+
+	printf("%s\n", query);
 	if(mysql_exec_sql(mysql, query)==0){ //success
 		
 		//problem with wierd mysql int type:
@@ -554,6 +715,8 @@ do_search(char *search)
 		result = mysql_store_result(mysql);
 		if(result){// there are rows
 			num_fields = mysql_num_fields(result);
+			char keywords[256];
+
 			while((row = mysql_fetch_row(result))){
 				lengths = mysql_fetch_lengths(result); //free? 
 				for(i = 0; i < num_fields; i++){ 
@@ -571,6 +734,7 @@ do_search(char *search)
 					}
 				}
 				format_time(length, row[5]);
+				if(row[MYSQL_KEYWORDS]) snprintf(keywords, 256, "%s", row[MYSQL_KEYWORDS]); else keywords[0] = 0;
 				//if(row[5]==NULL) length     = 0; else length     = atoi(row[5]);
 				if(row[6]==NULL) samplerate = 0; else samplerate = atoi(row[6]); samplerate_format(samplerate_s, samplerate);
 				if(row[7]==NULL) channels   = 0; else channels   = atoi(row[7]);
@@ -585,21 +749,23 @@ do_search(char *search)
 				} else iconbuf = NULL;
 
 				gtk_list_store_append(app.store, &iter); 
-				gtk_list_store_set(app.store, &iter, COL_ICON, iconbuf, COL_IDX, atoi(row[0]), COL_NAME, row[1], COL_FNAME, row[2], COL_KEYWORDS, row[3], 
+				gtk_list_store_set(app.store, &iter, COL_ICON, iconbuf, COL_IDX, atoi(row[0]), COL_NAME, row[1], COL_FNAME, row[2], COL_KEYWORDS, keywords, 
                                                      COL_OVERVIEW, pixbuf, COL_LENGTH, length, COL_SAMPLERATE, samplerate_s, COL_CHANNELS, channels, 
 													 COL_MIMETYPE, row[MYSQL_MIMETYPE], -1);
 			}
 			mysql_free_result(result);
+			statusbar_print(1, "search done");
 		}
 		else{  // mysql_store_result() returned nothing
 		  if(mysql_field_count(mysql) > 0){
 				// mysql_store_result() should have returned data
 				printf( "Error getting records: %s\n", mysql_error(mysql));
 		  }
+		  else printf( "do_search(): Failed to find any records (fieldcount<1): %s\n", mysql_error(mysql));
 		}
 	}
 	else{
-		printf( "Failed to find any records and caused an error: %s\n", mysql_error(mysql));
+		printf( "do_search(): Failed to find any records: %s\n", mysql_error(mysql));
 	}
 }
 
@@ -626,6 +792,18 @@ filter_new()
 	gtk_widget_show(entry);	
 	gtk_box_pack_start(GTK_BOX(hbox), entry, EXPAND_TRUE, TRUE, 0);
 	g_signal_connect(G_OBJECT(entry), "focus-out-event", G_CALLBACK(new_search), NULL);
+
+
+	//second row (metadata edit):
+	GtkWidget* hbox_edit = app.toolbar2 = gtk_hbox_new(FALSE, 0);
+    gtk_widget_show(hbox_edit);
+	gtk_box_pack_start(GTK_BOX(app.vbox), hbox_edit, EXPAND_FALSE, FILL_FALSE, 0);
+
+	label = gtk_label_new("Edit");
+	gtk_misc_set_padding(GTK_MISC(label), 5,5);
+	gtk_widget_show(label);
+	gtk_box_pack_start(GTK_BOX(hbox_edit), label, FALSE, FALSE, 0);
+	
 	
 	return TRUE;
 }
@@ -634,8 +812,47 @@ filter_new()
 gboolean
 tag_selector_new()
 {
+	//the tag _edit_ selector
+
 	//GtkWidget* combo = gtk_combo_box_new_text();
 	GtkWidget* combo = app.category = gtk_combo_box_new_text();
+	GtkComboBox* combo_ = GTK_COMBO_BOX(combo);
+	gtk_combo_box_append_text(combo_, "no categories");
+	gtk_combo_box_append_text(combo_, "drums");
+	gtk_combo_box_append_text(combo_, "perc");
+	gtk_combo_box_append_text(combo_, "keys");
+	gtk_combo_box_append_text(combo_, "strings");
+	gtk_combo_box_append_text(combo_, "fx");
+	gtk_combo_box_append_text(combo_, "impulses");
+	gtk_combo_box_set_active(combo_, 0);
+	gtk_widget_show(combo);	
+	gtk_box_pack_start(GTK_BOX(app.toolbar2), combo, EXPAND_FALSE, FALSE, 0);
+	g_signal_connect(combo, "changed", G_CALLBACK(on_category_changed), NULL);
+	//gtk_combo_box_get_active_text(combo);
+
+	GtkWidget* combo2 = gtk_combo_box_entry_new_text();
+	combo_ = GTK_COMBO_BOX(combo2);
+	gtk_combo_box_append_text(combo_, "no categories");
+	gtk_widget_show(combo2);	
+	gtk_box_pack_start(GTK_BOX(app.toolbar2), combo2, EXPAND_FALSE, FALSE, 0);
+
+	//"set" button:
+	GtkWidget* set = gtk_button_new_with_label("Set");
+	gtk_widget_show(set);	
+	gtk_box_pack_start(GTK_BOX(app.toolbar2), set, EXPAND_FALSE, FALSE, 0);
+	g_signal_connect(set, "clicked", G_CALLBACK(on_set_clicked), NULL);
+
+	return TRUE;
+}
+
+
+gboolean
+tagshow_selector_new()
+{
+	//the view-filter tag-select.
+
+	//GtkWidget* combo = gtk_combo_box_new_text();
+	GtkWidget* combo = app.view_category = gtk_combo_box_new_text();
 	GtkComboBox* combo_ = GTK_COMBO_BOX(combo);
 	gtk_combo_box_append_text(combo_, "all categories");
 	gtk_combo_box_append_text(combo_, "drums");
@@ -645,14 +862,8 @@ tag_selector_new()
 	gtk_combo_box_set_active(combo_, 0);
 	gtk_widget_show(combo);	
 	gtk_box_pack_start(GTK_BOX(app.toolbar), combo, EXPAND_FALSE, FALSE, 0);
-	g_signal_connect(combo, "changed", G_CALLBACK(on_category_changed), NULL);
+	g_signal_connect(combo, "changed", G_CALLBACK(on_view_category_changed), NULL);
 	//gtk_combo_box_get_active_text(combo);
-
-	//"set" button:
-	GtkWidget* set = gtk_button_new_with_label("Set");
-	gtk_widget_show(set);	
-	gtk_box_pack_start(GTK_BOX(app.toolbar), set, EXPAND_FALSE, FALSE, 0);
-	g_signal_connect(set, "clicked", G_CALLBACK(on_set_clicked), NULL);
 
 	return TRUE;
 }
@@ -662,6 +873,20 @@ void
 on_category_changed(GtkComboBox *widget, gpointer user_data)
 {
 	printf("on_category_changed()...\n");
+}
+
+
+void
+on_view_category_changed(GtkComboBox *widget, gpointer user_data)
+{
+	//update the sample list with the new view-category.
+
+	printf("on_view_category_changed()...\n");
+
+	if (app.search_category) g_free(app.search_category);
+	app.search_category = gtk_combo_box_get_active_text(GTK_COMBO_BOX(app.view_category));
+
+	do_search(app.search_phrase, app.search_dir);
 }
 
 
@@ -692,6 +917,7 @@ on_set_clicked(GtkComboBox *widget, gpointer user_data)
 
 			char tags_new[1024];
 			snprintf(tags_new, 1024, "%s %s", tags, category);
+			g_strstrip(tags_new);//trim
 
 			char sql[1024];
 			snprintf(sql, 1024, "UPDATE samples SET keywords='%s' WHERE id=%i", tags_new, id);
@@ -714,90 +940,12 @@ on_set_clicked(GtkComboBox *widget, gpointer user_data)
 
 
 gboolean
-window_new()
-{
-/*
-window
-+--vbox
-   +--search box
-   |  +--label
-   |  +--text entry
-   |
-   +--scrollwin
-   |  +--treeview
-   |
-   +--statusbar hbox
-      +--statusbar	
-
-*/
-	printf("window_new().\n");
-	
-	GtkWidget *window = app.window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-	g_signal_connect(window, "destroy", gtk_main_quit, NULL);
-
-	GtkWidget *vbox = app.vbox = gtk_vbox_new(FALSE, 0);
-	gtk_widget_show(vbox);
-	gtk_container_add(GTK_CONTAINER(window), vbox);
-
-	GtkWidget *hbox_statusbar = gtk_hbox_new(FALSE, 0);
-	gtk_widget_show(hbox_statusbar);
-	gtk_box_pack_end(GTK_BOX(vbox), hbox_statusbar, EXPAND_FALSE, FALSE, 0);
-
-	GtkWidget *scroll = app.scroll = gtk_scrolled_window_new(NULL, NULL);  //adjustments created automatically.
-	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
-	gtk_widget_show(scroll);
-	gtk_box_pack_end(GTK_BOX(vbox), scroll, EXPAND_TRUE, TRUE, 0);
-
-	GtkWidget *statusbar = app.statusbar = gtk_statusbar_new();
-	//gtk_statusbar_set_has_resize_grip(GTK_STATUSBAR(statusbar), TRUE);	//why does give a warning??????
-	gtk_statusbar_set_has_resize_grip(GTK_STATUSBAR(statusbar), FALSE);
-	gtk_box_pack_start(GTK_BOX(hbox_statusbar), statusbar, EXPAND_TRUE, FILL_TRUE, 0);
-	gtk_widget_show(statusbar);
-
-	g_signal_connect(G_OBJECT(window), "size-allocate", G_CALLBACK(window_on_realise), NULL);
-
-	gtk_widget_show_all(window);
-
-	dnd_setup();
-
-	return TRUE;
-}
-
-
-void
-window_on_realise(GtkWidget *win, gpointer user_data)
-{
-	#define SCROLLBAR_WIDTH_HACK 32
-	static gboolean done = FALSE;
-	if(!app.view->requisition.width) return;
-
-	if(!done){
-		//printf("window_new(): wid=%i\n", app.view->requisition.width);
-		gtk_widget_set_size_request(win, app.view->requisition.width + SCROLLBAR_WIDTH_HACK, app.view->requisition.height);
-		done = TRUE;
-	}else{
-		//now reduce the request to allow the user to manually make the window smaller.
-		gtk_widget_set_size_request(win, 100, 100);
-	}
-
-	colour_get_style_bg(&app.bg_colour, GTK_STATE_NORMAL);
-	colour_get_style_fg(&app.fg_colour, GTK_STATE_NORMAL);
-
-
-	//set column colours:
-	//printf("window_on_realise(): fg_color: %x %x %x\n", app.fg_colour.red, app.fg_colour.green, app.fg_colour.blue);
-	g_object_set(app.cell1, "cell-background-gdk", &app.fg_colour, "cell-background-set", TRUE, NULL);
-	g_object_set(app.cell1, "foreground-gdk", &app.bg_colour, "foreground-set", TRUE, NULL);
-}
-
-
-gboolean
 db_connect()
 {
 	MYSQL *mysql;
 
 	if(mysql_init(&(app.mysql))==NULL){
-		printf("Failed to initate MySQL connection.\n");
+		printf("Failed to initiate MySQL connection.\n");
 		exit(1);
 	}
 	printf("MySQL Client Version is %s\n", mysql_get_client_info());
@@ -828,14 +976,65 @@ db_insert(char *qry)
 	MYSQL *mysql = &app.mysql;
 	int id = 0;
 
-	if(mysql_exec_sql(mysql, qry)==0)/*success*/{
+	if(mysql_exec_sql(mysql, qry)==0){
 		printf("db_insert(): ok!\n");
 		id = mysql_insert_id(mysql);
 	}else{
-		printf("db_insert(): not ok...\n");
+		errprintf("db_insert(): not ok...\n");
 		return 0;
 	}
 	return id;
+}
+
+
+void
+db_get_dirs()
+{
+	if (!app.dir_tree) { errprintf("db_get_dirs(): dir_tree not initialised.\n"); return; }
+
+	char qry[1024];
+	MYSQL *mysql;
+	mysql=&app.mysql;
+	MYSQL_RES *result;
+	MYSQL_ROW row;
+
+	snprintf(qry, 1024, "SELECT DISTINCT filedir FROM samples ORDER BY filedir");
+
+	if(mysql_exec_sql(mysql, qry)==0){
+		result = mysql_store_result(mysql);
+		if(result){// there are rows
+			DhLink* link = NULL;
+			GNode* leaf = NULL;
+			char uri[256];
+			gint position;
+
+			//snprintf(uri, 256, "%s", "all directories");
+			link = dh_link_new(DH_LINK_TYPE_PAGE, "all directories", "");
+			leaf = g_node_new(link);
+			g_node_insert(app.dir_tree, -1, leaf);
+
+			while((row = mysql_fetch_row(result))){
+
+				printf("db_get_dirs(): dir=%s\n", row[0]);
+				snprintf(uri, 256, "%s", row[0]);
+				link = dh_link_new(DH_LINK_TYPE_PAGE, row[0], uri);
+				leaf = g_node_new(link);
+
+				position = -1;//end
+				g_node_insert(app.dir_tree, position, leaf);
+			}
+			mysql_free_result(result);
+		}
+		else{  // mysql_store_result() returned nothing
+		  if(mysql_field_count(mysql) > 0){
+				// mysql_store_result() should have returned data
+				printf( "Error getting records: %s\n", mysql_error(mysql));
+		  }
+		}
+	}
+	else{
+		printf( "db_get_dirs(): failed to find any records: %s\n", mysql_error(mysql));
+	}
 }
 
 
@@ -847,7 +1046,7 @@ new_search(GtkWidget *widget, gpointer userdata)
 
 	const gchar* text = gtk_entry_get_text(GTK_ENTRY(app.search));
 	
-	do_search((gchar*)text);
+	do_search((gchar*)text, NULL);
 	return FALSE;
 }
 
@@ -1198,7 +1397,7 @@ update_row(GtkWidget *widget, gpointer user_data)
 
 	  		MIME_type* mime_type = mime_type_lookup(mimetype);
 			type_to_icon(mime_type);
-			if ( mime_type->image == NULL ) printf("do_search(): no icon.\n");
+			if ( mime_type->image == NULL ) printf("update_row(): no icon.\n");
 			iconbuf = mime_type->image->sm_pixbuf;
 
 		}else{
@@ -1222,6 +1421,36 @@ update_row(GtkWidget *widget, gpointer user_data)
 void
 edit_row(GtkWidget *widget, gpointer user_data)
 {
+	//what exactly is this supposed to be "editing"? any cell mouse happens to be over? currently it looks like only the tags cell.	
+	printf("edit_row()...\n");
+
+	GtkTreeSelection* selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(app.view));
+	if(!selection){ errprintf("edit_row(): cannot get selection.\n");/* return;*/ }
+	GtkTreeModel *model = GTK_TREE_MODEL(app.store);
+	GList* selectionlist = gtk_tree_selection_get_selected_rows(selection, &(model));
+	if(!selectionlist){ errprintf("edit_row(): no files selected?\n"); return; }
+
+	GtkTreePath *treepath;
+	if((treepath = g_list_nth_data(selectionlist, 0))){
+		GtkTreeIter iter;
+		if(gtk_tree_model_get_iter(GTK_TREE_MODEL(app.store), &iter, treepath)){
+			gchar* path_str = gtk_tree_model_get_string_from_iter(GTK_TREE_MODEL(app.store), &iter);
+			printf("edit_row(): path=%s\n", path_str);
+
+			//segfault!
+			//FIXME is this the correct fn?
+			GtkCellEditable* editable = gtk_cell_renderer_start_editing(app.cell_tags, 
+												 NULL, //GdkEvent *event,
+												 app.view,
+												 path_str,  //a string representation of GtkTreePath
+												 NULL, //GdkRectangle *background_area,
+												 NULL, //GdkRectangle *cell_area,
+												 GTK_CELL_RENDERER_SELECTED);
+		} else errprintf("edit_row(): cannot get iter.\n");
+		//free path_str ??
+		gtk_tree_path_free(treepath);
+	}
+	g_list_free(selectionlist);
 }
 
 
@@ -1310,7 +1539,7 @@ on_row_clicked(GtkWidget *widget, GdkEventButton *event, gpointer user_data)
 					gtk_tree_model_get(model, &iter, /*COL_FNAME, &fpath, COL_NAME, &fname, */COL_KEYWORDS, &tags, COL_IDX, &id, -1);
 
 					gtk_entry_set_text(GTK_ENTRY(app.search), tags);
-					do_search(tags);
+					do_search(tags, NULL);
 				}
 			}
 		}

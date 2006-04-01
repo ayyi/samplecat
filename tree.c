@@ -29,7 +29,7 @@
 #include <gtk/gtktreestore.h>
 
 //#include "dh-marshal.h"
-#include "dh-book-tree.h"
+#include "tree.h"
 #include "dh-link.h"
 
 #define d(x)
@@ -167,9 +167,9 @@ book_tree_finalize (GObject *object)
 	if (priv) {
 		g_object_unref (priv->store);
 
-		g_object_unref (priv->pixbufs->pixbuf_opened);
-		g_object_unref (priv->pixbufs->pixbuf_closed);
-		g_object_unref (priv->pixbufs->pixbuf_helpdoc);
+		if (priv->pixbufs->pixbuf_opened) g_object_unref (priv->pixbufs->pixbuf_opened);
+		if (priv->pixbufs->pixbuf_closed) g_object_unref (priv->pixbufs->pixbuf_closed);
+		if (priv->pixbufs->pixbuf_helpdoc) g_object_unref (priv->pixbufs->pixbuf_helpdoc);
 		g_free (priv->pixbufs);
 			
 		g_free (priv);

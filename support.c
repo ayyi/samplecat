@@ -11,6 +11,7 @@
 #include <libart_lgpl/libart.h>
 #include <libgnomevfs/gnome-vfs.h>
 
+#include "dh-link.h"
 #include "main.h"
 #include "support.h"
 //#include "gnome-vfs-uri.h"
@@ -517,13 +518,14 @@ statusbar_print(int n, char *s)
   else if(n==2) statusbar = app.statusbar2;
   else {errprintf("statusbar_print(): bad statusbar index (%i)\n", n); n=1;}
 
-  if((int)statusbar<1024) return; //window may not be open.
-  //printf("statusbar_print(): statusbar=%p\n", statusbar);
+  if((unsigned int)statusbar<1024) return; //window may not be open.
+  printf("statusbar_print(): statusbar=%p\n", statusbar);
 
   gchar buff[128];
-  gint cid = gtk_statusbar_get_context_id(GTK_STATUSBAR(statusbar), "Song");
+  gint cid = gtk_statusbar_get_context_id(GTK_STATUSBAR(statusbar), "dummy");
+  printf("statusbar_print(): statusbar=%p cid=%d\n", statusbar, cid);
   snprintf(buff, 128, "  %s", s); //experimental padding.
-  //printf("statusbar_print(): n=%i cid=%i '%s'\n", n, cid, buff);
+  printf("statusbar_print(): n=%i cid=%i '%s'\n", n, cid, buff);
   gtk_statusbar_push(GTK_STATUSBAR(statusbar), cid, buff);
 }
 
