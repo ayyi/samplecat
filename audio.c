@@ -17,6 +17,7 @@
 
 #include "mysql/mysql.h"
 #include "dh-link.h"
+#include <FLAC/all.h>
 #include "main.h"
 #include "support.h"
 #include "audio.h"
@@ -194,5 +195,125 @@ playback_free()
 	free(buffer);
 }
 
+
+//--------------------------------------------------------------------------------------------
+
+
+gboolean
+get_file_info_flac(sample* sample)
+{
+	char *filename = sample->filename;
+
+	FLAC__StreamMetadata streaminfo;
+	if(!FLAC__metadata_get_streaminfo(filename, &streaminfo)) {
+		errprintf("get_file_info_flac(): can't open file or get STREAMINFO block\n", filename);
+		return false;
+	}
+
+	sample->sample_rate  = streaminfo.data.stream_info.sample_rate;
+	sample->channels     = streaminfo.data.stream_info.channels;
+	sample->bitdepth     = streaminfo.data.stream_info.bits_per_sample;
+
+	int total_samples    = streaminfo.data.stream_info.total_samples;
+	sample->length       = (total_samples * 1000) / sample->sample_rate;
+
+	int bits_per_sample = sample->bitdepth;
+	if(bits_per_sample < FLAC__MIN_BITS_PER_SAMPLE || bits_per_sample > FLAC__MAX_BITS_PER_SAMPLE) warnprintf("get_file_info_flac() bitdepth=%i\n", bits_per_sample);
+
+	if(sample->channels<1 || sample->channels>100){ printf("get_file_info_flac(): bad channel count: %i\n", sample->channels); return FALSE; }
+
+	return TRUE;
+}
+
+
+void
+flac_decode(char* filename)
+{
+	FLAC__FileDecoder *flacstream = FLAC__file_decoder_new();
+	if(FLAC__file_decoder_init(flacstream) == FLAC__FILE_DECODER_OK){
+
+		FLAC__file_decoder_set_filename(flacstream, filename);
+		FLAC__file_decoder_set_error_callback(flacstream, flac_error_cb);
+
+		FLAC__file_decoder_set_write_callback(flacstream, flac_write_cb);
+
+		if(!FLAC__file_decoder_process_until_end_of_file(flacstream)){
+			errprintf("flac_decode(): process error. state=\n", FLAC__file_decoder_get_state(flacstream));
+		}
+
+		FLAC__file_decoder_finish(flacstream);
+		FLAC__file_decoder_delete(flacstream);
+	}
+	else errprintf("flac_decode(): failed to open stream.\n");
+}
+
+
+FLAC__StreamDecoderWriteStatus
+flac_write_cb(const FLAC__FileDecoder *dec, const FLAC__Frame *frame, const FLAC__int32 * const buf[], void *data)
+{
+	//FIXME do something with the data!
+
+	return 0;
+}
+
+
+void
+flac_error_cb(const FLAC__FileDecoder *dec, FLAC__StreamDecoderErrorStatus status, void *data)
+{
+    errprintf("flac_error_cb(): flac error handler called!\n");
+}
+
+//--------------------------------------------------------------------------------------------
+
+//seekable flac - lets get to this later!
+
+void
+flac_decode_seekable(char* filename)
+{
+	FLAC__SeekableStreamDecoder* flacstream = FLAC__seekable_stream_decoder_new();
+	if(FLAC__seekable_stream_decoder_init(flacstream) == FLAC__SEEKABLE_STREAM_DECODER_OK){
+
+		//FLAC__file_decoder_set_filename(flacstream, filename);
+		FLAC__file_decoder_set_error_callback(flacstream, flac_error_cb);
+
+		FLAC__seekable_stream_decoder_set_read_callback(flacstream,	(FLAC__SeekableStreamDecoderReadCallback)flac_read_cb); //can we use the default?
+		FLAC__file_decoder_set_write_callback(flacstream, flac_write_cb);
+
+		if(!FLAC__stream_decoder_process_until_end_of_stream(flacstream)){
+			errprintf("flac_decode(): process error. state=\n", FLAC__stream_decoder_get_state(flacstream));
+		}
+
+		FLAC__seekable_stream_decoder_finish(flacstream);
+		FLAC__seekable_stream_decoder_delete(flacstream);
+	}
+	else errprintf("flac_decode(): failed to open stream.\n");
+}
+
+
+FLAC__StreamDecoderReadStatus
+flac_read_cb(const FLAC__StreamDecoder *decoder, FLAC__byte buffer[], unsigned *bytes, void *client_data)
+{
+	//The address of the buffer to be filled is supplied, along with the number of bytes the buffer can hold
+	/*
+	-decoder      The decoder instance calling the callback.
+	-buffer       A pointer to a location for the callee to store data to be decoded.
+	-bytes        A pointer to the size of the buffer. On entry to the callback, it contains the maximum number of bytes that may be stored in buffer. The callee must set it to the actual number of bytes stored (0 in case of error or end-of-stream) before returning.
+	-client_data  The callee's client data set through FLAC__stream_decoder_set_client_data().
+
+	return value should be one of:
+		-FLAC__STREAM_DECODER_READ_STATUS_CONTINUE      The read was OK and decoding can continue.
+		-FLAC__STREAM_DECODER_READ_STATUS_END_OF_STREAM The read was attempted at the end of the stream.
+		-FLAC__STREAM_DECODER_READ_STATUS_ABORT         An unrecoverable error occurred. The decoder will return from the process call.
+
+	*/
+  return 0;
+}
+
+
+FLAC__StreamDecoderWriteStatus
+flac_write_cb_seekable(const FLAC__FileDecoder *dec, const FLAC__Frame *frame, const FLAC__int32 * const buf[], void *data)
+{
+  return 0;
+}
 
 
