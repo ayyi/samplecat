@@ -61,12 +61,19 @@ typedef struct _sample
 	int         id;			//database index.
 	GtkTreeRowReference* row_ref;
 	char        filename[256]; //full path.
+	char        filetype;   //see enum.
 	int         sample_rate;
 	int         length;     // milliseconds
 	int         channels;
+	int         bitdepth;
 	GdkPixbuf*  pixbuf;
 
 } sample;
+
+enum {
+	TYPE_SNDFILE=1,
+	TYPE_FLAC,
+};
 
 gboolean	window_new();
 GtkWidget*  left_pane();
@@ -94,6 +101,7 @@ void        sample_free(sample* sample);
 
 void        add_file(char *uri);
 gboolean    get_file_info(sample* sample);
+gboolean    get_file_info_sndfile(sample* sample);
 gboolean    on_overview_done(gpointer sample);
 
 void        db_update_pixbuf(sample *sample);

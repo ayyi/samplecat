@@ -22,6 +22,7 @@
 #include <m_string.h>    // for strmov
 #include <sndfile.h>
 #include <gtk/gtk.h>
+#include <FLAC/all.h>
 
 #include <gdk-pixbuf/gdk-pixdata.h>
 #include <libart_lgpl/libart.h>
@@ -781,10 +782,10 @@ filter_new()
     gtk_widget_show(hbox);
 	gtk_box_pack_start(GTK_BOX(app.vbox), hbox, EXPAND_FALSE, FILL_FALSE, 0);
 
-	GtkWidget* label = gtk_label_new("Search");
-	gtk_misc_set_padding(GTK_MISC(label), 5,5);
-	gtk_widget_show(label);
-	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
+	GtkWidget* label1 = gtk_label_new("Search");
+	gtk_misc_set_padding(GTK_MISC(label1), 5,5);
+	gtk_widget_show(label1);
+	gtk_box_pack_start(GTK_BOX(hbox), label1, FALSE, FALSE, 0);
 	
 	GtkWidget *entry = app.search = gtk_entry_new();
 	gtk_entry_set_max_length(GTK_ENTRY(entry), 64);
@@ -799,11 +800,20 @@ filter_new()
     gtk_widget_show(hbox_edit);
 	gtk_box_pack_start(GTK_BOX(app.vbox), hbox_edit, EXPAND_FALSE, FILL_FALSE, 0);
 
-	label = gtk_label_new("Edit");
-	gtk_misc_set_padding(GTK_MISC(label), 5,5);
-	gtk_widget_show(label);
-	gtk_box_pack_start(GTK_BOX(hbox_edit), label, FALSE, FALSE, 0);
-	
+	//left align the label:
+	GtkWidget* align1 = gtk_alignment_new(0.0, 0.5, 0.0, 0.0);
+	gtk_widget_show(align1);
+	gtk_box_pack_start(GTK_BOX(hbox_edit), align1, EXPAND_FALSE, FILL_FALSE, 0);
+
+	GtkWidget* label2 = gtk_label_new("Edit");
+	gtk_misc_set_padding(GTK_MISC(label2), 5,5);
+	gtk_widget_show(label2);
+	gtk_container_add(GTK_CONTAINER(align1), label2);	
+
+	//make the two lhs labels the same width:
+	GtkSizeGroup* size_group = gtk_size_group_new(GTK_SIZE_GROUP_HORIZONTAL);
+	gtk_size_group_add_widget(size_group, label1);
+	gtk_size_group_add_widget(size_group, align1);
 	
 	return TRUE;
 }
@@ -833,11 +843,17 @@ tag_selector_new()
 	GtkWidget* combo2 = gtk_combo_box_entry_new_text();
 	combo_ = GTK_COMBO_BOX(combo2);
 	gtk_combo_box_append_text(combo_, "no categories");
+	gtk_combo_box_append_text(combo_, "drums");
+	gtk_combo_box_append_text(combo_, "perc");
+	gtk_combo_box_append_text(combo_, "keys");
+	gtk_combo_box_append_text(combo_, "strings");
+	gtk_combo_box_append_text(combo_, "fx");
+	gtk_combo_box_append_text(combo_, "impulses");
 	gtk_widget_show(combo2);	
 	gtk_box_pack_start(GTK_BOX(app.toolbar2), combo2, EXPAND_FALSE, FALSE, 0);
 
 	//"set" button:
-	GtkWidget* set = gtk_button_new_with_label("Set");
+	GtkWidget* set = gtk_button_new_with_label("Set Category");
 	gtk_widget_show(set);	
 	gtk_box_pack_start(GTK_BOX(app.toolbar2), set, EXPAND_FALSE, FALSE, 0);
 	g_signal_connect(set, "clicked", G_CALLBACK(on_set_clicked), NULL);
@@ -1107,6 +1123,7 @@ sample_new()
   sample* sample;
   sample = malloc(sizeof(*sample));
   sample->id = 0;
+  sample->filetype = 0;
   sample->pixbuf = NULL;
   return sample;
 }
@@ -1141,7 +1158,9 @@ add_file(char *uri)
   MIME_type* mime_type = type_from_path(filename);
   char mime_string[64];
   snprintf(mime_string, 64, "%s/%s", mime_type->media_type, mime_type->subtype);
-  printf("add_file() mimetype: %s\n", mime_string);
+
+  if(!strcmp(mime_string, "audio/x-flac")) sample->filetype = TYPE_FLAC;
+  printf("add_file() mimetype: %s type=%i\n", mime_string, sample->filetype);
 
   /* better way to do the string appending (or use glib?):
   tmppos = strmov(tmp, "INSERT INTO test_blob (a_blob) VALUES ('");
@@ -1199,9 +1218,16 @@ add_file(char *uri)
 }
 
 
-
 gboolean
 get_file_info(sample* sample)
+{
+  if(sample->filetype==TYPE_FLAC) return get_file_info_flac(sample);
+  else                            return get_file_info_sndfile(sample);
+}
+
+
+gboolean
+get_file_info_sndfile(sample* sample)
 {
 	char *filename = sample->filename;
 
@@ -1210,7 +1236,7 @@ get_file_info(sample* sample)
 	sfinfo.format  = 0;
 
 	if(!(sffile = sf_open(filename, SFM_READ, &sfinfo))){
-		printf("get_file_info(): not able to open input file %s.\n", filename);
+		printf("get_file_info_sndfile(): not able to open input file %s.\n", filename);
 		puts(sf_strerror(NULL));    // print the error message from libsndfile:
 		return FALSE;
 	}
@@ -1224,7 +1250,7 @@ get_file_info(sample* sample)
 	sample->sample_rate = sfinfo.samplerate;
 	sample->length      = (sfinfo.frames * 1000) / sfinfo.samplerate;
 
-	if(sample->channels<1 || sample->channels>100){ printf("get_file_info(): bad channel count: %i\n", sample->channels); return FALSE; }
+	if(sample->channels<1 || sample->channels>100){ printf("get_file_info_sndfile(): bad channel count: %i\n", sample->channels); return FALSE; }
 	if(sf_close(sffile)) printf("error! bad file close.\n");
 
 	//printf("get_file_info(): failed to get info.\n"); return FALSE;
