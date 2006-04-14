@@ -7,6 +7,7 @@
 //#include <my_global.h>   // for strmov
 //#include <m_string.h>    // for strmov
 #include <sndfile.h>
+#include <jack/jack.h>
 #include <gtk/gtk.h>
 
 #include <gdk-pixbuf/gdk-pixdata.h>
@@ -186,7 +187,7 @@ make_overview_flac(sample* sample)
   //jack_ringbuffer_t* rb = jack_ringbuffer_create(rb_size);
 
   _decoder_session session;
-  flac_sesssion_init(&session);
+  flac_sesssion_init(&session, sample);
   /*
   session.sample = sample;
   session.sample_num = 0;

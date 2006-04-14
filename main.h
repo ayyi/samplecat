@@ -6,6 +6,9 @@ char warn[32];
 #define FILL_TRUE 1
 #define FILL_FALSE 0
 
+#define OVERVIEW_WIDTH 150
+#define OVERVIEW_HEIGHT 20
+
 //dnd:
 enum {
   TARGET_APP_COLLECTION_MEMBER,
@@ -19,6 +22,8 @@ struct _app
 	char      search_phrase[256];
 	char*     search_dir;
 	gchar*    search_category;
+
+	GKeyFile* key_file;   //config file data.
 
 	int       playing_id; //database index of the file that is currently playing, or zero if none playing.
 
@@ -58,15 +63,17 @@ struct _app
 
 typedef struct _sample
 {
-	int         id;			//database index.
+	int          id;            //database index.
 	GtkTreeRowReference* row_ref;
-	char        filename[256]; //full path.
-	char        filetype;   //see enum.
-	int         sample_rate;
-	int         length;     // milliseconds
-	int         channels;
-	int         bitdepth;
-	GdkPixbuf*  pixbuf;
+	char         filename[256]; //full path.
+	char         filetype;      //see enum.
+	unsigned int sample_rate;
+	unsigned int length;        //milliseconds
+	unsigned int frames;        //total number of frames (eg a frame for 16bit stereo is 4 bytes).
+	unsigned int channels;
+	int          bitdepth;
+	short        minmax[OVERVIEW_WIDTH]; //peak data before it is copied onto the pixbuf.
+	GdkPixbuf*   pixbuf;
 
 } sample;
 
@@ -97,6 +104,7 @@ gint        drag_received(GtkWidget *widget, GdkDragContext *drag_context, gint 
                           GtkSelectionData *data, guint info, guint time, gpointer user_data);
 
 sample*     sample_new();
+sample*     sample_new_from_model(GtkTreePath *path);
 void        sample_free(sample* sample);
 
 void        add_file(char *uri);
@@ -121,3 +129,9 @@ gboolean    treeview_get_tags_cell(GtkTreeView *view, guint x, guint y, GtkCellR
 gint        get_mouseover_row();
 void        tag_cell_data(GtkTreeViewColumn *tree_column, GtkCellRenderer *cell, GtkTreeModel *tree_model, GtkTreeIter *iter, gpointer data);
 gboolean    tree_on_link_selected(GObject *ignored, DhLink *link, gpointer data);
+
+void        on_entry_activate(GtkEntry *entry, gpointer user_data);
+
+gboolean    load_config();
+void        on_quit(GtkMenuItem *menuitem, gpointer user_data);
+

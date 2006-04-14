@@ -1,9 +1,9 @@
 
 PACKAGE_CFLAGS = `pkg-config gtk+-2.0 --cflags` -I/usr/X11R6/include -I/usr/include/freetype2 `pkg-config libxml --cflags` `pkg-config libart --cflags` -I/usr/include/mysql -I/usr/include/gnome-vfs-2.0
-PACKAGE_LIBS = -Wall,--export-dynamic `pkg-config gtk+-2.0 --libs` -lgdk-x11-2.0 -latk-1.0 -ldl -lmysqlclient -lgnomevfs-2 
+PACKAGE_LIBS = -Wall,--export-dynamic `pkg-config gtk+-2.0 --libs` -lgdk-x11-2.0 -latk-1.0 -ldl -lmysqlclient -lgnomevfs-2 -lFLAC 
 MYSQL = -L/usr/local/lib/mysql
 
-OBJECTS = audio.o overview.o support.o pixmaps.o type.o diritem.o cellrenderer_hypertext.o xdgmime.o xdgmimecache.o xdgmimemagic.o xdgmimealias.o xdgmimeparent.o xdgmimeglob.o xdgmimeint.o
+OBJECTS = audio.o overview.o support.o pixmaps.o type.o diritem.o cellrenderer_hypertext.o tree.o dh-link.o xdgmime.o xdgmimecache.o xdgmimemagic.o xdgmimealias.o xdgmimeparent.o xdgmimeglob.o xdgmimeint.o
 
 all: $(OBJECTS) 
 	gcc -Wall main.c $(OBJECTS) -o samplecat $(PACKAGE_CFLAGS) $(PACKAGE_LIBS) $(MYSQL) `pkg-config jack --cflags --libs` `pkg-config sndfile --cflags --libs` `pkg-config libart --cflags --libs`
@@ -25,6 +25,12 @@ type.o: type.c type.h
 
 diritem.o: diritem.c diritem.h
 	gcc -Wall diritem.c -c $(PACKAGE_CFLAGS)
+
+dh-link.o: dh-link.c dh-link.h
+	gcc -Wall dh-link.c -c $(PACKAGE_CFLAGS)
+
+tree.o: tree.c tree.h main.h
+	gcc -Wall tree.c -c $(PACKAGE_CFLAGS)
 
 xdgmime.o: xdgmime.h
 	gcc -Wall xdgmime.c -c $(PACKAGE_CFLAGS)

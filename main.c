@@ -21,12 +21,14 @@
 #include <my_global.h>   // for strmov
 #include <m_string.h>    // for strmov
 #include <sndfile.h>
+#include <jack/jack.h>
 #include <gtk/gtk.h>
 #include <FLAC/all.h>
 
 #include <gdk-pixbuf/gdk-pixdata.h>
 #include <libart_lgpl/libart.h>
 #include <libgnomevfs/gnome-vfs.h>
+#include <jack/ringbuffer.h>
 
 #include "mysql/mysql.h"
 #include "dh-link.h"
@@ -151,6 +153,8 @@ main(int argc, char* *argv)
 	app_init();
 
 	printf("%s%s. Version %s%s\n", yellow, app_name, app_version, white);
+
+	load_config();
 
 	gtk_init(&argc, &argv);
 	type_init();
@@ -346,7 +350,8 @@ window
 	printf("window_new().\n");
 	
 	GtkWidget *window = app.window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-	g_signal_connect(window, "destroy", gtk_main_quit, NULL);
+	g_signal_connect (G_OBJECT(window), "delete_event", G_CALLBACK(on_quit), NULL);
+	//g_signal_connect(window, "destroy", gtk_main_quit, NULL);
 
 	GtkWidget *vbox = app.vbox = gtk_vbox_new(FALSE, 0);
 	gtk_widget_show(vbox);
@@ -370,7 +375,7 @@ window
 	gtk_paned_add2(GTK_PANED(hpaned), scroll);
 
 	GtkWidget *statusbar = app.statusbar = gtk_statusbar_new();
-	printf("statusbar=%p\n", app.statusbar);
+	//printf("statusbar=%p\n", app.statusbar);
 	//gtk_statusbar_set_has_resize_grip(GTK_STATUSBAR(statusbar), TRUE);	//why does give a warning??????
 	gtk_statusbar_set_has_resize_grip(GTK_STATUSBAR(statusbar), FALSE);
 	gtk_box_pack_start(GTK_BOX(hbox_statusbar), statusbar, EXPAND_TRUE, FILL_TRUE, 0);
@@ -620,14 +625,6 @@ tag_cell_data(GtkTreeViewColumn *tree_column, GtkCellRenderer *cell, GtkTreeMode
 	*/
 }
 
-void
-on_quit()
-{
-	MYSQL *mysql;
-	mysql=&app.mysql;
-  	mysql_close(mysql);
-}
-
 
 void
 scan_dir()
@@ -793,7 +790,10 @@ filter_new()
 	gtk_widget_show(entry);	
 	gtk_box_pack_start(GTK_BOX(hbox), entry, EXPAND_TRUE, TRUE, 0);
 	g_signal_connect(G_OBJECT(entry), "focus-out-event", G_CALLBACK(new_search), NULL);
-
+	//this is supposed to enable REUTRN to enter the text - does it work?
+	gtk_entry_set_activates_default(GTK_ENTRY(entry), TRUE);
+	//g_signal_connect(G_OBJECT(entry), "activate", G_CALLBACK(on_entry_activate), NULL);
+	g_signal_connect(G_OBJECT(entry), "activate", G_CALLBACK(new_search), NULL);
 
 	//second row (metadata edit):
 	GtkWidget* hbox_edit = app.toolbar2 = gtk_hbox_new(FALSE, 0);
@@ -1031,7 +1031,7 @@ db_get_dirs()
 
 			while((row = mysql_fetch_row(result))){
 
-				printf("db_get_dirs(): dir=%s\n", row[0]);
+				//printf("db_get_dirs(): dir=%s\n", row[0]);
 				snprintf(uri, 256, "%s", row[0]);
 				link = dh_link_new(DH_LINK_TYPE_PAGE, row[0], uri);
 				leaf = g_node_new(link);
@@ -1124,6 +1124,26 @@ sample_new()
   sample = malloc(sizeof(*sample));
   sample->id = 0;
   sample->filetype = 0;
+  sample->pixbuf = NULL;
+  return sample;
+}
+
+
+sample*
+sample_new_from_model(GtkTreePath *path)
+{
+  GtkTreeIter iter;
+  GtkTreeModel *model = gtk_tree_view_get_model(GTK_TREE_VIEW(app.view));
+  gtk_tree_model_get_iter(model, &iter, path);
+  gchar *fpath, *fname, *mimetype;
+  int id;
+  gtk_tree_model_get(model, &iter, COL_FNAME, &fpath, COL_NAME, &fname, COL_IDX, &id, COL_MIMETYPE, &mimetype, -1);
+
+
+  sample* sample = malloc(sizeof(*sample));
+  sample->id = id;
+  snprintf(sample->filename, 256, "%s/%s", fpath, fname);
+  if(!strcmp(mimetype, "audio/x-flac")) sample->filetype = TYPE_FLAC; else sample->filetype = TYPE_SNDFILE; 
   sample->pixbuf = NULL;
   return sample;
 }
@@ -1543,15 +1563,20 @@ on_row_clicked(GtkWidget *widget, GdkEventButton *event, gpointer user_data)
 				//overview column:
 				printf("on_row_clicked() column rect: %i %i %i %i\n", rect.x, rect.y, rect.width, rect.height);
 
+				/*
 				GtkTreeIter iter;
 				GtkTreeModel *model = gtk_tree_view_get_model(GTK_TREE_VIEW(app.view));
 				gtk_tree_model_get_iter(model, &iter, path);
-				gchar *fpath, *fname;
+				gchar *fpath, *fname, *mimetype;
 				int id;
-				gtk_tree_model_get(model, &iter, COL_FNAME, &fpath, COL_NAME, &fname, COL_IDX, &id, -1);
+				gtk_tree_model_get(model, &iter, COL_FNAME, &fpath, COL_NAME, &fname, COL_IDX, &id, COL_MIMETYPE, &mimetype, -1);
 
 				char file[256]; snprintf(file, 256, "%s/%s", fpath, fname);
-				if(id != app.playing_id) playback_init(file, id);
+				*/
+
+				sample* sample = sample_new_from_model(path);
+
+				if(sample->id != app.playing_id) playback_init(sample);
 				else playback_stop();
 			}else{
 				gtk_tree_view_get_cell_area(treeview, path, app.col_tags, &rect);
@@ -1828,6 +1853,56 @@ treeview_get_tags_cell(GtkTreeView *view, guint x, guint y, GtkCellRenderer **ce
 	g_list_free(cells);
 	printf("not found in column. cell_height=%i\n", cell_rect.height);
 	return FALSE; // not found
+}
+
+
+void
+on_entry_activate(GtkEntry *entry, gpointer user_data)
+{
+	printf("on_entry_activate(): entry activated!\n");
+}
+
+
+gboolean
+load_config()
+{
+	GError *error = NULL;
+	app.key_file = g_key_file_new();
+	char config_file[256];
+	snprintf(config_file, 256, "%s/.samplecat", g_get_home_dir());
+	if(g_key_file_load_from_file(app.key_file, config_file, G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS, &error)){
+		printf("ini file loaded.\n");
+	}else{
+		printf("unable to load config file: %s\n", error->message);
+		g_error_free(error);
+		error = NULL;
+		return FALSE;
+	}
+	return TRUE;
+}
+
+
+void
+on_quit(GtkMenuItem *menuitem, gpointer user_data)
+{
+    printf("on_quit()...\n");
+	//FIXME save ini file.
+	//save?: 
+	GError *error = NULL;
+	gsize length;
+	gchar* string = g_key_file_to_data(app.key_file, &length, &error);
+	if(error){
+		printf("on_quit(): error saving config file: %s\n", error->message);
+		g_error_free(error);
+	}
+	printf(string);
+
+	MYSQL *mysql;
+	mysql=&app.mysql;
+  	mysql_close(mysql);
+
+	gtk_main_quit();
+    exit(0);
 }
 
 
