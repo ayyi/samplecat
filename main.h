@@ -90,7 +90,10 @@ gboolean    tag_selector_new();
 gboolean    tagshow_selector_new();
 void        on_view_category_changed(GtkComboBox *widget, gpointer user_data);
 void        on_category_changed(GtkComboBox *widget, gpointer user_data);
-void        on_set_clicked(GtkComboBox *widget, gpointer user_data);
+void        on_category_set_clicked(GtkComboBox *widget, gpointer user_data);
+gboolean    row_set_tags(GtkTreeIter* iter, int id, char* tags_new);
+gboolean    row_clear_tags(GtkTreeIter* iter, int id);
+
 
 gboolean	db_connect();
 void        do_search(char *search, char *dir);
@@ -123,6 +126,7 @@ void        edit_row  (GtkWidget *widget, gpointer user_data);
 GtkWidget*  make_context_menu();
 gboolean    on_row_clicked(GtkWidget *widget, GdkEventButton *event, gpointer user_data);
 gboolean    treeview_on_motion(GtkWidget *widget, GdkEventMotion *event, gpointer user_data);
+void        treeview_block_motion_handler();
 gboolean    treeview_get_cell(GtkTreeView *view, guint x, guint y, GtkCellRenderer **cell);
 gboolean    treeview_get_tags_cell(GtkTreeView *view, guint x, guint y, GtkCellRenderer **cell);
 
@@ -135,3 +139,4 @@ void        on_entry_activate(GtkEntry *entry, gpointer user_data);
 gboolean    load_config();
 void        on_quit(GtkMenuItem *menuitem, gpointer user_data);
 
+gboolean    keyword_is_dupe(char* new, char* existing);

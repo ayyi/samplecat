@@ -12,6 +12,9 @@
 
 	BLOB can handle up to 64k.
 
+
+	should we use the Set datatype for keywords? No: Set is not good for large numbers of set values.
+
 	*/
 #include <stdio.h>
 #include <stdlib.h>
@@ -448,7 +451,10 @@ tree_on_link_selected(GObject *ignored, DhLink *link, gpointer data)
 	if((unsigned int)link<1024){ errprintf("tree_on_link_selected(): bad link arg.\n"); return FALSE; }
 	printf("tree_on_link_selected()...uri=%s\n", link->uri);
 	app.search_dir = link->uri;
-	do_search("", link->uri);
+
+	const gchar* text = app.search ? gtk_entry_get_text(GTK_ENTRY(app.search)) : "";
+	
+	do_search((gchar*)text, link->uri);
 	return FALSE; //?
 }
 
@@ -674,7 +680,9 @@ do_search(char *search, char *dir)
 	unsigned int num_fields;
 	char query[1024];
 	char where[512]="";
+	char where_dir[512]="";
 	char category[256]="";
+	char sb_text[256];
 	//char phrase[256]="";
 	GdkPixbuf* pixbuf  = NULL;
 	GdkPixbuf* iconbuf = NULL;
@@ -686,18 +694,27 @@ do_search(char *search, char *dir)
 
 	//lets assume that the search_phrase filter should *always* be in effect.
 
-	//FIXME should we use SET datatype for keywords?
 	if (app.search_category) snprintf(category, 256, "AND keywords LIKE '%%%s%%' ", app.search_category);
 
-	//strmov(query_def, "SELECT * FROM samples"); //where is this defined?
+	if(dir && strlen(dir)){
+		snprintf(where_dir, 512, "AND filedir='%s' %s ", dir, category);
+	}
+
+	//strmov(dst, src) moves all the  characters  of  src to dst, and returns a pointer to the new closing NUL in dst. 
+	//strmov(query_def, "SELECT * FROM samples"); //this is defined in mysql m_string.h
 	//strcpy(query, "SELECT * FROM samples WHERE 1 ");
+
+	char* a = NULL;
+
 	if(strlen(search)){ 
 		snprintf(where, 512, "AND (filename LIKE '%%%s%%' OR filedir LIKE '%%%s%%' OR keywords LIKE '%%%s%%') ", search, search, search); //FIXME duplicate category LIKE's
 		//snprintf(query, 1024, "SELECT * FROM samples WHERE 1 %s", where);
 	}
-	if(dir && strlen(dir)){
-		snprintf(where, 512, "AND filedir='%s' %s ", dir, category);
-	}
+
+	//append the dir-where part:
+	a = where + strlen(where);
+	strmov(a, where_dir);
+
 	snprintf(query, 1024, "SELECT * FROM samples WHERE 1 %s", where);
 
 	printf("%s\n", query);
@@ -706,15 +723,28 @@ do_search(char *search, char *dir)
 		//problem with wierd mysql int type:
 		//printf( "%ld Records Found\n", (long) mysql_affected_rows(&mysql));
 		//printf( "%lu Records Found\n", (unsigned long)mysql_affected_rows(mysql));
+
 	
-		//FIXME clear the treeview.
+		gtk_tree_row_reference_free(app.mouseover_row_ref);
+		treeview_block_motion_handler(); //dunno exactly why but this prevents a segfault.
+
+		printf("do_search(): clearing store...\n");
 		gtk_list_store_clear(app.store);
+
+		/*
+		while (gtk_tree_model_get_iter_first(GTK_TREE_MODEL(app.store), &iter)){
+			gtk_list_store_remove(app.store, &iter);
+		}
+		*/
+		printf("do_search(): store cleared.\n");
+
 
 		result = mysql_store_result(mysql);
 		if(result){// there are rows
 			num_fields = mysql_num_fields(result);
 			char keywords[256];
 
+			int row_count = 0;
 			while((row = mysql_fetch_row(result))){
 				lengths = mysql_fetch_lengths(result); //free? 
 				for(i = 0; i < num_fields; i++){ 
@@ -750,9 +780,11 @@ do_search(char *search, char *dir)
 				gtk_list_store_set(app.store, &iter, COL_ICON, iconbuf, COL_IDX, atoi(row[0]), COL_NAME, row[1], COL_FNAME, row[2], COL_KEYWORDS, keywords, 
                                                      COL_OVERVIEW, pixbuf, COL_LENGTH, length, COL_SAMPLERATE, samplerate_s, COL_CHANNELS, channels, 
 													 COL_MIMETYPE, row[MYSQL_MIMETYPE], -1);
+				row_count++;
 			}
 			mysql_free_result(result);
-			statusbar_print(1, "search done");
+			snprintf(sb_text, 256, "%i samples found.", row_count);
+			statusbar_print(1, sb_text);
 		}
 		else{  // mysql_store_result() returned nothing
 		  if(mysql_field_count(mysql) > 0){
@@ -764,6 +796,23 @@ do_search(char *search, char *dir)
 	}
 	else{
 		printf( "do_search(): Failed to find any records: %s\n", mysql_error(mysql));
+	}
+}
+
+
+void
+treeview_block_motion_handler()
+{
+	if(app.view){
+		gulong id1= g_signal_handler_find(app.view,
+							   G_SIGNAL_MATCH_FUNC, // | G_SIGNAL_MATCH_DATA,
+							   0,//arrange->hzoom_handler,   //guint signal_id      ?handler_id?
+							   0,        //GQuark detail
+							   0,        //GClosure *closure
+							   treeview_on_motion, //callback
+							   NULL);    //data
+		if(id1) g_signal_handler_block(app.view, id1);
+		else warnprintf("treeview_block_motion_handler(): failed to find handler.\n");
 	}
 }
 
@@ -824,6 +873,7 @@ tag_selector_new()
 {
 	//the tag _edit_ selector
 
+	/*
 	//GtkWidget* combo = gtk_combo_box_new_text();
 	GtkWidget* combo = app.category = gtk_combo_box_new_text();
 	GtkComboBox* combo_ = GTK_COMBO_BOX(combo);
@@ -839,9 +889,10 @@ tag_selector_new()
 	gtk_box_pack_start(GTK_BOX(app.toolbar2), combo, EXPAND_FALSE, FALSE, 0);
 	g_signal_connect(combo, "changed", G_CALLBACK(on_category_changed), NULL);
 	//gtk_combo_box_get_active_text(combo);
+	*/
 
-	GtkWidget* combo2 = gtk_combo_box_entry_new_text();
-	combo_ = GTK_COMBO_BOX(combo2);
+	GtkWidget* combo2 = app.category = gtk_combo_box_entry_new_text();
+	GtkComboBox* combo_ = GTK_COMBO_BOX(combo2);
 	gtk_combo_box_append_text(combo_, "no categories");
 	gtk_combo_box_append_text(combo_, "drums");
 	gtk_combo_box_append_text(combo_, "perc");
@@ -856,7 +907,7 @@ tag_selector_new()
 	GtkWidget* set = gtk_button_new_with_label("Set Category");
 	gtk_widget_show(set);	
 	gtk_box_pack_start(GTK_BOX(app.toolbar2), set, EXPAND_FALSE, FALSE, 0);
-	g_signal_connect(set, "clicked", G_CALLBACK(on_set_clicked), NULL);
+	g_signal_connect(set, "clicked", G_CALLBACK(on_category_set_clicked), NULL);
 
 	return TRUE;
 }
@@ -907,18 +958,18 @@ on_view_category_changed(GtkComboBox *widget, gpointer user_data)
 
 
 void
-on_set_clicked(GtkComboBox *widget, gpointer user_data)
+on_category_set_clicked(GtkComboBox *widget, gpointer user_data)
 {
 	//add selected category to selected samples.
 
-	printf("on_set_clicked()...\n");
+	printf("on_category_set_clicked()...\n");
 
 	//selected category?
 	gchar* category = gtk_combo_box_get_active_text(GTK_COMBO_BOX(app.category));
 
 	GtkTreeSelection* selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(app.view));
 	GList* selectionlist = gtk_tree_selection_get_selected_rows(selection, NULL);
-	if(!selectionlist){ printf("on_set_clicked(): no files selected.\n"); return; }
+	if(!selectionlist){ printf("on_category_set_clicked(): no files selected.\n"); return; }
 	//printf("delete_row(): %i rows selected.\n", g_list_length(selectionlist));
 
 	int i;
@@ -931,27 +982,72 @@ on_set_clicked(GtkComboBox *widget, gpointer user_data)
 			int id;
 			gtk_tree_model_get(GTK_TREE_MODEL(app.store), &iter, COL_NAME, &fname, COL_KEYWORDS, &tags, COL_IDX, &id, -1);
 
-			char tags_new[1024];
-			snprintf(tags_new, 1024, "%s %s", tags, category);
-			g_strstrip(tags_new);//trim
+			if(!strcmp(category, "no categories")) row_clear_tags(&iter, id);
+			else{
 
-			char sql[1024];
-			snprintf(sql, 1024, "UPDATE samples SET keywords='%s' WHERE id=%i", tags_new, id);
-			printf("on_set_clicked(): row: %s sql=%s\n", fname, sql);
-			if(mysql_query(&app.mysql, sql)){
-				errprintf("on_set_clicked(): update failed! sql=%s\n", sql);
-				return;
+				if(!keyword_is_dupe(category, tags)){
+					char tags_new[1024];
+					snprintf(tags_new, 1024, "%s %s", tags, category);
+					g_strstrip(tags_new);//trim
+
+					row_set_tags(&iter, id, tags_new);
+					/*
+					char sql[1024];
+					snprintf(sql, 1024, "UPDATE samples SET keywords='%s' WHERE id=%i", tags_new, id);
+					printf("on_category_set_clicked(): row: %s sql=%s\n", fname, sql);
+					if(mysql_query(&app.mysql, sql)){
+						errprintf("on_category_set_clicked(): update failed! sql=%s\n", sql);
+						return;
+					}
+					//update the store:
+					gtk_list_store_set(app.store, &iter, COL_KEYWORDS, tags_new, -1);
+					*/
+				}else{
+					printf("on_category_set_clicked(): keyword is a dupe - not applying.\n");
+					statusbar_print(1, "ignoring duplicate keyword.");
+				}
 			}
-			//update the store:
-    		gtk_list_store_set(app.store, &iter, COL_KEYWORDS, tags_new, -1);
 
-
-		} else errprintf("on_set_clicked() bad iter! i=%i (<%i)\n", i, g_list_length(selectionlist));
+		} else errprintf("on_category_set_clicked() bad iter! i=%i (<%i)\n", i, g_list_length(selectionlist));
 	}
 	g_list_foreach(selectionlist, (GFunc)gtk_tree_path_free, NULL);
 	g_list_free(selectionlist);
 
 	g_free(category);
+}
+
+
+gboolean
+row_set_tags(GtkTreeIter* iter, int id, char* tags_new)
+{
+	char sql[1024];
+	snprintf(sql, 1024, "UPDATE samples SET keywords='%s' WHERE id=%i", tags_new, id);
+	printf("on_category_set_clicked(): sql=%s\n", sql);
+	if(mysql_query(&app.mysql, sql)){
+		errprintf("on_category_set_clicked(): update failed! sql=%s\n", sql);
+		return FALSE;
+	}
+	//update the store:
+	gtk_list_store_set(app.store, iter, COL_KEYWORDS, tags_new, -1);
+	return TRUE;
+}
+
+
+gboolean
+row_clear_tags(GtkTreeIter* iter, int id)
+{
+	if(!id){ errprintf("row_clear_tags(): bad arg: id\n"); return FALSE; }
+
+	char sql[1024];
+	snprintf(sql, 1024, "UPDATE samples SET keywords='' WHERE id=%i", id);
+	printf("row_clear_tags(): sql=%s\n", sql);
+	if(mysql_query(&app.mysql, sql)){
+		errprintf("on_category_set_clicked(): update failed! sql=%s\n", sql);
+		return FALSE;
+	}
+	//update the store:
+	gtk_list_store_set(app.store, iter, COL_KEYWORDS, "", -1);
+	return TRUE;
 }
 
 
@@ -1062,7 +1158,7 @@ new_search(GtkWidget *widget, gpointer userdata)
 
 	const gchar* text = gtk_entry_get_text(GTK_ENTRY(app.search));
 	
-	do_search((gchar*)text, NULL);
+	do_search((gchar*)text, app.search_dir);
 	return FALSE;
 }
 
@@ -1307,7 +1403,8 @@ on_overview_done(gpointer data)
 
 
 void
-db_update_pixbuf(sample *sample){
+db_update_pixbuf(sample *sample)
+{
 	printf("db_update_pixbuf()...\n");
 
 	GdkPixbuf* pixbuf = sample->pixbuf;
@@ -1341,17 +1438,21 @@ db_update_pixbuf(sample *sample){
 void
 keywords_on_edited(GtkCellRendererText *cell, gchar *path_string, gchar *new_text, gpointer user_data)
 {
+	//the keywords column has been edited. Update the database to reflect the new text.
+
 	printf("cell_edited_callback()...\n");
-	//GtkTreeModel* model = GTK_TREE_MODEL();
 	GtkTreeIter iter;
 	int idx;
 	gchar *filename;
-	//GtkListStore *store = app.store;
 	GtkTreeModel* store = GTK_TREE_MODEL(app.store);
 	GtkTreePath* path = gtk_tree_path_new_from_string(path_string);
 	gtk_tree_model_get_iter(store, &iter, path);
 	gtk_tree_model_get(store, &iter, COL_IDX, &idx,  COL_NAME, &filename, -1);
 	printf("cell_edited_callback(): filename=%s\n", filename);
+
+	//convert to lowercase:
+	//gchar* lower = g_ascii_strdown(new_text, -1);
+	//g_free(lower);
 
 	char sql[1024];
 	char* tmppos;
@@ -1905,4 +2006,31 @@ on_quit(GtkMenuItem *menuitem, gpointer user_data)
     exit(0);
 }
 
+
+gboolean
+keyword_is_dupe(char* new, char* existing)
+{
+	//return true if the word 'new' is contained in the 'existing' string.
+
+	//FIXME make case insensitive.
+	//gint g_ascii_strncasecmp(const gchar *s1, const gchar *s2, gsize n);
+	//gchar*      g_utf8_casefold(const gchar *str, gssize len);
+
+	gboolean found = FALSE;
+
+	//split the existing keyword string into separate words.
+	gchar** split = g_strsplit(existing, " ", 0);
+	int word_index = 0;
+	while(split[word_index]){
+		if(!strcmp(split[word_index], new)){
+			printf("keyword_is_dupe(): '%s' already in string '%s'\n", new, existing);
+			found = TRUE;
+			break;
+		}
+		word_index++;
+	}
+
+	g_strfreev(split);
+	return found;
+}
 
