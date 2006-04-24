@@ -1,9 +1,3 @@
-/** @file simple_client.c
- *
- * @brief This simple client demonstrates the basic features of JACK
- * as they would be used by many applications.
- */
-
 #include <stdio.h>
 #include <errno.h>
 #include <unistd.h>
@@ -28,15 +22,23 @@ extern char warn[32];
 
 _audition audition;
 jack_port_t *output_port1, *output_port2;
-jack_client_t *client = NULL;
+jack_client_t *jack_client = NULL;
 #define MAX_JACK_BUFFER_SIZE 16384
 float buffer[MAX_JACK_BUFFER_SIZE];
+#define JACK_PORT_COUNT 2;
 
+/*
+
+libsndfile now does flac!!!!!
+
+*/
 
 
 int
 jack_process(jack_nframes_t nframes, void* arg)
 {
+	//return non-zero on error.
+
 	if(audition.type == TYPE_FLAC) return jack_process_flac(nframes, arg); //or maybe set this function directly as the jack callback?
 
 	int readcount, src_offset;
@@ -73,6 +75,8 @@ jack_process(jack_nframes_t nframes, void* arg)
 		printf("\n");
 	}else{
 		printf("jack_process(): unsupported channel count (%i).\n", audition.sfinfo.channels);
+		playback_stop();
+		return 1;
 	}
 
 	return 0;      
@@ -81,15 +85,59 @@ jack_process(jack_nframes_t nframes, void* arg)
 int
 jack_process_flac(jack_nframes_t nframes, void *arg)
 {
-	//flac decoding should really be in another thread....
-
 	jack_default_audio_sample_t *out1 = (jack_default_audio_sample_t *)jack_port_get_buffer(output_port1, nframes);
 	jack_default_audio_sample_t *out2 = (jack_default_audio_sample_t *)jack_port_get_buffer(output_port2, nframes);
 
-	flac_fill_ringbuffer(audition.session);
+	int bytes_to_copy = nframes * sizeof(jack_default_audio_sample_t);// * JACK_PORT_COUNT;
+
+	jack_ringbuffer_t* rb1 = audition.rb1;
+	jack_ringbuffer_t* rb2 = audition.rb2;
+	if((unsigned)rb1<1024) errprintf("jack_process_flac(): bad rb1.\n");
+	if((unsigned)rb2<1024) errprintf("jack_process_flac(): bad rb2.\n");
+
+	if(jack_ringbuffer_read_space(rb1) < bytes_to_copy){ //yes, its *bytes*.
+		printf("jack_process_flac(): not enough data ready. Aborting playback...\n");
+		//g_idle_add_full(G_PRIORITY_HIGH_IDLE, (GSourceFunc)jack_process_stop_playback, NULL, NULL); //FIXME this is not aggressive enough
+		return FALSE;
+	}
+	jack_ringbuffer_read_space(rb2);
+	/*
+
+	//copy nframes from the ringbuffer into the jack buffer:
+	jack_ringbuffer_read(rb1, (char*)out1, bytes_to_copy); //the count is in *bytes*.
+	jack_ringbuffer_read(rb2, (char*)out2, bytes_to_copy);
+
+	//inform the main thread:
+	//g_idle_add_full(G_PRIORITY_HIGH_IDLE, (GSourceFunc)jack_process_finished, NULL, NULL); //FIXME this is not aggressive enough
+	*/
 
 	return TRUE;
 }
+
+gboolean
+jack_process_finished(gpointer data)
+{
+	//runs in the main thread.
+
+	gdk_threads_enter(); //this is probably a complete waste as we're not calling any gdk functions.
+	if(audition.session) flac_fill_ringbuffer(audition.session);
+	gdk_threads_leave();
+	return FALSE; //remove the source.
+}
+
+
+gboolean
+jack_process_stop_playback(gpointer data)
+{
+	//runs in the main thread.
+	gdk_threads_enter();
+	printf("jack_process_stop_playback(). jack thread requests playback_stop()...\n");
+
+	if(audition.session) playback_stop(); //this "if" could probably be improved.
+	gdk_threads_leave();
+	return FALSE; //remove the source.
+}
+
 
 /**
  * This is the shutdown callback for this JACK application.
@@ -99,6 +147,7 @@ jack_process_flac(jack_nframes_t nframes, void *arg)
 void
 jack_shutdown(void *arg)
 {
+	printf("jack_shutdown(): FIXME\n");
 }
 
 int
@@ -107,24 +156,25 @@ jack_init()
 	const char **ports;
 
 	// try to become a client of the JACK server
-	if ((client = jack_client_new("samplecat")) == 0) {
+	if ((jack_client = jack_client_new("samplecat")) == 0) {
 		fprintf (stderr, "cannot connect to jack server.\n");
 		return 1;
 	}
 
-	jack_set_process_callback(client, jack_process, 0);
-	jack_on_shutdown(client, jack_shutdown, 0);
+	jack_set_process_callback(jack_client, jack_process, 0);
+	jack_on_shutdown(jack_client, jack_shutdown, 0);
 	//jack_set_buffer_size_callback(_jack, jack_bufsize_cb, this);
 
-	// display the current sample rate. 
-	printf("jack_init(): engine sample rate: %" PRIu32 "\n", jack_get_sample_rate(client));
-
 	// create two ports
-	output_port1 = jack_port_register(client, "output1", JACK_DEFAULT_AUDIO_TYPE, JackPortIsOutput, 0);
-	output_port2 = jack_port_register(client, "output2", JACK_DEFAULT_AUDIO_TYPE, JackPortIsOutput, 0);
+	output_port1 = jack_port_register(jack_client, "output1", JACK_DEFAULT_AUDIO_TYPE, JackPortIsOutput, 0);
+	output_port2 = jack_port_register(jack_client, "output2", JACK_DEFAULT_AUDIO_TYPE, JackPortIsOutput, 0);
+
+	audition.nframes = jack_get_buffer_size(jack_client);
+
+	printf("jack_init(): samplerate=%" PRIu32 " buffersize=%i\n", jack_get_sample_rate(jack_client), audition.nframes);
 
 	// tell the JACK server that we are ready to roll
-	if (jack_activate(client)){ fprintf (stderr, "cannot activate client"); return 1; }
+	if (jack_activate(jack_client)){ fprintf (stderr, "cannot activate client"); return 1; }
 
 	// connect the ports:
 
@@ -137,25 +187,106 @@ jack_init()
 	//	fprintf (stderr, "cannot connect input ports\n");
 	//}
 	
-	if((ports = jack_get_ports(client, NULL, NULL, JackPortIsPhysical|JackPortIsInput)) == NULL) {
+	if((ports = jack_get_ports(jack_client, NULL, NULL, JackPortIsPhysical|JackPortIsInput)) == NULL) {
 		fprintf(stderr, "Cannot find any physical playback ports\n");
 		return 1;
 	}
 
-	if(jack_connect(client, jack_port_name(output_port1), ports[0])) {
+	if(jack_connect(jack_client, jack_port_name(output_port1), ports[0])) {
 		fprintf (stderr, "cannot connect output ports\n");
 	}
-	if(jack_connect(client, jack_port_name(output_port2), ports[1])) {
+	if(jack_connect(jack_client, jack_port_name(output_port2), ports[1])) {
 		fprintf (stderr, "cannot connect output ports\n");
 	}
 
 	free (ports);
 
-	audition.nframes = 4096; //FIXME!!??
-
-	//jack_client_close(client);
 	printf("jack_init(): done ok.\n");
 	return 1;
+}
+
+
+void
+jack_close()
+{
+	if(jack_client) jack_client_close(jack_client);
+}
+
+
+void
+audition_init()
+{
+	audition.session = NULL;
+	//audition.sfinfo = 0; 
+	audition.sffile = NULL;
+	audition.rb1 = NULL;
+	audition.rb2 = NULL;
+	audition.type = 0;
+}
+
+
+void
+audition_reset()
+{
+	printf("audition_reset()...\n");
+	if(audition.rb1){ jack_ringbuffer_free(audition.rb1); jack_ringbuffer_free(audition.rb2); }
+	if(audition.session) decoder_session_free(audition.session);
+	audition.session = NULL;
+	printf("audition_reset(): session nulled.\n");
+	audition.sffile = NULL;
+	audition.rb1 = NULL;
+	audition.rb2 = NULL;
+	audition.type = 0;
+}
+
+
+_decoder_session*
+flac_decoder_session_new()
+{
+	_decoder_session* session = malloc(sizeof(_decoder_session*));
+	session->output_peakfile = FALSE;
+	session->flacstream = NULL;
+	session->sample = NULL;
+	session->sample_num = 0;
+	session->total_samples = 0;
+	printf("flac_decoder_session_new(): session=%p\n", session);
+	return session;
+}
+
+
+void
+flac_decoder_sesssion_init(_decoder_session* session, sample* sample)
+{
+	printf("flac_decoder_sesssion_init()...\n");
+	if(!session) errprintf("flac_decoder_sesssion_init(): bad arg.\n");
+
+	session->sample = sample;
+	session->sample_num = 0;
+	session->total_samples = sample->frames;
+
+	int x;
+	for(x=0;x<OVERVIEW_WIDTH;x++){
+		session->max[x] = 0;
+		session->min[x] = 0;
+	}
+}
+
+
+void
+decoder_session_free(_decoder_session* session)
+{
+	if((unsigned)session<1024){ warnprintf("decoder_session_free(): bad session arg (%p).\n", session); return; }
+	printf("decoder_session_free()...\n");
+
+	if(session->flacstream){
+		flac_close(session->flacstream); //just in case. This should already be done?
+		session->flacstream = NULL;
+	}
+
+	printf("decoder_session_free(): freeing session (%p)... FIXME!!!\n", session);
+	//free(session);
+	printf("decoder_session_free(): done.\n");
+
 }
 
 
@@ -165,6 +296,8 @@ int
 playback_init(sample* sample)
 {
 	//open a file ready for playback.
+	printf("playback_init()...\n");
+	int ok = TRUE;
 
 	if(app.playing_id) playback_stop(); //stop any previous playback.
 
@@ -175,9 +308,24 @@ playback_init(sample* sample)
 	//case 1:
 	//if(!strcmp(mimetype, "audio/x-flac")){
 	if(sample->filetype == TYPE_FLAC){
-		audition.session = malloc(sizeof(_decoder_session*));
-		flac_sesssion_init(audition.session, sample);
-		FLAC__FileDecoder* decoder = flac_open(audition.session);
+
+		int rb_size = 128 * 1024;
+		jack_ringbuffer_t *rb1, *rb2;
+		if((rb1 = jack_ringbuffer_create(rb_size)) && (rb2 = jack_ringbuffer_create(rb_size))){
+
+			audition.session = flac_decoder_session_new();
+			audition.session->audition = &audition; //used as a flag.
+			audition.type = TYPE_FLAC;
+			audition.rb1 = rb1;
+			audition.rb2 = rb2;
+			flac_decoder_sesssion_init(audition.session, sample);
+			if(flac_open(audition.session)){
+				printf("playback_init(): filling ringbuffer... %p %p\n", rb1, rb2);
+				if(flac_fill_ringbuffer(audition.session)) ok = FALSE;
+				if(FLAC__file_decoder_get_state(audition.session->flacstream) != FLAC__FILE_DECODER_OK) ok = FALSE;
+
+			}else{ errprintf("playback_init(): failed to initialise flac decoder.\n"); ok = FALSE; }
+		}else{ errprintf("playback_init(): failed to create ringbuffer.\n"); ok = FALSE; }
 	}else{
 	//if(sw==TYPE_SNDFILE){
 		SF_INFO *sfinfo = &audition.sfinfo;
@@ -200,10 +348,12 @@ playback_init(sample* sample)
 
 	}
 
-	if(!client) jack_init();
-
-	app.playing_id = sample->id;
-	return 1;
+	if(ok){
+		if(!jack_client) jack_init();
+		app.playing_id = sample->id;
+	}
+	printf("playback_init(): done.\n");
+	return ok;
 }
 
 
@@ -212,10 +362,15 @@ playback_stop()
 {
 	printf("playback_stop()...\n");
 
-	if(sf_close(audition.sffile)) printf("error! bad file close.\n");
-	audition.sffile = NULL;
+	//if(audition.type == TYPE_FLAC){
+	if(audition.type == TYPE_SNDFILE){
+		if(sf_close(audition.sffile)) printf("error! bad file close.\n");
+	}else{
+		flac_close(audition.session->flacstream);
+		audition.session->flacstream = NULL;
+	}
 
-	if(audition.session){ free(audition.session); audition.session = NULL; }
+	audition_reset();
 
 	app.playing_id = 0;
 	memset(buffer, 0, MAX_JACK_BUFFER_SIZE * sizeof(jack_default_audio_sample_t));
@@ -261,34 +416,30 @@ get_file_info_flac(sample* sample)
 }
 
 
-void
-flac_sesssion_init(_decoder_session* session, sample* sample)
-{
-	if(!session) errprintf("flac_sesssion_init(): bad arg.\n");
-
-	session->sample = sample;
-	session->sample_num = 0;
-	session->total_samples = sample->frames;
-}
-
-
 FLAC__FileDecoder*
 flac_open(_decoder_session* session)
 {
-	FLAC__FileDecoder* flacstream = FLAC__file_decoder_new();
-	FLAC__file_decoder_set_filename(flacstream, session->sample->filename);
-	FLAC__file_decoder_set_md5_checking(flacstream, true);
+	//opens a flac file ready for decoding block by block.
 
-	FLAC__file_decoder_set_error_callback(flacstream, flac_error_cb);
-	FLAC__file_decoder_set_write_callback(flacstream, flac_write_cb);
-	FLAC__file_decoder_set_client_data(flacstream, (void*)&session);
+	printf("flac_open()...\n");
+	FLAC__FileDecoder* flacstream = FLAC__file_decoder_new();
+
+	FLAC__file_decoder_set_filename(flacstream, session->sample->filename);
+	//FLAC__file_decoder_set_md5_checking(flacstream, true);
+
+	//must be set _before_ initialisation:
+	FLAC__file_decoder_set_write_callback   (flacstream, (FLAC__FileDecoderWriteCallback)flac_write_cb);
+	FLAC__file_decoder_set_error_callback   (flacstream, flac_error_cb);
+	FLAC__file_decoder_set_client_data      (flacstream, (void*)session);
 	FLAC__file_decoder_set_metadata_callback(flacstream, flac_metadata_cb);
 
 	if(FLAC__file_decoder_init(flacstream) == FLAC__FILE_DECODER_OK){
-		return flacstream;
+		FLAC__file_decoder_seek_absolute(flacstream, 0);
+		printf("flac_open(): done ok.\n");
+		return session->flacstream = flacstream;
 	}
 
-	errprintf("flac_open(): failed to initialise flac decoder (%s) flac=%p.\n", session->sample->filename, flacstream);
+	errprintf("flac_open(): failed to initialise flac decoder (%s) flac=%p %s.\n", session->sample->filename, flacstream, FLAC__FileDecoderStateString[FLAC__file_decoder_get_state(flacstream)]);
 	FLAC__file_decoder_delete(flacstream);
 	return NULL;
 }
@@ -297,6 +448,7 @@ flac_open(_decoder_session* session)
 gboolean
 flac_close(FLAC__FileDecoder* flacstream)
 {
+	if((unsigned)flacstream<1024){ warnprintf("flac_close(): bad arg.\n"); return FALSE; }
 	printf("flac_close()...\n");
 	FLAC__file_decoder_finish(flacstream);
 	FLAC__file_decoder_delete(flacstream);
@@ -307,6 +459,8 @@ flac_close(FLAC__FileDecoder* flacstream)
 gboolean
 flac_read(FLAC__FileDecoder* flacstream)
 {
+	//used by overview
+
 	printf("flac_read(): flacstream=%p\n", flacstream);
 
 	FLAC__file_decoder_seek_absolute(flacstream, 0);
@@ -317,20 +471,22 @@ flac_read(FLAC__FileDecoder* flacstream)
 		return false;
 	}
 	printf("flac_read(): finished.\n");
-	flac_close(flacstream);
+	flac_close(flacstream); //should we be closing here? how to NULL flacstream?
 	return true;
 }
 
 
 void
-flac_decode(char* filename)
+flac_decode_file(char* filename)
 {
+	//decode a whole flac file.
+
 	FLAC__FileDecoder *flacstream = FLAC__file_decoder_new();
 	if(FLAC__file_decoder_init(flacstream) == FLAC__FILE_DECODER_OK){
 
 		FLAC__file_decoder_set_filename(flacstream, filename);
 		FLAC__file_decoder_set_error_callback(flacstream, flac_error_cb);
-		FLAC__file_decoder_set_write_callback(flacstream, flac_write_cb);
+		FLAC__file_decoder_set_write_callback(flacstream, (FLAC__FileDecoderWriteCallback)flac_write_cb);
 
 		if(!FLAC__file_decoder_process_until_end_of_file(flacstream)){
 			errprintf("flac_decode(): process error. state=\n", FLAC__file_decoder_get_state(flacstream));
@@ -343,22 +499,53 @@ flac_decode(char* filename)
 }
 
 
-void
+FLAC__bool
 flac_next_block(_decoder_session* session)
 {
-	//if(!FLAC__file_decoder_process_single(flacstream)){
-	//	errprintf("flac_next_block(): process error. state=\n", FLAC__file_decoder_get_state(flacstream));
-	//}
+	//returning false indicates an error.
+
+	printf("flac_next_block()...\n");
+	if(!FLAC__file_decoder_process_single(session->flacstream)){
+		errprintf("flac_next_block(): process error. state=%i %s\n", FLAC__file_decoder_get_state(session->flacstream), FLAC__FileDecoderStateString[FLAC__file_decoder_get_state(session->flacstream)]);
+		playback_stop();
+		return FALSE;
+	}
+	return TRUE;
 }
 
+#define RB_SPARE 4096
 
-void
+gboolean
 flac_fill_ringbuffer(_decoder_session* session)
 {
-	jack_ringbuffer_t* rb = session->audition->rb;
+	//returning non-zero indicates an error.
 
-		//size_t jack_ringbuffer_write_space (const jack_ringbuffer_t * rb)
-		//jack_ringbuffer_write (jack_ringbuffer_t * rb, const char *src, size_t cnt)
+	if((unsigned)session<1024){ errprintf("flac_fill_ringbuffer(): bad arg: session."); return TRUE; }
+	if((unsigned)session->audition<1024){ errprintf("flac_fill_ringbuffer(): bad audition pointer (%p)\n", session->audition); return TRUE; }
+
+	jack_ringbuffer_t* rb1 = session->audition->rb1;
+	//jack_ringbuffer_t* rb2 = session->audition->rb2;
+	if((unsigned)rb1<1024){ errprintf("flac_fill_ringbuffer(): bad ringbuffer pointer (%p)\n", rb1); return TRUE; }
+
+	if(FLAC__file_decoder_get_state(session->flacstream) != FLAC__FILE_DECODER_OK){ errprintf("flac_fill_ringbuffer(): session error! why are we being called?\n"); return TRUE; }
+
+	int i = 0;
+	//printf("flac_fill_ringbuffer(): checking ringbuffer space...\n");
+	//FLAC__MAX_BLOCK_SIZE
+	while(jack_ringbuffer_write_space(rb1) > 48 * 1024 ){ //FIXME we dont know yet the flac block size, but can we make a better guess? blocksize appears to be about 4000 => 4000*4*2 bytes.
+		if(!flac_next_block(session)){
+			printf("flac_fill_ringbuffer() cannot decode another block\n");
+			break;
+		}
+		i++;
+	}
+
+	printf("flac_fill_ringbuffer() finished. read %i blocks\n", i);
+
+	/*
+	size_t space_available = jack_ringbuffer_write_space(rb);
+	*/
+	return FALSE;
 }
 
 /*
@@ -377,24 +564,38 @@ flac_write_cb(const FLAC__FileDecoder *dec, const FLAC__Frame *frame, const FLAC
 */
 
 FLAC__StreamDecoderWriteStatus 
-//write_callback(const void *decoder, const FLAC__Frame *frame, const FLAC__int32 * const buffer[], void *client_data)
-flac_write_cb(const FLAC__FileDecoder *decoder, const FLAC__Frame* frame, const FLAC__int32 * const buffer[], void* data)
+flac_write_cb(const FLAC__FileDecoder *decoder, const FLAC__Frame* frame, const FLAC__int32 * const buffer[], _decoder_session* session)
 {
 	/*
+	a block has been decoded. We copy the data from *frame either to the peakdata array, or to ....?
+
 	-decoder 	  The decoder instance calling the callback.
-	-frame 	      The description of the decoded frame. (?????)
+	-frame 	      Information about the decoded frame, and file metadata.
 	-buffer 	  An array of pointers to decoded channels of data (deinterleaved).
 	-client_data  The callee's client data set through FLAC__file_decoder_set_client_data().
 
+	frame->header:
+		unsigned                blocksize
+		unsigned                sample_rate
+		unsigned                channels
+		FLAC__ChannelAssignment channel_assignment
+		unsigned 	            bits_per_sample
+		FLAC__FrameNumberType   number_type //tells us which type the union below contains.
+		union {
+		   FLAC__uint32         frame_number
+		   FLAC__uint64         sample_number
+		}                       number
+		FLAC__uint8             crc
+
 	note: buffer is not interleaved: buffer[channel][wide_sample]
 	*/
+	if((unsigned)session<1024){ errprintf("flac_write_cb(): bad session arg.\n"); return FLAC__STREAM_DECODER_WRITE_STATUS_ABORT; }
+	//printf("1"); fflush(stdout);
+	gboolean debug = FALSE;
 
-	/*
-	jack_ringbuffer_t* rb = (jack_ringbuffer_t*)data;
-	if(!rb){ errprintf("flac_write_cb(): bad ringbuffer arg.\n"); return FLAC__STREAM_DECODER_WRITE_STATUS_ABORT;}
-	*/
-	_decoder_session* session = (_decoder_session*)data;
+	//_decoder_session* session = (_decoder_session*)data;
 	unsigned sample_num = session->sample_num;
+	int i, ch;
 
 	//DecoderSession *decoder_session = (DecoderSession*)client_data;
 	//FILE *fout = decoder_session->fout;
@@ -408,7 +609,8 @@ flac_write_cb(const FLAC__FileDecoder *decoder, const FLAC__Frame* frame, const 
 	FLAC__bool is_big_endian_host_ = FALSE;
 
 	unsigned wide_samples          = frame->header.blocksize;
-	unsigned buffer_total_frames   = frame->header.blocksize / channels;
+	//printf("flac_write_cb(): blocksize=%u\n", wide_samples);
+	unsigned buffer_total_frames   = frame->header.blocksize;// looks like we dont have to divide by channel count here.
 	unsigned wide_sample, sample, channel, byte;
 	//printf("flac_write_cb(): frame=%p blocksize=%u.\n", frame, wide_samples);
 
@@ -421,6 +623,7 @@ flac_write_cb(const FLAC__FileDecoder *decoder, const FLAC__Frame* frame, const 
 	size_t bytes_to_write = 0;
 
 	(void)decoder;
+	if(debug){ printf("2"); fflush(stdout); }
 
 	//if(decoder_session->abort_flag)	return FLAC__STREAM_DECODER_WRITE_STATUS_ABORT;
 
@@ -576,35 +779,82 @@ flac_write_cb(const FLAC__FileDecoder *decoder, const FLAC__Frame* frame, const 
 			}
 		}
 	}
+	printf("3"); fflush(stdout);
 	if(bytes_to_write > 0) {
-		/*
-		//size_t jack_ringbuffer_write_space (const jack_ringbuffer_t * rb)
-		//jack_ringbuffer_write (jack_ringbuffer_t * rb, const char *src, size_t cnt)
 
-		if(jack_ringbuffer_write(rb, (void *)buffer, bytes_to_write) < bytes_to_write){
-			return FLAC__STREAM_DECODER_WRITE_STATUS_ABORT;
+		if(session->output_peakfile){
+			//calculate peak data:
+			int pixel_x;
+			short sample_val;
+			short* max = session->max;
+			short* min = session->min;
+			if(bps == 16){
+				for(i=0;i<buffer_total_frames;i+=2){
+					pixel_x = (sample_num * OVERVIEW_WIDTH) / session->total_samples;
+					if(pixel_x >= OVERVIEW_WIDTH){errprintf("flac_write_cb(): pixbuf index error. sample=%i, total=%i\n", sample_num, session->total_samples); break;}
+					for(ch=0;ch<channels;ch++){
+						//sample_val = s16buffer[i + ch];
+						sample_val = (FLAC__int16)(buffer[ch][i]);
+						max[pixel_x] = MAX(max[pixel_x], sample_val);
+						min[pixel_x] = MIN(min[pixel_x], sample_val);
+						sample_num++;         //probably should use frame_num instead.
+					}
+				}
+			} else printf("flac_write_cb(): FIXME bitdepth not supported.\n");
+
+		}else{
+			//output to a ringbuffer for jack (non-interleaved -> non-interleaved):
+
+			//FIXME this doesnt use the s16 etc buffer filled above, so dont fill it.
+
+
+			//jack_ringbuffer_t* rb1 = audition.rb1;
+			//jack_ringbuffer_t* rb2 = audition.rb2;
+			jack_ringbuffer_t* rb[channels];
+			rb[0] = audition.rb1;
+			rb[1] = audition.rb2;
+			if((unsigned)rb[0]<1024){ errprintf("flac_write_cb(): bad ringbuffer arg (%p).\n", rb[0]); return FLAC__STREAM_DECODER_WRITE_STATUS_ABORT;}
+
+			if(jack_ringbuffer_write_space(audition.rb1) > bytes_to_write){
+				printf("4"); fflush(stdout);
+
+				//jack_ringbuffer_write (jack_ringbuffer_t * rb, const char *src, size_t cnt)
+
+				//converting 16bit to float, we write twice as many bytes as there are from the decoder
+
+				FLAC__int16 src1;
+				FLAC__int16 src2;
+				float float1;
+				//float float2;
+				for(i=0;i<buffer_total_frames;i++){
+					if(debug){ printf("5"); fflush(stdout); }
+					//printf("  buffer=%p\n", buffer);
+					for(ch=0;ch<channels;ch++){
+						//printf("  buffer0=%i\n", buffer[ch][i]);
+						src1 = (FLAC__int16)(buffer[ch][i]); //FIXME this is an unneccesary copy.
+						src2 = (FLAC__int16)(buffer[ch][i]);
+
+						//convert from int to float:
+						//printf("  src1=%i\n", src1);
+						if (src1 >= 0) float1 = src1 / 32767.0; else float1 = src1 / 32768.0;
+						//if (src2 >= 0) float2 = src2 / 32767.0; else float2 = src2 / 32768.0;
+
+						if(debug){ printf("6"); fflush(stdout); }
+						if(jack_ringbuffer_write(rb[ch], (void*)(&float1), 4) < 4){
+							errprintf("flac_write_cb(): problem writing to ringbuffer: flac buffer size: %i\n", bytes_to_write);
+							return FLAC__STREAM_DECODER_WRITE_STATUS_ABORT;
+						}
+						//jack_ringbuffer_write(rb2, (void*)(&float2), 4);
+						if(debug){ printf("7"); fflush(stdout); }
+					}
+				}
+
+			} else { errprintf("flac_write_cb(): no space in ringbuffer. available=%i needed=%i\n", jack_ringbuffer_write_space(audition.rb1), bytes_to_write*2); return FLAC__STREAM_DECODER_WRITE_STATUS_ABORT; }
+			printf("8"); fflush(stdout);
+
 		}
-		*/
-
-	}
-
-	//calculate peak data:
-	int i, ch, pixel_x;
-	short sample_val;
-	short* max = session->max;
-	short* min = session->min;
-	if(bps == 16){
-		for(i=0;i<buffer_total_frames;i++){
-			pixel_x = (sample_num * OVERVIEW_WIDTH) / session->total_samples;
-			if(pixel_x >= OVERVIEW_WIDTH){errprintf("flac_write_cb(): pixbuf index error.\n"); break;}
-			for(ch=0;ch<channels;ch++){
-				sample_val = s16buffer[i + ch];
-				max[pixel_x] = MAX(max[pixel_x], sample_val);
-				min[pixel_x] = MIN(min[pixel_x], sample_val);
-				sample_num++;         //probably should use frame_num instead.
-			}
-		}
-	} else printf("flac_write_cb(): FIXME bitdepth not supported.\n");
+	} else errprintf("flac_write_cb(): bytes_to_write < 1.\n");
+	printf("9"); fflush(stdout);
 
 	session->sample_num = sample_num;
 
@@ -612,9 +862,14 @@ flac_write_cb(const FLAC__FileDecoder *decoder, const FLAC__Frame* frame, const 
 }
 
 void
-flac_error_cb(const FLAC__FileDecoder *dec, FLAC__StreamDecoderErrorStatus status, void *data)
+flac_error_cb(const FLAC__FileDecoder *decoder, FLAC__StreamDecoderErrorStatus status, void *data)
 {
-    errprintf("flac_error_cb(): flac error handler called!\n");
+    errprintf("flac_error_cb(): flac error handler called! %s\n", FLAC__FileDecoderStateString[FLAC__file_decoder_get_state(decoder)]);
+
+	if(data){
+		//_decoder_session* session = (_decoder_session*)data;
+		playback_stop();
+	}
 }
 
 void
@@ -651,12 +906,13 @@ flac_decode_seekable(char* filename)
 	*/
 }
 
-
+#ifdef NEVER
 FLAC__StreamDecoderReadStatus
 flac_read_cb(const FLAC__StreamDecoder *decoder, FLAC__byte buffer[], unsigned *bytes, void *client_data)
 {
-	//The address of the buffer to be filled is supplied, along with the number of bytes the buffer can hold
 	/*
+	The address of the buffer to be filled is supplied, along with the number of bytes the buffer can hold
+
 	-decoder      The decoder instance calling the callback.
 	-buffer       A pointer to a location for the callee to store data to be decoded.
 	-bytes        A pointer to the size of the buffer. On entry to the callback, it contains the maximum number of bytes that may be stored in buffer. The callee must set it to the actual number of bytes stored (0 in case of error or end-of-stream) before returning.
@@ -670,6 +926,7 @@ flac_read_cb(const FLAC__StreamDecoder *decoder, FLAC__byte buffer[], unsigned *
 	*/
   return 0;
 }
+#endif
 
 
 FLAC__StreamDecoderWriteStatus
