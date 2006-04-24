@@ -17,6 +17,15 @@ enum {
 };
 
 
+typedef struct _inspector
+{
+	GtkWidget*   name;
+	GtkWidget*   filename;
+	GtkWidget*   tags;
+	GtkWidget*   image;
+} inspector;
+
+
 struct _app
 {
 	char      search_phrase[256];
@@ -28,6 +37,7 @@ struct _app
 	int       playing_id; //database index of the file that is currently playing, or zero if none playing.
 
 	GtkListStore *store;
+	inspector    *inspector;
 	
 	GtkWidget *window;
 	GtkWidget *vbox;
@@ -84,7 +94,10 @@ enum {
 
 gboolean	window_new();
 GtkWidget*  left_pane();
+GtkWidget*  inspector_pane();
+void        inspector_udpate(GtkTreePath *path);
 void        window_on_realise(GtkWidget *win, gpointer user_data);
+void        make_listview();
 gboolean	filter_new();
 gboolean    tag_selector_new();
 gboolean    tagshow_selector_new();
@@ -99,6 +112,7 @@ gboolean	db_connect();
 void        do_search(char *search, char *dir);
 
 gboolean    new_search(GtkWidget *widget, gpointer userdata);
+gboolean    on_notes_focus_out(GtkWidget *widget, gpointer userdata);
 
 void        scan_dir();
 

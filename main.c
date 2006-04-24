@@ -47,6 +47,8 @@
 #include "pixmaps.h"
 //#include "gnome-vfs-uri.h"
 
+#define DEBUG_NO_THREADS 1
+
 struct _app app;
 GList* mime_types; // list of *MIME_type
 
@@ -159,18 +161,26 @@ main(int argc, char* *argv)
 
 	load_config();
 
+	g_thread_init(NULL);
+	gdk_threads_init();
 	gtk_init(&argc, &argv);
+
 	type_init();
 	pixmaps_init();
 
+	printf("main(): creating overview thread...\n");
+	//g_thread_init(NULL);
+	gdk_threads_enter();
+#ifndef DEBUG_NO_THREADS
 	GError *error = NULL;
-	g_thread_init(NULL);
 	msg_queue = g_async_queue_new();
 	if(!g_thread_create(overview_thread, NULL, FALSE, &error)){
 		printf("main(): error creating thread: %s\n", error->message);
 		g_error_free(error);
 	}
+#endif
 
+	printf("main(): initialising vfs...\n");
 	if (!gnome_vfs_init()){ errprintf("could not initialize GnomeVFS.\n"); return 1; }
 
 	/*
@@ -209,7 +219,145 @@ main(int argc, char* *argv)
 	}
 	//how many rows are in the list?
 
+	window_new(); 
+	filter_new();
+	tagshow_selector_new();
+	tag_selector_new();
  
+	//gtk_box_pack_start(GTK_BOX(app.vbox), view, EXPAND_TRUE, FILL_TRUE, 0);
+	gtk_container_add(GTK_CONTAINER(app.scroll), app.view);
+
+	app.context_menu = make_context_menu();
+	g_signal_connect((gpointer)app.view, "button-press-event", G_CALLBACK(on_row_clicked), NULL);
+
+	gtk_main();
+	gdk_threads_leave();
+	exit(0);
+}
+
+
+gboolean
+window_new()
+{
+/*
+window
++--paned
+   +--dir tree
+   |
+   +--vbox
+      +--search box
+      |  +--label
+      |  +--text entry
+      |
+      +--edit metadata hbox
+      |
+      +--hpaned
+      |  +--vpaned (left pane)
+      |  |  +--directory tree
+      |  |  +--inspector
+      |  | 
+      |  +--scrollwin (right pane)
+      |     +--treeview
+      |
+      +--statusbar hbox
+          +--statusbar	
+          +--statusbar2
+
+*/
+	printf("window_new().\n");
+	
+	GtkWidget *window = app.window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+	g_signal_connect (G_OBJECT(window), "delete_event", G_CALLBACK(on_quit), NULL);
+	//g_signal_connect(window, "destroy", gtk_main_quit, NULL);
+
+	GtkWidget *vbox = app.vbox = gtk_vbox_new(FALSE, 0);
+	gtk_widget_show(vbox);
+	gtk_container_add(GTK_CONTAINER(window), vbox);
+
+	GtkWidget *hbox_statusbar = gtk_hbox_new(FALSE, 0);
+	gtk_widget_show(hbox_statusbar);
+	gtk_box_pack_end(GTK_BOX(vbox), hbox_statusbar, EXPAND_FALSE, FALSE, 0);
+
+	//alignment to give top border to main hpane.
+	GtkWidget* align1 = gtk_alignment_new(0.0, 0.0, 1.0, 1.0);
+	gtk_alignment_set_padding(GTK_ALIGNMENT(align1), 2, 1, 0, 0); //top, bottom, left, right.
+	gtk_widget_show(align1);
+	gtk_box_pack_end(GTK_BOX(vbox), align1, EXPAND_TRUE, TRUE, 0);
+
+	GtkWidget *hpaned = gtk_hpaned_new();
+	gtk_paned_set_position(GTK_PANED(hpaned), 160);
+	//gtk_box_pack_end(GTK_BOX(vbox), hpaned, EXPAND_TRUE, TRUE, 0);
+	gtk_container_add(GTK_CONTAINER(align1), hpaned);	
+	gtk_widget_show(hpaned);
+
+	GtkWidget* tree = left_pane();
+	gtk_paned_add1(GTK_PANED(hpaned), tree);
+
+	GtkWidget *scroll = app.scroll = gtk_scrolled_window_new(NULL, NULL);  //adjustments created automatically.
+	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
+	gtk_widget_show(scroll);
+	//gtk_box_pack_end(GTK_BOX(vbox), scroll, EXPAND_TRUE, TRUE, 0);
+	gtk_paned_add2(GTK_PANED(hpaned), scroll);
+
+	make_listview();
+
+	GtkWidget *statusbar = app.statusbar = gtk_statusbar_new();
+	//printf("statusbar=%p\n", app.statusbar);
+	//gtk_statusbar_set_has_resize_grip(GTK_STATUSBAR(statusbar), TRUE);	//why does give a warning??????
+	gtk_statusbar_set_has_resize_grip(GTK_STATUSBAR(statusbar), FALSE);
+	gtk_container_set_border_width(GTK_CONTAINER(statusbar), 5);
+	gtk_box_pack_start(GTK_BOX(hbox_statusbar), statusbar, EXPAND_TRUE, FILL_TRUE, 0);
+	gtk_widget_show(statusbar);
+
+	GtkWidget *statusbar2 = app.statusbar2 = gtk_statusbar_new();
+	//gtk_statusbar_set_has_resize_grip(GTK_STATUSBAR(statusbar), TRUE);	//why does give a warning??????
+	gtk_statusbar_set_has_resize_grip(GTK_STATUSBAR(statusbar2), FALSE);
+	gtk_container_set_border_width(GTK_CONTAINER(statusbar2), 5);
+	gtk_box_pack_start(GTK_BOX(hbox_statusbar), statusbar2, EXPAND_TRUE, FILL_TRUE, 0);
+	gtk_widget_show(statusbar2);
+
+	g_signal_connect(G_OBJECT(window), "size-allocate", G_CALLBACK(window_on_realise), NULL);
+
+	gtk_widget_show_all(window);
+
+	dnd_setup();
+
+	return TRUE;
+}
+
+
+void
+window_on_realise(GtkWidget *win, gpointer user_data)
+{
+	#define SCROLLBAR_WIDTH_HACK 32
+	static gboolean done = FALSE;
+	if(!app.view->requisition.width) return;
+
+	if(!done){
+		//printf("window_new(): wid=%i\n", app.view->requisition.width);
+		gtk_widget_set_size_request(win, app.view->requisition.width + SCROLLBAR_WIDTH_HACK, app.view->requisition.height);
+		done = TRUE;
+	}else{
+		//now reduce the request to allow the user to manually make the window smaller.
+		gtk_widget_set_size_request(win, 100, 100);
+	}
+
+	colour_get_style_bg(&app.bg_colour, GTK_STATE_NORMAL);
+	colour_get_style_fg(&app.fg_colour, GTK_STATE_NORMAL);
+
+
+	//set column colours:
+	//printf("window_on_realise(): fg_color: %x %x %x\n", app.fg_colour.red, app.fg_colour.green, app.fg_colour.blue);
+	g_object_set(app.cell1, "cell-background-gdk", &app.fg_colour, "cell-background-set", TRUE, NULL);
+	g_object_set(app.cell1, "foreground-gdk", &app.bg_colour, "foreground-set", TRUE, NULL);
+}
+
+
+void
+make_listview()
+{
+	//the main pane. A treeview with a list of samples.
+
 	GtkWidget *view = app.view = gtk_tree_view_new_with_model(GTK_TREE_MODEL(app.store));
 	g_signal_connect(view, "motion-notify-event", (GCallback)treeview_on_motion, NULL);
 	//gtk_tree_view_set_fixed_height_mode(GTK_TREE_VIEW(view), TRUE); //supposed to be faster. gtk >= 2.6
@@ -309,139 +457,144 @@ main(int argc, char* *argv)
 	gtk_tree_view_set_search_column(GTK_TREE_VIEW(app.view), COL_NAME);
 
 	gtk_widget_show(view);
-
-	window_new(); 
-	filter_new();
-	tagshow_selector_new();
-	tag_selector_new();
- 
-	//gtk_box_pack_start(GTK_BOX(app.vbox), view, EXPAND_TRUE, FILL_TRUE, 0);
-	gtk_container_add(GTK_CONTAINER(app.scroll), view);
-
-	app.context_menu = make_context_menu();
-	g_signal_connect((gpointer)view, "button-press-event", G_CALLBACK(on_row_clicked), NULL);
-
-	gtk_main();
-	exit(0);
-}
-
-
-gboolean
-window_new()
-{
-/*
-window
-+--paned
-   +--dir tree
-   |
-   +--vbox
-      +--search box
-      |  +--label
-      |  +--text entry
-      |
-      +--edit metadata hbox
-      |
-      |--hpaned
-      +--scrollwin
-      |  +--treeview
-      |
-      +--statusbar hbox
-         +--statusbar	
-         +--statusbar2
-
-*/
-	printf("window_new().\n");
-	
-	GtkWidget *window = app.window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-	g_signal_connect (G_OBJECT(window), "delete_event", G_CALLBACK(on_quit), NULL);
-	//g_signal_connect(window, "destroy", gtk_main_quit, NULL);
-
-	GtkWidget *vbox = app.vbox = gtk_vbox_new(FALSE, 0);
-	gtk_widget_show(vbox);
-	gtk_container_add(GTK_CONTAINER(window), vbox);
-
-	GtkWidget *hbox_statusbar = gtk_hbox_new(FALSE, 0);
-	gtk_widget_show(hbox_statusbar);
-	gtk_box_pack_end(GTK_BOX(vbox), hbox_statusbar, EXPAND_FALSE, FALSE, 0);
-
-	GtkWidget *hpaned = gtk_hpaned_new();
-	gtk_box_pack_end(GTK_BOX(vbox), hpaned, EXPAND_TRUE, TRUE, 0);
-	gtk_widget_show(hpaned);
-
-	GtkWidget* tree = left_pane();
-	gtk_paned_add1(GTK_PANED(hpaned), tree);
-
-	GtkWidget *scroll = app.scroll = gtk_scrolled_window_new(NULL, NULL);  //adjustments created automatically.
-	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
-	gtk_widget_show(scroll);
-	//gtk_box_pack_end(GTK_BOX(vbox), scroll, EXPAND_TRUE, TRUE, 0);
-	gtk_paned_add2(GTK_PANED(hpaned), scroll);
-
-	GtkWidget *statusbar = app.statusbar = gtk_statusbar_new();
-	//printf("statusbar=%p\n", app.statusbar);
-	//gtk_statusbar_set_has_resize_grip(GTK_STATUSBAR(statusbar), TRUE);	//why does give a warning??????
-	gtk_statusbar_set_has_resize_grip(GTK_STATUSBAR(statusbar), FALSE);
-	gtk_box_pack_start(GTK_BOX(hbox_statusbar), statusbar, EXPAND_TRUE, FILL_TRUE, 0);
-	gtk_widget_show(statusbar);
-
-	GtkWidget *statusbar2 = app.statusbar2 = gtk_statusbar_new();
-	//gtk_statusbar_set_has_resize_grip(GTK_STATUSBAR(statusbar), TRUE);	//why does give a warning??????
-	gtk_statusbar_set_has_resize_grip(GTK_STATUSBAR(statusbar2), FALSE);
-	gtk_box_pack_start(GTK_BOX(hbox_statusbar), statusbar2, EXPAND_TRUE, FILL_TRUE, 0);
-	gtk_widget_show(statusbar2);
-
-	g_signal_connect(G_OBJECT(window), "size-allocate", G_CALLBACK(window_on_realise), NULL);
-
-	gtk_widget_show_all(window);
-
-	dnd_setup();
-
-	return TRUE;
-}
-
-
-void
-window_on_realise(GtkWidget *win, gpointer user_data)
-{
-	#define SCROLLBAR_WIDTH_HACK 32
-	static gboolean done = FALSE;
-	if(!app.view->requisition.width) return;
-
-	if(!done){
-		//printf("window_new(): wid=%i\n", app.view->requisition.width);
-		gtk_widget_set_size_request(win, app.view->requisition.width + SCROLLBAR_WIDTH_HACK, app.view->requisition.height);
-		done = TRUE;
-	}else{
-		//now reduce the request to allow the user to manually make the window smaller.
-		gtk_widget_set_size_request(win, 100, 100);
-	}
-
-	colour_get_style_bg(&app.bg_colour, GTK_STATE_NORMAL);
-	colour_get_style_fg(&app.fg_colour, GTK_STATE_NORMAL);
-
-
-	//set column colours:
-	//printf("window_on_realise(): fg_color: %x %x %x\n", app.fg_colour.red, app.fg_colour.green, app.fg_colour.blue);
-	g_object_set(app.cell1, "cell-background-gdk", &app.fg_colour, "cell-background-set", TRUE, NULL);
-	g_object_set(app.cell1, "foreground-gdk", &app.bg_colour, "foreground-set", TRUE, NULL);
 }
 
 
 GtkWidget*
 left_pane()
 {
-	//examples of file navigation: nautilus? (rox has no tree)
+	//other examples of file navigation: nautilus? (rox has no tree)
+
+	GtkWidget *vpaned = gtk_vpaned_new();
+	//gtk_box_pack_end(GTK_BOX(vbox), hpaned, EXPAND_TRUE, TRUE, 0);
+	gtk_widget_show(vpaned);
 
 	app.dir_tree = g_node_new(NULL);
 
 	db_get_dirs();
 
 	GtkWidget* tree = dh_book_tree_new(app.dir_tree);
+	gtk_paned_add1(GTK_PANED(vpaned), tree);
 	gtk_widget_show(tree);
-
 	g_signal_connect(tree, "link_selected", G_CALLBACK(tree_on_link_selected), NULL);
 
-	return tree;
+	//------------
+
+	GtkWidget* inspector = inspector_pane();
+	gtk_paned_add2(GTK_PANED(vpaned), inspector);
+
+	//return tree;
+	return vpaned;
+}
+
+
+GtkWidget*
+inspector_pane()
+{
+	//close up on a single sample. Bottom left of main window.
+
+	app.inspector = malloc(sizeof(inspector*));
+
+	int margin_left = 5;
+
+	GtkWidget *vbox = gtk_vbox_new(FALSE, 0);
+	gtk_widget_show(vbox);
+
+	//left align the label:
+	GtkWidget* align1 = gtk_alignment_new(0.0, 0.5, 0.0, 0.0);
+	gtk_widget_show(align1);
+	gtk_box_pack_start(GTK_BOX(vbox), align1, EXPAND_FALSE, FILL_FALSE, 0);
+
+	GtkWidget* label1 = app.inspector->name = gtk_label_new("Name");
+	gtk_misc_set_padding(GTK_MISC(label1), margin_left, 5);
+	gtk_widget_show(label1);
+	//gtk_box_pack_start(GTK_BOX(vbox), label1, FALSE, FALSE, 0);
+	gtk_container_add(GTK_CONTAINER(align1), label1);	
+
+	PangoFontDescription* pangofont = pango_font_description_from_string("San-Serif 18");
+	gtk_widget_modify_font(label1, pangofont);
+	pango_font_description_free(pangofont);
+
+	//-----------
+
+	app.inspector->image = gtk_image_new_from_pixbuf(NULL);
+	gtk_misc_set_alignment(GTK_MISC(app.inspector->image), 0.0, 0.5);
+	gtk_misc_set_padding(GTK_MISC(app.inspector->image), margin_left, 2);
+	gtk_box_pack_start(GTK_BOX(vbox), app.inspector->image, EXPAND_FALSE, FILL_FALSE, 0);
+	gtk_widget_show(app.inspector->image);
+
+	//-----------
+
+	GtkWidget* align2 = gtk_alignment_new(0.0, 0.5, 0.0, 0.0);
+	gtk_widget_show(align2);
+	gtk_box_pack_start(GTK_BOX(vbox), align2, EXPAND_FALSE, FILL_FALSE, 0);
+
+	GtkWidget* label2 = app.inspector->filename = gtk_label_new("Filename");
+	gtk_misc_set_padding(GTK_MISC(label2), margin_left, 2);
+	gtk_widget_show(label2);
+	gtk_container_add(GTK_CONTAINER(align2), label2);	
+
+	//-----------
+
+	GtkWidget* align3 = gtk_alignment_new(0.0, 0.5, 0.0, 0.0);
+	gtk_widget_show(align3);
+	gtk_box_pack_start(GTK_BOX(vbox), align3, EXPAND_FALSE, FILL_FALSE, 0);
+
+	GtkWidget* label3 = app.inspector->tags = gtk_label_new("Tags");
+	gtk_misc_set_padding(GTK_MISC(label3), margin_left, 2);
+	gtk_widget_show(label3);
+	gtk_container_add(GTK_CONTAINER(align3), label3);	
+
+	//-----------
+
+	GtkTextBuffer *txt_buf1;
+	GtkWidget *text1 = gtk_text_view_new();
+	//gtk_widget_show(text1);
+	txt_buf1 = gtk_text_view_get_buffer(GTK_TEXT_VIEW(text1));
+	gtk_text_buffer_set_text(txt_buf1, "this sample works really well on mid-tempo tracks", -1);
+	g_signal_connect(G_OBJECT(text1), "focus-out-event", G_CALLBACK(on_notes_focus_out), NULL);
+	gtk_box_pack_start(GTK_BOX(vbox), text1, FALSE, TRUE, 2);
+
+	GValue gval = {0,};
+	g_value_init(&gval, G_TYPE_CHAR);
+	g_value_set_char(&gval, margin_left);
+	g_object_set_property(G_OBJECT(text1), "border-width", &gval);
+
+	gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(text1), GTK_WRAP_WORD_CHAR);
+	gtk_text_view_set_pixels_above_lines(GTK_TEXT_VIEW(text1), 5);
+	gtk_text_view_set_pixels_below_lines(GTK_TEXT_VIEW(text1), 5);
+
+	//this also sets the margin:
+	//gtk_text_view_set_border_window_size(GTK_TEXT_VIEW(text1), GTK_TEXT_WINDOW_LEFT, 20);
+
+	return vbox;
+}
+
+
+void
+inspector_udpate(GtkTreePath *path)
+{
+	if((unsigned)path<1024){ errprintf("inspector_udpate(): bad path arg.\n"); return; }
+	printf("inspector_udpate()...\n");
+
+	sample* sample = sample_new_from_model(path);
+
+	GtkTreeIter iter;
+	gtk_tree_model_get_iter(GTK_TREE_MODEL(app.store), &iter, path);
+	gchar *tags;
+	gchar *fpath;
+	gchar *fname;
+	GdkPixbuf* pixbuf = NULL;
+	int id;
+	gtk_tree_model_get(GTK_TREE_MODEL(app.store), &iter, COL_NAME, &fname, COL_FNAME, &fpath, COL_KEYWORDS, &tags, COL_OVERVIEW, &pixbuf, COL_IDX, &id, -1);
+
+	gtk_label_set_text(GTK_LABEL(app.inspector->name), fname);
+	gtk_label_set_text(GTK_LABEL(app.inspector->filename), sample->filename);
+	gtk_label_set_text(GTK_LABEL(app.inspector->tags), tags);
+	gtk_image_set_from_pixbuf(GTK_IMAGE(app.inspector->image), pixbuf);
+	printf("inspector_udpate(): pixbuf=%p.\n", pixbuf);
+
+	free(sample);
 }
 
 
@@ -728,7 +881,7 @@ do_search(char *search, char *dir)
 		gtk_tree_row_reference_free(app.mouseover_row_ref);
 		treeview_block_motion_handler(); //dunno exactly why but this prevents a segfault.
 
-		printf("do_search(): clearing store...\n");
+		//printf("do_search(): clearing store...\n");
 		gtk_list_store_clear(app.store);
 
 		/*
@@ -736,7 +889,7 @@ do_search(char *search, char *dir)
 			gtk_list_store_remove(app.store, &iter);
 		}
 		*/
-		printf("do_search(): store cleared.\n");
+		//printf("do_search(): store cleared.\n");
 
 
 		result = mysql_store_result(mysql);
@@ -1159,6 +1312,14 @@ new_search(GtkWidget *widget, gpointer userdata)
 	const gchar* text = gtk_entry_get_text(GTK_ENTRY(app.search));
 	
 	do_search((gchar*)text, app.search_dir);
+	return FALSE;
+}
+
+
+gboolean
+on_notes_focus_out(GtkWidget *widget, gpointer userdata)
+{
+	printf("on_notes_focus_out()...\n");
 	return FALSE;
 }
 
@@ -1657,6 +1818,8 @@ on_row_clicked(GtkWidget *widget, GdkEventButton *event, gpointer user_data)
 		//printf("left button press!\n");
 		GtkTreePath *path;
 		if(gtk_tree_view_get_path_at_pos(GTK_TREE_VIEW(app.view), (gint)event->x, (gint)event->y, &path, NULL, NULL, NULL)){
+			inspector_udpate(path);
+
 			GdkRectangle rect;
 			gtk_tree_view_get_cell_area(treeview, path, app.col_pixbuf, &rect);
 			if(((gint)event->x > rect.x) && ((gint)event->x < (rect.x + rect.width))){
@@ -1987,6 +2150,10 @@ void
 on_quit(GtkMenuItem *menuitem, gpointer user_data)
 {
     printf("on_quit()...\n");
+
+	//disconnect cleanly from jack.
+	jack_close();
+
 	//FIXME save ini file.
 	//save?: 
 	GError *error = NULL;
@@ -1996,13 +2163,14 @@ on_quit(GtkMenuItem *menuitem, gpointer user_data)
 		printf("on_quit(): error saving config file: %s\n", error->message);
 		g_error_free(error);
 	}
-	printf(string);
+	printf("string=%s\n", string);
 
 	MYSQL *mysql;
 	mysql=&app.mysql;
   	mysql_close(mysql);
 
 	gtk_main_quit();
+    printf("on_quit(): done.\n");
     exit(0);
 }
 
