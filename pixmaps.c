@@ -199,7 +199,7 @@ MaskedPixmap *load_pixmap(const char *name)
  */
 static MaskedPixmap *mp_from_stock(const char *stock_id, int size)
 {
-	printf("mp_from_stock()...\n");
+	//printf("mp_from_stock()...\n");
 	GtkIconSet *icon_set;
 	GdkPixbuf  *pixbuf;
 	MaskedPixmap *retval;
