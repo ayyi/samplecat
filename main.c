@@ -41,6 +41,7 @@
 #include "overview.h"
 #include "cellrenderer_hypertext.h"
 #include "tree.h"
+#include "db.h"
 
 #include "rox_global.h"
 #include "type.h"
@@ -50,9 +51,8 @@
 #define DEBUG_NO_THREADS 1
 
 struct _app app;
+struct _palette palette;
 GList* mime_types; // list of *MIME_type
-
-char database_name[64] = "samplelib";
 
 //strings for console output:
 char white [16];
@@ -74,13 +74,15 @@ enum
   COL_SAMPLERATE,
   COL_CHANNELS,
   COL_MIMETYPE,
+  COL_NOTES, //this is in the store but not the view.
   NUM_COLS
 };
 
-//mysql table layout:
+//mysql table layout (database column numbers):
+#define MYSQL_KEYWORDS 3
 #define MYSQL_ONLINE 8
 #define MYSQL_MIMETYPE 10
-#define MYSQL_KEYWORDS 3
+#define MYSQL_NOTES 11
 
 //dnd:
 GtkTargetEntry dnd_file_drag_types[] = {
@@ -119,13 +121,6 @@ func (GtkTreeModel *model, GtkTreeIter *iter, gpointer data)
 }
 
 
-int 
-mysql_exec_sql(MYSQL *mysql, const char *create_definition)
-{
-   return mysql_real_query(mysql,create_definition,strlen(create_definition));
-}
-
-
 void
 app_init()
 {
@@ -144,7 +139,7 @@ int
 main(int argc, char* *argv)
 {
 	//make gdb break on g errors:
-    g_log_set_always_fatal( G_LOG_FLAG_RECURSION | G_LOG_FLAG_FATAL | G_LOG_LEVEL_ERROR | G_LOG_LEVEL_CRITICAL | G_LOG_LEVEL_WARNING );
+    //g_log_set_always_fatal( G_LOG_FLAG_RECURSION | G_LOG_FLAG_FATAL | G_LOG_LEVEL_ERROR | G_LOG_LEVEL_CRITICAL | G_LOG_LEVEL_WARNING );
 
 	//init console escape commands:
 	sprintf(white,  "%c[0;39m", 0x1b);
@@ -159,7 +154,7 @@ main(int argc, char* *argv)
 
 	printf("%s%s. Version %s%s\n", yellow, app_name, app_version, white);
 
-	load_config();
+	config_load();
 
 	g_thread_init(NULL);
 	gdk_threads_init();
@@ -168,10 +163,10 @@ main(int argc, char* *argv)
 	type_init();
 	pixmaps_init();
 
-	printf("main(): creating overview thread...\n");
 	//g_thread_init(NULL);
-	gdk_threads_enter();
+	//gdk_threads_enter();
 #ifndef DEBUG_NO_THREADS
+	printf("main(): creating overview thread...\n");
 	GError *error = NULL;
 	msg_queue = g_async_queue_new();
 	if(!g_thread_create(overview_thread, NULL, FALSE, &error)){
@@ -192,7 +187,7 @@ main(int argc, char* *argv)
  
 	scan_dir();
 
-	app.store = gtk_list_store_new(NUM_COLS, GDK_TYPE_PIXBUF, G_TYPE_INT, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING, GDK_TYPE_PIXBUF, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_INT, G_TYPE_STRING);
+	app.store = gtk_list_store_new(NUM_COLS, GDK_TYPE_PIXBUF, G_TYPE_INT, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING, GDK_TYPE_PIXBUF, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_INT, G_TYPE_STRING, G_TYPE_STRING);
 	//gtk_list_store_append(store, &iter);
 	//gtk_list_store_set(store, &iter, COL_NAME, "row 1", -1);
  
@@ -231,7 +226,7 @@ main(int argc, char* *argv)
 	g_signal_connect((gpointer)app.view, "button-press-event", G_CALLBACK(on_row_clicked), NULL);
 
 	gtk_main();
-	gdk_threads_leave();
+	//gdk_threads_leave();
 	exit(0);
 }
 
@@ -480,6 +475,8 @@ left_pane()
 
 	//------------
 
+#ifdef INSPECTOR
+#endif
 	GtkWidget* inspector = inspector_pane();
 	gtk_paned_add2(GTK_PANED(vpaned), inspector);
 
@@ -493,7 +490,7 @@ inspector_pane()
 {
 	//close up on a single sample. Bottom left of main window.
 
-	app.inspector = malloc(sizeof(inspector*));
+	app.inspector = malloc(sizeof(*app.inspector));
 
 	int margin_left = 5;
 
@@ -544,15 +541,64 @@ inspector_pane()
 	gtk_misc_set_padding(GTK_MISC(label3), margin_left, 2);
 	gtk_widget_show(label3);
 	gtk_container_add(GTK_CONTAINER(align3), label3);	
+	
 
 	//-----------
+
+	GtkWidget* align4 = gtk_alignment_new(0.0, 0.5, 0.0, 0.0);
+	gtk_widget_show(align4);
+	gtk_box_pack_start(GTK_BOX(vbox), align4, EXPAND_FALSE, FILL_FALSE, 0);
+
+	GtkWidget* label4 = app.inspector->length = gtk_label_new("Length");
+	gtk_misc_set_padding(GTK_MISC(label4), margin_left, 2);
+	gtk_widget_show(label4);
+	gtk_container_add(GTK_CONTAINER(align4), label4);	
+
+	//-----------
+	
+	GtkWidget* align5 = gtk_alignment_new(0.0, 0.5, 0.0, 0.0);
+	gtk_widget_show(align5);
+	gtk_box_pack_start(GTK_BOX(vbox), align5, EXPAND_FALSE, FILL_FALSE, 0);
+
+	GtkWidget* label5 = app.inspector->samplerate = gtk_label_new("Samplerate");
+	gtk_misc_set_padding(GTK_MISC(label5), margin_left, 2);
+	gtk_widget_show(label5);
+	gtk_container_add(GTK_CONTAINER(align5), label5);	
+
+	//-----------
+
+	GtkWidget* align6 = gtk_alignment_new(0.0, 0.5, 0.0, 0.0);
+	gtk_widget_show(align6);
+	gtk_box_pack_start(GTK_BOX(vbox), align6, EXPAND_FALSE, FILL_FALSE, 0);
+
+	GtkWidget* label6 = app.inspector->channels = gtk_label_new("Channels");
+	gtk_misc_set_padding(GTK_MISC(label6), margin_left, 2);
+	gtk_widget_show(label6);
+	gtk_container_add(GTK_CONTAINER(align6), label6);	
+
+	//-----------
+
+	GtkWidget* align7 = gtk_alignment_new(0.0, 0.5, 0.0, 0.0);
+	gtk_widget_show(align7);
+	gtk_box_pack_start(GTK_BOX(vbox), align7, EXPAND_FALSE, FILL_FALSE, 0);
+
+	GtkWidget* label7 = app.inspector->mimetype = gtk_label_new("Mimetype");
+	gtk_misc_set_padding(GTK_MISC(label7), margin_left, 2);
+	gtk_widget_show(label7);
+	gtk_container_add(GTK_CONTAINER(align7), label7);	
+	
+	//-----------
+
+	//notes:
 
 	GtkTextBuffer *txt_buf1;
 	GtkWidget *text1 = gtk_text_view_new();
 	//gtk_widget_show(text1);
-	txt_buf1 = gtk_text_view_get_buffer(GTK_TEXT_VIEW(text1));
+	txt_buf1 = app.inspector->notes = gtk_text_view_get_buffer(GTK_TEXT_VIEW(text1));
 	gtk_text_buffer_set_text(txt_buf1, "this sample works really well on mid-tempo tracks", -1);
+	gtk_text_view_set_accepts_tab(GTK_TEXT_VIEW(text1), FALSE);
 	g_signal_connect(G_OBJECT(text1), "focus-out-event", G_CALLBACK(on_notes_focus_out), NULL);
+	g_signal_connect(G_OBJECT(text1), "insert-at-cursor", G_CALLBACK(on_notes_insert), NULL);
 	gtk_box_pack_start(GTK_BOX(vbox), text1, FALSE, TRUE, 2);
 
 	GValue gval = {0,};
@@ -567,6 +613,8 @@ inspector_pane()
 	//this also sets the margin:
 	//gtk_text_view_set_border_window_size(GTK_TEXT_VIEW(text1), GTK_TEXT_WINDOW_LEFT, 20);
 
+	printf("inspector_pane(): size=%i inspector=%p textbuf=%p\n", sizeof(*app.inspector), app.inspector, app.inspector->notes);
+
 	return vbox;
 }
 
@@ -574,6 +622,7 @@ inspector_pane()
 void
 inspector_udpate(GtkTreePath *path)
 {
+	if(!app.inspector) return;
 	if((unsigned)path<1024){ errprintf("inspector_udpate(): bad path arg.\n"); return; }
 	printf("inspector_udpate()...\n");
 
@@ -584,17 +633,70 @@ inspector_udpate(GtkTreePath *path)
 	gchar *tags;
 	gchar *fpath;
 	gchar *fname;
+	gchar *length;
+	gchar *samplerate;
+	int channels;
+	gchar *mimetype;
+	gchar *notes;
 	GdkPixbuf* pixbuf = NULL;
 	int id;
-	gtk_tree_model_get(GTK_TREE_MODEL(app.store), &iter, COL_NAME, &fname, COL_FNAME, &fpath, COL_KEYWORDS, &tags, COL_OVERVIEW, &pixbuf, COL_IDX, &id, -1);
+	gtk_tree_model_get(GTK_TREE_MODEL(app.store), &iter, COL_NAME, &fname, COL_FNAME, &fpath, COL_KEYWORDS, &tags, COL_LENGTH, &length, COL_SAMPLERATE, &samplerate, COL_CHANNELS, &channels, COL_MIMETYPE, &mimetype, COL_NOTES, &notes, COL_OVERVIEW, &pixbuf, COL_IDX, &id, -1);
 
-	gtk_label_set_text(GTK_LABEL(app.inspector->name), fname);
-	gtk_label_set_text(GTK_LABEL(app.inspector->filename), sample->filename);
-	gtk_label_set_text(GTK_LABEL(app.inspector->tags), tags);
+	char ch_str[64]; snprintf(ch_str, 64, "%u channels", channels);
+	char fs_str[64]; snprintf(fs_str, 64, "%s kHz",      samplerate);
+
+	gtk_label_set_text(GTK_LABEL(app.inspector->name),       fname);
+	gtk_label_set_text(GTK_LABEL(app.inspector->filename),   sample->filename);
+	gtk_label_set_text(GTK_LABEL(app.inspector->tags),       tags);
+	gtk_label_set_text(GTK_LABEL(app.inspector->length),     length);
+	gtk_label_set_text(GTK_LABEL(app.inspector->channels),   ch_str);
+	gtk_label_set_text(GTK_LABEL(app.inspector->samplerate), fs_str);
+	gtk_label_set_text(GTK_LABEL(app.inspector->mimetype),   mimetype);
+	gtk_text_buffer_set_text(app.inspector->notes, notes ? notes : "", -1);
 	gtk_image_set_from_pixbuf(GTK_IMAGE(app.inspector->image), pixbuf);
-	printf("inspector_udpate(): pixbuf=%p.\n", pixbuf);
+	printf("inspector_udpate(): channels=%i.\n", channels);
+
+	//store a reference to the row id in the inspector widget:
+	//g_object_set_data(G_OBJECT(app.inspector->name), "id", GUINT_TO_POINTER(id));
+	app.inspector->row_id = id;
+	app.inspector->row_ref = gtk_tree_row_reference_new(GTK_TREE_MODEL(app.store), path);
 
 	free(sample);
+	printf("inspector_udpate(): done.\n");
+}
+
+
+GtkWidget*
+colour_box_new(GtkWidget* parent)
+{
+	GdkColor color;
+	GtkWidget* e;
+	//GtkWidget* h = gtk_hbox_new(FALSE, 0);
+	int i;
+	for(i=0;i<8;i++){
+		color.red   = palette.red[8+i];
+		color.green = palette.grn[8+i];
+		color.blue  = palette.blu[8+i];
+
+		e = gtk_event_box_new();
+
+		//dnd:
+		gtk_drag_source_set(e, GDK_BUTTON1_MASK | GDK_BUTTON2_MASK,
+                          dnd_file_drag_types,          //const GtkTargetEntry *targets,
+                          dnd_file_drag_types_count,    //gint n_targets,
+                          GDK_ACTION_COPY | GDK_ACTION_MOVE | GDK_ACTION_LINK);
+		//g_signal_connect(G_OBJECT(e), "drag-begin", G_CALLBACK(colour_drag_begin), NULL);
+		//g_signal_connect(G_OBJECT(e), "drag-end",   G_CALLBACK(colour_drag_end),   NULL);
+		g_signal_connect(G_OBJECT(e), "drag-data-received", G_CALLBACK(colour_drag_datareceived), NULL);
+		g_signal_connect(G_OBJECT(e), "drag-data-get", G_CALLBACK(colour_drag_dataget), GUINT_TO_POINTER(i));
+
+		gtk_widget_modify_bg(GTK_WIDGET(e), GTK_STATE_NORMAL, &color);
+		gtk_widget_show(e);
+
+		gtk_box_pack_end(GTK_BOX(parent), e, TRUE, TRUE, 0);
+	}
+	//gtk_widget_show_all(h);
+	return e;
 }
 
 
@@ -932,7 +1034,7 @@ do_search(char *search, char *dir)
 				gtk_list_store_append(app.store, &iter); 
 				gtk_list_store_set(app.store, &iter, COL_ICON, iconbuf, COL_IDX, atoi(row[0]), COL_NAME, row[1], COL_FNAME, row[2], COL_KEYWORDS, keywords, 
                                                      COL_OVERVIEW, pixbuf, COL_LENGTH, length, COL_SAMPLERATE, samplerate_s, COL_CHANNELS, channels, 
-													 COL_MIMETYPE, row[MYSQL_MIMETYPE], -1);
+													 COL_MIMETYPE, row[MYSQL_MIMETYPE], COL_NOTES, row[MYSQL_NOTES], -1);
 				row_count++;
 			}
 			mysql_free_result(result);
@@ -997,6 +1099,8 @@ filter_new()
 	//g_signal_connect(G_OBJECT(entry), "activate", G_CALLBACK(on_entry_activate), NULL);
 	g_signal_connect(G_OBJECT(entry), "activate", G_CALLBACK(new_search), NULL);
 
+	//----------------------------------------------------------------------
+
 	//second row (metadata edit):
 	GtkWidget* hbox_edit = app.toolbar2 = gtk_hbox_new(FALSE, 0);
     gtk_widget_show(hbox_edit);
@@ -1017,6 +1121,9 @@ filter_new()
 	gtk_size_group_add_widget(size_group, label1);
 	gtk_size_group_add_widget(size_group, align1);
 	
+	GtkWidget* colour_box = colour_box_new(hbox_edit);
+	//gtk_box_pack_start(GTK_BOX(hbox_edit), colour_box, EXPAND_FALSE, FILL_FALSE, 0);
+
 	return TRUE;
 }
 
@@ -1204,54 +1311,6 @@ row_clear_tags(GtkTreeIter* iter, int id)
 }
 
 
-gboolean
-db_connect()
-{
-	MYSQL *mysql;
-
-	if(mysql_init(&(app.mysql))==NULL){
-		printf("Failed to initiate MySQL connection.\n");
-		exit(1);
-	}
-	printf("MySQL Client Version is %s\n", mysql_get_client_info());
-
-	mysql = &app.mysql;
-
-	if(!mysql_real_connect(mysql, "localhost", "root", "hlongporto", "test", 0, NULL, 0)){
-		printf("cannot connect. %s\n", mysql_error(mysql));
-		exit(1);
-	}
-	printf("MySQL Server Version is %s\n", mysql_get_server_info(mysql));
-	//printf("Logged on to database.\n");
-
-	if(!mysql_select_db(mysql, database_name /*const char *db*/)==0)/*success*/{
-		//printf( "Database Selected.\n");
-	//else
-		printf( "Failed to connect to Database: Error: %s\n", mysql_error(mysql));
-		return FALSE;
-	}
-
-	return TRUE;
-}
- 
-
-int
-db_insert(char *qry)
-{
-	MYSQL *mysql = &app.mysql;
-	int id = 0;
-
-	if(mysql_exec_sql(mysql, qry)==0){
-		printf("db_insert(): ok!\n");
-		id = mysql_insert_id(mysql);
-	}else{
-		errprintf("db_insert(): not ok...\n");
-		return 0;
-	}
-	return id;
-}
-
-
 void
 db_get_dirs()
 {
@@ -1262,6 +1321,14 @@ db_get_dirs()
 	mysql=&app.mysql;
 	MYSQL_RES *result;
 	MYSQL_ROW row;
+
+	/*
+	GdkPixbuf* iconbuf = NULL;
+	MIME_type* mime_type = mime_type_lookup("inode/directory");
+	type_to_icon(mime_type);
+	if ( mime_type->image == NULL ) printf("db_get_dirs(): no icon.\n");
+	iconbuf = mime_type->image->sm_pixbuf;
+	*/
 
 	snprintf(qry, 1024, "SELECT DISTINCT filedir FROM samples ORDER BY filedir");
 
@@ -1316,10 +1383,46 @@ new_search(GtkWidget *widget, gpointer userdata)
 }
 
 
+void
+on_notes_insert(GtkTextView *textview, gchar *arg1, gpointer user_data)
+{
+	printf("on_notes_insert()...\n");
+}
+
+
 gboolean
 on_notes_focus_out(GtkWidget *widget, gpointer userdata)
 {
 	printf("on_notes_focus_out()...\n");
+
+	GtkTextBuffer* textbuf = gtk_text_view_get_buffer(GTK_TEXT_VIEW(widget));
+	if(!textbuf){ errprintf("on_notes_focus_out(): bad arg: widget.\n"); return FALSE; }
+
+	GtkTextIter start_iter, end_iter;
+	gtk_text_buffer_get_start_iter(textbuf,  &start_iter);
+	gtk_text_buffer_get_end_iter  (textbuf,  &end_iter);
+	gchar* notes = gtk_text_buffer_get_text(textbuf, &start_iter, &end_iter, TRUE);
+	printf("on_notes_focus_out(): start=%i end=%i\n", gtk_text_iter_get_offset(&start_iter), gtk_text_iter_get_offset(&end_iter));
+
+	unsigned id = app.inspector->row_id;
+	char sql[1024];
+	snprintf(sql, 1024, "UPDATE samples SET notes='%s' WHERE id=%u", notes, id);
+	//printf("on_notes_focus_out(): %s\n", sql);
+	if(mysql_query(&app.mysql, sql)){
+		errprintf("on_notes_focus_out(): update failed! sql=%s\n", sql);
+		return FALSE;
+	}else{
+		GtkTreePath *path;
+		//if((path = gtk_tree_model_get_path(GTK_TREE_MODEL(app.store), &iter))){
+		if((path = gtk_tree_row_reference_get_path(app.mouseover_row_ref))){
+  			GtkTreeIter iter;
+			gtk_tree_model_get_iter(GTK_TREE_MODEL(app.store), &iter, path);
+	    	gtk_list_store_set(app.store, &iter, COL_NOTES, notes, -1);
+			gtk_tree_path_free(path);
+		}
+	}
+
+	g_free(notes);
 	return FALSE;
 }
 
@@ -1330,8 +1433,6 @@ dnd_setup(){
                         dnd_file_drag_types,       //const GtkTargetEntry *targets,
                         dnd_file_drag_types_count,    //gint n_targets,
                         (GdkDragAction)(GDK_ACTION_MOVE | GDK_ACTION_COPY));
-  //g_signal_connect (G_OBJECT(ch->e), "drag-drop", G_CALLBACK(mixer_drag_drop), NULL);
-  //g_signal_connect(G_OBJECT(view), "drag-motion", G_CALLBACK(pool_drag_motion), NULL);
   g_signal_connect(G_OBJECT(app.window), "drag-data-received", G_CALLBACK(drag_received), NULL);
 }
 
@@ -1395,7 +1496,6 @@ sample_new_from_model(GtkTreePath *path)
   gchar *fpath, *fname, *mimetype;
   int id;
   gtk_tree_model_get(model, &iter, COL_FNAME, &fpath, COL_NAME, &fname, COL_IDX, &id, COL_MIMETYPE, &mimetype, -1);
-
 
   sample* sample = malloc(sizeof(*sample));
   sample->id = id;
@@ -2128,8 +2228,10 @@ on_entry_activate(GtkEntry *entry, gpointer user_data)
 
 
 gboolean
-load_config()
+config_load()
 {
+	snprintf(app.config.database_name, 64, "samplelib");
+
 	GError *error = NULL;
 	app.key_file = g_key_file_new();
 	char config_file[256];
@@ -2140,9 +2242,32 @@ load_config()
 		printf("unable to load config file: %s\n", error->message);
 		g_error_free(error);
 		error = NULL;
+		config_new();
 		return FALSE;
 	}
 	return TRUE;
+}
+
+
+void
+config_new()
+{
+	printf("config_new()...\n");
+
+	//g_key_file_has_group(GKeyFile *key_file, const gchar *group_name);
+
+	GError *error = NULL;
+	char data[256 * 256];
+	sprintf(data, "#this is the default config file.\n#pls enter the database details.\n"
+		"[First Group]\n"
+		"database_name=samplelib\n");
+
+	if(!g_key_file_load_from_data(app.key_file, data, strlen(data), G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS, &error)){
+		errprintf("config_new() error creating new key_file from data. %s\n", error->message);
+		g_error_free(error);
+		error = NULL;
+		return;
+	}
 }
 
 
@@ -2201,4 +2326,72 @@ keyword_is_dupe(char* new, char* existing)
 	g_strfreev(split);
 	return found;
 }
+
+
+int
+colour_drag_dataget(GtkWidget *widget, GdkDragContext *drag_context,
+                    GtkSelectionData *data,
+                    guint info,
+                    guint time,
+                    gpointer user_data)
+{
+  char text[16];
+  gboolean data_sent = FALSE;
+  printf("colour_drag_dataget()!\n");
+
+  //palette = user_data;
+
+  int i=0;
+
+	/*
+      //get window data:
+	  struct _colour_win_data *windata;
+	  windata = window->data;
+	  //printf("  box0=%i\n", windata->box[0]);
+
+	  //find our square:
+      for(i=0;i<8;i++){
+	    //if(i<10) printf("widget=%i box=%i\n", widget, windata->box[i]);
+        if(windata->box[i] == widget){ break;}
+      }
+	*/
+  
+  //convert to a string (all dnd messages are strings?):
+  sprintf(text, "colour:%i", i+1);//1 based to avoid atoi problems.
+  
+  gtk_selection_data_set(data,	
+						GDK_SELECTION_TYPE_STRING,
+						8,	/* 8 bits per character. */
+						text, strlen(text)
+						);
+  data_sent = TRUE;
+
+  /*
+  if(!data_sent){
+    const gchar *cstrptr = "Error";
+    gtk_selection_data_set(data,
+						   GDK_SELECTION_TYPE_STRING,
+						   8,						// 8 bits per character.
+						   cstrptr, strlen(cstrptr)
+                           );
+	data_sent = TRUE;
+  }
+  */
+  return FALSE;
+}
+
+
+int
+colour_drag_datareceived(GtkWidget *widget, GdkDragContext *drag_context,
+                    gint x, gint y, GtkSelectionData *data,
+                    guint info,
+                    guint time,
+                    gpointer user_data)
+{
+  printf("colour_drag_colour_drag_datareceived()!\n");
+
+  return FALSE;
+}
+
+
 

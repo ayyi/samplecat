@@ -19,15 +19,28 @@ enum {
 
 typedef struct _inspector
 {
-	GtkWidget*   name;
-	GtkWidget*   filename;
-	GtkWidget*   tags;
-	GtkWidget*   image;
+	unsigned       row_id;
+	GtkTreeRowReference* row_ref;
+	GtkWidget*     name;
+	GtkWidget*     filename;
+	GtkWidget*     tags;
+	GtkWidget*     length;
+	GtkWidget*     samplerate;
+	GtkWidget*     channels;
+	GtkWidget*     mimetype;
+	GtkWidget*     image;
+	GtkTextBuffer* notes;
 } inspector;
 
 
+struct _config
+{
+	char      database_name[64];
+};
+
 struct _app
 {
+	struct _config config;
 	char      search_phrase[256];
 	char*     search_dir;
 	gchar*    search_category;
@@ -87,6 +100,12 @@ typedef struct _sample
 
 } sample;
 
+struct _palette {
+  guint red[8];
+  guint grn[8];
+  guint blu[8];
+};
+
 enum {
 	TYPE_SNDFILE=1,
 	TYPE_FLAC,
@@ -96,6 +115,7 @@ gboolean	window_new();
 GtkWidget*  left_pane();
 GtkWidget*  inspector_pane();
 void        inspector_udpate(GtkTreePath *path);
+GtkWidget*  colour_box_new(GtkWidget* parent);
 void        window_on_realise(GtkWidget *win, gpointer user_data);
 void        make_listview();
 gboolean	filter_new();
@@ -108,10 +128,10 @@ gboolean    row_set_tags(GtkTreeIter* iter, int id, char* tags_new);
 gboolean    row_clear_tags(GtkTreeIter* iter, int id);
 
 
-gboolean	db_connect();
 void        do_search(char *search, char *dir);
 
 gboolean    new_search(GtkWidget *widget, gpointer userdata);
+void        on_notes_insert(GtkTextView *textview, gchar *arg1, gpointer user_data);
 gboolean    on_notes_focus_out(GtkWidget *widget, gpointer userdata);
 
 void        scan_dir();
@@ -130,7 +150,6 @@ gboolean    get_file_info_sndfile(sample* sample);
 gboolean    on_overview_done(gpointer sample);
 
 void        db_update_pixbuf(sample *sample);
-int         db_insert(char *qry);
 void        db_get_dirs();
 
 void        keywords_on_edited(GtkCellRendererText *cell, gchar *path_string, gchar *new_text, gpointer user_data);
@@ -150,7 +169,12 @@ gboolean    tree_on_link_selected(GObject *ignored, DhLink *link, gpointer data)
 
 void        on_entry_activate(GtkEntry *entry, gpointer user_data);
 
-gboolean    load_config();
+gboolean    config_load();
+void        config_new();
 void        on_quit(GtkMenuItem *menuitem, gpointer user_data);
 
 gboolean    keyword_is_dupe(char* new, char* existing);
+
+int         colour_drag_dataget(GtkWidget *widget, GdkDragContext *drag_context, GtkSelectionData *data, guint info, guint time, gpointer user_data);
+int         colour_drag_datareceived(GtkWidget *widget, GdkDragContext *drag_context, gint x, gint y, GtkSelectionData *data, guint info, guint time, gpointer user_data);
+
