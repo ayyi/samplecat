@@ -95,21 +95,22 @@ jack_process_flac(jack_nframes_t nframes, void *arg)
 	if((unsigned)rb1<1024) errprintf("jack_process_flac(): bad rb1.\n");
 	if((unsigned)rb2<1024) errprintf("jack_process_flac(): bad rb2.\n");
 
+	g_mutex_lock(app.mutex);
 	if(jack_ringbuffer_read_space(rb1) < bytes_to_copy){ //yes, its *bytes*.
-		printf("jack_process_flac(): not enough data ready. Aborting playback...\n");
-		//g_idle_add_full(G_PRIORITY_HIGH_IDLE, (GSourceFunc)jack_process_stop_playback, NULL, NULL); //FIXME this is not aggressive enough
+		warnprintf("jack_process_flac(): not enough data ready. Aborting playback...\n");
+		g_idle_add_full(G_PRIORITY_HIGH_IDLE, (GSourceFunc)jack_process_stop_playback, NULL, NULL); //FIXME this is not aggressive enough
+		g_mutex_unlock(app.mutex);
 		return FALSE;
 	}
-	jack_ringbuffer_read_space(rb2);
-	/*
+	//jack_ringbuffer_read_space(rb2);
 
 	//copy nframes from the ringbuffer into the jack buffer:
 	jack_ringbuffer_read(rb1, (char*)out1, bytes_to_copy); //the count is in *bytes*.
 	jack_ringbuffer_read(rb2, (char*)out2, bytes_to_copy);
 
 	//inform the main thread:
-	//g_idle_add_full(G_PRIORITY_HIGH_IDLE, (GSourceFunc)jack_process_finished, NULL, NULL); //FIXME this is not aggressive enough
-	*/
+	g_idle_add_full(G_PRIORITY_HIGH_IDLE, (GSourceFunc)jack_process_finished, NULL, NULL); //FIXME this is not aggressive enough
+	g_mutex_unlock(app.mutex);
 
 	return TRUE;
 }
@@ -243,7 +244,8 @@ audition_reset()
 _decoder_session*
 flac_decoder_session_new()
 {
-	_decoder_session* session = malloc(sizeof(_decoder_session*));
+	_decoder_session* session = malloc(sizeof(*session));
+	printf("flac_decoder_session_new(): size=%i\n", sizeof(*session));
 	session->output_peakfile = FALSE;
 	session->flacstream = NULL;
 	session->sample = NULL;
@@ -338,6 +340,7 @@ playback_init(sample* sample)
 			puts(sf_strerror(NULL));    // print the error message from libsndfile:
 		}
 		audition.sffile = sffile;
+		audition.type = TYPE_SNDFILE;
 
 		char chanwidstr[64];
 		if     (sfinfo->channels==1) snprintf(chanwidstr, 64, "mono");
@@ -364,16 +367,20 @@ playback_stop()
 
 	//if(audition.type == TYPE_FLAC){
 	if(audition.type == TYPE_SNDFILE){
+		printf("playback_stop(): closing sndfile...\n");
 		if(sf_close(audition.sffile)) printf("error! bad file close.\n");
 	}else{
+		printf("playback_stop(): closing flac...\n");
 		flac_close(audition.session->flacstream);
 		audition.session->flacstream = NULL;
 	}
 
+	printf("playback_stop(): reseting audiition...\n");
 	audition_reset();
 
 	app.playing_id = 0;
 	memset(buffer, 0, MAX_JACK_BUFFER_SIZE * sizeof(jack_default_audio_sample_t));
+	printf("playback_stop(): done.\n");
 }
 
 
@@ -424,9 +431,11 @@ flac_open(_decoder_session* session)
 	printf("flac_open()...\n");
 	FLAC__FileDecoder* flacstream = FLAC__file_decoder_new();
 
+	printf("flac_open(): setting filename...\n");
 	FLAC__file_decoder_set_filename(flacstream, session->sample->filename);
 	//FLAC__file_decoder_set_md5_checking(flacstream, true);
 
+	printf("flac_open(): setting callbacks...\n");
 	//must be set _before_ initialisation:
 	FLAC__file_decoder_set_write_callback   (flacstream, (FLAC__FileDecoderWriteCallback)flac_write_cb);
 	FLAC__file_decoder_set_error_callback   (flacstream, flac_error_cb);
@@ -532,6 +541,7 @@ flac_fill_ringbuffer(_decoder_session* session)
 	int i = 0;
 	//printf("flac_fill_ringbuffer(): checking ringbuffer space...\n");
 	//FLAC__MAX_BLOCK_SIZE
+	//g_mutex_lock(app.mutex);
 	while(jack_ringbuffer_write_space(rb1) > 48 * 1024 ){ //FIXME we dont know yet the flac block size, but can we make a better guess? blocksize appears to be about 4000 => 4000*4*2 bytes.
 		if(!flac_next_block(session)){
 			printf("flac_fill_ringbuffer() cannot decode another block\n");
@@ -539,6 +549,7 @@ flac_fill_ringbuffer(_decoder_session* session)
 		}
 		i++;
 	}
+	//g_mutex_unlock(app.mutex);
 
 	printf("flac_fill_ringbuffer() finished. read %i blocks\n", i);
 
@@ -815,6 +826,7 @@ flac_write_cb(const FLAC__FileDecoder *decoder, const FLAC__Frame* frame, const 
 			rb[1] = audition.rb2;
 			if((unsigned)rb[0]<1024){ errprintf("flac_write_cb(): bad ringbuffer arg (%p).\n", rb[0]); return FLAC__STREAM_DECODER_WRITE_STATUS_ABORT;}
 
+			g_mutex_lock(app.mutex);
 			if(jack_ringbuffer_write_space(audition.rb1) > bytes_to_write){
 				printf("4"); fflush(stdout);
 
@@ -850,6 +862,7 @@ flac_write_cb(const FLAC__FileDecoder *decoder, const FLAC__Frame* frame, const 
 				}
 
 			} else { errprintf("flac_write_cb(): no space in ringbuffer. available=%i needed=%i\n", jack_ringbuffer_write_space(audition.rb1), bytes_to_write*2); return FLAC__STREAM_DECODER_WRITE_STATUS_ABORT; }
+			g_mutex_unlock(app.mutex);
 			printf("8"); fflush(stdout);
 
 		}
