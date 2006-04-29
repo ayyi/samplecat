@@ -454,6 +454,106 @@ colour_get_style_bg(GdkColor *color, int state)
 
 
 void
+colour_get_style_base(GdkColor *color, int state)
+{
+  //gives the default style base colour for the given widget state.
+
+  GtkWidget *widget = app.window;
+
+  GtkStyle *style = gtk_style_copy(gtk_widget_get_style(widget));
+  color->red   = style->base[state].red;
+  color->green = style->base[state].green;
+  color->blue  = style->base[state].blue;
+
+  g_free(style);
+}
+
+
+void
+colour_get_style_text(GdkColor *color, int state)
+{
+  //gives the default style text colour for the given widget state.
+
+  GtkWidget *widget = app.window;
+
+  GtkStyle *style = gtk_style_copy(gtk_widget_get_style(widget));
+  color->red   = style->text[state].red;
+  color->green = style->text[state].green;
+  color->blue  = style->text[state].blue;
+
+  g_free(style);
+}
+
+
+gchar*
+gdkcolor_get_hexstring(GdkColor* c)
+{
+	return g_strdup_printf("%02x%02x%02x", c->red >> 8, c->green >> 8, c->blue >> 8);
+}
+
+
+void
+hexstring_from_gdkcolor(char* hexstring, GdkColor* c)
+{
+	snprintf(hexstring, 7, "%02x%02x%02x", c->red >> 8, c->green >> 8, c->blue >> 8);
+}
+
+
+gboolean
+colour_lighter(GdkColor* lighter, GdkColor* colour)
+{
+	lighter->red   = MIN(colour->red   * 1.2 + 0x600, 0xffff);
+	lighter->green = MIN(colour->green * 1.2 + 0x600, 0xffff);
+	lighter->blue  = MIN(colour->blue  * 1.2 + 0x600, 0xffff);
+
+	if(is_white(lighter)) return FALSE; else return TRUE;
+}
+
+
+gboolean
+colour_darker(GdkColor* darker, GdkColor* colour)
+{
+	darker->red   = MAX(colour->red   * 0.8, 0x0000);
+	darker->green = MAX(colour->green * 0.8, 0x0000);
+	darker->blue  = MAX(colour->blue  * 0.8, 0x0000);
+
+	if(is_black(darker)) return FALSE; else return TRUE;
+}
+
+
+gboolean
+is_white(GdkColor* colour)
+{
+	if(colour->red >= 0xffff && colour->green >= 0xffff && colour->blue >= 0xffff) return TRUE;
+	else return FALSE;
+}
+
+
+gboolean
+is_black(GdkColor* colour)
+{
+	if(colour->red < 1 && colour->green < 1 && colour->blue < 1) return TRUE;
+	else return FALSE;
+}
+
+
+gboolean
+is_similar(GdkColor* colour1, GdkColor* colour2)
+{
+	GdkColor difference;
+	difference.red   = ABS(colour1->red   - colour2->red);
+	difference.green = ABS(colour1->green - colour2->green);
+	difference.blue  = ABS(colour1->blue  - colour2->blue);
+
+	if(difference.red + difference.green + difference.blue < 0x2000){
+		printf("is_similar(): is similar! %x = %x\n", colour1->red, colour2->red);
+		return TRUE;
+	}
+
+	return FALSE;
+}
+
+void
 format_time(char* length, char* milliseconds)
 {
 	if(!length){ errprintf("format_time()!\n"); return; }

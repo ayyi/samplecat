@@ -56,6 +56,15 @@ GdkPixbuf*   scale_pixbuf_up(GdkPixbuf *src, int max_w, int max_h);
 
 void         colour_get_style_fg(GdkColor *color, int state);
 void         colour_get_style_bg(GdkColor *color, int state);
+void         colour_get_style_base(GdkColor *color, int state);
+void         colour_get_style_text(GdkColor *color, int state);
+gchar*       gdkcolor_get_hexstring(GdkColor* c);
+void         hexstring_from_gdkcolor(char* hexstring, GdkColor* c);
+gboolean     colour_lighter(GdkColor* lighter, GdkColor* colour);
+gboolean     colour_darker(GdkColor* lighter, GdkColor* colour);
+gboolean     is_black(GdkColor* colour);
+gboolean     is_white(GdkColor* colour);
+gboolean     is_similar(GdkColor* colour1, GdkColor* colour2);
 
 void         format_time(char* length, char* milliseconds);
 void         format_time_int(char* length, int milliseconds);
