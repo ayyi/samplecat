@@ -69,6 +69,7 @@
 
 #include <libart_lgpl/libart.h>
 #include "support.h"
+extern unsigned debug;
 
 #define TYPE_NS "http://www.freedesktop.org/standards/shared-mime-info"
 enum {SET_MEDIA, SET_TYPE};
@@ -144,14 +145,14 @@ void type_init(void)
 	//printf("type_init(): count=%i path: %s\n", n_elements, *path[0]);
 	int i;
 	for(i=0;i<n_elements;i++){
-		printf("type_init(): icon_theme_path=%s\n", path[0][i]);
+		if(debug) printf("type_init(): icon_theme_path=%s\n", path[0][i]);
 	}
 	g_strfreev(*path);
 
 	GList* icon_list = gtk_icon_theme_list_icons(icon_theme, "mimetypes");
 	for(i=0;i<g_list_length(icon_list);i++){
 		char* icon = g_list_nth_data(icon_list, i);
-		printf("type_init(): %s\n", icon);
+		if(debug) printf("type_init(): %s\n", icon);
 		g_free(icon);
 	}
 
@@ -491,7 +492,7 @@ type_to_icon(MIME_type *type)
 		// Ugly hack... try for a GNOME icon
 		type_name = g_strconcat("gnome-mime-", type->media_type, "-", type->subtype, NULL);
 		full = gtk_icon_theme_load_icon(icon_theme,	type_name, icon_height, 0, NULL);
-		if (full) printf("type_to_icon(): gtk_icon_theme_load_icon() found icon! iconname=%s\n", type_name);
+		//if (full) printf("type_to_icon(): gtk_icon_theme_load_icon() found icon! iconname=%s\n", type_name);
 		g_free(type_name);
 	}
 	if (!full)
@@ -499,7 +500,7 @@ type_to_icon(MIME_type *type)
 		// try for a media type:
 		type_name = g_strconcat("mime-", type->media_type, NULL);
 		full = gtk_icon_theme_load_icon(icon_theme,	type_name, icon_height, 0, NULL);
-		if (full) printf("type_to_icon(): gtk_icon_theme_load_icon() found icon! iconname=mime-%s\n", type->media_type);
+		//if (full) printf("type_to_icon(): gtk_icon_theme_load_icon() found icon! iconname=mime-%s\n", type->media_type);
 		g_free(type_name);
 	}
 	if (full)
@@ -511,7 +512,7 @@ type_to_icon(MIME_type *type)
 out:
 	if (!type->image)
 	{
-		printf("type_to_icon(): failed! using im_unknown.\n");
+		//printf("type_to_icon(): failed! using im_unknown.\n");
 		/* One ref from the type structure, one returned */
 		type->image = im_unknown;
 		g_object_ref(im_unknown);
@@ -949,8 +950,8 @@ static GList *build_icon_theme(Option *option, xmlNode *node, guchar *label)
 
 static void set_icon_theme(void)
 {
-	printf("set_icon_theme()...\n");
-	const char *home_dir = "/home/tim/";
+	//printf("set_icon_theme()...\n");
+	const char *home_dir = g_get_home_dir();
 	GtkIconInfo *info;
 	char *icon_home;
 	//const char *theme_name = o_icon_theme.value;
@@ -980,7 +981,7 @@ static void set_icon_theme(void)
 
 		if (strcmp(theme_name, "ROX") == 0) break;
 
-		errprintf("Icon theme '%s' does not contain MIME icons. Using ROX default theme instead.", theme_name);
+		warnprintf("Icon theme '%s' does not contain MIME icons. Using ROX default theme instead.\n", theme_name);
 		
 		theme_name = "ROX";
 	}
