@@ -1,0 +1,41 @@
+todo:
+	-how to programmatically enter treeview cell edit mode?
+	-valgrind
+
+dependencies:
+	-gnome-vfs
+	-mysql
+
+functionality:
+	-show files                              done
+		-name                                done
+		-path                                done
+		-category / keywords                 mostly done
+		-waveform overview                   done
+		-add vertical view of currently selected file at bottom left.
+	-preview files                           done
+	-import
+		-scan directories                    no
+		-scan dvd's/cdr's                    no
+		-drag n drop                         done
+	export
+		-seismix
+		-ardour/rosegarden etc
+		-drag n drop
+	formats
+		-wav/aiff/etc                        done
+		-flac                                no
+	colours
+		-add selector in the toolbar
+		-drag n drop to row
+		-click to apply to selected.
+
+threads:
+	-main thread
+	-overview thread
+	-jack thread (on demand) x2
+
+
+-what does Paul Davis's SFDB do? old url no longer works (see Ardour).
+
+-papers on automatic metadata and searching: http://audioclas.iua.upf.edu/documents.shtml
