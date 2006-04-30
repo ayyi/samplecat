@@ -34,7 +34,7 @@ extern GAsyncQueue* msg_queue; //receive messages from main thread.
 gpointer
 overview_thread(gpointer data)
 {
-	printf("new thread!\n");
+	printf("overview_thread(): new thread!\n");
 
 	if(!msg_queue){ errprintf("overview_thread(): no msg_queue!\n"); return NULL; }
 
@@ -183,20 +183,11 @@ make_overview_flac(sample* sample)
 
   char *filename = sample->filename;
 
-  //int rb_size = 16384;
-  //jack_ringbuffer_t* rb = jack_ringbuffer_create(rb_size);
-
   _decoder_session session;
-  flac_sesssion_init(&session, sample);
-  /*
-  session.sample = sample;
-  session.sample_num = 0;
-  session.total_samples = sample->frames;
-  */
-  int x;
-  for(x=0;x<OVERVIEW_WIDTH;x++){
-    session.max[x] = 0;
-    session.min[x] = 0;
+  session.output_peakfile = TRUE;
+  if(!flac_decoder_sesssion_init(&session, sample)){
+    errprintf("make_overview_flac(): unable to initialise flac decoder session. %s.\n", filename);
+	return NULL;
   }
 
   FLAC__FileDecoder* flac = flac_open(&session);
@@ -215,8 +206,10 @@ make_overview_flac(sample* sample)
   flac_read(flac);
 
   //update the pixbuf:
+  int x;
   for(x=0;x<OVERVIEW_WIDTH;x++){
     overview_draw_line(pixbuf, x, session.max[x], session.min[x]);
+	//printf("make_overview_flac(): max=%i\n", session.max[x]);
   }
 
   sample->pixbuf = pixbuf;
