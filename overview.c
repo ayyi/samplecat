@@ -30,11 +30,12 @@
 
 extern struct _app app;
 extern GAsyncQueue* msg_queue; //receive messages from main thread.
+extern unsigned debug;
 
 gpointer
 overview_thread(gpointer data)
 {
-	printf("overview_thread(): new thread!\n");
+	if(debug) printf("overview_thread(): new thread!\n");
 
 	if(!msg_queue){ errprintf("overview_thread(): no msg_queue!\n"); return NULL; }
 
@@ -111,7 +112,7 @@ make_overview_sndfile(sample* sample)
                                         FALSE,  //gboolean has_alpha
                                         8,      //int bits_per_sample
                                         OVERVIEW_WIDTH, OVERVIEW_HEIGHT);  //int width, int height)
-  printf("make_overview(): pixbuf=%p\n", pixbuf);
+  if(debug) printf("make_overview(): pixbuf=%p\n", pixbuf);
   pixbuf_clear(pixbuf, &app.fg_colour);
   /*
   GdkColor colour;
@@ -123,7 +124,7 @@ make_overview_sndfile(sample* sample)
   //-this will use up a lot of ram for a large file, 600M file will use 4MB.
   int frames_per_buf = sfinfo.frames / OVERVIEW_WIDTH;
   int buffer_len = frames_per_buf * sfinfo.channels; //may be a small remainder?
-  printf("make_overview(): buffer_len=%i\n", buffer_len);
+  if(debug) printf("make_overview(): buffer_len=%i\n", buffer_len);
   short *data = malloc(sizeof(*data) * buffer_len);
 
   int x=0, frame, ch;
@@ -179,7 +180,7 @@ make_overview_flac(sample* sample)
   decode a complete flac file generating an overview pixbuf as we go.
 
   */
-  printf("make_overview_flac()...\n");
+  if(debug) printf("make_overview_flac()...\n");
 
   char *filename = sample->filename;
 

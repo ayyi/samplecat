@@ -20,6 +20,8 @@
  */
 
 //#include <config.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <gdk/gdkkeysyms.h>
 #include <gdk-pixbuf/gdk-pixbuf.h>
 #include <gtk/gtkcellrenderertext.h>
@@ -31,6 +33,9 @@
 //#include "dh-marshal.h"
 #include "tree.h"
 #include "dh-link.h"
+#include "rox_global.h"
+#include "type.h"
+#include "pixmaps.h"
 
 #define d(x)
 
@@ -138,10 +143,9 @@ book_tree_init (DhBookTree *tree)
 					  G_TYPE_STRING,
 					  G_TYPE_POINTER);
 
-        tree->priv = priv;
+	tree->priv = priv;
 
-	gtk_tree_view_set_model (GTK_TREE_VIEW (tree), 
-				 GTK_TREE_MODEL (priv->store));
+	gtk_tree_view_set_model (GTK_TREE_VIEW (tree), GTK_TREE_MODEL (priv->store));
 
 	gtk_tree_view_set_headers_visible (GTK_TREE_VIEW (tree), FALSE);
 	
@@ -223,13 +227,13 @@ book_tree_setup_selection (DhBookTree *tree)
 static void
 book_tree_populate_tree (DhBookTree *tree)
 {
-        DhBookTreePriv *priv;
+	DhBookTreePriv *priv;
 	GNode          *node;
 	
 	g_return_if_fail (tree != NULL);
-        g_return_if_fail (DH_IS_BOOK_TREE (tree));
+	g_return_if_fail (DH_IS_BOOK_TREE (tree));
 
-        priv = tree->priv;
+	priv = tree->priv;
 
 	/* Use the link tree ... */
 /* 	books = dh_bookshelf_get_books (priv->bookshelf); */
@@ -261,26 +265,20 @@ book_tree_insert_node (DhBookTree  *tree,
 	gtk_tree_store_append (priv->store, &iter, parent_iter);
 
 	if (link->type == DH_LINK_TYPE_BOOK) {
+		//printf("book_tree_insert_node(): DH_LINK_TYPE_BOOK: %s\n", link->name);
 		gtk_tree_store_set (priv->store, &iter, 
-				    COL_OPEN_PIXBUF, 
-				    priv->pixbufs->pixbuf_opened,
-				    COL_CLOSED_PIXBUF, 
-				    priv->pixbufs->pixbuf_closed,
-				    COL_TITLE, 
-				    link->name,
-				    COL_LINK, 
-				    link,
+				    COL_OPEN_PIXBUF,   priv->pixbufs->pixbuf_opened,
+				    COL_CLOSED_PIXBUF, priv->pixbufs->pixbuf_closed,
+				    COL_TITLE,         link->name,
+				    COL_LINK,          link,
 				    -1);
 	} else {
+		//printf("book_tree_insert_node(): not book. %s %p\n", link->name, link);
 		gtk_tree_store_set (priv->store, &iter, 
-				    COL_OPEN_PIXBUF, 
-				    priv->pixbufs->pixbuf_helpdoc,
-				    COL_CLOSED_PIXBUF, 
-				    priv->pixbufs->pixbuf_helpdoc,
-				    COL_TITLE, 
-				    link->name,
-				    COL_LINK, 
-				    link,
+				    COL_OPEN_PIXBUF,   priv->pixbufs->pixbuf_helpdoc,
+				    COL_CLOSED_PIXBUF, priv->pixbufs->pixbuf_helpdoc,
+				    COL_TITLE,         link->name,
+				    COL_LINK,          link,
 				    -1);
 	}
 	
@@ -296,15 +294,21 @@ book_tree_create_pixbufs (DhBookTree *tree)
 {
  	DhBookTreePixbufs *pixbufs;
 	
-        g_return_if_fail (DH_IS_BOOK_TREE (tree));
+	g_return_if_fail (DH_IS_BOOK_TREE (tree));
 	
 	pixbufs = g_new0 (DhBookTreePixbufs, 1);
-	
-	pixbufs->pixbuf_closed = gdk_pixbuf_new_from_file (DATA_DIR "/devhelp/images/book_closed.png", NULL);
-	pixbufs->pixbuf_opened = gdk_pixbuf_new_from_file (DATA_DIR "/devhelp/images/book_open.png", NULL);
-	pixbufs->pixbuf_helpdoc = gdk_pixbuf_new_from_file (DATA_DIR "/devhelp/images/helpdoc.png", NULL);
 
-        tree->priv->pixbufs = pixbufs;
+    GdkPixbuf* iconbuf = NULL;
+    MIME_type* mime_type = mime_type_lookup("inode/directory");
+    type_to_icon(mime_type);
+    if ( mime_type->image == NULL ) printf("db_get_dirs(): no icon.\n");
+    iconbuf = mime_type->image->sm_pixbuf;
+
+	pixbufs->pixbuf_closed = iconbuf;//gdk_pixbuf_new_from_file (DATA_DIR "/devhelp/images/book_closed.png", NULL);
+	pixbufs->pixbuf_opened = gdk_pixbuf_new_from_file (DATA_DIR "/devhelp/images/book_open.png", NULL);
+	pixbufs->pixbuf_helpdoc = iconbuf;//gdk_pixbuf_new_from_file (DATA_DIR "/devhelp/images/helpdoc.png", NULL);
+
+	tree->priv->pixbufs = pixbufs;
 }
 
 static void
@@ -329,15 +333,15 @@ book_tree_selection_changed_cb (GtkTreeSelection *selection, DhBookTree *tree)
 GtkWidget *
 dh_book_tree_new (GNode *books)
 {
-        DhBookTree *tree;
+	DhBookTree *tree;
 
 	tree = g_object_new (DH_TYPE_BOOK_TREE, NULL);
 
-        tree->priv->link_tree = books;
+	tree->priv->link_tree = books;
 
-        book_tree_populate_tree (tree);
+	book_tree_populate_tree (tree);
 	
-        return GTK_WIDGET (tree);
+	return GTK_WIDGET (tree);
 }
 
 void

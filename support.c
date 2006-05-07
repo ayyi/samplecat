@@ -117,6 +117,13 @@ file_exists(const char *path)
 	return !stat(path, &info);
 }
 
+gboolean
+is_dir(const char *path)
+{
+	struct stat info2;
+	return lstat(path, &info2) == 0 && S_ISDIR(info2.st_mode);
+}
+
 #ifdef NEVER
 //below is stuff from gnome-vfs-uri.c
 //-i think eventually we might as well statically link the whole file.

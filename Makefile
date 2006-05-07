@@ -3,36 +3,50 @@ PACKAGE_CFLAGS = `pkg-config gtk+-2.0 --cflags` -I/usr/X11R6/include -I/usr/incl
 PACKAGE_LIBS = -Wall,--export-dynamic `pkg-config gtk+-2.0 --libs` -lgdk-x11-2.0 -latk-1.0 -ldl -lmysqlclient -lgnomevfs-2 -lFLAC 
 MYSQL = -L/usr/local/lib/mysql
 
-OBJECTS = audio.o overview.o support.o pixmaps.o type.o diritem.o cellrenderer_hypertext.o tree.o dh-link.o xdgmime.o xdgmimecache.o xdgmimemagic.o xdgmimealias.o xdgmimeparent.o xdgmimeglob.o xdgmimeint.o
+HEADERS = main.h audio.h overview.h support.h pixmaps.h type.h diritem.h dh-link.h tree.h db.h dnd.h cellrenderer_hypertext.h xdgmime.h
+
+OBJECTS = main.o audio.o overview.o support.o pixmaps.o type.o diritem.o dh-link.o tree.o db.o dnd.o cellrenderer_hypertext.o xdgmime.o xdgmimecache.o xdgmimemagic.o xdgmimealias.o xdgmimeparent.o xdgmimeglob.o xdgmimeint.o
 
 all: $(OBJECTS) 
-	gcc -Wall main.c $(OBJECTS) -o samplecat $(PACKAGE_CFLAGS) $(PACKAGE_LIBS) $(MYSQL) `pkg-config jack --cflags --libs` `pkg-config sndfile --cflags --libs` `pkg-config libart --cflags --libs`
+	gcc -Wall $(OBJECTS) -o samplecat $(PACKAGE_CFLAGS) $(PACKAGE_LIBS) $(MYSQL) `pkg-config jack --cflags --libs` `pkg-config sndfile --cflags --libs` `pkg-config libart --cflags --libs`
 
-audio.o: audio.c audio.h
+main.o: main.c $(HEADERS)
+	gcc -Wall main.c -c $(PACKAGE_CFLAGS)
+
+audio.o: audio.c $(HEADERS)
 	gcc -Wall audio.c -c $(PACKAGE_CFLAGS)
 
-overview.o: overview.c overview.h
+overview.o: overview.c $(HEADERS)
 	gcc -Wall overview.c -c $(PACKAGE_CFLAGS)
 
-support.o: support.c support.h
+support.o: support.c $(HEADERS)
 	gcc -Wall support.c -c $(PACKAGE_CFLAGS)
 
-pixmaps.o: pixmaps.h
+pixmaps.o: pixmaps.c $(HEADERS)
 	gcc -Wall pixmaps.c -c $(PACKAGE_CFLAGS)
 
-type.o: type.c type.h
+type.o: type.c $(HEADERS)
 	gcc -Wall type.c -c $(PACKAGE_CFLAGS)
 
-diritem.o: diritem.c diritem.h
+diritem.o: diritem.c $(HEADERS)
 	gcc -Wall diritem.c -c $(PACKAGE_CFLAGS)
 
-dh-link.o: dh-link.c dh-link.h
+dh-link.o: dh-link.c $(HEADERS)
 	gcc -Wall dh-link.c -c $(PACKAGE_CFLAGS)
 
-tree.o: tree.c tree.h main.h
+tree.o: tree.c $(HEADERS)
 	gcc -Wall tree.c -c $(PACKAGE_CFLAGS)
 
-xdgmime.o: xdgmime.h
+db.o: db.c $(HEADERS)
+	gcc -Wall db.c -c $(PACKAGE_CFLAGS)
+
+dnd.o: dnd.c $(HEADERS)
+	gcc -Wall dnd.c -c $(PACKAGE_CFLAGS)
+
+cellrenderer_hypertext.o: cellrenderer_hypertext.c $(HEADERS)
+	gcc -Wall cellrenderer_hypertext.c -c $(PACKAGE_CFLAGS)
+
+xdgmime.o: xdgmime.c $(HEADERS)
 	gcc -Wall xdgmime.c -c $(PACKAGE_CFLAGS)
 
 xdgmimecache.o: xdgmimecache.c xdgmimecache.h
@@ -53,5 +67,11 @@ xdgmimeglob.o: xdgmimeglob.c xdgmimeglob.h
 xdgmimeint.o: xdgmimeint.c xdgmimeint.h
 	gcc -Wall xdgmimeint.c -c $(PACKAGE_CFLAGS)
 
-cellrenderer_hypertext.o: cellrenderer_hypertext.c cellrenderer_hypertext.h
-	gcc -Wall cellrenderer_hypertext.c -c $(PACKAGE_CFLAGS)
+clean:
+	rm *.o
+	rm samplecat
+
+tarball:
+	rm *.o
+	rm samplecat
+	tar czvvf ../samplecat-0.0.1.tgz ../samplelib

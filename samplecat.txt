@@ -1,10 +1,14 @@
 todo:
 	-how to programmatically enter treeview cell edit mode?
 	-valgrind
+	-make install
 
 dependencies:
 	-gnome-vfs
 	-mysql
+	-libsndfile
+	-jack
+	-flac
 
 functionality:
 	-show files                              done
@@ -12,7 +16,7 @@ functionality:
 		-path                                done
 		-category / keywords                 mostly done
 		-waveform overview                   done
-		-add vertical view of currently selected file at bottom left.
+		-inspector                           done
 	-preview files                           done
 	-import
 		-scan directories                    no
@@ -20,15 +24,18 @@ functionality:
 		-drag n drop                         done
 	export
 		-seismix
-		-ardour/rosegarden etc
-		-drag n drop
+		-ardour/rosegarden etc               no
+		-drag n drop                         no
 	formats
 		-wav/aiff/etc                        done
-		-flac                                no
+		-flac                                done
 	colours
-		-add selector in the toolbar
-		-drag n drop to row
+		-add selector in the toolbar         done
+		-drag n drop to row                  done
+		-drag n drop to overview             no
 		-click to apply to selected.
+	update
+		-"locate": scan for moved file.      no
 
 threads:
 	-main thread

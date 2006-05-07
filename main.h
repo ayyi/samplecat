@@ -9,12 +9,11 @@ char warn[32];
 #define OVERVIEW_WIDTH 150
 #define OVERVIEW_HEIGHT 20
 
-//dnd:
-enum {
-  TARGET_APP_COLLECTION_MEMBER,
-  TARGET_URI_LIST,
-  TARGET_TEXT_PLAIN
-};
+#define PALETTE_SIZE 12
+
+#define ASSERT_POINTER(A, B, C) if((unsigned)A < 1024){ errprintf("%s(): bad %s pointer (%p).\n", B, C, A); return; }
+#define ASSERT_POINTER_FALSE(A, B, C) if(GPOINTER_TO_UINT(B) < 1024){ errprintf("%s(): bad %s pointer (%p).\n", A, C, B); return FALSE; }
+#define POINTER_OK_NULL(A, B, C) if((unsigned)A < 1024){ errprintf("%s(): bad %s pointer (%p).\n", B, C, A); return NULL; }
 
 
 typedef struct _inspector
@@ -35,11 +34,20 @@ typedef struct _inspector
 
 struct _config
 {
+	char      database_host[64];
+	char      database_user[64];
+	char      database_pass[64];
 	char      database_name[64];
+	char      show_dir[256];
+	char      window_width[64];
+	char      window_height[64];
+	char      colour[PALETTE_SIZE][8];
 };
 
 struct _app
 {
+	char      home_dir[256];
+	char      config_filename[256];
 	struct _config config;
 	char      search_phrase[256];
 	char*     search_dir;
@@ -65,6 +73,9 @@ struct _app
 	GtkWidget *view_category;
 	GtkWidget *context_menu;
 
+	GtkWidget *colour_button[PALETTE_SIZE];
+	gboolean  colourbox_dirty;
+
 	GtkCellRenderer*   cell1;     //sample name.
 	GtkCellRenderer*   cell_tags;
 	GtkTreeViewColumn* col_pixbuf;
@@ -76,12 +87,17 @@ struct _app
 
 	GdkColor fg_colour;
 	GdkColor bg_colour;
+	GdkColor bg_colour_mod1;
+	GdkColor base_colour;
+	GdkColor text_colour;
 
 	MYSQL mysql;
 
 	//nasty!
 	gint     mouse_x;
 	gint     mouse_y;
+
+	GMutex*  mutex;
 };
 
 typedef struct _sample
@@ -114,9 +130,14 @@ enum {
 gboolean	window_new();
 GtkWidget*  left_pane();
 GtkWidget*  inspector_pane();
-void        inspector_udpate(GtkTreePath *path);
+void        inspector_update(GtkTreePath *path);
 GtkWidget*  colour_box_new(GtkWidget* parent);
+void        colour_box_update();
+gboolean    colour_box_exists(GdkColor* colour);
+gboolean    colour_box_add(GdkColor* colour);
+void        window_on_allocate(GtkWidget *win, gpointer user_data);
 void        window_on_realise(GtkWidget *win, gpointer user_data);
+gboolean    window_on_configure(GtkWidget *widget, GdkEventConfigure *event, gpointer user_data);
 void        make_listview();
 gboolean	filter_new();
 gboolean    tag_selector_new();
@@ -136,15 +157,12 @@ gboolean    on_notes_focus_out(GtkWidget *widget, gpointer userdata);
 
 void        scan_dir();
 
-void        dnd_setup();
-gint        drag_received(GtkWidget *widget, GdkDragContext *drag_context, gint x, gint y,
-                          GtkSelectionData *data, guint info, guint time, gpointer user_data);
-
 sample*     sample_new();
 sample*     sample_new_from_model(GtkTreePath *path);
 void        sample_free(sample* sample);
 
-void        add_file(char *uri);
+gboolean    add_file(char *uri);
+gboolean    add_dir(char *uri);
 gboolean    get_file_info(sample* sample);
 gboolean    get_file_info_sndfile(sample* sample);
 gboolean    on_overview_done(gpointer sample);
@@ -159,22 +177,32 @@ void        edit_row  (GtkWidget *widget, gpointer user_data);
 GtkWidget*  make_context_menu();
 gboolean    on_row_clicked(GtkWidget *widget, GdkEventButton *event, gpointer user_data);
 gboolean    treeview_on_motion(GtkWidget *widget, GdkEventMotion *event, gpointer user_data);
+void        clear_store();
 void        treeview_block_motion_handler();
+void        treeview_unblock_motion_handler();
 gboolean    treeview_get_cell(GtkTreeView *view, guint x, guint y, GtkCellRenderer **cell);
 gboolean    treeview_get_tags_cell(GtkTreeView *view, guint x, guint y, GtkCellRenderer **cell);
 
 gint        get_mouseover_row();
+void        path_cell_data_func(GtkTreeViewColumn *tree_column, GtkCellRenderer *cell, GtkTreeModel *tree_model, GtkTreeIter *iter, gpointer data);
+void        path_cell_bg_lighter(GtkTreeViewColumn *tree_column, GtkCellRenderer *cell, GtkTreeModel *tree_model, GtkTreeIter *iter);
 void        tag_cell_data(GtkTreeViewColumn *tree_column, GtkCellRenderer *cell, GtkTreeModel *tree_model, GtkTreeIter *iter, gpointer data);
 gboolean    tree_on_link_selected(GObject *ignored, DhLink *link, gpointer data);
+void        set_search_dir(char* dir);
 
 void        on_entry_activate(GtkEntry *entry, gpointer user_data);
 
 gboolean    config_load();
 void        config_new();
+gboolean    config_save();
 void        on_quit(GtkMenuItem *menuitem, gpointer user_data);
 
 gboolean    keyword_is_dupe(char* new, char* existing);
 
 int         colour_drag_dataget(GtkWidget *widget, GdkDragContext *drag_context, GtkSelectionData *data, guint info, guint time, gpointer user_data);
-int         colour_drag_datareceived(GtkWidget *widget, GdkDragContext *drag_context, gint x, gint y, GtkSelectionData *data, guint info, guint time, gpointer user_data);
+//int         colour_drag_datareceived(GtkWidget *widget, GdkDragContext *drag_context, gint x, gint y, GtkSelectionData *data, guint info, guint time, gpointer user_data);
+gint        treeview_drag_received(GtkWidget *widget, GdkDragContext *drag_context, gint x, gint y, GtkSelectionData *data, guint info, guint time, gpointer user_data);
+gboolean    item_set_colour(GtkTreePath* path, unsigned colour);
+
+int         path_get_id(GtkTreePath* path);
 

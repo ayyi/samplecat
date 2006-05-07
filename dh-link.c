@@ -20,6 +20,7 @@
  */
 
 //#include <config.h>
+#include <stdio.h>
 #include "string.h"
 #include "dh-link.h"
 
@@ -37,6 +38,7 @@ link_free (DhLink *link)
 DhLink *
 dh_link_new (DhLinkType type, const gchar *name, const gchar *uri)
 {
+	//printf("dh_link_new(): %s\n", name);
 	DhLink *link;
 
 	g_return_val_if_fail (name != NULL, NULL);

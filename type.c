@@ -322,7 +322,7 @@ MIME_type *type_get_type(const guchar *path)
 MIME_type*
 type_from_path(const char *path)
 {
-	printf("type_from_path()...\n");
+	if(debug) printf("type_from_path()...\n");
 	const char *type_name;
 
 	/* Check for extended attribute first */
@@ -334,7 +334,7 @@ type_from_path(const char *path)
 
 	/* Try name and contents next */
 	type_name = xdg_mime_get_mime_type_for_file(path);
-	printf("type_from_path(): type_name=%s.\n", type_name);
+	if(debug) printf("type_from_path(): type_name=%s.\n", type_name);
 	if (type_name) return get_mime_type(type_name, TRUE);
 
 	return NULL;

@@ -19,8 +19,10 @@ typedef struct __audition
 struct __decoder_session
 {
 	sample*       sample;
-	unsigned      sample_num; 
-	uint64_t      total_samples;
+	unsigned      sample_num;          // not being used currently 
+	unsigned      frame_num;           // not being used currently 
+	uint64_t      total_samples;       // total_frames * channels
+	uint64_t      total_frames;
 	short         max[OVERVIEW_WIDTH];
 	short         min[OVERVIEW_WIDTH];
 
@@ -44,7 +46,7 @@ void   playback_stop();
 void   audition_init();
 void   audition_reset();
 _decoder_session*              flac_decoder_session_new();
-void                           flac_decoder_sesssion_init(_decoder_session* session, sample* sample);
+gboolean                       flac_decoder_sesssion_init(_decoder_session* session, sample* sample);
 void                           decoder_session_free(_decoder_session* session);
 
 gboolean                       get_file_info_flac(sample* sample);
