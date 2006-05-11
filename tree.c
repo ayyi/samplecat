@@ -88,27 +88,25 @@ static gint              signals[LAST_SIGNAL] = { 0 };
 GType
 dh_book_tree_get_type (void)
 {
-        static GType type = 0;
+	static GType type = 0;
 
-        if (!type) {
-                static const GTypeInfo info = {
-                        sizeof (DhBookTreeClass),
+	if (!type) {
+		static const GTypeInfo info = {
+			sizeof (DhBookTreeClass),
 			NULL,
 			NULL,
-                        (GClassInitFunc) book_tree_class_init,
+			(GClassInitFunc) book_tree_class_init,
 			NULL,
 			NULL,
-                        sizeof (DhBookTree),
+			sizeof (DhBookTree),
 			0,
-                        (GInstanceInitFunc) book_tree_init,
-                };
+			(GInstanceInitFunc) book_tree_init,
+		};
 		
-		type = g_type_register_static (GTK_TYPE_TREE_VIEW,
-					       "DhBookTree",
-					       &info, 0);
-        }
+		type = g_type_register_static (GTK_TYPE_TREE_VIEW, "DhBookTree", &info, 0);
+	}
 
-        return type;
+	return type;
 }
 
 static void
@@ -288,6 +286,12 @@ book_tree_insert_node (DhBookTree  *tree,
 		book_tree_insert_node (tree, child, &iter);
 	}
 }
+/*
+static void
+book_tree_remove_node (DhBookTree  *tree, GNode *node, GtkTreeIter *parent_iter)
+{
+}
+*/
 
 static void
 book_tree_create_pixbufs (DhBookTree *tree)
@@ -342,6 +346,16 @@ dh_book_tree_new (GNode *books)
 	book_tree_populate_tree (tree);
 	
 	return GTK_WIDGET (tree);
+}
+
+void
+dh_book_tree_reload(DhBookTree *tree)
+{
+	DhBookTreePriv* priv = tree->priv;
+
+	gtk_tree_store_clear (priv->store);
+
+	book_tree_populate_tree (tree);
 }
 
 void
