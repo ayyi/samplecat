@@ -1,0 +1,35 @@
+
+samplecat installation
+----------------------
+
+report problems to tim@orford.org
+
+
+1 - make
+
+2 - copy "samplecat" to a bin directory.
+
+3 - setup the database.
+    You need to make a single mysql table:
+
+	CREATE TABLE `samples` (
+	  `id` int(11) NOT NULL auto_increment,
+	  `filename` text NOT NULL,
+	  `filedir` text,
+	  `keywords` varchar(60) default '',
+	  `pixbuf` blob,
+	  `length` int(22) default NULL,
+	  `sample_rate` int(11) default NULL,
+	  `channels` int(4) default NULL,
+	  `online` int(1) default NULL,
+	  `last_checked` datetime default NULL,
+	  `mimetype` tinytext,
+	  `notes` mediumtext,
+	  `colour` tinyint(4) default NULL,
+	  PRIMARY KEY  (`id`)
+	)
+
+4 - running the program will create a default config file 
+	(~/.samplecat) that you should edit with your db access info.
+
+
