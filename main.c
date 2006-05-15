@@ -145,7 +145,6 @@ main(int argc, char* *argv)
 
 	const gchar* home_dir = g_get_home_dir();
 	snprintf(app.home_dir, 256, "%s", home_dir); //no dont bother
-	//g_free(home_dir);
 	snprintf(app.config_filename, 256, "%s/.samplecat", app.home_dir);
 	config_load();
 
@@ -161,8 +160,6 @@ main(int argc, char* *argv)
 	type_init();
 	pixmaps_init();
 
-	//g_thread_init(NULL);
-	//gdk_threads_enter();
 #ifndef DEBUG_NO_THREADS
 	if(debug) printf("main(): creating overview thread...\n");
 	GError *error = NULL;
@@ -175,28 +172,12 @@ main(int argc, char* *argv)
 
 	if (!gnome_vfs_init()){ errprintf("could not initialize GnomeVFS.\n"); return 1; }
 
-	//scan_dir();
-
 	app.store = gtk_list_store_new(NUM_COLS, GDK_TYPE_PIXBUF, G_TYPE_INT, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING, GDK_TYPE_PIXBUF, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_INT, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_INT);
-	//gtk_list_store_append(store, &iter);
-	//gtk_list_store_set(store, &iter, COL_NAME, "row 1", -1);
  
 	//GtkTreeModel *filter = gtk_tree_model_filter_new(GTK_TREE_MODEL(store), NULL);
 	//gtk_tree_model_filter_set_visible_func(GTK_TREE_MODEL_FILTER(filter), (GtkTreeModelFilterVisibleFunc)func, NULL, NULL);
 
-	//detach the model from the view to speed up row inserts (actually its not yet attached):
-	/*
-	model = gtk_tree_view_get_model(GTK_TREE_VIEW(view));
-	g_object_ref(model);
-	gtk_tree_view_set_model(GTK_TREE_VIEW(view), NULL);
-	*/ 
-
-	/*
-	MYSQL *mysql_real_connect(MYSQL *mysql, const char *host, const char *user, const char *passwd, const char *db,
-			unsigned int port, const char *unix_socket, unsigned int client_flag)
-	*/
-
-	do_search(app.search_phrase, NULL);
+	do_search(app.search_phrase, app.search_dir);
 
 	window_new(); 
 	filter_new();
@@ -210,7 +191,6 @@ main(int argc, char* *argv)
 	g_signal_connect((gpointer)app.view, "button-press-event", G_CALLBACK(on_row_clicked), NULL);
 
 	gtk_main();
-	//gdk_threads_leave();
 	exit(0);
 }
 
@@ -471,7 +451,7 @@ make_listview()
 	gtk_tree_view_column_set_min_width(col1, 0);
 	//gtk_tree_view_column_set_spacing(col1, 10);
 	//g_object_set(cell1, "ypad", 0, NULL);
-	gtk_tree_view_column_set_cell_data_func(col1, cell1, path_cell_bg_lighter, NULL, NULL);
+	gtk_tree_view_column_set_cell_data_func(col1, cell1, (gpointer)path_cell_bg_lighter, NULL, NULL);
 	
 	GtkCellRenderer *cell2 = gtk_cell_renderer_text_new();
 	GtkTreeViewColumn *col2 = gtk_tree_view_column_new_with_attributes("Path", cell2, "text", COL_FNAME, NULL);
@@ -559,28 +539,22 @@ left_pane()
 {
 	//other examples of file navigation: nautilus? (rox has no tree)
 
-	GtkWidget *vpaned = gtk_vpaned_new();
+	app.vpaned = gtk_vpaned_new();
 	//gtk_box_pack_end(GTK_BOX(vbox), hpaned, EXPAND_TRUE, TRUE, 0);
-	gtk_widget_show(vpaned);
+	gtk_widget_show(app.vpaned);
 
-	app.dir_tree = g_node_new(NULL);
-
-	db_get_dirs();
-
-	GtkWidget* tree = dh_book_tree_new(app.dir_tree);
-	gtk_paned_add1(GTK_PANED(vpaned), tree);
+	GtkWidget* tree = dir_tree_new();
+	gtk_paned_add1(GTK_PANED(app.vpaned), tree);
 	gtk_widget_show(tree);
-	g_signal_connect(tree, "link_selected", G_CALLBACK(tree_on_link_selected), NULL);
-
-	//------------
+	g_signal_connect(tree, "link_selected", G_CALLBACK(dir_tree_on_link_selected), NULL);
 
 #ifdef INSPECTOR
 #endif
 	GtkWidget* inspector = inspector_pane();
-	gtk_paned_add2(GTK_PANED(vpaned), inspector);
+	gtk_paned_add2(GTK_PANED(app.vpaned), inspector);
 
 	//return tree;
-	return vpaned;
+	return app.vpaned;
 }
 
 
@@ -637,10 +611,17 @@ inspector_pane()
 	gtk_widget_show(align3);
 	gtk_box_pack_start(GTK_BOX(vbox), align3, EXPAND_FALSE, FILL_FALSE, 0);
 
+	//the tags label has an event box to catch mouse clicks.
+	GtkWidget *ev_tags = app.inspector->tags_ev = gtk_event_box_new ();
+	gtk_widget_show(ev_tags);
+	gtk_container_add(GTK_CONTAINER(align3), ev_tags);	
+	g_signal_connect((gpointer)app.inspector->tags_ev, "button-release-event", G_CALLBACK(inspector_on_tags_clicked), NULL);
+
 	GtkWidget* label3 = app.inspector->tags = gtk_label_new("Tags");
 	gtk_misc_set_padding(GTK_MISC(label3), margin_left, 2);
 	gtk_widget_show(label3);
-	gtk_container_add(GTK_CONTAINER(align3), label3);	
+	//gtk_container_add(GTK_CONTAINER(align3), label3);	
+	gtk_container_add(GTK_CONTAINER(ev_tags), label3);	
 	
 
 	//-----------
@@ -710,6 +691,20 @@ inspector_pane()
 	gtk_text_view_set_pixels_above_lines(GTK_TEXT_VIEW(text1), 5);
 	gtk_text_view_set_pixels_below_lines(GTK_TEXT_VIEW(text1), 5);
 
+	//invisible edit widget:
+	GtkWidget *edit = app.inspector->edit = gtk_entry_new();
+	gtk_entry_set_max_length(GTK_ENTRY(edit), 64);
+	gtk_entry_set_text(GTK_ENTRY(edit), "");
+	gtk_widget_show(edit);
+	/*	
+	g_signal_connect(G_OBJECT(entry), "focus-out-event", G_CALLBACK(new_search), NULL);
+	//this is supposed to enable REUTRN to enter the text - does it work?
+	gtk_entry_set_activates_default(GTK_ENTRY(entry), TRUE);
+	//g_signal_connect(G_OBJECT(entry), "activate", G_CALLBACK(on_entry_activate), NULL);
+	g_signal_connect(G_OBJECT(entry), "activate", G_CALLBACK(new_search), NULL);
+	*/
+    gtk_widget_ref(edit);//stops gtk deleting the widget.
+
 	//this also sets the margin:
 	//gtk_text_view_set_border_window_size(GTK_TEXT_VIEW(text1), GTK_TEXT_WINDOW_LEFT, 20);
 
@@ -769,6 +764,22 @@ inspector_update(GtkTreePath *path)
 }
 
 
+gboolean
+inspector_on_tags_clicked(GtkWidget *widget, GdkEventButton *event, gpointer user_data)
+{
+	/*
+	a single click on the Tags label puts us into edit mode.
+	*/
+	//printf("inspector_on_tags_clicked()...\n");
+
+	if(event->button == 3) return FALSE;
+
+	tag_edit_start(0);
+
+	return TRUE;
+}
+
+
 GtkWidget*
 colour_box_new(GtkWidget* parent)
 {
@@ -818,17 +829,59 @@ colour_box_update()
 }
 
 
-gboolean
-tree_on_link_selected(GObject *ignored, DhLink *link, gpointer data)
+GtkWidget*
+dir_tree_new()
 {
-	if((unsigned int)link<1024){ errprintf("tree_on_link_selected(): bad link arg.\n"); return FALSE; }
+	//data:
+	app.dir_tree = g_node_new(NULL); //this is unneccesary ?
+	db_get_dirs();
+
+	//view:
+	app.dir_treeview = dh_book_tree_new(app.dir_tree);
+
+	return app.dir_treeview;
+}
+
+
+gboolean
+dir_tree_on_link_selected(GObject *ignored, DhLink *link, gpointer data)
+{
+	/*
+	what does it mean if link->uri is empty?
+	*/
+	ASSERT_POINTER_FALSE("dir_tree_on_link_selected", link, "link");
+
 	printf("tree_on_link_selected()...uri=%s\n", link->uri);
-	set_search_dir(link->uri);
+	//FIXME segfault if we use this if()
+	//if(strlen(link->uri)){
+		set_search_dir(link->uri);
 
-	const gchar* text = app.search ? gtk_entry_get_text(GTK_ENTRY(app.search)) : "";
-	do_search((gchar*)text, link->uri);
+		const gchar* text = app.search ? gtk_entry_get_text(GTK_ENTRY(app.search)) : "";
+		do_search((gchar*)text, link->uri);
+	//}
+	return FALSE;
+}
 
-	return FALSE; //?
+
+gboolean
+dir_tree_update(gpointer data)
+{
+	/*
+	refresh the directory tree. Called from an idle.
+
+	note: destroying the whole node tree is wasteful - can we just make modifications to it?
+
+	*/
+	printf("dir_tree_update()... \n");
+
+	GNode *node;
+	node = app.dir_tree;
+
+	db_get_dirs();
+
+	dh_book_tree_reload((DhBookTree*)app.dir_treeview);
+
+	return FALSE; //source should be removed.
 }
 
 
@@ -840,6 +893,8 @@ set_search_dir(char* dir)
 	//if string is empty, we show all directories?
 
 	if(!dir){ errprintf("set_search_dir()\n"); return; }
+
+	printf("set_search_dir(): dir=%s\n", dir);
 	app.search_dir = dir;
 }
 
@@ -1079,7 +1134,7 @@ void
 scan_dir(const char* path)
 {
 	/*
-	scan the directory and try and add any files we find. Not recursive.
+	scan the directory and try and add any files we find.
 	
 	*/
 	printf("scan_dir()....\n");
@@ -1094,9 +1149,14 @@ scan_dir(const char* path)
 		while((file = g_dir_read_name(dir))){
 			if(file[0]=='.') continue;
 			snprintf(filepath, 128, "%s/%s", path, file);
+
 			if(!g_file_test(filepath, G_FILE_TEST_IS_DIR)){
 				//printf("scan_dir(): checking files: %s\n", file);
 				add_file(filepath);
+			}
+			// IS_DIR
+			else if(app.add_recursive){
+				scan_dir(filepath);
 			}
 		}
 		g_dir_close(dir);
@@ -1173,6 +1233,13 @@ do_search(char *search, char *dir)
 
 		clear_store();
 
+		//detach the model from the view to speed up row inserts:
+		/*
+		model = gtk_tree_view_get_model(GTK_TREE_VIEW(view));
+		g_object_ref(model);
+		gtk_tree_view_set_model(GTK_TREE_VIEW(view), NULL);
+		*/ 
+
 		result = mysql_store_result(mysql);
 		if(result){// there are rows
 			num_fields = mysql_num_fields(result);
@@ -1235,7 +1302,7 @@ do_search(char *search, char *dir)
 	else{
 		printf( "do_search(): Failed to find any records: %s\n", mysql_error(mysql));
 	}
-	printf( "do_search(): done.\n");
+	if(debug) printf( "do_search(): done.\n");
 }
 
 
@@ -1505,7 +1572,7 @@ on_category_set_clicked(GtkComboBox *widget, gpointer user_data)
 
 
 gboolean
-row_set_tags(GtkTreeIter* iter, int id, char* tags_new)
+row_set_tags(GtkTreeIter* iter, int id, const char* tags_new)
 {
 	char sql[1024];
 	snprintf(sql, 1024, "UPDATE samples SET keywords='%s' WHERE id=%i", tags_new, id);
@@ -1516,6 +1583,36 @@ row_set_tags(GtkTreeIter* iter, int id, char* tags_new)
 	}
 	//update the store:
 	gtk_list_store_set(app.store, iter, COL_KEYWORDS, tags_new, -1);
+	return TRUE;
+}
+
+
+gboolean
+row_set_tags_from_id(int id, GtkTreeRowReference* row_ref, const char* tags_new)
+{
+	if(!id){ errprintf("row_set_tags_from_id(): bad arg: id (%i)\n", id); return FALSE; }
+	ASSERT_POINTER_FALSE("row_set_tags_from_id", row_ref, "row_ref");
+
+	char sql[1024];
+	snprintf(sql, 1024, "UPDATE samples SET keywords='%s' WHERE id=%i", tags_new, id);
+	printf("on_category_set_clicked(): sql=%s\n", sql);
+	if(mysql_query(&app.mysql, sql)){
+		errprintf("on_category_set_clicked(): update failed! sql=%s\n", sql);
+		return FALSE;
+	}
+
+	//update the store:
+
+	GtkTreePath *path;
+	if((path = gtk_tree_row_reference_get_path(row_ref))){
+		GtkTreeIter iter;
+		gtk_tree_model_get_iter(GTK_TREE_MODEL(app.store), &iter, path);
+		gtk_tree_path_free(path);
+
+		gtk_list_store_set(app.store, &iter, COL_KEYWORDS, tags_new, -1);
+	}
+	else { errprintf("row_set_tags_from_id(): cannot get row path: id=%i.\n", id); return FALSE; }
+
 	return TRUE;
 }
 
@@ -1541,6 +1638,9 @@ row_clear_tags(GtkTreeIter* iter, int id)
 void
 db_get_dirs()
 {
+	/*
+	builds a node list of directories listed in the database.
+	*/
 	if (!app.dir_tree) { errprintf("db_get_dirs(): dir_tree not initialised.\n"); return; }
 
 	char qry[1024];
@@ -1549,13 +1649,8 @@ db_get_dirs()
 	MYSQL_RES *result;
 	MYSQL_ROW row;
 
-	/*
-	GdkPixbuf* iconbuf = NULL;
-	MIME_type* mime_type = mime_type_lookup("inode/directory");
-	type_to_icon(mime_type);
-	if ( mime_type->image == NULL ) printf("db_get_dirs(): no icon.\n");
-	iconbuf = mime_type->image->sm_pixbuf;
-	*/
+	g_node_destroy(app.dir_tree);    //remove any previous nodes.
+	app.dir_tree = g_node_new(NULL); //make an empty root node.
 
 	snprintf(qry, 1024, "SELECT DISTINCT filedir FROM samples ORDER BY filedir");
 
@@ -1722,7 +1817,7 @@ add_file(char *uri)
   /*
   uri must be "unescaped" before calling this fn.
   */
-  printf("add_file()... %s\n", uri);
+  if(debug) printf("add_file()... %s\n", uri);
   gboolean ok = TRUE;
 
   sample* sample = sample_new(); //free'd after db and store are updated.
@@ -1741,6 +1836,15 @@ add_file(char *uri)
   char mime_string[64];
   snprintf(mime_string, 64, "%s/%s", mime_type->media_type, mime_type->subtype);
 
+  char extn[64];
+  file_extension(filename, extn);
+  if(!strcmp(extn, "rfl")){
+    printf("cannot add file: file type \"%s\" not supported.\n", extn);
+    statusbar_print(1, "cannot add file: rfl files not supported.");
+    ok = FALSE;
+    goto out;
+  }
+
   if(!strcmp(mime_string, "audio/x-flac")) sample->filetype = TYPE_FLAC;
   printf("add_file() mimetype: %s type=%i\n", mime_string, sample->filetype);
 
@@ -1751,6 +1855,12 @@ add_file(char *uri)
   }
 
   if(!strcmp(mime_string, "audio/mpeg")){
+    printf("cannot add file: file type \"%s\" not supported.\n", mime_string);
+    statusbar_print(1, "cannot add file: mpeg files not supported.");
+    ok = FALSE;
+    goto out;
+  }
+  if(!strcmp(mime_string, "application/x-par2")){
     printf("cannot add file: file type \"%s\" not supported.\n", mime_string);
     statusbar_print(1, "cannot add file: mpeg files not supported.");
     ok = FALSE;
@@ -1784,12 +1894,12 @@ add_file(char *uri)
 	GtkTreePath* treepath;
 	if((treepath = gtk_tree_model_get_path(GTK_TREE_MODEL(app.store), &iter))){
 		sample->row_ref = gtk_tree_row_reference_new(GTK_TREE_MODEL(app.store), treepath);
-		printf("add_file(): rowref=%p\n", sample->row_ref);
+		//printf("add_file(): rowref=%p\n", sample->row_ref);
 		gtk_tree_path_free(treepath);
 	}else errprintf("add_file(): failed to make treepath from inserted iter.\n");
 
 	//printf("add_file(): iter=%p=%s\n", &iter, gtk_tree_model_get_string_from_iter(GTK_TREE_MODEL(app.store), &iter));
-    printf("setting store... filename=%s mime=%s\n", filename, mime_string);
+    if(debug) printf("setting store... filename=%s mime=%s\n", filename, mime_string);
     gtk_list_store_set(app.store, &iter,
 	                  COL_IDX, sample->id,
                       COL_NAME, filename,
@@ -1802,8 +1912,10 @@ add_file(char *uri)
 	                  COL_MIMETYPE, mime_string,
                       -1);
 
-    printf("sending message: sample=%p filename=%s (%p)\n", sample, sample->filename, sample->filename);
+    if(debug) printf("sending message: sample=%p filename=%s (%p)\n", sample, sample->filename, sample->filename);
 	g_async_queue_push(msg_queue, sample); //notify the overview thread.
+
+	on_directory_list_changed();
 
   }else{
     //strcpy(sql2, sql);
@@ -1880,16 +1992,18 @@ on_overview_done(gpointer data)
 	//printf("on_overview_done(): row_ref=%p\n", sample->row_ref);
 	//printf("on_overview_done(): pixbuf=%p\n", sample->pixbuf);
 
-	GtkTreePath* treepath = gtk_tree_row_reference_get_path(sample->row_ref);
-	GtkTreeIter iter;
-	if(gtk_tree_model_get_iter(GTK_TREE_MODEL(app.store), &iter, treepath)){
-		//printf("on_overview_done(): setting pixbuf in store... pixbuf=%p\n", sample->pixbuf);
-		if(GDK_IS_PIXBUF(sample->pixbuf)){
-			gtk_list_store_set(app.store, &iter, COL_OVERVIEW, sample->pixbuf, -1);
-		}else errprintf("on_overview_done(): pixbuf is not a pixbuf.\n");
+	GtkTreePath* treepath;
+	if((treepath = gtk_tree_row_reference_get_path(sample->row_ref))){ //it's possible the row may no longer be visible.
+		GtkTreeIter iter;
+		if(gtk_tree_model_get_iter(GTK_TREE_MODEL(app.store), &iter, treepath)){
+			//printf("on_overview_done(): setting pixbuf in store... pixbuf=%p\n", sample->pixbuf);
+			if(GDK_IS_PIXBUF(sample->pixbuf)){
+				gtk_list_store_set(app.store, &iter, COL_OVERVIEW, sample->pixbuf, -1);
+			}else errprintf("on_overview_done(): pixbuf is not a pixbuf.\n");
 
-	}else errprintf("on_overview_done(): failed to get row iter. row_ref=%p\n", sample->row_ref);
-	gtk_tree_path_free(treepath);
+		}else errprintf("on_overview_done(): failed to get row iter. row_ref=%p\n", sample->row_ref);
+		gtk_tree_path_free(treepath);
+	}
 
 	sample_free(sample);
 	return FALSE; //source should be removed.
@@ -1899,7 +2013,7 @@ on_overview_done(gpointer data)
 void
 db_update_pixbuf(sample *sample)
 {
-	printf("db_update_pixbuf()...\n");
+	if(debug) printf("db_update_pixbuf()...\n");
 
 	GdkPixbuf* pixbuf = sample->pixbuf;
 	//printf("db_update_pixbuf(): pixbuf=%p\n", pixbuf);
@@ -1983,28 +2097,46 @@ delete_row(GtkWidget *widget, gpointer user_data)
 	if(!selectionlist){ errprintf("delete_row(): no files selected?\n"); return; }
 	printf("delete_row(): %i rows selected.\n", g_list_length(selectionlist));
 
+	GList* selected_row_refs = NULL;
+	GtkTreeRowReference* row_ref = NULL;
+
+	//get row refs for each selected row:
 	int i;
 	for(i=0;i<g_list_length(selectionlist);i++){
 		GtkTreePath *treepath_selection = g_list_nth_data(selectionlist, i);
 
-		if(gtk_tree_model_get_iter(model, &iter, treepath_selection)){
-			gchar *fname;
-			int id;
-			gtk_tree_model_get(model, &iter, COL_NAME, &fname, COL_IDX, &id, -1);
-
-			char sql[1024];
-			snprintf(sql, 1024, "DELETE FROM samples WHERE id=%i", id);
-			printf("delete_row(): row: %s sql=%s\n", fname, sql);
-			if(mysql_query(&app.mysql, sql)){
-				errprintf("delete_row(): delete failed! sql=%s\n", sql);
-				return;
-			}
-			//update the store:
-			//gtk_tree_store_remove(model, &iter);
-			gtk_list_store_remove(app.store, &iter);
-		} else errprintf("delete_row() bad iter! i=%i (<%i)\n", i, g_list_length(selectionlist));
+		row_ref = gtk_tree_row_reference_new(GTK_TREE_MODEL(app.store), treepath_selection);
+		selected_row_refs = g_list_prepend(selected_row_refs, row_ref);
 	}
 	g_list_free(selectionlist);
+
+
+	GtkTreePath* path;
+	for(i=0;i<g_list_length(selected_row_refs);i++){
+		row_ref = g_list_nth_data(selected_row_refs, i);
+		if((path = gtk_tree_row_reference_get_path(row_ref))){
+
+			if(gtk_tree_model_get_iter(model, &iter, path)){
+				gchar *fname;
+				int id;
+				gtk_tree_model_get(model, &iter, COL_NAME, &fname, COL_IDX, &id, -1);
+
+				char sql[1024];
+				snprintf(sql, 1024, "DELETE FROM samples WHERE id=%i", id);
+				printf("delete_row(): row: %s sql=%s\n", fname, sql);
+				if(mysql_query(&app.mysql, sql)){
+					errprintf("delete_row(): delete failed! sql=%s\n", sql);
+					return;
+				}
+				//update the store:
+				//gtk_tree_store_remove(model, &iter);
+				gtk_list_store_remove(app.store, &iter);
+			} else errprintf("delete_row() bad iter! i=%i (<%i)\n", i, g_list_length(selectionlist));
+		} else errprintf("delete_row(): cannot get path from row_ref!\n");
+	}
+	g_list_free(selected_row_refs); //FIXME free the row_refs?
+
+	on_directory_list_changed();
 }
 
 
@@ -2103,7 +2235,6 @@ make_context_menu()
 	GtkWidget *menu = gtk_menu_new();
 	GtkWidget *menu_item;
 
-	//item 1:
 	menu_item = gtk_menu_item_new_with_label ("Delete");
 	gtk_menu_shell_append (GTK_MENU_SHELL(menu), menu_item);
 	g_signal_connect (G_OBJECT(menu_item), "activate", G_CALLBACK(delete_row), NULL);
@@ -2119,6 +2250,42 @@ make_context_menu()
 	g_signal_connect (G_OBJECT(menu_item), "activate", G_CALLBACK(edit_row), NULL);
 	gtk_widget_show (menu_item);
 
+	//-------
+
+	//separator
+	menu_item = gtk_separator_menu_item_new();
+	gtk_menu_shell_append (GTK_MENU_SHELL(menu), menu_item);
+	gtk_widget_show (menu_item);
+
+	//-------
+
+	//tick image:
+	/*
+	//GtkIconFactory* icon_factory = gtk_icon_factory_new();
+	GtkIconSize image_size = GTK_ICON_SIZE_MENU;
+	gchar *stock_id = GTK_STOCK_APPLY;
+	GtkWidget* image = gtk_image_new_from_stock(stock_id, image_size);
+
+	//#define GTK_STOCK_APPLY            "gtk-apply"
+
+	//menu_item = gtk_menu_item_new_with_label ("Recursive");
+    menu_item = gtk_image_menu_item_new_with_label("Recursive");
+
+    gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(menu_item), image);
+
+	gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_item);
+	g_signal_connect(G_OBJECT(menu_item), "activate", G_CALLBACK(toggle_recursive_add), NULL);
+	gtk_widget_show(menu_item);
+	*/
+
+
+	menu_item = gtk_check_menu_item_new_with_mnemonic("Add Recursively");
+	gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_item);
+	gtk_widget_show(menu_item);
+	gtk_check_menu_item_set_active(menu_item, app.add_recursive);
+	g_signal_connect(G_OBJECT(menu_item), "activate", G_CALLBACK(toggle_recursive_add), NULL);
+
+	//-------
 
   /* example a submenu:
 
@@ -2464,6 +2631,235 @@ on_entry_activate(GtkEntry *entry, gpointer user_data)
 
 
 gboolean
+keyword_is_dupe(char* new, char* existing)
+{
+	//return true if the word 'new' is contained in the 'existing' string.
+
+	//FIXME make case insensitive.
+	//gint g_ascii_strncasecmp(const gchar *s1, const gchar *s2, gsize n);
+	//gchar*      g_utf8_casefold(const gchar *str, gssize len);
+
+	gboolean found = FALSE;
+
+	//split the existing keyword string into separate words.
+	gchar** split = g_strsplit(existing, " ", 0);
+	int word_index = 0;
+	while(split[word_index]){
+		if(!strcmp(split[word_index], new)){
+			printf("keyword_is_dupe(): '%s' already in string '%s'\n", new, existing);
+			found = TRUE;
+			break;
+		}
+		word_index++;
+	}
+
+	g_strfreev(split);
+	return found;
+}
+
+
+int
+colour_drag_dataget(GtkWidget *widget, GdkDragContext *drag_context,
+                    GtkSelectionData *data,
+                    guint info,
+                    guint time,
+                    gpointer user_data)
+{
+  char text[16];
+  gboolean data_sent = FALSE;
+  printf("colour_drag_dataget()!\n");
+
+  int box_num = GPOINTER_TO_UINT(user_data); //box_num corresponds to the colour index.
+
+  //convert to a pseudo uri string:
+  sprintf(text, "colour:%i", box_num + 1);//1 based to avoid atoi problems.
+  
+  gtk_selection_data_set(data,	
+						GDK_SELECTION_TYPE_STRING,
+						8,	/* 8 bits per character. */
+						text, strlen(text)
+						);
+  data_sent = TRUE;
+
+  return FALSE;
+}
+
+/*
+int
+colour_drag_datareceived(GtkWidget *widget, GdkDragContext *drag_context,
+                    gint x, gint y, GtkSelectionData *data,
+                    guint info,
+                    guint time,
+                    gpointer user_data)
+{
+  printf("colour_drag_colour_drag_datareceived()!\n");
+
+  return FALSE;
+}
+*/
+
+gint
+treeview_drag_received(GtkWidget *widget, GdkDragContext *drag_context, gint x, gint y, GtkSelectionData *data, guint info, guint time, gpointer user_data)
+{
+  printf("treeview_drag_datareceived()!\n");
+  return FALSE;
+}
+
+
+int
+path_get_id(GtkTreePath* path)
+{
+	printf("path_get_id()...\n");
+
+	int id;
+	GtkTreeIter iter;
+	gchar *filename;
+	GtkTreeModel* store = GTK_TREE_MODEL(app.store);
+	gtk_tree_model_get_iter(store, &iter, path);
+	gtk_tree_model_get(store, &iter, COL_IDX, &id,  COL_NAME, &filename, -1);
+
+	printf("cell_edited_callback(): filename=%s\n", filename);
+	return id;
+}
+
+
+void
+tag_edit_start(int tnum)
+{
+  /*
+  initiate the inplace renaming of a tag label in the inspector following a double-click.
+
+  -rename widget has had an extra ref added at creation time, so we dont have to do it here.
+
+  -current strategy is too swap the non-editable gtklabel with the editable gtkentry widget.
+  -fn is fragile in that it makes too many assumptions about the widget layout (widget parent).
+
+  FIXME global keyboard shortcuts are still active during editing?
+  FIXME add ESC key to stop editing.
+  */
+
+  printf("tag_edit_start()...\n");
+
+  static gulong handler1 =0; // the edit box "focus_out" handler.
+  static gulong handler2 =0; // the edit box RETURN key trap.
+  
+  GtkWidget* parent = app.inspector->tags_ev;
+  GtkWidget* edit   = app.inspector->edit;
+  GtkWidget *label = app.inspector->tags;
+
+  if(!GTK_IS_WIDGET(app.inspector->edit)){ errprintf("tag_edit_start(): edit widget missing.\n"); return;}
+  if(!GTK_IS_WIDGET(label))              { errprintf("tags_edit_start(): label widget is missing.\n"); return;}
+
+  //show the rename widget:
+  gtk_entry_set_text(GTK_ENTRY(app.inspector->edit), gtk_label_get_text(GTK_LABEL(label)));
+  gtk_widget_ref(label);//stops gtk deleting the widget.
+  gtk_container_remove(GTK_CONTAINER(parent), label);
+  gtk_container_add   (GTK_CONTAINER(parent), app.inspector->edit);
+
+  //our focus-out could be improved by properly focussing other widgets when clicked on (widgets that dont catch events?).
+
+  if(handler1) g_signal_handler_disconnect((gpointer)edit, handler1);
+  
+  handler1 = g_signal_connect((gpointer)app.inspector->edit, "focus-out-event", G_CALLBACK(tag_edit_stop), GINT_TO_POINTER(0));
+
+  /*
+  //this signal is no good as it quits when you move the mouse:
+  //g_signal_connect ((gpointer)arrange->wrename, "leave-notify-event", G_CALLBACK(track_label_edit_stop), 
+  //								GINT_TO_POINTER(tnum));
+  
+  if(handler2) g_signal_handler_disconnect((gpointer)arrange->wrename, handler2);
+  handler2 =   g_signal_connect(G_OBJECT(arrange->wrename), "key-press-event", 
+  								G_CALLBACK(track_entry_key_press), GINT_TO_POINTER(tnum));//traps the RET key.
+  */
+
+  //grab_focus allows us to start typing imediately. It also selects the whole string.
+  gtk_widget_grab_focus(GTK_WIDGET(app.inspector->edit));
+}
+
+
+void
+tag_edit_stop(GtkWidget *widget, GdkEventCrossing *event, gpointer user_data)
+{
+  /*
+  tidy up widgets and notify core of label change.
+  called following a focus-out-event for the gtkEntry renaming widget.
+  -track number should correspond to the one being edited...???
+
+  warning! if called incorrectly, this fn can cause mysterious segfaults!!
+  Is it something to do with multiple focus-out events? This function causes the
+  rename widget to lose focus, it can run a 2nd time before completing the first: segfault!
+  Currently it works ok if focus is removed before calling.
+  */
+
+  //static gboolean busy = FALSE;
+  //if(busy){"track_label_edit_stop(): busy!\n"; return;} //only run once at a time!
+  //busy = TRUE;
+
+  GtkWidget* edit = app.inspector->edit;
+  GtkWidget* parent = app.inspector->tags_ev;
+
+  //g_signal_handler_disconnect((gpointer)edit, handler_id);
+  
+  //printf("track_label_edit_stop(): wrename_parent=%p.\n", arrange->wrename->parent);
+  //printf("track_label_edit_stop(): label_parent  =%p.\n", trkA[tnum]->wlabel);
+  
+  //printf("w:%p is_widget: %i\n", trkA[tnum]->wlabel, GTK_IS_WIDGET(trkA[tnum]->wlabel));
+
+  //make sure the rename widget is being shown:
+  /*
+  if(edit->parent != parent){printf(
+    "tags_edit_stop(): info: entry widget not in correct container! trk probably changed. parent=%p\n",
+	   							arrange->wrename->parent); }
+  */
+	   
+  //change the text in the label:
+  gtk_label_set_text(GTK_LABEL(app.inspector->tags), gtk_entry_get_text(GTK_ENTRY(edit)));
+  //printf("track_label_edit_stop(): text set.\n");
+
+  //update the data:
+  //update the string for the channel that the current track is using:
+  //int ch = track_get_ch_idx(tnum);
+  row_set_tags_from_id(app.inspector->row_id, app.inspector->row_ref, gtk_entry_get_text(GTK_ENTRY(edit)));
+
+  //swap back to the normal label:
+  gtk_container_remove(GTK_CONTAINER(parent), edit);
+  //gtk_container_remove(GTK_CONTAINER(arrange->wrename->parent), arrange->wrename);
+  //printf("track_label_edit_stop(): wrename unparented.\n");
+  
+  gtk_container_add(GTK_CONTAINER(parent), app.inspector->tags);
+  gtk_widget_unref(app.inspector->tags); //remove 'artificial' ref added in edit_start.
+  
+  printf("tags_edit_stop(): finished.\n");
+  //busy = FALSE;
+}
+
+
+gboolean
+on_directory_list_changed()
+{
+  /*
+  the database has been modified, the directory list may have changed.
+  Update all directory views. Atm there is only one.
+  */
+
+  if(debug) printf("on_directory_list_changed()...\n");
+
+  g_idle_add(dir_tree_update, NULL);
+  return FALSE;
+}
+
+
+gboolean
+toggle_recursive_add(GtkWidget *widget, gpointer user_data)
+{
+  printf("toggle_recursive_add()...\n");
+  //if(app.config.add_recursive) app.config.add_recursive = false; else app.config.add_recursive = true;
+  if(app.add_recursive) app.add_recursive = false; else app.add_recursive = true;
+  return FALSE;
+}
+
+
+gboolean
 config_load()
 {
 	snprintf(app.config.database_name, 64, "samplelib");
@@ -2607,236 +3003,6 @@ on_quit(GtkMenuItem *menuitem, gpointer user_data)
 	gtk_main_quit();
     if(debug) printf("on_quit(): done.\n");
     exit(GPOINTER_TO_INT(user_data));
-}
-
-
-gboolean
-keyword_is_dupe(char* new, char* existing)
-{
-	//return true if the word 'new' is contained in the 'existing' string.
-
-	//FIXME make case insensitive.
-	//gint g_ascii_strncasecmp(const gchar *s1, const gchar *s2, gsize n);
-	//gchar*      g_utf8_casefold(const gchar *str, gssize len);
-
-	gboolean found = FALSE;
-
-	//split the existing keyword string into separate words.
-	gchar** split = g_strsplit(existing, " ", 0);
-	int word_index = 0;
-	while(split[word_index]){
-		if(!strcmp(split[word_index], new)){
-			printf("keyword_is_dupe(): '%s' already in string '%s'\n", new, existing);
-			found = TRUE;
-			break;
-		}
-		word_index++;
-	}
-
-	g_strfreev(split);
-	return found;
-}
-
-
-int
-colour_drag_dataget(GtkWidget *widget, GdkDragContext *drag_context,
-                    GtkSelectionData *data,
-                    guint info,
-                    guint time,
-                    gpointer user_data)
-{
-  char text[16];
-  gboolean data_sent = FALSE;
-  printf("colour_drag_dataget()!\n");
-
-  int box_num = GPOINTER_TO_UINT(user_data); //box_num corresponds to the colour index.
-
-  //convert to a pseudo uri string:
-  sprintf(text, "colour:%i", box_num + 1);//1 based to avoid atoi problems.
-  
-  gtk_selection_data_set(data,	
-						GDK_SELECTION_TYPE_STRING,
-						8,	/* 8 bits per character. */
-						text, strlen(text)
-						);
-  data_sent = TRUE;
-
-  return FALSE;
-}
-
-/*
-int
-colour_drag_datareceived(GtkWidget *widget, GdkDragContext *drag_context,
-                    gint x, gint y, GtkSelectionData *data,
-                    guint info,
-                    guint time,
-                    gpointer user_data)
-{
-  printf("colour_drag_colour_drag_datareceived()!\n");
-
-  return FALSE;
-}
-*/
-
-gint
-treeview_drag_received(GtkWidget *widget, GdkDragContext *drag_context, gint x, gint y, GtkSelectionData *data, guint info, guint time, gpointer user_data)
-{
-  printf("treeview_drag_datareceived()!\n");
-  return FALSE;
-}
-
-
-int
-path_get_id(GtkTreePath* path)
-{
-	printf("path_get_id()...\n");
-
-	int id;
-	GtkTreeIter iter;
-	gchar *filename;
-	GtkTreeModel* store = GTK_TREE_MODEL(app.store);
-	gtk_tree_model_get_iter(store, &iter, path);
-	gtk_tree_model_get(store, &iter, COL_IDX, &id,  COL_NAME, &filename, -1);
-
-	printf("cell_edited_callback(): filename=%s\n", filename);
-	return id;
-}
-
-
-void
-tag_edit_start(int tnum)
-{
-  /*
-  initiate the inplace renaming of a tag label in the inspector following a double-click.
-
-  -rename widget has had an extra ref added at creation time, so we dont have to do it here.
-
-  -current strategy is too swap the non-editable gtklabel with the editable gtkentry widget.
-  -fn is fragile in that it makes too many assumptions about the widget layout (widget parent).
-
-  FIXME global keyboard shortcuts are still active during editing?
-  FIXME add ESC key to stop editing.
-  */
-
-  //static gulong handler_id=0; //signal handlers
-  static gulong handler2  =0;
-  
-  GtkWidget* parent = NULL;
-
-  //printf("track_label_edit_start(). tnum=%i\n", tnum);
-
-  if(tnum >= 1000){printf("track_label_edit_start(): track number out of range.\n"); return;}
-
-  //if(!GTK_IS_WIDGET(arrange->wrename)){printf("track_label_edit_start(): rename widget missing.\n"); return;}
-  //if(!GTK_IS_WIDGET(trkA[tnum]->chlabel)){printf("track_label_edit_start(): label widget is missing.\n"); return;}
-
-  GtkWidget *label = NULL;
-  /*
-    if(trkA[tnum]->chlabel->parent != parent) {printf("chlabel_edit_start(): not terminated!\n"); return;}
-	label = trkA[tnum]->chlabel;
-  */ 
-
-  //printf("track_label_edit_start(). l->par=%p r->p=%p\n", 
-  //				trkA[tnum]->wlabel->parent, arrange->wrename->parent);
-
-  //check the track has a channel:
-  int ch_idx = 0;
-  if(!ch_idx){printf("chlabel_edit_start(): track has no channel.\n");return;}
-
-  //show the rename widget:
-  gtk_entry_set_text(GTK_ENTRY(NULL), gtk_label_get_text(GTK_LABEL(label)));
-  gtk_widget_ref(label);//stops gtk deleting the widget.
-  gtk_container_remove(GTK_CONTAINER(parent), label);
-  GtkWidget* wrename = NULL;
-  gtk_container_add   (GTK_CONTAINER(parent), wrename);
-
-  //focus-out can be improved by properly focussing other widgets when clicked on.
-
-  //if(handler_id) g_signal_handler_disconnect((gpointer)arrange->wrename, handler_id);
-  
-  //this signal wont quit until you click on another button, or other widget which takes kb focus.
-  //"focus" refers to the keyboard. So, eg, TAB will cause it to quit.
-
-  /*
-  handler_id = g_signal_connect ((gpointer)arrange->wrename, "focus-out-event",	G_CALLBACK(chlabel_edit_stop), GINT_TO_POINTER(tnum));
-
-  //this signal is no good as it quits when you move the mouse:
-  //g_signal_connect ((gpointer)arrange->wrename, "leave-notify-event", G_CALLBACK(track_label_edit_stop), 
-  //								GINT_TO_POINTER(tnum));
-  
-  if(handler2) g_signal_handler_disconnect((gpointer)arrange->wrename, handler2);
-  handler2 =   g_signal_connect(G_OBJECT(arrange->wrename), "key-press-event", 
-  								G_CALLBACK(track_entry_key_press), GINT_TO_POINTER(tnum));//traps the RET key.
-  */
-
-  //this is neccesary as it allows us to start typing imediately. It also selects the whole string.
-  gtk_widget_grab_focus(GTK_WIDGET(wrename));
-}
-
-
-void
-tag_edit_stop(GtkWidget *widget, GdkEventCrossing *event, gpointer user_data)
-{
-  //tidy up widgets and notify core of label change.
-  //called following a focus-out-event for the gtkEntry renaming widget.
-  //-track number should correspond to the one being edited...???
-
-  //warning! if called incorrectly, this fn can cause mysterious segfaults!!
-  // Is it something to do with multiple focus-out events? This function causes the
-  // rename widget to lose focus, it can run a 2nd time before completing the first: segfault!
-  // Currently it works ok if focus is removed before calling.
-
-  //static gboolean busy = FALSE;
-  //if(busy){"track_label_edit_stop(): busy!\n"; return;} //only run once at a time!
-  //busy = TRUE;
-
-  /*
-  GtkWidget* wrename = NULL;
-  g_signal_handler_disconnect((gpointer)wrename, handler_id);
-  
-  unsigned int tnum = GPOINTER_TO_INT(user_data);
-  //if(tnum >= MAX_GTRKS){printf("chlabel_edit_stop(): track number out of range.\n"); return;}
-  //printf("track_label_edit_stop(). tnum=%i\n", tnum);
-
-  //printf("track_label_edit_stop(): wrename_parent=%p.\n", arrange->wrename->parent);
-  //printf("track_label_edit_stop(): label_parent  =%p.\n", trkA[tnum]->wlabel);
-
-  GtkWidget* parent = trkA[tnum]->chlabel_ebox;
-  
-  //printf("w:%p is_widget: %i\n", trkA[tnum]->wlabel, GTK_IS_WIDGET(trkA[tnum]->wlabel));
-
-  //make sure the rename widget is being shown:
-  if(arrange->wrename->parent != parent){printf(
-    "chlabel_edit_stop(): info: entry widget not in correct container! trk probably changed. parent=%p\n",
-	   							arrange->wrename->parent); }
-	   
-  //change the text in the label:
-  gtk_label_set_text(GTK_LABEL(trkA[tnum]->chlabel), gtk_entry_get_text(GTK_ENTRY(arrange->wrename)));
-  //printf("track_label_edit_stop(): text set.\n");
-
-  //notify core: FIXME
-  if(!got_song_shm){
-    warnprintf("chlabel_edit_stop(): no shm.\n"); return;
-  }else{
-    //update the string for the channel that the current track is using:
-	int ch = track_get_ch_idx(tnum);
-    ch_idx_set_label(ch);
-
-	trkctl_redraw();
-  }
-  printf("chlabel_edit_stop(): trkctl_redraw done.\n");
-
-  //swap back to the normal label:
-  gtk_container_remove(GTK_CONTAINER(parent), arrange->wrename);
-  //gtk_container_remove(GTK_CONTAINER(arrange->wrename->parent), arrange->wrename);
-  //printf("track_label_edit_stop(): wrename unparented.\n");
-  
-  gtk_container_add(GTK_CONTAINER(parent), trkA[tnum]->chlabel);
-  gtk_widget_unref(trkA[tnum]->chlabel); //remove 'artificial' ref added in edit_start.
-  
-  //printf("track_label_edit_stop(): finished.\n");
-  //busy = FALSE;
-  */
 }
 
 

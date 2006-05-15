@@ -23,12 +23,14 @@ typedef struct _inspector
 	GtkWidget*     name;
 	GtkWidget*     filename;
 	GtkWidget*     tags;
+	GtkWidget*     tags_ev;    //event box for mouse clicks
 	GtkWidget*     length;
 	GtkWidget*     samplerate;
 	GtkWidget*     channels;
 	GtkWidget*     mimetype;
 	GtkWidget*     image;
 	GtkTextBuffer* notes;
+	GtkWidget*     edit;
 } inspector;
 
 
@@ -42,6 +44,7 @@ struct _config
 	char      window_width[64];
 	char      window_height[64];
 	char      colour[PALETTE_SIZE][8];
+	gboolean  add_recursive;
 };
 
 struct _app
@@ -52,6 +55,7 @@ struct _app
 	char      search_phrase[256];
 	char*     search_dir;
 	gchar*    search_category;
+	gboolean  add_recursive;
 
 	GKeyFile* key_file;   //config file data.
 
@@ -83,13 +87,15 @@ struct _app
 
 	GtkTreeRowReference* mouseover_row_ref;
 
-	GNode*   dir_tree;
+	GNode*     dir_tree;
+	GtkWidget* dir_treeview;
+	GtkWidget* vpaned;        //vertical divider on lhs between the dir_tree and inspector
 
-	GdkColor fg_colour;
-	GdkColor bg_colour;
-	GdkColor bg_colour_mod1;
-	GdkColor base_colour;
-	GdkColor text_colour;
+	GdkColor   fg_colour;
+	GdkColor   bg_colour;
+	GdkColor   bg_colour_mod1;
+	GdkColor   base_colour;
+	GdkColor   text_colour;
 
 	MYSQL mysql;
 
@@ -131,6 +137,7 @@ gboolean	window_new();
 GtkWidget*  left_pane();
 GtkWidget*  inspector_pane();
 void        inspector_update(GtkTreePath *path);
+gboolean    inspector_on_tags_clicked(GtkWidget *widget, GdkEventButton *event, gpointer user_data);
 GtkWidget*  colour_box_new(GtkWidget* parent);
 void        colour_box_update();
 gboolean    colour_box_exists(GdkColor* colour);
@@ -145,7 +152,8 @@ gboolean    tagshow_selector_new();
 void        on_view_category_changed(GtkComboBox *widget, gpointer user_data);
 void        on_category_changed(GtkComboBox *widget, gpointer user_data);
 void        on_category_set_clicked(GtkComboBox *widget, gpointer user_data);
-gboolean    row_set_tags(GtkTreeIter* iter, int id, char* tags_new);
+gboolean    row_set_tags(GtkTreeIter* iter, int id, const char* tags_new);
+gboolean    row_set_tags_from_id(int id, GtkTreeRowReference* row_ref, const char* tags_new);
 gboolean    row_clear_tags(GtkTreeIter* iter, int id);
 
 
@@ -187,15 +195,13 @@ gint        get_mouseover_row();
 void        path_cell_data_func(GtkTreeViewColumn *tree_column, GtkCellRenderer *cell, GtkTreeModel *tree_model, GtkTreeIter *iter, gpointer data);
 void        path_cell_bg_lighter(GtkTreeViewColumn *tree_column, GtkCellRenderer *cell, GtkTreeModel *tree_model, GtkTreeIter *iter);
 void        tag_cell_data(GtkTreeViewColumn *tree_column, GtkCellRenderer *cell, GtkTreeModel *tree_model, GtkTreeIter *iter, gpointer data);
-gboolean    tree_on_link_selected(GObject *ignored, DhLink *link, gpointer data);
+
+GtkWidget*  dir_tree_new();
+gboolean    dir_tree_on_link_selected(GObject *ignored, DhLink *link, gpointer data);
+gboolean    dir_tree_update(gpointer data);
 void        set_search_dir(char* dir);
 
 void        on_entry_activate(GtkEntry *entry, gpointer user_data);
-
-gboolean    config_load();
-void        config_new();
-gboolean    config_save();
-void        on_quit(GtkMenuItem *menuitem, gpointer user_data);
 
 gboolean    keyword_is_dupe(char* new, char* existing);
 
@@ -205,4 +211,14 @@ gint        treeview_drag_received(GtkWidget *widget, GdkDragContext *drag_conte
 gboolean    item_set_colour(GtkTreePath* path, unsigned colour);
 
 int         path_get_id(GtkTreePath* path);
+gboolean	on_directory_list_changed();
+gboolean    toggle_recursive_add(GtkWidget *widget, gpointer user_data);
+
+void        tag_edit_start(int tnum);
+void        tag_edit_stop(GtkWidget *widget, GdkEventCrossing *event, gpointer user_data);
+
+gboolean    config_load();
+void        config_new();
+gboolean    config_save();
+void        on_quit(GtkMenuItem *menuitem, gpointer user_data);
 
