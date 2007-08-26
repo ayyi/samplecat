@@ -1,10 +1,10 @@
 todo:
+	-freshly imported files dont have the icon set.
 	-check out libsexy SexyUrlLabel (for tags) 
 	-check out chickensys samplemanage.
 	-recursive importing: gui is unresponsive - put in some mainloop stuff
 	-check with valgrind
 	-how to programmatically enter treeview cell edit mode? (see code)
-	-configure / make install
 	-why segfaults related to tree row_refs - see dir_tree_on_link_selected() 
 	-look at aqualung to see how they do the FFmpeg support.
 
@@ -56,7 +56,7 @@ threads:
 
 file system trees:
 	-the first implementation was based on devhelp and worked ok, but didnt do too much.
-	-second implementation used gqviews gtkclist implemtation - aborted due to implementation of gtktreeview theming into gtk2.10.
+	-second implementation used gqview's gtkclist implemtation - aborted due to implementation of gtktreeview theming into gtk2.10.
 	-3rd implementation uses gqviews gtktreeview imlementation - not yet finished.
 
 

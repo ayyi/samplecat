@@ -16,6 +16,7 @@ typedef struct __audition
 	
 } _audition;
 
+#ifdef HAVE_FLAC_1_1_1
 struct __decoder_session
 {
 	sample*       sample;
@@ -32,6 +33,7 @@ struct __decoder_session
 
 	char          output_peakfile;     //boolean - true if we are making a pixbuf, false if we are outputting to jack.
 };
+#endif
 
 int                            jack_init();
 void                           jack_close();
@@ -45,6 +47,7 @@ void                           playback_stop();
 
 void                           audition_init();
 void                           audition_reset();
+#ifdef HAVE_FLAC_1_1_1
 _decoder_session*              flac_decoder_session_new();
 gboolean                       flac_decoder_sesssion_init(_decoder_session* session, sample* sample);
 void                           decoder_session_free(_decoder_session* session);
@@ -59,6 +62,7 @@ FLAC__StreamDecoderReadStatus  flac_read_cb(const FLAC__StreamDecoder *decoder, 
 void                           flac_error_cb(const FLAC__FileDecoder *dec, FLAC__StreamDecoderErrorStatus status, void *data);
 void                           flac_metadata_cb(const FLAC__FileDecoder *dec, const FLAC__StreamMetadata *meta, void *data);
 gboolean                       flac_fill_ringbuffer(_decoder_session* session);
+#endif
 
 gboolean                       jack_process_finished(gpointer data);
 gboolean                       jack_process_stop_playback(gpointer data);

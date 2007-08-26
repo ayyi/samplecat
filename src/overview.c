@@ -4,8 +4,6 @@
 #include <string.h>
 #include <unistd.h>
 #include <getopt.h>
-//#include <my_global.h>   // for strmov
-//#include <m_string.h>    // for strmov
 #include <sndfile.h>
 #include <jack/jack.h>
 #include <gtk/gtk.h>
@@ -71,7 +69,11 @@ GdkPixbuf*
 make_overview(sample* sample)
 {
   GdkPixbuf* pixbuf = NULL;
+#ifdef HAVE_FLAC_1_1_1
   if (sample->filetype == TYPE_FLAC) pixbuf = make_overview_flac(sample);
+#else
+  if(0){}
+#endif
   else pixbuf = make_overview_sndfile(sample);
   return pixbuf;
 }
@@ -166,6 +168,7 @@ make_overview_sndfile(sample* sample)
 }
 
 
+#ifdef HAVE_FLAC_1_1_1
 GdkPixbuf*
 make_overview_flac(sample* sample)
 {
@@ -283,6 +286,7 @@ make_overview_flac_finish(FLAC__FileDecoder* flac, sample* sample)
   if(!GDK_IS_PIXBUF(sample->pixbuf)){ errprintf("make_overview(): pixbuf is not a pixbuf.\n"); return FALSE; }
   return TRUE;
 }
+#endif
 
 
 GdkPixbuf*

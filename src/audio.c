@@ -11,7 +11,9 @@
 
 #include "mysql/mysql.h"
 #include "dh-link.h"
-#include <FLAC/all.h>
+#ifdef HAVE_FLAC_1_1_1
+  #include <FLAC/all.h>
+#endif
 #include <jack/ringbuffer.h>
 #include "main.h"
 #include "support.h"
@@ -30,7 +32,7 @@ float buffer[MAX_JACK_BUFFER_SIZE];
 
 /*
 
-libsndfile now does flac!!!!!
+TODO test libsndfile flac
 
 */
 
@@ -122,7 +124,9 @@ jack_process_finished(gpointer data)
 	//runs in the main thread.
 
 	gdk_threads_enter(); //this is probably a complete waste as we're not calling any gdk functions.
+#ifdef HAVE_FLAC_1_1_1
 	if(audition.session) flac_fill_ringbuffer(audition.session);
+#endif
 	gdk_threads_leave();
 	return FALSE; //remove the source.
 }
@@ -232,7 +236,9 @@ audition_reset()
 {
 	printf("audition_reset()...\n");
 	if(audition.rb1){ jack_ringbuffer_free(audition.rb1); jack_ringbuffer_free(audition.rb2); }
+#ifdef HAVE_FLAC_1_1_1
 	if(audition.session) decoder_session_free(audition.session);
+#endif
 	audition.session = NULL;
 	printf("audition_reset(): session nulled.\n");
 	audition.sffile = NULL;
@@ -242,6 +248,7 @@ audition_reset()
 }
 
 
+#ifdef HAVE_FLAC_1_1_1
 _decoder_session*
 flac_decoder_session_new()
 {
@@ -298,6 +305,7 @@ decoder_session_free(_decoder_session* session)
 	printf("decoder_session_free(): done.\n");
 
 }
+#endif
 
 
 //gboolean
@@ -317,6 +325,7 @@ playback_init(sample* sample)
 	//case TYPE_SNDFILE:
 	//case 1:
 	//if(!strcmp(mimetype, "audio/x-flac")){
+#ifdef HAVE_FLAC_1_1_1
 	if(sample->filetype == TYPE_FLAC){
 
 		int rb_size = 128 * 1024;
@@ -337,6 +346,9 @@ playback_init(sample* sample)
 				}else{ errprintf("playback_init(): failed to initialise flac decoder.\n"); ok = FALSE; }
 			}else{ errprintf("playback_init(): failed to initialise flac session.\n"); ok = FALSE; }
 		}else{ errprintf("playback_init(): failed to create ringbuffer.\n"); ok = FALSE; }
+#else
+	if(0){
+#endif
 	}else{
 	//if(sw==TYPE_SNDFILE){
 		SF_INFO *sfinfo = &audition.sfinfo;
@@ -378,10 +390,12 @@ playback_stop()
 	if(audition.type == TYPE_SNDFILE){
 		printf("playback_stop(): closing sndfile...\n");
 		if(sf_close(audition.sffile)) printf("error! bad file close.\n");
+#ifdef HAVE_FLAC_1_1_1
 	}else{
 		printf("playback_stop(): closing flac...\n");
 		flac_close(audition.session->flacstream);
 		audition.session->flacstream = NULL;
+#endif
 	}
 
 	printf("playback_stop(): reseting audiition...\n");
@@ -403,6 +417,7 @@ playback_free()
 //--------------------------------------------------------------------------------------------
 
 
+#ifdef HAVE_FLAC_1_1_1
 gboolean
 get_file_info_flac(sample* sample)
 {
@@ -946,4 +961,4 @@ flac_write_cb_seekable(const FLAC__FileDecoder *dec, const FLAC__Frame *frame, c
   return 0;
 }
 
-
+#endif //flac

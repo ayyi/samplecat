@@ -11,8 +11,8 @@ Copyright Tim Orford 2007
 #include <string.h>
 #include <unistd.h>
 #include <getopt.h>
-#include <my_global.h>   // for strmov
-#include <m_string.h>    // for strmov
+//#include <my_global.h>   // for strmov
+//#include <m_string.h>    // for strmov
 #include <sndfile.h>
 #include <jack/jack.h>
 #include <gtk/gtk.h>
@@ -46,6 +46,10 @@ Copyright Tim Orford 2007
 //#include "gnome-vfs-uri.h"
 
 //#define DEBUG_NO_THREADS 1
+
+//#if defined(HAVE_STPCPY) && !defined(HAVE_mit_thread)
+  #define strmov(A,B) stpcpy((A),(B))
+//#endif
 
 struct _app app;
 struct _palette palette;
@@ -150,7 +154,7 @@ main(int argc, char* *argv)
 
 	app_init();
 
-	printf("%s%s. Version "APP_VERSION"%s\n", yellow, app_name, white);
+	printf("%s%s. Version "PACKAGE_VERSION"%s\n", yellow, app_name, white);
 
 	const gchar* home_dir = g_get_home_dir();
 	snprintf(app.home_dir, 256, "%s", home_dir); //no dont bother
@@ -355,9 +359,9 @@ window_on_allocate(GtkWidget *win, gpointer user_data)
 
 		//make modifier colours:
 		colour_get_style_bg(&app.bg_colour_mod1, GTK_STATE_NORMAL);
-		app.bg_colour_mod1.red   = min(app.bg_colour_mod1.red   + 0x1000, 0xffff);
-		app.bg_colour_mod1.green = min(app.bg_colour_mod1.green + 0x1000, 0xffff);
-		app.bg_colour_mod1.blue  = min(app.bg_colour_mod1.blue  + 0x1000, 0xffff);
+		app.bg_colour_mod1.red   = MIN(app.bg_colour_mod1.red   + 0x1000, 0xffff);
+		app.bg_colour_mod1.green = MIN(app.bg_colour_mod1.green + 0x1000, 0xffff);
+		app.bg_colour_mod1.blue  = MIN(app.bg_colour_mod1.blue  + 0x1000, 0xffff);
 
 		//set column colours:
 		//printf("window_on_allocate(): fg_color: %x %x %x\n", app.fg_colour.red, app.fg_colour.green, app.fg_colour.blue);
@@ -1982,7 +1986,11 @@ add_dir(char *uri)
 gboolean
 get_file_info(sample* sample)
 {
+#ifdef HAVE_FLAC_1_1_1
 	if(sample->filetype==TYPE_FLAC) return get_file_info_flac(sample);
+#else
+	if(0){}
+#endif
 	else                            return get_file_info_sndfile(sample);
 }
 
@@ -2949,7 +2957,7 @@ config_load()
 	if(g_key_file_load_from_file(app.key_file, app.config_filename, G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS, &error)){
 		printf("ini file loaded.\n");
 		gchar* groupname = g_key_file_get_start_group(app.key_file);
-		dbg (0, "group=%s.", groupname);
+		dbg (2, "group=%s.", groupname);
 		if(!strcmp(groupname, "Samplecat")){
 			/*
 			gsize length;
@@ -2966,7 +2974,7 @@ config_load()
 			for(k=0;k<num_keys;k++){
 				if((keyval = g_key_file_get_string(app.key_file, groupname, keys[k], &error))){
 					snprintf(loc[k], 64, "%s", keyval);
-                    dbg(0, "%s=%s", keys[k], keyval);
+                    dbg(2, "%s=%s", keys[k], keyval);
 					g_free(keyval);
 				}else strcpy(loc[k], "");
 			}
