@@ -7,18 +7,22 @@
 --
 -- Table structure for table `samples`
 --
+	CREATE database samples;
+	USE samples;
 
-CREATE TABLE samples (
-  id int(11) NOT NULL auto_increment,
-  filename text NOT NULL,
-  filedir text,
-  keywords varchar(60) default '',
-  PRIMARY KEY  (id)
-) TYPE=MyISAM;
-
---
--- Dumping data for table `samples`
---
-
-INSERT INTO samples VALUES (1,'808 kik','/home/tim/','drums kik');
-
+	CREATE TABLE `samples` (
+	  id int(11) NOT NULL auto_increment,
+	  `filename` text NOT NULL,
+	  `filedir` text,
+	  `keywords` varchar(60) default '',
+	  `pixbuf` blob,
+	  `length` int(22) default NULL,
+	  `sample_rate` int(11) default NULL,
+	  `channels` int(4) default NULL,
+	  `online` int(1) default NULL,
+	  `last_checked` datetime default NULL,
+	  `mimetype` tinytext,
+	  `notes` mediumtext,
+	  `colour` tinyint(4) default NULL,
+	  PRIMARY KEY  (`id`)
+	)

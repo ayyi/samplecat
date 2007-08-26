@@ -761,13 +761,14 @@ int mode_to_base_type(int st_mode)
 	*/
 }
 
+#ifdef NOT_USED
 static void expire_timer(gpointer key, gpointer value, gpointer data)
 {
 	MIME_type *type = value;
 
 	type->image_time = 0;
 }
-
+#endif
 
 /* Return a pointer to a (static) colour for this item. If colouring is
  * off, returns normal.
@@ -792,6 +793,7 @@ GdkColor *type_get_colour(DirItem *item, GdkColor *normal)
 	return normal;
 }
 
+#ifdef NOT_USED
 static char **get_xdg_data_dirs(int *n_dirs)
 {
 	const char *env;
@@ -816,6 +818,7 @@ static char **get_xdg_data_dirs(int *n_dirs)
 	*n_dirs = n + 1;
 	return dirs;
 }
+#endif
 
 /* Try to fill in 'type->comment' from this document */
 	/*
@@ -853,6 +856,7 @@ const char *mime_type_comment(MIME_type *type)
 	return type->comment;
 }
 
+#ifdef NOT_USED
 static guchar *read_theme(Option *option)
 {
 	GtkOptionMenu *om = GTK_OPTION_MENU(option->widget);
@@ -892,6 +896,7 @@ static void add_themes_from_dir(GPtrArray *names, const char *dir)
 
 	g_ptr_array_free(list, TRUE);
 }
+#endif
 
 #ifdef NEVER
 static GList *build_icon_theme(Option *option, xmlNode *node, guchar *label)

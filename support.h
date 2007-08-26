@@ -1,12 +1,15 @@
 
 void         errprintf(char *fmt, ...);
 void         warnprintf(char *format, ...);
+void         debug_printf(const char* func, int level, const char *format, ...);
 
 void         samplerate_format(char* str, int samplerate);
 gint         strcmp2(gconstpointer a, gconstpointer b);
 GPtrArray*   list_dir(const guchar *path);
 gboolean     file_exists(const char *path);
 gboolean     is_dir(const char *path);
+gboolean     dir_is_empty(const char *path);
+void         file_extension(const char* path, char* extn);
 
 //-----------------------------------------------------------------
 

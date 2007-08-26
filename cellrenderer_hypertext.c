@@ -370,7 +370,7 @@ gtk_cell_renderer_hyper_text_render(GtkCellRenderer      *cell,
 				if (celltext->extra_attrs) pango_attr_list_unref (celltext->extra_attrs);
 
 				//setting text here doesnt seem to work (text is set but not displayed), but setting markup does.
-				printf("  render(): prelight! setting text: %s\n", text);
+				//printf("  render(): prelight! setting text: %s\n", text);
 				celltext->text = text;
 				celltext->extra_attrs = attrs;
 				hypercell->markup_set = TRUE;

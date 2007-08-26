@@ -35,9 +35,9 @@ extern unsigned debug;
 gpointer
 overview_thread(gpointer data)
 {
-	if(debug) printf("overview_thread(): new thread!\n");
+	if(debug) printf("%s(): new thread!\n", __func__);
 
-	if(!msg_queue){ errprintf("overview_thread(): no msg_queue!\n"); return NULL; }
+	if(!msg_queue){ errprintf("%s(): no msg_queue!\n", __func__); return NULL; }
 
 	g_async_queue_ref(msg_queue);
 
@@ -49,20 +49,18 @@ overview_thread(gpointer data)
 		//printf("overview_thread(): checking for work...\n");
 		while(g_async_queue_length(msg_queue)){
 			message = g_async_queue_pop(msg_queue);
-			printf("overview_thread(): new message! %p\n", message);
+			if(debug) printf("%s(): new message! %p\n", __func__, message);
 			msg_list = g_list_append(msg_list, message);
 		}
 
-		//printf("overview_thread(): starting work...\n");
 		while(msg_list!=NULL){
 			//printf("overview_thread(): list length: %i.\n", g_list_length(msg_list));
-			//sample* sample = msg_list->data; //g_list_data(msg_list);
 			sample* sample = (struct _sample*)g_list_first(msg_list)->data;
-			printf("overview_thread(): sample=%p filename=%s.\n", sample, sample->filename);
+			if(debug) printf("%s(): sample=%p filename=%s.\n", __func__, sample, sample->filename);
 			make_overview(sample);
 			g_idle_add(on_overview_done, sample); //notify();
 			msg_list = g_list_remove(msg_list, sample);
-  			//printf("overview_thread(): row_ref=%p\n", sample->row_ref);
+			//printf("overview_thread(): row_ref=%p\n", sample->row_ref);
 		}
 		sleep(1); //FIXME
 	}
@@ -91,7 +89,7 @@ make_overview_sndfile(sample* sample)
 	probably not much we can use....
 
   */
-  printf("make_overview_sndfile()...\n");
+  if(debug) printf("make_overview_sndfile()...\n");
 
   char *filename = sample->filename;
 
@@ -100,12 +98,12 @@ make_overview_sndfile(sample* sample)
   sfinfo.format  = 0;
   int            readcount;
 
-  printf("make_overview(): row_ref=%p\n", sample->row_ref);
+  if(debug) printf("make_overview(): row_ref=%p\n", sample->row_ref);
 
   if(!(sffile = sf_open(filename, SFM_READ, &sfinfo))){
     errprintf("make_overview(): not able to open input file (%p) %s.\n", filename, filename);
     puts(sf_strerror(NULL));    // print the error message from libsndfile:
-	return NULL;
+    return NULL;
   }
 
   GdkPixbuf* pixbuf = gdk_pixbuf_new(GDK_COLORSPACE_RGB,
@@ -114,12 +112,7 @@ make_overview_sndfile(sample* sample)
                                         OVERVIEW_WIDTH, OVERVIEW_HEIGHT);  //int width, int height)
   if(debug) printf("make_overview(): pixbuf=%p\n", pixbuf);
   pixbuf_clear(pixbuf, &app.fg_colour);
-  /*
-  GdkColor colour;
-  colour.red   = 0xffff;
-  colour.green = 0x0000;
-  colour.blue  = 0x0000;
-  */
+
   //how many samples should we load at a time? Lets make it a multiple of the image width.
   //-this will use up a lot of ram for a large file, 600M file will use 4MB.
   int frames_per_buf = sfinfo.frames / OVERVIEW_WIDTH;
@@ -128,7 +121,7 @@ make_overview_sndfile(sample* sample)
   short *data = malloc(sizeof(*data) * buffer_len);
 
   int x=0, frame, ch;
-  int srcidx_start=0;             //index into the source buffer for each sample pt.
+  int srcidx_start=0;       //index into the source buffer for each sample pt.
   int srcidx_stop =0;
   short min;                //negative peak value for each pixel.
   short max;                //positive peak value for each pixel.
@@ -188,14 +181,14 @@ make_overview_flac(sample* sample)
   session.output_peakfile = TRUE;
   if(!flac_decoder_sesssion_init(&session, sample)){
     errprintf("make_overview_flac(): unable to initialise flac decoder session. %s.\n", filename);
-	return NULL;
+    return NULL;
   }
 
   FLAC__FileDecoder* flac = flac_open(&session);
 
   if(!(flac)){
     errprintf("make_overview_flac(): not able to open input file (%p) %s.\n", filename, filename);
-	return NULL;
+    return NULL;
   }
 
   GdkPixbuf* pixbuf = overview_pixbuf_new();
@@ -210,7 +203,7 @@ make_overview_flac(sample* sample)
   int x;
   for(x=0;x<OVERVIEW_WIDTH;x++){
     overview_draw_line(pixbuf, x, session.max[x], session.min[x]);
-	//printf("make_overview_flac(): max=%i\n", session.max[x]);
+    //printf("make_overview_flac(): max=%i\n", session.max[x]);
   }
 
   sample->pixbuf = pixbuf;

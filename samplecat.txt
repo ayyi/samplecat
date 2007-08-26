@@ -1,16 +1,24 @@
 todo:
-	-how to programmatically enter treeview cell edit mode?
-	-valgrind
-	-make install
+	-check out libsexy SexyUrlLabel (for tags) 
+	-check out chickensys samplemanage.
+	-recursive importing: gui is unresponsive - put in some mainloop stuff
+	-check with valgrind
+	-how to programmatically enter treeview cell edit mode? (see code)
+	-configure / make install
+	-why segfaults related to tree row_refs - see dir_tree_on_link_selected() 
+	-look at aqualung to see how they do the FFmpeg support.
 
 dependencies:
+	-glib/gtk2 - v2.6 is needed for g_key_file
 	-gnome-vfs
 	-mysql
 	-libsndfile
 	-jack
 	-flac
 
-functionality:
+functionality status:
+	-sorting
+		-by date                             no
 	-show files                              done
 		-name                                done
 		-path                                done
@@ -19,13 +27,14 @@ functionality:
 		-inspector                           done
 	-preview files                           done
 	-import
-		-scan directories                    no
-		-scan dvd's/cdr's                    no
+		-scan directories                    done
+		-scan dvd's/cdr's                    test
 		-drag n drop                         done
+		-dupe checking                       test
 	export
 		-seismix
 		-ardour/rosegarden etc               no
-		-drag n drop                         no
+		-drag n drop                         no - test ardour + rosegarden
 	formats
 		-wav/aiff/etc                        done
 		-flac                                done
@@ -34,15 +43,24 @@ functionality:
 		-drag n drop to row                  done
 		-drag n drop to overview             no
 		-click to apply to selected.
-	update
+	updates
 		-"locate": scan for moved file.      no
+		-sample versioning                   no
+	slocate
+		-allow searches of slocate db        no
 
 threads:
 	-main thread
 	-overview thread
-	-jack thread (on demand) x2
+	-jack thread (only created on demand) x2
+
+file system trees:
+	-the first implementation was based on devhelp and worked ok, but didnt do too much.
+	-second implementation used gqviews gtkclist implemtation - aborted due to implementation of gtktreeview theming into gtk2.10.
+	-3rd implementation uses gqviews gtktreeview imlementation - not yet finished.
 
 
 -what does Paul Davis's SFDB do? old url no longer works (see Ardour).
 
 -papers on automatic metadata and searching: http://audioclas.iua.upf.edu/documents.shtml
+

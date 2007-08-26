@@ -44,6 +44,11 @@ extern unsigned debug;
 	void mysql_close(MYSQL *mysql)
 	*/
  
+	/*
+	MYSQL *mysql_real_connect(MYSQL *mysql, const char *host, const char *user, const char *passwd, const char *db,
+			unsigned int port, const char *unix_socket, unsigned int client_flag)
+	*/
+
 gboolean
 db_connect()
 {
@@ -53,7 +58,7 @@ db_connect()
 		printf("Failed to initiate MySQL connection.\n");
 		exit(1);
 	}
-	if(debug) printf("MySQL Client Version is %s\n", mysql_get_client_info());
+	dbg (1, "MySQL Client Version is %s\n", mysql_get_client_info());
 
 	mysql = &app.mysql;
 
@@ -63,12 +68,9 @@ db_connect()
 		exit(1);
 	}
 	if(debug) printf("MySQL Server Version is %s\n", mysql_get_server_info(mysql));
-	//printf("Logged on to database.\n");
 
 	if(!mysql_select_db(mysql, app.config.database_name /*const char *db*/)==0)/*success*/{
-		//printf( "Database Selected.\n");
-	//else
-		errprintf("Failed to connect to Database: Error: %s\n", mysql_error(mysql));
+		errprintf("Failed to connect to Database: %s\n", mysql_error(mysql));
 		return FALSE;
 	}
 
@@ -83,7 +85,7 @@ db_insert(char *qry)
 	int id = 0;
 
 	if(mysql_exec_sql(mysql, qry)==0){
-		printf("db_insert(): ok!\n");
+		if(debug) printf("db_insert(): ok!\n");
 		id = mysql_insert_id(mysql);
 	}else{
 		errprintf("db_insert(): not ok...\n");

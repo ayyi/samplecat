@@ -14,6 +14,8 @@ char warn[32];
 #define ASSERT_POINTER(A, B, C) if((unsigned)A < 1024){ errprintf("%s(): bad %s pointer (%p).\n", B, C, A); return; }
 #define ASSERT_POINTER_FALSE(A, B, C) if(GPOINTER_TO_UINT(B) < 1024){ errprintf("%s(): bad %s pointer (%p).\n", A, C, B); return FALSE; }
 #define POINTER_OK_NULL(A, B, C) if((unsigned)A < 1024){ errprintf("%s(): bad %s pointer (%p).\n", B, C, A); return NULL; }
+#define PF printf("%s()...\n", __func__);
+#define dbg(A, B, ...) debug_printf(__func__, A, B, __VA_ARGS__)
 
 
 typedef struct _inspector
@@ -136,8 +138,8 @@ enum {
 gboolean	window_new();
 GtkWidget*  left_pane();
 GtkWidget*  inspector_pane();
-void        inspector_update(GtkTreePath *path);
-gboolean    inspector_on_tags_clicked(GtkWidget *widget, GdkEventButton *event, gpointer user_data);
+void        inspector_update(GtkTreePath*);
+gboolean    inspector_on_tags_clicked(GtkWidget*, GdkEventButton*, gpointer user_data);
 GtkWidget*  colour_box_new(GtkWidget* parent);
 void        colour_box_update();
 gboolean    colour_box_exists(GdkColor* colour);
@@ -179,9 +181,9 @@ void        db_update_pixbuf(sample *sample);
 void        db_get_dirs();
 
 void        keywords_on_edited(GtkCellRendererText *cell, gchar *path_string, gchar *new_text, gpointer user_data);
-void        delete_row(GtkWidget *widget, gpointer user_data);
-void        update_row(GtkWidget *widget, gpointer user_data);
-void        edit_row  (GtkWidget *widget, gpointer user_data);
+void        delete_row(GtkWidget*, gpointer user_data);
+void        update_row(GtkWidget*, gpointer user_data);
+void        edit_row  (GtkWidget*, gpointer user_data);
 GtkWidget*  make_context_menu();
 gboolean    on_row_clicked(GtkWidget *widget, GdkEventButton *event, gpointer user_data);
 gboolean    treeview_on_motion(GtkWidget *widget, GdkEventMotion *event, gpointer user_data);

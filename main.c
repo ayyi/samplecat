@@ -2,7 +2,10 @@
 
 This software is licensed under the GPL. See accompanying file COPYING.
 
+Copyright Tim Orford 2007
+
 */
+#include "config.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -30,6 +33,12 @@ This software is licensed under the GPL. See accompanying file COPYING.
 #include "tree.h"
 #include "db.h"
 #include "dnd.h"
+#include "gqview_view_dir_tree.h"
+#ifdef USE_GQVIEW_1_DIRTREE
+  #include "filelist.h"
+  #include "view_dir_list.h"
+  #include "view_dir_tree.h"
+#endif
 
 #include "rox_global.h"
 #include "type.h"
@@ -76,9 +85,8 @@ enum
 #define MYSQL_NOTES 11
 #define MYSQL_COLOUR 12
 
-//dnd:
 char       *app_name    = "Samplecat";
-const char *app_version = "0.0.1";
+//const char *app_version = "0.0.2";
 
 static const struct option long_options[] = {
   { "input",            1, NULL, 'i' },
@@ -111,13 +119,14 @@ void
 app_init()
 {
 	//app.fg_colour.pixel = 0;
-	app.dir_tree = NULL;
-	app.statusbar = NULL;
-	app.statusbar2 = NULL;
+	app.dir_tree         = NULL;
+	app.statusbar        = NULL;
+	app.statusbar2       = NULL;
 	//sprintf(app.search_phrase, "");
 	app.search_phrase[0] = 0;
-	app.search_dir = NULL;
-	app.search_category = NULL;
+	app.search_dir       = NULL;
+	app.search_category  = NULL;
+	app.window           = NULL;
 
 	int i; for(i=0;i<PALETTE_SIZE;i++) app.colour_button[i] = NULL;
 	app.colourbox_dirty = TRUE;
@@ -128,7 +137,7 @@ int
 main(int argc, char* *argv)
 {
 	//make gdb break on g errors:
-    //g_log_set_always_fatal( G_LOG_FLAG_RECURSION | G_LOG_FLAG_FATAL | G_LOG_LEVEL_ERROR | G_LOG_LEVEL_CRITICAL | G_LOG_LEVEL_WARNING );
+	//g_log_set_always_fatal( G_LOG_FLAG_RECURSION | G_LOG_FLAG_FATAL | G_LOG_LEVEL_ERROR | G_LOG_LEVEL_CRITICAL | G_LOG_LEVEL_WARNING );
 
 	//init console escape commands:
 	sprintf(white,  "%c[0;39m", 0x1b);
@@ -141,31 +150,31 @@ main(int argc, char* *argv)
 
 	app_init();
 
-	printf("%s%s. Version %s%s\n", yellow, app_name, app_version, white);
+	printf("%s%s. Version "APP_VERSION"%s\n", yellow, app_name, white);
 
 	const gchar* home_dir = g_get_home_dir();
 	snprintf(app.home_dir, 256, "%s", home_dir); //no dont bother
 	snprintf(app.config_filename, 256, "%s/.samplecat", app.home_dir);
 	config_load();
 
-	MYSQL *mysql;
-	if(db_connect()) mysql = &app.mysql;
-	else on_quit(NULL, GINT_TO_POINTER(1));
-
 	g_thread_init(NULL);
 	gdk_threads_init();
 	app.mutex = g_mutex_new();
 	gtk_init(&argc, &argv);
 
+	MYSQL *mysql;
+	if(db_connect()) mysql = &app.mysql; else on_quit(NULL, GINT_TO_POINTER(1));
+	//if(db_connect()){ printf("ok...\n"); mysql = &app.mysql; }else{ printf("not ok...\n"); on_quit(NULL, GINT_TO_POINTER(1)); exit(1); }
+
 	type_init();
 	pixmaps_init();
 
 #ifndef DEBUG_NO_THREADS
-	if(debug) printf("main(): creating overview thread...\n");
+	if(debug) printf("%s(): creating overview thread...\n", __func__);
 	GError *error = NULL;
 	msg_queue = g_async_queue_new();
 	if(!g_thread_create(overview_thread, NULL, FALSE, &error)){
-		errprintf("main(): error creating thread: %s\n", error->message);
+		errprintf("%s(): error creating thread: %s\n", error->message, __func__);
 		g_error_free(error);
 	}
 #endif
@@ -219,7 +228,7 @@ window
       |     +--treeview
       |
       +--statusbar hbox
-         +--statusbar	
+         +--statusbar
          +--statusbar2
 
 */
@@ -246,7 +255,7 @@ window
 	GtkWidget *hpaned = gtk_hpaned_new();
 	gtk_paned_set_position(GTK_PANED(hpaned), 160);
 	//gtk_box_pack_end(GTK_BOX(vbox), hpaned, EXPAND_TRUE, TRUE, 0);
-	gtk_container_add(GTK_CONTAINER(align1), hpaned);	
+	gtk_container_add(GTK_CONTAINER(align1), hpaned);
 	gtk_widget_show(hpaned);
 
 	GtkWidget* tree = left_pane();
@@ -373,7 +382,7 @@ window_on_configure(GtkWidget *widget, GdkEventConfigure *event, gpointer user_d
 		int height = atoi(app.config.window_height);
 		if(!height) height = MIN(app.view->requisition.height, 900);
 		if(width && height){
-			printf("window_on_configure()...width=%s height=%s\n", app.config.window_width, app.config.window_height);
+			dbg(0, "width=%s height=%s", app.config.window_width, app.config.window_height);
 			gtk_window_resize(GTK_WINDOW(app.window), width, height);
 			window_size_set = TRUE;
 		}
@@ -405,7 +414,7 @@ colour_box_add(GdkColor* colour)
 {
 	static unsigned slot = 0;
 
-	if(slot >= PALETTE_SIZE){ warnprintf("colour_box_add() colour_box full.\n"); return FALSE; }
+	if(slot >= PALETTE_SIZE){ if(debug) warnprintf("colour_box_add() colour_box full.\n"); return FALSE; }
 
 	//only add a colour if a similar colour isnt already there.
 	if(colour_box_exists(colour)) return FALSE;
@@ -421,7 +430,7 @@ make_listview()
 	//the main pane. A treeview with a list of samples.
 
 	GtkWidget *view = app.view = gtk_tree_view_new_with_model(GTK_TREE_MODEL(app.store));
-	g_signal_connect(view, "motion-notify-event", (GCallback)treeview_on_motion, NULL);
+	//g_signal_connect(view, "motion-notify-event", (GCallback)treeview_on_motion, NULL); //FIXME this is causing segfaults?
 	g_signal_connect(view, "drag-data-received", G_CALLBACK(treeview_drag_received), NULL); //currently the window traps this before we get here.
 	g_signal_connect(view, "drag-motion", G_CALLBACK(drag_motion), NULL);
 	//gtk_tree_view_set_fixed_height_mode(GTK_TREE_VIEW(view), TRUE); //supposed to be faster. gtk >= 2.6
@@ -543,10 +552,39 @@ left_pane()
 	//gtk_box_pack_end(GTK_BOX(vbox), hpaned, EXPAND_TRUE, TRUE, 0);
 	gtk_widget_show(app.vpaned);
 
+	//make another vpane sitting inside the 1st:
+	GtkWidget* vpaned2 = gtk_vpaned_new();
+	gtk_widget_show(vpaned2);
+	gtk_paned_add1(GTK_PANED(app.vpaned), vpaned2);
+
+#ifndef NO_USE_DEVHELP_DIRTREE
 	GtkWidget* tree = dir_tree_new();
-	gtk_paned_add1(GTK_PANED(app.vpaned), tree);
+	//gtk_paned_add1(GTK_PANED(app.vpaned), tree);
+	gtk_paned_add1(GTK_PANED(vpaned2), tree);
 	gtk_widget_show(tree);
 	g_signal_connect(tree, "link_selected", G_CALLBACK(dir_tree_on_link_selected), NULL);
+#endif
+
+	gint expand = TRUE;
+	ViewDirTree* dir_list = vdtree_new(app.home_dir, expand);
+	GtkWidget* fs_tree = dir_list->widget;
+	//gtk_paned_add1(GTK_PANED(app.vpaned), tree);
+	gtk_paned_add2(GTK_PANED(vpaned2), fs_tree);
+	gtk_widget_show(fs_tree);
+
+	//alternative dir tree:
+#ifdef USE_NICE_GQVIEW_CLIST_TREE
+	if(false){
+		ViewDirList *dir_list = vdlist_new(app.home_dir);
+		GtkWidget* tree = dir_list->widget;
+	}
+	gint expand = TRUE;
+	ViewDirTree *dir_list = vdtree_new(app.home_dir, expand);
+	GtkWidget* tree = dir_list->widget;
+	gtk_paned_add1(GTK_PANED(app.vpaned), tree);
+	gtk_widget_show(tree);
+#endif
+
 
 #ifdef INSPECTOR
 #endif
@@ -696,14 +734,14 @@ inspector_pane()
 	gtk_entry_set_max_length(GTK_ENTRY(edit), 64);
 	gtk_entry_set_text(GTK_ENTRY(edit), "");
 	gtk_widget_show(edit);
-	/*	
+	/*
 	g_signal_connect(G_OBJECT(entry), "focus-out-event", G_CALLBACK(new_search), NULL);
 	//this is supposed to enable REUTRN to enter the text - does it work?
 	gtk_entry_set_activates_default(GTK_ENTRY(entry), TRUE);
 	//g_signal_connect(G_OBJECT(entry), "activate", G_CALLBACK(on_entry_activate), NULL);
 	g_signal_connect(G_OBJECT(entry), "activate", G_CALLBACK(new_search), NULL);
 	*/
-    gtk_widget_ref(edit);//stops gtk deleting the widget.
+	gtk_widget_ref(edit);//stops gtk deleting the widget.
 
 	//this also sets the margin:
 	//gtk_text_view_set_border_window_size(GTK_TEXT_VIEW(text1), GTK_TEXT_WINDOW_LEFT, 20);
@@ -719,8 +757,6 @@ inspector_update(GtkTreePath *path)
 {
 	if(!app.inspector) return;
 	ASSERT_POINTER(path, "inspector_update", "path");
-	//if((unsigned)path<1024){ errprintf("inspector_update(): bad path arg.\n"); return; }
-	printf("inspector_update()...\n");
 
 	if (app.inspector->row_ref){ gtk_tree_row_reference_free(app.inspector->row_ref); app.inspector->row_ref = NULL; }
 
@@ -872,14 +908,16 @@ dir_tree_update(gpointer data)
 	note: destroying the whole node tree is wasteful - can we just make modifications to it?
 
 	*/
-	printf("dir_tree_update()... \n");
+	printf("dir_tree_update()... FIXME !! dir list window not updated.\n");
 
 	GNode *node;
 	node = app.dir_tree;
 
 	db_get_dirs();
 
+#ifdef NOT_BROKEN
 	dh_book_tree_reload((DhBookTree*)app.dir_treeview);
+#endif
 
 	return FALSE; //source should be removed.
 }
@@ -894,7 +932,7 @@ set_search_dir(char* dir)
 
 	if(!dir){ errprintf("set_search_dir()\n"); return; }
 
-	printf("set_search_dir(): dir=%s\n", dir);
+	dbg (1, "dir=%s\n", dir);
 	app.search_dir = dir;
 }
 
@@ -983,7 +1021,7 @@ tag_cell_data(GtkTreeViewColumn *tree_column, GtkCellRenderer *cell, GtkTreeMode
 
 	//----------------------
 
- 	GtkCellRendererText *celltext = (GtkCellRendererText *)cell;
+	GtkCellRendererText *celltext = (GtkCellRendererText *)cell;
 	GtkCellRendererHyperText *hypercell = (GtkCellRendererHyperText *)cell;
 	GtkTreePath* path = gtk_tree_model_get_path(GTK_TREE_MODEL(app.store), iter);
 	GdkRectangle cellrect;
@@ -1153,6 +1191,9 @@ scan_dir(const char* path)
 			if(!g_file_test(filepath, G_FILE_TEST_IS_DIR)){
 				//printf("scan_dir(): checking files: %s\n", file);
 				add_file(filepath);
+
+				//FIXME why does this block?
+				//int i; for(i=0;i<20;i++) if(gtk_events_pending) gtk_main_iteration(); else break;
 			}
 			// IS_DIR
 			else if(app.add_recursive){
@@ -1198,7 +1239,7 @@ do_search(char *search, char *dir)
 
 	//lets assume that the search_phrase filter should *always* be in effect.
 
-	if (app.search_category) snprintf(category, 256, "AND keywords LIKE '%%%s%%' ", app.search_category);
+	if(app.search_category) snprintf(category, 256, "AND keywords LIKE '%%%s%%' ", app.search_category);
 
 	if(dir && strlen(dir)){
 		snprintf(where_dir, 512, "AND filedir='%s' %s ", dir, category);
@@ -1228,8 +1269,8 @@ do_search(char *search, char *dir)
 		//printf( "%ld Records Found\n", (long) mysql_affected_rows(&mysql));
 		//printf( "%lu Records Found\n", (unsigned long)mysql_affected_rows(mysql));
 
-	
-		treeview_block_motion_handler(); //dunno exactly why but this prevents a segfault.
+
+		treeview_block_motion_handler(); //dont know exactly why but this prevents a segfault.
 
 		clear_store();
 
@@ -1256,9 +1297,8 @@ do_search(char *search, char *dir)
 				//deserialise the pixbuf field:
 				pixbuf = NULL;
 				if(row[4]){
-					//printf("do_search(): deserializing...\n"); 
+					//printf("%s(): deserializing...\n", __func__); 
 					if(gdk_pixdata_deserialize(&pixdata, lengths[4], (guint8*)row[4], NULL)){
-						//printf("do_search(): extracting pixbuf...\n"); 
 						pixbuf = gdk_pixbuf_from_pixdata(&pixdata, TRUE, NULL);
 					}
 				}
@@ -1272,7 +1312,7 @@ do_search(char *search, char *dir)
 
 				//icon (dont show if the sound file is not available):
 				if(online){
-	  				MIME_type* mime_type = mime_type_lookup(row[MYSQL_MIMETYPE]);
+					MIME_type* mime_type = mime_type_lookup(row[MYSQL_MIMETYPE]);
 					/*MaskedPixmap* pixmap =*/ type_to_icon(mime_type);
 					if ( mime_type->image == NULL ) printf("do_search(): no icon.\n");
 					iconbuf = mime_type->image->sm_pixbuf;
@@ -1280,8 +1320,8 @@ do_search(char *search, char *dir)
 
 				gtk_list_store_append(app.store, &iter); 
 				gtk_list_store_set(app.store, &iter, COL_ICON, iconbuf, COL_IDX, atoi(row[0]), COL_NAME, row[1], COL_FNAME, row[2], COL_KEYWORDS, keywords, 
-                                                     COL_OVERVIEW, pixbuf, COL_LENGTH, length, COL_SAMPLERATE, samplerate_s, COL_CHANNELS, channels, 
-													 COL_MIMETYPE, row[MYSQL_MIMETYPE], COL_NOTES, row[MYSQL_NOTES], COL_COLOUR, colour, -1);
+				                     COL_OVERVIEW, pixbuf, COL_LENGTH, length, COL_SAMPLERATE, samplerate_s, COL_CHANNELS, channels, 
+				                     COL_MIMETYPE, row[MYSQL_MIMETYPE], COL_NOTES, row[MYSQL_NOTES], COL_COLOUR, colour, -1);
 				if(pixbuf) g_object_unref(pixbuf);
 				row_count++;
 			}
@@ -1294,15 +1334,15 @@ do_search(char *search, char *dir)
 				// mysql_store_result() should have returned data
 				printf( "Error getting records: %s\n", mysql_error(mysql));
 		  }
-		  else printf( "do_search(): Failed to find any records (fieldcount<1): %s\n", mysql_error(mysql));
+		  else printf("%s(): Failed to find any records (fieldcount<1): %s\n", __func__, mysql_error(mysql));
 		}
 
 		//treeview_unblock_motion_handler();  //causes a segfault even before it is run ??!!
 	}
 	else{
-		printf( "do_search(): Failed to find any records: %s\n", mysql_error(mysql));
+		printf("%s(): Failed to find any records: %s\n", mysql_error(mysql), __func__);
 	}
-	if(debug) printf( "do_search(): done.\n");
+	if(debug) printf("%s(): done.\n", __func__);
 }
 
 
@@ -1361,7 +1401,7 @@ treeview_unblock_motion_handler()
 							   treeview_on_motion, //callback
 							   NULL);    //data
 		if(id1) g_signal_handler_unblock(app.view, id1);
-		else warnprintf("treeview_unblock_motion_handler(): failed to find handler.\n");
+		else warnprintf("%s(): failed to find handler.\n", __func__);
 	}
 }
 
@@ -1374,7 +1414,7 @@ filter_new()
 	if(!app.window) return FALSE; //FIXME make this a macro with printf etc
 
 	GtkWidget* hbox = app.toolbar = gtk_hbox_new(FALSE, 0);
-    gtk_widget_show(hbox);
+	gtk_widget_show(hbox);
 	gtk_box_pack_start(GTK_BOX(app.vbox), hbox, EXPAND_FALSE, FILL_FALSE, 0);
 
 	GtkWidget* label1 = gtk_label_new("Search");
@@ -1397,7 +1437,7 @@ filter_new()
 
 	//second row (metadata edit):
 	GtkWidget* hbox_edit = app.toolbar2 = gtk_hbox_new(FALSE, 0);
-    gtk_widget_show(hbox_edit);
+	gtk_widget_show(hbox_edit);
 	gtk_box_pack_start(GTK_BOX(app.vbox), hbox_edit, EXPAND_FALSE, FILL_FALSE, 0);
 
 	//left align the label:
@@ -1501,8 +1541,7 @@ void
 on_view_category_changed(GtkComboBox *widget, gpointer user_data)
 {
 	//update the sample list with the new view-category.
-
-	printf("on_view_category_changed()...\n");
+	PF;
 
 	if (app.search_category) g_free(app.search_category);
 	app.search_category = gtk_combo_box_get_active_text(GTK_COMBO_BOX(app.view_category));
@@ -1527,7 +1566,7 @@ on_category_set_clicked(GtkComboBox *widget, gpointer user_data)
 	//printf("delete_row(): %i rows selected.\n", g_list_length(selectionlist));
 
 	int i;
-    GtkTreeIter iter;
+	GtkTreeIter iter;
 	for(i=0;i<g_list_length(selectionlist);i++){
 		GtkTreePath *treepath_selection = g_list_nth_data(selectionlist, i);
 
@@ -1737,9 +1776,9 @@ on_notes_focus_out(GtkWidget *widget, gpointer userdata)
 		GtkTreePath *path;
 		//if((path = gtk_tree_model_get_path(GTK_TREE_MODEL(app.store), &iter))){
 		if((path = gtk_tree_row_reference_get_path(app.inspector->row_ref))){
-  			GtkTreeIter iter;
+			GtkTreeIter iter;
 			gtk_tree_model_get_iter(GTK_TREE_MODEL(app.store), &iter, path);
-	    	gtk_list_store_set(app.store, &iter, COL_NOTES, notes, -1);
+			gtk_list_store_set(app.store, &iter, COL_NOTES, notes, -1);
 			gtk_tree_path_free(path);
 		}
 	}
@@ -1775,31 +1814,31 @@ item_set_colour(GtkTreePath* path, unsigned colour)
 sample*
 sample_new()
 {
-  sample* sample;
-  sample = malloc(sizeof(*sample));
-  sample->id = 0;
-  sample->filetype = 0;
-  sample->pixbuf = NULL;
-  return sample;
+	sample* sample;
+	sample = malloc(sizeof(*sample));
+	sample->id = 0;
+	sample->filetype = 0;
+	sample->pixbuf = NULL;
+	return sample;
 }
 
 
 sample*
 sample_new_from_model(GtkTreePath *path)
 {
-  GtkTreeIter iter;
-  GtkTreeModel *model = gtk_tree_view_get_model(GTK_TREE_VIEW(app.view));
-  gtk_tree_model_get_iter(model, &iter, path);
-  gchar *fpath, *fname, *mimetype;
-  int id;
-  gtk_tree_model_get(model, &iter, COL_FNAME, &fpath, COL_NAME, &fname, COL_IDX, &id, COL_MIMETYPE, &mimetype, -1);
+	GtkTreeIter iter;
+	GtkTreeModel *model = gtk_tree_view_get_model(GTK_TREE_VIEW(app.view));
+	gtk_tree_model_get_iter(model, &iter, path);
+	gchar *fpath, *fname, *mimetype;
+	int id;
+	gtk_tree_model_get(model, &iter, COL_FNAME, &fpath, COL_NAME, &fname, COL_IDX, &id, COL_MIMETYPE, &mimetype, -1);
 
-  sample* sample = malloc(sizeof(*sample));
-  sample->id = id;
-  snprintf(sample->filename, 256, "%s/%s", fpath, fname);
-  if(!strcmp(mimetype, "audio/x-flac")) sample->filetype = TYPE_FLAC; else sample->filetype = TYPE_SNDFILE; 
-  sample->pixbuf = NULL;
-  return sample;
+	sample* sample = malloc(sizeof(*sample));
+	sample->id = id;
+	snprintf(sample->filename, 256, "%s/%s", fpath, fname);
+	if(!strcmp(mimetype, "audio/x-flac")) sample->filetype = TYPE_FLAC; else sample->filetype = TYPE_SNDFILE; 
+	sample->pixbuf = NULL;
+	return sample;
 }
 
 
@@ -1814,81 +1853,81 @@ sample_free(sample* sample)
 gboolean
 add_file(char *uri)
 {
-  /*
-  uri must be "unescaped" before calling this fn.
-  */
-  if(debug) printf("add_file()... %s\n", uri);
-  gboolean ok = TRUE;
+	/*
+	uri must be "unescaped" before calling this fn.
+	*/
+	if(debug) printf("add_file()... %s\n", uri);
+	gboolean ok = TRUE;
 
-  sample* sample = sample_new(); //free'd after db and store are updated.
-  snprintf(sample->filename, 256, "%s", uri);
+	sample* sample = sample_new(); //free'd after db and store are updated.
+	snprintf(sample->filename, 256, "%s", uri);
 
-  #define SQL_LEN 66000
-  char sql[1024], sql2[SQL_LEN];
-  char length_ms[64];
-  char samplerate_s[32];
-  //strcpy(sql, "INSERT samples SET ");
-  gchar* filedir = g_path_get_dirname(uri);
-  gchar* filename = g_path_get_basename(uri);
-  snprintf(sql, 1024, "INSERT samples SET filename='%s', filedir='%s'", filename, filedir);
+	#define SQL_LEN 66000
+	char sql[1024], sql2[SQL_LEN];
+	char length_ms[64];
+	char samplerate_s[32];
+	//strcpy(sql, "INSERT samples SET ");
+	gchar* filedir = g_path_get_dirname(uri);
+	gchar* filename = g_path_get_basename(uri);
+	snprintf(sql, 1024, "INSERT samples SET filename='%s', filedir='%s'", filename, filedir);
 
-  MIME_type* mime_type = type_from_path(filename);
-  char mime_string[64];
-  snprintf(mime_string, 64, "%s/%s", mime_type->media_type, mime_type->subtype);
+	MIME_type* mime_type = type_from_path(filename);
+	char mime_string[64];
+	snprintf(mime_string, 64, "%s/%s", mime_type->media_type, mime_type->subtype);
 
-  char extn[64];
-  file_extension(filename, extn);
-  if(!strcmp(extn, "rfl")){
-    printf("cannot add file: file type \"%s\" not supported.\n", extn);
-    statusbar_print(1, "cannot add file: rfl files not supported.");
-    ok = FALSE;
-    goto out;
-  }
+	char extn[64];
+	file_extension(filename, extn);
+	if(!strcmp(extn, "rfl")){
+		printf("cannot add file: file type \"%s\" not supported.\n", extn);
+		statusbar_print(1, "cannot add file: rfl files not supported.");
+		ok = FALSE;
+		goto out;
+	}
 
-  if(!strcmp(mime_string, "audio/x-flac")) sample->filetype = TYPE_FLAC;
-  printf("add_file() mimetype: %s type=%i\n", mime_string, sample->filetype);
+	if(!strcmp(mime_string, "audio/x-flac")) sample->filetype = TYPE_FLAC;
+	printf("add_file() mimetype: %s type=%i\n", mime_string, sample->filetype);
 
-  if(!strcmp(mime_type->media_type, "text")){
-    printf("ignoring text file...\n");
-    ok = FALSE;
-    goto out;
-  }
+	if(!strcmp(mime_type->media_type, "text")){
+		printf("ignoring text file...\n");
+		ok = FALSE;
+		goto out;
+	}
 
-  if(!strcmp(mime_string, "audio/mpeg")){
-    printf("cannot add file: file type \"%s\" not supported.\n", mime_string);
-    statusbar_print(1, "cannot add file: mpeg files not supported.");
-    ok = FALSE;
-    goto out;
-  }
-  if(!strcmp(mime_string, "application/x-par2")){
-    printf("cannot add file: file type \"%s\" not supported.\n", mime_string);
-    statusbar_print(1, "cannot add file: mpeg files not supported.");
-    ok = FALSE;
-    goto out;
-  }
+	if(!strcmp(mime_string, "audio/mpeg")){
+		printf("cannot add file: file type \"%s\" not supported.\n", mime_string);
+		statusbar_print(1, "cannot add file: mpeg files not supported.");
+		ok = FALSE;
+		goto out;
+	}
+	if(!strcmp(mime_string, "application/x-par2")){
+		printf("cannot add file: file type \"%s\" not supported.\n", mime_string);
+		statusbar_print(1, "cannot add file: mpeg files not supported.");
+		ok = FALSE;
+		goto out;
+	}
 
-  /* better way to do the string appending (or use glib?):
-  tmppos = strmov(tmp, "INSERT INTO test_blob (a_blob) VALUES ('");
-  tmppos += mysql_real_escape_string(conn, tmppos, fbuffer, fsize);
-  tmppos = strmov(tmppos, "')");
-  *tmppos++ = (char)0;
-  mysql_query(conn, tmp);
-  */
+	/* better way to do the string appending (or use glib?):
+	tmppos = strmov(tmp, "INSERT INTO test_blob (a_blob) VALUES ('");
+	tmppos += mysql_real_escape_string(conn, tmppos, fbuffer, fsize);
+	tmppos = strmov(tmppos, "')");
+	*tmppos++ = (char)0;
+	mysql_query(conn, tmp);
+	*/
 
-  //GdkPixbuf* pixbuf = make_overview(&sample);
-  //if(pixbuf){
-  if(get_file_info(sample)){
+	//GdkPixbuf* pixbuf = make_overview(&sample);
+	//if(pixbuf){
+	if(get_file_info(sample)){
 
 	//snprintf(sql2, SQL_LEN, "%s, pixbuf='%s', length=%i, sample_rate=%i, channels=%i, mimetype='%s/%s' ", sql, blob, sample.length, sample.sample_rate, sample.channels, mime_type->media_type, mime_type->subtype);
 	snprintf(sql2, SQL_LEN, "%s, length=%i, sample_rate=%i, channels=%i, mimetype='%s/%s' ", sql, sample->length, sample->sample_rate, sample->channels, mime_type->media_type, mime_type->subtype);
 	format_time_int(length_ms, sample->length);
 	samplerate_format(samplerate_s, sample->sample_rate);
-    printf("add_file(): sql=%s\n", sql2);
+	printf("add_file(): sql=%s\n", sql2);
 
-    sample->id = db_insert(sql2);
+	sample->id = db_insert(sql2);
 
-    GtkTreeIter iter;
-    gtk_list_store_append(app.store, &iter);
+	GtkTreeIter iter;
+	gtk_list_store_append(app.store, &iter);
 
 	//store a row reference:
 	GtkTreePath* treepath;
@@ -1899,52 +1938,52 @@ add_file(char *uri)
 	}else errprintf("add_file(): failed to make treepath from inserted iter.\n");
 
 	//printf("add_file(): iter=%p=%s\n", &iter, gtk_tree_model_get_string_from_iter(GTK_TREE_MODEL(app.store), &iter));
-    if(debug) printf("setting store... filename=%s mime=%s\n", filename, mime_string);
-    gtk_list_store_set(app.store, &iter,
+	if(debug) printf("setting store... filename=%s mime=%s\n", filename, mime_string);
+	gtk_list_store_set(app.store, &iter,
 	                  COL_IDX, sample->id,
-                      COL_NAME, filename,
-                      COL_FNAME, filedir,
-                      //COL_OVERVIEW, pixbuf,
-                      //COL_OVERVIEW, NULL,
+	                  COL_NAME, filename,
+	                  COL_FNAME, filedir,
+	                  //COL_OVERVIEW, pixbuf,
+	                  //COL_OVERVIEW, NULL,
 	                  COL_LENGTH, length_ms,
-                      COL_SAMPLERATE, samplerate_s,
+	                  COL_SAMPLERATE, samplerate_s,
 	                  COL_CHANNELS, sample->channels,
 	                  COL_MIMETYPE, mime_string,
-                      -1);
+	                  -1);
 
-    if(debug) printf("sending message: sample=%p filename=%s (%p)\n", sample, sample->filename, sample->filename);
+	if(debug) printf("sending message: sample=%p filename=%s (%p)\n", sample, sample->filename, sample->filename);
 	g_async_queue_push(msg_queue, sample); //notify the overview thread.
 
 	on_directory_list_changed();
 
-  }else{
-    //strcpy(sql2, sql);
-    ok = FALSE;
-  }
+	}else{
+		//strcpy(sql2, sql);
+		ok = FALSE;
+	}
 
 out:
-  g_free(filedir);
-  g_free(filename);
-  return ok;
+	g_free(filedir);
+	g_free(filename);
+	return ok;
 }
 
 
 gboolean
 add_dir(char *uri)
 {
-  printf("add_dir(): dir=%s\n", uri);
+	printf("add_dir(): dir=%s\n", uri);
 
-  //GDir* dir = g_dir_open(const gchar *path, guint flags, GError **error);
+	//GDir* dir = g_dir_open(const gchar *path, guint flags, GError **error);
 
-  return FALSE;
+	return FALSE;
 }
 
 
 gboolean
 get_file_info(sample* sample)
 {
-  if(sample->filetype==TYPE_FLAC) return get_file_info_flac(sample);
-  else                            return get_file_info_sndfile(sample);
+	if(sample->filetype==TYPE_FLAC) return get_file_info_flac(sample);
+	else                            return get_file_info_sndfile(sample);
 }
 
 
@@ -2037,8 +2076,8 @@ db_update_pixbuf(sample *sample)
 
 		free(ser);
 
-	    //at this pt, refcount should be two, we make it 1 so that pixbuf is destroyed with the row:
-    	//g_object_unref(pixbuf); //FIXME
+		//at this pt, refcount should be two, we make it 1 so that pixbuf is destroyed with the row:
+		//g_object_unref(pixbuf); //FIXME
 	}else errprintf("db_update_pixbuf(): no pixbuf.\n");
 }
 
@@ -2170,7 +2209,7 @@ update_row(GtkWidget *widget, gpointer user_data)
 		if(file_exists(path)){
 			online=1;
 
-	  		MIME_type* mime_type = mime_type_lookup(mimetype);
+			MIME_type* mime_type = mime_type_lookup(mimetype);
 			type_to_icon(mime_type);
 			if ( mime_type->image == NULL ) printf("update_row(): no icon.\n");
 			iconbuf = mime_type->image->sm_pixbuf;
@@ -2213,7 +2252,20 @@ edit_row(GtkWidget *widget, gpointer user_data)
 			printf("edit_row(): path=%s\n", path_str);
 
 			//segfault!
-			//FIXME is this the correct fn?
+			//FIXME is this the correct fn? no! use this instead:
+/*
+    [...get the cell renderer...]
+    gtk_tree_view_get_cursor(treeview, &path, &col);
+    g_signal_handlers_block_by_func(treeview, cursor_changed, self);
+    gtk_widget_grab_focus(GTK_WIDGET(treeview));
+    gtk_tree_view_set_cursor_on_cell(treeview, path, col, renderer, TRUE);  <-------- start_editing=TRUE
+    g_signal_handlers_unblock_by_func(treeview, cursor_changed, self);
+    gtk_tree_path_free(path);
+*/
+
+
+			//shoule we be "activating" the cell instead? - how? cellrender doesnt seem to have such a thing.
+			/*
 			GtkCellEditable* editable = gtk_cell_renderer_start_editing(app.cell_tags, 
 												 NULL, //GdkEvent *event,
 												 app.view,
@@ -2221,6 +2273,19 @@ edit_row(GtkWidget *widget, gpointer user_data)
 												 NULL, //GdkRectangle *background_area,
 												 NULL, //GdkRectangle *cell_area,
 												 GTK_CELL_RENDERER_SELECTED);
+			*/
+
+			//lets try this instead:
+			GtkTreeViewColumn *focus_column = NULL;
+			GtkCellRenderer *focus_cell = NULL;
+			gtk_tree_view_set_cursor_on_cell(GTK_TREE_VIEW(app.view),
+			                                 treepath,
+			                                 focus_column, //GtkTreeViewColumn *focus_column - this needs to be set for start_editing to work.
+			                                 focus_cell, //the cell to be edited.
+			                                 TRUE); //gboolean start_editing
+
+
+
 		} else errprintf("edit_row(): cannot get iter.\n");
 		//free path_str ??
 		gtk_tree_path_free(treepath);
@@ -2269,9 +2334,9 @@ make_context_menu()
 	//#define GTK_STOCK_APPLY            "gtk-apply"
 
 	//menu_item = gtk_menu_item_new_with_label ("Recursive");
-    menu_item = gtk_image_menu_item_new_with_label("Recursive");
+	menu_item = gtk_image_menu_item_new_with_label("Recursive");
 
-    gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(menu_item), image);
+	gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(menu_item), image);
 
 	gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_item);
 	g_signal_connect(G_OBJECT(menu_item), "activate", G_CALLBACK(toggle_recursive_add), NULL);
@@ -2282,30 +2347,30 @@ make_context_menu()
 	menu_item = gtk_check_menu_item_new_with_mnemonic("Add Recursively");
 	gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_item);
 	gtk_widget_show(menu_item);
-	gtk_check_menu_item_set_active(menu_item, app.add_recursive);
+	gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menu_item), app.add_recursive);
 	g_signal_connect(G_OBJECT(menu_item), "activate", G_CALLBACK(toggle_recursive_add), NULL);
 
 	//-------
 
-  /* example a submenu:
+	/* example a submenu:
 
-  menu_item = gtk_menu_item_new_with_label("Metering");
-  //gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_item);
-  //g_signal_connect(G_OBJECT(menu_item), "activate", G_CALLBACK(strip_hide_sends), mixer_win);
-  gtk_widget_show(menu_item);
-  gtk_container_add(GTK_CONTAINER(menu), menu_item);
+	menu_item = gtk_menu_item_new_with_label("Metering");
+	//gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_item);
+	//g_signal_connect(G_OBJECT(menu_item), "activate", G_CALLBACK(strip_hide_sends), mixer_win);
+	gtk_widget_show(menu_item);
+	gtk_container_add(GTK_CONTAINER(menu), menu_item);
 
-  //sub-menu:
-  GtkWidget *sub_menu = gtk_menu_new();
-  gtk_menu_item_set_submenu(GTK_MENU_ITEM(menu_item), sub_menu);
-  //printf("mixer_contextmenu_init(): submenu=%p parent=%p\n", sub_menu, menu_item);
+	//sub-menu:
+	GtkWidget *sub_menu = gtk_menu_new();
+	gtk_menu_item_set_submenu(GTK_MENU_ITEM(menu_item), sub_menu);
+	//printf("mixer_contextmenu_init(): submenu=%p parent=%p\n", sub_menu, menu_item);
 
-  GtkWidget *item = gtk_menu_item_new_with_label("Jamin");
-  gtk_menu_shell_append(GTK_MENU_SHELL(sub_menu), item);
-  g_object_set_data(G_OBJECT(item), "smwin", smwin);
-  g_signal_connect(G_OBJECT(item), "activate", G_CALLBACK(mixer_set_meter_type), (gpointer)METER_JAMIN);
-  gtk_widget_show(item);
-  */
+	GtkWidget *item = gtk_menu_item_new_with_label("Jamin");
+	gtk_menu_shell_append(GTK_MENU_SHELL(sub_menu), item);
+	g_object_set_data(G_OBJECT(item), "smwin", smwin);
+	g_signal_connect(G_OBJECT(item), "activate", G_CALLBACK(mixer_set_meter_type), (gpointer)METER_JAMIN);
+	gtk_widget_show(item);
+	*/
 
 	return menu;
 }
@@ -2355,8 +2420,10 @@ on_row_clicked(GtkWidget *widget, GdkEventButton *event, gpointer user_data)
 					int id;
 					gtk_tree_model_get(model, &iter, /*COL_FNAME, &fpath, COL_NAME, &fname, */COL_KEYWORDS, &tags, COL_IDX, &id, -1);
 
-					gtk_entry_set_text(GTK_ENTRY(app.search), tags);
-					do_search(tags, NULL);
+					if(strlen(tags)){
+						gtk_entry_set_text(GTK_ENTRY(app.search), tags);
+						do_search(tags, NULL);
+					}
 				}
 			}
 		}
@@ -2365,7 +2432,7 @@ on_row_clicked(GtkWidget *widget, GdkEventButton *event, gpointer user_data)
 
 	//popup menu:
 	if(event->button == 3){
-		printf("right button press!\n");
+		dbg (0, "right button press!\n", "");
 
 		//if one or no rows selected, select one:
 		GtkTreeSelection *selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(app.view));
@@ -2665,23 +2732,23 @@ colour_drag_dataget(GtkWidget *widget, GdkDragContext *drag_context,
                     guint time,
                     gpointer user_data)
 {
-  char text[16];
-  gboolean data_sent = FALSE;
-  printf("colour_drag_dataget()!\n");
+	char text[16];
+	gboolean data_sent = FALSE;
+	printf("colour_drag_dataget()!\n");
 
-  int box_num = GPOINTER_TO_UINT(user_data); //box_num corresponds to the colour index.
+	int box_num = GPOINTER_TO_UINT(user_data); //box_num corresponds to the colour index.
 
-  //convert to a pseudo uri string:
-  sprintf(text, "colour:%i", box_num + 1);//1 based to avoid atoi problems.
-  
-  gtk_selection_data_set(data,	
+	//convert to a pseudo uri string:
+	sprintf(text, "colour:%i", box_num + 1);//1 based to avoid atoi problems.
+
+	gtk_selection_data_set(data,
 						GDK_SELECTION_TYPE_STRING,
-						8,	/* 8 bits per character. */
+						8,  /* 8 bits per character. */
 						text, strlen(text)
 						);
-  data_sent = TRUE;
+	data_sent = TRUE;
 
-  return FALSE;
+	return FALSE;
 }
 
 /*
@@ -2701,8 +2768,8 @@ colour_drag_datareceived(GtkWidget *widget, GdkDragContext *drag_context,
 gint
 treeview_drag_received(GtkWidget *widget, GdkDragContext *drag_context, gint x, gint y, GtkSelectionData *data, guint info, guint time, gpointer user_data)
 {
-  printf("treeview_drag_datareceived()!\n");
-  return FALSE;
+	printf("treeview_drag_datareceived()!\n");
+	return FALSE;
 }
 
 
@@ -2837,25 +2904,23 @@ tag_edit_stop(GtkWidget *widget, GdkEventCrossing *event, gpointer user_data)
 gboolean
 on_directory_list_changed()
 {
-  /*
-  the database has been modified, the directory list may have changed.
-  Update all directory views. Atm there is only one.
-  */
+	/*
+	the database has been modified, the directory list may have changed.
+	Update all directory views. Atm there is only one.
+	*/
 
-  if(debug) printf("on_directory_list_changed()...\n");
-
-  g_idle_add(dir_tree_update, NULL);
-  return FALSE;
+	g_idle_add(dir_tree_update, NULL);
+	return FALSE;
 }
 
 
 gboolean
 toggle_recursive_add(GtkWidget *widget, gpointer user_data)
 {
-  printf("toggle_recursive_add()...\n");
-  //if(app.config.add_recursive) app.config.add_recursive = false; else app.config.add_recursive = true;
-  if(app.add_recursive) app.add_recursive = false; else app.add_recursive = true;
-  return FALSE;
+	printf("toggle_recursive_add()...\n");
+	//if(app.config.add_recursive) app.config.add_recursive = false; else app.config.add_recursive = true;
+	if(app.add_recursive) app.add_recursive = false; else app.add_recursive = true;
+	return FALSE;
 }
 
 
@@ -2884,23 +2949,25 @@ config_load()
 	if(g_key_file_load_from_file(app.key_file, app.config_filename, G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS, &error)){
 		printf("ini file loaded.\n");
 		gchar* groupname = g_key_file_get_start_group(app.key_file);
-		printf("config_load(): group=%s.\n", groupname);
+		dbg (0, "group=%s.", groupname);
 		if(!strcmp(groupname, "Samplecat")){
 			/*
 			gsize length;
 			gchar** keys = g_key_file_get_keys(app.key_file, "Samplecat", &length, &error);
 			*/
 
+			#define num_keys 7
 			//FIXME 64 is not long enough for directories
-			char keys[6][64] = {"database_host",          "database_user",          "database_pass",          "show_dir",          "window_height",          "window_width"};
-			char *loc[6]     = {app.config.database_host, app.config.database_user, app.config.database_pass, app.config.show_dir, app.config.window_height, app.config.window_width};
+			char keys[num_keys][64] = {"database_host",          "database_user",          "database_pass",          "database_name",          "show_dir",          "window_height",          "window_width"};
+			char *loc[num_keys]     = {app.config.database_host, app.config.database_user, app.config.database_pass, app.config.database_name, app.config.show_dir, app.config.window_height, app.config.window_width};
 
 			int k;
-			gchar* keyname;
-			for(k=0;k<6;k++){
-				if((keyname = g_key_file_get_string(app.key_file, groupname, keys[k], &error))){
-					snprintf(loc[k], 64, "%s", keyname);
-					g_free(keyname);
+			gchar* keyval;
+			for(k=0;k<num_keys;k++){
+				if((keyval = g_key_file_get_string(app.key_file, groupname, keys[k], &error))){
+					snprintf(loc[k], 64, "%s", keyval);
+                    dbg(0, "%s=%s", keys[k], keyval);
+					g_free(keyval);
 				}else strcpy(loc[k], "");
 			}
 			set_search_dir(app.config.show_dir);
@@ -2928,7 +2995,13 @@ config_save()
 	//save window dimensions:
 	gint width, height;
 	char value[256];
-	gtk_window_get_size(GTK_WINDOW(app.window), &width, &height);
+	if(app.window && GTK_WIDGET_REALIZED(app.window)){
+		gtk_window_get_size(GTK_WINDOW(app.window), &width, &height);
+	} else {
+		dbg (0, "couldnt get window size...", "");
+		width  = MIN(atoi(app.config.window_width),  2048); //FIXME ?
+		height = MIN(atoi(app.config.window_height), 2048);
+	}
 	snprintf(value, 256, "%i", width);
 	g_key_file_set_value(app.key_file, "Samplecat", "window_width", value);
 	snprintf(value, 256, "%i", height);
@@ -2938,7 +3011,7 @@ config_save()
 	gsize length;
 	gchar* string = g_key_file_to_data(app.key_file, &length, &error);
 	if(error){
-		printf("on_quit(): error saving config file: %s\n", error->message);
+		dbg (0, "error saving config file: %s", error->message);
 		g_error_free(error);
 	}
 	//printf("string=%s\n", string);
@@ -2988,8 +3061,6 @@ config_new()
 void
 on_quit(GtkMenuItem *menuitem, gpointer user_data)
 {
-    if(debug) printf("on_quit()...\n");
-
 	jack_close();
 
 	config_save();
@@ -2998,11 +3069,11 @@ on_quit(GtkMenuItem *menuitem, gpointer user_data)
 
 	MYSQL *mysql;
 	mysql=&app.mysql;
-  	mysql_close(mysql);
+	mysql_close(mysql);
 
 	gtk_main_quit();
-    if(debug) printf("on_quit(): done.\n");
-    exit(GPOINTER_TO_INT(user_data));
+	dbg (1, "done.", "");
+	exit(GPOINTER_TO_INT(user_data));
 }
 
 

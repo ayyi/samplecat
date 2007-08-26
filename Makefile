@@ -1,14 +1,25 @@
 
-PACKAGE_CFLAGS = `pkg-config gtk+-2.0 --cflags` -I/usr/X11R6/include -I/usr/include/freetype2 `pkg-config libxml --cflags` `pkg-config libart --cflags` -I/usr/include/mysql -I/usr/include/gnome-vfs-2.0
+PACKAGE_CFLAGS = `pkg-config gtk+-2.0 --cflags` -I/usr/X11R6/include -I/usr/include/freetype2 `pkg-config libxml --cflags` `pkg-config libart --cflags` -I/usr/include/mysql -I/usr/include/gnome-vfs-2.0 -I./gqview2
 PACKAGE_LIBS = -Wall,--export-dynamic `pkg-config gtk+-2.0 --libs` -lgdk-x11-2.0 -latk-1.0 -ldl -lmysqlclient -lgnomevfs-2 -lFLAC 
+
+## eh??
 MYSQL = -L/usr/local/lib/mysql
 
-HEADERS = main.h audio.h overview.h support.h pixmaps.h type.h diritem.h dh-link.h tree.h db.h dnd.h cellrenderer_hypertext.h xdgmime.h
+GQVIEW1_DIRTREE_OBJECTS=view_dir_tree.o view_dir_list.o filelist.o 
 
-OBJECTS = main.o audio.o overview.o support.o pixmaps.o type.o diritem.o dh-link.o tree.o db.o dnd.o cellrenderer_hypertext.o xdgmime.o xdgmimecache.o xdgmimemagic.o xdgmimealias.o xdgmimeparent.o xdgmimeglob.o xdgmimeint.o
+DIRTREE_HEADERS=gqview_view_dir_tree.h gqview2/gqview.h
+##pixbuf_util.h
+DIRTREE_OBJECTS=ui_fileops.o ui_tree_edit.o filelist.o layout_util.o pixbuf_util.o
+
+HEADERS = main.h audio.h overview.h support.h pixmaps.h type.h diritem.h dh-link.h tree.h db.h dnd.h cellrenderer_hypertext.h xdgmime.h $(DIRTREE_HEADERS)
+#filelist.h view_dir_tree.h view_dir_list.h 
+
+OBJECTS = main.o audio.o overview.o support.o pixmaps.o type.o diritem.o dh-link.o tree.o db.o dnd.o cellrenderer_hypertext.o \
+	xdgmime.o xdgmimecache.o xdgmimemagic.o xdgmimealias.o xdgmimeparent.o xdgmimeglob.o xdgmimeint.o \
+	gqview_view_dir_tree.o $(DIRTREE_OBJECTS)
 
 all: $(OBJECTS) 
-	gcc -Wall $(OBJECTS) -o samplecat $(PACKAGE_CFLAGS) $(PACKAGE_LIBS) $(MYSQL) `pkg-config jack --cflags --libs` `pkg-config sndfile --cflags --libs` `pkg-config libart --cflags --libs`
+	gcc -Wall $(OBJECTS) -o samplecat -DHAVE_GTK_2_10 $(PACKAGE_CFLAGS) $(PACKAGE_LIBS) $(MYSQL) `pkg-config jack --cflags --libs` `pkg-config sndfile --cflags --libs` `pkg-config libart --cflags --libs`
 
 main.o: main.c $(HEADERS)
 	gcc -Wall main.c -c $(PACKAGE_CFLAGS)
@@ -46,6 +57,37 @@ dnd.o: dnd.c $(HEADERS)
 cellrenderer_hypertext.o: cellrenderer_hypertext.c $(HEADERS)
 	gcc -Wall cellrenderer_hypertext.c -c $(PACKAGE_CFLAGS)
 
+##----------------------------------------------------
+
+#view_dir_list.o: view_dir_list.c $(HEADERS)
+#	gcc -Wall view_dir_list.c -c $(PACKAGE_CFLAGS)
+
+#view_dir_tree.o: view_dir_tree.c $(HEADERS)
+#	gcc -Wall view_dir_tree.c -c $(PACKAGE_CFLAGS)
+
+gqview_view_dir_tree.o: view_dir_tree.c $(HEADERS)
+	gcc -Wall gqview_view_dir_tree.c -c $(PACKAGE_CFLAGS)
+
+ui_fileops.o: gqview2/ui_fileops.c $(HEADERS)
+	gcc -Wall gqview2/ui_fileops.c -c $(PACKAGE_CFLAGS)
+
+ui_tree_edit.o: gqview2/ui_tree_edit.c $(HEADERS)
+	gcc -Wall gqview2/ui_tree_edit.c -c $(PACKAGE_CFLAGS)
+
+layout_util.o: gqview2/layout_util.c $(HEADERS)
+	gcc -Wall gqview2/layout_util.c -c $(PACKAGE_CFLAGS)
+
+filelist.o: gqview2/filelist.c $(HEADERS)
+	gcc -Wall gqview2/filelist.c -c $(PACKAGE_CFLAGS)
+
+pixbuf_util.o: gqview2/pixbuf_util.c $(HEADERS)
+	gcc -Wall gqview2/pixbuf_util.c -c $(PACKAGE_CFLAGS)
+
+#filelist.o: filelist.c $(HEADERS)
+#	gcc -Wall filelist.c -c $(PACKAGE_CFLAGS)
+
+##----------------------------------------------------
+
 xdgmime.o: xdgmime.c $(HEADERS)
 	gcc -Wall xdgmime.c -c $(PACKAGE_CFLAGS)
 
@@ -69,9 +111,17 @@ xdgmimeint.o: xdgmimeint.c xdgmimeint.h
 
 clean:
 	rm *.o
-	rm samplecat
+	if [ -f samplecat ]; then rm samplecat; fi;
+
+install:
+	cp -p samplecat /usr/bin/
+
+TMP = ../samplecat-0.0.2
 
 tarball:
-	rm *.o
-	rm samplecat
-	tar czvvf ../samplecat-0.0.1.tgz ../samplelib
+	cp -pR ../samplecat $(TMP)
+	rm $(TMP)/*.o
+	tar cjvvf ../samplecat-0.0.2.tar.bz $(TMP) --exclude *.bak --exclude $(TMP)/samplecat --exclude $(TMP)/*.o --exclude *.svn* --exclude *peak?.c
+
+#tar cjvvf ../samplecat-0.0.2.tar.bz $(TMP) --exclude *.bak --exclude samplecat/samplecat --exclude $(TMP)/*.o --exclude *.svn* --exclude *peak?.c
+#tar czvvf ../samplecat-0.0.2.tgz ../samplecat --exclude *.bak --exclude samplelib/samplecat --exclude samplelib/*.o --exclude samplelib/.svn* --exclude *peak?.c

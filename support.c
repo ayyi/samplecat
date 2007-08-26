@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include <dirent.h>
 
 #include "mysql/mysql.h"
 #include <gtk/gtk.h>
@@ -17,6 +18,7 @@
 //#include "gnome-vfs-uri.h"
 
 extern struct _app app;
+extern unsigned debug;
 
 
 void
@@ -47,6 +49,21 @@ warnprintf(char *format, ...)
   va_start(argp, format); //make ap (arg pointer) point to 1st unnamed arg
   vprintf(format, argp);
   va_end(argp);           //clean up
+}
+
+
+void
+debug_printf(const char* func, int level, const char *format, ...)
+{
+	va_list args;
+
+	va_start(args, format);
+	if (level <= debug) {
+		fprintf(stderr, "%s(): ", func);
+		vfprintf(stderr, format, args);
+		fprintf(stderr, "\n");
+	}
+	va_end(args);
 }
 
 
@@ -122,6 +139,49 @@ is_dir(const char *path)
 {
 	struct stat info2;
 	return lstat(path, &info2) == 0 && S_ISDIR(info2.st_mode);
+}
+
+gboolean
+dir_is_empty(const char *path)
+{
+    DIR *dp;
+
+    if (strcmp(path, "/") == 0) return FALSE;
+
+    dp = opendir (path);
+
+    int n = 0;
+    while(readdir(dp) != NULL){
+        n++;
+        if (n > 2) {
+            closedir(dp);
+            return FALSE;
+        }
+    }
+    closedir(dp);
+    return TRUE;
+}
+
+void
+file_extension(const char* path, char* extn)
+{
+	ASSERT_POINTER(path, "file_extension", "path");
+	ASSERT_POINTER(extn, "file_extension", "extn");
+
+	gchar** split = g_strsplit(path, ".", 0);
+	//printf("split: [%s] %p %p %p %s\n", path, split[0], split[1], split[2], split[0]);
+	if(split[0]){
+		int i = 1;
+		while(split[i]) i++;
+		printf("file_extension(): extn=%s i=%i\n", split[i-1], i);
+		strcpy(extn, split[i-1]);
+		
+	}else{
+		printf("file_extension(): failed (%s)", path);
+		memset(extn, '\0', 1);
+	}
+
+	g_strfreev(split);
 }
 
 #ifdef NEVER

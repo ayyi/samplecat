@@ -20,6 +20,7 @@ This software is licensed under the GPL. See accompanying file COPYING.
 #include "dnd.h"
 
 extern struct _app app;
+extern unsigned debug;
 
 
 void
@@ -40,7 +41,7 @@ drag_received(GtkWidget *widget, GdkDragContext *drag_context, gint x, gint y,
 
   if(data == NULL || data->length < 0){ errprintf("drag_received(): no data!\n"); return -1; }
 
-  printf("drag_received()! %s\n", data->data);
+  if(debug) printf("drag_received()! %s\n", data->data);
 
   if(g_str_has_prefix(data->data, "colour:")){
     //printf("drag_received(): colour!!\n");
@@ -96,7 +97,7 @@ drag_received(GtkWidget *widget, GdkDragContext *drag_context, gint x, gint y,
         char* uri_unescaped = gnome_vfs_unescape_string(u->text, NULL);
 
 		if(is_dir(uri_unescaped)) scan_dir(uri_unescaped);
-        else if(add_file(u->text)) added_count++;
+        else if(add_file(uri_unescaped)) added_count++;
 
         g_free(uri_unescaped);
       }

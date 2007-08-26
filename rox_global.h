@@ -138,7 +138,8 @@ typedef enum {		/* Values used in options, must start at 0 */
 	DETAILS_UNKNOWN		= -1,
 } DetailsType;
 
-typedef enum {		/* Values used in options */
+/*
+typedef enum {		// Values used in options
 	SORT_NAME = 0,
 	SORT_TYPE = 1,
 	SORT_DATE = 2,
@@ -146,6 +147,7 @@ typedef enum {		/* Values used in options */
 	SORT_OWNER = 4,
 	SORT_GROUP = 5
 } SortType;
+*/
 
 /* Each DirItem has a base type with indicates what kind of object it is.
  * If the base_type is TYPE_FILE, then the MIME type field gives the exact

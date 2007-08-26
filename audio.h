@@ -33,18 +33,18 @@ struct __decoder_session
 	char          output_peakfile;     //boolean - true if we are making a pixbuf, false if we are outputting to jack.
 };
 
-int    jack_init();
-void   jack_close();
-//int    jack_process(jack_nframes_t nframes, void *arg);
-void   jack_shutdown(void *arg);
-int    jack_process_flac(jack_nframes_t nframes, void *arg);
+int                            jack_init();
+void                           jack_close();
+//int                          jack_process(jack_nframes_t nframes, void *arg);
+void                           jack_shutdown(void *arg);
+int                            jack_process_flac(jack_nframes_t nframes, void *arg);
 
-//int    playback_init(char* filename, int id);
-int    playback_init(sample* sample);
-void   playback_stop();
+//int                          playback_init(char* filename, int id);
+int                            playback_init(sample* sample);
+void                           playback_stop();
 
-void   audition_init();
-void   audition_reset();
+void                           audition_init();
+void                           audition_reset();
 _decoder_session*              flac_decoder_session_new();
 gboolean                       flac_decoder_sesssion_init(_decoder_session* session, sample* sample);
 void                           decoder_session_free(_decoder_session* session);

@@ -29,6 +29,8 @@ report problems to tim@orford.org
 	  PRIMARY KEY  (`id`)
 	)
 
+	Run the command: mysql -u<USERNAME> -p < samples.sql
+
 4 - running the program will create a default config file 
 	(~/.samplecat) that you should edit with your db access info.
 
