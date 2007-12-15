@@ -19,7 +19,7 @@
  */
 
 /* Each filer window has one of these all to itself */
-typedef struct _FilerWindow FilerWindow;
+typedef struct _Filer Filer;
 
 /* There is one Directory object per cached disk directory inode number.
  * Multiple FilerWindows may share a single Directory. Directories
@@ -139,14 +139,14 @@ typedef enum {		/* Values used in options, must start at 0 */
 } DetailsType;
 
 /*
-typedef enum {		// Values used in options
-	SORT_NAME = 0,
-	SORT_TYPE = 1,
-	SORT_DATE = 2,
-	SORT_SIZE = 3,
-	SORT_OWNER = 4,
-	SORT_GROUP = 5
-} SortType;
+typedef enum {
+	ROX_SORT_NAME = 0,
+	ROX_SORT_TYPE = 1,
+	ROX_SORT_DATE = 2,
+	ROX_SORT_SIZE = 3,
+	ROX_SORT_OWNER = 4,
+	ROX_SORT_GROUP = 5
+} RoxSortType;
 */
 
 /* Each DirItem has a base type with indicates what kind of object it is.
@@ -188,7 +188,7 @@ enum
 #define ROX_STOCK_MOUNTED  "rox-mounted"
 #define ROX_STOCK_BOOKMARKS GTK_STOCK_JUMP_TO
 
-#include <libxml/tree.h>
+//#include <libxml/tree.h>
 
 #define HUGE_HEIGHT 96
 #define HUGE_WIDTH 96

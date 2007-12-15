@@ -13,6 +13,7 @@ extern MIME_type *text_plain;		// often used as a default type
 extern MIME_type *application_octet_stream;
 extern MIME_type *application_x_shellscript;
 extern MIME_type *application_executable;
+extern MIME_type *application_x_desktop;
 /*
 extern MIME_type *inode_directory;
 extern MIME_type *inode_mountpoint;
@@ -59,6 +60,7 @@ struct _MIME_type
 void               type_init(void);
 //const char*        basetype_name(DirItem *item);
 MIME_type*         type_get_type(const guchar *path);
+GdkPixbuf*         mime_type_get_pixbuf(MIME_type*);
 
 MIME_type*         type_from_path(const char *path);
 gboolean           type_open(const char *path, MIME_type *type);

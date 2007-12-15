@@ -3,12 +3,15 @@
 #include <string.h>
 #include <unistd.h>
 #include <gtk/gtk.h>
-#include <libart_lgpl/libart.h>
+#ifdef OLD
+  #include <libart_lgpl/libart.h>
+#endif
 
 #include "mysql/mysql.h"
 #include "dh-link.h"
-#include "main.h"
 #include "support.h"
+#include "typedefs.h"
+#include "main.h"
 #include "db.h"
 extern struct _app app;
 extern char err [32];
@@ -62,7 +65,7 @@ db_connect()
 
 	mysql = &app.mysql;
 
-	if(!mysql_real_connect(mysql, app.config.database_host, app.config.database_user, app.config.database_pass, "test", 0, NULL, 0)){
+	if(!mysql_real_connect(mysql, app.config.database_host, app.config.database_user, app.config.database_pass, app.config.database_name, 0, NULL, 0)){
 		errprintf("cannot connect to database: %s\n", mysql_error(mysql));
 		return FALSE;
 		exit(1);
@@ -98,7 +101,27 @@ db_insert(char *qry)
 int 
 mysql_exec_sql(MYSQL *mysql, const char *create_definition)
 {
-   return mysql_real_query(mysql,create_definition,strlen(create_definition));
+   return mysql_real_query(mysql, create_definition, strlen(create_definition));
+}
+
+
+gboolean
+db_update_path(const char* old_path, const char* new_path)
+{
+	gboolean ok = FALSE;
+	MYSQL *mysql = &app.mysql;
+
+	char* filename = NULL; //FIXME
+	char* old_dir = NULL; //FIXME
+
+	char query[1024];
+	snprintf(query, 1023, "UPDATE samples SET filedir='%s' WHERE filename='%s' AND filedir='%s'", new_path, filename, old_dir);
+	dbg(0, "%s", query);
+
+	if(!mysql_exec_sql(mysql, query)){
+		ok = TRUE;
+	}
+	return ok;
 }
 
 

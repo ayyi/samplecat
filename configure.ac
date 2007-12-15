@@ -43,12 +43,17 @@ dnl ----------------------------------------------------------------------------
 
 GTK_CFLAGS=`pkg-config gtk+-2.0 --cflags`
 GTK_LIBS=`pkg-config gtk+-2.0 --libs`
-dnl -I/usr/X11R6/include
 AC_SUBST(GTK_CFLAGS)
 AC_SUBST(GTK_LIBS)
 
+if `pkg-config gtk+-2.0 --atleast-version=2.12`; then
+  HAVE_GTK_2_12="yes"
+  AC_DEFINE(HAVE_GTK_2_12, 1, "we have at least gtk version 2.12")
+else
+  HAVE_GTK_2_12="no"
+fi;
+
 DB_CFLAGS="-I/usr/include/mysql"
-dnl DB_LIBS="-L/usr/local/lib/mysql -lmysqlclient" dnl check this
 DB_LIBS=`/usr/bin/mysql_config --libs`
 AC_SUBST(DB_CFLAGS)
 AC_SUBST(DB_LIBS)
@@ -58,8 +63,9 @@ VFS_LIBS="-lgnomevfs-2"
 AC_SUBST(VFS_CFLAGS)
 AC_SUBST(VFS_LIBS)
 
-LIBART_CFLAGS=`pkg-config libart --cflags`
-LIBART_LIBS=`pkg-config libart --cflags --libs`
+dnl AC_CHECK_LIB(art_lgpl_2, art_rgba_run_alpha, [libart_found=yes], AC_MSG_RESULT(**** Cannot find LIBART ****))
+LIBART_CFLAGS=`pkg-config libart-2.0 --cflags`
+LIBART_LIBS=`pkg-config libart-2.0 --libs`
 AC_SUBST(LIBART_CFLAGS)
 AC_SUBST(LIBART_LIBS)
 
@@ -96,6 +102,23 @@ AC_SUBST(FLAC_LIBS)
 
 dnl -----------------------------------------------------------------------------
 
+AC_ARG_ENABLE(dnotify, AS_HELP_STRING([--enable-dnotify],[build with dnotify support]),enable_dnotify=$enableval,enable_dnotify=auto)
+
+if test x$enable_dnotify = xno ; then
+    have_dnotify=no;
+else
+    have_dnotify=yes;	
+fi
+
+if test x$have_dnotify = xyes; then
+   AC_DEFINE(USE_DNOTIFY,1,[Use dnotify on Linux])
+fi
+
+AM_CONDITIONAL(ENABLE_DNOTIFY, test x$have_dnotify = xyes)
+
+
+dnl -----------------------------------------------------------------------------
+
 SNDFILE_LIBS=`pkg-config --cflags --libs sndfile`
 AC_SUBST(SNDFILE_LIBS)
 
@@ -116,4 +139,5 @@ AC_OUTPUT
 
 AC_MSG_RESULT([])
 AC_MSG_RESULT([Building direct flac support:     $enable_flac])
+AC_MSG_RESULT([Building dnotify support:         $have_dnotify])
 AC_MSG_RESULT([])

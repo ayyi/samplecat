@@ -1,10 +1,31 @@
+/*
+  This file is part of the Samplecat project.
+  copyright (C) 2006-2007 Tim Orford <tim@orford.org>
+
+  This program is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+*/
+#include "config.h"
 #include <stdio.h>
 #include <errno.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
 #include <gtk/gtk.h>
-#include <libart_lgpl/libart.h>
+#ifdef OLD
+  #include <libart_lgpl/libart.h>
+#endif
 
 #include <sndfile.h>
 #include <jack/jack.h>
@@ -15,8 +36,9 @@
   #include <FLAC/all.h>
 #endif
 #include <jack/ringbuffer.h>
-#include "main.h"
 #include "support.h"
+#include "typedefs.h"
+#include "main.h"
 #include "audio.h"
 extern struct _app app;
 extern char err [32];
@@ -32,7 +54,8 @@ float buffer[MAX_JACK_BUFFER_SIZE];
 
 /*
 
-TODO test libsndfile flac
+the flac code here works with version 1.1.2 and earlier.
+	-flac porting guide for 1.1.3: http://flac.sourceforge.net/api/group__porting__1__1__2__to__1__1__3.html
 
 */
 

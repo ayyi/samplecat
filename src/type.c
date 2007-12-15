@@ -25,6 +25,7 @@
 //#include "config.h"
 
 #include <stdlib.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <errno.h>
 #include <ctype.h>
@@ -46,10 +47,10 @@
 # include <libgnomevfs/gnome-vfs-application-registry.h>
 #endif
 
-#include "rox_global.h"
+#include "rox/rox_global.h"
 
 #include "string.h"
-//#include "fscache.h"
+#include "fscache.h"
 //#include "main.h"
 #include "pixmaps.h"
 //#include "run.h"
@@ -67,36 +68,18 @@
 #include "xdgmime.h"
 //#include "xtypes.h"
 
-#include <libart_lgpl/libart.h>
+#ifdef OLD
+  #include <libart_lgpl/libart.h>
+#endif
 #include "support.h"
+#include "observer.h"
 extern unsigned debug;
 
 #define TYPE_NS "http://www.freedesktop.org/standards/shared-mime-info"
 enum {SET_MEDIA, SET_TYPE};
 
-/* Colours for file types (same order as base types) */
-/*
-static gchar *opt_type_colours[][2] = {
-	{"display_err_colour",  "#ff0000"},
-	{"display_unkn_colour", "#000000"},
-	{"display_dir_colour",  "#000080"},
-	{"display_pipe_colour", "#444444"},
-	{"display_sock_colour", "#ff00ff"},
-	{"display_file_colour", "#000000"},
-	{"display_cdev_colour", "#000000"},
-	{"display_bdev_colour", "#000000"},
-	{"display_door_colour", "#ff00ff"},
-	{"display_exec_colour", "#006000"},
-	{"display_adir_colour", "#006000"}
-};
-#define NUM_TYPE_COLOURS\
-		(sizeof(opt_type_colours) / sizeof(opt_type_colours[0]))
+char theme_name[64] = "Amaranth";
 
-
-// Parsed colours for file types
-static Option o_type_colours[NUM_TYPE_COLOURS];
-static GdkColor	type_colours[NUM_TYPE_COLOURS];
-*/
 
 /* Static prototypes */
 //static void alloc_type_colours(void);
@@ -105,7 +88,8 @@ static GdkColor	type_colours[NUM_TYPE_COLOURS];
 static MIME_type *get_mime_type(const gchar *type_name, gboolean can_create);
 //static gboolean remove_handler_with_confirm(const guchar *path);
 static void set_icon_theme(void);
-//static GList *build_icon_theme(Option *option, xmlNode *node, guchar *label);
+static GList *build_icon_theme(/*Option *option, xmlNode *node, */guchar *label);
+static void print_icon_list();
 
 /* Hash of all allocated MIME types, indexed by "media/subtype".
  * MIME_type structs are never freed; this table prevents memory leaks
@@ -124,6 +108,7 @@ MIME_type *inode_char_dev;
 MIME_type *application_executable;
 MIME_type *application_octet_stream;
 MIME_type *application_x_shellscript;
+MIME_type *application_x_desktop;
 MIME_type *inode_unknown;
 MIME_type *inode_door;
 
@@ -131,6 +116,7 @@ MIME_type *inode_door;
 //static Option o_icon_theme;
 
 static GtkIconTheme *icon_theme = NULL;
+GList* themes = NULL; 
 
 
 void type_init(void)
@@ -145,16 +131,9 @@ void type_init(void)
 	//printf("type_init(): count=%i path: %s\n", n_elements, *path[0]);
 	int i;
 	for(i=0;i<n_elements;i++){
-		if(debug) printf("type_init(): icon_theme_path=%s\n", path[0][i]);
+		dbg(2, "icon_theme_path=%s", path[0][i]);
 	}
 	g_strfreev(*path);
-
-	GList* icon_list = gtk_icon_theme_list_icons(icon_theme, "mimetypes");
-	for(i=0;i<g_list_length(icon_list);i++){
-		char* icon = g_list_nth_data(icon_list, i);
-		if(debug) printf("type_init(): %s\n", icon);
-		g_free(icon);
-	}
 
 	type_hash = g_hash_table_new(g_str_hash, g_str_equal);
 
@@ -168,6 +147,8 @@ void type_init(void)
 	application_executable = get_mime_type("application/x-executable", TRUE);
 	application_octet_stream = get_mime_type("application/octet-stream", TRUE);
 	application_x_shellscript = get_mime_type("application/x-shellscript", TRUE);
+	application_x_desktop = get_mime_type("application/x-desktop", TRUE);
+	application_x_desktop->executable = TRUE;
 	inode_unknown = get_mime_type("inode/unknown", TRUE);
 	inode_door = get_mime_type("inode/door", TRUE);
 
@@ -185,6 +166,34 @@ void type_init(void)
 	set_icon_theme();
 
 	//option_add_notify(options_changed);
+
+	guchar* label = g_new0(guchar, 64);
+	themes = build_icon_theme(label);
+}
+
+
+GdkPixbuf*
+mime_type_get_pixbuf(MIME_type* mime_type)
+{
+	type_to_icon(mime_type);
+	if ( mime_type->image == NULL ) dbg(0, "no icon.\n");
+	return mime_type->image->sm_pixbuf;
+}
+
+
+static void
+on_theme_select(GtkMenuItem* menuitem, gpointer user_data)
+{
+	ASSERT_POINTER(menuitem, "menuitem");
+
+	gchar* name = g_object_get_data(G_OBJECT(menuitem), "theme");
+	dbg(0, "theme=%s", name);
+
+	if(name && strlen(name)) strncpy(theme_name, name, 64);
+
+	print_icon_list();
+	set_icon_theme();
+	observer__icon_theme();
 }
 
 /* Read-load all the glob patterns.
@@ -206,16 +215,19 @@ void reread_mime_files(void)
 static MIME_type*
 get_mime_type(const gchar *type_name, gboolean can_create)
 {
-	//printf("get_mime_type()...\n");
 	if(!type_name){ errprintf("get_mime_type(): bad arg: type_name NULL\n"); return NULL; }
 	MIME_type *mtype = NULL;
 	gchar *slash;
 
-	//mtype = g_hash_table_lookup(type_hash, type_name);
+	mtype = g_hash_table_lookup(type_hash, type_name);
 	if (mtype || !can_create) return mtype;
+	dbg(2, "not found in cache: %s", type_name);
 
 	slash = strchr(type_name, '/');
-	g_return_val_if_fail(slash != NULL, NULL);     // XXX: Report nicely
+	if (slash == NULL) {
+		g_warning("MIME type '%s' does not contain a '/' character!", type_name);
+		return NULL;
+	}
 
 	mtype = g_new(MIME_type, 1);
 	mtype->media_type = g_strndup(type_name, slash - type_name);
@@ -225,7 +237,7 @@ get_mime_type(const gchar *type_name, gboolean can_create)
 
 	mtype->executable = xdg_mime_mime_type_subclass(type_name, "application/x-executable");
 
-	//g_hash_table_insert(type_hash, g_strdup(type_name), mtype);
+	g_hash_table_insert(type_hash, g_strdup(type_name), mtype);
 
 	return mtype;
 }
@@ -322,7 +334,7 @@ MIME_type *type_get_type(const guchar *path)
 MIME_type*
 type_from_path(const char *path)
 {
-	if(debug) printf("type_from_path()...\n");
+	if(debug>-1) printf("type_from_path()...\n");
 	const char *type_name;
 
 	/* Check for extended attribute first */
@@ -334,7 +346,7 @@ type_from_path(const char *path)
 
 	/* Try name and contents next */
 	type_name = xdg_mime_get_mime_type_for_file(path);
-	if(debug) printf("type_from_path(): type_name=%s.\n", type_name);
+	dbg(2, "type_name=%s.", type_name);
 	if (type_name) return get_mime_type(type_name, TRUE);
 
 	return NULL;
@@ -445,23 +457,16 @@ gboolean type_open(const char *path, MIME_type *type)
 MaskedPixmap*
 type_to_icon(MIME_type *type)
 {
-	//printf("type_to_icon()...\n");
-
-	GdkPixbuf *full;
+	GtkIconInfo *full;
 	char	*type_name, *path;
 	char icon_height = 16; //HUGE_HEIGHT 
 	time_t	now;
 
-	if (type == NULL)
-	{
-		g_object_ref(im_unknown);
-		return im_unknown;
-	}
+	if (!type){	g_object_ref(im_unknown); return im_unknown; }
 
 	now = time(NULL);
 	// already got an image?
-	if (type->image)
-	{
+	if (type->image) {
 		// Yes - don't recheck too often
 		if (abs(now - type->image_time) < 2)
 		{
@@ -472,47 +477,87 @@ type_to_icon(MIME_type *type)
 		type->image = NULL;
 	}
 
+	//gboolean is_audio = !strcmp(type->media_type, "audio");
+
 	type_name = g_strconcat(type->media_type, "_", type->subtype, ".png", NULL);
 	//path = choices_find_xdg_path_load(type_name, "MIME-icons", SITE);
 	path = NULL; //apparently NULL means use default.
 	g_free(type_name);
-	if (path)
-	{
+	if (path) {
 		//type->image = g_fscache_lookup(pixmap_cache, path);
 		//g_free(path);
 	}
 
 	if (type->image) goto out;
 
-	type_name = g_strconcat("mime-", type->media_type, ":",	type->subtype, NULL);
-	full = gtk_icon_theme_load_icon(icon_theme, type_name, icon_height, 0, NULL);
+	type_name = g_strconcat("mime-", type->media_type, ":", type->subtype, NULL);
+	dbg(2, "%s", type_name);
+	//full = gtk_icon_theme_load_icon(icon_theme, type_name, icon_height, 0, NULL);
+	full = gtk_icon_theme_lookup_icon(icon_theme, type_name, icon_height, 0);
+	if(full) dbg(0, "found");
 	g_free(type_name);
 	if (!full) {
 		//printf("type_to_icon(): gtk_icon_theme_load_icon() failed. mimetype=%s/%s\n", type->media_type, type->subtype);
 		// Ugly hack... try for a GNOME icon
-		type_name = g_strconcat("gnome-mime-", type->media_type, "-", type->subtype, NULL);
-		full = gtk_icon_theme_load_icon(icon_theme,	type_name, icon_height, 0, NULL);
-		//if (full) printf("type_to_icon(): gtk_icon_theme_load_icon() found icon! iconname=%s\n", type_name);
+		if (type == inode_directory) type_name = g_strdup("gnome-fs-directory");
+		else type_name = g_strconcat("gnome-mime-", type->media_type, "-", type->subtype, NULL);
+		//full = gtk_icon_theme_load_icon(icon_theme, type_name, icon_height, 0, NULL);
+		full = gtk_icon_theme_lookup_icon(icon_theme, type_name, icon_height, 0);
+		//if (full) dbg(0, "found icon! iconname=%s", type_name);
 		g_free(type_name);
 	}
-	if (!full)
-	{
+	if (!full) {
 		// try for a media type:
 		type_name = g_strconcat("mime-", type->media_type, NULL);
-		full = gtk_icon_theme_load_icon(icon_theme,	type_name, icon_height, 0, NULL);
-		//if (full) printf("type_to_icon(): gtk_icon_theme_load_icon() found icon! iconname=mime-%s\n", type->media_type);
+		//full = gtk_icon_theme_load_icon(icon_theme,	type_name, icon_height, 0, NULL);
+		full = gtk_icon_theme_lookup_icon(icon_theme, type_name, icon_height, 0);
+		//if (full) dbg(0, "gtk_icon_theme_load_icon() found icon! iconname=%s", type_name);
+		//else dbg(2, "not found: %s", type_name);
 		g_free(type_name);
 	}
-	if (full)
-	{
-		type->image = masked_pixmap_new(full);
-		g_object_unref(full);
+	if (!full) {
+		// Ugly hack... try for a GNOME default media icon
+		type_name = g_strconcat("gnome-mime-", type->media_type, NULL);
+
+		full = gtk_icon_theme_lookup_icon(icon_theme, type_name, icon_height, 0);
+		//if(!full) dbg(0, "not found: %s", type_name);
+ 		g_free(type_name);
+ 	}
+	if (!full/* && is_audio*/) {
+		// try any old non-standard rubbish:
+		type_name = g_strconcat(type->media_type, "-x-generic", NULL);
+		//full = gtk_icon_theme_load_icon(icon_theme,	type_name, icon_height, 0, NULL);
+		full = gtk_icon_theme_lookup_icon(icon_theme, type_name, icon_height, 0);
+		//if (full) dbg(0, "gtk_icon_theme_load_icon() found icon! iconname=%s", type_name);
+		//else dbg(0, "not found: %s", type_name);
+		g_free(type_name);
+	}
+	if (!full) {
+		// try any old non-standard rubbish:
+		type_name = g_strconcat("gnome-fs-regular", NULL);
+		full = gtk_icon_theme_lookup_icon(icon_theme, type_name, icon_height, 0);
+		//if (full) dbg(0, "gtk_icon_theme_load_icon() found icon! iconname=%s", type_name);
+		//else dbg(0, "not found: %s", type_name);
+		g_free(type_name);
+	}
+	if (full) {
+		const char *icon_path;
+		/* Get the actual icon through our cache, not through GTK, because
+		 * GTK doesn't cache icons.
+		 */
+		icon_path = gtk_icon_info_get_filename(full);
+		if (icon_path) type->image = g_fscache_lookup(pixmap_cache, icon_path);
+		//if (icon_path) type->image = masked_pixmap_new(full);
+		/* else shouldn't happen, because we didn't use
+		 * GTK_ICON_LOOKUP_USE_BUILTIN.
+		 */
+		gtk_icon_info_free(full);
 	}
 
 out:
 	if (!type->image)
 	{
-		//printf("type_to_icon(): failed! using im_unknown.\n");
+		dbg(2, "failed! using im_unknown.");
 		/* One ref from the type structure, one returned */
 		type->image = im_unknown;
 		g_object_ref(im_unknown);
@@ -847,12 +892,11 @@ static void get_comment(MIME_type *type, const guchar *path)
 }
 	*/
 
-const char *mime_type_comment(MIME_type *type)
+const char*
+mime_type_comment(MIME_type* type)
 {
-	/*
-	if (!type->comment)
-		find_comment(type);
-	*/
+	if(!type){ errprintf("%s(): @type is NULL\n", __func__); return NULL; } 
+	//if (!type->comment) find_comment(type);
 	return type->comment;
 }
 
@@ -868,8 +912,10 @@ static guchar *read_theme(Option *option)
 
 	return g_strdup(gtk_label_get_text(item));
 }
+#endif
 
-static void add_themes_from_dir(GPtrArray *names, const char *dir)
+static void
+add_themes_from_dir(GPtrArray *names, const char *dir)
 {
 	GPtrArray *list;
 	int i;
@@ -879,48 +925,46 @@ static void add_themes_from_dir(GPtrArray *names, const char *dir)
 	list = list_dir(dir);
 	g_return_if_fail(list != NULL);
 
-	for (i = 0; i < list->len; i++)
-	{
+	for (i = 0; i < list->len; i++){
 		char *index_path;
 
-		index_path = g_build_filename(dir, list->pdata[i],
-						"index.theme", NULL);
+		index_path = g_build_filename(dir, list->pdata[i], "index.theme", NULL);
 		
-		if (access(index_path, F_OK) == 0)
+		if (access(index_path, F_OK) == 0){
 			g_ptr_array_add(names, list->pdata[i]);
-		else
-			g_free(list->pdata[i]);
+		}
+		else g_free(list->pdata[i]);
 
 		g_free(index_path);
 	}
 
 	g_ptr_array_free(list, TRUE);
 }
-#endif
 
-#ifdef NEVER
-static GList *build_icon_theme(Option *option, xmlNode *node, guchar *label)
+
+static GList*
+build_icon_theme(/*Option *option, xmlNode *node, */guchar *label)
 {	/*
 	-appears to build a menu list of availabe themes.
 	*/
-	GtkWidget *button, *menu, *hbox;
+	GtkWidget *menu;
 	GPtrArray *names;
 	gchar **theme_dirs = NULL;
 	gint n_dirs = 0;
 	int i;
 
-	g_return_val_if_fail(option != NULL, NULL);
+	//g_return_val_if_fail(option != NULL, NULL);
 	g_return_val_if_fail(label != NULL, NULL);
 
-	hbox = gtk_hbox_new(FALSE, 4);
+	//hbox = gtk_hbox_new(FALSE, 4);
 
-	gtk_box_pack_start(GTK_BOX(hbox), gtk_label_new(label),	FALSE, TRUE, 0);
+	//gtk_box_pack_start(GTK_BOX(hbox), gtk_label_new(label),	FALSE, TRUE, 0);
 
-	button = gtk_option_menu_new();
-	gtk_box_pack_start(GTK_BOX(hbox), button, TRUE, TRUE, 0);
+	//button = gtk_option_menu_new();
+	//gtk_box_pack_start(GTK_BOX(hbox), button, TRUE, TRUE, 0);
 
 	menu = gtk_menu_new();
-	gtk_option_menu_set_menu(GTK_OPTION_MENU(button), menu);
+	//gtk_option_menu_set_menu(GTK_OPTION_MENU(button), menu);
 
 	gtk_icon_theme_get_search_path(icon_theme, &theme_dirs, &n_dirs);
 	names = g_ptr_array_new();
@@ -930,47 +974,65 @@ static GList *build_icon_theme(Option *option, xmlNode *node, guchar *label)
 	g_ptr_array_sort(names, strcmp2);
 
 	for (i = 0; i < names->len; i++) {
-		GtkWidget *item;
 		char *name = names->pdata[i];
+		dbg(2, "name=%s", name);
 
-		item = gtk_menu_item_new_with_label(name);
+		GtkWidget* item = gtk_menu_item_new_with_label(name);
 		gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
 		gtk_widget_show_all(item);
+
+		g_object_set_data(G_OBJECT(item), "theme", g_strdup(name)); //make sure this string is free'd when menu is updated.
+
+		g_signal_connect(G_OBJECT(item), "activate", G_CALLBACK(on_theme_select), NULL);
 
 		g_free(name);
 	}
 
 	g_ptr_array_free(names, TRUE);
 
-	//option->update_widget = update_theme;
-	//option->read_widget = read_theme;
-	option->widget = button;
-
-	//gtk_signal_connect_object(GTK_OBJECT(button), "changed", GTK_SIGNAL_FUNC(option_check_widget), (GtkObject *) option);
-
-	return g_list_append(NULL, hbox);
+	return g_list_append(NULL, menu);
 }
-#endif
 
 
-static void set_icon_theme(void)
+static void
+print_icon_list()
 {
-	//printf("set_icon_theme()...\n");
-	const char *home_dir = g_get_home_dir();
-	GtkIconInfo *info;
-	char *icon_home;
-	//const char *theme_name = o_icon_theme.value;
-	//const char *theme_name = "Industrial";
-	//const char *theme_name = "gnome";
-	const char *theme_name = "Wasp";
+	GList* icon_list = gtk_icon_theme_list_icons(icon_theme, "MimeTypes");
+	if(icon_list){
+		dbg(0, "%s----------------------------------", theme_name);
+		for(;icon_list;icon_list=icon_list->next){
+			char* icon = icon_list->data;
+			printf("%s\n", icon);
+			g_free(icon);
+		}
+		g_list_free(icon_list);
+		printf("-------------------------------------------------\n");
+	}
+	else warnprintf("icon_theme has no mimetype icons?\n");
 
-	if (!theme_name || !*theme_name) theme_name = "ROX";
+}
+
+
+static void
+set_icon_theme()
+{
+	//const char *home_dir = g_get_home_dir();
+	GtkIconInfo *info;
+	//char *icon_home;
+
+	//if (!theme_name || !*theme_name) theme_name = "ROX";
+	if (!theme_name || !*theme_name) strcpy(theme_name, "ROX");
+
+	g_hash_table_remove_all(type_hash);
 
 	while (1)
 	{
-		printf("set_icon_theme(): setting theme: %s.\n", theme_name);
+		dbg(0, "setting theme: %s.", theme_name);
 		gtk_icon_theme_set_custom_theme(icon_theme, theme_name);
-		//printf("set_icon_theme(): looking up test icon...\n");
+		return;
+
+		//the test below is disabled as its not reliable
+
 		info = gtk_icon_theme_lookup_icon(icon_theme, "mime-application:postscript", ICON_HEIGHT, 0);
 		if (!info)
 		{
@@ -979,7 +1041,8 @@ static void set_icon_theme(void)
 		}
 		if (info)
 		{
-			printf("set_icon_theme(): got test icon ok. Using theme '%s'\n", theme_name);
+			dbg(0, "got test icon ok. Using theme '%s'", theme_name);
+			print_icon_list();
 			gtk_icon_info_free(info);
 			return;
 		}
@@ -988,12 +1051,15 @@ static void set_icon_theme(void)
 
 		warnprintf("Icon theme '%s' does not contain MIME icons. Using ROX default theme instead.\n", theme_name);
 		
-		theme_name = "ROX";
+		//theme_name = "ROX";
+		strcpy(theme_name, "ROX");
 	}
 
+#if 0
 	icon_home = g_build_filename(home_dir, ".icons", NULL);
 	if (!file_exists(icon_home)) mkdir(icon_home, 0755);
 	g_free(icon_home);
+#endif
 
 	//icon_home = g_build_filename(home_dir, ".icons", "ROX", NULL);
 	//if (symlink(make_path(app_dir, "ROX"), icon_home))

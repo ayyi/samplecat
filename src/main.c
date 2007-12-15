@@ -8,42 +8,46 @@ Copyright Tim Orford 2007
 #include "config.h"
 #include <stdio.h>
 #include <stdlib.h>
+#define __USE_GNU
 #include <string.h>
 #include <unistd.h>
 #include <getopt.h>
-//#include <my_global.h>   // for strmov
-//#include <m_string.h>    // for strmov
 #include <sndfile.h>
 #include <jack/jack.h>
 #include <gtk/gtk.h>
 #include <FLAC/all.h>
 
 #include <gdk-pixbuf/gdk-pixdata.h>
-#include <libart_lgpl/libart.h>
-#include <libgnomevfs/gnome-vfs.h>
+#ifdef OLD
+  #include <libart_lgpl/libart.h>
+#endif
+//#include <libgnomevfs/gnome-vfs.h>
 #include <jack/ringbuffer.h>
 
 #include "mysql/mysql.h"
 #include "dh-link.h"
-#include "main.h"
 #include "support.h"
+#include "gqview_view_dir_tree.h"
+#include "main.h"
 #include "audio.h"
 #include "overview.h"
 #include "cellrenderer_hypertext.h"
 #include "tree.h"
+#include "listview.h"
+#include "window.h"
 #include "db.h"
 #include "dnd.h"
-#include "gqview_view_dir_tree.h"
 #ifdef USE_GQVIEW_1_DIRTREE
   #include "filelist.h"
   #include "view_dir_list.h"
   #include "view_dir_tree.h"
 #endif
 
-#include "rox_global.h"
+#include "rox/rox_global.h"
 #include "type.h"
 #include "pixmaps.h"
-//#include "gnome-vfs-uri.h"
+#include "rox/dir.h"
+#include "rox/filer.h"
 
 //#define DEBUG_NO_THREADS 1
 
@@ -51,9 +55,13 @@ Copyright Tim Orford 2007
   #define strmov(A,B) stpcpy((A),(B))
 //#endif
 
+void       dir_init();
+
 struct _app app;
 struct _palette palette;
 GList* mime_types; // list of *MIME_type
+extern GList* themes; 
+extern Filer filer;
 
 unsigned debug = 0;
 
@@ -64,33 +72,19 @@ char green [16];
 char yellow[16];
 char bold  [16];
 
-//treeview/store layout:
-enum
-{
-  COL_ICON = 0,
-  COL_IDX,
-  COL_NAME,
-  COL_FNAME,
-  COL_KEYWORDS,
-  COL_OVERVIEW,
-  COL_LENGTH,
-  COL_SAMPLERATE,
-  COL_CHANNELS,
-  COL_MIMETYPE,
-  COL_NOTES, //this is in the store but not the view.
-  COL_COLOUR,
-  NUM_COLS
-};
+char* categories[] = {"drums", "perc", "bass", "keys", "synth", "strings", "brass", "fx", "impulses"};
 
 //mysql table layout (database column numbers):
-#define MYSQL_KEYWORDS 3
+enum{
+  MYSQL_NAME = 1,
+  MYSQL_DIR = 2,
+  MYSQL_KEYWORDS = 3,
+  MYSQL_PIXBUF = 4
+};
 #define MYSQL_ONLINE 8
 #define MYSQL_MIMETYPE 10
 #define MYSQL_NOTES 11
 #define MYSQL_COLOUR 12
-
-char       *app_name    = "Samplecat";
-//const char *app_version = "0.0.2";
 
 static const struct option long_options[] = {
   { "input",            1, NULL, 'i' },
@@ -111,17 +105,10 @@ static const char* const usage =
 GAsyncQueue* msg_queue = NULL;
 
 
-//dummy treeview visibility filter function
-gboolean 
-func (GtkTreeModel *model, GtkTreeIter *iter, gpointer data)
-{
-	return FALSE;
-}
-
-
 void
 app_init()
 {
+	app.loaded           = FALSE;
 	//app.fg_colour.pixel = 0;
 	app.dir_tree         = NULL;
 	app.statusbar        = NULL;
@@ -138,7 +125,7 @@ app_init()
 
 
 int 
-main(int argc, char* *argv)
+main(int argc, char** argv)
 {
 	//make gdb break on g errors:
 	//g_log_set_always_fatal( G_LOG_FLAG_RECURSION | G_LOG_FLAG_FATAL | G_LOG_LEVEL_ERROR | G_LOG_LEVEL_CRITICAL | G_LOG_LEVEL_WARNING );
@@ -154,7 +141,7 @@ main(int argc, char* *argv)
 
 	app_init();
 
-	printf("%s%s. Version "PACKAGE_VERSION"%s\n", yellow, app_name, white);
+	printf("%s"PACKAGE_NAME". Version "PACKAGE_VERSION"%s\n", yellow, white);
 
 	const gchar* home_dir = g_get_home_dir();
 	snprintf(app.home_dir, 256, "%s", home_dir); //no dont bother
@@ -168,13 +155,13 @@ main(int argc, char* *argv)
 
 	MYSQL *mysql;
 	if(db_connect()) mysql = &app.mysql; else on_quit(NULL, GINT_TO_POINTER(1));
-	//if(db_connect()){ printf("ok...\n"); mysql = &app.mysql; }else{ printf("not ok...\n"); on_quit(NULL, GINT_TO_POINTER(1)); exit(1); }
 
 	type_init();
 	pixmaps_init();
+	dir_init();
 
 #ifndef DEBUG_NO_THREADS
-	if(debug) printf("%s(): creating overview thread...\n", __func__);
+	dbg(3, "creating overview thread...");
 	GError *error = NULL;
 	msg_queue = g_async_queue_new();
 	if(!g_thread_create(overview_thread, NULL, FALSE, &error)){
@@ -183,420 +170,21 @@ main(int argc, char* *argv)
 	}
 #endif
 
-	if (!gnome_vfs_init()){ errprintf("could not initialize GnomeVFS.\n"); return 1; }
-
 	app.store = gtk_list_store_new(NUM_COLS, GDK_TYPE_PIXBUF, G_TYPE_INT, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING, GDK_TYPE_PIXBUF, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_INT, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_INT);
  
-	//GtkTreeModel *filter = gtk_tree_model_filter_new(GTK_TREE_MODEL(store), NULL);
-	//gtk_tree_model_filter_set_visible_func(GTK_TREE_MODEL_FILTER(filter), (GtkTreeModelFilterVisibleFunc)func, NULL, NULL);
-
-	do_search(app.search_phrase, app.search_dir);
-
 	window_new(); 
-	filter_new();
 	tagshow_selector_new();
 	tag_selector_new();
  
-	//gtk_box_pack_start(GTK_BOX(app.vbox), view, EXPAND_TRUE, FILL_TRUE, 0);
-	gtk_container_add(GTK_CONTAINER(app.scroll), app.view);
+	do_search(app.search_phrase, app.search_dir);
 
 	app.context_menu = make_context_menu();
-	g_signal_connect((gpointer)app.view, "button-press-event", G_CALLBACK(on_row_clicked), NULL);
+
+	app.loaded = TRUE;
+	dbg(0, "loaded");
 
 	gtk_main();
 	exit(0);
-}
-
-
-gboolean
-window_new()
-{
-/*
-window
-+--paned
-   +--dir tree
-   |
-   +--vbox
-      +--search box
-      |  +--label
-      |  +--text entry
-      |
-      +--edit metadata hbox
-      |
-      +--hpaned
-      |  +--vpaned (left pane)
-      |  |  +--directory tree
-      |  |  +--inspector
-      |  | 
-      |  +--scrollwin (right pane)
-      |     +--treeview
-      |
-      +--statusbar hbox
-         +--statusbar
-         +--statusbar2
-
-*/
-	printf("window_new().\n");
-	
-	GtkWidget *window = app.window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-	g_signal_connect (G_OBJECT(window), "delete_event", G_CALLBACK(on_quit), NULL);
-	//g_signal_connect(window, "destroy", gtk_main_quit, NULL);
-
-	GtkWidget *vbox = app.vbox = gtk_vbox_new(FALSE, 0);
-	gtk_widget_show(vbox);
-	gtk_container_add(GTK_CONTAINER(window), vbox);
-
-	GtkWidget *hbox_statusbar = gtk_hbox_new(FALSE, 0);
-	gtk_widget_show(hbox_statusbar);
-	gtk_box_pack_end(GTK_BOX(vbox), hbox_statusbar, EXPAND_FALSE, FALSE, 0);
-
-	//alignment to give top border to main hpane.
-	GtkWidget* align1 = gtk_alignment_new(0.0, 0.0, 1.0, 1.0);
-	gtk_alignment_set_padding(GTK_ALIGNMENT(align1), 2, 1, 0, 0); //top, bottom, left, right.
-	gtk_widget_show(align1);
-	gtk_box_pack_end(GTK_BOX(vbox), align1, EXPAND_TRUE, TRUE, 0);
-
-	GtkWidget *hpaned = gtk_hpaned_new();
-	gtk_paned_set_position(GTK_PANED(hpaned), 160);
-	//gtk_box_pack_end(GTK_BOX(vbox), hpaned, EXPAND_TRUE, TRUE, 0);
-	gtk_container_add(GTK_CONTAINER(align1), hpaned);
-	gtk_widget_show(hpaned);
-
-	GtkWidget* tree = left_pane();
-	gtk_paned_add1(GTK_PANED(hpaned), tree);
-
-	GtkWidget *scroll = app.scroll = gtk_scrolled_window_new(NULL, NULL);  //adjustments created automatically.
-	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
-	gtk_widget_show(scroll);
-	//gtk_box_pack_end(GTK_BOX(vbox), scroll, EXPAND_TRUE, TRUE, 0);
-	gtk_paned_add2(GTK_PANED(hpaned), scroll);
-
-	make_listview();
-
-	GtkWidget *statusbar = app.statusbar = gtk_statusbar_new();
-	//printf("statusbar=%p\n", app.statusbar);
-	//gtk_statusbar_set_has_resize_grip(GTK_STATUSBAR(statusbar), TRUE);	//why does give a warning??????
-	gtk_statusbar_set_has_resize_grip(GTK_STATUSBAR(statusbar), FALSE);
-	gtk_container_set_border_width(GTK_CONTAINER(statusbar), 5);
-	gtk_box_pack_start(GTK_BOX(hbox_statusbar), statusbar, EXPAND_TRUE, FILL_TRUE, 0);
-	gtk_widget_show(statusbar);
-
-	GtkWidget *statusbar2 = app.statusbar2 = gtk_statusbar_new();
-	//gtk_statusbar_set_has_resize_grip(GTK_STATUSBAR(statusbar), TRUE);	//why does give a warning??????
-	gtk_statusbar_set_has_resize_grip(GTK_STATUSBAR(statusbar2), FALSE);
-	gtk_container_set_border_width(GTK_CONTAINER(statusbar2), 5);
-	gtk_box_pack_start(GTK_BOX(hbox_statusbar), statusbar2, EXPAND_TRUE, FILL_TRUE, 0);
-	gtk_widget_show(statusbar2);
-
-	g_signal_connect(G_OBJECT(window), "realize", G_CALLBACK(window_on_realise), NULL);
-	g_signal_connect(G_OBJECT(window), "size-allocate", G_CALLBACK(window_on_allocate), NULL);
-	g_signal_connect(G_OBJECT(window), "configure_event", G_CALLBACK(window_on_configure), NULL);
-
-	gtk_widget_show_all(window);
-
-	dnd_setup();
-
-	return TRUE;
-}
-
-
-void
-window_on_realise(GtkWidget *win, gpointer user_data)
-{
-	//printf("window_on_realise()...\n");
-
-}
-
-
-void
-window_on_allocate(GtkWidget *win, gpointer user_data)
-{
-	//printf("window_on_allocate()...\n");
-	GdkColor colour;
-	#define SCROLLBAR_WIDTH_HACK 32
-	static gboolean done = FALSE;
-	if(!app.view->requisition.width) return;
-
-	if(!done){
-		//printf("window_on_allocate(): requisition: wid=%i height=%i\n", app.view->requisition.width, app.view->requisition.height);
-		//moved!
-		//gtk_widget_set_size_request(win, app.view->requisition.width + SCROLLBAR_WIDTH_HACK, MIN(app.view->requisition.height, 900));
-		done = TRUE;
-	}else{
-		//now reduce the request to allow the user to manually make the window smaller.
-		gtk_widget_set_size_request(win, 100, 100);
-	}
-
-	colour_get_style_bg(&app.bg_colour, GTK_STATE_NORMAL);
-	colour_get_style_fg(&app.fg_colour, GTK_STATE_NORMAL);
-	colour_get_style_base(&app.base_colour, GTK_STATE_NORMAL);
-	colour_get_style_text(&app.text_colour, GTK_STATE_NORMAL);
-
-	if(app.colourbox_dirty){
-		//put the style colours into the palette:
-		if(colour_darker (&colour, &app.fg_colour)) colour_box_add(&colour);
-		colour_box_add(&app.fg_colour);
-		if(colour_lighter(&colour, &app.fg_colour)) colour_box_add(&colour);
-		colour_box_add(&app.bg_colour);
-		colour_box_add(&app.base_colour);
-		colour_box_add(&app.text_colour);
-
-		if(colour_darker (&colour, &app.base_colour)) colour_box_add(&colour);
-		if(colour_lighter(&colour, &app.base_colour)) colour_box_add(&colour);
-		if(colour_lighter(&colour, &colour)         ) colour_box_add(&colour);
-
-		colour_get_style_base(&colour, GTK_STATE_SELECTED);
-		if(colour_lighter(&colour, &colour)) colour_box_add(&colour);
-		if(colour_lighter(&colour, &colour)) colour_box_add(&colour);
-		if(colour_lighter(&colour, &colour)) colour_box_add(&colour);
-
-		//add greys:
-		gdk_color_parse("#555555", &colour);
-		colour_box_add(&colour);
-		if(colour_lighter(&colour, &colour)) colour_box_add(&colour);
-		if(colour_lighter(&colour, &colour)) colour_box_add(&colour);
-		if(colour_lighter(&colour, &colour)) colour_box_add(&colour);
-
-		//make modifier colours:
-		colour_get_style_bg(&app.bg_colour_mod1, GTK_STATE_NORMAL);
-		app.bg_colour_mod1.red   = MIN(app.bg_colour_mod1.red   + 0x1000, 0xffff);
-		app.bg_colour_mod1.green = MIN(app.bg_colour_mod1.green + 0x1000, 0xffff);
-		app.bg_colour_mod1.blue  = MIN(app.bg_colour_mod1.blue  + 0x1000, 0xffff);
-
-		//set column colours:
-		//printf("window_on_allocate(): fg_color: %x %x %x\n", app.fg_colour.red, app.fg_colour.green, app.fg_colour.blue);
-
-		g_object_set(app.cell1, "cell-background-gdk", &app.bg_colour_mod1, "cell-background-set", TRUE, NULL);
-		g_object_set(app.cell1, "foreground-gdk", &app.fg_colour, "foreground-set", TRUE, NULL);
-
-		colour_box_update();
-		app.colourbox_dirty = FALSE;
-	}
-}
-
-
-gboolean
-window_on_configure(GtkWidget *widget, GdkEventConfigure *event, gpointer user_data)
-{
-	static gboolean window_size_set = FALSE;
-	if(!window_size_set){
-		//take the window size from the config file, or failing that, from the treeview requisition.
-		int width = atoi(app.config.window_width);
-		if(!width) width = app.view->requisition.width + SCROLLBAR_WIDTH_HACK;
-		int height = atoi(app.config.window_height);
-		if(!height) height = MIN(app.view->requisition.height, 900);
-		if(width && height){
-			dbg(0, "width=%s height=%s", app.config.window_width, app.config.window_height);
-			gtk_window_resize(GTK_WINDOW(app.window), width, height);
-			window_size_set = TRUE;
-		}
-	}
-	return FALSE;
-}
-
-
-gboolean
-colour_box_exists(GdkColor* colour)
-{
-	//returns true if a similar colour already exists in the colour_box.
-
-	GdkColor existing_colour;
-	char string[8];
-	int i;
-	for(i=0;i<PALETTE_SIZE;i++){
-		snprintf(string, 8, "#%s", app.config.colour[i]);
-		if(!gdk_color_parse(string, &existing_colour)) warnprintf("colour_box_exists(): parsing of colour string failed (%s).\n", string);
-		if(is_similar(colour, &existing_colour)) return TRUE;
-	}
-
-	return FALSE;
-}
-
-
-gboolean
-colour_box_add(GdkColor* colour)
-{
-	static unsigned slot = 0;
-
-	if(slot >= PALETTE_SIZE){ if(debug) warnprintf("colour_box_add() colour_box full.\n"); return FALSE; }
-
-	//only add a colour if a similar colour isnt already there.
-	if(colour_box_exists(colour)) return FALSE;
-
-	hexstring_from_gdkcolor(app.config.colour[slot++], colour);
-	return TRUE;
-}
-
-
-void
-make_listview()
-{
-	//the main pane. A treeview with a list of samples.
-
-	GtkWidget *view = app.view = gtk_tree_view_new_with_model(GTK_TREE_MODEL(app.store));
-	//g_signal_connect(view, "motion-notify-event", (GCallback)treeview_on_motion, NULL); //FIXME this is causing segfaults?
-	g_signal_connect(view, "drag-data-received", G_CALLBACK(treeview_drag_received), NULL); //currently the window traps this before we get here.
-	g_signal_connect(view, "drag-motion", G_CALLBACK(drag_motion), NULL);
-	//gtk_tree_view_set_fixed_height_mode(GTK_TREE_VIEW(view), TRUE); //supposed to be faster. gtk >= 2.6
-
-	//icon:
-	GtkCellRenderer *cell9 = gtk_cell_renderer_pixbuf_new();
-	GtkTreeViewColumn *col9 /*= app.col_icon*/ = gtk_tree_view_column_new_with_attributes("", cell9, "pixbuf", COL_ICON, NULL);
-	gtk_tree_view_append_column(GTK_TREE_VIEW(view), col9);
-	//g_object_set(cell4,   "cell-background", "Orange",     "cell-background-set", TRUE,  NULL);
-	g_object_set(G_OBJECT(cell9), "xalign", 0.0, NULL);
-	gtk_tree_view_column_set_resizable(col9, TRUE);
-	gtk_tree_view_column_set_min_width(col9, 0);
-	gtk_tree_view_column_set_cell_data_func(col9, cell9, path_cell_data_func, NULL, NULL);
-
-#ifdef SHOW_INDEX
-	GtkCellRenderer* cell0 = gtk_cell_renderer_text_new();
-	GtkTreeViewColumn *col0 = gtk_tree_view_column_new_with_attributes("Id", cell0, "text", COL_IDX, NULL);
-	gtk_tree_view_append_column(GTK_TREE_VIEW(view), col0);
-#endif
-
-	GtkCellRenderer* cell1 = app.cell1 = gtk_cell_renderer_text_new();
-	GtkTreeViewColumn *col1 = gtk_tree_view_column_new_with_attributes("Sample Name", cell1, "text", COL_NAME, NULL);
-	gtk_tree_view_append_column(GTK_TREE_VIEW(view), col1);
-	gtk_tree_view_column_set_sort_column_id(col1, COL_NAME);
-	gtk_tree_view_column_set_resizable(col1, TRUE);
-	gtk_tree_view_column_set_reorderable(col1, TRUE);
-	gtk_tree_view_column_set_min_width(col1, 0);
-	//gtk_tree_view_column_set_spacing(col1, 10);
-	//g_object_set(cell1, "ypad", 0, NULL);
-	gtk_tree_view_column_set_cell_data_func(col1, cell1, (gpointer)path_cell_bg_lighter, NULL, NULL);
-	
-	GtkCellRenderer *cell2 = gtk_cell_renderer_text_new();
-	GtkTreeViewColumn *col2 = gtk_tree_view_column_new_with_attributes("Path", cell2, "text", COL_FNAME, NULL);
-	gtk_tree_view_append_column(GTK_TREE_VIEW(view), col2);
-	gtk_tree_view_column_set_sort_column_id(col2, COL_FNAME);
-	gtk_tree_view_column_set_resizable(col2, TRUE);
-	gtk_tree_view_column_set_reorderable(col2, TRUE);
-	gtk_tree_view_column_set_min_width(col2, 0);
-	//g_object_set(cell2, "ypad", 0, NULL);
-	gtk_tree_view_column_set_cell_data_func(col2, cell2, path_cell_data_func, NULL, NULL);
-
-	//GtkCellRenderer *cell3 /*= app.cell_tags*/ = gtk_cell_renderer_text_new();
-	GtkCellRenderer *cell3 = app.cell_tags = gtk_cell_renderer_hyper_text_new();
-	GtkTreeViewColumn *column3 = app.col_tags = gtk_tree_view_column_new_with_attributes("Tags", cell3, "text", COL_KEYWORDS, NULL);
-	gtk_tree_view_append_column(GTK_TREE_VIEW(view), column3);
-	gtk_tree_view_column_set_sort_column_id(column3, COL_KEYWORDS);
-	gtk_tree_view_column_set_resizable(column3, TRUE);
-	gtk_tree_view_column_set_reorderable(column3, TRUE);
-	gtk_tree_view_column_set_min_width(column3, 0);
-	g_object_set(cell3, "editable", TRUE, NULL);
-	g_signal_connect(cell3, "edited", (GCallback)keywords_on_edited, NULL);
-	gtk_tree_view_column_add_attribute(column3, cell3, "markup", COL_KEYWORDS);
-
-	//GtkTreeCellDataFunc
-	gtk_tree_view_column_set_cell_data_func(column3, cell3, tag_cell_data, NULL, NULL);
-
-	GtkCellRenderer *cell4 = gtk_cell_renderer_pixbuf_new();
-	GtkTreeViewColumn *col4 = app.col_pixbuf = gtk_tree_view_column_new_with_attributes("Overview", cell4, "pixbuf", COL_OVERVIEW, NULL);
-	gtk_tree_view_append_column(GTK_TREE_VIEW(view), col4);
-	//g_object_set(cell4,   "cell-background", "Orange",     "cell-background-set", TRUE,  NULL);
-	g_object_set(G_OBJECT(cell4), "xalign", 0.0, NULL);
-	gtk_tree_view_column_set_resizable(col4, TRUE);
-	gtk_tree_view_column_set_min_width(col4, 0);
-	//g_object_set(cell4, "ypad", 0, NULL);
-	gtk_tree_view_column_set_cell_data_func(col4, cell4, path_cell_data_func, NULL, NULL);
-
-	GtkCellRenderer* cell5 = gtk_cell_renderer_text_new();
-	GtkTreeViewColumn *col5 = gtk_tree_view_column_new_with_attributes("Length", cell5, "text", COL_LENGTH, NULL);
-	gtk_tree_view_append_column(GTK_TREE_VIEW(view), col5);
-	gtk_tree_view_column_set_resizable(col5, TRUE);
-	gtk_tree_view_column_set_reorderable(col5, TRUE);
-	gtk_tree_view_column_set_min_width(col5, 0);
-	g_object_set(G_OBJECT(cell5), "xalign", 1.0, NULL);
-	//g_object_set(cell5, "ypad", 0, NULL);
-	gtk_tree_view_column_set_cell_data_func(col5, cell5, path_cell_data_func, NULL, NULL);
-
-	GtkCellRenderer* cell6 = gtk_cell_renderer_text_new();
-	GtkTreeViewColumn *col6 = gtk_tree_view_column_new_with_attributes("Srate", cell6, "text", COL_SAMPLERATE, NULL);
-	gtk_tree_view_append_column(GTK_TREE_VIEW(view), col6);
-	gtk_tree_view_column_set_resizable(col6, TRUE);
-	gtk_tree_view_column_set_reorderable(col6, TRUE);
-	gtk_tree_view_column_set_min_width(col6, 0);
-	g_object_set(G_OBJECT(cell6), "xalign", 1.0, NULL);
-	//g_object_set(cell6, "ypad", 0, NULL);
-	gtk_tree_view_column_set_cell_data_func(col6, cell6, path_cell_data_func, NULL, NULL);
-
-	GtkCellRenderer* cell7 = gtk_cell_renderer_text_new();
-	GtkTreeViewColumn *col7 = gtk_tree_view_column_new_with_attributes("Chs", cell7, "text", COL_CHANNELS, NULL);
-	gtk_tree_view_append_column(GTK_TREE_VIEW(view), col7);
-	gtk_tree_view_column_set_resizable(col7, TRUE);
-	gtk_tree_view_column_set_reorderable(col7, TRUE);
-	gtk_tree_view_column_set_min_width(col7, 0);
-	g_object_set(G_OBJECT(cell7), "xalign", 1.0, NULL);
-	gtk_tree_view_column_set_cell_data_func(col7, cell7, path_cell_data_func, NULL, NULL);
-
-	GtkCellRenderer* cell8 = gtk_cell_renderer_text_new();
-	GtkTreeViewColumn *col8 = gtk_tree_view_column_new_with_attributes("Mimetype", cell8, "text", COL_MIMETYPE, NULL);
-	gtk_tree_view_append_column(GTK_TREE_VIEW(view), col8);
-	gtk_tree_view_column_set_resizable(col8, TRUE);
-	gtk_tree_view_column_set_reorderable(col8, TRUE);
-	gtk_tree_view_column_set_min_width(col8, 0);
-	//g_object_set(G_OBJECT(cell8), "xalign", 1.0, NULL);
-	gtk_tree_view_column_set_cell_data_func(col8, cell8, path_cell_data_func, NULL, NULL);
-
-	GtkTreeSelection* selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(app.view));
-	gtk_tree_selection_set_mode(selection, GTK_SELECTION_MULTIPLE);
-	gtk_tree_view_set_search_column(GTK_TREE_VIEW(app.view), COL_NAME);
-
-	gtk_widget_show(view);
-}
-
-
-GtkWidget*
-left_pane()
-{
-	//other examples of file navigation: nautilus? (rox has no tree)
-
-	app.vpaned = gtk_vpaned_new();
-	//gtk_box_pack_end(GTK_BOX(vbox), hpaned, EXPAND_TRUE, TRUE, 0);
-	gtk_widget_show(app.vpaned);
-
-	//make another vpane sitting inside the 1st:
-	GtkWidget* vpaned2 = gtk_vpaned_new();
-	gtk_widget_show(vpaned2);
-	gtk_paned_add1(GTK_PANED(app.vpaned), vpaned2);
-
-#ifndef NO_USE_DEVHELP_DIRTREE
-	GtkWidget* tree = dir_tree_new();
-	//gtk_paned_add1(GTK_PANED(app.vpaned), tree);
-	gtk_paned_add1(GTK_PANED(vpaned2), tree);
-	gtk_widget_show(tree);
-	g_signal_connect(tree, "link_selected", G_CALLBACK(dir_tree_on_link_selected), NULL);
-#endif
-
-	gint expand = TRUE;
-	ViewDirTree* dir_list = vdtree_new(app.home_dir, expand);
-	GtkWidget* fs_tree = dir_list->widget;
-	//gtk_paned_add1(GTK_PANED(app.vpaned), tree);
-	gtk_paned_add2(GTK_PANED(vpaned2), fs_tree);
-	gtk_widget_show(fs_tree);
-
-	//alternative dir tree:
-#ifdef USE_NICE_GQVIEW_CLIST_TREE
-	if(false){
-		ViewDirList *dir_list = vdlist_new(app.home_dir);
-		GtkWidget* tree = dir_list->widget;
-	}
-	gint expand = TRUE;
-	ViewDirTree *dir_list = vdtree_new(app.home_dir, expand);
-	GtkWidget* tree = dir_list->widget;
-	gtk_paned_add1(GTK_PANED(app.vpaned), tree);
-	gtk_widget_show(tree);
-#endif
-
-
-#ifdef INSPECTOR
-#endif
-	GtkWidget* inspector = inspector_pane();
-	gtk_paned_add2(GTK_PANED(app.vpaned), inspector);
-
-	//return tree;
-	return app.vpaned;
 }
 
 
@@ -718,7 +306,7 @@ inspector_pane()
 	GtkWidget *text1 = gtk_text_view_new();
 	//gtk_widget_show(text1);
 	txt_buf1 = app.inspector->notes = gtk_text_view_get_buffer(GTK_TEXT_VIEW(text1));
-	gtk_text_buffer_set_text(txt_buf1, "this sample works really well on mid-tempo tracks", -1);
+	//gtk_text_buffer_set_text(txt_buf1, "this sample works really well on mid-tempo tracks", -1);
 	gtk_text_view_set_accepts_tab(GTK_TEXT_VIEW(text1), FALSE);
 	g_signal_connect(G_OBJECT(text1), "focus-out-event", G_CALLBACK(on_notes_focus_out), NULL);
 	g_signal_connect(G_OBJECT(text1), "insert-at-cursor", G_CALLBACK(on_notes_insert), NULL);
@@ -760,7 +348,7 @@ void
 inspector_update(GtkTreePath *path)
 {
 	if(!app.inspector) return;
-	ASSERT_POINTER(path, "inspector_update", "path");
+	ASSERT_POINTER(path, "path");
 
 	if (app.inspector->row_ref){ gtk_tree_row_reference_free(app.inspector->row_ref); app.inspector->row_ref = NULL; }
 
@@ -810,62 +398,12 @@ inspector_on_tags_clicked(GtkWidget *widget, GdkEventButton *event, gpointer use
 	/*
 	a single click on the Tags label puts us into edit mode.
 	*/
-	//printf("inspector_on_tags_clicked()...\n");
 
 	if(event->button == 3) return FALSE;
 
 	tag_edit_start(0);
 
 	return TRUE;
-}
-
-
-GtkWidget*
-colour_box_new(GtkWidget* parent)
-{
-	GtkWidget* e;
-	//GtkWidget* h = gtk_hbox_new(FALSE, 0);
-	int i;
-	for(i=PALETTE_SIZE-1;i>=0;i--){
-		e = app.colour_button[i] = gtk_event_box_new();
-
-		//dnd:
-		gtk_drag_source_set(e, GDK_BUTTON1_MASK | GDK_BUTTON2_MASK,
-                          dnd_file_drag_types,          //const GtkTargetEntry *targets,
-                          dnd_file_drag_types_count,    //gint n_targets,
-                          GDK_ACTION_COPY | GDK_ACTION_MOVE | GDK_ACTION_LINK);
-		//g_signal_connect(G_OBJECT(e), "drag-begin", G_CALLBACK(colour_drag_begin), NULL);
-		//g_signal_connect(G_OBJECT(e), "drag-end",   G_CALLBACK(colour_drag_end),   NULL);
-		//g_signal_connect(G_OBJECT(e), "drag-data-received", G_CALLBACK(colour_drag_datareceived), NULL);
-		g_signal_connect(G_OBJECT(e), "drag-data-get", G_CALLBACK(colour_drag_dataget), GUINT_TO_POINTER(i));
-
-		gtk_widget_show(e);
-
-		gtk_box_pack_end(GTK_BOX(parent), e, TRUE, TRUE, 0);
-	}
-	//gtk_widget_show_all(h);
-	return e;
-}
-
-
-void
-colour_box_update()
-{
-	//show the current palette colours in the colour_box
-	printf("colour_box_update()...\n");
-	int i;
-	GdkColor colour;
-	char colour_string[16];
-	for(i=PALETTE_SIZE-1;i>=0;i--){
-		snprintf(colour_string, 16, "#%s", app.config.colour[i]);
-		if(!gdk_color_parse(colour_string, &colour)) warnprintf("colour_box_update(): parsing of colour string failed.\n");
-		//printf("colour_box_update(): colour: %x %x %x\n", colour.red, colour.green, colour.blue);
-
-		if(app.colour_button[i]){
-			if(colour.red != app.colour_button[i]->style->bg[GTK_STATE_NORMAL].red) 
-				gtk_widget_modify_bg(app.colour_button[i], GTK_STATE_NORMAL, &colour);
-		}
-	}
 }
 
 
@@ -891,7 +429,7 @@ dir_tree_on_link_selected(GObject *ignored, DhLink *link, gpointer data)
 	*/
 	ASSERT_POINTER_FALSE("dir_tree_on_link_selected", link, "link");
 
-	printf("tree_on_link_selected()...uri=%s\n", link->uri);
+	dbg(0, "uri=%s", link->uri);
 	//FIXME segfault if we use this if()
 	//if(strlen(link->uri)){
 		set_search_dir(link->uri);
@@ -1018,7 +556,6 @@ tag_cell_data(GtkTreeViewColumn *tree_column, GtkCellRenderer *cell, GtkTreeMode
 			However, because of padding (appears to be 1 pixel), it is not always inside the cell area when this callback occurs!!
 			!!!!cell_area.background_area <----try this.
 	*/
-	//printf("tag_cell_data()...\n");
 
 	//set background colour:
 	path_cell_data_func(tree_column, cell, tree_model, iter, data);
@@ -1088,7 +625,7 @@ tag_cell_data(GtkTreeViewColumn *tree_column, GtkCellRenderer *cell, GtkTreeMode
 				pango_layout_line_index_to_x(layout_line, char_index, trailing, &char_pos);
 				if(char_pos/PANGO_SCALE > mouse_cell_x){
 					mouse_word = word_index;
-					printf("tag_cell_data(): word=%i\n", word_index);
+					dbg(0, "word=%i\n", word_index);
 
 					snprintf(word, 256, "<u>%s</u> ", split[word_index]);
 					g_strlcat(formatted, word, 256);
@@ -1109,7 +646,7 @@ tag_cell_data(GtkTreeViewColumn *tree_column, GtkCellRenderer *cell, GtkTreeMode
 
 				word_index++;
 			}
-			printf("tag_cell_data(): joined: %s\n", formatted);
+			dbg(0, "joined: %s\n", formatted);
 
 			g_object_unref(layout);
 
@@ -1179,7 +716,7 @@ scan_dir(const char* path)
 	scan the directory and try and add any files we find.
 	
 	*/
-	printf("scan_dir()....\n");
+	PF;
 
 	//gchar path[256];
 	char filepath[256];
@@ -1218,7 +755,10 @@ do_search(char *search, char *dir)
 {
 	//fill the display with the results for the given search phrase.
 
-	unsigned i, channels, colour;
+	if(!search) search = app.search_phrase;
+	if(!dir)    dir    = app.search_dir;
+
+	unsigned channels, colour;
 	float samplerate; char samplerate_s[32];
 	char length[64];
 	GtkTreeIter iter;
@@ -1232,7 +772,7 @@ do_search(char *search, char *dir)
 	char where_dir[512]="";
 	char category[256]="";
 	char sb_text[256];
-	//char phrase[256]="";
+	char sample_name[256];
 	GdkPixbuf* pixbuf  = NULL;
 	GdkPixbuf* iconbuf = NULL;
 	GdkPixdata pixdata;
@@ -1253,15 +793,13 @@ do_search(char *search, char *dir)
 	//strmov(query_def, "SELECT * FROM samples"); //this is defined in mysql m_string.h
 	//strcpy(query, "SELECT * FROM samples WHERE 1 ");
 
-	char* a = NULL;
-
 	if(strlen(search)){ 
 		snprintf(where, 512, "AND (filename LIKE '%%%s%%' OR filedir LIKE '%%%s%%' OR keywords LIKE '%%%s%%') ", search, search, search); //FIXME duplicate category LIKE's
 		//snprintf(query, 1024, "SELECT * FROM samples WHERE 1 %s", where);
 	}
 
 	//append the dir-where part:
-	a = where + strlen(where);
+	char* a = where + strlen(where);
 	strmov(a, where_dir);
 
 	snprintf(query, 1024, "SELECT * FROM samples WHERE 1 %s", where);
@@ -1293,16 +831,18 @@ do_search(char *search, char *dir)
 			int row_count = 0;
 			while((row = mysql_fetch_row(result))){
 				lengths = mysql_fetch_lengths(result); //free? 
+				/*
 				for(i = 0; i < num_fields; i++){ 
-					//printf("[%s] ", row[i] ? row[i] : "NULL"); 
+					printf("[%s] ", row[i] ? row[i] : "NULL"); 
 				}
-				//printf("\n"); 
+				printf("\n"); 
+				*/
 
 				//deserialise the pixbuf field:
 				pixbuf = NULL;
-				if(row[4]){
+				if(row[MYSQL_PIXBUF]){
 					//printf("%s(): deserializing...\n", __func__); 
-					if(gdk_pixdata_deserialize(&pixdata, lengths[4], (guint8*)row[4], NULL)){
+					if(gdk_pixdata_deserialize(&pixdata, lengths[4], (guint8*)row[MYSQL_PIXBUF], NULL)){
 						pixbuf = gdk_pixbuf_from_pixdata(&pixdata, TRUE, NULL);
 					}
 				}
@@ -1314,16 +854,34 @@ do_search(char *search, char *dir)
 				if(row[MYSQL_ONLINE]==NULL) online = 0; else online = atoi(row[MYSQL_ONLINE]);
 				if(row[MYSQL_COLOUR]==NULL) colour = 0; else colour = atoi(row[MYSQL_COLOUR]);
 
+				strncpy(sample_name, row[MYSQL_NAME], 255);
+				//TODO markup should be set in cellrenderer, not model!
+#if 0
+				if(GTK_WIDGET_REALIZED(app.view)){
+					//check colours dont clash:
+					long c_num = strtol(app.config.colour[colour], NULL, 16);
+					dbg(2, "rowcolour=%s", app.config.colour[colour]);
+					GdkColor row_colour; color_rgba_to_gdk(&row_colour, c_num << 8);
+					if(is_similar(&row_colour, &app.fg_colour, 0x60)){
+						snprintf(sample_name, 255, "%s%s%s", "<span foreground=\"blue\">", row[MYSQL_NAME], "</span>");
+					}
+				}
+#endif
+
 				//icon (dont show if the sound file is not available):
 				if(online){
 					MIME_type* mime_type = mime_type_lookup(row[MYSQL_MIMETYPE]);
-					/*MaskedPixmap* pixmap =*/ type_to_icon(mime_type);
-					if ( mime_type->image == NULL ) printf("do_search(): no icon.\n");
+					type_to_icon(mime_type);
+					if ( ! mime_type->image ) dbg(0, "no icon.\n");
 					iconbuf = mime_type->image->sm_pixbuf;
 				} else iconbuf = NULL;
 
-				gtk_list_store_append(app.store, &iter); 
-				gtk_list_store_set(app.store, &iter, COL_ICON, iconbuf, COL_IDX, atoi(row[0]), COL_NAME, row[1], COL_FNAME, row[2], COL_KEYWORDS, keywords, 
+				//strip the homedir from the dir string:
+				char* path = strstr(row[MYSQL_DIR], g_get_home_dir());
+				path = path ? path + strlen(g_get_home_dir()) + 1 : row[MYSQL_DIR];
+
+				gtk_list_store_append(app.store, &iter);
+				gtk_list_store_set(app.store, &iter, COL_ICON, iconbuf, COL_IDX, atoi(row[0]), COL_NAME, sample_name, COL_FNAME, path, COL_KEYWORDS, keywords, 
 				                     COL_OVERVIEW, pixbuf, COL_LENGTH, length, COL_SAMPLERATE, samplerate_s, COL_CHANNELS, channels, 
 				                     COL_MIMETYPE, row[MYSQL_MIMETYPE], COL_NOTES, row[MYSQL_NOTES], COL_COLOUR, colour, -1);
 				if(pixbuf) g_object_unref(pixbuf);
@@ -1346,14 +904,13 @@ do_search(char *search, char *dir)
 	else{
 		printf("%s(): Failed to find any records: %s\n", mysql_error(mysql), __func__);
 	}
-	if(debug) printf("%s(): done.\n", __func__);
 }
 
 
 void
 clear_store()
 {
-	printf("clear_store()...\n");
+	PF;
 
 	//gtk_list_store_clear(app.store);
 
@@ -1368,7 +925,6 @@ clear_store()
 
 		if(pixbuf) g_object_unref(pixbuf);
 	}
-	//printf("clear_store(): store cleared.\n");
 }
 
 
@@ -1395,7 +951,7 @@ treeview_block_motion_handler()
 void
 treeview_unblock_motion_handler()
 {
-	printf("treeview_unblock_motion_handler()...\n");
+	PF;
 	if(app.view){
 		gulong id1= g_signal_handler_find(app.view,
 							   G_SIGNAL_MATCH_FUNC, // | G_SIGNAL_MATCH_DATA,
@@ -1407,62 +963,6 @@ treeview_unblock_motion_handler()
 		if(id1) g_signal_handler_unblock(app.view, id1);
 		else warnprintf("%s(): failed to find handler.\n", __func__);
 	}
-}
-
-
-gboolean
-filter_new()
-{
-	//search box
-
-	if(!app.window) return FALSE; //FIXME make this a macro with printf etc
-
-	GtkWidget* hbox = app.toolbar = gtk_hbox_new(FALSE, 0);
-	gtk_widget_show(hbox);
-	gtk_box_pack_start(GTK_BOX(app.vbox), hbox, EXPAND_FALSE, FILL_FALSE, 0);
-
-	GtkWidget* label1 = gtk_label_new("Search");
-	gtk_misc_set_padding(GTK_MISC(label1), 5,5);
-	gtk_widget_show(label1);
-	gtk_box_pack_start(GTK_BOX(hbox), label1, FALSE, FALSE, 0);
-	
-	GtkWidget *entry = app.search = gtk_entry_new();
-	gtk_entry_set_max_length(GTK_ENTRY(entry), 64);
-	gtk_entry_set_text(GTK_ENTRY(entry), "");
-	gtk_widget_show(entry);	
-	gtk_box_pack_start(GTK_BOX(hbox), entry, EXPAND_TRUE, TRUE, 0);
-	g_signal_connect(G_OBJECT(entry), "focus-out-event", G_CALLBACK(new_search), NULL);
-	//this is supposed to enable REUTRN to enter the text - does it work?
-	gtk_entry_set_activates_default(GTK_ENTRY(entry), TRUE);
-	//g_signal_connect(G_OBJECT(entry), "activate", G_CALLBACK(on_entry_activate), NULL);
-	g_signal_connect(G_OBJECT(entry), "activate", G_CALLBACK(new_search), NULL);
-
-	//----------------------------------------------------------------------
-
-	//second row (metadata edit):
-	GtkWidget* hbox_edit = app.toolbar2 = gtk_hbox_new(FALSE, 0);
-	gtk_widget_show(hbox_edit);
-	gtk_box_pack_start(GTK_BOX(app.vbox), hbox_edit, EXPAND_FALSE, FILL_FALSE, 0);
-
-	//left align the label:
-	GtkWidget* align1 = gtk_alignment_new(0.0, 0.5, 0.0, 0.0);
-	gtk_widget_show(align1);
-	gtk_box_pack_start(GTK_BOX(hbox_edit), align1, EXPAND_FALSE, FILL_FALSE, 0);
-
-	GtkWidget* label2 = gtk_label_new("Edit");
-	gtk_misc_set_padding(GTK_MISC(label2), 5,5);
-	gtk_widget_show(label2);
-	gtk_container_add(GTK_CONTAINER(align1), label2);	
-
-	//make the two lhs labels the same width:
-	GtkSizeGroup* size_group = gtk_size_group_new(GTK_SIZE_GROUP_HORIZONTAL);
-	gtk_size_group_add_widget(size_group, label1);
-	gtk_size_group_add_widget(size_group, align1);
-	
-	/*GtkWidget* colour_box = */colour_box_new(hbox_edit);
-	//gtk_box_pack_start(GTK_BOX(hbox_edit), colour_box, EXPAND_FALSE, FILL_FALSE, 0);
-
-	return TRUE;
 }
 
 
@@ -1494,15 +994,18 @@ tag_selector_new()
 	gtk_combo_box_append_text(combo_, "no categories");
 	gtk_combo_box_append_text(combo_, "drums");
 	gtk_combo_box_append_text(combo_, "perc");
+	gtk_combo_box_append_text(combo_, "bass");
 	gtk_combo_box_append_text(combo_, "keys");
+	gtk_combo_box_append_text(combo_, "synth");
 	gtk_combo_box_append_text(combo_, "strings");
+	gtk_combo_box_append_text(combo_, "brass");
 	gtk_combo_box_append_text(combo_, "fx");
 	gtk_combo_box_append_text(combo_, "impulses");
 	gtk_widget_show(combo2);	
 	gtk_box_pack_start(GTK_BOX(app.toolbar2), combo2, EXPAND_FALSE, FALSE, 0);
 
 	//"set" button:
-	GtkWidget* set = gtk_button_new_with_label("Set Category");
+	GtkWidget* set = gtk_button_new_with_label("Set Tag");
 	gtk_widget_show(set);	
 	gtk_box_pack_start(GTK_BOX(app.toolbar2), set, EXPAND_FALSE, FALSE, 0);
 	g_signal_connect(set, "clicked", G_CALLBACK(on_category_set_clicked), NULL);
@@ -1520,10 +1023,16 @@ tagshow_selector_new()
 	GtkWidget* combo = app.view_category = gtk_combo_box_new_text();
 	GtkComboBox* combo_ = GTK_COMBO_BOX(combo);
 	gtk_combo_box_append_text(combo_, "all categories");
+	dbg(0, "  size=%i", sizeof(categories));
+	int i; for(i=0;i<sizeof(categories)/sizeof(*categories);i++){
+		gtk_combo_box_append_text(combo_, categories[i]);
+	}
+/*
 	gtk_combo_box_append_text(combo_, "drums");
 	gtk_combo_box_append_text(combo_, "keys");
 	gtk_combo_box_append_text(combo_, "strings");
 	gtk_combo_box_append_text(combo_, "fx");
+*/
 	gtk_combo_box_set_active(combo_, 0);
 	gtk_widget_show(combo);	
 	gtk_box_pack_start(GTK_BOX(app.toolbar), combo, EXPAND_FALSE, FALSE, 0);
@@ -1537,7 +1046,7 @@ tagshow_selector_new()
 void
 on_category_changed(GtkComboBox *widget, gpointer user_data)
 {
-	printf("on_category_changed()...\n");
+	PF;
 }
 
 
@@ -1559,7 +1068,7 @@ on_category_set_clicked(GtkComboBox *widget, gpointer user_data)
 {
 	//add selected category to selected samples.
 
-	printf("on_category_set_clicked()...\n");
+	PF;
 
 	//selected category?
 	gchar* category = gtk_combo_box_get_active_text(GTK_COMBO_BOX(app.category));
@@ -1567,7 +1076,6 @@ on_category_set_clicked(GtkComboBox *widget, gpointer user_data)
 	GtkTreeSelection* selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(app.view));
 	GList* selectionlist = gtk_tree_selection_get_selected_rows(selection, NULL);
 	if(!selectionlist){ printf("on_category_set_clicked(): no files selected.\n"); return; }
-	//printf("delete_row(): %i rows selected.\n", g_list_length(selectionlist));
 
 	int i;
 	GtkTreeIter iter;
@@ -1758,7 +1266,7 @@ on_notes_insert(GtkTextView *textview, gchar *arg1, gpointer user_data)
 gboolean
 on_notes_focus_out(GtkWidget *widget, gpointer userdata)
 {
-	printf("on_notes_focus_out()...\n");
+	PF;
 
 	GtkTextBuffer* textbuf = gtk_text_view_get_buffer(GTK_TEXT_VIEW(widget));
 	if(!textbuf){ errprintf("on_notes_focus_out(): bad arg: widget.\n"); return FALSE; }
@@ -1797,7 +1305,7 @@ item_set_colour(GtkTreePath* path, unsigned colour)
 {
 	ASSERT_POINTER_FALSE(path, "item_set_colour", "path")
 
-	int id = path_get_id(path);
+	int id = listview__path_get_id(path);
 
 	char sql[1024];
 	snprintf(sql, 1024, "UPDATE samples SET colour=%u WHERE id=%i", colour, id);
@@ -1855,24 +1363,23 @@ sample_free(sample* sample)
 
 
 gboolean
-add_file(char *uri)
+add_file(char* path)
 {
 	/*
-	uri must be "unescaped" before calling this fn.
+	uri must be "unescaped" before calling this fn. Method string must be removed.
 	*/
-	if(debug) printf("add_file()... %s\n", uri);
+	dbg(0, "%s", path);
 	gboolean ok = TRUE;
 
 	sample* sample = sample_new(); //free'd after db and store are updated.
-	snprintf(sample->filename, 256, "%s", uri);
+	snprintf(sample->filename, 256, "%s", path);
 
 	#define SQL_LEN 66000
 	char sql[1024], sql2[SQL_LEN];
 	char length_ms[64];
 	char samplerate_s[32];
-	//strcpy(sql, "INSERT samples SET ");
-	gchar* filedir = g_path_get_dirname(uri);
-	gchar* filename = g_path_get_basename(uri);
+	gchar* filedir = g_path_get_dirname(path);
+	gchar* filename = g_path_get_basename(path);
 	snprintf(sql, 1024, "INSERT samples SET filename='%s', filedir='%s'", filename, filedir);
 
 	MIME_type* mime_type = type_from_path(filename);
@@ -1918,50 +1425,43 @@ add_file(char *uri)
 	mysql_query(conn, tmp);
 	*/
 
-	//GdkPixbuf* pixbuf = make_overview(&sample);
-	//if(pixbuf){
 	if(get_file_info(sample)){
 
-	//snprintf(sql2, SQL_LEN, "%s, pixbuf='%s', length=%i, sample_rate=%i, channels=%i, mimetype='%s/%s' ", sql, blob, sample.length, sample.sample_rate, sample.channels, mime_type->media_type, mime_type->subtype);
-	snprintf(sql2, SQL_LEN, "%s, length=%i, sample_rate=%i, channels=%i, mimetype='%s/%s' ", sql, sample->length, sample->sample_rate, sample->channels, mime_type->media_type, mime_type->subtype);
-	format_time_int(length_ms, sample->length);
-	samplerate_format(samplerate_s, sample->sample_rate);
-	printf("add_file(): sql=%s\n", sql2);
+		//snprintf(sql2, SQL_LEN, "%s, pixbuf='%s', length=%i, sample_rate=%i, channels=%i, mimetype='%s/%s' ", sql, blob, sample.length, sample.sample_rate, sample.channels, mime_type->media_type, mime_type->subtype);
+		snprintf(sql2, SQL_LEN, "%s, length=%i, sample_rate=%i, channels=%i, mimetype='%s/%s' ", sql, sample->length, sample->sample_rate, sample->channels, mime_type->media_type, mime_type->subtype);
+		format_time_int(length_ms, sample->length);
+		samplerate_format(samplerate_s, sample->sample_rate);
+		dbg(0, "sql=%s", sql2);
 
-	sample->id = db_insert(sql2);
+		sample->id = db_insert(sql2);
 
-	GtkTreeIter iter;
-	gtk_list_store_append(app.store, &iter);
+		GtkTreeIter iter;
+		gtk_list_store_append(app.store, &iter);
 
-	//store a row reference:
-	GtkTreePath* treepath;
-	if((treepath = gtk_tree_model_get_path(GTK_TREE_MODEL(app.store), &iter))){
-		sample->row_ref = gtk_tree_row_reference_new(GTK_TREE_MODEL(app.store), treepath);
-		//printf("add_file(): rowref=%p\n", sample->row_ref);
-		gtk_tree_path_free(treepath);
-	}else errprintf("add_file(): failed to make treepath from inserted iter.\n");
+		//store a row reference:
+		GtkTreePath* treepath;
+		if((treepath = gtk_tree_model_get_path(GTK_TREE_MODEL(app.store), &iter))){
+			sample->row_ref = gtk_tree_row_reference_new(GTK_TREE_MODEL(app.store), treepath);
+			gtk_tree_path_free(treepath);
+		}else errprintf("add_file(): failed to make treepath from inserted iter.\n");
 
-	//printf("add_file(): iter=%p=%s\n", &iter, gtk_tree_model_get_string_from_iter(GTK_TREE_MODEL(app.store), &iter));
-	if(debug) printf("setting store... filename=%s mime=%s\n", filename, mime_string);
-	gtk_list_store_set(app.store, &iter,
-	                  COL_IDX, sample->id,
-	                  COL_NAME, filename,
-	                  COL_FNAME, filedir,
-	                  //COL_OVERVIEW, pixbuf,
-	                  //COL_OVERVIEW, NULL,
-	                  COL_LENGTH, length_ms,
-	                  COL_SAMPLERATE, samplerate_s,
-	                  COL_CHANNELS, sample->channels,
-	                  COL_MIMETYPE, mime_string,
-	                  -1);
+		dbg(2, "setting store... filename=%s mime=%s", filename, mime_string);
+		gtk_list_store_set(app.store, &iter,
+						  COL_IDX, sample->id,
+						  COL_NAME, filename,
+						  COL_FNAME, filedir,
+						  COL_LENGTH, length_ms,
+						  COL_SAMPLERATE, samplerate_s,
+						  COL_CHANNELS, sample->channels,
+						  COL_MIMETYPE, mime_string,
+						  -1);
 
-	if(debug) printf("sending message: sample=%p filename=%s (%p)\n", sample, sample->filename, sample->filename);
-	g_async_queue_push(msg_queue, sample); //notify the overview thread.
+		dbg(2, "sending message: sample=%p filename=%s (%p)", sample, sample->filename, sample->filename);
+		g_async_queue_push(msg_queue, sample); //notify the overview thread.
 
-	on_directory_list_changed();
+		on_directory_list_changed();
 
 	}else{
-		//strcpy(sql2, sql);
 		ok = FALSE;
 	}
 
@@ -1975,7 +1475,7 @@ out:
 gboolean
 add_dir(char *uri)
 {
-	printf("add_dir(): dir=%s\n", uri);
+	dbg(0, "dir=%s", uri);
 
 	//GDir* dir = g_dir_open(const gchar *path, guint flags, GError **error);
 
@@ -2005,7 +1505,7 @@ get_file_info_sndfile(sample* sample)
 	sfinfo.format  = 0;
 
 	if(!(sffile = sf_open(filename, SFM_READ, &sfinfo))){
-		printf("get_file_info_sndfile(): not able to open input file %s.\n", filename);
+		dbg(0, "not able to open input file %s.", filename);
 		puts(sf_strerror(NULL));    // print the error message from libsndfile:
 		return FALSE;
 	}
@@ -2022,7 +1522,6 @@ get_file_info_sndfile(sample* sample)
 	if(sample->channels<1 || sample->channels>100){ printf("get_file_info_sndfile(): bad channel count: %i\n", sample->channels); return FALSE; }
 	if(sf_close(sffile)) printf("error! bad file close.\n");
 
-	//printf("get_file_info(): failed to get info.\n"); return FALSE;
 	return TRUE;
 }
 
@@ -2031,19 +1530,16 @@ gboolean
 on_overview_done(gpointer data)
 {
 	sample* sample = data;
-	printf("on_overview_done()...\n");
+	PF;
 	if(!sample){ errprintf("on_overview_done(): bad arg: sample.\n"); return FALSE; }
 	if(!sample->pixbuf){ errprintf("on_overview_done(): overview creation failed (no pixbuf).\n"); return FALSE; }
 
 	db_update_pixbuf(sample);
-	//printf("on_overview_done(): row_ref=%p\n", sample->row_ref);
-	//printf("on_overview_done(): pixbuf=%p\n", sample->pixbuf);
 
 	GtkTreePath* treepath;
 	if((treepath = gtk_tree_row_reference_get_path(sample->row_ref))){ //it's possible the row may no longer be visible.
 		GtkTreeIter iter;
 		if(gtk_tree_model_get_iter(GTK_TREE_MODEL(app.store), &iter, treepath)){
-			//printf("on_overview_done(): setting pixbuf in store... pixbuf=%p\n", sample->pixbuf);
 			if(GDK_IS_PIXBUF(sample->pixbuf)){
 				gtk_list_store_set(app.store, &iter, COL_OVERVIEW, sample->pixbuf, -1);
 			}else errprintf("on_overview_done(): pixbuf is not a pixbuf.\n");
@@ -2060,10 +1556,7 @@ on_overview_done(gpointer data)
 void
 db_update_pixbuf(sample *sample)
 {
-	if(debug) printf("db_update_pixbuf()...\n");
-
 	GdkPixbuf* pixbuf = sample->pixbuf;
-	//printf("db_update_pixbuf(): pixbuf=%p\n", pixbuf);
 	if(pixbuf){
 		//serialise the pixbuf:
 		guint8 blob[SQL_LEN];
@@ -2071,7 +1564,7 @@ db_update_pixbuf(sample *sample)
 		gdk_pixdata_from_pixbuf(&pixdata, pixbuf, 0);
 		guint length;
 		guint8* ser = gdk_pixdata_serialize(&pixdata, &length);
-		mysql_real_escape_string(&app.mysql, blob, ser, length);
+		mysql_real_escape_string(&app.mysql, (char*)blob, (char*)ser, length);
 		//printf("db_update_pixbuf() serial length: %i, strlen: %i\n", length, strlen(ser));
 
 		char sql[SQL_LEN];
@@ -2095,7 +1588,7 @@ keywords_on_edited(GtkCellRendererText *cell, gchar *path_string, gchar *new_tex
 {
 	//the keywords column has been edited. Update the database to reflect the new text.
 
-	printf("cell_edited_callback()...\n");
+	PF;
 	GtkTreeIter iter;
 	int idx;
 	gchar *filename;
@@ -2103,7 +1596,7 @@ keywords_on_edited(GtkCellRendererText *cell, gchar *path_string, gchar *new_tex
 	GtkTreePath* path = gtk_tree_path_new_from_string(path_string);
 	gtk_tree_model_get_iter(store, &iter, path);
 	gtk_tree_model_get(store, &iter, COL_IDX, &idx,  COL_NAME, &filename, -1);
-	printf("cell_edited_callback(): filename=%s\n", filename);
+	dbg(0, "filename=%s", filename);
 
 	//convert to lowercase:
 	//gchar* lower = g_ascii_strdown(new_text, -1);
@@ -2119,9 +1612,9 @@ keywords_on_edited(GtkCellRendererText *cell, gchar *path_string, gchar *new_tex
 	snprintf(idx_str, 64, "%i", idx);
 	tmppos = strmov(tmppos, idx_str);
 	*tmppos++ = (char)0;
-	printf("keywords_on_edited(): sql=%s\n", sql);
+	dbg(0, "sql=%s", sql);
 	if(mysql_query(&app.mysql, sql)){
-		printf("keywords_on_edited(): update failed! sql=%s\n", sql);
+		dbg(0, "update failed! sql=%s", sql);
 		return;
 	}
 
@@ -2135,14 +1628,14 @@ delete_row(GtkWidget *widget, gpointer user_data)
 {
 	//widget is likely to be a popupmenu.
 
-	printf("delete_row()...\n");
+	PF;
 	GtkTreeIter iter;
-	GtkTreeModel *model = gtk_tree_view_get_model(GTK_TREE_VIEW(app.view));
+	GtkTreeModel* model = gtk_tree_view_get_model(GTK_TREE_VIEW(app.view));
 
 	GtkTreeSelection* selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(app.view));
 	GList* selectionlist = gtk_tree_selection_get_selected_rows(selection, &(model));
 	if(!selectionlist){ errprintf("delete_row(): no files selected?\n"); return; }
-	printf("delete_row(): %i rows selected.\n", g_list_length(selectionlist));
+	dbg(0, "%i rows selected.", g_list_length(selectionlist));
 
 	GList* selected_row_refs = NULL;
 	GtkTreeRowReference* row_ref = NULL;
@@ -2170,13 +1663,12 @@ delete_row(GtkWidget *widget, gpointer user_data)
 
 				char sql[1024];
 				snprintf(sql, 1024, "DELETE FROM samples WHERE id=%i", id);
-				printf("delete_row(): row: %s sql=%s\n", fname, sql);
+				dbg(0, "row: %s sql=%s", fname, sql);
 				if(mysql_query(&app.mysql, sql)){
 					errprintf("delete_row(): delete failed! sql=%s\n", sql);
 					return;
 				}
 				//update the store:
-				//gtk_tree_store_remove(model, &iter);
 				gtk_list_store_remove(app.store, &iter);
 			} else errprintf("delete_row() bad iter! i=%i (<%i)\n", i, g_list_length(selectionlist));
 		} else errprintf("delete_row(): cannot get path from row_ref!\n");
@@ -2192,14 +1684,14 @@ update_row(GtkWidget *widget, gpointer user_data)
 {
 	//sync the catalogue row with the filesystem.
 
-	printf("update_row()...\n");
+	PF;
 	GtkTreeIter iter;
 	GtkTreeModel *model = gtk_tree_view_get_model(GTK_TREE_VIEW(app.view));
 
 	GtkTreeSelection* selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(app.view));
 	GList* selectionlist = gtk_tree_selection_get_selected_rows(selection, &(model));
 	if(!selectionlist){ errprintf("update_row(): no files selected?\n"); return; }
-	printf("update_row(): %i rows selected.\n", g_list_length(selectionlist));
+	dbg(0, "%i rows selected.", g_list_length(selectionlist));
 
 	//GDate* date = g_date_new();
 	//g_get_current_time(date);
@@ -2219,7 +1711,7 @@ update_row(GtkWidget *widget, gpointer user_data)
 
 			MIME_type* mime_type = mime_type_lookup(mimetype);
 			type_to_icon(mime_type);
-			if ( mime_type->image == NULL ) printf("update_row(): no icon.\n");
+			if ( mime_type->image == NULL ) dbg(0, "no icon.");
 			iconbuf = mime_type->image->sm_pixbuf;
 
 		}else{
@@ -2230,7 +1722,7 @@ update_row(GtkWidget *widget, gpointer user_data)
 
 		char sql[1024];
 		snprintf(sql, 1024, "UPDATE samples SET online=%i, last_checked=NOW() WHERE id=%i", online, id);
-		printf("update_row(): row: %s path=%s sql=%s\n", fname, path, sql);
+		dbg(0, "row: %s path=%s sql=%s", fname, path, sql);
 		if(mysql_query(&app.mysql, sql)){
 			errprintf("update_row(): update failed! sql=%s\n", sql);
 		}
@@ -2243,12 +1735,13 @@ update_row(GtkWidget *widget, gpointer user_data)
 void
 edit_row(GtkWidget *widget, gpointer user_data)
 {
-	//what exactly is this supposed to be "editing"? any cell mouse happens to be over? currently it looks like only the tags cell.	
-	printf("edit_row()...\n");
+	//currently this only works for the The tags cell.	
+	PF;
+	GtkTreeView* treeview = GTK_TREE_VIEW(app.view);
 
-	GtkTreeSelection* selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(app.view));
+	GtkTreeSelection* selection = gtk_tree_view_get_selection(treeview);
 	if(!selection){ errprintf("edit_row(): cannot get selection.\n");/* return;*/ }
-	GtkTreeModel *model = GTK_TREE_MODEL(app.store);
+	GtkTreeModel* model = GTK_TREE_MODEL(app.store);
 	GList* selectionlist = gtk_tree_selection_get_selected_rows(selection, &(model));
 	if(!selectionlist){ errprintf("edit_row(): no files selected?\n"); return; }
 
@@ -2257,41 +1750,17 @@ edit_row(GtkWidget *widget, gpointer user_data)
 		GtkTreeIter iter;
 		if(gtk_tree_model_get_iter(GTK_TREE_MODEL(app.store), &iter, treepath)){
 			gchar* path_str = gtk_tree_model_get_string_from_iter(GTK_TREE_MODEL(app.store), &iter);
-			printf("edit_row(): path=%s\n", path_str);
+			dbg(0, "path=%s", path_str);
 
-			//segfault!
-			//FIXME is this the correct fn? no! use this instead:
-/*
-    [...get the cell renderer...]
-    gtk_tree_view_get_cursor(treeview, &path, &col);
-    g_signal_handlers_block_by_func(treeview, cursor_changed, self);
-    gtk_widget_grab_focus(GTK_WIDGET(treeview));
-    gtk_tree_view_set_cursor_on_cell(treeview, path, col, renderer, TRUE);  <-------- start_editing=TRUE
-    g_signal_handlers_unblock_by_func(treeview, cursor_changed, self);
-    gtk_tree_path_free(path);
-*/
-
-
-			//shoule we be "activating" the cell instead? - how? cellrender doesnt seem to have such a thing.
-			/*
-			GtkCellEditable* editable = gtk_cell_renderer_start_editing(app.cell_tags, 
-												 NULL, //GdkEvent *event,
-												 app.view,
-												 path_str,  //a string representation of GtkTreePath
-												 NULL, //GdkRectangle *background_area,
-												 NULL, //GdkRectangle *cell_area,
-												 GTK_CELL_RENDERER_SELECTED);
-			*/
-
-			//lets try this instead:
-			GtkTreeViewColumn *focus_column = NULL;
-			GtkCellRenderer *focus_cell = NULL;
-			gtk_tree_view_set_cursor_on_cell(GTK_TREE_VIEW(app.view),
-			                                 treepath,
+			GtkTreeViewColumn* focus_column = app.col_tags;
+			GtkCellRenderer*   focus_cell   = app.cell_tags;
+	    	//g_signal_handlers_block_by_func(app.view, cursor_changed, self);
+    		gtk_widget_grab_focus(app.view);
+			gtk_tree_view_set_cursor_on_cell(GTK_TREE_VIEW(app.view), treepath,
 			                                 focus_column, //GtkTreeViewColumn *focus_column - this needs to be set for start_editing to work.
-			                                 focus_cell, //the cell to be edited.
-			                                 TRUE); //gboolean start_editing
-
+			                                 focus_cell,   //the cell to be edited.
+			                                 START_EDITING);
+    		//g_signal_handlers_unblock_by_func(treeview, cursor_changed, self);
 
 
 		} else errprintf("edit_row(): cannot get iter.\n");
@@ -2306,9 +1775,8 @@ GtkWidget*
 make_context_menu()
 {
 	GtkWidget *menu = gtk_menu_new();
-	GtkWidget *menu_item;
 
-	menu_item = gtk_menu_item_new_with_label ("Delete");
+	GtkWidget* menu_item = gtk_menu_item_new_with_label ("Delete");
 	gtk_menu_shell_append (GTK_MENU_SHELL(menu), menu_item);
 	g_signal_connect (G_OBJECT(menu_item), "activate", G_CALLBACK(delete_row), NULL);
 	gtk_widget_show (menu_item);
@@ -2318,9 +1786,14 @@ make_context_menu()
 	g_signal_connect (G_OBJECT(menu_item), "activate", G_CALLBACK(update_row), NULL);
 	gtk_widget_show (menu_item);
 
-	menu_item = gtk_menu_item_new_with_label ("Edit");
+	menu_item = gtk_menu_item_new_with_label ("Edit Tags");
 	gtk_menu_shell_append (GTK_MENU_SHELL(menu), menu_item);
 	g_signal_connect (G_OBJECT(menu_item), "activate", G_CALLBACK(edit_row), NULL);
+	gtk_widget_show (menu_item);
+
+	menu_item = gtk_menu_item_new_with_label ("Open");
+	gtk_menu_shell_append (GTK_MENU_SHELL(menu), menu_item);
+	gtk_widget_set_sensitive(GTK_WIDGET(menu_item), FALSE);
 	gtk_widget_show (menu_item);
 
 	//-------
@@ -2332,139 +1805,30 @@ make_context_menu()
 
 	//-------
 
-	//tick image:
-	/*
-	//GtkIconFactory* icon_factory = gtk_icon_factory_new();
-	GtkIconSize image_size = GTK_ICON_SIZE_MENU;
-	gchar *stock_id = GTK_STOCK_APPLY;
-	GtkWidget* image = gtk_image_new_from_stock(stock_id, image_size);
+	GtkWidget* prefs = gtk_menu_item_new_with_label("Prefs");
+	gtk_widget_show(prefs);
+	gtk_container_add(GTK_CONTAINER(menu), prefs);
 
-	//#define GTK_STOCK_APPLY            "gtk-apply"
-
-	//menu_item = gtk_menu_item_new_with_label ("Recursive");
-	menu_item = gtk_image_menu_item_new_with_label("Recursive");
-
-	gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(menu_item), image);
-
-	gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_item);
-	g_signal_connect(G_OBJECT(menu_item), "activate", G_CALLBACK(toggle_recursive_add), NULL);
-	gtk_widget_show(menu_item);
-	*/
-
+	GtkWidget* sub = gtk_menu_new();
+	gtk_menu_item_set_submenu(GTK_MENU_ITEM(prefs), sub);
 
 	menu_item = gtk_check_menu_item_new_with_mnemonic("Add Recursively");
-	gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_item);
+	gtk_menu_shell_append(GTK_MENU_SHELL(sub), menu_item);
 	gtk_widget_show(menu_item);
 	gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menu_item), app.add_recursive);
 	g_signal_connect(G_OBJECT(menu_item), "activate", G_CALLBACK(toggle_recursive_add), NULL);
 
-	//-------
+	if(themes){
+		GtkWidget* theme_menu = gtk_menu_item_new_with_label("Icon Themes");
+		gtk_widget_show(theme_menu);
+		gtk_container_add(GTK_CONTAINER(sub), theme_menu);
 
-	/* example a submenu:
-
-	menu_item = gtk_menu_item_new_with_label("Metering");
-	//gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_item);
-	//g_signal_connect(G_OBJECT(menu_item), "activate", G_CALLBACK(strip_hide_sends), mixer_win);
-	gtk_widget_show(menu_item);
-	gtk_container_add(GTK_CONTAINER(menu), menu_item);
-
-	//sub-menu:
-	GtkWidget *sub_menu = gtk_menu_new();
-	gtk_menu_item_set_submenu(GTK_MENU_ITEM(menu_item), sub_menu);
-	//printf("mixer_contextmenu_init(): submenu=%p parent=%p\n", sub_menu, menu_item);
-
-	GtkWidget *item = gtk_menu_item_new_with_label("Jamin");
-	gtk_menu_shell_append(GTK_MENU_SHELL(sub_menu), item);
-	g_object_set_data(G_OBJECT(item), "smwin", smwin);
-	g_signal_connect(G_OBJECT(item), "activate", G_CALLBACK(mixer_set_meter_type), (gpointer)METER_JAMIN);
-	gtk_widget_show(item);
-	*/
+		GtkWidget* sub_menu = themes->data;
+		gtk_menu_item_set_submenu(GTK_MENU_ITEM(theme_menu), sub_menu);
+	}
 
 	return menu;
 }
-
-gboolean
-on_row_clicked(GtkWidget *widget, GdkEventButton *event, gpointer user_data)
-{
-	GtkTreeView *treeview = GTK_TREE_VIEW(app.view);
-
-	//auditioning:
-	if(event->button == 1){
-		//printf("left button press!\n");
-		GtkTreePath *path;
-		if(gtk_tree_view_get_path_at_pos(GTK_TREE_VIEW(app.view), (gint)event->x, (gint)event->y, &path, NULL, NULL, NULL)){
-			inspector_update(path);
-
-			GdkRectangle rect;
-			gtk_tree_view_get_cell_area(treeview, path, app.col_pixbuf, &rect);
-			if(((gint)event->x > rect.x) && ((gint)event->x < (rect.x + rect.width))){
-
-				//overview column:
-				printf("on_row_clicked() column rect: %i %i %i %i\n", rect.x, rect.y, rect.width, rect.height);
-
-				/*
-				GtkTreeIter iter;
-				GtkTreeModel *model = gtk_tree_view_get_model(GTK_TREE_VIEW(app.view));
-				gtk_tree_model_get_iter(model, &iter, path);
-				gchar *fpath, *fname, *mimetype;
-				int id;
-				gtk_tree_model_get(model, &iter, COL_FNAME, &fpath, COL_NAME, &fname, COL_IDX, &id, COL_MIMETYPE, &mimetype, -1);
-
-				char file[256]; snprintf(file, 256, "%s/%s", fpath, fname);
-				*/
-
-				sample* sample = sample_new_from_model(path);
-
-				if(sample->id != app.playing_id) playback_init(sample);
-				else playback_stop();
-			}else{
-				gtk_tree_view_get_cell_area(treeview, path, app.col_tags, &rect);
-				if(((gint)event->x > rect.x) && ((gint)event->x < (rect.x + rect.width))){
-					//tags column:
-					GtkTreeIter iter;
-					GtkTreeModel *model = gtk_tree_view_get_model(GTK_TREE_VIEW(app.view));
-					gtk_tree_model_get_iter(model, &iter, path);
-					gchar *tags;
-					int id;
-					gtk_tree_model_get(model, &iter, /*COL_FNAME, &fpath, COL_NAME, &fname, */COL_KEYWORDS, &tags, COL_IDX, &id, -1);
-
-					if(strlen(tags)){
-						gtk_entry_set_text(GTK_ENTRY(app.search), tags);
-						do_search(tags, NULL);
-					}
-				}
-			}
-		}
-		return FALSE; //propogate the signal
-	}
-
-	//popup menu:
-	if(event->button == 3){
-		dbg (0, "right button press!\n", "");
-
-		//if one or no rows selected, select one:
-		GtkTreeSelection *selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(app.view));
-        if(gtk_tree_selection_count_selected_rows(selection)  <= 1){
-			GtkTreePath *path;
-			if(gtk_tree_view_get_path_at_pos(GTK_TREE_VIEW(app.view), (gint)event->x, (gint)event->y, &path, NULL, NULL, NULL)){
-				gtk_tree_selection_unselect_all(selection);
-				gtk_tree_selection_select_path(selection, path);
-				gtk_tree_path_free(path);
-			}
-		}
-
-		GtkWidget *context_menu = app.context_menu;
-		if(context_menu && (GPOINTER_TO_INT(context_menu) > 1024)){
-			//open pop-up menu:
-			gtk_menu_popup(GTK_MENU(context_menu),
-                           NULL, NULL,  //parents
-                           NULL, NULL,  //fn and data used to position the menu.
-                           event->button, event->time);
-		}
-		return TRUE;
-	} else return FALSE;
-}
-
 
 gboolean
 treeview_on_motion(GtkWidget *widget, GdkEventMotion *event, gpointer user_data)
@@ -2513,7 +1877,7 @@ treeview_on_motion(GtkWidget *widget, GdkEventMotion *event, gpointer user_data)
 				//if(row_ref != prev_row_ref){
 				//if(prev_path && (path != prev_path)){
 				if(prev_path && (atoi(path_str) != atoi(prev_path_str))){
-					printf("treeview_on_motion() new row! path=%p (%s) prev_path=%p (%s)\n", path, path_str, prev_path, prev_path_str);
+					dbg(0, "new row! path=%p (%s) prev_path=%p (%s)", path, path_str, prev_path, prev_path_str);
 
 					//restore text to previous row:
 					gtk_list_store_set(app.store, &prev_iter, COL_KEYWORDS, prev_text, -1);
@@ -2521,7 +1885,7 @@ treeview_on_motion(GtkWidget *widget, GdkEventMotion *event, gpointer user_data)
 					//store original text:
 					gchar* txt;
 					gtk_tree_model_get(GTK_TREE_MODEL(app.store), &iter, COL_KEYWORDS, &txt, -1);
-					printf("treeview_on_motion(): text=%s\n", prev_text);
+					dbg(0, "text=%s", prev_text);
 					snprintf(prev_text, 256, "%s", txt);
 					g_free(txt);
 
@@ -2588,7 +1952,7 @@ treeview_on_motion(GtkWidget *widget, GdkEventMotion *event, gpointer user_data)
 		gtk_tree_path_free(path);
 	}
 
-	printf("treeview_on_motion(): setting rowref=%p\n", prev_row_ref);
+	dbg(0, "setting rowref=%p", prev_row_ref);
 	app.mouseover_row_ref = prev_row_ref;
 	return FALSE;
 }
@@ -2629,7 +1993,7 @@ treeview_get_cell(GtkTreeView *view, guint x, guint y, GtkCellRenderer **cell)
 		guint            width = 0;
 
 		// Will this work for all packing modes? doesn't that return a random width depending on the last content rendered?
-		gtk_cell_renderer_get_size(checkcell, GTK_WIDGET(view), NULL, NULL, NULL, &width, NULL);
+		gtk_cell_renderer_get_size(checkcell, GTK_WIDGET(view), NULL, NULL, NULL, (int*)&width, NULL);
 
 		if(x >= colm_x && x < (colm_x + width)){
 			*cell = checkcell;
@@ -2678,7 +2042,7 @@ treeview_get_tags_cell(GtkTreeView *view, guint x, guint y, GtkCellRenderer **ce
 		guint            width = 0, height = 0;
 
 		// Will this work for all packing modes? doesn't that return a random width depending on the last content rendered?
-		gtk_cell_renderer_get_size(checkcell, GTK_WIDGET(view), &cell_rect, NULL, NULL, &width, &height);
+		gtk_cell_renderer_get_size(checkcell, GTK_WIDGET(view), &cell_rect, NULL, NULL, (int*)&width, (int*)&height);
 		printf("y=%i height=%i\n", cell_rect.y, cell_rect.height);
 
 		//if(x >= colm_x && x < (colm_x + width)){
@@ -2721,7 +2085,7 @@ keyword_is_dupe(char* new, char* existing)
 	int word_index = 0;
 	while(split[word_index]){
 		if(!strcmp(split[word_index], new)){
-			printf("keyword_is_dupe(): '%s' already in string '%s'\n", new, existing);
+			dbg(0, "'%s' already in string '%s'", new, existing);
 			found = TRUE;
 			break;
 		}
@@ -2742,18 +2106,14 @@ colour_drag_dataget(GtkWidget *widget, GdkDragContext *drag_context,
 {
 	char text[16];
 	gboolean data_sent = FALSE;
-	printf("colour_drag_dataget()!\n");
+	PF;
 
 	int box_num = GPOINTER_TO_UINT(user_data); //box_num corresponds to the colour index.
 
 	//convert to a pseudo uri string:
-	sprintf(text, "colour:%i", box_num + 1);//1 based to avoid atoi problems.
+	sprintf(text, "colour:%i%c%c", box_num + 1, 13, 10); //1 based to avoid atoi problems.
 
-	gtk_selection_data_set(data,
-						GDK_SELECTION_TYPE_STRING,
-						8,  /* 8 bits per character. */
-						text, strlen(text)
-						);
+	gtk_selection_data_set(data, GDK_SELECTION_TYPE_STRING, BITS_PER_CHAR_8, (guchar*)text, strlen(text));
 	data_sent = TRUE;
 
 	return FALSE;
@@ -2773,31 +2133,6 @@ colour_drag_datareceived(GtkWidget *widget, GdkDragContext *drag_context,
 }
 */
 
-gint
-treeview_drag_received(GtkWidget *widget, GdkDragContext *drag_context, gint x, gint y, GtkSelectionData *data, guint info, guint time, gpointer user_data)
-{
-	printf("treeview_drag_datareceived()!\n");
-	return FALSE;
-}
-
-
-int
-path_get_id(GtkTreePath* path)
-{
-	printf("path_get_id()...\n");
-
-	int id;
-	GtkTreeIter iter;
-	gchar *filename;
-	GtkTreeModel* store = GTK_TREE_MODEL(app.store);
-	gtk_tree_model_get_iter(store, &iter, path);
-	gtk_tree_model_get(store, &iter, COL_IDX, &id,  COL_NAME, &filename, -1);
-
-	printf("cell_edited_callback(): filename=%s\n", filename);
-	return id;
-}
-
-
 void
 tag_edit_start(int tnum)
 {
@@ -2813,10 +2148,10 @@ tag_edit_start(int tnum)
   FIXME add ESC key to stop editing.
   */
 
-  printf("tag_edit_start()...\n");
+  PF;
 
   static gulong handler1 =0; // the edit box "focus_out" handler.
-  static gulong handler2 =0; // the edit box RETURN key trap.
+  //static gulong handler2 =0; // the edit box RETURN key trap.
   
   GtkWidget* parent = app.inspector->tags_ev;
   GtkWidget* edit   = app.inspector->edit;
@@ -2904,7 +2239,7 @@ tag_edit_stop(GtkWidget *widget, GdkEventCrossing *event, gpointer user_data)
   gtk_container_add(GTK_CONTAINER(parent), app.inspector->tags);
   gtk_widget_unref(app.inspector->tags); //remove 'artificial' ref added in edit_start.
   
-  printf("tags_edit_stop(): finished.\n");
+  dbg(0, "finished.");
   //busy = FALSE;
 }
 
@@ -2925,12 +2260,32 @@ on_directory_list_changed()
 gboolean
 toggle_recursive_add(GtkWidget *widget, gpointer user_data)
 {
-	printf("toggle_recursive_add()...\n");
+	PF;
 	//if(app.config.add_recursive) app.config.add_recursive = false; else app.config.add_recursive = true;
 	if(app.add_recursive) app.add_recursive = false; else app.add_recursive = true;
 	return FALSE;
 }
 
+
+void
+on_file_moved(GtkTreeIter iter)
+{
+	PF;
+
+	gchar *tags;
+	gchar *fpath;
+	gchar *fname;
+	gchar *length;
+	gchar *samplerate;
+	int channels;
+	gchar *mimetype;
+	gchar *notes;
+	int id;
+	gtk_tree_model_get(GTK_TREE_MODEL(app.store), &iter, COL_NAME, &fname, COL_FNAME, &fpath, COL_KEYWORDS, &tags, COL_LENGTH, &length, COL_SAMPLERATE, &samplerate, COL_CHANNELS, &channels, COL_MIMETYPE, &mimetype, COL_NOTES, &notes, COL_IDX, &id, -1);
+}
+
+
+extern char theme_name[];
 
 gboolean
 config_load()
@@ -2964,10 +2319,10 @@ config_load()
 			gchar** keys = g_key_file_get_keys(app.key_file, "Samplecat", &length, &error);
 			*/
 
-			#define num_keys 7
+			#define num_keys 10
 			//FIXME 64 is not long enough for directories
-			char keys[num_keys][64] = {"database_host",          "database_user",          "database_pass",          "database_name",          "show_dir",          "window_height",          "window_width"};
-			char *loc[num_keys]     = {app.config.database_host, app.config.database_user, app.config.database_pass, app.config.database_name, app.config.show_dir, app.config.window_height, app.config.window_width};
+			char keys[num_keys][64] = {"database_host",          "database_user",          "database_pass",          "database_name",          "show_dir",          "window_height",          "window_width",         "icon_theme", "col1_width",                "filter"};
+			char* loc[num_keys]     = {app.config.database_host, app.config.database_user, app.config.database_pass, app.config.database_name, app.config.show_dir, app.config.window_height, app.config.window_width, theme_name,  app.config.column_widths[0], app.search_phrase};
 
 			int k;
 			gchar* keyval;
@@ -2976,17 +2331,21 @@ config_load()
 					snprintf(loc[k], 64, "%s", keyval);
                     dbg(2, "%s=%s", keys[k], keyval);
 					g_free(keyval);
-				}else strcpy(loc[k], "");
+				}else{
+					GERR_WARN;
+					strcpy(loc[k], "");
+				}
 			}
 			set_search_dir(app.config.show_dir);
 		}
 		else{ warnprintf("config_load(): cannot find Samplecat key group.\n"); return FALSE; }
 		g_free(groupname);
 	}else{
-		printf("unable to load config file: %s\n", error->message);
+		printf("unable to load config file: %s.\n", error->message);
 		g_error_free(error);
 		error = NULL;
 		config_new();
+		config_save();
 		return FALSE;
 	}
 
@@ -2997,23 +2356,33 @@ config_load()
 gboolean
 config_save()
 {
-	//update the search directory:
-	g_key_file_set_value(app.key_file, "Samplecat", "show_dir", app.search_dir);
+	if(app.loaded){
+		//update the search directory:
+		g_key_file_set_value(app.key_file, "Samplecat", "show_dir", app.search_dir);
 
-	//save window dimensions:
-	gint width, height;
-	char value[256];
-	if(app.window && GTK_WIDGET_REALIZED(app.window)){
-		gtk_window_get_size(GTK_WINDOW(app.window), &width, &height);
-	} else {
-		dbg (0, "couldnt get window size...", "");
-		width  = MIN(atoi(app.config.window_width),  2048); //FIXME ?
-		height = MIN(atoi(app.config.window_height), 2048);
+		//save window dimensions:
+		gint width, height;
+		char value[256];
+		if(app.window && GTK_WIDGET_REALIZED(app.window)){
+			gtk_window_get_size(GTK_WINDOW(app.window), &width, &height);
+		} else {
+			dbg (0, "couldnt get window size...", "");
+			width  = MIN(atoi(app.config.window_width),  2048); //FIXME ?
+			height = MIN(atoi(app.config.window_height), 2048);
+		}
+		snprintf(value, 255, "%i", width);
+		g_key_file_set_value(app.key_file, "Samplecat", "window_width", value);
+		snprintf(value, 255, "%i", height);
+		g_key_file_set_value(app.key_file, "Samplecat", "window_height", value);
+		g_key_file_set_value(app.key_file, "Samplecat", "icon_theme", theme_name);
+
+		GtkTreeViewColumn* column = gtk_tree_view_get_column(GTK_TREE_VIEW(app.view), 1);
+		int column_width = gtk_tree_view_column_get_width(column);
+		snprintf(value, 255, "%i", column_width);
+		g_key_file_set_value(app.key_file, "Samplecat", "col1_width", value);
+
+		g_key_file_set_value(app.key_file, "Samplecat", "filter", gtk_entry_get_text(GTK_ENTRY(app.search)));
 	}
-	snprintf(value, 256, "%i", width);
-	g_key_file_set_value(app.key_file, "Samplecat", "window_width", value);
-	snprintf(value, 256, "%i", height);
-	g_key_file_set_value(app.key_file, "Samplecat", "window_height", value);
 
 	GError *error = NULL;
 	gsize length;
@@ -3041,8 +2410,6 @@ config_save()
 void
 config_new()
 {
-	printf("config_new()...\n");
-
 	//g_key_file_has_group(GKeyFile *key_file, const gchar *group_name);
 
 	GError *error = NULL;
@@ -3062,7 +2429,7 @@ config_new()
 		return;
 	}
 
-	printf("a default config file has been created. Please enter your database details.\n");
+	printf("A default config file has been created. Please enter your database details in '%s'.\n", app.config_filename);
 }
 
 
@@ -3071,16 +2438,21 @@ on_quit(GtkMenuItem *menuitem, gpointer user_data)
 {
 	jack_close();
 
-	config_save();
+	if(app.loaded) config_save();
+
+#if 0
+	//disabled due to errors when quitting early.
 
 	clear_store(); //does this make a difference to valgrind? no.
 
-	MYSQL *mysql;
+	gtk_main_quit();
+#endif
+
+	MYSQL* mysql;
 	mysql=&app.mysql;
 	mysql_close(mysql);
 
-	gtk_main_quit();
-	dbg (1, "done.", "");
+	dbg (1, "done.");
 	exit(GPOINTER_TO_INT(user_data));
 }
 

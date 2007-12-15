@@ -39,7 +39,7 @@
 #include <sys/param.h>
 #include <sys/stat.h>
 
-#include "rox_global.h"
+#include "rox/rox_global.h"
 
 #include "diritem.h"
 //#include "support.h"
@@ -60,8 +60,7 @@
 time_t diritem_recent_time;
 
 /* Static prototypes */
-static void examine_dir(const guchar *path, DirItem *item,
-			struct stat *link_target);
+static void examine_dir(const guchar *path, DirItem *item, struct stat *link_target);
 
 /****************************************************************
  *			EXTERNAL INTERFACE			*
@@ -75,7 +74,8 @@ void diritem_init(void)
 /* Bring this item's structure uptodate.
  * 'parent' is optional; it saves one stat() for directories.
  */
-void diritem_restat(const guchar *path, DirItem *item, struct stat *parent)
+void
+diritem_restat(const guchar *path, DirItem *item, struct stat *parent)
 {
 	struct stat	info;
 
@@ -163,8 +163,7 @@ void diritem_restat(const guchar *path, DirItem *item, struct stat *parent)
 	}
 	else if (item->base_type == TYPE_FILE)
 	{
-		if (item->size == 0)
-			item->mime_type = text_plain;
+		if (item->size == 0) item->mime_type = text_plain;
 		/*
 		else if (item->flags & ITEM_FLAG_SYMLINK)
 		{
@@ -177,7 +176,7 @@ void diritem_restat(const guchar *path, DirItem *item, struct stat *parent)
 		}
 		*/
 		else
-			item->mime_type = type_from_path(path);
+			item->mime_type = type_from_path((char*)path);
 
 		/* Note: for symlinks we need the mode of the target */
 		if (info.st_mode & (S_IXUSR | S_IXGRP | S_IXOTH))
@@ -199,11 +198,21 @@ void diritem_restat(const guchar *path, DirItem *item, struct stat *parent)
 				item->mime_type = application_x_shellscript;
 			}
 		}		
+		else if (item->mime_type == application_x_desktop)
+		{
+			item->flags |= ITEM_FLAG_EXEC_FILE;
+		}
 
 		if (!item->mime_type)
 			item->mime_type = text_plain;
 
 		//check_globicon(path, item);
+
+		if (item->mime_type == application_x_desktop && item->_image == NULL)
+		{
+			//item->_image = g_fscache_lookup(desktop_icon_cache, path);
+			item->_image = NULL;
+		}
 	}
 	//else check_globicon(path, item);
 
@@ -212,7 +221,8 @@ void diritem_restat(const guchar *path, DirItem *item, struct stat *parent)
 		item->mime_type = text_plain;
 }
 
-DirItem *diritem_new(const guchar *leafname)
+DirItem*
+diritem_new(const guchar *leafname)
 {
 	DirItem		*item;
 
@@ -223,7 +233,7 @@ DirItem *diritem_new(const guchar *leafname)
 	item->base_type = TYPE_UNKNOWN;
 	item->flags = ITEM_FLAG_NEED_RESCAN_QUEUE;
 	item->mime_type = NULL;
-	//item->leafname_collate = collate_key_new(leafname);
+	item->leafname_collate = collate_key_new(leafname);
 
 	return item;
 }
@@ -235,7 +245,7 @@ void diritem_free(DirItem *item)
 	if (item->_image)
 		g_object_unref(item->_image);
 	item->_image = NULL;
-	//collate_key_free(item->leafname_collate);
+	collate_key_free(item->leafname_collate);
 	g_free(item->leafname);
 	g_free(item);
 }

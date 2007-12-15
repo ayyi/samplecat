@@ -9,20 +9,27 @@
 #include <gtk/gtk.h>
 
 #include <gdk-pixbuf/gdk-pixdata.h>
-#include <libart_lgpl/libart.h>
-#include <libgnomevfs/gnome-vfs.h>
-#include <FLAC/all.h>
+#ifdef OLD
+  #include <libart_lgpl/libart.h>
+#else
+  #include <cairo.h>
+#endif
+//#include <libgnomevfs/gnome-vfs.h>
+#ifdef HAVE_FLAC_1_1_1
+  #include <FLAC/all.h>
+#endif
 #include <jack/ringbuffer.h>
 
 #include "mysql/mysql.h"
 #include "dh-link.h"
-#include "main.h"
 #include "support.h"
+#include "typedefs.h"
+#include "main.h"
 #include "audio.h"
 #include "overview.h"
 #include "cellrenderer_hypertext.h"
 
-#include "rox_global.h"
+#include "rox/rox_global.h"
 #include "type.h"
 #include "pixmaps.h"
 
@@ -104,16 +111,26 @@ make_overview_sndfile(sample* sample)
 
   if(!(sffile = sf_open(filename, SFM_READ, &sfinfo))){
     errprintf("make_overview(): not able to open input file (%p) %s.\n", filename, filename);
-    puts(sf_strerror(NULL));    // print the error message from libsndfile:
+    puts(sf_strerror(NULL));    // print the error message from libsndfile
     return NULL;
   }
 
-  GdkPixbuf* pixbuf = gdk_pixbuf_new(GDK_COLORSPACE_RGB,
-                                        FALSE,  //gboolean has_alpha
+  GdkPixbuf* pixbuf = gdk_pixbuf_new(GDK_COLORSPACE_RGB, 1, //HAS_ALPHA_FALSE,
                                         8,      //int bits_per_sample
-                                        OVERVIEW_WIDTH, OVERVIEW_HEIGHT);  //int width, int height)
+                                        OVERVIEW_WIDTH, OVERVIEW_HEIGHT);
   if(debug) printf("make_overview(): pixbuf=%p\n", pixbuf);
   pixbuf_clear(pixbuf, &app.fg_colour);
+
+  //FIXME cairo doesnt support any 24bpp formats.
+  cairo_format_t format;
+  if (gdk_pixbuf_get_n_channels(pixbuf) == 3) format = CAIRO_FORMAT_RGB24; else format = CAIRO_FORMAT_ARGB32;
+  cairo_surface_t* surface = cairo_image_surface_create_for_data (gdk_pixbuf_get_pixels(pixbuf), format, OVERVIEW_WIDTH, OVERVIEW_HEIGHT, gdk_pixbuf_get_rowstride(pixbuf));
+  cairo_t*         cr      = cairo_create(surface);
+  float r, g, b;
+  colour_get_float(&app.bg_colour, &r, &g, &b, 0xff);
+  cairo_set_source_rgb (cr, r, g, b);
+  cairo_set_line_width (cr, 1.0);
+  
 
   //how many samples should we load at a time? Lets make it a multiple of the image width.
   //-this will use up a lot of ram for a large file, 600M file will use 4MB.
@@ -152,8 +169,14 @@ make_overview_sndfile(sample* sample)
     min = (min * OVERVIEW_HEIGHT) / (256*128*2);
     max = (max * OVERVIEW_HEIGHT) / (256*128*2);
 
+#ifdef OLD
     struct _ArtDRect pts = {x, OVERVIEW_HEIGHT/2 + min, x, OVERVIEW_HEIGHT/2 + max};
     pixbuf_draw_line(pixbuf, &pts, 1.0, &app.bg_colour);
+#else
+	//TODO libart overviews look better - why? antialiasing? colour is same?
+	rect pts = {x, OVERVIEW_HEIGHT/2 + min, x, OVERVIEW_HEIGHT/2 + max};
+    pixbuf_draw_line(cr, &pts, 1.0, &app.bg_colour);
+#endif
 
     //printf(" %i max=%i\n", x,OVERVIEW_HEIGHT/2);
     x++;
@@ -162,6 +185,8 @@ make_overview_sndfile(sample* sample)
   if(sf_close(sffile)) errprintf("make_overview(): bad file close.\n");
   //printf("end of loop...\n");
   free(data);
+  cairo_destroy(cr);
+  cairo_surface_destroy(surface);
   sample->pixbuf = pixbuf;
   if(!GDK_IS_PIXBUF(sample->pixbuf)) errprintf("make_overview(): pixbuf is not a pixbuf.\n");
   return pixbuf;

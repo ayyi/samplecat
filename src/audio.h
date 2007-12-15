@@ -41,7 +41,6 @@ void                           jack_close();
 void                           jack_shutdown(void *arg);
 int                            jack_process_flac(jack_nframes_t nframes, void *arg);
 
-//int                          playback_init(char* filename, int id);
 int                            playback_init(sample* sample);
 void                           playback_stop();
 

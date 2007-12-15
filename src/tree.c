@@ -33,13 +33,17 @@
 //#include "dh-marshal.h"
 #include "tree.h"
 #include "dh-link.h"
-#include "rox_global.h"
-#include "type.h"
-#include "pixmaps.h"
+//#include "rox_global.h"
+//#include "type.h"
+//#include "pixmaps.h"
 
 #define d(x)
 
 #define DATA_DIR "~/"
+
+typedef struct _MIME_type MIME_type;
+GdkPixbuf* mime_type_get_pixbuf(MIME_type*);
+extern MIME_type *inode_directory;
 
 typedef struct {
         GdkPixbuf *pixbuf_opened;
@@ -302,11 +306,14 @@ book_tree_create_pixbufs (DhBookTree *tree)
 	
 	pixbufs = g_new0 (DhBookTreePixbufs, 1);
 
+	/*
     GdkPixbuf* iconbuf = NULL;
     MIME_type* mime_type = mime_type_lookup("inode/directory");
     type_to_icon(mime_type);
     if ( mime_type->image == NULL ) printf("db_get_dirs(): no icon.\n");
     iconbuf = mime_type->image->sm_pixbuf;
+	*/
+	GdkPixbuf* iconbuf = mime_type_get_pixbuf(inode_directory);
 
 	pixbufs->pixbuf_closed = iconbuf;//gdk_pixbuf_new_from_file (DATA_DIR "/devhelp/images/book_closed.png", NULL);
 	pixbufs->pixbuf_opened = gdk_pixbuf_new_from_file (DATA_DIR "/devhelp/images/book_open.png", NULL);

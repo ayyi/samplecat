@@ -1,0 +1,97 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html>
+<head>
+<title>SampleCat</title>
+ <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+ <meta name="description" content="A GPL'd Gtk application for cataloguing audio samples"/>
+ <meta name="keywords" content="linux audio sample gtk catalogue library screenshot mysql"/>
+ <!--<link href='style.php' rel='stylesheet' type='text/css'/>-->
+ <style type="text/css">
+  <!--
+  body      {color:#ccc;background-color:#000;margin-bottom:30px;}
+  /*h1       {color:#42e;}*/
+  h1        {color:#0f0;}
+  h3        {color:#f60;}
+  p         {margin-left:20px;width:924px;}
+  a         {color:#0f0}
+  a:visited {color:#3c3}
+  code      {color:#fff;}
+  .main_img {margin-top:10px;margin-left:20px;}
+  -->
+ </style>
+</head>
+
+<body>
+<h1>SampleCat</h1>
+
+<p>
+SampleCat is a program for cataloguing and auditioning audio samples.
+</p>
+<p>
+SampleCat is available under the GNU General Public License and runs mainly on
+GNU/Linux systems. It is written in C and uses the GTK graphics library. 
+MySql is used for the database.
+</p>
+<p>
+Currently, basic functionality is working, but the bells and whistles are not there.
+</p>
+<p>
+<strong>20070922</strong>: Fixed dnd import bug, and added some more simple file management functionality.
+</p>
+<p>
+<strong>20070907</strong>: Gnome-vfs dependency removed. Initial support for moving and copying samples added.
+</p>
+<p>
+<strong>20070906</strong>: Problems reported linking against libart, so libart has been removed as a dependency. Drawing is now done with Cairo. Tarball updated.
+</p>
+<p>
+<strong>20070905</strong>: Updated the tarball again with some bugfixes. Thanks to Luigi for his help.
+</p>
+<p>
+<strong>20070825</strong>: It appears that Flac have <a href="http://lists.xiph.org/pipermail/flac-dev/2007-June/002218.html">broken their API again</a>, ho ho.
+Recent versions are sensibly marked as unstable on my distro, and anything later than 1.1.2 will apparently cause 
+Samplecat to fail to compile. I've taken this opportunity to convert the project to use Autotools, so you can now do
+<code>./configure --disable-flac</code>. Flac auditioning still works with this option, if you have it built into libsndfile. The latest
+'unstable' version of Samplecat is <a href="http://orford.f2s.com/assets/samplecat-0.0.3.tar.gz">0.0.3</a>
+</p>
+
+<h3>features</h3>
+<ul>
+  <li>catalogues 'offline' (eg cdrom), as well as 'online' sample files.
+  <li>supported filetypes are wav, flac, aiff, sd2, etc, via libsndfile.
+  <li>metadata stored: filename, path, samplerate, channels, mimetype, and a small waveform overview.
+  <li>freeform tagging.
+  <li>browsing is done by directory, and filtering on name, path or tag.
+  <li>auditioning of samples is possible via JACK.
+  <li>samples can be renamed, moved and copied to other directories.
+</ul>
+
+<img src="pics/samplecat3-600.png" class="main_img" alt="samplecat screenshot"/>
+
+<h3>installation</h3>
+<ul>
+  <li><a href="http://orford.f2s.com/assets/samplecat-0.0.3.tar.gz">download source</a> (or use the <a href="http://orford.f2s.com/assets/samplecat-0.0.3.ebuild">gentoo ebuild</a>)
+  <li>untar, configure, make, make install.
+  <li>dependencies: mysqlclient, gtk+2.4, jack, libsndfile, flac (&lt; 1.1.3).
+</ul>
+
+<h3>usage</h3>
+<ul>
+  <li>import files or directories using drag and drop.
+  <li>if a file is currently mounted, an icon will be shown in the main table. Select Update on the context menu to refresh its status.
+  <li>set tags by 1) selecting Edit Tags on the context menu, 2) double clicking the tag area, 3) enter text in the Edit box at the top of the window and hit the "Set Category" button.
+  <li>to move a file in the filesystem, drag it from the main list to a directory in the directory tree on the left.
+  <li>to rename a file in the filesystem, select it, then click on the name.
+</ul>
+
+<h3>limitations</h3>
+<ul>
+  <li>currently, audtioning is stereo only. Files with more than 2 channels cannot be auditioned.
+  <li>Auditioning is done at the system sample rate with no resampling.
+  <li>mySql is currently the only database supported.
+  <li>There is no outgoing dnd support. This is a priority on the TODO list.
+</ul>
+
+</body>
+</html>
+

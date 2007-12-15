@@ -10,13 +10,16 @@ This software is licensed under the GPL. See accompanying file COPYING.
 #include <string.h>
 #include <unistd.h>
 #include <gtk/gtk.h>
-#include <libart_lgpl/libart.h>
-#include <libgnomevfs/gnome-vfs.h>
+#ifdef OLD
+  #include <libart_lgpl/libart.h>
+#endif
+//#include <libgnomevfs/gnome-vfs.h>
 
 #include "mysql/mysql.h"
 #include "dh-link.h"
-#include "main.h"
 #include "support.h"
+#include "typedefs.h"
+#include "main.h"
 #include "dnd.h"
 
 extern struct _app app;
@@ -39,16 +42,16 @@ drag_received(GtkWidget *widget, GdkDragContext *drag_context, gint x, gint y,
 {
   //this receives drops for the whole window.
 
-  if(data == NULL || data->length < 0){ errprintf("drag_received(): no data!\n"); return -1; }
+  if(!data || data->length < 0){ errprintf("drag_received(): no data!\n"); return -1; }
 
-  if(debug) printf("drag_received()! %s\n", data->data);
+  dbg(1, "%s", data->data);
 
   if(g_str_has_prefix(data->data, "colour:")){
     //printf("drag_received(): colour!!\n");
 
 	if(get_mouseover_row() > -1){
 	//if(widget==app.view){
-      printf("drag_received(): treeview!\n");
+      dbg(1, "treeview!");
 	}
 
 	char* colour_string = data->data + 7;
@@ -59,19 +62,28 @@ drag_received(GtkWidget *widget, GdkDragContext *drag_context, gint x, gint y,
 	GtkTreeIter iter;
 	gint x, treeview_top;
 	gdk_window_get_position(app.view->window, &x, &treeview_top);
-	printf("drag_received(): treeview_top=%i\n", y);
+	dbg(2, "treeview_top=%i", y);
 
-	if(gtk_tree_view_get_path_at_pos(GTK_TREE_VIEW(app.view), x, y - treeview_top, &path, NULL, NULL, NULL)){
+#ifdef HAVE_GTK_2_12
+	dbg(0, "warning: untested gtk2.12 fn.");
+	gint bx, by;
+	gtk_tree_view_convert_widget_to_bin_window_coords(GTK_TREE_VIEW(app.view), x, y, &bx, &by);
+#else
+	gint by = y - treeview_top - 20;
+#endif
+
+	if(gtk_tree_view_get_path_at_pos(GTK_TREE_VIEW(app.view), x, by, &path, NULL, NULL, NULL)){
 
 		gtk_tree_model_get_iter(GTK_TREE_MODEL(app.store), &iter, path);
 		gchar* path_str = gtk_tree_model_get_string_from_iter(GTK_TREE_MODEL(app.store), &iter);
-		printf("drag_received() path=%s y=%i final_y=%i\n", path_str, y, y - treeview_top);
+		dbg(2, "path=%s y=%i final_y=%i", path_str, y, y - treeview_top);
 
 		item_set_colour(path, colour_index);
 
 		statusbar_print(1, "colour set");
 		gtk_tree_path_free(path);
     }
+	else dbg(0, "path not found.");
 
     return FALSE;
   }
@@ -79,22 +91,24 @@ drag_received(GtkWidget *widget, GdkDragContext *drag_context, gint x, gint y,
   if(info==GPOINTER_TO_INT(GDK_SELECTION_TYPE_STRING)) printf(" type=string.\n");
 
   if(info==GPOINTER_TO_INT(TARGET_URI_LIST)){
-    printf("drag_received(): type=uri_list. len=%i\n", data->length);
-    GList *list = gnome_vfs_uri_list_parse(data->data);
+    dbg(0, "type=uri_list. len=%i", data->length);
+    GList* list = uri_list_to_glist(data->data);
 	if(g_list_length(list) < 1) warnprintf("drag_received(): drag drop: uri list parsing found no uri's.\n");
-    int i, added_count=0;
-    for(i=0;i<g_list_length(list); i++){
-      GnomeVFSURI* u = g_list_nth_data(list, i);
-      printf("drag_received(): %i: %s\n", i, u->text);
+    int i=0, added_count=0;
+	GList* l = list;
+    for(;l;l=l->next){
+      char* u = l->data;
 
-      printf("drag_received(): method=%s\n", u->method_string);
+      gchar* method_string;
+      vfs_get_method_string(u, &method_string);
+      dbg(2, "%i: %s method=%s", i, u, method_string);
 
-      if(!strcmp(u->method_string, "file")){
+      if(!strcmp(method_string, "file")){
         //we could probably better use g_filename_from_uri() here
         //http://10.0.0.151/man/glib-2.0/glib-Character-Set-Conversion.html#g-filename-from-uri
         //-or perhaps get_local_path() from rox/src/support.c
 
-        char* uri_unescaped = gnome_vfs_unescape_string(u->text, NULL);
+        char* uri_unescaped = vfs_unescape_string(u + strlen(method_string) + 1, NULL);
 
 		if(is_dir(uri_unescaped)) scan_dir(uri_unescaped);
         else if(add_file(uri_unescaped)) added_count++;
@@ -102,13 +116,14 @@ drag_received(GtkWidget *widget, GdkDragContext *drag_context, gint x, gint y,
         g_free(uri_unescaped);
       }
       else warnprintf("drag_received(): drag drop: unknown format: '%s'. Ignoring.\n", u);
+      i++;
     }
 
 	char msg[256];
 	snprintf(msg, 256, "%i files added", added_count);
 	statusbar_print(1, msg);
 
-    gnome_vfs_uri_list_free(list);
+    uri_list_free(list);
   }
 
   return FALSE;
@@ -116,11 +131,8 @@ drag_received(GtkWidget *widget, GdkDragContext *drag_context, gint x, gint y,
 
 
 gint
-drag_motion(GtkWidget *widget, GdkDragContext *drag_context, gint x, gint y,
-                   guint time, gpointer user_data)
+drag_motion(GtkWidget *widget, GdkDragContext *drag_context, gint x, gint y, guint time, gpointer user_data)
 {
-
-  printf("data motion!...\n");
 
   //GdkAtom target;
   //gtk_drag_get_data(widget, drag_context, target, time);

@@ -201,7 +201,6 @@ gint stat_utf8(const gchar *s, struct stat *st)
 	return ret;
 }
 
-#if 0
 gint isname(const gchar *s)
 {
 	struct stat st;
@@ -215,7 +214,6 @@ gint isfile(const gchar *s)
 
 	return (stat_utf8(s, &st) && S_ISREG(st.st_mode));
 }
-#endif
 
 gint isdir(const gchar *s)
 {
@@ -337,6 +335,7 @@ gint rmdir_utf8(const gchar *s)
 
 	return ret;
 }
+#endif
 
 gint copy_file_attributes(const gchar *s, const gchar *t, gint perms, gint mtime)
 {
@@ -382,6 +381,7 @@ static gint hard_linked(const gchar *a, const gchar *b)
 	return (sta.st_dev == stb.st_dev &&
 		sta.st_ino == stb.st_ino);
 }
+
 
 gint copy_file(const gchar *s, const gchar *t)
 {
@@ -467,6 +467,7 @@ gint move_file(const gchar *s, const gchar *t)
 	return ret;
 }
 
+#if 0
 gint rename_file(const gchar *s, const gchar *t)
 {
 	gchar *sl, *tl;
@@ -612,6 +613,7 @@ long checksum_simple(const gchar *path)
 
 	return sum;
 }
+#endif
 
 gchar *unique_filename(const gchar *path, const gchar *ext, const gchar *divider, gint pad)
 {
@@ -673,7 +675,6 @@ gchar *unique_filename_simple(const gchar *path)
 
 	return unique;
 }
-#endif
 
 const gchar *filename_from_path(const gchar *path)
 {
@@ -703,6 +704,7 @@ gchar *remove_level_from_path(const gchar *path)
 	new_path = g_strndup(path, (guint)p);
 	return new_path;
 }
+#endif
 
 gchar *concat_dir_and_file(const gchar *base, const gchar *name)
 {
@@ -719,6 +721,7 @@ const gchar *extension_from_path(const gchar *path)
 	return strrchr(path, '.');
 }
 
+#if 0
 gint file_extension_match(const gchar *path, const gchar *ext)
 {
 	gint p;
@@ -732,6 +735,7 @@ gint file_extension_match(const gchar *path, const gchar *ext)
 
 	return (p > e && strncasecmp(path + p - e, ext, e) == 0);
 }
+#endif
 
 gchar *remove_extension_from_path(const gchar *path)
 {
@@ -749,6 +753,7 @@ gchar *remove_extension_from_path(const gchar *path)
 	return new_path;
 }
 
+#if 0
 void parse_out_relatives(gchar *path)
 {
 	gint s, t;

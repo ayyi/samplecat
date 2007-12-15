@@ -22,14 +22,18 @@
 
 //#include <config.h>
 #include <string.h>
+#include <stdint.h>
 #include "cellrenderer_hypertext.h"
 
 #include <gtk/gtk.h>
-#include <libart_lgpl/libart.h>
+#ifdef OLD
+  #include <libart_lgpl/libart.h>
+#endif
 #include "mysql/mysql.h"
 #include "dh-link.h"
-#include "main.h"
 #include "support.h"
+#include "typedefs.h"
+#include "main.h"
 extern struct _app app;
 
 static void gtk_cell_renderer_hyper_text_get_size (GtkCellRenderer *cell,

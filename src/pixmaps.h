@@ -75,4 +75,6 @@ void pixmap_background_thumb(const gchar *path, GFunc callback, gpointer data);
 MaskedPixmap *masked_pixmap_new(GdkPixbuf *full_size);
 GdkPixbuf *scale_pixbuf(GdkPixbuf *src, int max_w, int max_h);
 
+//GdkPixbuf* create_spotlight_pixbuf(GdkPixbuf *src, guint32 color, guchar alpha);
+
 #endif /* _PIXMAP_H */

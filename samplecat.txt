@@ -1,4 +1,6 @@
 todo:
+	-show warning icon in statusbar - eggtrayicon.c ?
+	-dont show /home/bob/ in the path - show these as relative paths.
 	-freshly imported files dont have the icon set.
 	-check out libsexy SexyUrlLabel (for tags) 
 	-check out chickensys samplemanage.
@@ -10,8 +12,7 @@ todo:
 
 dependencies:
 	-glib/gtk2 - v2.6 is needed for g_key_file
-	-gnome-vfs
-	-mysql
+	-mysql_client
 	-libsndfile
 	-jack
 	-flac
@@ -59,6 +60,14 @@ file system trees:
 	-second implementation used gqview's gtkclist implemtation - aborted due to implementation of gtktreeview theming into gtk2.10.
 	-3rd implementation uses gqviews gtktreeview imlementation - not yet finished.
 
+-commercial competitors:
+	-soundminer: http://www.soundminer.com/SM_Site/Home.html
+	-chickensys samplemanage
+	-AudioFinder
+	-Netmix - http://www.netmixpro.com/
+
+-auditioning
+	-perhaps use the dssi sampleplayer plugin like sonikvisualiser does?
 
 -what does Paul Davis's SFDB do? old url no longer works (see Ardour).
 

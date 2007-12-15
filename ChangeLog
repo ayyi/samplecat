@@ -1,0 +1,16 @@
+070907
+-new feature: files can now be moved in the filesystem by dragging from list view to the dir tree panel.
+-gnomevfs dependency removed
+-libart code removed. Now use cairo instead.
+
+070830
+-upgraded to latest xdgmime.
+-added fscache to cache icons
+-added icon_theme menu list
+
+070825
+-changed to using autotools.
+-direct flac support is broken following api change in 1.1.3. Added configure option to remove direct flac support - it seems to work fine with libsndfile anyway.
+
+060102
+-added gnome-vfs dependency for parsing of drag n drop uri's.

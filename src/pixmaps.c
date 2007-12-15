@@ -34,6 +34,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/types.h>
@@ -42,9 +43,10 @@
 
 #include <gtk/gtk.h>
 
-#include "rox_global.h"
-//#include "fscache.h"
+#include "rox/rox_global.h"
+#include "fscache.h"
 //#include "gui_support.h"
+#include "rox/rox_support.h"
 #include "pixmaps.h"
 //#include "main.h"
 //#include "filer.h"
@@ -55,7 +57,9 @@
 //#include "action.h"
 #include "type.h"
 
-#include <libart_lgpl/libart.h>
+#ifdef OLD
+  #include <libart_lgpl/libart.h>
+#endif
 #include "support.h"
 
 GFSCache *pixmap_cache = NULL;
@@ -114,13 +118,13 @@ static GtkIconSize mount_icon_size = -1;
 
 static void load_default_pixmaps(void);
 static gint purge(gpointer data);
-//static MaskedPixmap *image_from_file(const char *path);
+static MaskedPixmap *image_from_file(const char *path);
 static MaskedPixmap *get_bad_image(void);
 //static GdkPixbuf *scale_pixbuf_up(GdkPixbuf *src, int max_w, int max_h);
-//static GdkPixbuf *get_thumbnail_for(const char *path);
+static GdkPixbuf *get_thumbnail_for(const char *path);
 //static void thumbnail_child_done(ChildThumbnail *info);
 //static void child_create_thumbnail(const gchar *path);
-static GdkPixbuf *create_spotlight_pixbuf(GdkPixbuf *src, guint32 color, guchar alpha);
+//static GdkPixbuf *create_spotlight_pixbuf(GdkPixbuf *src, guint32 color, guchar alpha);
 //static GList *thumbs_purge_cache(Option *option, xmlNode *node, guchar *label);
 //static gchar *thumbnail_path(const gchar *path);
 //static gchar *thumbnail_program(MIME_type *type);
@@ -133,7 +137,7 @@ void pixmaps_init(void)
 {
 	gtk_widget_push_colormap(gdk_rgb_get_colormap());
 
-	//pixmap_cache = g_fscache_new((GFSLoadFunc) image_from_file, NULL, NULL);
+	pixmap_cache = g_fscache_new((GFSLoadFunc) image_from_file, NULL, NULL);
 
 	g_timeout_add(10000, purge, NULL);
 
@@ -220,7 +224,8 @@ static MaskedPixmap *mp_from_stock(const char *stock_id, int size)
 	return retval;
 }
 
-void pixmap_make_huge(MaskedPixmap *mp)
+void
+pixmap_make_huge(MaskedPixmap *mp)
 {
 	if (mp->huge_pixbuf)
 		return;
@@ -230,8 +235,7 @@ void pixmap_make_huge(MaskedPixmap *mp)
 	/* Limit to small size now, otherwise they get scaled up in mixed mode.
 	 * Also looked ugly.
 	 */
-	mp->huge_pixbuf = scale_pixbuf_up(mp->src_pixbuf,
-					  SMALL_WIDTH, SMALL_HEIGHT);
+	mp->huge_pixbuf = scale_pixbuf_up(mp->src_pixbuf, SMALL_WIDTH, SMALL_HEIGHT);
 
 	if (!mp->huge_pixbuf)
 	{
@@ -239,16 +243,16 @@ void pixmap_make_huge(MaskedPixmap *mp)
 		g_object_ref(mp->huge_pixbuf);
 	}
 
-	mp->huge_pixbuf_lit = create_spotlight_pixbuf(mp->huge_pixbuf,
-						      0x000099, 128);
+	//mp->huge_pixbuf_lit = create_spotlight_pixbuf(mp->huge_pixbuf, 0x000099, 128);
 	mp->huge_width = gdk_pixbuf_get_width(mp->huge_pixbuf);
 	mp->huge_height = gdk_pixbuf_get_height(mp->huge_pixbuf);
 }
 
-void pixmap_make_small(MaskedPixmap *mp)
+void
+pixmap_make_small(MaskedPixmap *mp)
 {
-	if (mp->sm_pixbuf)
-		return;
+	dbg(0, "************************* never get here");
+	if (mp->sm_pixbuf) return;
 
 	g_return_if_fail(mp->src_pixbuf != NULL);
 
@@ -260,8 +264,7 @@ void pixmap_make_small(MaskedPixmap *mp)
 		g_object_ref(mp->sm_pixbuf);
 	}
 
-	mp->sm_pixbuf_lit = create_spotlight_pixbuf(mp->sm_pixbuf,
-						      0x000099, 128);
+	//mp->sm_pixbuf_lit = create_spotlight_pixbuf(mp->sm_pixbuf, 0x000099, 128);
 
 	mp->sm_width = gdk_pixbuf_get_width(mp->sm_pixbuf);
 	mp->sm_height = gdk_pixbuf_get_height(mp->sm_pixbuf);
@@ -272,31 +275,29 @@ void pixmap_make_small(MaskedPixmap *mp)
  * If the image is already uptodate, or being created already, calls the
  * callback right away.
  */
-/*
-void pixmap_background_thumb(const gchar *path, GFunc callback, gpointer data)
+void
+pixmap_background_thumb(const gchar *path, GFunc callback, gpointer data)
 {
 	gboolean	found = FALSE;
-	MaskedPixmap	*image;
-	GdkPixbuf	*pixbuf;
-	pid_t		child;
-	ChildThumbnail	*info;
-	MIME_type       *type;
-	gchar		*thumb_prog;
 
-
-	//image = g_fscache_lookup_full(pixmap_cache, path, FSCACHE_LOOKUP_ONLY_NEW, &found);
+	MaskedPixmap* image = g_fscache_lookup_full(pixmap_cache, path, FSCACHE_LOOKUP_ONLY_NEW, &found);
 
 	if (found)
 	{
+		dbg(0, "found");
 		// Thumbnail is known, or being created
 		if (image) g_object_unref(image);
 		callback(data, NULL);
 		return;
 	}
 
+	dbg(0, "FIXME not found");
+#if 0
+	pid_t		child;
+	ChildThumbnail	*info;
 	g_return_if_fail(image == NULL);
 
-	pixbuf = get_thumbnail_for(path);
+	GdkPixbuf* pixbuf = get_thumbnail_for(path);
 	
 	if (!pixbuf)
 	{
@@ -306,7 +307,7 @@ void pixmap_background_thumb(const gchar *path, GFunc callback, gpointer data)
 		dir = g_path_get_dirname(path);
 
 		// If the image itself is in ~/.thumbnails, load it now (ie, don't create thumbnails for thumbnails!).
-		if (mc_stat(dir, &info1) != 0)
+		if (stat(dir, &info1) != 0)
 		{
 			callback(data, NULL);
 			g_free(dir);
@@ -314,17 +315,15 @@ void pixmap_background_thumb(const gchar *path, GFunc callback, gpointer data)
 		}
 		g_free(dir);
 
-		if (mc_stat(make_path(home_dir, ".thumbnails/normal"),
+		if (stat(make_path(home_dir, ".thumbnails/normal"),
 			    &info2) == 0 &&
 			    info1.st_dev == info2.st_dev &&
 			    info1.st_ino == info2.st_ino)
 		{
-			pixbuf = rox_pixbuf_new_from_file_at_scale(path,
-					PIXMAP_THUMB_SIZE, PIXMAP_THUMB_SIZE, TRUE, NULL);
+			pixbuf = rox_pixbuf_new_from_file_at_scale(path, PIXMAP_THUMB_SIZE, PIXMAP_THUMB_SIZE, TRUE, NULL);
 			if (!pixbuf)
 			{
-				g_fscache_insert(pixmap_cache,
-						 path, NULL, TRUE);
+				g_fscache_insert(pixmap_cache, path, NULL, TRUE);
 				callback(data, NULL);
 				return;
 			}
@@ -343,14 +342,13 @@ void pixmap_background_thumb(const gchar *path, GFunc callback, gpointer data)
 		return;
 	}
 
-	type = type_from_path(path);
-	if (!type)
-		type = text_plain;
+	MIME_type* type = type_from_path(path);
+	if (!type) type = text_plain;
 
 	// Add an entry, set to NULL, so no-one else tries to load this image.
 	g_fscache_insert(pixmap_cache, path, NULL, TRUE);
 
-	thumb_prog = thumbnail_program(type);
+	gchar* thumb_prog = thumbnail_program(type);
 
 	// Only attempt to load 'images' types ourselves
 	if (thumb_prog == NULL && strcmp(type->media_type, "image") != 0)
@@ -401,8 +399,8 @@ void pixmap_background_thumb(const gchar *path, GFunc callback, gpointer data)
 	info->callback = callback;
 	info->data = data;
 	on_child_death(child, (CallbackFn) thumbnail_child_done, info);
+#endif
 }
-*/
 
 /****************************************************************
  *			INTERNAL FUNCTIONS			*
@@ -410,7 +408,8 @@ void pixmap_background_thumb(const gchar *path, GFunc callback, gpointer data)
 
 /* Create a thumbnail file for this image */
 /*
-static void save_thumbnail(const char *pathname, GdkPixbuf *full)
+static void
+save_thumbnail(const char *pathname, GdkPixbuf *full)
 {
 	struct stat info;
 	gchar *path;
@@ -590,74 +589,63 @@ static void thumbnail_child_done(ChildThumbnail *info)
 /* Check if we have an up-to-date thumbnail for this image.
  * If so, return it. Otherwise, returns NULL.
  */
-/*
-static GdkPixbuf *get_thumbnail_for(const char *pathname)
+static GdkPixbuf*
+get_thumbnail_for(const char *pathname)
 {
 	GdkPixbuf *thumb = NULL;
-	char *thumb_path, *md5, *uri, *path;
+	char *thumb_path, *uri;
 	const char *ssize, *smtime;
 	struct stat info;
 	time_t ttime, now;
 
-	path = pathdup(pathname);
+	char* path = pathdup(pathname);
 	uri = g_filename_to_uri(path, NULL, NULL);
-	if(!uri)
-	        uri = g_strconcat("file://", path, NULL);
-	md5 = md5_hash(uri);
+	if(!uri) uri = g_strconcat("file://", path, NULL);
+	char* md5 = md5_hash(uri);
 	g_free(uri);
 	
-	thumb_path = g_strdup_printf("%s/.thumbnails/normal/%s.png",
-					home_dir, md5);
+	thumb_path = g_strdup_printf("%s/.thumbnails/normal/%s.png", g_get_home_dir(), md5);
 	g_free(md5);
 
 	thumb = gdk_pixbuf_new_from_file(thumb_path, NULL);
-	if (!thumb)
-		goto err;
+	if (!thumb) goto err;
 
 	// Note that these don't need freeing... 
 	ssize = gdk_pixbuf_get_option(thumb, "tEXt::Thumb::Size");
-	if (!ssize)
-		goto err;
+	if (!ssize) goto err;
 
 	smtime = gdk_pixbuf_get_option(thumb, "tEXt::Thumb::MTime");
-	if (!smtime)
-		goto err;
+	if (!smtime) goto err;
 	
-	if (mc_stat(path, &info) != 0)
-		goto err;
+	if (stat(path, &info) != 0) goto err;
 
 	ttime=(time_t) atol(smtime);
 	time(&now);
 	if (info.st_mtime != ttime && now>ttime+PIXMAP_THUMB_TOO_OLD_TIME)
 		goto err;
 
-	if (info.st_size < atol(ssize))
-		goto err;
+	if (info.st_size < atol(ssize)) goto err;
 
 	goto out;
 err:
-	if (thumb)
-		gdk_pixbuf_unref(thumb);
+	if (thumb) gdk_pixbuf_unref(thumb);
 	thumb = NULL;
 out:
 	g_free(path);
 	g_free(thumb_path);
 	return thumb;
 }
-*/
 
-#ifdef NEVER
 /* Load the image 'path' and return a pointer to the resulting
  * MaskedPixmap. NULL on failure.
  * Doesn't check for thumbnails (this is for small icons).
  */
-static MaskedPixmap *image_from_file(const char *path)
+static MaskedPixmap*
+image_from_file(const char *path)
 {
-	GdkPixbuf	*pixbuf;
-	MaskedPixmap	*image;
-	GError		*error = NULL;
+	GError* error = NULL;
 	
-	pixbuf = gdk_pixbuf_new_from_file(path, &error);
+	GdkPixbuf* pixbuf = gdk_pixbuf_new_from_file(path, &error);
 	if (!pixbuf)
 	{
 		g_warning("%s\n", error->message);
@@ -665,13 +653,12 @@ static MaskedPixmap *image_from_file(const char *path)
 		return NULL;
 	}
 
-	image = masked_pixmap_new(pixbuf);
+	MaskedPixmap* image = masked_pixmap_new(pixbuf);
 
 	gdk_pixbuf_unref(pixbuf);
 
 	return image;
 }
-#endif
 
 /* Scale src down to fit in max_w, max_h and return the new pixbuf.
  * If src is small enough, then ref it and return that.
@@ -738,14 +725,14 @@ static GdkPixbuf *scale_pixbuf_up(GdkPixbuf *src, int max_w, int max_h)
 /* Return a pointer to the (static) bad image. The ref counter will ensure
  * that the image is never freed.
  */
-static MaskedPixmap *get_bad_image(void)
+static MaskedPixmap*
+get_bad_image(void)
 {
 	printf("get_bad_image()...\n");
 	GdkPixbuf *bad;
-	MaskedPixmap *mp;
 	
 	bad = gdk_pixbuf_new_from_xpm_data(bad_xpm);
-	mp = masked_pixmap_new(bad);
+	MaskedPixmap *mp = masked_pixmap_new(bad);
 	gdk_pixbuf_unref(bad);
 
 	return mp;
@@ -761,8 +748,10 @@ static gint purge(gpointer data)
 
 static gpointer parent_class;
 
-static void masked_pixmap_finialize(GObject *object)
+static void
+masked_pixmap_finialize(GObject *object)
 {
+	PF;
 	MaskedPixmap *mp = (MaskedPixmap *) object;
 
 	if (mp->src_pixbuf)
@@ -869,40 +858,41 @@ masked_pixmap_new(GdkPixbuf *full_size)
 {
 	//printf("masked_pixmap_new()...\n");
 
-	GdkPixbuf	*src_pixbuf, *normal_pixbuf;
-
 	g_return_val_if_fail(full_size != NULL, NULL);
 
-	src_pixbuf = scale_pixbuf(full_size, HUGE_WIDTH, HUGE_HEIGHT);
+	GdkPixbuf* src_pixbuf = scale_pixbuf(full_size, HUGE_WIDTH, HUGE_HEIGHT);
 	g_return_val_if_fail(src_pixbuf != NULL, NULL);
 
-	normal_pixbuf = scale_pixbuf(src_pixbuf, ICON_WIDTH, ICON_HEIGHT);
+	GdkPixbuf* normal_pixbuf = scale_pixbuf(src_pixbuf, ICON_WIDTH, ICON_HEIGHT);
 	g_return_val_if_fail(normal_pixbuf != NULL, NULL);
 
 	//small pixbuf added by Tim - where does rox do this?
-	GdkPixbuf *small_pixbuf = scale_pixbuf(src_pixbuf, SMALL_WIDTH, SMALL_HEIGHT);
-	g_return_val_if_fail(small_pixbuf != NULL, NULL);
+	GdkPixbuf* small_pixbuf = scale_pixbuf(src_pixbuf, SMALL_WIDTH, SMALL_HEIGHT);
+	g_return_val_if_fail(small_pixbuf, NULL);
 
-	MaskedPixmap *mp = g_object_new(masked_pixmap_get_type(), NULL);
+	MaskedPixmap* mp = g_object_new(masked_pixmap_get_type(), NULL);
 
 	mp->src_pixbuf = src_pixbuf;
+	mp->pixbuf     = normal_pixbuf;
+	//mp->pixbuf_lit = create_spotlight_pixbuf(normal_pixbuf, 0x000099, 128);
+	mp->sm_pixbuf  = small_pixbuf;
+	mp->width      = gdk_pixbuf_get_width (normal_pixbuf);
+	mp->height     = gdk_pixbuf_get_height(normal_pixbuf);
 
-	mp->pixbuf = normal_pixbuf;
-	mp->pixbuf_lit = create_spotlight_pixbuf(normal_pixbuf, 0x000099, 128);
-	mp->sm_pixbuf = small_pixbuf;
-	mp->width = gdk_pixbuf_get_width(normal_pixbuf);
-	mp->height = gdk_pixbuf_get_height(normal_pixbuf);
+	mp->sm_width   = gdk_pixbuf_get_width (small_pixbuf);
+	mp->sm_height  = gdk_pixbuf_get_height(small_pixbuf);
 
 	return mp;
 }
 
+#if 0
 /* Stolen from eel...and modified to colourize the pixbuf.
  * 'alpha' is the transparency of 'color' (0xRRGGBB):
  * 0 = fully opaque, 255 = fully transparent.
  */
-static GdkPixbuf *create_spotlight_pixbuf(GdkPixbuf *src,
-					  guint32 color,
-					  guchar alpha)
+
+static GdkPixbuf*
+create_spotlight_pixbuf(GdkPixbuf *src, guint32 color, guchar alpha)
 {
 	GdkPixbuf *dest;
 	int i, j;
@@ -957,9 +947,11 @@ static GdkPixbuf *create_spotlight_pixbuf(GdkPixbuf *src,
 
 	return dest;
 }
+#endif
 
 /* Load all the standard pixmaps. Also sets the default window icon. */
-static void load_default_pixmaps(void)
+static void
+load_default_pixmaps(void)
 {
 	im_error = mp_from_stock(GTK_STOCK_DIALOG_WARNING, GTK_ICON_SIZE_DIALOG);
 	im_unknown = mp_from_stock(GTK_STOCK_DIALOG_QUESTION, GTK_ICON_SIZE_DIALOG);
