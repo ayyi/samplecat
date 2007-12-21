@@ -17,6 +17,9 @@ extern struct _app app;
 extern char err [32];
 extern char warn[32];
 extern unsigned debug;
+
+static gboolean is_connected = FALSE;
+
 /*
 	CREATE DATABASE samplelib;
 
@@ -55,20 +58,18 @@ extern unsigned debug;
 gboolean
 db_connect()
 {
-	MYSQL *mysql;
+	MYSQL *mysql = &app.mysql;
 
-	if(mysql_init(&(app.mysql))==NULL){
+	if(!mysql_init(&(app.mysql))){
 		printf("Failed to initiate MySQL connection.\n");
 		exit(1);
 	}
 	dbg (1, "MySQL Client Version is %s\n", mysql_get_client_info());
 
-	mysql = &app.mysql;
-
 	if(!mysql_real_connect(mysql, app.config.database_host, app.config.database_user, app.config.database_pass, app.config.database_name, 0, NULL, 0)){
 		errprintf("cannot connect to database: %s\n", mysql_error(mysql));
 		return FALSE;
-		exit(1);
+		//exit(1);
 	}
 	if(debug) printf("MySQL Server Version is %s\n", mysql_get_server_info(mysql));
 
@@ -77,9 +78,17 @@ db_connect()
 		return FALSE;
 	}
 
+	is_connected = TRUE;
 	return TRUE;
 }
  
+
+gboolean
+db_is_connected()
+{
+  return is_connected;
+}
+
 
 int
 db_insert(char *qry)

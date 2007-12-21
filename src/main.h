@@ -143,9 +143,6 @@ enum {
 	TYPE_FLAC,
 };
 
-GtkWidget*  inspector_pane();
-void        inspector_update(GtkTreePath*);
-gboolean    inspector_on_tags_clicked(GtkWidget*, GdkEventButton*, gpointer user_data);
 gboolean    tag_selector_new();
 gboolean    tagshow_selector_new();
 void        on_view_category_changed(GtkComboBox *widget, gpointer user_data);
@@ -193,7 +190,6 @@ void        path_cell_data_func(GtkTreeViewColumn *tree_column, GtkCellRenderer 
 void        path_cell_bg_lighter(GtkTreeViewColumn *tree_column, GtkCellRenderer *cell, GtkTreeModel *tree_model, GtkTreeIter *iter);
 void        tag_cell_data(GtkTreeViewColumn *tree_column, GtkCellRenderer *cell, GtkTreeModel *tree_model, GtkTreeIter *iter, gpointer data);
 
-GtkWidget*  dir_tree_new();
 gboolean    dir_tree_on_link_selected(GObject *ignored, DhLink *link, gpointer data);
 gboolean    dir_tree_update(gpointer data);
 void        set_search_dir(char* dir);
@@ -204,7 +200,6 @@ gboolean    keyword_is_dupe(char* new, char* existing);
 
 int         colour_drag_dataget(GtkWidget *widget, GdkDragContext *drag_context, GtkSelectionData *data, guint info, guint time, gpointer user_data);
 //int         colour_drag_datareceived(GtkWidget *widget, GdkDragContext *drag_context, gint x, gint y, GtkSelectionData *data, guint info, guint time, gpointer user_data);
-gboolean    item_set_colour(GtkTreePath* path, unsigned colour);
 
 gboolean	on_directory_list_changed();
 gboolean    toggle_recursive_add(GtkWidget*, gpointer user_data);

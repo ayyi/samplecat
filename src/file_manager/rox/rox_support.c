@@ -151,8 +151,8 @@ make_path(const char *dir, const char *leaf)
 	if (!buffer)
 		buffer = g_string_new(NULL);
 
-	g_return_val_if_fail(dir != NULL, buffer->str);
-	g_return_val_if_fail(leaf != NULL, buffer->str);
+	g_return_val_if_fail(dir != NULL, (guchar*)buffer->str);
+	g_return_val_if_fail(leaf != NULL, (guchar*)buffer->str);
 
 	if (buffer->str != dir)
 		g_string_assign(buffer, dir);
@@ -162,7 +162,7 @@ make_path(const char *dir, const char *leaf)
 
 	g_string_append(buffer, leaf);
 
-	return buffer->str;
+	return (guchar*)buffer->str;
 }
 
 #if 0
@@ -1286,8 +1286,8 @@ collate_key_free(CollateKey *key)
 int
 collate_key_cmp(const CollateKey *key1, const CollateKey *key2, gboolean caps_first)
 {
-	ASSERT_POINTER(key1, "key1");
-	ASSERT_POINTER(key2, "key2");
+	ASSERT_POINTER_FALSE(key1, "key1");
+	ASSERT_POINTER_FALSE(key2, "key2");
 
 	CollatePart *n1 = key1->parts;
 	CollatePart *n2 = key2->parts;
@@ -1396,6 +1396,7 @@ gchar *unescape_uri(const EscapedPath *uri)
 
 	return tmp;
 }
+#endif //0
 
 /* Used as the sort function for sorting GPtrArrays */
 gint strcmp2(gconstpointer a, gconstpointer b)
@@ -1440,6 +1441,7 @@ GPtrArray *list_dir(const guchar *path)
 	return names;
 }
 
+#if 0
 int stat_with_timeout(const char *path, struct stat *info)
 {
 	int status;

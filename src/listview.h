@@ -20,3 +20,5 @@ enum
 void        listview__new();
 void        list__update();
 int         listview__path_get_id(GtkTreePath* path);
+void        listview__show_db_missing();
+gboolean    listview__item_set_colour(GtkTreePath* path, unsigned colour);

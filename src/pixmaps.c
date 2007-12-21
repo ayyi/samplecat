@@ -55,7 +55,7 @@
 //#include "choices.h"
 //#include "options.h"
 //#include "action.h"
-#include "type.h"
+#include "mimetype.h"
 
 #ifdef OLD
   #include <libart_lgpl/libart.h>
@@ -120,7 +120,7 @@ static void load_default_pixmaps(void);
 static gint purge(gpointer data);
 static MaskedPixmap *image_from_file(const char *path);
 static MaskedPixmap *get_bad_image(void);
-//static GdkPixbuf *scale_pixbuf_up(GdkPixbuf *src, int max_w, int max_h);
+static GdkPixbuf *scale_pixbuf_up(GdkPixbuf *src, int max_w, int max_h);
 static GdkPixbuf *get_thumbnail_for(const char *path);
 //static void thumbnail_child_done(ChildThumbnail *info);
 //static void child_create_thumbnail(const gchar *path);
@@ -663,7 +663,6 @@ image_from_file(const char *path)
 /* Scale src down to fit in max_w, max_h and return the new pixbuf.
  * If src is small enough, then ref it and return that.
  */
-/*
 GdkPixbuf *scale_pixbuf(GdkPixbuf *src, int max_w, int max_h)
 {
 	int	w, h;
@@ -690,12 +689,10 @@ GdkPixbuf *scale_pixbuf(GdkPixbuf *src, int max_w, int max_h)
 						GDK_INTERP_BILINEAR);
 	}
 }
-*/
 
 /* Scale src up to fit in max_w, max_h and return the new pixbuf.
  * If src is that size or bigger, then ref it and return that.
  */
-/*
 static GdkPixbuf *scale_pixbuf_up(GdkPixbuf *src, int max_w, int max_h)
 {
 	int	w, h;
@@ -720,7 +717,6 @@ static GdkPixbuf *scale_pixbuf_up(GdkPixbuf *src, int max_w, int max_h)
 						GDK_INTERP_BILINEAR);
 	}
 }
-*/
 
 /* Return a pointer to the (static) bad image. The ref counter will ensure
  * that the image is never freed.

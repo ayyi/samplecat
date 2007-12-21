@@ -36,9 +36,9 @@
 #include "rox/dir.h"
 #include "diritem.h"
 #include "rox/rox_support.h"
-#include "type.h"
+#include "mimetype.h"
 #include "rox/display.h"
-#include "rox/filer.h"
+#include "file_manager.h"
 #include "pixmaps.h"
 #include "dnd.h"
 //#include "bind.h"
@@ -61,7 +61,7 @@
 #define COL_VIEW_ITEM 10
 #define N_COLUMNS 11
 
-Filer filer;
+extern Filer filer;
 
 static gpointer parent_class = NULL;
 

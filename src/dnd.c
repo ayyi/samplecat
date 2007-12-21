@@ -20,6 +20,7 @@ This software is licensed under the GPL. See accompanying file COPYING.
 #include "support.h"
 #include "typedefs.h"
 #include "main.h"
+#include "listview.h"
 #include "dnd.h"
 
 extern struct _app app;
@@ -78,7 +79,7 @@ drag_received(GtkWidget *widget, GdkDragContext *drag_context, gint x, gint y,
 		gchar* path_str = gtk_tree_model_get_string_from_iter(GTK_TREE_MODEL(app.store), &iter);
 		dbg(2, "path=%s y=%i final_y=%i", path_str, y, y - treeview_top);
 
-		item_set_colour(path, colour_index);
+		listview__item_set_colour(path, colour_index);
 
 		statusbar_print(1, "colour set");
 		gtk_tree_path_free(path);

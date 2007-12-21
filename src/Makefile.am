@@ -1,6 +1,6 @@
 ## Process this file with automake to produce Makefile.in
 
-#SUBDIRS = ayyi
+SUBDIRS = file_manager
 
 #EXTRA_DIST = msg
 
@@ -15,6 +15,7 @@ AM_CFLAGS = \
 	-DPACKAGE_LOCALE_DIR=\""$(prefix)/$(DATADIRNAME)/locale"\" \
 	-DIMAGES_DIR=\"$(imagesdir)\" \
 	-I./gqview2 \
+	-I./file_manager \
 	-DHAVE_GTK_2_10 \
 	$(GTK_CFLAGS) $(DB_CFLAGS) $(FLAC_CFLAGS) $(XML_CFLAGS)
 
@@ -32,16 +33,15 @@ samplecat_SOURCES = \
 	main.c main.h rox/rox_global.h \
 	window.c window.h \
 	listview.c listview.h \
+	inspector.c inspector.h \
 	audio.c audio.h \
 	overview.c overview.h \
 	pixmaps.c pixmaps.h \
-	type.c type.h \
+	mimetype.c mimetype.h \
 	diritem.c diritem.h \
 	dh-link.c dh-link.h \
 	tree.c tree.h \
 	cellrenderer_hypertext.c cellrenderer_hypertext.h \
-	file_view.c file_view.h rox/display.c rox/display.h rox/view_iface.c rox/view_iface.h rox/rox_support.c rox/rox_support.h rox/filer.c rox/filer.h rox/cell_icon.c rox/cell_icon.h \
-	rox/dir.c rox/dir.h \
 	dnd.c dnd.h \
 	db.c db.h \
 	menu.c menu.h \
@@ -52,6 +52,7 @@ samplecat_SOURCES = \
 	$(GQVIEW1_SRC)
 
 samplecat_LDADD = \
+	file_manager/libfilemanager.a \
 	$(GTK_LIBS) $(DB_LIBS) $(JACK_LIBS) $(SNDFILE_LIBS) $(FLAC_LIBS) $(GTHREAD_LIBS)
 
 ##	$(INTLLIBS) $(LIBART_LIBS) $(VFS_LIBS)

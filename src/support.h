@@ -5,7 +5,8 @@
 #define PF_DONE printf("%s(): done.\n", __func__);
 //#define ASSERT_POINTER(A, B, C) if((unsigned)A < 1024){ errprintf("%s(): bad %s pointer (%p).\n", B, C, A); return; }
 #define ASSERT_POINTER(A, B) if((unsigned)A < 1024){ errprintf2(__func__, "bad %s pointer (%p).\n", B, A); return; }
-#define ASSERT_POINTER_FALSE(A, B, C) if(GPOINTER_TO_UINT(B) < 1024){ errprintf("%s(): bad %s pointer (%p).\n", A, C, B); return FALSE; }
+//#define ASSERT_POINTER_FALSE(A, B, C) if(GPOINTER_TO_UINT(B) < 1024){ errprintf("%s(): bad %s pointer (%p).\n", A, C, B); return FALSE; }
+#define ASSERT_POINTER_FALSE(A, B) if(GPOINTER_TO_UINT(A) < 1024){ errprintf2(__func__, "bad %s pointer (%p).\n", B, A); return FALSE; } 
 #define GERR_WARN if(error){ warnprintf("%s\n", error->message); g_error_free(error); error = NULL; }
 
 #define HAS_ALPHA_FALSE 0
@@ -36,8 +37,8 @@ void         warnprintf(char* format, ...);
 void         debug_printf(const char* func, int level, const char* format, ...);
 
 void         samplerate_format(char* str, int samplerate);
-gint         strcmp2(gconstpointer a, gconstpointer b);
-GPtrArray*   list_dir(const guchar *path);
+//gint         strcmp2(gconstpointer a, gconstpointer b);
+//GPtrArray*   list_dir(const guchar *path);
 gboolean     file_exists(const char *path);
 gboolean     is_dir(const char *path);
 gboolean     dir_is_empty(const char *path);
@@ -59,8 +60,8 @@ void         pixbuf_draw_line(GdkPixbuf *pixbuf, struct _ArtDRect *pts, double l
 #else
 void         pixbuf_draw_line(cairo_t*, rect *pts, double line_width, GdkColor *colour);
 #endif
-GdkPixbuf*   scale_pixbuf(GdkPixbuf *src, int max_w, int max_h);
-GdkPixbuf*   scale_pixbuf_up(GdkPixbuf *src, int max_w, int max_h);
+//GdkPixbuf*   scale_pixbuf(GdkPixbuf *src, int max_w, int max_h);
+//GdkPixbuf*   scale_pixbuf_up(GdkPixbuf *src, int max_w, int max_h);
 GdkPixbuf*   create_spotlight_pixbuf(GdkPixbuf *src, GdkColor*);
 
 void         colour_get_style_fg(GdkColor *color, int state);

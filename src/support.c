@@ -20,13 +20,11 @@
 #ifdef OLD
   #include <libart_lgpl/libart.h>
 #endif
-//#include <libgnomevfs/gnome-vfs.h>
 
 #include "dh-link.h"
 #include "support.h"
 #include "typedefs.h"
 #include "main.h"
-//#include "gnome-vfs-uri.h"
 #include "gqview2/ui_fileops.h"
 #include "rox/rox_global.h"
 #include "rox/rox_support.h"
@@ -117,6 +115,7 @@ samplerate_format(char* str, int samplerate)
 }
 
 
+#if 0
 /* Used as the sort function for sorting GPtrArrays */
 gint 
 strcmp2(gconstpointer a, gconstpointer b)
@@ -161,6 +160,7 @@ list_dir(const guchar *path)
 
 	return names;
 }
+#endif //0
 
 /* Returns TRUE if the object exists, FALSE if it doesn't.
  * For symlinks, the file pointed to must exist.
@@ -360,6 +360,7 @@ do_move(const char *path, const char *dest)
 	{
 		//printf_send("!%s\nFailed to move %s as %s\n", err, path, dest_path);
 		dbg(0, "!%s\nFailed to move %s as %s\n", err, path, dest);
+		dbg(0, "FIXME change to using print callback to application");
 		statusbar_printf(1, "!%s: Failed to move %s as %s", err, path, dest);
 		g_free(err);
 	}
@@ -1048,6 +1049,7 @@ pixbuf_draw_line(cairo_t* cr, rect *pts, double line_width, GdkColor *colour)
 /* Scale src down to fit in max_w, max_h and return the new pixbuf.
  * If src is small enough, then ref it and return that.
  */
+#if 0
 GdkPixbuf*
 scale_pixbuf(GdkPixbuf *src, int max_w, int max_h)
 {
@@ -1104,6 +1106,7 @@ scale_pixbuf_up(GdkPixbuf *src, int max_w, int max_h)
 						GDK_INTERP_BILINEAR);
 	}
 }
+#endif
 
 /* Create a new pixbuf by colourizing 'src' to 'color'. If the function fails,
  * 'src' will be returned (with an increased reference count, so it is safe to
@@ -1321,10 +1324,10 @@ is_similar(GdkColor* colour1, GdkColor* colour2, char min_diff)
 	difference.blue  = ABS(colour1->blue  - colour2->blue);
 
 	if(difference.red + difference.green + difference.blue < (min_diff << 8)){
-		dbg(0, "is similar! #%02x%02x%02x = %02x%02x%02x", colour1->red >> 8, colour1->green >> 8, colour1->blue >> 8, colour2->red >> 8, colour2->green >> 8, colour2->blue >> 8);
+		dbg(2, "is similar! #%02x%02x%02x = %02x%02x%02x", colour1->red >> 8, colour1->green >> 8, colour1->blue >> 8, colour2->red >> 8, colour2->green >> 8, colour2->blue >> 8);
 		return TRUE;
 	}
-	dbg(0, "not similar #%02x%02x%02x = #%02x%02x%02x", colour1->red >> 8, colour1->green >> 8, colour1->blue >> 8, colour2->red >> 8, colour2->green >> 8, colour2->blue >> 8);
+	dbg(2, "not similar #%02x%02x%02x = #%02x%02x%02x", colour1->red >> 8, colour1->green >> 8, colour1->blue >> 8, colour2->red >> 8, colour2->green >> 8, colour2->blue >> 8);
 
 	return FALSE;
 }

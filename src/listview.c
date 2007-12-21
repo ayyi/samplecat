@@ -11,6 +11,7 @@
 #include "main.h"
 #include "dnd.h"
 #include "cellrenderer_hypertext.h"
+#include "inspector.h"
 #include "listview.h"
 
 extern struct _app app;
@@ -180,6 +181,20 @@ listview__path_get_id(GtkTreePath* path)
 }
 
 
+void
+listview__show_db_missing()
+{
+	static gboolean done = FALSE;
+	if(done) return;
+
+	GtkTreeIter iter;
+	gtk_list_store_append(app.store, &iter);
+	gtk_list_store_set(app.store, &iter, COL_NAME, "no database available", -1); 
+
+	done = TRUE;
+}
+
+
 static gboolean
 listview__on_row_clicked(GtkWidget *widget, GdkEventButton *event, gpointer user_data)
 {
@@ -190,7 +205,7 @@ listview__on_row_clicked(GtkWidget *widget, GdkEventButton *event, gpointer user
 		//printf("left button press!\n");
 		GtkTreePath *path;
 		if(gtk_tree_view_get_path_at_pos(GTK_TREE_VIEW(app.view), (gint)event->x, (gint)event->y, &path, NULL, NULL, NULL)){
-			inspector_update(path);
+			inspector_update_from_listview(path);
 
 			GdkRectangle rect;
 			gtk_tree_view_get_cell_area(treeview, path, app.col_pixbuf, &rect);
@@ -263,6 +278,29 @@ listview__on_row_clicked(GtkWidget *widget, GdkEventButton *event, gpointer user
 }
 
 
+gboolean
+listview__item_set_colour(GtkTreePath* path, unsigned colour)
+{
+	ASSERT_POINTER_FALSE(path, "path")
+
+	int id = listview__path_get_id(path);
+
+	char sql[1024];
+	snprintf(sql, 1024, "UPDATE samples SET colour=%u WHERE id=%i", colour, id);
+	printf("item_set_colour(): sql=%s\n", sql);
+	if(mysql_query(&app.mysql, sql)){
+		errprintf("item_set_colour(): update failed! sql=%s\n", sql);
+		return FALSE;
+	}
+
+	GtkTreeIter iter;
+	gtk_tree_model_get_iter(GTK_TREE_MODEL(app.store), &iter, path);
+	gtk_list_store_set(GTK_LIST_STORE(app.store), &iter, COL_COLOUR, colour, -1);
+
+	return TRUE;
+}
+
+
 static void
 listview__dnd_get(GtkWidget *widget, GdkDragContext *context, GtkSelectionData *selection_data, guint info, guint time, gpointer data)
 {
@@ -307,7 +345,7 @@ listview__dnd_get(GtkWidget *widget, GdkDragContext *context, GtkSelectionData *
 	}
 
 	if (uri_text) {
-		gtk_selection_data_set(selection_data, selection_data->target, BITS_PER_CHAR_8, uri_text, length);
+		gtk_selection_data_set(selection_data, selection_data->target, BITS_PER_CHAR_8, (guchar*)uri_text, length);
 		g_free(uri_text);
 	}
 

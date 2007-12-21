@@ -70,7 +70,7 @@
 #include "fscache.h"
 //#include "mount.h"
 #include "pixmaps.h"
-#include "type.h"
+#include "mimetype.h"
 //#include "usericons.h"
 
 #ifdef USE_DNOTIFY

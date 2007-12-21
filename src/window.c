@@ -14,7 +14,10 @@
 #include "dnd.h"
 #include "rox/rox_global.h"
 #include "rox/dir.h"
-#include "rox/filer.h"
+#include "file_manager.h"
+#include "file_view.h"
+#include "inspector.h"
+#include "tree.h"
 #include "window.h"
 
 extern struct _app app;
@@ -30,6 +33,7 @@ static GtkWidget* colour_box_new(GtkWidget* parent);
 static gboolean   colour_box_exists(GdkColor* colour);
 static gboolean   colour_box_add(GdkColor* colour);
 static GtkWidget* scrolled_window_new();
+static void       window_on_fileview_row_selected(GtkTreeView*, gpointer user_data);
 
 
 gboolean
@@ -120,13 +124,6 @@ window
 	//--------
 
 	dbg(2, "making fileview pane...");
-    filer.filter = FILER_SHOW_ALL;
-    filer.filter_string = NULL;
-    filer.regexp = NULL;
-    filer.filter_directories = FALSE;
-	filer.display_style_wanted = SMALL_ICONS;
-	filer.sort_type = SORT_NAME;
-
 	GtkWidget* scroll2 = scrolled_window_new();
 	gtk_paned_add2(GTK_PANED(r_vpaned), scroll2);
 
@@ -136,6 +133,7 @@ window
 	gtk_container_add(GTK_CONTAINER(scroll2), file_view);
 	gtk_widget_show(file_view);
 	app.fm_menu = filer.menu = fm_make_context_menu();
+	g_signal_connect(G_OBJECT(file_view), "cursor-changed", G_CALLBACK(window_on_fileview_row_selected), NULL);
 
 	//set up as dnd source:
 	gtk_drag_source_set(file_view, GDK_BUTTON1_MASK | GDK_BUTTON2_MASK,
@@ -468,6 +466,7 @@ colour_box_add(GdkColor* colour)
 	return TRUE;
 }
 
+
 static GtkWidget*
 scrolled_window_new()
 {
@@ -475,6 +474,29 @@ scrolled_window_new()
 	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
 	gtk_widget_show(scroll);
 	return scroll;
+}
+
+
+GtkWidget*
+dir_tree_new()
+{
+	//data:
+	app.dir_tree = g_node_new(NULL); //this is unneccesary ?
+	db_get_dirs();
+
+	//view:
+	app.dir_treeview = dh_book_tree_new(app.dir_tree);
+
+	return app.dir_treeview;
+}
+
+
+static void
+window_on_fileview_row_selected(GtkTreeView* treeview, gpointer user_data)
+{
+	//a filesystem file has been clicked on. Can we show info for it?
+	PF;
+	inspector_update_from_fileview(treeview);
 }
 
 

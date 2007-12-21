@@ -61,10 +61,10 @@ void null_g_free(gpointer p);
 CollateKey *collate_key_new(const guchar *name);
 void collate_key_free(CollateKey *key);
 int collate_key_cmp(const CollateKey *n1, const CollateKey *n2, gboolean caps_first);
-#if 0
-gboolean file_exists(const char *path);
+//gboolean file_exists(const char *path);
 GPtrArray *list_dir(const guchar *path);
 gint strcmp2(gconstpointer a, gconstpointer b);
+#if 0
 int stat_with_timeout(const char *path, struct stat *info);
 
 EscapedPath *escape_uri_path(const char *path);

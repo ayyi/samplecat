@@ -37,13 +37,13 @@
 
 #include "support.h"
 
-#include "rox_global.h"
+#include "rox/rox_global.h"
 
-#include "display.h"
-#include "dir.h"
+#include "rox/display.h"
+#include "rox/dir.h"
 #include "filer.h"
 #include "fscache.h"
-#include "rox_support.h"
+#include "rox/rox_support.h"
 #if 0
 #include "choices.h"
 #endif
@@ -53,7 +53,7 @@
 #include "dnd.h"
 #endif
 #include "diritem.h"
-#include "view_iface.h"
+#include "rox/view_iface.h"
 #include "file_view.h"
 #if 0
 #include "run.h"
@@ -72,7 +72,7 @@
 #include "bookmarks.h"
 #include "xtypes.h"
 #endif
-#include "cell_icon.h"
+#include "rox/cell_icon.h"
 
 extern GFSCache* pixmap_cache;
 

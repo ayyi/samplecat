@@ -38,7 +38,7 @@
 #include "display.h"
 #include "diritem.h"
 #include "pixmaps.h"
-#include "type.h"
+#include "mimetype.h"
 #include "rox_support.h"
 #include "fscache.h"
 

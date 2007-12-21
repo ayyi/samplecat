@@ -1,8 +1,8 @@
 /*
 
-This software is licensed under the GPL. See accompanying file COPYING.
-
 Copyright Tim Orford 2007
+
+This software is licensed under the GPL. See accompanying file COPYING.
 
 */
 #include "config.h"
@@ -21,7 +21,6 @@ Copyright Tim Orford 2007
 #ifdef OLD
   #include <libart_lgpl/libart.h>
 #endif
-//#include <libgnomevfs/gnome-vfs.h>
 #include <jack/ringbuffer.h>
 
 #include "mysql/mysql.h"
@@ -35,6 +34,7 @@ Copyright Tim Orford 2007
 #include "tree.h"
 #include "listview.h"
 #include "window.h"
+#include "inspector.h"
 #include "db.h"
 #include "dnd.h"
 #ifdef USE_GQVIEW_1_DIRTREE
@@ -44,10 +44,11 @@ Copyright Tim Orford 2007
 #endif
 
 #include "rox/rox_global.h"
-#include "type.h"
+#include "mimetype.h"
 #include "pixmaps.h"
 #include "rox/dir.h"
-#include "rox/filer.h"
+//#include "rox/filer.h"
+#include "file_manager.h"
 
 //#define DEBUG_NO_THREADS 1
 
@@ -61,7 +62,6 @@ struct _app app;
 struct _palette palette;
 GList* mime_types; // list of *MIME_type
 extern GList* themes; 
-extern Filer filer;
 
 unsigned debug = 0;
 
@@ -75,7 +75,7 @@ char bold  [16];
 char* categories[] = {"drums", "perc", "bass", "keys", "synth", "strings", "brass", "fx", "impulses"};
 
 //mysql table layout (database column numbers):
-enum{
+enum {
   MYSQL_NAME = 1,
   MYSQL_DIR = 2,
   MYSQL_KEYWORDS = 3,
@@ -113,8 +113,7 @@ app_init()
 	app.dir_tree         = NULL;
 	app.statusbar        = NULL;
 	app.statusbar2       = NULL;
-	//sprintf(app.search_phrase, "");
-	app.search_phrase[0] = 0;
+	app.search_phrase[0] = '\0';
 	app.search_dir       = NULL;
 	app.search_category  = NULL;
 	app.window           = NULL;
@@ -153,12 +152,17 @@ main(int argc, char** argv)
 	app.mutex = g_mutex_new();
 	gtk_init(&argc, &argv);
 
-	MYSQL *mysql;
-	if(db_connect()) mysql = &app.mysql; else on_quit(NULL, GINT_TO_POINTER(1));
+	if(!db_connect()){
+	#ifdef QUIT_WITHOUT_DB
+		on_quit(NULL, GINT_TO_POINTER(1));
+	#endif
+	}
 
 	type_init();
 	pixmaps_init();
 	dir_init();
+
+	file_manager__init();
 
 #ifndef DEBUG_NO_THREADS
 	dbg(3, "creating overview thread...");
@@ -188,246 +192,13 @@ main(int argc, char** argv)
 }
 
 
-GtkWidget*
-inspector_pane()
-{
-	//close up on a single sample. Bottom left of main window.
-
-	app.inspector = malloc(sizeof(*app.inspector));
-	app.inspector->row_ref = NULL;
-
-	int margin_left = 5;
-
-	GtkWidget *vbox = gtk_vbox_new(FALSE, 0);
-	gtk_widget_show(vbox);
-
-	//left align the label:
-	GtkWidget* align1 = gtk_alignment_new(0.0, 0.5, 0.0, 0.0);
-	gtk_widget_show(align1);
-	gtk_box_pack_start(GTK_BOX(vbox), align1, EXPAND_FALSE, FILL_FALSE, 0);
-
-	// sample name:
-	GtkWidget* label1 = app.inspector->name = gtk_label_new("");
-	gtk_misc_set_padding(GTK_MISC(label1), margin_left, 5);
-	gtk_widget_show(label1);
-	gtk_container_add(GTK_CONTAINER(align1), label1);	
-
-	PangoFontDescription* pangofont = pango_font_description_from_string("San-Serif 18");
-	gtk_widget_modify_font(label1, pangofont);
-	pango_font_description_free(pangofont);
-
-	//-----------
-
-	app.inspector->image = gtk_image_new_from_pixbuf(NULL);
-	gtk_misc_set_alignment(GTK_MISC(app.inspector->image), 0.0, 0.5);
-	gtk_misc_set_padding(GTK_MISC(app.inspector->image), margin_left, 2);
-	gtk_box_pack_start(GTK_BOX(vbox), app.inspector->image, EXPAND_FALSE, FILL_FALSE, 0);
-	gtk_widget_show(app.inspector->image);
-
-	//-----------
-
-	GtkWidget* align2 = gtk_alignment_new(0.0, 0.5, 0.0, 0.0);
-	gtk_widget_show(align2);
-	gtk_box_pack_start(GTK_BOX(vbox), align2, EXPAND_FALSE, FILL_FALSE, 0);
-
-	GtkWidget* label2 = app.inspector->filename = gtk_label_new("Filename");
-	gtk_misc_set_padding(GTK_MISC(label2), margin_left, 2);
-	gtk_widget_show(label2);
-	gtk_container_add(GTK_CONTAINER(align2), label2);	
-
-	//-----------
-
-	GtkWidget* align3 = gtk_alignment_new(0.0, 0.5, 0.0, 0.0);
-	gtk_widget_show(align3);
-	gtk_box_pack_start(GTK_BOX(vbox), align3, EXPAND_FALSE, FILL_FALSE, 0);
-
-	//the tags label has an event box to catch mouse clicks.
-	GtkWidget *ev_tags = app.inspector->tags_ev = gtk_event_box_new ();
-	gtk_widget_show(ev_tags);
-	gtk_container_add(GTK_CONTAINER(align3), ev_tags);	
-	g_signal_connect((gpointer)app.inspector->tags_ev, "button-release-event", G_CALLBACK(inspector_on_tags_clicked), NULL);
-
-	GtkWidget* label3 = app.inspector->tags = gtk_label_new("Tags");
-	gtk_misc_set_padding(GTK_MISC(label3), margin_left, 2);
-	gtk_widget_show(label3);
-	//gtk_container_add(GTK_CONTAINER(align3), label3);	
-	gtk_container_add(GTK_CONTAINER(ev_tags), label3);	
-	
-
-	//-----------
-
-	GtkWidget* align4 = gtk_alignment_new(0.0, 0.5, 0.0, 0.0);
-	gtk_widget_show(align4);
-	gtk_box_pack_start(GTK_BOX(vbox), align4, EXPAND_FALSE, FILL_FALSE, 0);
-
-	GtkWidget* label4 = app.inspector->length = gtk_label_new("Length");
-	gtk_misc_set_padding(GTK_MISC(label4), margin_left, 2);
-	gtk_widget_show(label4);
-	gtk_container_add(GTK_CONTAINER(align4), label4);	
-
-	//-----------
-	
-	GtkWidget* align5 = gtk_alignment_new(0.0, 0.5, 0.0, 0.0);
-	gtk_widget_show(align5);
-	gtk_box_pack_start(GTK_BOX(vbox), align5, EXPAND_FALSE, FILL_FALSE, 0);
-
-	GtkWidget* label5 = app.inspector->samplerate = gtk_label_new("Samplerate");
-	gtk_misc_set_padding(GTK_MISC(label5), margin_left, 2);
-	gtk_widget_show(label5);
-	gtk_container_add(GTK_CONTAINER(align5), label5);	
-
-	//-----------
-
-	GtkWidget* align6 = gtk_alignment_new(0.0, 0.5, 0.0, 0.0);
-	gtk_widget_show(align6);
-	gtk_box_pack_start(GTK_BOX(vbox), align6, EXPAND_FALSE, FILL_FALSE, 0);
-
-	GtkWidget* label6 = app.inspector->channels = gtk_label_new("Channels");
-	gtk_misc_set_padding(GTK_MISC(label6), margin_left, 2);
-	gtk_widget_show(label6);
-	gtk_container_add(GTK_CONTAINER(align6), label6);	
-
-	//-----------
-
-	GtkWidget* align7 = gtk_alignment_new(0.0, 0.5, 0.0, 0.0);
-	gtk_widget_show(align7);
-	gtk_box_pack_start(GTK_BOX(vbox), align7, EXPAND_FALSE, FILL_FALSE, 0);
-
-	GtkWidget* label7 = app.inspector->mimetype = gtk_label_new("Mimetype");
-	gtk_misc_set_padding(GTK_MISC(label7), margin_left, 2);
-	gtk_widget_show(label7);
-	gtk_container_add(GTK_CONTAINER(align7), label7);	
-	
-	//-----------
-
-	//notes:
-
-	GtkTextBuffer *txt_buf1;
-	GtkWidget *text1 = gtk_text_view_new();
-	//gtk_widget_show(text1);
-	txt_buf1 = app.inspector->notes = gtk_text_view_get_buffer(GTK_TEXT_VIEW(text1));
-	//gtk_text_buffer_set_text(txt_buf1, "this sample works really well on mid-tempo tracks", -1);
-	gtk_text_view_set_accepts_tab(GTK_TEXT_VIEW(text1), FALSE);
-	g_signal_connect(G_OBJECT(text1), "focus-out-event", G_CALLBACK(on_notes_focus_out), NULL);
-	g_signal_connect(G_OBJECT(text1), "insert-at-cursor", G_CALLBACK(on_notes_insert), NULL);
-	gtk_box_pack_start(GTK_BOX(vbox), text1, FALSE, TRUE, 2);
-
-	GValue gval = {0,};
-	g_value_init(&gval, G_TYPE_CHAR);
-	g_value_set_char(&gval, margin_left);
-	g_object_set_property(G_OBJECT(text1), "border-width", &gval);
-
-	gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(text1), GTK_WRAP_WORD_CHAR);
-	gtk_text_view_set_pixels_above_lines(GTK_TEXT_VIEW(text1), 5);
-	gtk_text_view_set_pixels_below_lines(GTK_TEXT_VIEW(text1), 5);
-
-	//invisible edit widget:
-	GtkWidget *edit = app.inspector->edit = gtk_entry_new();
-	gtk_entry_set_max_length(GTK_ENTRY(edit), 64);
-	gtk_entry_set_text(GTK_ENTRY(edit), "");
-	gtk_widget_show(edit);
-	/*
-	g_signal_connect(G_OBJECT(entry), "focus-out-event", G_CALLBACK(new_search), NULL);
-	//this is supposed to enable REUTRN to enter the text - does it work?
-	gtk_entry_set_activates_default(GTK_ENTRY(entry), TRUE);
-	//g_signal_connect(G_OBJECT(entry), "activate", G_CALLBACK(on_entry_activate), NULL);
-	g_signal_connect(G_OBJECT(entry), "activate", G_CALLBACK(new_search), NULL);
-	*/
-	gtk_widget_ref(edit);//stops gtk deleting the widget.
-
-	//this also sets the margin:
-	//gtk_text_view_set_border_window_size(GTK_TEXT_VIEW(text1), GTK_TEXT_WINDOW_LEFT, 20);
-
-	//printf("inspector_pane(): size=%i inspector=%p textbuf=%p\n", sizeof(*app.inspector), app.inspector, app.inspector->notes);
-
-	return vbox;
-}
-
-
-void
-inspector_update(GtkTreePath *path)
-{
-	if(!app.inspector) return;
-	ASSERT_POINTER(path, "path");
-
-	if (app.inspector->row_ref){ gtk_tree_row_reference_free(app.inspector->row_ref); app.inspector->row_ref = NULL; }
-
-	sample* sample = sample_new_from_model(path);
-
-	GtkTreeIter iter;
-	gtk_tree_model_get_iter(GTK_TREE_MODEL(app.store), &iter, path);
-	gchar *tags;
-	gchar *fpath;
-	gchar *fname;
-	gchar *length;
-	gchar *samplerate;
-	int channels;
-	gchar *mimetype;
-	gchar *notes;
-	GdkPixbuf* pixbuf = NULL;
-	int id;
-	gtk_tree_model_get(GTK_TREE_MODEL(app.store), &iter, COL_NAME, &fname, COL_FNAME, &fpath, COL_KEYWORDS, &tags, COL_LENGTH, &length, COL_SAMPLERATE, &samplerate, COL_CHANNELS, &channels, COL_MIMETYPE, &mimetype, COL_NOTES, &notes, COL_OVERVIEW, &pixbuf, COL_IDX, &id, -1);
-
-	char ch_str[64]; snprintf(ch_str, 64, "%u channels", channels);
-	char fs_str[64]; snprintf(fs_str, 64, "%s kHz",      samplerate);
-
-	gtk_label_set_text(GTK_LABEL(app.inspector->name),       fname);
-	gtk_label_set_text(GTK_LABEL(app.inspector->filename),   sample->filename);
-	gtk_label_set_text(GTK_LABEL(app.inspector->tags),       tags);
-	gtk_label_set_text(GTK_LABEL(app.inspector->length),     length);
-	gtk_label_set_text(GTK_LABEL(app.inspector->channels),   ch_str);
-	gtk_label_set_text(GTK_LABEL(app.inspector->samplerate), fs_str);
-	gtk_label_set_text(GTK_LABEL(app.inspector->mimetype),   mimetype);
-	gtk_text_buffer_set_text(app.inspector->notes, notes ? notes : "", -1);
-	gtk_image_set_from_pixbuf(GTK_IMAGE(app.inspector->image), pixbuf);
-
-	//store a reference to the row id in the inspector widget:
-	//g_object_set_data(G_OBJECT(app.inspector->name), "id", GUINT_TO_POINTER(id));
-	app.inspector->row_id = id;
-	app.inspector->row_ref = gtk_tree_row_reference_new(GTK_TREE_MODEL(app.store), path);
-	if(!app.inspector->row_ref) errprintf("inspector_update(): setting row_ref failed!\n");
-
-	free(sample);
-	//printf("inspector_update(): done.\n");
-}
-
-
-gboolean
-inspector_on_tags_clicked(GtkWidget *widget, GdkEventButton *event, gpointer user_data)
-{
-	/*
-	a single click on the Tags label puts us into edit mode.
-	*/
-
-	if(event->button == 3) return FALSE;
-
-	tag_edit_start(0);
-
-	return TRUE;
-}
-
-
-GtkWidget*
-dir_tree_new()
-{
-	//data:
-	app.dir_tree = g_node_new(NULL); //this is unneccesary ?
-	db_get_dirs();
-
-	//view:
-	app.dir_treeview = dh_book_tree_new(app.dir_tree);
-
-	return app.dir_treeview;
-}
-
-
 gboolean
 dir_tree_on_link_selected(GObject *ignored, DhLink *link, gpointer data)
 {
 	/*
 	what does it mean if link->uri is empty?
 	*/
-	ASSERT_POINTER_FALSE("dir_tree_on_link_selected", link, "link");
+	ASSERT_POINTER_FALSE(link, "link");
 
 	dbg(0, "uri=%s", link->uri);
 	//FIXME segfault if we use this if()
@@ -755,6 +526,8 @@ do_search(char *search, char *dir)
 {
 	//fill the display with the results for the given search phrase.
 
+	if(!db_is_connected()){ listview__show_db_missing(); return; }
+
 	if(!search) search = app.search_phrase;
 	if(!dir)    dir    = app.search_dir;
 
@@ -778,8 +551,7 @@ do_search(char *search, char *dir)
 	GdkPixdata pixdata;
 	gboolean online = FALSE;
 
-	MYSQL *mysql;
-	mysql=&app.mysql;
+	MYSQL *mysql = &app.mysql;
 
 	//lets assume that the search_phrase filter should *always* be in effect.
 
@@ -1142,7 +914,7 @@ gboolean
 row_set_tags_from_id(int id, GtkTreeRowReference* row_ref, const char* tags_new)
 {
 	if(!id){ errprintf("row_set_tags_from_id(): bad arg: id (%i)\n", id); return FALSE; }
-	ASSERT_POINTER_FALSE("row_set_tags_from_id", row_ref, "row_ref");
+	ASSERT_POINTER_FALSE(row_ref, "row_ref");
 
 	char sql[1024];
 	snprintf(sql, 1024, "UPDATE samples SET keywords='%s' WHERE id=%i", tags_new, id);
@@ -1194,9 +966,10 @@ db_get_dirs()
 	*/
 	if (!app.dir_tree) { errprintf("db_get_dirs(): dir_tree not initialised.\n"); return; }
 
+	if(!db_is_connected()) return;
+
 	char qry[1024];
-	MYSQL *mysql;
-	mysql=&app.mysql;
+	MYSQL *mysql=&app.mysql;
 	MYSQL_RES *result;
 	MYSQL_ROW row;
 
@@ -1297,29 +1070,6 @@ on_notes_focus_out(GtkWidget *widget, gpointer userdata)
 
 	g_free(notes);
 	return FALSE;
-}
-
-
-gboolean
-item_set_colour(GtkTreePath* path, unsigned colour)
-{
-	ASSERT_POINTER_FALSE(path, "item_set_colour", "path")
-
-	int id = listview__path_get_id(path);
-
-	char sql[1024];
-	snprintf(sql, 1024, "UPDATE samples SET colour=%u WHERE id=%i", colour, id);
-	printf("item_set_colour(): sql=%s\n", sql);
-	if(mysql_query(&app.mysql, sql)){
-		errprintf("item_set_colour(): update failed! sql=%s\n", sql);
-		return FALSE;
-	}
-
-	GtkTreeIter iter;
-	gtk_tree_model_get_iter(GTK_TREE_MODEL(app.store), &iter, path);
-	gtk_list_store_set(GTK_LIST_STORE(app.store), &iter, COL_COLOUR, colour, -1);
-
-	return TRUE;
 }
 
 

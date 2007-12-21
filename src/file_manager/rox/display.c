@@ -46,7 +46,7 @@
 #include "rox_support.h"
 //#include "main.h"
 #include "rox/dir.h"
-#include "filer.h"
+#include "../filer.h"
 #if 0
 #include "display.h"
 #include "gui_support.h"
@@ -61,7 +61,7 @@
 #include "action.h"
 #include "minibuffer.h"
 #endif
-#include "type.h"
+#include "mimetype.h"
 #include "diritem.h"
 #include "view_iface.h"
 #if 0
@@ -320,7 +320,7 @@ sort_by_name(const void *item1, const void *item2)
 	const DirItem* i2 = (DirItem *) item2;
 	CollateKey* n1 = i1->leafname_collate;
 	CollateKey* n2 = i2->leafname_collate;
-	ASSERT_POINTER_FALSE(__func__, n1, "item1->leafname_collate");
+	ASSERT_POINTER_FALSE(n1, "item1->leafname_collate");
 	int retval;
 
 	SORT_DIRS;

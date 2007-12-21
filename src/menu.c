@@ -14,7 +14,7 @@
 #include "support.h"
 #include "rox/rox_global.h"
 #include "rox/dir.h"
-#include "rox/filer.h"
+#include "file_manager.h"
 #include "rox/display.h"
 #include "menu.h"
 

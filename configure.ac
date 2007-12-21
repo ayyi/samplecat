@@ -13,7 +13,7 @@ AC_HEADER_STDBOOL
 AC_TYPE_SIZE_T
 
 # Library building stuff
-# AC_PROG_RANLIB
+AC_PROG_RANLIB
 
 # Check for debugging flag
 debug="yes"
@@ -135,6 +135,7 @@ CFLAGS="$CFLAGS -pipe  -fmessage-length=139 -fdiagnostics-show-location=every-li
 
 AC_CONFIG_FILES([Makefile])
 AC_CONFIG_FILES([src/Makefile])
+AC_CONFIG_FILES([src/file_manager/Makefile])
 AC_OUTPUT
 
 AC_MSG_RESULT([])

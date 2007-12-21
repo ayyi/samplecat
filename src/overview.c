@@ -30,7 +30,7 @@
 #include "cellrenderer_hypertext.h"
 
 #include "rox/rox_global.h"
-#include "type.h"
+#include "mimetype.h"
 #include "pixmaps.h"
 
 extern struct _app app;

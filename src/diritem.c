@@ -40,12 +40,13 @@
 #include <sys/stat.h>
 
 #include "rox/rox_global.h"
+#include "rox/rox_support.h"
 
 #include "diritem.h"
 //#include "support.h"
 //#include "gui_support.h"
 //#include "mount.h"
-#include "type.h"
+#include "mimetype.h"
 //#include "usericons.h"
 //#include "options.h"
 //#include "fscache.h"
@@ -87,7 +88,7 @@ diritem_restat(const guchar *path, DirItem *item, struct stat *parent)
 	item->flags = 0;
 	item->mime_type = NULL;
 
-	if (lstat(path, &info) == -1)
+	if (lstat((char*)path, &info) == -1)
 	{
 		item->lstat_errno = errno;
 		item->base_type = TYPE_ERROR;
