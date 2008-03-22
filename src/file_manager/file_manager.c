@@ -39,6 +39,8 @@
 #include "file_manager.h"
 
 Filer filer;
+GList* all_filer_windows = NULL;
+
 
 Filer*
 file_manager__init()
@@ -51,3 +53,43 @@ file_manager__init()
 	filer.sort_type = SORT_NAME;
 	return &filer;
 }
+
+
+GtkWidget*
+file_manager__new_window(const char* path)
+{
+	GtkWidget* file_view = view_details_new(&filer);
+	filer.view = (ViewIface*)file_view;
+
+	all_filer_windows = g_list_prepend(all_filer_windows, &filer);
+
+	filer_change_to(&filer, path, NULL);
+
+	return file_view;
+}
+
+
+void
+file_manager__update_all(void)
+{
+	GList *next = all_filer_windows;
+
+	while (next)
+	{
+		Filer *filer_window = (Filer*) next->data;
+
+		/* Updating directory may remove it from list -- stop sending
+		 * patches to move this line!
+		 */
+		next = next->next;
+
+		/* Don't trigger a refresh if we're already scanning.
+		 * Otherwise, two views of a single directory will trigger
+		 * two scans.
+		 */
+		if (filer_window->directory &&
+		    !filer_window->directory->scanning)
+			filer_update_dir(filer_window, TRUE);
+	}
+}
+

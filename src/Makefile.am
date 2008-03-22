@@ -37,14 +37,12 @@ samplecat_SOURCES = \
 	audio.c audio.h \
 	overview.c overview.h \
 	pixmaps.c pixmaps.h \
-	mimetype.c mimetype.h \
 	diritem.c diritem.h \
 	dh-link.c dh-link.h \
 	tree.c tree.h \
 	cellrenderer_hypertext.c cellrenderer_hypertext.h \
 	dnd.c dnd.h \
 	db.c db.h \
-	menu.c menu.h \
 	observer.c observer.h \
 	fscache.c fscache.h \
 	xdgmime.c xdgmime.h xdgmimecache.c xdgmimecache.h xdgmimemagic.c xdgmimemagic.h xdgmimealias.c xdgmimealias.h xdgmimeparent.c xdgmimeparent.h xdgmimeglob.c xdgmimeglob.h xdgmimeint.c xdgmimeint.h \

@@ -55,9 +55,8 @@
 #include "diritem.h"
 #include "rox/view_iface.h"
 #include "file_view.h"
+#include "mimetype.h"
 #if 0
-#include "run.h"
-#include "type.h"
 #include "options.h"
 #include "minibuffer.h"
 #include "icon.h"
@@ -91,9 +90,11 @@ static GdkWindow *motion_window = NULL;
  * the last key press or Menu click event.
  */
 FilerWindow 	*window_with_focus = NULL;
+#endif //0
 
-GList		*all_filer_windows = NULL;
+extern GList *all_filer_windows;
 
+#if 0
 static GHashTable *window_with_id = NULL;
 
 static FilerWindow *window_with_primary = NULL;
@@ -1249,23 +1250,25 @@ void filer_open_parent(FilerWindow *filer_window)
 	filer_opendir(dir, filer_window, NULL);
 	g_free(dir);
 }
+#endif //0
 
-void change_to_parent(FilerWindow *filer_window)
+void change_to_parent(Filer *filer_window)
 {
 	const char *current = filer_window->sym_path;
 
 	if (current[0] == '/' && current[1] == '\0')
 		return;		/* Already in the root */
 
+#if 0
 	if (mount_is_user_mounted(filer_window->real_path))
 		may_offer_unmount(filer_window,
 				g_strdup(filer_window->real_path));
-	
+#endif
+
 	char* dir = g_path_get_dirname(current);
 	filer_change_to(filer_window, dir, g_basename(current));
 	g_free(dir);
 }
-#endif
 
 /* Removes trailing /s from path (modified in place) */
 static void
@@ -1291,7 +1294,7 @@ tidy_sympath(gchar *path)
 void
 filer_change_to(Filer* filer_window, const char *path, const char *from)
 {
-	PF_DONE;
+	printf("file_change_to(): %s", path);
 	g_return_if_fail(filer_window != NULL);
 
 	filer_cancel_thumbnails(filer_window);
@@ -1351,27 +1354,27 @@ filer_change_to(Filer* filer_window, const char *path, const char *from)
 	PF_DONE;
 }
 
-#if 0
 /* Returns a list containing the full (sym) pathname of every selected item.
  * You must g_free() each item in the list.
  */
-GList *filer_selected_items(FilerWindow *filer_window)
+GList*
+filer_selected_items(Filer *filer_window)
 {
 	GList	*retval = NULL;
-	guchar	*dir = filer_window->sym_path;
+	guchar	*dir = (guchar*)filer_window->sym_path;
 	ViewIter iter;
 	DirItem *item;
 
 	view_get_iter(filer_window->view, &iter, VIEW_ITER_SELECTED);
 	while ((item = iter.next(&iter)))
 	{
-		retval = g_list_prepend(retval,
-				g_strdup(make_path(dir, item->leafname)));
+		retval = g_list_prepend(retval,	g_strdup((char*)make_path((char*)dir, item->leafname)));
 	}
 
 	return g_list_reverse(retval);
 }
 
+#if 0
 /* Return the single selected item. Error if nothing is selected. */
 DirItem *filer_selected_item(FilerWindow *filer_window)
 {
@@ -1830,52 +1833,31 @@ set_scanning_display(Filer* filer_window, gboolean scanning)
 */
 }
 
-#if 0
 /* Note that filer_window may not exist after this call.
- * Returns TRUE iff the directory still exists.
+ * Returns TRUE if the directory still exists.
  */
 gboolean
-filer_update_dir(FilerWindow *filer_window, gboolean warning)
+filer_update_dir(Filer *filer_window, gboolean warning)
 {
-	gboolean still_exists;
+/*
+	gboolean still_exists = may_rescan(filer_window, warning);
 
-	still_exists = may_rescan(filer_window, warning);
+	if (still_exists)*/ dir_update(filer_window->directory, filer_window->sym_path);
 
-	if (still_exists) dir_update(filer_window->directory, filer_window->sym_path);
-
-	return still_exists;
+	//return still_exists;
+	return TRUE;
 }
 
-void filer_update_all(void)
-{
-	GList	*next = all_filer_windows;
-
-	while (next)
-	{
-		FilerWindow *filer_window = (FilerWindow *) next->data;
-
-		/* Updating directory may remove it from list -- stop sending
-		 * patches to move this line!
-		 */
-		next = next->next;
-
-		/* Don't trigger a refresh if we're already scanning.
-		 * Otherwise, two views of a single directory will trigger
-		 * two scans.
-		 */
-		if (filer_window->directory &&
-		    !filer_window->directory->scanning)
-			filer_update_dir(filer_window, TRUE);
-	}
-}
 
 /* Refresh the various caches even if we don't think we need to */
-void full_refresh(void)
+void
+full_refresh(void)
 {
-	mount_update(TRUE);
+	//mount_update(TRUE);
 	reread_mime_files();	/* Refreshes all windows */
 }
 
+#if 0
 /* See whether a filer window with a given path already exists
  * and is different from diff.
  */
@@ -2888,9 +2870,12 @@ static void refresh_done(FilerWindow *filer_window)
 	if (filer_exists(filer_window))
 		filer_update_dir(filer_window, TRUE);
 }
+#endif
 
-void filer_refresh(FilerWindow *filer_window)
+void
+filer_refresh(Filer *filer_window)
 {
+#if 0
 	if (!strncmp(ZERO_MNT "/", filer_window->real_path, sizeof(ZERO_MNT)))
 	{
 		/* Try to run 0refresh */
@@ -2910,10 +2895,10 @@ void filer_refresh(FilerWindow *filer_window)
 			on_child_death(pid, (CallbackFn) refresh_done,
 					filer_window);
 	}
-	
+#endif
+
 	full_refresh();
 }
-#endif
 
 static inline gboolean
 is_hidden(const char *dir, DirItem *item)

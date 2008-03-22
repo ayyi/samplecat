@@ -141,6 +141,8 @@ view_details_new(Filer* filer_window)
 	ViewDetails* view_details = g_object_new(view_details_get_type(), NULL);
 	view_details->filer_window = filer_window;
 
+	filer_window->menu = fm_make_context_menu();
+
 #if 0
 	gtk_range_set_adjustment(GTK_RANGE(filer_window->scrollbar),
 		gtk_tree_view_get_vadjustment(GTK_TREE_VIEW(view_details)));

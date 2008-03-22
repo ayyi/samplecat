@@ -999,13 +999,10 @@ pixbuf_clear(GdkPixbuf *pixbuf, GdkColor *colour)
 void
 pixbuf_draw_line(GdkPixbuf *pixbuf, struct _ArtDRect *pts, double line_width, GdkColor *colour)
 {
-  //printf("pixbuf_draw_line(): pixbuf=%p\n", pixbuf);
-
   art_u8 *buffer = (art_u8*)gdk_pixbuf_get_pixels(pixbuf);
   int bufwidth  = gdk_pixbuf_get_width    (pixbuf);
   int bufheight = gdk_pixbuf_get_height   (pixbuf);
   int rowstride = gdk_pixbuf_get_rowstride(pixbuf);
-  //printf("pixbuf_draw_line(): pixbuf width=%i height=%i\n", bufwidth, bufheight);
   art_u32 color_fg = ((colour->red/256)<< 24) | ((colour->green/256)<<16) | ((colour->blue/256)<<8) | (0xff); //
 
   //define the line as a libart vector:

@@ -25,6 +25,8 @@ libfilemanager_a_SOURCES = \
 	file_manager.c \
 	file_view.c \
 	filer.c filer.h rox/display.c rox/display.h rox/view_iface.c rox/view_iface.h rox/rox_support.c rox/rox_support.h rox/cell_icon.c rox/cell_icon.h \
+	menu.c menu.h \
+	mimetype.c mimetype.h \
 	rox/dir.c rox/dir.h
 
 EXTRA_DIST =

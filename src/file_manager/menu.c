@@ -22,7 +22,8 @@ extern Filer filer;
 
 //static gint updating_menu = 0;      // Non-zero => ignore activations
 
-static void menu_add(GtkMenuItem*, gpointer user_data);
+static void menu__go_up_dir(GtkMenuItem*, gpointer user_data);
+static void menu__refresh  (GtkMenuItem*, gpointer user_data);
 //static void set_sort(gpointer data, guint action, GtkWidget *widget);
 //static void reverse_sort(gpointer data, guint action, GtkWidget *widget);
 
@@ -90,11 +91,9 @@ static GtkItemFactoryEntry fm_menu_def[] = {
 {N_("Window"),          NULL, NULL, 0, "<Branch>"},
 {">" N_("Parent, New Window"),  NULL, open_parent, 0, "<StockItem>", GTK_STOCK_GO_UP},
 {">" N_("Parent, Same Window"), NULL, open_parent_same, 0, NULL},
-{">" N_("New Window"),      NULL, new_window, 0, NULL},
 {">" N_("Home Directory"),  "<Ctrl>Home", home_directory, 0, "<StockItem>", GTK_STOCK_HOME},
 {">" N_("Show Bookmarks"),  "<Ctrl>B", show_bookmarks, 0, "<StockItem>", ROX_STOCK_BOOKMARKS},
 {">" N_("Follow Symbolic Links"),   NULL, follow_symlinks, 0, NULL},
-{">" N_("Resize Window"),   "<Ctrl>E", resize, 0, NULL},
 
 {">" N_("Close Window"),    "<Ctrl>Q", close_window, 0, "<StockItem>", GTK_STOCK_CLOSE},
 {">",               NULL, NULL, 0, "<Separator>"},
@@ -118,7 +117,9 @@ typedef struct
 
 
 static menu_def fm_menu_def[] = {
-	{"Add to database", menu_add},
+	//{"Add to database", G_CALLBACK(menu__add)},
+	{"Go up directory", G_CALLBACK(menu__go_up_dir)},
+	{"Refresh",         G_CALLBACK(menu__refresh)},
 	//{"Delete", NULL}
 };
 
@@ -140,10 +141,35 @@ fm_make_context_menu()
 }
 
 
-static void
-menu_add(GtkMenuItem* menuitem, gpointer user_data)
+/*
+ *   for application-level menu additions.
+ */
+void
+fm_add_menu_item(GtkAction* action)
 {
 	PF;
+	GtkWidget* menu_item = gtk_action_create_menu_item(action);
+	gtk_menu_shell_append(GTK_MENU_SHELL(filer.menu), menu_item);
+	//GCClosure* closure = gtk_action_get_accel_closure(action);
+	//dbg(0, "closure=%p callback=%p", closure, closure->callback);
+	gtk_widget_show(menu_item);
+}
+
+
+static void
+menu__go_up_dir(GtkMenuItem* menuitem, gpointer user_data)
+{
+	PF;
+	change_to_parent(&filer);
+}
+
+
+static void
+menu__refresh(GtkMenuItem* menuitem, gpointer user_data)
+{
+	PF;
+	//filer_refresh(&filer);
+	file_manager__update_all();
 }
 
 

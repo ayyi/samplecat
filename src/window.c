@@ -34,6 +34,68 @@ static gboolean   colour_box_exists(GdkColor* colour);
 static gboolean   colour_box_add(GdkColor* colour);
 static GtkWidget* scrolled_window_new();
 static void       window_on_fileview_row_selected(GtkTreeView*, gpointer user_data);
+static void       menu__add_to_db(GtkMenuItem*, gpointer user_data);
+
+
+struct s_key {
+	int           code;
+	int           mask;
+};
+
+struct _accel {
+	char          name[16];
+	GtkStockItem* stock_item;
+	struct s_key  key[2];
+	gpointer      callback;
+	gpointer      user_data;
+};
+
+struct _accel keys[] = {
+	//{"Quit",        NULL,            {{(char)'q',       GDK_CONTROL_MASK},  {0, 0}}, on_quit,          NULL              },
+	//{"Close",       NULL,            {{(char)'w',       GDK_CONTROL_MASK},  {0, 0}}, window__close,    NULL              },
+	//{"Save",        NULL,            {{(char)'s',       GDK_CONTROL_MASK},  {0, 0}}, on_song_save_activate, NULL         },
+	{"Add to database",NULL,            {{(char)'a',       0               },  {0, 0}}, menu__add_to_db, GINT_TO_POINTER(0)},
+	//{"Locate 2",    NULL,            {{(char)'2',       0               },  {0, 0}}, transport_locate, GINT_TO_POINTER(1)},
+	//{"Locate 2 KP", NULL,            {{GDK_KP_2,        0               },  {0, 0}}, transport_locate, GINT_TO_POINTER(1)},
+	//{"Locate End",  NULL,            {{GDK_KP_End,      0               },  {0, 0}}, transport_locate, GINT_TO_POINTER(0)},
+	//{"Locate Down", NULL,            {{GDK_KP_Down,     0               },  {0, 0}}, transport_locate, GINT_TO_POINTER(1)},
+	//{"Nudge Left",  NULL,            {{(char)'[',       0               },  {0, 0}}, nudge_left,       NULL              },
+	//{"Nudge Right", NULL, {{(char)']',       0               },  {0, 0}}, nudge_right,      NULL              },
+	//{"Locate Left", NULL, {{GDK_leftarrow,   GDK_CONTROL_MASK},  {0, 0}}, transport_loc_left_k                },
+	//{"Locate Right",NULL, {{GDK_rightarrow,  GDK_CONTROL_MASK},  {0, 0}}, transport_loc_right_k               },
+};
+
+static GtkAccelGroup* accel_group = NULL;
+
+
+static void
+make_menu_actions()
+{
+	//action_group = gimp_action_group_new(name, label, "gtk-paste", mnemonics, NULL, update_func);
+	GtkActionGroup* group = gtk_action_group_new("File Manager");
+	accel_group = gtk_accel_group_new();
+
+	int count = sizeof(struct _accel)/sizeof(keys[0]);
+	int k;
+	for(k=0;k<count;k++){
+		struct _accel* key = &keys[k];
+
+    	GtkAction* action = gtk_action_new(key->name, key->name, "Tooltip", key->stock_item? key->stock_item->stock_id : "gtk-file");
+  		gtk_action_group_add_action(GTK_ACTION_GROUP(group), action);
+
+    	GClosure* closure = g_cclosure_new(G_CALLBACK(key->callback), key->user_data, NULL);
+		g_signal_connect_closure(G_OBJECT(action), "activate", closure, FALSE);
+		//dbg(0, "callback=%p", closure->callback);
+		gchar path[64]; sprintf(path, "<%s>/Categ/%s", gtk_action_group_get_name(GTK_ACTION_GROUP(group)), key->name);
+		//gtk_accel_group_connect(accel_group, key->key[0].code, key->key[0].mask, GTK_ACCEL_MASK, closure);
+		gtk_accel_group_connect_by_path(accel_group, path, closure);
+		gtk_accel_map_add_entry(path, key->key[0].code, key->key[0].mask);
+		gtk_action_set_accel_path(action, path);
+		gtk_action_set_accel_group(action, accel_group);
+
+		fm_add_menu_item(action);
+	}
+}
 
 
 gboolean
@@ -127,13 +189,17 @@ window
 	GtkWidget* scroll2 = scrolled_window_new();
 	gtk_paned_add2(GTK_PANED(r_vpaned), scroll2);
 
-	GtkWidget* file_view = app.fm_view = view_details_new(&filer);
-	filer.view = (ViewIface*)file_view;
-	filer_change_to(&filer, g_get_home_dir(), NULL);
+	GtkWidget* file_view = file_manager__new_window(g_get_home_dir());
+	app.fm_view = file_view;
+	//GtkWidget* file_view = app.fm_view = view_details_new(&filer);
+	//filer.view = (ViewIface*)file_view;
+	//filer_change_to(&filer, g_get_home_dir(), NULL);
 	gtk_container_add(GTK_CONTAINER(scroll2), file_view);
 	gtk_widget_show(file_view);
-	app.fm_menu = filer.menu = fm_make_context_menu();
+	//app.fm_menu = filer.menu = fm_make_context_menu();
 	g_signal_connect(G_OBJECT(file_view), "cursor-changed", G_CALLBACK(window_on_fileview_row_selected), NULL);
+
+	make_menu_actions();
 
 	//set up as dnd source:
 	gtk_drag_source_set(file_view, GDK_BUTTON1_MASK | GDK_BUTTON2_MASK,
@@ -240,7 +306,7 @@ window_on_allocate(GtkWidget *win, gpointer user_data)
 		g_object_set(app.cell1, "cell-background-gdk", &app.bg_colour_mod1, "cell-background-set", TRUE, NULL);
 		g_object_set(app.cell1, "foreground-gdk", &app.fg_colour, "foreground-set", TRUE, NULL);
 
-		view_details_set_alt_colours(app.fm_view, &app.bg_colour_mod1, &app.fg_colour);
+		view_details_set_alt_colours(VIEW_DETAILS(app.fm_view), &app.bg_colour_mod1, &app.fg_colour);
 
 		colour_box_update();
 		app.colourbox_dirty = FALSE;
@@ -389,27 +455,18 @@ filter_new()
 static GtkWidget*
 colour_box_new(GtkWidget* parent)
 {
-	PF;
 	GtkWidget* e;
 	int i;
 	for(i=PALETTE_SIZE-1;i>=0;i--){
 		e = app.colour_button[i] = gtk_event_box_new();
 
-		//dnd:
-		gtk_drag_source_set(e, GDK_BUTTON1_MASK | GDK_BUTTON2_MASK,
-                          dnd_file_drag_types,          //const GtkTargetEntry *targets,
-                          dnd_file_drag_types_count,    //gint n_targets,
-                          GDK_ACTION_COPY | GDK_ACTION_MOVE | GDK_ACTION_LINK);
-		//g_signal_connect(G_OBJECT(e), "drag-begin", G_CALLBACK(colour_drag_begin), NULL);
-		//g_signal_connect(G_OBJECT(e), "drag-end",   G_CALLBACK(colour_drag_end),   NULL);
-		//g_signal_connect(G_OBJECT(e), "drag-data-received", G_CALLBACK(colour_drag_datareceived), NULL);
+		gtk_drag_source_set(e, GDK_BUTTON1_MASK | GDK_BUTTON2_MASK, dnd_file_drag_types, dnd_file_drag_types_count, GDK_ACTION_COPY | GDK_ACTION_MOVE | GDK_ACTION_LINK);
 		g_signal_connect(G_OBJECT(e), "drag-data-get", G_CALLBACK(colour_drag_dataget), GUINT_TO_POINTER(i));
 
 		gtk_widget_show(e);
 
 		gtk_box_pack_end(GTK_BOX(parent), e, TRUE, TRUE, 0);
 	}
-	PF_DONE;
 	return e;
 }
 
@@ -497,6 +554,13 @@ window_on_fileview_row_selected(GtkTreeView* treeview, gpointer user_data)
 	//a filesystem file has been clicked on. Can we show info for it?
 	PF;
 	inspector_update_from_fileview(treeview);
+}
+
+
+/*static */void
+menu__add_to_db(GtkMenuItem* menuitem, gpointer user_data)
+{
+	PF;
 }
 
 

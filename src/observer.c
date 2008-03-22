@@ -37,6 +37,7 @@ observer__icon_theme()
 {
 	list__update();
 	vdtree_on_icon_theme_changed((ViewDirTree*)app.dir_treeview2);
+	file_manager__update_all();
 }
 
 

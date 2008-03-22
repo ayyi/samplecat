@@ -99,7 +99,7 @@ struct _app
 	GtkWidget*           vpaned;        //vertical divider on lhs between the dir_tree and inspector
 
 	GtkWidget*           fm_view;
-	GtkWidget*           fm_menu;
+	//GtkWidget*           fm_menu;
 
 	GdkColor             fg_colour;
 	GdkColor             bg_colour;

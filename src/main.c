@@ -127,7 +127,7 @@ int
 main(int argc, char** argv)
 {
 	//make gdb break on g errors:
-	//g_log_set_always_fatal( G_LOG_FLAG_RECURSION | G_LOG_FLAG_FATAL | G_LOG_LEVEL_ERROR | G_LOG_LEVEL_CRITICAL | G_LOG_LEVEL_WARNING );
+	g_log_set_always_fatal( G_LOG_FLAG_RECURSION | G_LOG_FLAG_FATAL | G_LOG_LEVEL_ERROR | G_LOG_LEVEL_CRITICAL | G_LOG_LEVEL_WARNING );
 
 	//init console escape commands:
 	sprintf(white,  "%c[0;39m", 0x1b);

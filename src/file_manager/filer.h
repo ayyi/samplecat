@@ -123,11 +123,14 @@ extern Option		o_filer_size_limit;
 /* Prototypes */
 void filer_init(void);
 FilerWindow *filer_opendir(const char *path, FilerWindow *src_win, const gchar *wm_class);
-gboolean filer_update_dir(FilerWindow *filer_window, gboolean warning);
-void filer_update_all(void);
+#endif //0
+gboolean filer_update_dir(Filer *filer_window, gboolean warning);
+#if 0
 DirItem *filer_selected_item(FilerWindow *filer_window);
-void change_to_parent(FilerWindow *filer_window);
+#endif
+void change_to_parent(Filer *filer_window);
 void full_refresh(void);
+#if 0
 void filer_openitem(FilerWindow *filer_window, ViewIter *iter, OpenFlags flags);
 void filer_check_mounted(const char *real_path);
 void filer_close_recursive(const char *path);
@@ -143,8 +146,8 @@ void filer_target_mode(FilerWindow	*filer_window,
 			TargetFunc	fn,
 			gpointer	data,
 			const char	*reason);
-GList *filer_selected_items(FilerWindow *filer_window);
 #endif
+GList *filer_selected_items(Filer *filer_window);
 void filer_create_thumb(Filer* filer_window, const gchar *pathname);
 void filer_cancel_thumbnails(Filer* filer_window);
 #if 0
@@ -163,8 +166,8 @@ void filer_perform_action(FilerWindow *filer_window, GdkEventButton *event);
 gint filer_motion_notify(FilerWindow *filer_window, GdkEventMotion *event);
 gint filer_key_press_event(GtkWidget *widget, GdkEventKey *event, FilerWindow *filer_window);
 void filer_set_autoscroll(FilerWindow *filer_window, gboolean auto_scroll);
-void filer_refresh(FilerWindow *filer_window);
 #endif
+void filer_refresh(Filer *filer_window);
 
 gboolean filer_match_filter(Filer*, DirItem *item);
 #if 0

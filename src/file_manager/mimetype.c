@@ -199,7 +199,8 @@ on_theme_select(GtkMenuItem* menuitem, gpointer user_data)
 /* Read-load all the glob patterns.
  * Note: calls filer_update_all.
  */
-void reread_mime_files(void)
+void
+reread_mime_files(void)
 {
 	//gtk_icon_theme_rescan_if_needed(icon_theme);
 
