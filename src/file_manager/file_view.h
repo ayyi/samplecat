@@ -48,13 +48,13 @@ struct _ViewDetails {
 	int		          drag_box_x[2];	/* Index 0 is the fixed corner */
 	int		          drag_box_y[2];
 
+	gboolean          use_alt_colours;
 	GdkColor          alt_bg;
 	GdkColor          alt_fg;
 };
 
 
-#define VIEW_DETAILS(obj) \
-	(GTK_CHECK_CAST((obj), view_details_get_type(), ViewDetails))
+#define VIEW_DETAILS(obj) (GTK_CHECK_CAST((obj), view_details_get_type(), ViewDetails))
 
 GtkWidget* view_details_new(Filer* filer_window);
 GType      view_details_get_type();

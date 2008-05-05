@@ -24,10 +24,15 @@ extern struct _app app;
 extern Filer filer;
 extern unsigned debug;
 
-GtkWidget* view_details_new();
-void       view_details_dnd_get(GtkWidget*, GdkDragContext*, GtkSelectionData*, guint info, guint time, gpointer data);
+char* categories[] = {"drums", "perc", "bass", "keys", "synth", "strings", "brass", "fx", "impulses"};
+ 
+GtkWidget*        view_details_new();
+void              view_details_dnd_get(GtkWidget*, GdkDragContext*, GtkSelectionData*, guint info, guint time, gpointer data);
 
 static gboolean   window_on_destroy(GtkWidget*, gpointer);
+static void       window_on_realise(GtkWidget*, gpointer);
+static void       window_on_allocate(GtkWidget*, gpointer);
+static gboolean   window_on_configure(GtkWidget*, GdkEventConfigure*, gpointer user_data);
 static gboolean   filter_new();
 static GtkWidget* colour_box_new(GtkWidget* parent);
 static gboolean   colour_box_exists(GdkColor* colour);
@@ -75,7 +80,7 @@ make_menu_actions()
 	GtkActionGroup* group = gtk_action_group_new("File Manager");
 	accel_group = gtk_accel_group_new();
 
-	int count = sizeof(struct _accel)/sizeof(keys[0]);
+	int count = A_SIZE(keys);
 	int k;
 	for(k=0;k<count;k++){
 		struct _accel* key = &keys[k];
@@ -148,14 +153,14 @@ window
 	gtk_widget_show(align1);
 	gtk_box_pack_end(GTK_BOX(vbox), align1, EXPAND_TRUE, TRUE, 0);
 
-	GtkWidget *hpaned = gtk_hpaned_new();
+	GtkWidget *hpaned = app.hpaned = gtk_hpaned_new();
 	gtk_paned_set_position(GTK_PANED(hpaned), 160);
 	//gtk_box_pack_end(GTK_BOX(vbox), hpaned, EXPAND_TRUE, TRUE, 0);
 	gtk_container_add(GTK_CONTAINER(align1), hpaned);
 	gtk_widget_show(hpaned);
 
-	GtkWidget* tree = left_pane();
-	gtk_paned_add1(GTK_PANED(hpaned), tree);
+	GtkWidget* left = left_pane();
+	gtk_paned_add1(GTK_PANED(hpaned), left);
 
 	GtkWidget* rhs_vbox = gtk_vbox_new(NON_HOMOGENOUS, 0);
 	gtk_widget_show(rhs_vbox);
@@ -163,20 +168,11 @@ window
 
 	//split the rhs in two:
 	GtkWidget* r_vpaned = gtk_vpaned_new();
-	gtk_paned_set_position(GTK_PANED(r_vpaned), 160);
+	gtk_paned_set_position(GTK_PANED(r_vpaned), 300);
 	gtk_box_pack_start(GTK_BOX(rhs_vbox), r_vpaned, EXPAND_TRUE, TRUE, 0);
-	//gtk_container_add(GTK_CONTAINER(align1), r_vpaned);
 	gtk_widget_show(r_vpaned);
 
 	GtkWidget* scroll = app.scroll = scrolled_window_new();
-/*
-	GtkWidget *scroll = app.scroll = gtk_scrolled_window_new(NULL, NULL);  //adjustments created automatically.
-	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
-	gtk_widget_show(scroll);
-*/
-	//gtk_box_pack_end(GTK_BOX(vbox), scroll, EXPAND_TRUE, TRUE, 0);
-	//gtk_paned_add2(GTK_PANED(hpaned), scroll);
-	//gtk_box_pack_start(GTK_BOX(rhs_vbox), scroll, EXPAND_TRUE, TRUE, 0);
 	gtk_paned_add1(GTK_PANED(r_vpaned), scroll);
 
 	listview__new();
@@ -189,14 +185,9 @@ window
 	GtkWidget* scroll2 = scrolled_window_new();
 	gtk_paned_add2(GTK_PANED(r_vpaned), scroll2);
 
-	GtkWidget* file_view = file_manager__new_window(g_get_home_dir());
-	app.fm_view = file_view;
-	//GtkWidget* file_view = app.fm_view = view_details_new(&filer);
-	//filer.view = (ViewIface*)file_view;
-	//filer_change_to(&filer, g_get_home_dir(), NULL);
+	GtkWidget* file_view = app.fm_view = file_manager__new_window(g_get_home_dir());
 	gtk_container_add(GTK_CONTAINER(scroll2), file_view);
 	gtk_widget_show(file_view);
-	//app.fm_menu = filer.menu = fm_make_context_menu();
 	g_signal_connect(G_OBJECT(file_view), "cursor-changed", G_CALLBACK(window_on_fileview_row_selected), NULL);
 
 	make_menu_actions();
@@ -227,6 +218,8 @@ window
 	g_signal_connect(G_OBJECT(window), "configure_event", G_CALLBACK(window_on_configure), NULL);
 
 	filter_new();
+	tagshow_selector_new();
+	tag_selector_new();
 
 	gtk_widget_show_all(window);
 
@@ -236,7 +229,7 @@ window
 }
 
 
-void
+static void
 window_on_realise(GtkWidget *win, gpointer user_data)
 {
 	gtk_tree_view_column_set_resizable(app.col_name, TRUE);
@@ -245,7 +238,7 @@ window_on_realise(GtkWidget *win, gpointer user_data)
 }
 
 
-void
+static void
 window_on_allocate(GtkWidget *win, gpointer user_data)
 {
 	GdkColor colour;
@@ -301,7 +294,7 @@ window_on_allocate(GtkWidget *win, gpointer user_data)
 		app.bg_colour_mod1.blue  = MIN(app.bg_colour_mod1.blue  + 0x1000, 0xffff);
 
 		//set column colours:
-		//printf("window_on_allocate(): fg_color: %x %x %x\n", app.fg_colour.red, app.fg_colour.green, app.fg_colour.blue);
+		dbg(3, "fg_color: %x %x %x", app.fg_colour.red, app.fg_colour.green, app.fg_colour.blue);
 
 		g_object_set(app.cell1, "cell-background-gdk", &app.bg_colour_mod1, "cell-background-set", TRUE, NULL);
 		g_object_set(app.cell1, "foreground-gdk", &app.fg_colour, "foreground-set", TRUE, NULL);
@@ -314,7 +307,7 @@ window_on_allocate(GtkWidget *win, gpointer user_data)
 }
 
 
-gboolean
+static gboolean
 window_on_configure(GtkWidget *widget, GdkEventConfigure *event, gpointer user_data)
 {
 	static gboolean window_size_set = FALSE;
@@ -328,6 +321,16 @@ window_on_configure(GtkWidget *widget, GdkEventConfigure *event, gpointer user_d
 			dbg(2, "width=%s height=%s", app.config.window_width, app.config.window_height);
 			gtk_window_resize(GTK_WINDOW(app.window), width, height);
 			window_size_set = TRUE;
+
+			//set the position of the left pane elements.
+			//As the allocation is somehow bigger than its container, we just do it v approximately.
+			if(GTK_WIDGET_REALIZED(app.vpaned)){
+				//dbg(0, "height=%i %i %i", app.hpaned->allocation.height, app.statusbar->allocation.y, app.inspector->widget->allocation.height);
+				guint inspector_y = height - app.hpaned->allocation.y - 210;
+				gtk_paned_set_position(GTK_PANED(app.vpaned), inspector_y);
+
+				gtk_paned_set_position(GTK_PANED(app.vpaned2), inspector_y / 2);
+			}
 		}
 	}
 	return FALSE;
@@ -344,20 +347,16 @@ window_on_destroy(GtkWidget* widget, gpointer user_data)
 GtkWidget*
 left_pane()
 {
-	//other examples of file navigation: nautilus? (rox has no tree)
-
 	app.vpaned = gtk_vpaned_new();
-	//gtk_box_pack_end(GTK_BOX(vbox), hpaned, EXPAND_TRUE, TRUE, 0);
 	gtk_widget_show(app.vpaned);
 
 	//make another vpane sitting inside the 1st:
-	GtkWidget* vpaned2 = gtk_vpaned_new();
+	GtkWidget* vpaned2 = app.vpaned2 = gtk_vpaned_new();
 	gtk_widget_show(vpaned2);
 	gtk_paned_add1(GTK_PANED(app.vpaned), vpaned2);
 
 #ifndef NO_USE_DEVHELP_DIRTREE
 	GtkWidget* tree = dir_tree_new();
-	//gtk_paned_add1(GTK_PANED(app.vpaned), tree);
 	gtk_paned_add1(GTK_PANED(vpaned2), tree);
 	gtk_widget_show(tree);
 	g_signal_connect(tree, "link_selected", G_CALLBACK(dir_tree_on_link_selected), NULL);
@@ -385,13 +384,9 @@ left_pane()
 	gtk_widget_show(tree);
 #endif
 
+	inspector_pane();
+	gtk_paned_add2(GTK_PANED(app.vpaned), app.inspector->widget);
 
-#ifdef INSPECTOR
-#endif
-	GtkWidget* inspector = inspector_pane();
-	gtk_paned_add2(GTK_PANED(app.vpaned), inspector);
-
-	//return tree;
 	return app.vpaned;
 }
 
@@ -548,6 +543,70 @@ dir_tree_new()
 }
 
 
+gboolean
+tag_selector_new()
+{
+	//the tag _edit_ selector
+
+	/*
+	//GtkWidget* combo = gtk_combo_box_new_text();
+	GtkWidget* combo = app.category = gtk_combo_box_new_text();
+	GtkComboBox* combo_ = GTK_COMBO_BOX(combo);
+	gtk_combo_box_append_text(combo_, "no categories");
+	gtk_combo_box_append_text(combo_, "drums");
+	gtk_combo_box_append_text(combo_, "perc");
+	gtk_combo_box_append_text(combo_, "keys");
+	gtk_combo_box_append_text(combo_, "strings");
+	gtk_combo_box_append_text(combo_, "fx");
+	gtk_combo_box_append_text(combo_, "impulses");
+	gtk_combo_box_set_active(combo_, 0);
+	gtk_widget_show(combo);	
+	gtk_box_pack_start(GTK_BOX(app.toolbar2), combo, EXPAND_FALSE, FALSE, 0);
+	g_signal_connect(combo, "changed", G_CALLBACK(on_category_changed), NULL);
+	//gtk_combo_box_get_active_text(combo);
+	*/
+
+	GtkWidget* combo2 = app.category = gtk_combo_box_entry_new_text();
+	GtkComboBox* combo_ = GTK_COMBO_BOX(combo2);
+	gtk_combo_box_append_text(combo_, "no categories");
+	int i; for (i=0;i<A_SIZE(categories);i++) {
+		gtk_combo_box_append_text(combo_, categories[i]);
+	}
+	gtk_widget_show(combo2);	
+	gtk_box_pack_start(GTK_BOX(app.toolbar2), combo2, EXPAND_FALSE, FALSE, 0);
+
+	//"set" button:
+	GtkWidget* set = gtk_button_new_with_label("Set Tag");
+	gtk_widget_show(set);	
+	gtk_box_pack_start(GTK_BOX(app.toolbar2), set, EXPAND_FALSE, FALSE, 0);
+	g_signal_connect(set, "clicked", G_CALLBACK(on_category_set_clicked), NULL);
+
+	return TRUE;
+}
+
+
+gboolean
+tagshow_selector_new()
+{
+	//the view-filter tag-select.
+
+	GtkWidget* combo = app.view_category = gtk_combo_box_new_text();
+	GtkComboBox* combo_ = GTK_COMBO_BOX(combo);
+	gtk_combo_box_append_text(combo_, "all categories");
+	//dbg(0, "  size=%i", sizeof(categories));
+	int i; for(i=0;i<A_SIZE(categories);i++){
+		gtk_combo_box_append_text(combo_, categories[i]);
+	}
+	gtk_combo_box_set_active(combo_, 0);
+	gtk_widget_show(combo);	
+	gtk_box_pack_start(GTK_BOX(app.toolbar), combo, EXPAND_FALSE, FALSE, 0);
+	g_signal_connect(combo, "changed", G_CALLBACK(on_view_category_changed), NULL);
+	//gtk_combo_box_get_active_text(combo);
+
+	return TRUE;
+}
+
+
 static void
 window_on_fileview_row_selected(GtkTreeView* treeview, gpointer user_data)
 {
@@ -557,10 +616,28 @@ window_on_fileview_row_selected(GtkTreeView* treeview, gpointer user_data)
 }
 
 
-/*static */void
+#define COL_LEAF 0 //api leakage - does the filemanager really have no get_selected_files() function?
+void
 menu__add_to_db(GtkMenuItem* menuitem, gpointer user_data)
 {
 	PF;
+
+	GtkTreeModel* model = gtk_tree_view_get_model(GTK_TREE_VIEW(filer.view));
+	GtkTreeSelection* selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(filer.view));
+	GList* list = gtk_tree_selection_get_selected_rows(selection, NULL);
+	for (; list; list = list->next) {
+		GtkTreePath* path = list->data;
+		GtkTreeIter iter;
+		if (gtk_tree_model_get_iter(model, &iter, path)) {
+			gchar* leaf;
+			gtk_tree_model_get(model, &iter, COL_LEAF, &leaf, -1);
+			gchar* filepath = g_build_filename(filer.real_path, leaf, NULL);
+			dbg(2, "filepath=%s", filepath);
+
+			add_file(filepath);
+			g_free(filepath);
+		}
+	}
 }
 
 

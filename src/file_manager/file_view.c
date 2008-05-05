@@ -140,6 +140,7 @@ view_details_new(Filer* filer_window)
 	PF;
 	ViewDetails* view_details = g_object_new(view_details_get_type(), NULL);
 	view_details->filer_window = filer_window;
+	view_details->use_alt_colours = FALSE;
 
 	filer_window->menu = fm_make_context_menu();
 
@@ -638,7 +639,6 @@ view_details_button_press(GtkWidget* widget, GdkEventButton* ev)
 	//GtkTreeView *tree = (GtkTreeView *) widget;
 
 	if(ev->type == GDK_BUTTON_PRESS && ev->button == 3){
-		dbg(0, "right click!");
 		if(filer_window->menu) gtk_menu_popup(GTK_MENU(filer_window->menu),
                    NULL, NULL, NULL, NULL,
                    (ev) ? ev->button : 0,
@@ -1106,7 +1106,6 @@ view_details_iface_init(gpointer giface, gpointer iface_data)
 static void
 view_details_style_changed(ViewIface *view, int flags)
 {
-	PF;
 	ViewDetails*  view_details = (ViewDetails *) view;
 	GtkTreeModel* model        = (GtkTreeModel *) view;
 	ViewItem**    items        = (ViewItem **) view_details->items->pdata;

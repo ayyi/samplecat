@@ -1,6 +1,6 @@
 /*
 
-Copyright Tim Orford 2007
+Copyright (C) Tim Orford 2007-2008
 
 This software is licensed under the GPL. See accompanying file COPYING.
 
@@ -47,7 +47,6 @@ This software is licensed under the GPL. See accompanying file COPYING.
 #include "mimetype.h"
 #include "pixmaps.h"
 #include "rox/dir.h"
-//#include "rox/filer.h"
 #include "file_manager.h"
 
 //#define DEBUG_NO_THREADS 1
@@ -60,7 +59,7 @@ void       dir_init();
 
 struct _app app;
 struct _palette palette;
-GList* mime_types; // list of *MIME_type
+GList* mime_types; // list of MIME_type*
 extern GList* themes; 
 
 unsigned debug = 0;
@@ -71,8 +70,6 @@ char red   [16];
 char green [16];
 char yellow[16];
 char bold  [16];
-
-char* categories[] = {"drums", "perc", "bass", "keys", "synth", "strings", "brass", "fx", "impulses"};
 
 //mysql table layout (database column numbers):
 enum {
@@ -177,8 +174,6 @@ main(int argc, char** argv)
 	app.store = gtk_list_store_new(NUM_COLS, GDK_TYPE_PIXBUF, G_TYPE_INT, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING, GDK_TYPE_PIXBUF, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_INT, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_INT);
  
 	window_new(); 
-	tagshow_selector_new();
-	tag_selector_new();
  
 	do_search(app.search_phrase, app.search_dir);
 
@@ -221,7 +216,7 @@ dir_tree_update(gpointer data)
 	note: destroying the whole node tree is wasteful - can we just make modifications to it?
 
 	*/
-	printf("dir_tree_update()... FIXME !! dir list window not updated.\n");
+	dbg(0, "FIXME !! dir list window not updated.\n");
 
 	GNode *node;
 	node = app.dir_tree;
@@ -243,7 +238,7 @@ set_search_dir(char* dir)
 
 	//if string is empty, we show all directories?
 
-	if(!dir){ errprintf("set_search_dir()\n"); return; }
+	if(!dir){ perr("dir!\n"); return; }
 
 	dbg (1, "dir=%s\n", dir);
 	app.search_dir = dir;
@@ -281,7 +276,7 @@ path_cell_data_func(GtkTreeViewColumn *tree_column, GtkCellRenderer *cell, GtkTr
 	snprintf(colour, 16, "#%s", app.config.colour[colour_index]);
 	//printf("path_cell_data_func(): colour=%i %s\n", colour_index, colour);
 
-	if(strlen(colour) != 7 ){ errprintf("path_cell_data_func(): bad colour string (%s) index=%u.\n", colour, colour_index); return; }
+	if(strlen(colour) != 7 ){ perr("bad colour string (%s) index=%u.\n", colour, colour_index); return; }
 
 	if(colour_index) g_object_set(cell, "cell-background-set", TRUE, "cell-background", colour, NULL);
 	else             g_object_set(cell, "cell-background-set", FALSE, NULL);
@@ -489,11 +484,9 @@ scan_dir(const char* path)
 	*/
 	PF;
 
-	//gchar path[256];
 	char filepath[256];
 	G_CONST_RETURN gchar *file;
 	GError *error = NULL;
-	//sprintf(path, app.home_dir);
 	GDir *dir;
 	if((dir = g_dir_open(path, 0, &error))){
 		while((file = g_dir_read_name(dir))){
@@ -501,7 +494,6 @@ scan_dir(const char* path)
 			snprintf(filepath, 128, "%s/%s", path, file);
 
 			if(!g_file_test(filepath, G_FILE_TEST_IS_DIR)){
-				//printf("scan_dir(): checking files: %s\n", file);
 				add_file(filepath);
 
 				//FIXME why does this block?
@@ -735,83 +727,6 @@ treeview_unblock_motion_handler()
 		if(id1) g_signal_handler_unblock(app.view, id1);
 		else warnprintf("%s(): failed to find handler.\n", __func__);
 	}
-}
-
-
-gboolean
-tag_selector_new()
-{
-	//the tag _edit_ selector
-
-	/*
-	//GtkWidget* combo = gtk_combo_box_new_text();
-	GtkWidget* combo = app.category = gtk_combo_box_new_text();
-	GtkComboBox* combo_ = GTK_COMBO_BOX(combo);
-	gtk_combo_box_append_text(combo_, "no categories");
-	gtk_combo_box_append_text(combo_, "drums");
-	gtk_combo_box_append_text(combo_, "perc");
-	gtk_combo_box_append_text(combo_, "keys");
-	gtk_combo_box_append_text(combo_, "strings");
-	gtk_combo_box_append_text(combo_, "fx");
-	gtk_combo_box_append_text(combo_, "impulses");
-	gtk_combo_box_set_active(combo_, 0);
-	gtk_widget_show(combo);	
-	gtk_box_pack_start(GTK_BOX(app.toolbar2), combo, EXPAND_FALSE, FALSE, 0);
-	g_signal_connect(combo, "changed", G_CALLBACK(on_category_changed), NULL);
-	//gtk_combo_box_get_active_text(combo);
-	*/
-
-	GtkWidget* combo2 = app.category = gtk_combo_box_entry_new_text();
-	GtkComboBox* combo_ = GTK_COMBO_BOX(combo2);
-	gtk_combo_box_append_text(combo_, "no categories");
-	gtk_combo_box_append_text(combo_, "drums");
-	gtk_combo_box_append_text(combo_, "perc");
-	gtk_combo_box_append_text(combo_, "bass");
-	gtk_combo_box_append_text(combo_, "keys");
-	gtk_combo_box_append_text(combo_, "synth");
-	gtk_combo_box_append_text(combo_, "strings");
-	gtk_combo_box_append_text(combo_, "brass");
-	gtk_combo_box_append_text(combo_, "fx");
-	gtk_combo_box_append_text(combo_, "impulses");
-	gtk_widget_show(combo2);	
-	gtk_box_pack_start(GTK_BOX(app.toolbar2), combo2, EXPAND_FALSE, FALSE, 0);
-
-	//"set" button:
-	GtkWidget* set = gtk_button_new_with_label("Set Tag");
-	gtk_widget_show(set);	
-	gtk_box_pack_start(GTK_BOX(app.toolbar2), set, EXPAND_FALSE, FALSE, 0);
-	g_signal_connect(set, "clicked", G_CALLBACK(on_category_set_clicked), NULL);
-
-	return TRUE;
-}
-
-
-gboolean
-tagshow_selector_new()
-{
-	//the view-filter tag-select.
-
-	//GtkWidget* combo = gtk_combo_box_new_text();
-	GtkWidget* combo = app.view_category = gtk_combo_box_new_text();
-	GtkComboBox* combo_ = GTK_COMBO_BOX(combo);
-	gtk_combo_box_append_text(combo_, "all categories");
-	dbg(0, "  size=%i", sizeof(categories));
-	int i; for(i=0;i<sizeof(categories)/sizeof(*categories);i++){
-		gtk_combo_box_append_text(combo_, categories[i]);
-	}
-/*
-	gtk_combo_box_append_text(combo_, "drums");
-	gtk_combo_box_append_text(combo_, "keys");
-	gtk_combo_box_append_text(combo_, "strings");
-	gtk_combo_box_append_text(combo_, "fx");
-*/
-	gtk_combo_box_set_active(combo_, 0);
-	gtk_widget_show(combo);	
-	gtk_box_pack_start(GTK_BOX(app.toolbar), combo, EXPAND_FALSE, FALSE, 0);
-	g_signal_connect(combo, "changed", G_CALLBACK(on_view_category_changed), NULL);
-	//gtk_combo_box_get_active_text(combo);
-
-	return TRUE;
 }
 
 
@@ -2141,7 +2056,6 @@ config_save()
 		dbg (0, "error saving config file: %s", error->message);
 		g_error_free(error);
 	}
-	//printf("string=%s\n", string);
 
 	FILE* fp;
 	if(!(fp = fopen(app.config_filename, "w"))){
@@ -2164,7 +2078,7 @@ config_new()
 
 	GError *error = NULL;
 	char data[256 * 256];
-	sprintf(data, "#this is the default config file.\n#pls enter the database details.\n"
+	sprintf(data, "# this is the default config file for the Samplecat application.\n# pls enter your database details.\n"
 		"[Samplecat]\n"
 		"database_host=localhost\n"
 		"database_user=username\n"
@@ -2173,7 +2087,7 @@ config_new()
 		);
 
 	if(!g_key_file_load_from_data(app.key_file, data, strlen(data), G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS, &error)){
-		errprintf("config_new() error creating new key_file from data. %s\n", error->message);
+		perr("error creating new key_file from data. %s\n", error->message);
 		g_error_free(error);
 		error = NULL;
 		return;

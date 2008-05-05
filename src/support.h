@@ -1,16 +1,17 @@
 #include "stdint.h"
 
 #define dbg(A, B, ...) debug_printf(__func__, A, B, ##__VA_ARGS__)
+#define perr(A, ...) errprintf2(__func__, A, ##__VA_ARGS__)
 #define PF printf("%s()...\n", __func__);
 #define PF_DONE printf("%s(): done.\n", __func__);
-//#define ASSERT_POINTER(A, B, C) if((unsigned)A < 1024){ errprintf("%s(): bad %s pointer (%p).\n", B, C, A); return; }
 #define ASSERT_POINTER(A, B) if((unsigned)A < 1024){ errprintf2(__func__, "bad %s pointer (%p).\n", B, A); return; }
-//#define ASSERT_POINTER_FALSE(A, B, C) if(GPOINTER_TO_UINT(B) < 1024){ errprintf("%s(): bad %s pointer (%p).\n", A, C, B); return FALSE; }
 #define ASSERT_POINTER_FALSE(A, B) if(GPOINTER_TO_UINT(A) < 1024){ errprintf2(__func__, "bad %s pointer (%p).\n", B, A); return FALSE; } 
 #define GERR_WARN if(error){ warnprintf("%s\n", error->message); g_error_free(error); error = NULL; }
 
 #define HAS_ALPHA_FALSE 0
 #define BITS_PER_CHAR_8 8
+
+#define A_SIZE(A) sizeof(A)/sizeof(A[0])
 
 typedef struct _rect {
   double x1;

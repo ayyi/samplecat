@@ -21,6 +21,7 @@ typedef struct _inspector
 {
 	unsigned       row_id;
 	GtkTreeRowReference* row_ref;
+	GtkWidget*     widget;
 	GtkWidget*     name;
 	GtkWidget*     filename;
 	GtkWidget*     tags;
@@ -68,21 +69,22 @@ struct _app
 	GtkListStore*  store;
 	inspector*     inspector;
 	
-	GtkWidget* window;
-	GtkWidget* vbox;
-	GtkWidget* toolbar;
-	GtkWidget* toolbar2;
-	GtkWidget* scroll;
-	GtkWidget* view;
-	GtkWidget* statusbar;
-	GtkWidget* statusbar2;
-	GtkWidget* search;
-	GtkWidget* category;
-	GtkWidget* view_category;
-	GtkWidget* context_menu;
+	GtkWidget*     window;
+	GtkWidget*     vbox;
+	GtkWidget*     toolbar;
+	GtkWidget*     toolbar2;
+	GtkWidget*     scroll;
+	GtkWidget*     hpaned;
+	GtkWidget*     view;
+	GtkWidget*     statusbar;
+	GtkWidget*     statusbar2;
+	GtkWidget*     search;
+	GtkWidget*     category;
+	GtkWidget*     view_category;
+	GtkWidget*     context_menu;
 
-	GtkWidget* colour_button[PALETTE_SIZE];
-	gboolean   colourbox_dirty;
+	GtkWidget*     colour_button[PALETTE_SIZE];
+	gboolean       colourbox_dirty;
 
 	GtkCellRenderer*     cell1;          //sample name.
 	GtkCellRenderer*     cell_tags;
@@ -97,9 +99,9 @@ struct _app
 	GtkWidget*           dir_treeview;
 	ViewDirTree*         dir_treeview2;
 	GtkWidget*           vpaned;        //vertical divider on lhs between the dir_tree and inspector
+	GtkWidget*           vpaned2;
 
 	GtkWidget*           fm_view;
-	//GtkWidget*           fm_menu;
 
 	GdkColor             fg_colour;
 	GdkColor             bg_colour;
@@ -143,8 +145,6 @@ enum {
 	TYPE_FLAC,
 };
 
-gboolean    tag_selector_new();
-gboolean    tagshow_selector_new();
 void        on_view_category_changed(GtkComboBox *widget, gpointer user_data);
 void        on_category_changed(GtkComboBox *widget, gpointer user_data);
 void        on_category_set_clicked(GtkComboBox *widget, gpointer user_data);

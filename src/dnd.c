@@ -47,15 +47,14 @@ drag_received(GtkWidget *widget, GdkDragContext *drag_context, gint x, gint y,
 
   dbg(1, "%s", data->data);
 
-  if(g_str_has_prefix(data->data, "colour:")){
-    //printf("drag_received(): colour!!\n");
+  if(g_str_has_prefix((char*)data->data, "colour:")){
 
 	if(get_mouseover_row() > -1){
 	//if(widget==app.view){
       dbg(1, "treeview!");
 	}
 
-	char* colour_string = data->data + 7;
+	char* colour_string = (char*)data->data + 7;
 	unsigned colour_index = atoi(colour_string) ? atoi(colour_string) - 1 : 0;
 
 	//which row are we on?
@@ -93,7 +92,7 @@ drag_received(GtkWidget *widget, GdkDragContext *drag_context, gint x, gint y,
 
   if(info==GPOINTER_TO_INT(TARGET_URI_LIST)){
     dbg(0, "type=uri_list. len=%i", data->length);
-    GList* list = uri_list_to_glist(data->data);
+    GList* list = uri_list_to_glist((char*)data->data);
 	if(g_list_length(list) < 1) warnprintf("drag_received(): drag drop: uri list parsing found no uri's.\n");
     int i=0, added_count=0;
 	GList* l = list;

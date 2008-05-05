@@ -14,8 +14,8 @@ extern MIME_type *application_octet_stream;
 extern MIME_type *application_x_shellscript;
 extern MIME_type *application_executable;
 extern MIME_type *application_x_desktop;
-/*
 extern MIME_type *inode_directory;
+/*
 extern MIME_type *inode_mountpoint;
 extern MIME_type *inode_pipe;
 extern MIME_type *inode_socket;

@@ -1,3 +1,8 @@
+080505
+-import from filemanager now works.
+-better default panel sizes on lhs.
+-filemanager context menu shows subdirs and allows you to navigate into them.
+
 070907
 -new feature: files can now be moved in the filesystem by dragging from list view to the dir tree panel.
 -gnomevfs dependency removed

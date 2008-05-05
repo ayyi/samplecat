@@ -306,7 +306,7 @@ MIME_type *type_get_type(const guchar *path)
 	DirItem		*item;
 	MIME_type	*type = NULL;
 
-	item = diritem_new("");
+	item = diritem_new((guchar*)"");
 	diritem_restat(path, item, NULL);
 	if (item->base_type != TYPE_ERROR)
 		type = item->mime_type;
@@ -315,7 +315,7 @@ MIME_type *type_get_type(const guchar *path)
 	if (type)
 		return type;
 
-	type = type_from_path(path);
+	type = type_from_path((char*)path);
 
 	if (!type)
 		return text_plain;
@@ -923,7 +923,7 @@ add_themes_from_dir(GPtrArray *names, const char *dir)
 
 	if (access(dir, F_OK) != 0)	return;
 
-	list = list_dir(dir);
+	list = list_dir((guchar*)dir);
 	g_return_if_fail(list != NULL);
 
 	for (i = 0; i < list->len; i++){

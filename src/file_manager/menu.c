@@ -16,19 +16,24 @@
 #include "rox/dir.h"
 #include "file_manager.h"
 #include "rox/display.h"
+#include "mimetype.h"
 #include "menu.h"
 
 extern Filer filer;
 
 //static gint updating_menu = 0;      // Non-zero => ignore activations
 
-static void menu__go_up_dir(GtkMenuItem*, gpointer user_data);
-static void menu__refresh  (GtkMenuItem*, gpointer user_data);
+static void menu__go_down_dir(GtkMenuItem*, gpointer user_data);
+static void menu__go_up_dir  (GtkMenuItem*, gpointer user_data);
+static void menu__refresh    (GtkMenuItem*, gpointer user_data);
+static GtkWidget* fm_make_subdir_menu();
 //static void set_sort(gpointer data, guint action, GtkWidget *widget);
 //static void reverse_sort(gpointer data, guint action, GtkWidget *widget);
 
 #undef N_
 #define N_(x) x
+
+#define IS_DIR(item) (item->base_type == TYPE_DIRECTORY)
 
 #if 0
 static GtkItemFactoryEntry fm_menu_def[] = {
@@ -117,7 +122,6 @@ typedef struct
 
 
 static menu_def fm_menu_def[] = {
-	//{"Add to database", G_CALLBACK(menu__add)},
 	{"Go up directory", G_CALLBACK(menu__go_up_dir)},
 	{"Refresh",         G_CALLBACK(menu__refresh)},
 	//{"Delete", NULL}
@@ -129,15 +133,52 @@ fm_make_context_menu()
 {
 	GtkWidget* menu = gtk_menu_new();
 
-	int i; for(i=0;i<sizeof(fm_menu_def) / sizeof(*fm_menu_def);i++){
-		dbg(0, "i=%i", i);
+	int i; for(i=0;i<A_SIZE(fm_menu_def);i++){
+		dbg(2, "i=%i", i);
 		menu_def* item = &fm_menu_def[i];
 		GtkWidget* menu_item = gtk_menu_item_new_with_label (item->label);
 		gtk_menu_shell_append (GTK_MENU_SHELL(menu), menu_item);
 		if(item->callback) g_signal_connect (G_OBJECT(menu_item), "activate", G_CALLBACK(item->callback), NULL);
-		gtk_widget_show (menu_item);
 	}
+
+	GtkWidget* cd = gtk_image_menu_item_new_with_mnemonic("Cd");
+	GtkWidget* ico = gtk_image_new_from_pixbuf(mime_type_get_pixbuf(inode_directory));
+	gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(cd), ico);
+	gtk_container_add(GTK_CONTAINER(menu), cd);
+
+	GtkWidget* submenu = fm_make_subdir_menu();
+	gtk_menu_item_set_submenu(GTK_MENU_ITEM(cd), submenu);
+
+	gtk_widget_show_all(menu);
 	return menu;
+}
+
+
+static GtkWidget*
+fm_make_subdir_menu()
+{
+	GtkWidget* submenu = gtk_menu_new();
+
+	if (filer.real_path) {
+		GDir* dir = g_dir_open((char*)filer.real_path, 0, NULL);
+		const char* leaf;
+		if (dir) {
+			while ((leaf = g_dir_read_name(dir))) {
+				if (leaf[0] == '.') continue;
+				gchar* filename = g_build_filename(filer.real_path, leaf, NULL);
+				if (g_file_test(filename, G_FILE_TEST_IS_DIR)) {
+					GtkWidget* item = gtk_image_menu_item_new_with_mnemonic (leaf);
+					GtkWidget* ico = gtk_image_new_from_pixbuf(mime_type_get_pixbuf(inode_directory));
+					gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(item), ico);
+					gtk_container_add(GTK_CONTAINER(submenu), item);
+					g_signal_connect(G_OBJECT(item), "activate", G_CALLBACK(menu__go_down_dir), NULL);
+				}
+				g_free(filename);
+			}
+			g_dir_close(dir);
+		}
+	}
+	return submenu;
 }
 
 
@@ -147,7 +188,6 @@ fm_make_context_menu()
 void
 fm_add_menu_item(GtkAction* action)
 {
-	PF;
 	GtkWidget* menu_item = gtk_action_create_menu_item(action);
 	gtk_menu_shell_append(GTK_MENU_SHELL(filer.menu), menu_item);
 	//GCClosure* closure = gtk_action_get_accel_closure(action);
@@ -156,10 +196,47 @@ fm_add_menu_item(GtkAction* action)
 }
 
 
+void
+fm_menu__dir_update()
+{
+	//update menu items related to the current directory.
+	PF;
+	GtkWidget* menu = filer.menu;
+	GList* items = GTK_MENU_SHELL(menu)->children;
+	for(;items;items=items->next){
+		GtkMenuItem* item = items->data;
+		GtkWidget* submenu = gtk_menu_item_get_submenu(item);
+		if(submenu){
+			GtkWidget* cd = fm_make_subdir_menu();
+			gtk_menu_item_set_submenu(GTK_MENU_ITEM(item), cd);
+			gtk_widget_show_all(GTK_WIDGET(item));
+			break;
+		}
+	}
+}
+
+
+static void
+menu__go_down_dir(GtkMenuItem* menuitem, gpointer user_data)
+{
+	GList* children = gtk_container_get_children(GTK_CONTAINER(menuitem));
+	for (;children;children=children->next) {
+		GtkWidget* child = children->data;
+		if (GTK_IS_LABEL(child)) {
+			const gchar* leaf = gtk_label_get_text((GtkLabel*)child);
+			gchar* filename = g_build_filename(filer.real_path, leaf, NULL);
+
+			filer_change_to(&filer, filename, NULL);
+
+			g_free(filename);
+		}
+	}
+}
+
+
 static void
 menu__go_up_dir(GtkMenuItem* menuitem, gpointer user_data)
 {
-	PF;
 	change_to_parent(&filer);
 }
 

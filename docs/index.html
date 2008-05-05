@@ -33,7 +33,10 @@ GNU/Linux systems. It is written in C and uses the GTK graphics library.
 MySql is used for the database.
 </p>
 <p>
-Currently, basic functionality is working, but the bells and whistles are not there.
+Currently, basic functionality is working, but the application lacks the bells and whistles to make it a serious tool.
+</p>
+<p>
+<strong>20080505</strong>: Added some minor functionality to the filemanager context menu.
 </p>
 <p>
 <strong>20070922</strong>: Fixed dnd import bug, and added some more simple file management functionality.
@@ -48,12 +51,6 @@ Currently, basic functionality is working, but the bells and whistles are not th
 <strong>20070905</strong>: Updated the tarball again with some bugfixes. Thanks to Luigi for his help.
 </p>
 <p>
-<strong>20070825</strong>: It appears that Flac have <a href="http://lists.xiph.org/pipermail/flac-dev/2007-June/002218.html">broken their API again</a>, ho ho.
-Recent versions are sensibly marked as unstable on my distro, and anything later than 1.1.2 will apparently cause 
-Samplecat to fail to compile. I've taken this opportunity to convert the project to use Autotools, so you can now do
-<code>./configure --disable-flac</code>. Flac auditioning still works with this option, if you have it built into libsndfile. The latest
-'unstable' version of Samplecat is <a href="http://orford.f2s.com/assets/samplecat-0.0.3.tar.gz">0.0.3</a>
-</p>
 
 <h3>features</h3>
 <ul>
@@ -70,7 +67,7 @@ Samplecat to fail to compile. I've taken this opportunity to convert the project
 
 <h3>installation</h3>
 <ul>
-  <li><a href="http://orford.f2s.com/assets/samplecat-0.0.3.tar.gz">download source</a> (or use the <a href="http://orford.f2s.com/assets/samplecat-0.0.3.ebuild">gentoo ebuild</a>)
+  <li><a href="http://orford.org/assets/samplecat-0.0.4.tar.gz">download source</a> (or use the <a href="http://orford.org/assets/samplecat-0.0.4.ebuild">gentoo ebuild</a>)
   <li>untar, configure, make, make install.
   <li>dependencies: mysqlclient, gtk+2.4, jack, libsndfile, flac (&lt; 1.1.3).
 </ul>
@@ -82,6 +79,7 @@ Samplecat to fail to compile. I've taken this opportunity to convert the project
   <li>set tags by 1) selecting Edit Tags on the context menu, 2) double clicking the tag area, 3) enter text in the Edit box at the top of the window and hit the "Set Category" button.
   <li>to move a file in the filesystem, drag it from the main list to a directory in the directory tree on the left.
   <li>to rename a file in the filesystem, select it, then click on the name.
+  <li>import files into your audio editor using dragndrop.
 </ul>
 
 <h3>limitations</h3>
@@ -89,7 +87,6 @@ Samplecat to fail to compile. I've taken this opportunity to convert the project
   <li>currently, audtioning is stereo only. Files with more than 2 channels cannot be auditioned.
   <li>Auditioning is done at the system sample rate with no resampling.
   <li>mySql is currently the only database supported.
-  <li>There is no outgoing dnd support. This is a priority on the TODO list.
 </ul>
 
 </body>

@@ -416,12 +416,12 @@ update_display(Directory *dir, DirAction action, GPtrArray* items, Filer* filer_
 			//toolbar_update_info(filer_window);
 			break;
 		case DIR_START_SCAN:
-			dbg(0, "DIR_START_SCAN");
+			dbg(2, "DIR_START_SCAN");
 			set_scanning_display(filer_window, TRUE);
 			//toolbar_update_info(filer_window);
 			break;
 		case DIR_END_SCAN:
-			dbg(0, "DIR_END_SCAN");
+			dbg(2, "DIR_END_SCAN");
 			//if (filer_window->window->window) gdk_window_set_cursor(filer_window->window->window, NULL);
 			set_scanning_display(filer_window, FALSE);
 			//toolbar_update_info(filer_window);
@@ -445,7 +445,7 @@ update_display(Directory *dir, DirAction action, GPtrArray* items, Filer* filer_
 			if (filer_window->thumb_queue) start_thumb_scanning(filer_window);
 			break;
 		case DIR_UPDATE:
-			dbg(0, "DIR_UPDATE");
+			dbg(2, "DIR_UPDATE");
 			view_update_items(view, items);
 			break;
 		case DIR_ERROR_CHANGED:
@@ -1252,7 +1252,8 @@ void filer_open_parent(FilerWindow *filer_window)
 }
 #endif //0
 
-void change_to_parent(Filer *filer_window)
+void
+change_to_parent(Filer *filer_window)
 {
 	const char *current = filer_window->sym_path;
 
@@ -1294,7 +1295,7 @@ tidy_sympath(gchar *path)
 void
 filer_change_to(Filer* filer_window, const char *path, const char *from)
 {
-	printf("file_change_to(): %s", path);
+	dbg(2, "%s", path);
 	g_return_if_fail(filer_window != NULL);
 
 	filer_cancel_thumbnails(filer_window);
@@ -1351,6 +1352,8 @@ filer_change_to(Filer* filer_window, const char *path, const char *from)
 	//if (o_filer_auto_resize.int_value == RESIZE_ALWAYS) view_autosize(filer_window->view);
 
 	//if (filer_window->mini_type == MINI_PATH) g_idle_add((GSourceFunc) minibuffer_show_cb, filer_window);
+
+	fm_menu__dir_update();
 	PF_DONE;
 }
 

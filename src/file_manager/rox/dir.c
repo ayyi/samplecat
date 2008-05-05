@@ -72,6 +72,7 @@
 #include "pixmaps.h"
 #include "mimetype.h"
 //#include "usericons.h"
+#include "menu.h"
 
 #ifdef USE_DNOTIFY
 /* Newer Linux kernels can tell us when the directories we are watching
@@ -683,7 +684,7 @@ insert_item(Directory *dir, const guchar *leafname)
 			if (old._image) g_object_ref(old._image);
 			do_compare = TRUE;
 		}
-		diritem_restat(full_path, item, &dir->stat_info);
+		diritem_restat((guchar*)full_path, item, &dir->stat_info);
 	}
 	else
 	{
@@ -692,7 +693,7 @@ insert_item(Directory *dir, const guchar *leafname)
 		 * we get here.
 		 */
 		item = diritem_new(leafname);
-		diritem_restat(full_path, item, &dir->stat_info);
+		diritem_restat((guchar*)full_path, item, &dir->stat_info);
 		if (item->base_type == TYPE_ERROR &&
 				item->lstat_errno == ENOENT)
 		{

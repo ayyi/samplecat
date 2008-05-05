@@ -25,7 +25,7 @@ inspector_pane()
 
 	int margin_left = 5;
 
-	GtkWidget *vbox = gtk_vbox_new(FALSE, 0);
+	GtkWidget *vbox = app.inspector->widget = gtk_vbox_new(FALSE, 0);
 	gtk_widget_show(vbox);
 
 	//left align the label:
@@ -164,8 +164,6 @@ inspector_pane()
 
 	//this also sets the margin:
 	//gtk_text_view_set_border_window_size(GTK_TEXT_VIEW(text1), GTK_TEXT_WINDOW_LEFT, 20);
-
-	//printf("inspector_pane(): size=%i inspector=%p textbuf=%p\n", sizeof(*app.inspector), app.inspector, app.inspector->notes);
 
 	return vbox;
 }

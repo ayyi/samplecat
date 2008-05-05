@@ -17,7 +17,7 @@ BUILT_SOURCES =
 CLEANFILES =
 
 libfilemanager_headers = \
-	file_manager.h
+	file_manager.h \
 	file_view.h
 
 libfilemanager_a_SOURCES = \
@@ -29,5 +29,7 @@ libfilemanager_a_SOURCES = \
 	mimetype.c mimetype.h \
 	rox/dir.c rox/dir.h
 
-EXTRA_DIST =
+EXTRA_DIST = \
+	file_manager.h \
+	file_view.h
 
