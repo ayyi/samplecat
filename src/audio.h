@@ -1,3 +1,9 @@
+#ifdef HAVE_FLAC_1_1_1
+#  include <FLAC/all.h>
+#endif
+#include <jack/jack.h>
+#include <jack/ringbuffer.h>
+
 typedef struct __decoder_session _decoder_session;
 
 typedef struct __audition

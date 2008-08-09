@@ -28,8 +28,9 @@
 #include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
 
+#include "typedefs.h"
 #include "support.h"
-#include "rox/rox_global.h"
+#include "file_manager.h"
 
 #include "rox/view_iface.h"
 #include "file_view.h"
@@ -38,13 +39,9 @@
 #include "rox/rox_support.h"
 #include "mimetype.h"
 #include "rox/display.h"
-#include "file_manager.h"
 #include "pixmaps.h"
 #include "dnd.h"
-//#include "bind.h"
-//#include "gui_support.h"
-//#include "menu.h"
-//#include "options.h"
+#include "menu.h"
 #include "rox/cell_icon.h"
 
 /* These are the column numbers in the ListStore */

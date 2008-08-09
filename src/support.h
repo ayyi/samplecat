@@ -20,18 +20,6 @@ typedef struct _rect {
   double y2;
 } rect;
 
-typedef enum {
-	SORT_NONE = 0,
-	SORT_NAME,
-	SORT_TYPE,
-	SORT_DATE,
-	SORT_SIZE,
-	SORT_OWNER,
-	SORT_GROUP,
-	SORT_NUMBER,
-	SORT_PATH
-} SortType;
-
 void         errprintf(char* fmt, ...);
 void         errprintf2(const char* func, char* format, ...);
 void         warnprintf(char* format, ...);

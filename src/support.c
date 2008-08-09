@@ -22,8 +22,9 @@
 #endif
 
 #include "dh-link.h"
-#include "support.h"
 #include "typedefs.h"
+#include <gqview2/typedefs.h>
+#include "support.h"
 #include "main.h"
 #include "gqview2/ui_fileops.h"
 #include "rox/rox_global.h"

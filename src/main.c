@@ -13,21 +13,20 @@ This software is licensed under the GPL. See accompanying file COPYING.
 #include <unistd.h>
 #include <getopt.h>
 #include <sndfile.h>
-#include <jack/jack.h>
 #include <gtk/gtk.h>
-#include <FLAC/all.h>
 
 #include <gdk-pixbuf/gdk-pixdata.h>
 #ifdef OLD
   #include <libart_lgpl/libart.h>
 #endif
-#include <jack/ringbuffer.h>
 
+#include "typedefs.h"
 #include "mysql/mysql.h"
 #include "dh-link.h"
 #include "support.h"
 #include "gqview_view_dir_tree.h"
 #include "main.h"
+#include "sample.h"
 #include "audio.h"
 #include "overview.h"
 #include "cellrenderer_hypertext.h"
@@ -123,8 +122,10 @@ app_init()
 int 
 main(int argc, char** argv)
 {
+#if 0
 	//make gdb break on g errors:
 	g_log_set_always_fatal( G_LOG_FLAG_RECURSION | G_LOG_FLAG_FATAL | G_LOG_LEVEL_ERROR | G_LOG_LEVEL_CRITICAL | G_LOG_LEVEL_WARNING );
+#endif
 
 	//init console escape commands:
 	sprintf(white,  "%c[0;39m", 0x1b);
@@ -693,44 +694,6 @@ clear_store()
 
 
 void
-treeview_block_motion_handler()
-{
-	if(app.view){
-		gulong id1= g_signal_handler_find(app.view,
-							   G_SIGNAL_MATCH_FUNC, // | G_SIGNAL_MATCH_DATA,
-							   0,//arrange->hzoom_handler,   //guint signal_id      ?handler_id?
-							   0,        //GQuark detail
-							   0,        //GClosure *closure
-							   treeview_on_motion, //callback
-							   NULL);    //data
-		if(id1) g_signal_handler_block(app.view, id1);
-		else warnprintf("treeview_block_motion_handler(): failed to find handler.\n");
-
-		gtk_tree_row_reference_free(app.mouseover_row_ref);
-		app.mouseover_row_ref = NULL;
-	}
-}
-
-
-void
-treeview_unblock_motion_handler()
-{
-	PF;
-	if(app.view){
-		gulong id1= g_signal_handler_find(app.view,
-							   G_SIGNAL_MATCH_FUNC, // | G_SIGNAL_MATCH_DATA,
-							   0,        //guint signal_id
-							   0,        //GQuark detail
-							   0,        //GClosure *closure
-							   treeview_on_motion, //callback
-							   NULL);    //data
-		if(id1) g_signal_handler_unblock(app.view, id1);
-		else warnprintf("%s(): failed to find handler.\n", __func__);
-	}
-}
-
-
-void
 on_category_changed(GtkComboBox *widget, gpointer user_data)
 {
 	PF;
@@ -944,89 +907,6 @@ new_search(GtkWidget *widget, gpointer userdata)
 }
 
 
-void
-on_notes_insert(GtkTextView *textview, gchar *arg1, gpointer user_data)
-{
-	printf("on_notes_insert()...\n");
-}
-
-
-gboolean
-on_notes_focus_out(GtkWidget *widget, gpointer userdata)
-{
-	PF;
-
-	GtkTextBuffer* textbuf = gtk_text_view_get_buffer(GTK_TEXT_VIEW(widget));
-	if(!textbuf){ errprintf("on_notes_focus_out(): bad arg: widget.\n"); return FALSE; }
-
-	GtkTextIter start_iter, end_iter;
-	gtk_text_buffer_get_start_iter(textbuf,  &start_iter);
-	gtk_text_buffer_get_end_iter  (textbuf,  &end_iter);
-	gchar* notes = gtk_text_buffer_get_text(textbuf, &start_iter, &end_iter, TRUE);
-	printf("on_notes_focus_out(): start=%i end=%i\n", gtk_text_iter_get_offset(&start_iter), gtk_text_iter_get_offset(&end_iter));
-
-	unsigned id = app.inspector->row_id;
-	char sql[1024];
-	snprintf(sql, 1024, "UPDATE samples SET notes='%s' WHERE id=%u", notes, id);
-	//printf("on_notes_focus_out(): %s\n", sql);
-	if(mysql_query(&app.mysql, sql)){
-		errprintf("on_notes_focus_out(): update failed! sql=%s\n", sql);
-		return FALSE;
-	}else{
-		GtkTreePath *path;
-		//if((path = gtk_tree_model_get_path(GTK_TREE_MODEL(app.store), &iter))){
-		if((path = gtk_tree_row_reference_get_path(app.inspector->row_ref))){
-			GtkTreeIter iter;
-			gtk_tree_model_get_iter(GTK_TREE_MODEL(app.store), &iter, path);
-			gtk_list_store_set(app.store, &iter, COL_NOTES, notes, -1);
-			gtk_tree_path_free(path);
-		}
-	}
-
-	g_free(notes);
-	return FALSE;
-}
-
-
-sample*
-sample_new()
-{
-	sample* sample;
-	sample = malloc(sizeof(*sample));
-	sample->id = 0;
-	sample->filetype = 0;
-	sample->pixbuf = NULL;
-	return sample;
-}
-
-
-sample*
-sample_new_from_model(GtkTreePath *path)
-{
-	GtkTreeIter iter;
-	GtkTreeModel *model = gtk_tree_view_get_model(GTK_TREE_VIEW(app.view));
-	gtk_tree_model_get_iter(model, &iter, path);
-	gchar *fpath, *fname, *mimetype;
-	int id;
-	gtk_tree_model_get(model, &iter, COL_FNAME, &fpath, COL_NAME, &fname, COL_IDX, &id, COL_MIMETYPE, &mimetype, -1);
-
-	sample* sample = malloc(sizeof(*sample));
-	sample->id = id;
-	snprintf(sample->filename, 256, "%s/%s", fpath, fname);
-	if(!strcmp(mimetype, "audio/x-flac")) sample->filetype = TYPE_FLAC; else sample->filetype = TYPE_SNDFILE; 
-	sample->pixbuf = NULL;
-	return sample;
-}
-
-
-void
-sample_free(sample* sample)
-{
-	gtk_tree_row_reference_free(sample->row_ref);
-	g_free(sample);
-}
-
-
 gboolean
 add_file(char* path)
 {
@@ -1060,8 +940,7 @@ add_file(char* path)
 		goto out;
 	}
 
-	if(!strcmp(mime_string, "audio/x-flac")) sample->filetype = TYPE_FLAC;
-	printf("add_file() mimetype: %s type=%i\n", mime_string, sample->filetype);
+	sample_set_type_from_mime_string(sample, mime_string);
 
 	if(!strcmp(mime_type->media_type, "text")){
 		printf("ignoring text file...\n");

@@ -1,3 +1,5 @@
+#include "rox/rox_global.h"
+#include "rox/dir.h"
 #include "filer.h"
 
 Filer*     file_manager__init();

@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <gtk/gtk.h>
+#include "typedefs.h"
 #include "support.h"
 #include "mysql/mysql.h"
 #include "dh-link.h"
@@ -192,7 +193,7 @@ window
 
 	make_menu_actions();
 
-	//set up as dnd source:
+	//set up fileview as dnd source:
 	gtk_drag_source_set(file_view, GDK_BUTTON1_MASK | GDK_BUTTON2_MASK,
 				dnd_file_drag_types, dnd_file_drag_types_count,
 				GDK_ACTION_COPY | GDK_ACTION_MOVE | GDK_ACTION_ASK);

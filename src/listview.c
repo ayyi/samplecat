@@ -6,9 +6,11 @@
 #include "mysql/mysql.h"
 #include "dh-link.h"
 
-#include "support.h"
 #include "typedefs.h"
+#include <gqview2/typedefs.h>
+#include "support.h"
 #include "main.h"
+#include "sample.h"
 #include "dnd.h"
 #include "cellrenderer_hypertext.h"
 #include "inspector.h"
@@ -358,6 +360,44 @@ listview__drag_received(GtkWidget *widget, GdkDragContext *drag_context, gint x,
 {
 	PF;
 	return FALSE;
+}
+
+
+void
+treeview_block_motion_handler()
+{
+	if(app.view){
+		gulong id1= g_signal_handler_find(app.view,
+							   G_SIGNAL_MATCH_FUNC, // | G_SIGNAL_MATCH_DATA,
+							   0,//arrange->hzoom_handler,   //guint signal_id      ?handler_id?
+							   0,        //GQuark detail
+							   0,        //GClosure *closure
+							   treeview_on_motion, //callback
+							   NULL);    //data
+		if(id1) g_signal_handler_block(app.view, id1);
+		else warnprintf("treeview_block_motion_handler(): failed to find handler.\n");
+
+		gtk_tree_row_reference_free(app.mouseover_row_ref);
+		app.mouseover_row_ref = NULL;
+	}
+}
+
+
+void
+treeview_unblock_motion_handler()
+{
+	PF;
+	if(app.view){
+		gulong id1= g_signal_handler_find(app.view,
+							   G_SIGNAL_MATCH_FUNC, // | G_SIGNAL_MATCH_DATA,
+							   0,        //guint signal_id
+							   0,        //GQuark detail
+							   0,        //GClosure *closure
+							   treeview_on_motion, //callback
+							   NULL);    //data
+		if(id1) g_signal_handler_unblock(app.view, id1);
+		else warnprintf("%s(): failed to find handler.\n", __func__);
+	}
 }
 
 

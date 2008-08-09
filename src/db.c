@@ -9,8 +9,9 @@
 
 #include "mysql/mysql.h"
 #include "dh-link.h"
-#include "support.h"
 #include "typedefs.h"
+#include <gqview2/typedefs.h>
+#include "support.h"
 #include "main.h"
 #include "db.h"
 extern struct _app app;
@@ -68,8 +69,9 @@ db_connect()
 
 	if(!mysql_real_connect(mysql, app.config.database_host, app.config.database_user, app.config.database_pass, app.config.database_name, 0, NULL, 0)){
 		errprintf("cannot connect to database: %s\n", mysql_error(mysql));
+		//currently this wont be displayed, as the window is not yet opened.
+		statusbar_printf(1, "cannot connect to database: %s\n", mysql_error(mysql));
 		return FALSE;
-		//exit(1);
 	}
 	if(debug) printf("MySQL Server Version is %s\n", mysql_get_server_info(mysql));
 

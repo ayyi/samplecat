@@ -35,6 +35,7 @@
 #include <gdk/gdkx.h>
 #include <gdk/gdkkeysyms.h>
 
+#include "typedefs.h"
 #include "support.h"
 
 #include "rox/rox_global.h"

@@ -9,6 +9,7 @@
  * This software comes with no warranty of any kind, use at your own risk!
  */
 #include <gtk/gtk.h>
+#include "../typedefs.h"
 #include "support.h"
 
 #include "gqview.h"

@@ -30,10 +30,12 @@ GQVIEW1_SRC = gqview_view_dir_tree.c gqview_view_dir_tree.h gqview2/gqview.h gqv
 GQVIEW2_SRC = 
 
 samplecat_SOURCES = \
+	typedefs.h \
 	main.c main.h file_manager/rox/rox_global.h \
 	window.c window.h \
 	listview.c listview.h \
 	inspector.c inspector.h \
+	sample.c sample.h \
 	audio.c audio.h \
 	overview.c overview.h \
 	pixmaps.c pixmaps.h \

@@ -1,4 +1,5 @@
 #include <gtk/gtk.h>
+#include "../typedefs.h"
 #include "support.h"
 #include "gqview.h"
 #include "ui_fileops.h"

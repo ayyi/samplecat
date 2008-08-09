@@ -1,4 +1,4 @@
-
+//#include "config.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,19 +14,16 @@
 #else
   #include <cairo.h>
 #endif
-//#include <libgnomevfs/gnome-vfs.h>
-#ifdef HAVE_FLAC_1_1_1
-  #include <FLAC/all.h>
-#endif
-#include <jack/ringbuffer.h>
 
 #include "mysql/mysql.h"
 #include "dh-link.h"
-#include "support.h"
 #include "typedefs.h"
+#include <gqview2/typedefs.h>
+#include "support.h"
 #include "main.h"
 #include "audio.h"
 #include "overview.h"
+#include "sample.h"
 #include "cellrenderer_hypertext.h"
 
 #include "rox/rox_global.h"

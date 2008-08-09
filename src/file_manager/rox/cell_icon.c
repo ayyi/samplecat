@@ -28,6 +28,7 @@
 #include <string.h>
 #include <sys/stat.h>
 
+#include "typedefs.h"
 #include "support.h"
 #include "rox_global.h"
 

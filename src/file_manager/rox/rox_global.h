@@ -8,6 +8,9 @@
  * ROX-Filer header files.
  */
 
+#ifndef __rox_global_h__
+#define __rox_global_h__
+
 #include <glib.h>
 
 #ifdef HAVE_GNOME_VFS
@@ -231,3 +234,4 @@ typedef struct _MaskedPixmap MaskedPixmap;
 
 MaskedPixmap *im_unknown;
 
+#endif //__rox_global_h__

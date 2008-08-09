@@ -27,8 +27,10 @@
 #include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
 
+#include "../typedefs.h"
 #include "support.h"
-#include "rox/rox_global.h"
+//#include "rox/rox_global.h"
+#include "file_manager.h"
 #include "rox/view_iface.h"
 #include "file_view.h"
 #include "rox/dir.h"
@@ -36,7 +38,6 @@
 #include "rox/rox_support.h"
 #include "mimetype.h"
 
-#include "file_manager.h"
 
 Filer filer;
 GList* all_filer_windows = NULL;

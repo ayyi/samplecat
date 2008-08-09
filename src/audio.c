@@ -28,7 +28,6 @@
 #endif
 
 #include <sndfile.h>
-#include <jack/jack.h>
 
 #include "mysql/mysql.h"
 #include "dh-link.h"
@@ -36,8 +35,10 @@
   #include <FLAC/all.h>
 #endif
 #include <jack/ringbuffer.h>
-#include "support.h"
 #include "typedefs.h"
+#include "sample.h"
+#include "support.h"
+#include <gqview2/typedefs.h>
 #include "main.h"
 #include "audio.h"
 extern struct _app app;

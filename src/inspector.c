@@ -1,18 +1,27 @@
 #include "config.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <libgen.h>
 #include <gtk/gtk.h>
+#include "typedefs.h"
 #include "support.h"
 #include "mysql/mysql.h"
 #include "dh-link.h"
 #include "gqview_view_dir_tree.h"
 #include "main.h"
+#include "db.h"
+#include "rox/rox_global.h"
+#include "mimetype.h"
+#include "sample.h"
 #include "listview.h"
 #include "inspector.h"
 
 extern struct _app app;
 
 static gboolean   inspector_on_tags_clicked(GtkWidget*, GdkEventButton*, gpointer user_data);
+static gboolean   on_notes_focus_out       (GtkWidget*, gpointer userdata);
+static void       on_notes_insert          (GtkTextView*, gchar *arg1, gpointer user_data);
 
 
 GtkWidget*
@@ -228,12 +237,35 @@ inspector_update_from_fileview(GtkTreeView* treeview)
 		GtkTreeIter iter;
 		gtk_tree_model_get_iter(model, &iter, path);
 
-		gchar* fname;
-		gtk_tree_model_get(model, &iter, COL_NAME, &fname, -1);
-		dbg(0, "%s", fname);
-
-		g_list_foreach (list, gtk_tree_path_free, NULL);
+		g_list_foreach (list, (GFunc)gtk_tree_path_free, NULL);
 		g_list_free (list);
+
+		sample* sample = sample_new_from_fileview(model, &iter);
+
+		if(sample){
+			MIME_type* mime_type = type_from_path(sample->filename);
+			char mime_string[64];
+			snprintf(mime_string, 64, "%s/%s", mime_type->media_type, mime_type->subtype);
+			sample_set_type_from_mime_string(sample, mime_string);
+
+			if(get_file_info(sample)){
+				char ch_str[64]; snprintf(ch_str, 64, "%u channels", sample->channels);
+				char fs_str[64]; snprintf(fs_str, 64, "%u kHz",      sample->sample_rate);
+				char length[64]; snprintf(length, 64, "%u",          sample->length);
+
+				gtk_label_set_text(GTK_LABEL(app.inspector->name),       basename(sample->filename));
+				gtk_label_set_text(GTK_LABEL(app.inspector->filename),   sample->filename);
+				gtk_label_set_text(GTK_LABEL(app.inspector->tags),       "");
+				gtk_label_set_text(GTK_LABEL(app.inspector->length),     length);
+				gtk_label_set_text(GTK_LABEL(app.inspector->channels),   ch_str);
+				gtk_label_set_text(GTK_LABEL(app.inspector->samplerate), fs_str);
+				gtk_label_set_text(GTK_LABEL(app.inspector->mimetype),   mime_string);
+				gtk_text_buffer_set_text(app.inspector->notes, "", -1);
+#if 0
+				gtk_image_set_from_pixbuf(GTK_IMAGE(app.inspector->image), pixbuf);
+#endif
+			}
+		}
 	}
 }
 
@@ -250,6 +282,48 @@ inspector_on_tags_clicked(GtkWidget *widget, GdkEventButton *event, gpointer use
 	tag_edit_start(0);
 
 	return TRUE;
+}
+
+
+static void
+on_notes_insert(GtkTextView *textview, gchar *arg1, gpointer user_data)
+{
+	dbg(0, "...");
+}
+
+
+static gboolean
+on_notes_focus_out(GtkWidget *widget, gpointer userdata)
+{
+	if(!db_is_connected()) return FALSE;
+
+	GtkTextBuffer* textbuf = gtk_text_view_get_buffer(GTK_TEXT_VIEW(widget));
+	if(!textbuf){ errprintf("on_notes_focus_out(): bad arg: widget.\n"); return FALSE; }
+
+	GtkTextIter start_iter, end_iter;
+	gtk_text_buffer_get_start_iter(textbuf,  &start_iter);
+	gtk_text_buffer_get_end_iter  (textbuf,  &end_iter);
+	gchar* notes = gtk_text_buffer_get_text(textbuf, &start_iter, &end_iter, TRUE);
+	dbg(0, "start=%i end=%i", gtk_text_iter_get_offset(&start_iter), gtk_text_iter_get_offset(&end_iter));
+
+	unsigned id = app.inspector->row_id;
+	char sql[1024];
+	snprintf(sql, 1024, "UPDATE samples SET notes='%s' WHERE id=%u", notes, id);
+	if(mysql_query(&app.mysql, sql)){
+		errprintf("on_notes_focus_out(): update failed! sql=%s\n", sql);
+		return FALSE;
+	}else{
+		GtkTreePath *path;
+		if((path = gtk_tree_row_reference_get_path(app.inspector->row_ref))){
+			GtkTreeIter iter;
+			gtk_tree_model_get_iter(GTK_TREE_MODEL(app.store), &iter, path);
+			gtk_list_store_set(app.store, &iter, COL_NOTES, notes, -1);
+			gtk_tree_path_free(path);
+		}
+	}
+
+	g_free(notes);
+	return FALSE;
 }
 
 

@@ -824,9 +824,9 @@ static void
 dir_recheck(Directory *dir, const guchar *path, const guchar *leafname)
 {
 	PF;
-	guchar *old = dir->pathname;
+	guchar *old = (guchar*)dir->pathname;
 
-	dir->pathname = g_strdup(path);
+	dir->pathname = g_strdup((gchar*)path);
 	g_free(old);
 
 	time(&diritem_recent_time);

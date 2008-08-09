@@ -2,8 +2,9 @@
 #include "listview.h"
 #include "mysql/mysql.h"
 #include "dh-link.h"
-#include "support.h"
 #include "typedefs.h"
+#include <gqview2/typedefs.h>
+#include "support.h"
 #include "main.h"
 #include "gqview_view_dir_tree.h"
 

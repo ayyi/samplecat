@@ -12,7 +12,7 @@
 #ifndef VIEW_DIR_TREE_H
 #define VIEW_DIR_TREE_H
 
-#include <typedefs.h>
+#include <gqview2/typedefs.h>
 
 ViewDirTree *vdtree_new(const gchar *path, gint expand);
 
