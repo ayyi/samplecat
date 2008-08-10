@@ -75,7 +75,7 @@ void
 sample_set_type_from_mime_string(sample* sample, char* mime_string)
 {
 	if(!strcmp(mime_string, "audio/x-flac")) sample->filetype = TYPE_FLAC;
-	dbg(0, "mimetype: %s type=%i", mime_string, sample->filetype);
+	dbg(2, "mimetype: %s type=%i", mime_string, sample->filetype);
 }
 
 

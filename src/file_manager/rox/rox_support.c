@@ -1103,7 +1103,7 @@ md5_hash(const char *message)
 	MD5Context ctx;
 
 	MD5Init(&ctx);
-	MD5Update(&ctx, message, strlen(message));
+	MD5Update(&ctx, (guchar*)message, strlen(message));
 	return MD5Final(&ctx);
 }
 
@@ -1217,14 +1217,14 @@ CollateKey *collate_key_new(const guchar *name)
 	array = g_array_new(FALSE, FALSE, sizeof(CollatePart));
 
 	/* Ensure valid UTF-8 */
-	if (!g_utf8_validate(name, -1, NULL))
+	if (!g_utf8_validate((gchar*)name, -1, NULL))
 	{
-		to_free = to_utf8(name);
+		to_free = (guchar*)to_utf8((gchar*)name);
 		name = to_free;
 	}
 
 	retval = g_new(CollateKey, 1);
-	retval->caps = g_unichar_isupper(g_utf8_get_char(name));
+	retval->caps = g_unichar_isupper(g_utf8_get_char((gchar*)name));
 
 	for (i = name; *i; i = g_utf8_next_char(i))
 	{

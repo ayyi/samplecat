@@ -48,7 +48,6 @@ overview_thread(gpointer data)
 	while(1){
 
 		//any new work ?
-		//printf("overview_thread(): checking for work...\n");
 		while(g_async_queue_length(msg_queue)){
 			message = g_async_queue_pop(msg_queue);
 			if(debug) printf("%s(): new message! %p\n", __func__, message);
@@ -56,13 +55,11 @@ overview_thread(gpointer data)
 		}
 
 		while(msg_list!=NULL){
-			//printf("overview_thread(): list length: %i.\n", g_list_length(msg_list));
 			sample* sample = (struct _sample*)g_list_first(msg_list)->data;
 			if(debug) printf("%s(): sample=%p filename=%s.\n", __func__, sample, sample->filename);
 			make_overview(sample);
 			g_idle_add(on_overview_done, sample); //notify();
 			msg_list = g_list_remove(msg_list, sample);
-			//printf("overview_thread(): row_ref=%p\n", sample->row_ref);
 		}
 		sleep(1); //FIXME
 	}

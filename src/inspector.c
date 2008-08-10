@@ -253,6 +253,8 @@ inspector_update_from_fileview(GtkTreeView* treeview)
 				char fs_str[64]; snprintf(fs_str, 64, "%u kHz",      sample->sample_rate);
 				char length[64]; snprintf(length, 64, "%u",          sample->length);
 
+				GdkPixbuf* pixbuf = NULL;
+
 				gtk_label_set_text(GTK_LABEL(app.inspector->name),       basename(sample->filename));
 				gtk_label_set_text(GTK_LABEL(app.inspector->filename),   sample->filename);
 				gtk_label_set_text(GTK_LABEL(app.inspector->tags),       "");
@@ -261,9 +263,8 @@ inspector_update_from_fileview(GtkTreeView* treeview)
 				gtk_label_set_text(GTK_LABEL(app.inspector->samplerate), fs_str);
 				gtk_label_set_text(GTK_LABEL(app.inspector->mimetype),   mime_string);
 				gtk_text_buffer_set_text(app.inspector->notes, "", -1);
-#if 0
-				gtk_image_set_from_pixbuf(GTK_IMAGE(app.inspector->image), pixbuf);
-#endif
+				//gtk_image_set_from_pixbuf(GTK_IMAGE(app.inspector->image), pixbuf);
+				gtk_image_clear(app.inspector->image);
 			}
 		}
 	}

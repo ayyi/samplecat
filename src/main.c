@@ -1058,12 +1058,12 @@ get_file_info_sndfile(sample* sample)
 	if     (sfinfo.channels==1) snprintf(chanwidstr, 64, "mono");
 	else if(sfinfo.channels==2) snprintf(chanwidstr, 64, "stereo");
 	else                        snprintf(chanwidstr, 64, "channels=%i", sfinfo.channels);
-	printf("%iHz %s frames=%i\n", sfinfo.samplerate, chanwidstr, (int)sfinfo.frames);
+	if(debug) printf("%iHz %s frames=%i\n", sfinfo.samplerate, chanwidstr, (int)sfinfo.frames);
 	sample->channels    = sfinfo.channels;
 	sample->sample_rate = sfinfo.samplerate;
 	sample->length      = (sfinfo.frames * 1000) / sfinfo.samplerate;
 
-	if(sample->channels<1 || sample->channels>100){ printf("get_file_info_sndfile(): bad channel count: %i\n", sample->channels); return FALSE; }
+	if(sample->channels<1 || sample->channels>100){ dbg(0, "bad channel count: %i", sample->channels); return FALSE; }
 	if(sf_close(sffile)) printf("error! bad file close.\n");
 
 	return TRUE;
@@ -1609,7 +1609,7 @@ treeview_get_tags_cell(GtkTreeView *view, guint x, guint y, GtkCellRenderer **ce
 void
 on_entry_activate(GtkEntry *entry, gpointer user_data)
 {
-	printf("on_entry_activate(): entry activated!\n");
+	dbg(0, "entry activated!");
 }
 
 
@@ -1805,7 +1805,6 @@ gboolean
 toggle_recursive_add(GtkWidget *widget, gpointer user_data)
 {
 	PF;
-	//if(app.config.add_recursive) app.config.add_recursive = false; else app.config.add_recursive = true;
 	if(app.add_recursive) app.add_recursive = false; else app.add_recursive = true;
 	return FALSE;
 }

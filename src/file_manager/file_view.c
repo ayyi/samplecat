@@ -23,6 +23,7 @@
 
 #include <stdlib.h>
 #include <stdint.h>
+#include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <gtk/gtk.h>
@@ -2036,10 +2037,10 @@ view_details_on_edited(GtkCellRendererText *cell, gchar* path_string, gchar* new
 
 		gchar* src  = g_build_filename(dir, leaf, NULL);
 		gchar* dest = g_build_filename(dir, new_text, NULL);
-		dbg(0, "moving '%s' to '%s'", src, dest);
-
-		file_move(src, dest);
-
+		if(strcmp(src, dest)){
+			dbg(0, "moving '%s' to '%s'", src, dest);
+			file_move(src, dest);
+		}
 		gtk_tree_path_free(treepath);
 		g_free(src);
 		g_free(dest);
