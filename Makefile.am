@@ -1,4 +1,4 @@
-SUBDIRS = src
+SUBDIRS = ayyi src
 
 pkgconfigdir = $(libdir)/pkgconfig
 

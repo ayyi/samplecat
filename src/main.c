@@ -19,6 +19,9 @@ This software is licensed under the GPL. See accompanying file COPYING.
 #ifdef OLD
   #include <libart_lgpl/libart.h>
 #endif
+#ifdef USE_AYYI
+  #include <ayyi/ayyi.h>
+#endif
 
 #include "typedefs.h"
 #include "mysql/mysql.h"
@@ -179,6 +182,21 @@ main(int argc, char** argv)
 	do_search(app.search_phrase, app.search_dir);
 
 	app.context_menu = make_context_menu();
+
+	void
+	ayyi_connect(){
+		Service* ardourd = &known_services[0];
+		GError* error = NULL;
+		if((/*app.dbus = */dbus_server_connect (ardourd, &error))){
+			dbus_server_get_shm(ardourd);
+			//ardourd->on_shm = app_on_shm;
+			//dbus_register_signals();
+		}else{
+			P_GERR;
+			dbg (0, "ayyi dbus connection failed.");
+		}
+	}
+	ayyi_connect();
 
 	app.loaded = TRUE;
 	dbg(0, "loaded");
@@ -914,6 +932,7 @@ add_file(char* path)
 	uri must be "unescaped" before calling this fn. Method string must be removed.
 	*/
 	dbg(0, "%s", path);
+	if(!db_is_connected()) return FALSE;
 	gboolean ok = TRUE;
 
 	sample* sample = sample_new(); //free'd after db and store are updated.
@@ -1997,5 +2016,45 @@ on_quit(GtkMenuItem *menuitem, gpointer user_data)
 	dbg (1, "done.");
 	exit(GPOINTER_TO_INT(user_data));
 }
+
+
+#ifdef USE_AYYI
+void
+action_free(AyyiAction* ayyi_action)
+{
+#if 0
+  ASSERT_POINTER(ayyi_action, "action");
+  action* action = ayyi_action->app_data;
+  ASSERT_POINTER(actionlist, "actionlist");
+  dbg (1, "list len: %i", g_list_length(actionlist));
+  if(action) dbg (2, "id=%i %s%s%s", ayyi_action->trid, bold, strlen(action->label) ? action->label : "<unnamed>", white);
+
+  actionlist = g_list_remove(actionlist, ayyi_action);
+  if(action && action->pending) g_list_free(action->pending);
+  if(action) g_free(action);
+  g_free(ayyi_action);
+  dbg (1, "new list len: %i", g_list_length(actionlist));
+#endif
+}
+
+
+void
+action_complete(AyyiAction* ayyi_action)
+{
+#if 0
+  //actions are now freed here and (ideally) only here.
+
+  ASSERT_POINTER(ayyi_action, "action");
+
+  action* action = ayyi_action->app_data;
+  dbg(2, "action=%p", action);
+  if(action && action->callback){
+    (*(action->callback))(ayyi_action);
+  }
+
+  action_free(ayyi_action);
+#endif
+}
+#endif
 
 

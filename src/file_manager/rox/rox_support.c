@@ -1226,7 +1226,7 @@ CollateKey *collate_key_new(const guchar *name)
 	retval = g_new(CollateKey, 1);
 	retval->caps = g_unichar_isupper(g_utf8_get_char((gchar*)name));
 
-	for (i = name; *i; i = g_utf8_next_char(i))
+	for (i = name; *i; i = (guchar*)g_utf8_next_char(i))
 	{
 		gunichar first_char;
 
@@ -1235,7 +1235,7 @@ CollateKey *collate_key_new(const guchar *name)
 		 * Note: g_ascii_isdigit takes char, not unichar, while
 		 * g_unicode_isdigit returns true for non ASCII digits.
 		 */
-		first_char = g_utf8_get_char(i);
+		first_char = g_utf8_get_char((gchar*)i);
 		if (first_char >= '0' && first_char <= '9')
 		{
 			char *endp;
@@ -1286,8 +1286,8 @@ collate_key_free(CollateKey *key)
 int
 collate_key_cmp(const CollateKey *key1, const CollateKey *key2, gboolean caps_first)
 {
-	ASSERT_POINTER_FALSE(key1, "key1");
-	ASSERT_POINTER_FALSE(key2, "key2");
+	g_return_val_if_fail(key1, 0);
+	g_return_val_if_fail(key2, 0);
 
 	CollatePart *n1 = key1->parts;
 	CollatePart *n2 = key2->parts;

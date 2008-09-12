@@ -1,3 +1,4 @@
+#include "../config.h"
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -45,6 +46,7 @@ static void        check_flags();
 static void        process_flag(char flag);
 
 
+#ifndef USE_AYYI
 void
 errprintf(char *format, ...)
 {
@@ -74,6 +76,7 @@ errprintf2(const char* func, char *format, ...)
   vprintf(format, argp);
   va_end(argp);
 }
+#endif
 
 
 void
@@ -90,6 +93,7 @@ warnprintf(char *format, ...)
 }
 
 
+#ifndef USE_AYYI
 void
 debug_printf(const char* func, int level, const char *format, ...)
 {
@@ -103,6 +107,7 @@ debug_printf(const char* func, int level, const char *format, ...)
 	}
 	va_end(args);
 }
+#endif
 
 
 void

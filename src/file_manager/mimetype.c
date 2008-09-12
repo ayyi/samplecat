@@ -945,9 +945,9 @@ add_themes_from_dir(GPtrArray *names, const char *dir)
 
 static GList*
 build_icon_theme(/*Option *option, xmlNode *node, */guchar *label)
-{	/*
-	-appears to build a menu list of availabe themes.
-	*/
+{
+	//-appears to build a menu list of availabe themes.
+
 	GtkWidget *menu;
 	GPtrArray *names;
 	gchar **theme_dirs = NULL;

@@ -27,7 +27,7 @@
  *-----------------------------------------------------------------------------
  */
 
-static GList *filter_list = NULL;
+//static GList *filter_list = NULL;
 static GList *extension_list = NULL;
 
 gint ishidden(const gchar *name)

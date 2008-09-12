@@ -5,7 +5,9 @@
 #define PF printf("%s()...\n", __func__);
 #define PF_DONE printf("%s(): done.\n", __func__);
 #define ASSERT_POINTER(A, B) if((unsigned)A < 1024){ errprintf2(__func__, "bad %s pointer (%p).\n", B, A); return; }
+#ifndef USE_AYYI
 #define ASSERT_POINTER_FALSE(A, B) if(GPOINTER_TO_UINT(A) < 1024){ errprintf2(__func__, "bad %s pointer (%p).\n", B, A); return FALSE; } 
+#endif
 #define GERR_WARN if(error){ warnprintf("%s\n", error->message); g_error_free(error); error = NULL; }
 
 #define HAS_ALPHA_FALSE 0

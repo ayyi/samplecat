@@ -9,9 +9,10 @@
  * This software comes with no warranty of any kind, use at your own risk!
  */
 
-#ifdef HAVE_CONFIG_H
-#  include "config.h"
-#endif
+#include "../../config.h"
+//#ifdef HAVE_CONFIG_H
+//#  include "config.h"
+//#endif
 
 #include <pwd.h>
 #include <stdio.h>
@@ -146,6 +147,7 @@ gchar *path_to_utf8(const gchar *path)
 	return utf8;
 }
 
+#ifndef USE_AYYI
 gchar *path_from_utf8(const gchar *utf8)
 {
 	gchar *path;
@@ -167,6 +169,7 @@ gchar *path_from_utf8(const gchar *utf8)
 
 	return path;
 }
+#endif
 
 #if 0
 /* first we try the HOME environment var, if that doesn't work, we try getpwuid(). */

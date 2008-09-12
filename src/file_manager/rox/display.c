@@ -321,7 +321,7 @@ sort_by_name(const void *item1, const void *item2)
 	const DirItem* i2 = (DirItem *) item2;
 	CollateKey* n1 = i1->leafname_collate;
 	CollateKey* n2 = i2->leafname_collate;
-	ASSERT_POINTER_FALSE(n1, "item1->leafname_collate");
+	g_return_val_if_fail(n1, 0);
 	int retval;
 
 	SORT_DIRS;

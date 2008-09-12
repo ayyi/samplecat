@@ -11,7 +11,9 @@ char warn[32];
 #define PALETTE_SIZE 12
 
 #define POINTER_OK_NULL(A, B, C) if((unsigned)A < 1024){ errprintf("%s(): bad %s pointer (%p).\n", B, C, A); return NULL; }
+#ifndef USE_AYYI
 #define P_GERR if(error){ errprintf2("%s\n", error->message); g_error_free(error); error = NULL; }
+#endif
 
 
 typedef struct _inspector

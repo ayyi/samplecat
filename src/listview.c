@@ -4,6 +4,9 @@
 #include <string.h>
 #include <gtk/gtk.h>
 #include "mysql/mysql.h"
+#ifdef USE_AYYI
+#include <ayyi/ayyi.h>
+#endif
 #include "dh-link.h"
 
 #include "typedefs.h"

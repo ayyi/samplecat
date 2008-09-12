@@ -119,6 +119,53 @@ AM_CONDITIONAL(ENABLE_DNOTIFY, test x$have_dnotify = xyes)
 
 dnl -----------------------------------------------------------------------------
 
+dbus="yes"
+AC_ARG_ENABLE(dbus,
+[  --disable-dbus          disable use of dbus],[
+  case "$enableval" in
+    "yes")
+      echo "dbus YES"
+      ;;
+    "no")
+      echo "dbus NO"
+      dbus="no"
+      ;;
+    *)
+      AC_MSG_ERROR([must use --enable-dbus(=yes/no) or --disable-dbus])
+      ;;
+  esac
+])
+if `test "$dbus" = "yes"`; then
+    AC_CHECK_LIB(dbus-glib-1, dbus_g_bus_get, [DBUS_FOUND=yes], [echo "*** dbus not found!"])
+	if test "$DBUS_FOUND" = "yes"; then
+		AM_CONDITIONAL(ENABLE_DBUS, test "yes" = "yes")
+		AC_DEFINE(USE_DBUS, 1, Dbus is used for messaging.)
+	else
+		AC_MSG_ERROR([Dbus was configured as the comms system but was not found on your machine.])
+	fi;
+	DBUS_CFLAGS=`pkg-config --cflags-only-I dbus-glib-1`
+	DBUS_LDFLAGS=`pkg-config --libs-only-l dbus-glib-1`
+else
+	AM_CONDITIONAL(ENABLE_DBUS, test "yes" = "no")
+	DBUS_CFLAGS=
+	DBUS_LDFLAGS=
+fi;
+AC_SUBST(DBUS_CFLAGS)
+AC_SUBST(DBUS_LDFLAGS)
+
+
+dnl -----------------------------------------------------------------------------
+
+AC_ARG_ENABLE(ayyi, AS_HELP_STRING([--enable-ayyi],[build with ayyi support]),enable_ayyi=$enableval,enable_ayyi=auto)
+AM_CONDITIONAL(ENABLE_AYYI, test "$enable_ayyi" = "yes")
+if test "$enable_ayyi" = "yes"; then
+   AC_DEFINE(USE_AYYI,1,[Use ayyi])
+fi
+AM_CONDITIONAL(ENABLE_AYYI, test "$enable_ayyi" = "yes")
+
+
+dnl -----------------------------------------------------------------------------
+
 SNDFILE_LIBS=`pkg-config --cflags --libs sndfile`
 AC_SUBST(SNDFILE_LIBS)
 
@@ -136,9 +183,11 @@ CFLAGS="$CFLAGS -pipe  -fmessage-length=139 -fdiagnostics-show-location=every-li
 AC_CONFIG_FILES([Makefile])
 AC_CONFIG_FILES([src/Makefile])
 AC_CONFIG_FILES([src/file_manager/Makefile])
+AC_CONFIG_FILES([ayyi/Makefile])
 AC_OUTPUT
 
 AC_MSG_RESULT([])
 AC_MSG_RESULT([Building direct flac support:     $enable_flac])
 AC_MSG_RESULT([Building dnotify support:         $have_dnotify])
+AC_MSG_RESULT([Building ayyi support:            $enable_ayyi])
 AC_MSG_RESULT([])

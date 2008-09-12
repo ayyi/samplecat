@@ -17,7 +17,7 @@ AM_CFLAGS = \
 	-I./gqview2 \
 	-I./file_manager \
 	-DHAVE_GTK_2_10 \
-	$(GTK_CFLAGS) $(DB_CFLAGS) $(FLAC_CFLAGS) $(XML_CFLAGS)
+	$(GTK_CFLAGS) $(DBUS_CFLAGS) $(DB_CFLAGS) $(FLAC_CFLAGS) $(XML_CFLAGS)
 
 # $(LIBART_CFLAGS) $(VFS_CFLAGS)
 
@@ -28,6 +28,12 @@ GQVIEW1_SRC = gqview_view_dir_tree.c gqview_view_dir_tree.h gqview2/gqview.h gqv
 	gqview2/utilops.c gqview2/utilops.h
 #view_dir_list.c view_dir_list.h filelist.c filelist.h
 GQVIEW2_SRC = 
+
+if ENABLE_AYYI
+AYYI_LIBS = ../ayyi/libayyi.a
+else
+AYYI_LIBS =
+endif
 
 samplecat_SOURCES = \
 	typedefs.h \
@@ -53,6 +59,8 @@ samplecat_SOURCES = \
 
 samplecat_LDADD = \
 	file_manager/libfilemanager.a \
+	$(AYYI_LIBS) \
+	$(DBUS_LDFLAGS) \
 	$(GTK_LIBS) $(DB_LIBS) $(JACK_LIBS) $(SNDFILE_LIBS) $(FLAC_LIBS) $(GTHREAD_LIBS)
 
 ##	$(INTLLIBS) $(LIBART_LIBS) $(VFS_LIBS)
