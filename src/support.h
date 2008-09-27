@@ -22,6 +22,17 @@ typedef struct _rect {
   double y2;
 } rect;
 
+struct _accel {
+	char          name[16];
+	GtkStockItem* stock_item;
+	struct s_key {
+		int        code;
+		int        mask;
+	}             key[2];
+	gpointer      callback;
+	gpointer      user_data;
+};
+
 void         errprintf(char* fmt, ...);
 void         errprintf2(const char* func, char* format, ...);
 void         warnprintf(char* format, ...);
@@ -76,6 +87,16 @@ void         format_time_int(char* length, int milliseconds);
 gint         treecell_get_row(GtkWidget *widget, GdkRectangle *cell_area);
 void         statusbar_print(int n, char *s);
 void         statusbar_printf(int n, char* fmt, ...);
+
+void         make_accels(GtkAccelGroup*, GimpActionGroup*, struct _accel*, int count, gpointer user_data);
+
+const gchar* gimp_get_mod_name_shift ();
+const gchar* gimp_get_mod_name_control();
+const gchar* gimp_get_mod_name_alt ();
+const gchar* gimp_get_mod_separator ();
+const gchar* gimp_get_mod_string (GdkModifierType modifiers);
+gchar*       gimp_strip_uline(const gchar* str);
+gchar*       gimp_get_accel_string(guint key, GdkModifierType modifiers);
 
 GList*       uri_list_to_glist(const char *uri_list);
 void         uri_list_free(GList*);

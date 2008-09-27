@@ -20,7 +20,8 @@ This software is licensed under the GPL. See accompanying file COPYING.
   #include <libart_lgpl/libart.h>
 #endif
 #ifdef USE_AYYI
-  #include <ayyi/ayyi.h>
+  #include "ayyi.h"
+  #include "ayyi_model.h"
 #endif
 
 #include "typedefs.h"
@@ -119,6 +120,8 @@ app_init()
 
 	int i; for(i=0;i<PALETTE_SIZE;i++) app.colour_button[i] = NULL;
 	app.colourbox_dirty = TRUE;
+
+	snprintf(app.config_filename, 256, "%s/.samplecat", g_get_home_dir());
 }
 
 
@@ -143,9 +146,6 @@ main(int argc, char** argv)
 
 	printf("%s"PACKAGE_NAME". Version "PACKAGE_VERSION"%s\n", yellow, white);
 
-	const gchar* home_dir = g_get_home_dir();
-	snprintf(app.home_dir, 256, "%s", home_dir); //no dont bother
-	snprintf(app.config_filename, 256, "%s/.samplecat", app.home_dir);
 	config_load();
 
 	g_thread_init(NULL);
@@ -175,28 +175,21 @@ main(int argc, char** argv)
 	}
 #endif
 
-	app.store = gtk_list_store_new(NUM_COLS, GDK_TYPE_PIXBUF, G_TYPE_INT, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING, GDK_TYPE_PIXBUF, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_INT, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_INT);
- 
+	app.store = gtk_list_store_new(NUM_COLS, GDK_TYPE_PIXBUF,
+	                               #ifdef USE_AYYI
+	                               GDK_TYPE_PIXBUF,
+	                               #endif
+	                               G_TYPE_INT, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING, GDK_TYPE_PIXBUF, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_INT, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_INT);
+
 	window_new(); 
  
 	do_search(app.search_phrase, app.search_dir);
 
 	app.context_menu = make_context_menu();
 
-	void
-	ayyi_connect(){
-		Service* ardourd = &known_services[0];
-		GError* error = NULL;
-		if((/*app.dbus = */dbus_server_connect (ardourd, &error))){
-			dbus_server_get_shm(ardourd);
-			//ardourd->on_shm = app_on_shm;
-			//dbus_register_signals();
-		}else{
-			P_GERR;
-			dbg (0, "ayyi dbus connection failed.");
-		}
-	}
+#ifdef USE_AYYI
 	ayyi_connect();
+#endif
 
 	app.loaded = TRUE;
 	dbg(0, "loaded");
@@ -559,6 +552,9 @@ do_search(char *search, char *dir)
 	char sample_name[256];
 	GdkPixbuf* pixbuf  = NULL;
 	GdkPixbuf* iconbuf = NULL;
+#ifdef USE_AYYI
+	GdkPixbuf* ayyi_icon = NULL;
+#endif
 	GdkPixdata pixdata;
 	gboolean online = FALSE;
 
@@ -651,11 +647,17 @@ do_search(char *search, char *dir)
 				}
 #endif
 
-				//icon (dont show if the sound file is not available):
+#ifdef USE_AYYI
+				//is the file loaded in the current Ayyi song?
+				gchar* fullpath = g_build_filename(row[MYSQL_DIR], sample_name, NULL);
+				if(pool__file_exists(fullpath)) dbg(0, "exists"); else dbg(0, "doesnt exist");
+				g_free(fullpath);
+#endif
+				//icon (only shown if the sound file is currently available):
 				if(online){
 					MIME_type* mime_type = mime_type_lookup(row[MYSQL_MIMETYPE]);
 					type_to_icon(mime_type);
-					if ( ! mime_type->image ) dbg(0, "no icon.\n");
+					if ( ! mime_type->image ) dbg(0, "no icon.");
 					iconbuf = mime_type->image->sm_pixbuf;
 				} else iconbuf = NULL;
 
@@ -664,7 +666,11 @@ do_search(char *search, char *dir)
 				path = path ? path + strlen(g_get_home_dir()) + 1 : row[MYSQL_DIR];
 
 				gtk_list_store_append(app.store, &iter);
-				gtk_list_store_set(app.store, &iter, COL_ICON, iconbuf, COL_IDX, atoi(row[0]), COL_NAME, sample_name, COL_FNAME, path, COL_KEYWORDS, keywords, 
+				gtk_list_store_set(app.store, &iter, COL_ICON, iconbuf,
+#ifdef USE_AYYI
+				                     COL_AYYI_ICON, ayyi_icon,
+#endif
+				                     COL_IDX, atoi(row[0]), COL_NAME, sample_name, COL_FNAME, path, COL_KEYWORDS, keywords, 
 				                     COL_OVERVIEW, pixbuf, COL_LENGTH, length, COL_SAMPLERATE, samplerate_s, COL_CHANNELS, channels, 
 				                     COL_MIMETYPE, row[MYSQL_MIMETYPE], COL_NOTES, row[MYSQL_NOTES], COL_COLOUR, colour, -1);
 				if(pixbuf) g_object_unref(pixbuf);
@@ -679,7 +685,7 @@ do_search(char *search, char *dir)
 				// mysql_store_result() should have returned data
 				printf( "Error getting records: %s\n", mysql_error(mysql));
 		  }
-		  else printf("%s(): Failed to find any records (fieldcount<1): %s\n", __func__, mysql_error(mysql));
+		  else dbg(0, "failed to find any records (fieldcount<1): %s", mysql_error(mysql));
 		}
 
 		//treeview_unblock_motion_handler();  //causes a segfault even before it is run ??!!
@@ -1936,12 +1942,15 @@ config_save()
 		g_key_file_set_value(app.key_file, "Samplecat", "window_width", value);
 		snprintf(value, 255, "%i", height);
 		g_key_file_set_value(app.key_file, "Samplecat", "window_height", value);
+
 		g_key_file_set_value(app.key_file, "Samplecat", "icon_theme", theme_name);
 
 		GtkTreeViewColumn* column = gtk_tree_view_get_column(GTK_TREE_VIEW(app.view), 1);
 		int column_width = gtk_tree_view_column_get_width(column);
 		snprintf(value, 255, "%i", column_width);
 		g_key_file_set_value(app.key_file, "Samplecat", "col1_width", value);
+
+		g_key_file_set_value(app.key_file, "Samplecat", "col1_height", value);
 
 		g_key_file_set_value(app.key_file, "Samplecat", "filter", gtk_entry_get_text(GTK_ENTRY(app.search)));
 	}
@@ -1997,6 +2006,10 @@ config_new()
 void
 on_quit(GtkMenuItem *menuitem, gpointer user_data)
 {
+	//if(user_data) dbg(0, "exitcode=%i", GPOINTER_TO_INT(user_data));
+	int exit_code = GPOINTER_TO_INT(user_data);
+	if(exit_code > 1) exit_code = 0; //ignore invalid exit code.
+
 	jack_close();
 
 	if(app.loaded) config_save();
@@ -2014,47 +2027,7 @@ on_quit(GtkMenuItem *menuitem, gpointer user_data)
 	mysql_close(mysql);
 
 	dbg (1, "done.");
-	exit(GPOINTER_TO_INT(user_data));
+	exit(exit_code);
 }
-
-
-#ifdef USE_AYYI
-void
-action_free(AyyiAction* ayyi_action)
-{
-#if 0
-  ASSERT_POINTER(ayyi_action, "action");
-  action* action = ayyi_action->app_data;
-  ASSERT_POINTER(actionlist, "actionlist");
-  dbg (1, "list len: %i", g_list_length(actionlist));
-  if(action) dbg (2, "id=%i %s%s%s", ayyi_action->trid, bold, strlen(action->label) ? action->label : "<unnamed>", white);
-
-  actionlist = g_list_remove(actionlist, ayyi_action);
-  if(action && action->pending) g_list_free(action->pending);
-  if(action) g_free(action);
-  g_free(ayyi_action);
-  dbg (1, "new list len: %i", g_list_length(actionlist));
-#endif
-}
-
-
-void
-action_complete(AyyiAction* ayyi_action)
-{
-#if 0
-  //actions are now freed here and (ideally) only here.
-
-  ASSERT_POINTER(ayyi_action, "action");
-
-  action* action = ayyi_action->app_data;
-  dbg(2, "action=%p", action);
-  if(action && action->callback){
-    (*(action->callback))(ayyi_action);
-  }
-
-  action_free(ayyi_action);
-#endif
-}
-#endif
 
 

@@ -5,7 +5,6 @@ AM_CFLAGS = \
 	-DIMAGES_DIR=\"$(imagesdir)\" \
 	-I../ \
 	-I../gqview2 \
-	-DHAVE_GTK_2_10 \
 	-DG_LOG_DOMAIN=\"FileMan\" \
 	-I$(top_srcdir)/src \
 	$(GTK_CFLAGS) $(DB_CFLAGS) $(FLAC_CFLAGS) $(XML_CFLAGS)

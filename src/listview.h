@@ -3,6 +3,9 @@
 enum
 {
   COL_ICON = 0,
+#ifdef USE_AYYI
+  COL_AYYI_ICON,
+#endif
   COL_IDX,
   COL_NAME,
   COL_FNAME,

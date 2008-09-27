@@ -5,8 +5,7 @@ AM_CFLAGS = \
 	-DIMAGES_DIR=\"$(imagesdir)\" \
 	-I../ \
 	-I../gqview2 \
-	-DHAVE_GTK_2_10 \
-	-DG_LOG_DOMAIN=\"FileMan\" \
+	-DG_LOG_DOMAIN=\"Ayyi\" \
 	-I$(top_srcdir)/src \
 	$(DBUS_CFLAGS) $(GTK_CFLAGS)
 
@@ -15,10 +14,6 @@ noinst_LIBRARIES = libayyi.a
 BUILT_SOURCES =
 
 CLEANFILES =
-
-##libfilemanager_headers = \
-##	file_manager.h \
-##	file_view.h
 
 libayyi_a_SOURCES = \
 	ayyi.h \

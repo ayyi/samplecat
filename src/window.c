@@ -5,6 +5,8 @@
 #include <string.h>
 #include <gtk/gtk.h>
 #include "typedefs.h"
+#include <gimp/gimpaction.h>
+#include <gimp/gimpactiongroup.h>
 #include "support.h"
 #include "mysql/mysql.h"
 #include "dh-link.h"
@@ -41,67 +43,19 @@ static gboolean   colour_box_add(GdkColor* colour);
 static GtkWidget* scrolled_window_new();
 static void       window_on_fileview_row_selected(GtkTreeView*, gpointer user_data);
 static void       menu__add_to_db(GtkMenuItem*, gpointer user_data);
+static void       make_fm_menu_actions();
 
 
-struct s_key {
-	int           code;
-	int           mask;
+struct _accel menu_keys[] = {
+	{"Add to database",NULL,        {{(char)'a',    0               },  {0, 0}}, menu__add_to_db, GINT_TO_POINTER(0)},
 };
 
-struct _accel {
-	char          name[16];
-	GtkStockItem* stock_item;
-	struct s_key  key[2];
-	gpointer      callback;
-	gpointer      user_data;
-};
-
-struct _accel keys[] = {
-	//{"Quit",        NULL,            {{(char)'q',       GDK_CONTROL_MASK},  {0, 0}}, on_quit,          NULL              },
-	//{"Close",       NULL,            {{(char)'w',       GDK_CONTROL_MASK},  {0, 0}}, window__close,    NULL              },
-	//{"Save",        NULL,            {{(char)'s',       GDK_CONTROL_MASK},  {0, 0}}, on_song_save_activate, NULL         },
-	{"Add to database",NULL,            {{(char)'a',       0               },  {0, 0}}, menu__add_to_db, GINT_TO_POINTER(0)},
-	//{"Locate 2",    NULL,            {{(char)'2',       0               },  {0, 0}}, transport_locate, GINT_TO_POINTER(1)},
-	//{"Locate 2 KP", NULL,            {{GDK_KP_2,        0               },  {0, 0}}, transport_locate, GINT_TO_POINTER(1)},
-	//{"Locate End",  NULL,            {{GDK_KP_End,      0               },  {0, 0}}, transport_locate, GINT_TO_POINTER(0)},
-	//{"Locate Down", NULL,            {{GDK_KP_Down,     0               },  {0, 0}}, transport_locate, GINT_TO_POINTER(1)},
-	//{"Nudge Left",  NULL,            {{(char)'[',       0               },  {0, 0}}, nudge_left,       NULL              },
-	//{"Nudge Right", NULL, {{(char)']',       0               },  {0, 0}}, nudge_right,      NULL              },
-	//{"Locate Left", NULL, {{GDK_leftarrow,   GDK_CONTROL_MASK},  {0, 0}}, transport_loc_left_k                },
-	//{"Locate Right",NULL, {{GDK_rightarrow,  GDK_CONTROL_MASK},  {0, 0}}, transport_loc_right_k               },
+struct _accel window_keys[] = {
+	{"Quit",           NULL,        {{(char)'q',    GDK_CONTROL_MASK},  {0, 0}}, on_quit,         GINT_TO_POINTER(0)},
+	{"Close",          NULL,        {{(char)'w',    GDK_CONTROL_MASK},  {0, 0}}, on_quit,         GINT_TO_POINTER(0)},
 };
 
 static GtkAccelGroup* accel_group = NULL;
-
-
-static void
-make_menu_actions()
-{
-	//action_group = gimp_action_group_new(name, label, "gtk-paste", mnemonics, NULL, update_func);
-	GtkActionGroup* group = gtk_action_group_new("File Manager");
-	accel_group = gtk_accel_group_new();
-
-	int count = A_SIZE(keys);
-	int k;
-	for(k=0;k<count;k++){
-		struct _accel* key = &keys[k];
-
-    	GtkAction* action = gtk_action_new(key->name, key->name, "Tooltip", key->stock_item? key->stock_item->stock_id : "gtk-file");
-  		gtk_action_group_add_action(GTK_ACTION_GROUP(group), action);
-
-    	GClosure* closure = g_cclosure_new(G_CALLBACK(key->callback), key->user_data, NULL);
-		g_signal_connect_closure(G_OBJECT(action), "activate", closure, FALSE);
-		//dbg(0, "callback=%p", closure->callback);
-		gchar path[64]; sprintf(path, "<%s>/Categ/%s", gtk_action_group_get_name(GTK_ACTION_GROUP(group)), key->name);
-		//gtk_accel_group_connect(accel_group, key->key[0].code, key->key[0].mask, GTK_ACCEL_MASK, closure);
-		gtk_accel_group_connect_by_path(accel_group, path, closure);
-		gtk_accel_map_add_entry(path, key->key[0].code, key->key[0].mask);
-		gtk_action_set_accel_path(action, path);
-		gtk_action_set_accel_group(action, accel_group);
-
-		fm_add_menu_item(action);
-	}
-}
 
 
 gboolean
@@ -125,6 +79,8 @@ window
       |  |  +--inspector
       |  | 
       |  +--vpaned (right pane)
+      |     +  vpane2
+      |
       |     +--scrollwin
       |     |  +--treeview file manager
       |     |
@@ -183,21 +139,27 @@ window
 	//--------
 
 	dbg(2, "making fileview pane...");
-	GtkWidget* scroll2 = scrolled_window_new();
-	gtk_paned_add2(GTK_PANED(r_vpaned), scroll2);
+	void
+	make_fileview_pane()
+	{
+		GtkWidget* scroll2 = scrolled_window_new();
+		gtk_paned_add2(GTK_PANED(r_vpaned), scroll2);
 
-	GtkWidget* file_view = app.fm_view = file_manager__new_window(g_get_home_dir());
-	gtk_container_add(GTK_CONTAINER(scroll2), file_view);
-	gtk_widget_show(file_view);
-	g_signal_connect(G_OBJECT(file_view), "cursor-changed", G_CALLBACK(window_on_fileview_row_selected), NULL);
+		GtkWidget* file_view = app.fm_view = file_manager__new_window(g_get_home_dir());
+		gtk_container_add(GTK_CONTAINER(scroll2), file_view);
+		gtk_widget_show(file_view);
+		g_signal_connect(G_OBJECT(file_view), "cursor-changed", G_CALLBACK(window_on_fileview_row_selected), NULL);
 
-	make_menu_actions();
+		make_fm_menu_actions();
 
-	//set up fileview as dnd source:
-	gtk_drag_source_set(file_view, GDK_BUTTON1_MASK | GDK_BUTTON2_MASK,
+		//set up fileview as dnd source:
+		gtk_drag_source_set(file_view, GDK_BUTTON1_MASK | GDK_BUTTON2_MASK,
 				dnd_file_drag_types, dnd_file_drag_types_count,
 				GDK_ACTION_COPY | GDK_ACTION_MOVE | GDK_ACTION_ASK);
-	g_signal_connect(G_OBJECT(file_view), "drag_data_get", G_CALLBACK(view_details_dnd_get), NULL);
+		g_signal_connect(G_OBJECT(file_view), "drag_data_get", G_CALLBACK(view_details_dnd_get), NULL);
+
+	}
+	make_fileview_pane();
 
 	GtkWidget* statusbar = app.statusbar = gtk_statusbar_new();
 	//printf("statusbar=%p\n", app.statusbar);
@@ -221,6 +183,13 @@ window
 	filter_new();
 	tagshow_selector_new();
 	tag_selector_new();
+
+	GtkAccelGroup* accel_group = gtk_accel_group_new();
+	gboolean mnemonics = FALSE;
+	GimpActionGroupUpdateFunc update_func = NULL;
+	GimpActionGroup* action_group = gimp_action_group_new("Samplecat-window", "Samplecat-window", "gtk-paste", mnemonics, NULL, update_func);
+	make_accels(accel_group, action_group, window_keys, G_N_ELEMENTS(window_keys), NULL);
+	gtk_window_add_accel_group(GTK_WINDOW(window), accel_group);
 
 	gtk_widget_show_all(window);
 
@@ -364,7 +333,7 @@ left_pane()
 #endif
 
 	gint expand = TRUE;
-	ViewDirTree* dir_list = app.dir_treeview2 = vdtree_new(app.home_dir, expand);
+	ViewDirTree* dir_list = app.dir_treeview2 = vdtree_new(g_get_home_dir(), expand);
 	vdtree_set_select_func(dir_list, dir_on_select, NULL); //callback
 	//app.dir_treeview2 = GTK_WIDGET(dir_list);
 	GtkWidget* fs_tree = dir_list->widget;
@@ -638,6 +607,35 @@ menu__add_to_db(GtkMenuItem* menuitem, gpointer user_data)
 			add_file(filepath);
 			g_free(filepath);
 		}
+	}
+}
+
+
+static void
+make_fm_menu_actions()
+{
+	GtkActionGroup* group = gtk_action_group_new("File Manager");
+	accel_group = gtk_accel_group_new();
+
+	int count = A_SIZE(menu_keys);
+	int k;
+	for(k=0;k<count;k++){
+		struct _accel* key = &menu_keys[k];
+
+    	GtkAction* action = gtk_action_new(key->name, key->name, "Tooltip", key->stock_item? key->stock_item->stock_id : "gtk-file");
+  		gtk_action_group_add_action(GTK_ACTION_GROUP(group), action);
+
+    	GClosure* closure = g_cclosure_new(G_CALLBACK(key->callback), key->user_data, NULL);
+		g_signal_connect_closure(G_OBJECT(action), "activate", closure, FALSE);
+		//dbg(0, "callback=%p", closure->callback);
+		gchar path[64]; sprintf(path, "<%s>/Categ/%s", gtk_action_group_get_name(GTK_ACTION_GROUP(group)), key->name);
+		//gtk_accel_group_connect(accel_group, key->key[0].code, key->key[0].mask, GTK_ACCEL_MASK, closure);
+		gtk_accel_group_connect_by_path(accel_group, path, closure);
+		gtk_accel_map_add_entry(path, key->key[0].code, key->key[0].mask);
+		gtk_action_set_accel_path(action, path);
+		gtk_action_set_accel_group(action, accel_group);
+
+		fm_add_menu_item(action);
 	}
 }
 

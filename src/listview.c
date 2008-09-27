@@ -85,6 +85,13 @@ listview__new()
 	gtk_tree_view_column_set_min_width(col2, 0);
 	//g_object_set(cell2, "ypad", 0, NULL);
 	gtk_tree_view_column_set_cell_data_func(col2, cell2, path_cell_data_func, NULL, NULL);
+#ifdef USE_AYYI
+	//icon that shows when file is in current active song.
+	GtkCellRenderer *ayyi_renderer = gtk_cell_renderer_pixbuf_new();
+	gtk_tree_view_column_pack_start(col2, ayyi_renderer, FALSE);
+	gtk_tree_view_column_add_attribute(col2, ayyi_renderer, "pixbuf", COL_AYYI_ICON);
+	//gtk_tree_view_column_set_cell_data_func(col2, ayyi_renderer, vdtree_color_cb, vdt, NULL);
+#endif
 
 	gtk_tree_view_column_set_sizing(col2, GTK_TREE_VIEW_COLUMN_FIXED);
 	width = atoi(app.config.column_widths[1]);

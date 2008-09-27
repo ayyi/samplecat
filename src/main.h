@@ -53,7 +53,6 @@ struct _app
 {
 	gboolean       loaded;
 
-	char           home_dir[256];
 	char           config_filename[256];
 	struct _config config;
 	char           search_phrase[256];

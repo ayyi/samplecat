@@ -60,6 +60,7 @@
 #ifdef OLD
   #include <libart_lgpl/libart.h>
 #endif
+typedef void GimpActionGroup;
 #include "support.h"
 
 GFSCache *pixmap_cache = NULL;

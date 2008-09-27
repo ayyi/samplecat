@@ -13,7 +13,6 @@ This software is licensed under the GPL. See accompanying file COPYING.
 #ifdef OLD
   #include <libart_lgpl/libart.h>
 #endif
-//#include <libgnomevfs/gnome-vfs.h>
 
 #include "mysql/mysql.h"
 #include "dh-link.h"

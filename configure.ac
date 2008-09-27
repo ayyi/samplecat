@@ -53,6 +53,13 @@ else
   HAVE_GTK_2_12="no"
 fi;
 
+if `"$PKG_CONFIG" gtk+-2.0 --atleast-version=2.10`; then
+  HAVE_GTK_2_10="yes"
+  AC_DEFINE(HAVE_GTK_2_10, 1, "we have at least gtk version 2.10")
+else
+  HAVE_GTK_2_10="no"
+fi;
+
 DB_CFLAGS="-I/usr/include/mysql"
 DB_LIBS=`/usr/bin/mysql_config --libs`
 AC_SUBST(DB_CFLAGS)
@@ -183,6 +190,7 @@ CFLAGS="$CFLAGS -pipe  -fmessage-length=139 -fdiagnostics-show-location=every-li
 AC_CONFIG_FILES([Makefile])
 AC_CONFIG_FILES([src/Makefile])
 AC_CONFIG_FILES([src/file_manager/Makefile])
+AC_CONFIG_FILES([src/gimp/Makefile])
 AC_CONFIG_FILES([ayyi/Makefile])
 AC_OUTPUT
 

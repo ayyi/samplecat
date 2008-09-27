@@ -60,6 +60,7 @@
 //#include <fcntl.h>
 //#include <sys/stat.h>
 
+typedef void GimpActionGroup;
 #include "support.h"
 #include "rox_global.h"
 

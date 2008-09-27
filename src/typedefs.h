@@ -14,4 +14,4 @@ typedef enum {
 } SortType;
 
 typedef struct _sample sample;
-
+typedef struct _GimpActionGroup GimpActionGroup;

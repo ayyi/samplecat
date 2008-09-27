@@ -1,4 +1,4 @@
-#include "config.h"
+#include "../config.h"
 #define __USE_GNU
 #include <string.h>
 #include <gtk/gtk.h>

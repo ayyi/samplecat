@@ -140,9 +140,10 @@ dbus_server_connect(Service* server, GError** error)
 gboolean
 dbus_server_get_shm(Service* server)
 {
-	dbg (2, "...");
+	dbg (0, "...");
 
-	ASSERT_POINTER_FALSE(ayyi.segs, "ayyi.shm_segs");
+	if(!ayyi.segs){ gwarn("no shm segs have been configured."); return FALSE; }
+
 	GList* list = ayyi.segs;
 	for(;list;list=list->next){
 #define DBUS_SYNC

@@ -25,6 +25,8 @@
 #include "dh-link.h"
 #include "typedefs.h"
 #include <gqview2/typedefs.h>
+#include <gimp/gimpaction.h>
+#include <gimp/gimpactiongroup.h>
 #include "support.h"
 #include "main.h"
 #include "gqview2/ui_fileops.h"
@@ -32,6 +34,8 @@
 #include "rox/rox_support.h"
 
 #define HEX_ESCAPE '%'
+#define N_(A) A 
+#define gettext(A) A
 
 extern struct _app app;
 extern unsigned debug;
@@ -1456,6 +1460,329 @@ statusbar_printf(int n, char* fmt, ...)
   gtk_statusbar_push(GTK_STATUSBAR(statusbar), cid, s);
 }
 
+
+static void
+shortcuts_add_action(GtkAction* action, GimpActionGroup* action_group)
+{
+  g_return_if_fail(action_group);
+
+  gtk_action_group_add_action(GTK_ACTION_GROUP(action_group), action);
+  dbg(2, "group=%s group_size=%i action=%s", gtk_action_group_get_name(GTK_ACTION_GROUP(action_group)), g_list_length(gtk_action_group_list_actions(GTK_ACTION_GROUP(action_group))), gtk_action_get_name(action));
+}
+
+
+void
+make_accels(GtkAccelGroup* accel_group, GimpActionGroup* action_group, struct _accel* keys, int count, gpointer user_data)
+{
+  //add keyboard shortcuts from the key array to the accelerator group.
+
+  //@param action_group - if NULL, global group is used.
+
+  ASSERT_POINTER(accel_group, "accel_group");
+  ASSERT_POINTER(keys, "keys");
+
+  int k;
+  for(k=0;k<count;k++){
+    struct _accel* key = &keys[k];
+    dbg (2, "user_data=%p %s.", user_data, key->name);
+    GClosure* closure = NULL;
+    if(key->callback){
+      closure = g_cclosure_new(G_CALLBACK(key->callback), keys[k].user_data ? keys[k].user_data : user_data, NULL);
+#ifdef REAL
+      gtk_accel_group_connect(accel_group, keys[k].keycode, keys[k].mask, GTK_ACCEL_MASK, closure);
+#endif
+    }
+
+    gchar path[64]; sprintf(path, "<%s>/Categ/%s", action_group ? gtk_action_group_get_name(GTK_ACTION_GROUP(action_group)) : "Global", keys[k].name);
+    dbg(2, "path=%s", path);
+    if(closure) gtk_accel_group_connect_by_path(accel_group, path, closure);
+    gtk_accel_map_add_entry(path, key->key[0].code, key->key[0].mask);
+    dbg(2, "done");
+
+    //gchar name[64]; sprintf(name, "Action %i", k);
+    dbg(2, "stock_item=%p", key->stock_item);
+    dbg(2, "stock-id=%s", key->stock_item? key->stock_item->stock_id : "gtk-file");
+    gchar* label = key->name;
+    GtkAction* action = gtk_action_new(key->name, label, "Tooltip", key->stock_item? key->stock_item->stock_id : "gtk-file");
+    gtk_action_set_accel_path(action, path);
+    gtk_action_set_accel_group(action, accel_group);
+    shortcuts_add_action(action, action_group);
+
+    struct s_key* alt_key = &key->key[1];
+    int n_keys = alt_key->code ? 2 : 1;   //accels either have 1 or 2 keys
+    if(n_keys == 2){
+      guchar* stock_id = (guchar*)( key->stock_item ? g_strconcat(key->stock_item->stock_id, "-ALT", NULL) : "gtk-file"); //free!
+      GtkAction* action = gtk_action_new((char*)stock_id, label, "Tooltip", (char*)stock_id);
+      gtk_action_set_accel_path(action, path);
+      gtk_action_set_accel_group(action, accel_group);
+      shortcuts_add_action(action, action_group);
+    }
+  }
+}
+
+
+
+/**
+ * gimp_strip_uline:
+ * @str: underline infested string (or %NULL)
+ *
+ * This function returns a copy of @str stripped of underline
+ * characters. This comes in handy when needing to strip mnemonics
+ * from menu paths etc.
+ *
+ * In some languages, mnemonics are handled by adding the mnemonic
+ * character in brackets (like "File (_F)"). This function recognizes
+ * this construct and removes the whole bracket construction to get
+ * rid of the mnemonic (see bug #157561).
+ *
+ * Return value: A (possibly stripped) copy of @str which should be
+ *               freed using g_free() when it is not needed any longer.
+ **/
+gchar*
+gimp_strip_uline (const gchar* str)
+{
+  gchar    *escaped;
+  gchar    *p;
+  gboolean  past_bracket = FALSE;
+
+  if (! str) return NULL;
+
+  p = escaped = g_strdup (str);
+
+  while (*str)
+    {
+      if (*str == '_')
+        {
+          /*  "__" means a literal "_" in the menu path  */
+          if (str[1] == '_')
+            {
+             *p++ = *str++;
+             *p++ = *str++;
+            }
+
+          /*  find the "(_X)" construct and remove it entirely  */
+          if (past_bracket && str[1] && *(g_utf8_next_char (str + 1)) == ')')
+            {
+              str = g_utf8_next_char (str + 1) + 1;
+              p--;
+            }
+          else
+            {
+              str++;
+            }
+        }
+      else
+        {
+          past_bracket = (*str == '(');
+
+          *p++ = *str++;
+        }
+    }
+
+  *p = '\0';
+
+  return escaped;
+}
+
+/*  The format string which is used to display modifier names
+ *  <Shift>, <Ctrl> and <Alt>
+ */
+#define GIMP_MOD_NAME_FORMAT_STRING N_("<%s>")
+
+const gchar*
+gimp_get_mod_name_shift ()
+{
+  static gchar *mod_name_shift = NULL;
+
+  if (! mod_name_shift)
+    {
+      GtkAccelLabelClass *accel_label_class;
+
+      accel_label_class = g_type_class_ref (GTK_TYPE_ACCEL_LABEL);
+      mod_name_shift = g_strdup_printf (gettext (GIMP_MOD_NAME_FORMAT_STRING),
+                                        accel_label_class->mod_name_shift);
+      g_type_class_unref (accel_label_class);
+    }
+
+  return (const gchar *) mod_name_shift;
+}
+
+
+const gchar*
+gimp_get_mod_name_control()
+{
+  static gchar *mod_name_control = NULL;
+
+  if (! mod_name_control)
+    {
+      GtkAccelLabelClass *accel_label_class;
+
+      accel_label_class = g_type_class_ref (GTK_TYPE_ACCEL_LABEL);
+      mod_name_control = g_strdup_printf (gettext (GIMP_MOD_NAME_FORMAT_STRING),
+                                          accel_label_class->mod_name_control);
+      g_type_class_unref (accel_label_class);
+    }
+
+  return (const gchar *) mod_name_control;
+}
+
+
+const gchar*
+gimp_get_mod_name_alt ()
+{
+  static gchar *mod_name_alt = NULL;
+
+  if (! mod_name_alt)
+    {
+      GtkAccelLabelClass *accel_label_class;
+
+      accel_label_class = g_type_class_ref (GTK_TYPE_ACCEL_LABEL);
+      mod_name_alt = g_strdup_printf (gettext (GIMP_MOD_NAME_FORMAT_STRING),
+                                      accel_label_class->mod_name_alt);
+      g_type_class_unref (accel_label_class);
+    }
+
+  return (const gchar *) mod_name_alt;
+}
+
+
+const gchar*
+gimp_get_mod_separator ()
+{
+  static gchar *mod_separator = NULL;
+
+  if (! mod_separator)
+    {
+      GtkAccelLabelClass *accel_label_class;
+
+      accel_label_class = g_type_class_ref (GTK_TYPE_ACCEL_LABEL);
+      mod_separator = g_strdup (accel_label_class->mod_separator);
+      g_type_class_unref (accel_label_class);
+    }
+
+  return (const gchar *) mod_separator;
+}
+
+
+const gchar*
+gimp_get_mod_string (GdkModifierType modifiers)
+{
+  static struct
+  {
+    GdkModifierType  modifiers;
+    gchar           *name;
+  }
+  modifier_strings[] =
+  {
+    { GDK_SHIFT_MASK,                                    NULL },
+    { GDK_CONTROL_MASK,                                  NULL },
+    { GDK_MOD1_MASK,                                     NULL },
+    { GDK_SHIFT_MASK | GDK_CONTROL_MASK,                 NULL },
+    { GDK_SHIFT_MASK | GDK_MOD1_MASK,                    NULL },
+    { GDK_CONTROL_MASK | GDK_MOD1_MASK,                  NULL },
+    { GDK_SHIFT_MASK | GDK_CONTROL_MASK | GDK_MOD1_MASK, NULL }
+  };
+
+  gint i;
+
+  for (i = 0; i < G_N_ELEMENTS (modifier_strings); i++)
+    {
+      if (modifiers == modifier_strings[i].modifiers)
+        {
+          if (! modifier_strings[i].name)
+            {
+              GString *str = g_string_new ("");
+
+              if (modifiers & GDK_SHIFT_MASK)
+                {
+                  g_string_append (str, gimp_get_mod_name_shift ());
+                }
+
+              if (modifiers & GDK_CONTROL_MASK)
+                {
+                  if (str->len)
+                    g_string_append (str, gimp_get_mod_separator ());
+
+                  g_string_append (str, gimp_get_mod_name_control ());
+                }
+              if (modifiers & GDK_MOD1_MASK)
+                {
+                  if (str->len)
+                    g_string_append (str, gimp_get_mod_separator ());
+
+                  g_string_append (str, gimp_get_mod_name_alt ());
+                }
+
+              modifier_strings[i].name = g_string_free (str, FALSE);
+            }
+
+          return modifier_strings[i].name;
+        }
+    }
+
+  return NULL;
+}
+
+
+static void
+gimp_substitute_underscores (gchar *str)
+{
+  gchar *p;
+
+  for (p = str; *p; p++)
+    if (*p == '_')
+      *p = ' ';
+}
+
+
+gchar*
+gimp_get_accel_string (guint key, GdkModifierType modifiers)
+{
+  GtkAccelLabelClass *accel_label_class;
+  GString            *gstring;
+  gunichar            ch;
+
+  accel_label_class = g_type_class_peek (GTK_TYPE_ACCEL_LABEL);
+
+  gstring = g_string_new (gimp_get_mod_string (modifiers));
+
+  if (gstring->len > 0)
+    g_string_append (gstring, gimp_get_mod_separator ());
+
+  ch = gdk_keyval_to_unicode (key);
+
+  if (ch && (g_unichar_isgraph (ch) || ch == ' ') &&
+      (ch < 0x80 || accel_label_class->latin1_to_char))
+    {
+      switch (ch)
+        {
+        case ' ':
+          g_string_append (gstring, "Space");
+          break;
+        case '\\':
+          g_string_append (gstring, "Backslash");
+          break;
+        default:
+          g_string_append_unichar (gstring, g_unichar_toupper (ch));
+          break;
+        }
+    }
+  else
+    {
+      gchar *tmp;
+
+      tmp = gtk_accelerator_name (key, 0);
+
+      if (tmp[0] != 0 && tmp[1] == 0)
+        tmp[0] = g_ascii_toupper (tmp[0]);
+
+      gimp_substitute_underscores (tmp);
+      g_string_append (gstring, tmp);
+      g_free (tmp);
+    }
+
+  return g_string_free (gstring, FALSE);
+}
 
 
 //from Rox:

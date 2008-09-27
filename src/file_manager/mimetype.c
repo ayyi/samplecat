@@ -71,6 +71,7 @@
 #ifdef OLD
   #include <libart_lgpl/libart.h>
 #endif
+typedef void GimpActionGroup;
 #include "support.h"
 #include "observer.h"
 extern unsigned debug;

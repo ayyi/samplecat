@@ -27,6 +27,7 @@
  */
 
 #include <gtk/gtk.h>
+typedef void GimpActionGroup;
 #include "support.h"
 
 #include "rox/rox_global.h"

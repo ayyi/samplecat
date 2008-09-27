@@ -1,6 +1,7 @@
+#include "../config.h"
 #include <gtk/gtk.h>
+#include <mysql/mysql.h>
 #include "listview.h"
-#include "mysql/mysql.h"
 #include "dh-link.h"
 #include "typedefs.h"
 #include <gqview2/typedefs.h>

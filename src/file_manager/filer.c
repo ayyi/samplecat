@@ -49,8 +49,8 @@
 #include "choices.h"
 #endif
 #include "pixmaps.h"
-#if 0
 #include "menu.h"
+#if 0
 #include "dnd.h"
 #endif
 #include "diritem.h"
@@ -2256,7 +2256,6 @@ filer_create_thumb(Filer* filer_window, const gchar *path)
 void
 filer_create_thumbs(Filer* filer_window)
 {
-	PF;
 	if (!filer_window->show_thumbs) return;
 
 	ViewIter iter;
