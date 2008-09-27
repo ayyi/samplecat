@@ -574,7 +574,6 @@ do_search(char *search, char *dir)
 
 	if(strlen(search)){ 
 		snprintf(where, 512, "AND (filename LIKE '%%%s%%' OR filedir LIKE '%%%s%%' OR keywords LIKE '%%%s%%') ", search, search, search); //FIXME duplicate category LIKE's
-		//snprintf(query, 1024, "SELECT * FROM samples WHERE 1 %s", where);
 	}
 
 	//append the dir-where part:
@@ -585,11 +584,6 @@ do_search(char *search, char *dir)
 
 	printf("%s\n", query);
 	if(mysql_exec_sql(mysql, query)==0){ //success
-		
-		//problem with wierd mysql int type:
-		//printf( "%ld Records Found\n", (long) mysql_affected_rows(&mysql));
-		//printf( "%lu Records Found\n", (unsigned long)mysql_affected_rows(mysql));
-
 
 		treeview_block_motion_handler(); //dont know exactly why but this prevents a segfault.
 
@@ -602,13 +596,14 @@ do_search(char *search, char *dir)
 		gtk_tree_view_set_model(GTK_TREE_VIEW(view), NULL);
 		*/ 
 
+		#define MAX_DISPLAY_ROWS 1000
 		result = mysql_store_result(mysql);
 		if(result){// there are rows
 			num_fields = mysql_num_fields(result);
 			char keywords[256];
 
 			int row_count = 0;
-			while((row = mysql_fetch_row(result))){
+			while((row = mysql_fetch_row(result)) && row_count < MAX_DISPLAY_ROWS){
 				lengths = mysql_fetch_lengths(result); //free? 
 				/*
 				for(i = 0; i < num_fields; i++){ 
@@ -677,21 +672,27 @@ do_search(char *search, char *dir)
 				row_count++;
 			}
 			mysql_free_result(result);
-			snprintf(sb_text, 256, "%i samples found.", row_count);
+
+			if(0 && row_count < MAX_DISPLAY_ROWS){
+				snprintf(sb_text, 256, "%i samples found.", row_count);
+			}else{
+				uint32_t tot_rows = (uint32_t)mysql_affected_rows(mysql);
+				snprintf(sb_text, 256, "showing %i of %i samples", row_count, tot_rows);
+			}
 			statusbar_print(1, sb_text);
 		}
 		else{  // mysql_store_result() returned nothing
-		  if(mysql_field_count(mysql) > 0){
+			if(mysql_field_count(mysql) > 0){
 				// mysql_store_result() should have returned data
 				printf( "Error getting records: %s\n", mysql_error(mysql));
-		  }
-		  else dbg(0, "failed to find any records (fieldcount<1): %s", mysql_error(mysql));
+			}
+			else dbg(0, "failed to find any records (fieldcount<1): %s", mysql_error(mysql));
 		}
 
 		//treeview_unblock_motion_handler();  //causes a segfault even before it is run ??!!
 	}
 	else{
-		printf("%s(): Failed to find any records: %s\n", mysql_error(mysql), __func__);
+		dbg(0, "Failed to find any records: %s", mysql_error(mysql));
 	}
 }
 

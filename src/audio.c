@@ -239,7 +239,10 @@ jack_init()
 void
 jack_close()
 {
-	if(jack_client) jack_client_close(jack_client);
+	if(jack_client){
+		jack_deactivate(jack_client);
+		jack_client_close(jack_client);
+	}
 }
 
 
@@ -334,16 +337,16 @@ decoder_session_free(_decoder_session* session)
 
 //gboolean
 int
-//playback_init(char* filename, int id, char* mimetype)
 playback_init(sample* sample)
 {
 	//open a file ready for playback.
-	printf("playback_init()...\n");
+
+	PF;
 	int ok = TRUE;
 
 	if(app.playing_id) playback_stop(); //stop any previous playback.
 
-	if(!sample->id){ errprintf("playback_init(): bad arg: id=0\n"); return 0; }
+	if(!sample->id){ perr("bad arg: id=0\n"); return 0; }
 
 	//switch(sw){
 	//case TYPE_SNDFILE:
@@ -363,13 +366,13 @@ playback_init(sample* sample)
 			audition.rb2 = rb2;
 			if(flac_decoder_sesssion_init(audition.session, sample)){
 				if(flac_open(audition.session)){
-					printf("playback_init(): filling ringbuffer... %p %p\n", rb1, rb2);
-					if(flac_fill_ringbuffer(audition.session)) ok = FALSE;
-					if(FLAC__file_decoder_get_state(audition.session->flacstream) != FLAC__FILE_DECODER_OK) ok = FALSE;
+					dbg(0, "filling ringbuffer... %p %p", rb1, rb2);
+					if(flac_fill_ringbuffer(audition.session)) ok = false;
+					if(FLAC__file_decoder_get_state(audition.session->flacstream) != FLAC__FILE_DECODER_OK) ok = false;
 
-				}else{ errprintf("playback_init(): failed to initialise flac decoder.\n"); ok = FALSE; }
-			}else{ errprintf("playback_init(): failed to initialise flac session.\n"); ok = FALSE; }
-		}else{ errprintf("playback_init(): failed to create ringbuffer.\n"); ok = FALSE; }
+				}else{ perr("failed to initialise flac decoder.\n"); ok = false; }
+			}else{ perr("failed to initialise flac session.\n"); ok = false; }
+		}else{ perr("failed to create ringbuffer.\n"); ok = false; }
 #else
 	if(0){
 #endif
@@ -378,11 +381,11 @@ playback_init(sample* sample)
 		SF_INFO *sfinfo = &audition.sfinfo;
 		SNDFILE *sffile;
 		sfinfo->format  = 0;
-		//int            readcount;
 
 		if(!(sffile = sf_open(sample->filename, SFM_READ, sfinfo))){
-			printf("playback_init(): not able to open input file %s.\n", sample->filename);
+			dbg(0, "not able to open input file %s.", sample->filename);
 			puts(sf_strerror(NULL));    // print the error message from libsndfile:
+			return ok = false;
 		}
 		audition.sffile = sffile;
 		audition.type = TYPE_SNDFILE;
@@ -391,16 +394,14 @@ playback_init(sample* sample)
 		if     (sfinfo->channels==1) snprintf(chanwidstr, 64, "mono");
 		else if(sfinfo->channels==2) snprintf(chanwidstr, 64, "stereo");
 		else                         snprintf(chanwidstr, 64, "channels=%i", sfinfo->channels);
-		printf("playback_init(): %iHz %s frames=%i\n", sfinfo->samplerate, chanwidstr, (int)sfinfo->frames);
-		//break;
-
+		dbg(0, "%iHz %s frames=%i", sfinfo->samplerate, chanwidstr, (int)sfinfo->frames);
 	}
 
 	if(ok){
 		if(!jack_client) jack_init();
 		app.playing_id = sample->id;
 	}
-	printf("playback_init(): done.\n");
+	PF_DONE;
 	return ok;
 }
 
@@ -408,9 +409,8 @@ playback_init(sample* sample)
 void
 playback_stop()
 {
-	printf("playback_stop()...\n");
+	PF;
 
-	//if(audition.type == TYPE_FLAC){
 	if(audition.type == TYPE_SNDFILE){
 		printf("playback_stop(): closing sndfile...\n");
 		if(sf_close(audition.sffile)) printf("error! bad file close.\n");
@@ -422,12 +422,12 @@ playback_stop()
 #endif
 	}
 
-	printf("playback_stop(): reseting audiition...\n");
+	dbg(0, "reseting audition...");
 	audition_reset();
 
 	app.playing_id = 0;
 	memset(buffer, 0, MAX_JACK_BUFFER_SIZE * sizeof(jack_default_audio_sample_t));
-	printf("playback_stop(): done.\n");
+	PF_DONE;
 }
 
 

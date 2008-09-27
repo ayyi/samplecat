@@ -32,18 +32,18 @@ sample_new()
 sample*
 sample_new_from_model(GtkTreePath *path)
 {
-	GtkTreeIter iter;
 	GtkTreeModel *model = gtk_tree_view_get_model(GTK_TREE_VIEW(app.view));
+	GtkTreeIter iter;
 	gtk_tree_model_get_iter(model, &iter, path);
-	gchar *fpath, *fname, *mimetype;
-	int id;
+
+	gchar *fpath, *fname, *mimetype; int id;
 	gtk_tree_model_get(model, &iter, COL_FNAME, &fpath, COL_NAME, &fname, COL_IDX, &id, COL_MIMETYPE, &mimetype, -1);
 
 	sample* sample = g_new0(struct _sample, 1);
-	sample->id = id;
-	snprintf(sample->filename, 256, "%s/%s", fpath, fname);
-	if(!strcmp(mimetype, "audio/x-flac")) sample->filetype = TYPE_FLAC; else sample->filetype = TYPE_SNDFILE; 
+	sample->id     = id;
 	sample->pixbuf = NULL;
+	snprintf(sample->filename, 255, "%s/%s", fpath, fname);
+	if(!strcmp(mimetype, "audio/x-flac")) sample->filetype = TYPE_FLAC; else sample->filetype = TYPE_SNDFILE; 
 	return sample;
 }
 
@@ -66,7 +66,7 @@ sample_new_from_fileview(GtkTreeModel* model, GtkTreeIter* iter)
 void
 sample_free(sample* sample)
 {
-	gtk_tree_row_reference_free(sample->row_ref);
+	if(sample->row_ref) gtk_tree_row_reference_free(sample->row_ref);
 	g_free(sample);
 }
 

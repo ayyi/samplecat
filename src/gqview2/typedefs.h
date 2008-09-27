@@ -476,6 +476,7 @@ struct _ViewDirTree
 	GtkWidget *treeview;
 
 	gchar *path;
+	gchar *root_path;
 
 	FileData *click_fd;
 

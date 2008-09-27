@@ -836,6 +836,8 @@ static void vdtree_dnd_init(ViewDirTree *vdt)
 
 static GList *parts_list(const gchar *path)
 {
+	//path must be absolute
+
 	GList *list = NULL;
 	const gchar *strb, *strp;
 	gint l;
@@ -867,6 +869,10 @@ static GList *parts_list(const gchar *path)
 
 	list = g_list_reverse(list);
 
+	//##########################
+	//list = g_list_remove_link(list, list);
+	//##########################
+
 	list = g_list_prepend(list, g_strdup("/"));
 
 	return list;
@@ -888,6 +894,8 @@ static void parts_list_free(GList *list)
 
 static GList *parts_list_add_node_points(ViewDirTree *vdt, GList *list)
 {
+	//takes a list of path fragment names, and returns a corresponding list of PathData.
+
 	GList *work;
 	GtkTreeModel *store;
 	GtkTreeIter iter;
@@ -905,7 +913,8 @@ static GList *parts_list_add_node_points(ViewDirTree *vdt, GList *list)
 		pd = g_new0(PathData, 1);
 		pd->name = work->data;
 
-		while (valid && !fd)
+		//printf("%s(): looking for: '%s'...\n", __func__, pd->name);
+		while (valid && !fd) //look through the model until we find our path
 			{
 			NodeData *nd;
 
@@ -920,6 +929,7 @@ static GList *parts_list_add_node_points(ViewDirTree *vdt, GList *list)
 				}
 			}
 
+		//printf("%s(): '%s': fd=%p\n", __func__, pd->name, fd);
 		pd->node = fd;
 		work->data = pd;
 
@@ -1061,6 +1071,26 @@ static void vdtree_add_by_data(ViewDirTree *vdt, FileData *fd, GtkTreeIter *pare
 		}
 }
 
+
+static gint vdt_filelist_read(ViewDirTree *vdt, const gchar *path, GList **files, GList **dirs)
+{
+	//this fn fools the treeview into thinking that a directory is a root directory by prepending vdt->root_path if neccesary.
+
+	GList *dlist;
+	GList *flist;
+
+	dlist = NULL;
+	flist = NULL;
+
+	gchar *real_path = NULL;
+	if(strstr(path, vdt->root_path) != path) real_path = g_build_filename(vdt->root_path, path, NULL);
+
+	gint ret = filelist_read(real_path ? real_path : path, files, dirs);
+
+	if(real_path) g_free(real_path);
+	return ret;
+}
+
 static gint vdtree_populate_path_by_iter(ViewDirTree *vdt, GtkTreeIter *iter, gint force, const gchar *target_path)
 {
 	GtkTreeModel *store;
@@ -1095,7 +1125,8 @@ static gint vdtree_populate_path_by_iter(ViewDirTree *vdt, GtkTreeIter *iter, gi
 	vdtree_busy_push(vdt);
 
 	list = NULL;
-	filelist_read(nd->fd->path, NULL, &list);
+	//filelist_read(nd->fd->path, NULL, &list);
+	vdt_filelist_read(vdt, nd->fd->path, NULL, &list);
 
 	/* when hidden files are not enabled, and the user enters a hidden path,
 	 * allow the tree to display that path by specifically inserting the hidden entries
@@ -1205,6 +1236,7 @@ static gint vdtree_populate_path_by_iter(ViewDirTree *vdt, GtkTreeIter *iter, gi
 
 static FileData *vdtree_populate_path(ViewDirTree *vdt, const gchar *path, gint expand, gint force)
 {
+	dbg(0, "path=%s", path);
 	GList *list;
 	GList *work;
 	FileData *fd = NULL;
@@ -1214,21 +1246,31 @@ static FileData *vdtree_populate_path(ViewDirTree *vdt, const gchar *path, gint 
 	vdtree_busy_push(vdt);
 
 	list = parts_list(path); //split the path into its constituent parts
-	//{printf("vdtree_populate_path():"); GList* l = list; for(;l;l=l->next) printf(" %s", l->data); printf("\n"); }
-	list = parts_list_add_node_points(vdt, list);
+#if 0
+	{
+		printf("vdtree_populate_path():");
+		GList* l = list;
+		for(;l;l=l->next)
+			printf(" %s", (char*)l->data);
+		printf("\n");
+	}
+#endif
+	list = parts_list_add_node_points(vdt, list); //convert the list into list of PathData*.
 
 	work = list;
 	while (work)
 		{
 		PathData *pd = work->data;
-		if (pd->node == NULL)
+		dbg(0, "pd=%s node=%p", pd->name, pd->node);
+		if (pd->node == NULL) //item is not already in the model.
 			{
+			dbg(0, "pd=%s", pd->name);
 			PathData *parent_pd;
 			GtkTreeIter parent_iter;
 			GtkTreeIter iter;
 			NodeData *nd;
 
-			if (work == list)
+			if (work == list) //first part
 				{
 				/* should not happen */
 				printf("vdtree warning, root node not found\n");
@@ -1328,6 +1370,7 @@ vdtree_select_row(ViewDirTree *vdt, FileData *fd)
 
 gint vdtree_set_path(ViewDirTree *vdt, const gchar *path)
 {
+	dbg(0, "path=%s", path);
 	FileData *fd;
 	GtkTreeIter iter;
 
@@ -1599,18 +1642,23 @@ static void vdtree_setup_root(ViewDirTree *vdt)
 {
 	PF;
 	const gchar *path = "/";
-	//const gchar *path = "/home/tim/";
-	FileData *fd;
 
-	fd = g_new0(FileData, 1);
-	fd->path = g_strdup(path);
+	FileData *fd = g_new0(FileData, 1);
+	//fd->path = g_strdup(path);
+	fd->path = g_strdup("/");
 	fd->name = fd->path;
 	fd->size = 0;
 	fd->date = filetime(path);
-	vdtree_add_by_data(vdt, fd, NULL);
+	vdtree_add_by_data(vdt, fd, NULL); //add entry to tree_model for root
+
+	//testing:
+	{
+		//g_list_remove_link()
+		//path = "tim";
+	}
 
 	vdtree_expand_by_data(vdt, fd, TRUE);
-	vdtree_populate_path(vdt, path, FALSE, FALSE);
+	vdtree_populate_path(vdt, path, FALSE, FALSE); //add child nodes to tree_model.
 }
 
 static void vdtree_activate_cb(GtkTreeView *tview, GtkTreePath *tpath, GtkTreeViewColumn *column, gpointer data)
@@ -1708,6 +1756,7 @@ ViewDirTree *vdtree_new(const gchar *path, gint expand)
 	vdt = g_new0(ViewDirTree, 1);
 
 	vdt->path = NULL;
+	vdt->root_path = (gchar*)g_get_home_dir(); //TODO add menu item to change this dynamically
 	vdt->click_fd = NULL;
 
 	vdt->drop_fd = NULL;

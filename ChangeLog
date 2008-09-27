@@ -1,3 +1,11 @@
+20080920
+-added support for keyboard shortuts using GimpAction. Currently only CTL-Q / CTL-W to quit is used.
+-initial Ayyi support added with configure option. Connects to server, but does nothing else.
+
+20080910
+-changed directory tree to use the home directory as its root instead of '/'.
+-added limit to number of database items showable at once
+
 20080809
 -added display of simple metadata for current filemanager selection.
 -version changed to 0.0.5

@@ -214,7 +214,6 @@ listview__on_row_clicked(GtkWidget *widget, GdkEventButton *event, gpointer user
 
 	//auditioning:
 	if(event->button == 1){
-		//printf("left button press!\n");
 		GtkTreePath *path;
 		if(gtk_tree_view_get_path_at_pos(GTK_TREE_VIEW(app.view), (gint)event->x, (gint)event->y, &path, NULL, NULL, NULL)){
 			inspector_update_from_listview(path);
@@ -224,7 +223,7 @@ listview__on_row_clicked(GtkWidget *widget, GdkEventButton *event, gpointer user
 			if(((gint)event->x > rect.x) && ((gint)event->x < (rect.x + rect.width))){
 
 				//overview column:
-				dbg(0, "column rect: %i %i %i %i\n", rect.x, rect.y, rect.width, rect.height);
+				dbg(2, "column rect: %i %i %i %i", rect.x, rect.y, rect.width, rect.height);
 
 				/*
 				GtkTreeIter iter;
@@ -239,7 +238,9 @@ listview__on_row_clicked(GtkWidget *widget, GdkEventButton *event, gpointer user
 
 				sample* sample = sample_new_from_model(path);
 
-				if(sample->id != app.playing_id) playback_init(sample);
+				if(sample->id != app.playing_id){
+					if(!playback_init(sample)) sample_free(sample);
+				}
 				else playback_stop();
 			}else{
 				gtk_tree_view_get_cell_area(treeview, path, app.col_tags, &rect);
