@@ -41,6 +41,7 @@ static GtkWidget* colour_box_new(GtkWidget* parent);
 static gboolean   colour_box_exists(GdkColor* colour);
 static gboolean   colour_box_add(GdkColor* colour);
 static GtkWidget* scrolled_window_new();
+static GtkWidget* message_panel__new();
 static void       window_on_fileview_row_selected(GtkTreeView*, gpointer user_data);
 static void       menu__add_to_db(GtkMenuItem*, gpointer user_data);
 static void       make_fm_menu_actions();
@@ -62,34 +63,33 @@ gboolean
 window_new()
 {
 /*
-window
-+--paned
-   +--dir tree
+GtkWindow
++--GtkVbox
+   +--search box
+   |  +--label
+   |  +--text entry
    |
-   +--vbox
-      +--search box
-      |  +--label
-      |  +--text entry
-      |
-      +--edit metadata hbox
-      |
-      +--hpaned
-      |  +--vpaned (left pane)
-      |  |  +--directory tree
-      |  |  +--inspector
-      |  | 
-      |  +--vpaned (right pane)
-      |     +  vpane2
-      |
-      |     +--scrollwin
-      |     |  +--treeview file manager
-      |     |
-      |     +--scrollwin (right pane)
-      |        +--treeview
-      |
-      +--statusbar hbox
-         +--statusbar
-         +--statusbar2
+   +--edit metadata hbox
+   |
+   +--GtkAlignment
+   |  +-GtkHPaned
+   |    +--vpaned (main left pane)
+   |    |  +--directory tree
+   |    |  +--inspector
+   |    | 
+   |    +--vpaned (main right pane)
+   |       +--GtkVBox
+   |          +--GtkLabel
+   |          +--GtkVPaned
+   |             +--scrollwin
+   |             |  +--treeview file manager
+   |             |
+   |             +--scrollwin (right pane)
+   |                +--treeview
+   |
+   +--statusbar hbox
+      +--statusbar
+      +--statusbar2
 
 */
 	GtkWidget *window = app.window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
@@ -123,6 +123,8 @@ window
 	gtk_widget_show(rhs_vbox);
 	gtk_paned_add2(GTK_PANED(hpaned), rhs_vbox);
 
+	gtk_box_pack_start(GTK_BOX(rhs_vbox), message_panel__new(), EXPAND_FALSE, FILL_FALSE, 0);
+
 	//split the rhs in two:
 	GtkWidget* r_vpaned = gtk_vpaned_new();
 	gtk_paned_set_position(GTK_PANED(r_vpaned), 300);
@@ -133,7 +135,6 @@ window
 	gtk_paned_add1(GTK_PANED(r_vpaned), scroll);
 
 	listview__new();
-	//gtk_box_pack_start(GTK_BOX(app.vbox), view, EXPAND_TRUE, FILL_TRUE, 0);
 	gtk_container_add(GTK_CONTAINER(app.scroll), app.view);
 
 	//--------
@@ -162,7 +163,6 @@ window
 	make_fileview_pane();
 
 	GtkWidget* statusbar = app.statusbar = gtk_statusbar_new();
-	//printf("statusbar=%p\n", app.statusbar);
 	//gtk_statusbar_set_has_resize_grip(GTK_STATUSBAR(statusbar), TRUE);	//why does give a warning??????
 	gtk_statusbar_set_has_resize_grip(GTK_STATUSBAR(statusbar), FALSE);
 	gtk_container_set_border_width(GTK_CONTAINER(statusbar), 5);
@@ -170,7 +170,6 @@ window
 	gtk_widget_show(statusbar);
 
 	GtkWidget *statusbar2 = app.statusbar2 = gtk_statusbar_new();
-	//gtk_statusbar_set_has_resize_grip(GTK_STATUSBAR(statusbar), TRUE);	//why does give a warning??????
 	gtk_statusbar_set_has_resize_grip(GTK_STATUSBAR(statusbar2), FALSE);
 	gtk_container_set_border_width(GTK_CONTAINER(statusbar2), 5);
 	gtk_box_pack_start(GTK_BOX(hbox_statusbar), statusbar2, EXPAND_TRUE, FILL_TRUE, 0);
@@ -496,6 +495,15 @@ scrolled_window_new()
 	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
 	gtk_widget_show(scroll);
 	return scroll;
+}
+
+
+static GtkWidget*
+message_panel__new()
+{
+	app.msg_panel = gtk_label_new("");
+	gtk_widget_set_no_show_all(app.msg_panel); //initially hidden.
+	return app.msg_panel;
 }
 
 

@@ -10,7 +10,7 @@ AM_CFLAGS = \
 	-I./gqview2 \
 	-I./file_manager \
 	-I./gimp \
-	$(GTK_CFLAGS) $(DBUS_CFLAGS) $(DB_CFLAGS) $(FLAC_CFLAGS) $(XML_CFLAGS)
+	$(GTK_CFLAGS) $(DBUS_CFLAGS) $(DB_CFLAGS) $(FLAC_CFLAGS) $(TRACKER_CFLAGS) $(XML_CFLAGS)
 
 bin_PROGRAMS = samplecat
 
@@ -47,6 +47,7 @@ samplecat_SOURCES = \
 	fscache.c fscache.h \
 	xdgmime.c xdgmime.h xdgmimecache.c xdgmimecache.h xdgmimemagic.c xdgmimemagic.h xdgmimealias.c xdgmimealias.h xdgmimeparent.c xdgmimeparent.h xdgmimeglob.c xdgmimeglob.h xdgmimeint.c xdgmimeint.h \
 	support.c support.h \
+	tracker.c tracker_.h \
 	$(AYYI_SRC) \
 	$(GQVIEW1_SRC)
 
@@ -55,5 +56,6 @@ samplecat_LDADD = \
 	gimp/libgimpwidgets.a \
 	$(AYYI_LIBS) \
 	$(DBUS_LDFLAGS) \
+	$(TRACKER_LDFLAGS) \
 	$(GTK_LIBS) $(DB_LIBS) $(JACK_LIBS) $(SNDFILE_LIBS) $(FLAC_LIBS) $(GTHREAD_LIBS)
 

@@ -1,5 +1,5 @@
 
-gboolean	window_new();
+gboolean    window_new();
 GtkWidget*  left_pane();
 void        colour_box_update();
 GtkWidget*  dir_tree_new();

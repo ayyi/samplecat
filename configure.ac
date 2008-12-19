@@ -53,7 +53,7 @@ else
   HAVE_GTK_2_12="no"
 fi;
 
-if `"$PKG_CONFIG" gtk+-2.0 --atleast-version=2.10`; then
+if `pkg-config gtk+-2.0 --atleast-version=2.10`; then
   HAVE_GTK_2_10="yes"
   AC_DEFINE(HAVE_GTK_2_10, 1, "we have at least gtk version 2.10")
 else
@@ -163,6 +163,20 @@ AC_SUBST(DBUS_LDFLAGS)
 
 dnl -----------------------------------------------------------------------------
 
+AC_CHECK_LIB(trackerclient, tracker_connect, [tracker_found=yes])
+AM_CONDITIONAL(ENABLE_TRACKER, test "$tracker_found" = "yes")
+if `test "$tracker_found" = "yes"`; then
+    AC_DEFINE(USE_TRACKER, 1, Use Tracker metadata daemon)
+    enable_tracker="yes"
+    TRACKER_CFLAGS=`pkg-config --cflags-only-I tracker`
+    TRACKER_LDFLAGS=`pkg-config --libs-only-l tracker`
+fi;
+AC_SUBST(TRACKER_CFLAGS)
+AC_SUBST(TRACKER_LDFLAGS)
+
+
+dnl -----------------------------------------------------------------------------
+
 AC_ARG_ENABLE(ayyi, AS_HELP_STRING([--enable-ayyi],[build with ayyi support]),enable_ayyi=$enableval,enable_ayyi=auto)
 AM_CONDITIONAL(ENABLE_AYYI, test "$enable_ayyi" = "yes")
 if test "$enable_ayyi" = "yes"; then
@@ -198,4 +212,5 @@ AC_MSG_RESULT([])
 AC_MSG_RESULT([Building direct flac support:     $enable_flac])
 AC_MSG_RESULT([Building dnotify support:         $have_dnotify])
 AC_MSG_RESULT([Building ayyi support:            $enable_ayyi])
+AC_MSG_RESULT([Building tracker support:         $enable_tracker])
 AC_MSG_RESULT([])

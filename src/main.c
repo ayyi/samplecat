@@ -23,6 +23,10 @@ This software is licensed under the GPL. See accompanying file COPYING.
   #include "ayyi.h"
   #include "ayyi_model.h"
 #endif
+#ifdef USE_TRACKER
+  #include "tracker.h"
+  #include <src/tracker_.h>
+#endif
 
 #include "typedefs.h"
 #include "mysql/mysql.h"
@@ -189,6 +193,17 @@ main(int argc, char** argv)
 
 #ifdef USE_AYYI
 	ayyi_connect();
+#endif
+
+#ifdef USE_TRACKER
+	//note: trackerd doesnt have to be running - it will be auto-started.
+	//TODO dont do this until the gui has loaded.
+	TrackerClient* tc = tracker_connect(TRUE);
+	if(tc){
+		tracker_search(tc);
+		tracker_disconnect (tc);
+	}
+	else warnprintf("cant connect to tracker daemon.");
 #endif
 
 	app.loaded = TRUE;

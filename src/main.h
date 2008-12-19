@@ -74,6 +74,7 @@ struct _app
 	GtkWidget*     scroll;
 	GtkWidget*     hpaned;
 	GtkWidget*     view;
+	GtkWidget*     msg_panel;
 	GtkWidget*     statusbar;
 	GtkWidget*     statusbar2;
 	GtkWidget*     search;
