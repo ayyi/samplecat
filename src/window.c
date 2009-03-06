@@ -21,6 +21,7 @@
 #include "file_view.h"
 #include "inspector.h"
 #include "tree.h"
+#include "db.h"
 #include "window.h"
 
 extern struct _app app;
@@ -42,6 +43,7 @@ static gboolean   colour_box_exists(GdkColor* colour);
 static gboolean   colour_box_add(GdkColor* colour);
 static GtkWidget* scrolled_window_new();
 static GtkWidget* message_panel__new();
+static GtkWidget* message_panel__add_msg(const gchar* msg, const gchar* stock_id);
 static void       window_on_fileview_row_selected(GtkTreeView*, gpointer user_data);
 static void       menu__add_to_db(GtkMenuItem*, gpointer user_data);
 static void       make_fm_menu_actions();
@@ -135,6 +137,7 @@ GtkWindow
 	gtk_paned_add1(GTK_PANED(r_vpaned), scroll);
 
 	listview__new();
+	if(!db_is_connected()) gtk_widget_set_no_show_all(app.view, true); //dont show main view if no database.
 	gtk_container_add(GTK_CONTAINER(app.scroll), app.view);
 
 	//--------
@@ -499,11 +502,37 @@ scrolled_window_new()
 
 
 static GtkWidget*
+message_panel__add_msg(const gchar* msg, const gchar* stock_id)
+{
+	//TODO expire old messages. Limit to 5 and add close button?
+
+	GtkWidget* hbox = gtk_hbox_new(FALSE, 2);
+
+	if(stock_id){
+		//const gchar* stock_id = GTK_STOCK_DIALOG_WARNING;
+		GtkWidget* icon = gtk_image_new_from_stock(stock_id, GTK_ICON_SIZE_MENU);
+		gtk_widget_set_size_request(icon, 16, -1);
+		//gtk_image_set_from_stock(GTK_IMAGE(icon), stock_id, GTK_ICON_SIZE_MENU);
+		gtk_box_pack_start((GtkBox*)hbox, icon, FALSE, FALSE, 2);
+	}
+
+	GtkWidget* label = gtk_label_new(msg);
+	gtk_box_pack_start((GtkBox*)hbox, label, FALSE, FALSE, 2);
+	return hbox;
+}
+
+
+static GtkWidget*
 message_panel__new()
 {
-	app.msg_panel = gtk_label_new("");
-	gtk_widget_set_no_show_all(app.msg_panel); //initially hidden.
-	return app.msg_panel;
+	GtkWidget* vbox = app.msg_panel = gtk_vbox_new(FALSE, 2);
+
+	char* msg; msg = db_is_connected() ? "" : "no database available";
+	GtkWidget* hbox = message_panel__add_msg(msg, GTK_STOCK_INFO);
+	gtk_box_pack_start((GtkBox*)vbox, hbox, FALSE, FALSE, 2);
+
+	if(db_is_connected()) gtk_widget_set_no_show_all(app.msg_panel, true); //initially hidden.
+	return vbox;
 }
 
 

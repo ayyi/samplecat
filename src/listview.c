@@ -167,7 +167,9 @@ listview__new()
 
 	g_signal_connect((gpointer)app.view, "button-press-event", G_CALLBACK(listview__on_row_clicked), NULL);
 
+#if 0 //showing is now conditional on the database - TODO check panel is still visible.
 	gtk_widget_show(view);
+#endif
 }
 
 

@@ -46,10 +46,10 @@ GList* all_filer_windows = NULL;
 Filer*
 file_manager__init()
 {
-    filer.filter = FILER_SHOW_ALL;
-    filer.filter_string = NULL;
-    filer.regexp = NULL;
-    filer.filter_directories = FALSE;
+	filer.filter = FILER_SHOW_ALL;
+	filer.filter_string = NULL;
+	filer.regexp = NULL;
+	filer.filter_directories = FALSE;
 	filer.display_style_wanted = SMALL_ICONS;
 	filer.sort_type = SORT_NAME;
 	return &filer;
@@ -89,7 +89,7 @@ file_manager__update_all(void)
 		 * two scans.
 		 */
 		if (filer_window->directory &&
-		    !filer_window->directory->scanning)
+				!filer_window->directory->scanning)
 			filer_update_dir(filer_window, TRUE);
 	}
 }
