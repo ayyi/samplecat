@@ -8,6 +8,7 @@
 #define SIG_IN printf("%s--->%s %s\n", bold, white, __func__)
 #define SIG_IN1 printf("%s--->%s ", bold, white)
 #define SIG_OUT printf("%s(): %s--->%s\n", __func__, yellow, white)
+#define UNEXPECTED_PROPERTY gwarn("unexpected property: obj_type=%s prop=%s", ayyi_print_object_type(object_type), ayyi_print_prop_type(prop));
 
 typedef struct _service
 {
@@ -23,6 +24,7 @@ typedef struct _service
 #ifndef __ayyi_dbus_c__
 extern Service known_services[];
 #endif
+#define AYYI_SERVICE_AYYID1 0
 
 gboolean        dbus_server_connect (Service*, GError** error);
 gboolean        dbus_server_get_shm (Service*);

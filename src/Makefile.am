@@ -1,6 +1,6 @@
 ## Process this file with automake to produce Makefile.in
 
-SUBDIRS = file_manager gimp
+SUBDIRS = file_manager gimp xdgmime
 
 AM_CFLAGS = \
 	-g -Wall -O2 \
@@ -10,6 +10,7 @@ AM_CFLAGS = \
 	-I./gqview2 \
 	-I./file_manager \
 	-I./gimp \
+	-I./xdgmime \
 	$(GTK_CFLAGS) $(DBUS_CFLAGS) $(DB_CFLAGS) $(FLAC_CFLAGS) $(TRACKER_CFLAGS) $(XML_CFLAGS)
 
 bin_PROGRAMS = samplecat
@@ -45,7 +46,6 @@ samplecat_SOURCES = \
 	db.c db.h \
 	observer.c observer.h \
 	fscache.c fscache.h \
-	xdgmime.c xdgmime.h xdgmimecache.c xdgmimecache.h xdgmimemagic.c xdgmimemagic.h xdgmimealias.c xdgmimealias.h xdgmimeparent.c xdgmimeparent.h xdgmimeglob.c xdgmimeglob.h xdgmimeint.c xdgmimeint.h \
 	support.c support.h \
 	tracker.c tracker_.h \
 	$(AYYI_SRC) \
@@ -54,6 +54,7 @@ samplecat_SOURCES = \
 samplecat_LDADD = \
 	file_manager/libfilemanager.a \
 	gimp/libgimpwidgets.a \
+	xdgmime/libxdgmime.a \
 	$(AYYI_LIBS) \
 	$(DBUS_LDFLAGS) \
 	$(TRACKER_LDFLAGS) \

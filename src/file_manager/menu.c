@@ -30,6 +30,7 @@ static void menu__refresh    (GtkMenuItem*, gpointer user_data);
 static GtkWidget* fm_make_subdir_menu();
 //static void set_sort(gpointer data, guint action, GtkWidget *widget);
 //static void reverse_sort(gpointer data, guint action, GtkWidget *widget);
+static GtkWidget* menu_separator_new(GtkWidget*);
 
 #undef N_
 #define N_(x) x
@@ -119,12 +120,13 @@ typedef struct
 {
 	char*     label;
 	GCallback callback;
+	char*     stock_id;
 } menu_def;
 
 
 static menu_def fm_menu_def[] = {
-	{"Go up directory", G_CALLBACK(menu__go_up_dir)},
-	{"Refresh",         G_CALLBACK(menu__refresh)},
+	{"Go up directory", G_CALLBACK(menu__go_up_dir), GTK_STOCK_GO_UP},
+	{"Refresh",         G_CALLBACK(menu__refresh), GTK_STOCK_REFRESH},
 	//{"Delete", NULL}
 };
 
@@ -137,8 +139,14 @@ fm_make_context_menu()
 	int i; for(i=0;i<A_SIZE(fm_menu_def);i++){
 		dbg(2, "i=%i", i);
 		menu_def* item = &fm_menu_def[i];
-		GtkWidget* menu_item = gtk_menu_item_new_with_label (item->label);
+		GtkWidget* menu_item = gtk_image_menu_item_new_with_label (item->label);
 		gtk_menu_shell_append (GTK_MENU_SHELL(menu), menu_item);
+		if(item->stock_id){
+			GtkIconSet* set = gtk_style_lookup_icon_set(gtk_widget_get_style(menu), item->stock_id);
+			GdkPixbuf* pixbuf = gtk_icon_set_render_icon(set, gtk_widget_get_style(menu), GTK_TEXT_DIR_LTR, GTK_STATE_NORMAL, GTK_ICON_SIZE_MENU, menu, NULL);
+			GtkWidget* ico = gtk_image_new_from_pixbuf(pixbuf);
+			gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(menu_item), ico);
+		}
 		if(item->callback) g_signal_connect (G_OBJECT(menu_item), "activate", G_CALLBACK(item->callback), NULL);
 	}
 
@@ -248,6 +256,16 @@ menu__refresh(GtkMenuItem* menuitem, gpointer user_data)
 	PF;
 	//filer_refresh(&filer);
 	file_manager__update_all();
+}
+
+
+static GtkWidget*
+menu_separator_new(GtkWidget* container)
+{
+  GtkWidget* separator = gtk_menu_item_new();
+  gtk_widget_set_sensitive(separator, FALSE);
+  gtk_container_add(GTK_CONTAINER(container), separator);
+  return separator;
 }
 
 

@@ -1,4 +1,6 @@
 
+http://orford.org/portfolio/samplecat/
+
 SampleCat is a program for cataloguing and auditioning audio samples.
 
 SampleCat is available under the GNU General Public License and runs mainly on
@@ -7,3 +9,9 @@ MySql is used for the database.
 
 Currently, basic functionality is working, but the application lacks the bells 
 and whistles to make it a serious tool.
+
+
+known issues:
+-------------
+-samplecat will crash when trying to read a directory containing broken links.
+

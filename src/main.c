@@ -192,6 +192,7 @@ main(int argc, char** argv)
 	app.context_menu = make_context_menu();
 
 #ifdef USE_AYYI
+	ayyi_client_init();
 	ayyi_connect();
 #endif
 
@@ -503,7 +504,7 @@ file_selector()
 
 
 void
-scan_dir(const char* path)
+scan_dir(const char* path, int* added_count)
 {
 	/*
 	scan the directory and try and add any files we find.
@@ -522,13 +523,11 @@ scan_dir(const char* path)
 
 			if(!g_file_test(filepath, G_FILE_TEST_IS_DIR)){
 				add_file(filepath);
-
-				//FIXME why does this block?
-				//int i; for(i=0;i<20;i++) if(gtk_events_pending) gtk_main_iteration(); else break;
+				statusbar_printf(1, "%i files added", ++*added_count);
 			}
 			// IS_DIR
 			else if(app.add_recursive){
-				scan_dir(filepath);
+				scan_dir(filepath, added_count);
 			}
 		}
 		g_dir_close(dir);
@@ -659,9 +658,11 @@ do_search(char *search, char *dir)
 
 #ifdef USE_AYYI
 				//is the file loaded in the current Ayyi song?
-				gchar* fullpath = g_build_filename(row[MYSQL_DIR], sample_name, NULL);
-				if(pool__file_exists(fullpath)) dbg(0, "exists"); else dbg(0, "doesnt exist");
-				g_free(fullpath);
+				if(ayyi.got_song){
+					gchar* fullpath = g_build_filename(row[MYSQL_DIR], sample_name, NULL);
+					if(pool__file_exists(fullpath)) dbg(0, "exists"); else dbg(0, "doesnt exist");
+					g_free(fullpath);
+				}
 #endif
 				//icon (only shown if the sound file is currently available):
 				if(online){
@@ -1213,13 +1214,12 @@ delete_row(GtkWidget *widget, gpointer user_data)
 {
 	//widget is likely to be a popupmenu.
 
-	PF;
 	GtkTreeIter iter;
 	GtkTreeModel* model = gtk_tree_view_get_model(GTK_TREE_VIEW(app.view));
 
 	GtkTreeSelection* selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(app.view));
 	GList* selectionlist = gtk_tree_selection_get_selected_rows(selection, &(model));
-	if(!selectionlist){ errprintf("delete_row(): no files selected?\n"); return; }
+	if(!selectionlist){ perr("no files selected?\n"); return; }
 	dbg(0, "%i rows selected.", g_list_length(selectionlist));
 
 	GList* selected_row_refs = NULL;
@@ -1235,7 +1235,6 @@ delete_row(GtkWidget *widget, gpointer user_data)
 	}
 	g_list_free(selectionlist);
 
-
 	GtkTreePath* path;
 	for(i=0;i<g_list_length(selected_row_refs);i++){
 		row_ref = g_list_nth_data(selected_row_refs, i);
@@ -1246,20 +1245,16 @@ delete_row(GtkWidget *widget, gpointer user_data)
 				int id;
 				gtk_tree_model_get(model, &iter, COL_NAME, &fname, COL_IDX, &id, -1);
 
-				char sql[1024];
-				snprintf(sql, 1024, "DELETE FROM samples WHERE id=%i", id);
-				dbg(0, "row: %s sql=%s", fname, sql);
-				if(mysql_query(&app.mysql, sql)){
-					errprintf("delete_row(): delete failed! sql=%s\n", sql);
-					return;
-				}
+				if(!db_delete_row(id)) return;
+
 				//update the store:
 				gtk_list_store_remove(app.store, &iter);
-			} else errprintf("delete_row() bad iter! i=%i (<%i)\n", i, g_list_length(selectionlist));
-		} else errprintf("delete_row(): cannot get path from row_ref!\n");
+			} else perr("bad iter! i=%i (<%i)\n", i, g_list_length(selectionlist));
+		} else perr("cannot get path from row_ref!\n");
 	}
 	g_list_free(selected_row_refs); //FIXME free the row_refs?
 
+	statusbar_printf(1, "%i rows deleted", i);
 	on_directory_list_changed();
 }
 

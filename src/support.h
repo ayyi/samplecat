@@ -8,10 +8,16 @@
 #ifndef USE_AYYI
 #define ASSERT_POINTER_FALSE(A, B) if(GPOINTER_TO_UINT(A) < 1024){ errprintf2(__func__, "bad %s pointer (%p).\n", B, A); return FALSE; } 
 #endif
-#define GERR_WARN if(error){ warnprintf("%s\n", error->message); g_error_free(error); error = NULL; }
 
 #define HAS_ALPHA_FALSE 0
 #define BITS_PER_CHAR_8 8
+
+#ifndef false
+  #define false FALSE
+#endif
+#ifndef true
+  #define true TRUE
+#endif
 
 #define A_SIZE(A) sizeof(A)/sizeof(A[0])
 

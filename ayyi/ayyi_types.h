@@ -19,27 +19,27 @@ typedef enum {
 } AyyiOp;
 
 enum {
-    AYYI_OBJECT_EMPTY = 0,
-    AYYI_OBJECT_TRACK,
-    AYYI_OBJECT_AUDIO_TRACK,
-    AYYI_OBJECT_MIDI_TRACK,
-    AYYI_OBJECT_CHAN,
-    AYYI_OBJECT_AUX,
-    AYYI_OBJECT_PART,
-    AYYI_OBJECT_AUDIO_PART,
-    AYYI_OBJECT_MIDI_PART,
-    AYYI_OBJECT_EVENT,
-    AYYI_OBJECT_RAW,
-    AYYI_OBJECT_STRING,
-    AYYI_OBJECT_ROUTE,
-    AYYI_OBJECT_FILE,
-    AYYI_OBJECT_LIST,
-    AYYI_OBJECT_MIDI_NOTE,
-    AYYI_OBJECT_SONG,
-    AYYI_OBJECT_TRANSPORT,
-    AYYI_OBJECT_AUTO,
-    AYYI_OBJECT_UNSUPPORTED,
-    AYYI_OBJECT_ALL
+	AYYI_OBJECT_EMPTY = 0,
+	AYYI_OBJECT_TRACK,
+	AYYI_OBJECT_AUDIO_TRACK,
+	AYYI_OBJECT_MIDI_TRACK,
+	AYYI_OBJECT_CHAN,
+	AYYI_OBJECT_AUX,
+	AYYI_OBJECT_PART,
+	AYYI_OBJECT_AUDIO_PART,
+	AYYI_OBJECT_MIDI_PART,
+	AYYI_OBJECT_EVENT,
+	AYYI_OBJECT_RAW,
+	AYYI_OBJECT_STRING,
+	AYYI_OBJECT_ROUTE,
+	AYYI_OBJECT_FILE,
+	AYYI_OBJECT_LIST,
+	AYYI_OBJECT_MIDI_NOTE,
+	AYYI_OBJECT_SONG,
+	AYYI_OBJECT_TRANSPORT,
+	AYYI_OBJECT_AUTO,
+	AYYI_OBJECT_UNSUPPORTED,
+	AYYI_OBJECT_ALL
 };
 
 //properties
@@ -49,6 +49,7 @@ enum {
 	AYYI_STIME,
 	AYYI_LENGTH,
 	AYYI_HEIGHT,
+	AYYI_COLOUR,
 	AYYI_END,
 	AYYI_TRACK,
 	AYYI_MUTE,
@@ -106,18 +107,27 @@ struct _song_pos
 };
 
 
+struct _ayyi_obj_idx
+{
+	uint32_t idx1;
+	uint32_t idx2;
+	uint32_t idx3;
+};
+
+
 enum {
-    VOL = 0,
-    PAN,
+	VOL = 0,
+	PAN,
 	AUTO_MAX
 };
 
 enum // channel/track/aux flags
 {
-    muted  = 1 << 0,
-    solod  = 1 << 1,
-    armed  = 1 << 2,
-    master = 1 << 3,
+	muted  = 1 << 0,
+	solod  = 1 << 1,
+	armed  = 1 << 2,
+	master = 1 << 3,
+	deleted= 1 << 4,
 } ChanFlags;
 
 #endif

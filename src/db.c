@@ -102,10 +102,24 @@ db_insert(char *qry)
 		if(debug) printf("db_insert(): ok!\n");
 		id = mysql_insert_id(mysql);
 	}else{
-		errprintf("db_insert(): not ok...\n");
+		perr("not ok...\n");
 		return 0;
 	}
 	return id;
+}
+
+
+gboolean
+db_delete_row(int id)
+{
+	char sql[1024];
+	snprintf(sql, 1024, "DELETE FROM samples WHERE id=%i", id);
+	dbg(2, "row: sql=%s", sql);
+	if(mysql_query(&app.mysql, sql)){
+		perr("delete failed! sql=%s\n", sql);
+		return false;
+	}
+	return true;
 }
 
 
@@ -119,7 +133,7 @@ mysql_exec_sql(MYSQL *mysql, const char *create_definition)
 gboolean
 db_update_path(const char* old_path, const char* new_path)
 {
-	gboolean ok = FALSE;
+	gboolean ok = false;
 	MYSQL *mysql = &app.mysql;
 
 	char* filename = NULL; //FIXME

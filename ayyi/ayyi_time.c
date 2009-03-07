@@ -4,8 +4,8 @@
 #include <sys/types.h>
 #include <jack/jack.h>
 #include <glib.h>
-typedef struct _song_pos song_pos;
 typedef void             action;
+#include <ayyi/ayyi_typedefs.h>
 #include <ayyi/ayyi_types.h>
 #include <ayyi/ayyi_utils.h>
 #include <ayyi/interface.h>

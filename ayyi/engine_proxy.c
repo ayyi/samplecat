@@ -7,18 +7,16 @@
 #include <ayyi/dbus_marshallers.h>
 #include <ayyi/dbus_marshallers.c>
 
-typedef struct _song_pos song_pos;
-typedef struct _shm_seg  shm_seg;
-typedef void             action;
-typedef struct _ayyi_action AyyiAction;
+typedef void action;
+#include <ayyi/ayyi_typedefs.h>
 #include <ayyi/ayyi_types.h>
 #include <ayyi/ayyi_shm.h>
 #include <ayyi/ayyi_utils.h>
 #include <ayyi/ayyi_msg.h>
+#include <ayyi/ayyi_action.h>
 #include <ayyi/ayyi_client.h>
 #include <ayyi/ayyi_dbus.h>
-void        action_complete          (struct _ayyi_action*); //FIXME
-void        action_free              (struct _ayyi_action*); //FIXME
+#include <ayyi/ayyi_log.h>
 
 extern int debug;
 
@@ -66,14 +64,14 @@ create_object_notify(DBusGProxy *proxy, DBusGProxyCall *call, gpointer data)
 		log_printf(LOG_FAIL, "%s", error->message);
 #endif
 		g_error_free(error);
-		if(ayyi_action) action_free(ayyi_action);
+		if(ayyi_action) ayyi_action_free(ayyi_action);
 		return;
 	}
 
 	if(ayyi_action){
 		dbg (2, "request done. idx=%u", idx);
 		ayyi_action->idx = idx;
-		action_complete(ayyi_action);
+		ayyi_action_complete(ayyi_action);
 	}
 }
 
@@ -92,27 +90,24 @@ delete_object_notify(DBusGProxy *proxy, DBusGProxyCall *call, gpointer data)
 {
 	P_IN;
 	PF;
-	AyyiAction* ayyi_action = (AyyiAction*)data;
-	//action* action = ayyi_action->app_data;
+	AyyiAction *ayyi_action = (AyyiAction*)data;
 	if(!ayyi_action) gwarn ("no action!");
 
 	GError *error = NULL;
 	if (!dbus_g_proxy_end_call (proxy, call, &error, G_TYPE_INVALID)){
 		gwarn ("%s", error->message);
-#ifdef __log_h__
-		log_printf(LOG_FAIL, "%s", error->message);//FIXME not curently in Ayyi client lib
-#endif
+		log_print(LOG_FAIL, "%s", error->message);
 		g_error_free(error);
-		if(ayyi_action) action_free(ayyi_action);
+		if(ayyi_action) ayyi_action_free(ayyi_action);
 		return;
 	}
 
-	action_complete(ayyi_action);
+	ayyi_action_complete(ayyi_action);
 }
 
 
 DBusGProxyCall*
-dbus_get_prop_string(AyyiAction* action, int object_type, int property_type)
+dbus_get_prop_string(AyyiAction *action, int object_type, int property_type)
 {
 	SIG_OUT;
 	gpointer user_data = action;
@@ -133,14 +128,13 @@ dbus_get_prop_notify(DBusGProxy *proxy, DBusGProxyCall *call, gpointer data)
 	if (!dbus_g_proxy_end_call (proxy, call, &error, G_TYPE_STRING, &val, G_TYPE_INVALID)){
 		gerr ("reply: %s", error->message);
 		g_error_free(error);
-		if(ayyi_action) action_free(ayyi_action);
+		if(ayyi_action) ayyi_action_free(ayyi_action);
 		return;
 	}
 
-	dbg(0, "val=%p", val);
 	ayyi_action->return_val_1 = val;
 
-	if(ayyi_action) action_complete(ayyi_action);
+	if(ayyi_action) ayyi_action_complete(ayyi_action);
 }
 
 
@@ -269,12 +263,12 @@ dbus_set_prop_notify(DBusGProxy *proxy, DBusGProxyCall *call, gpointer data)
 		if(action){
 			if(ayyi_action->err) ayyi_action->err = 1;
 			//note: callback fns should now check for action->err.
-			action_complete(ayyi_action);
+			ayyi_action_complete(ayyi_action);
 		}
 		return;
 	}
 
-	if(ayyi_action) action_complete(ayyi_action);
+	if(ayyi_action) ayyi_action_complete(ayyi_action);
 }
 
 

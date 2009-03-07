@@ -15,8 +15,9 @@ void*                  ayyi_mixer_container_get_item(AyyiContainer*, int idx);
 struct _ayyi_control*  ayyi_mixer__plugin_control_next(AyyiContainer*, struct _ayyi_control*);
 void*                  ayyi_mixer__container_next_item(AyyiContainer*, void*);
 int                    ayyi_mixer_container_count_items(AyyiContainer*);
+gboolean               ayyi_mixer_container_verify(AyyiContainer*);
 
-struct _ayyi_aux*      ayyi_mixer__aux_get(struct _ayyi_channel*, int idx);
+struct _ayyi_aux*      ayyi_mixer__aux_get(AyyiChannel*, int idx);
 struct _ayyi_aux*      ayyi_mixer__aux_get_(int channel_idx, int idx);
 int                    ayyi_mixer__aux_count(int channel_idx);
 
@@ -26,4 +27,3 @@ shm_event*             ayyi_auto_get_event(AyyiChannel*, int i, int auto_type);
 void                   ayyi_automation_print(AyyiChannel*);
 
 void*                  translate_mixer_address(void*);
-

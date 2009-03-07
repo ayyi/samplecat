@@ -1345,7 +1345,7 @@ filer_change_to(Filer* filer_window, const char *path, const char *from)
 	view_cursor_to_iter(filer_window->view, NULL);
 
 	attach(filer_window);
-	
+
 	//check_settings(filer_window);
 
 	//display_set_actual_size(filer_window, FALSE);

@@ -82,8 +82,11 @@ struct _Directory
 
 	gint		rescan_timeout;	/* See dir_rescan_soon() */
 
-#ifdef USE_DNOTIFY
-	int		dnotify_fd;	/* -1 if not watching */
+#ifdef USE_NOTIFY
+	int         notify_fd;  /* -1 if not watching */
+#endif
+#ifdef USE_INOTIFY
+	guint       inotify_source;
 #endif
 };
 

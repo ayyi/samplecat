@@ -110,7 +110,7 @@ drag_received(GtkWidget *widget, GdkDragContext *drag_context, gint x, gint y,
 
         char* uri_unescaped = vfs_unescape_string(u + strlen(method_string) + 1, NULL);
 
-		if(is_dir(uri_unescaped)) scan_dir(uri_unescaped);
+		if(is_dir(uri_unescaped)) scan_dir(uri_unescaped, &added_count);
         else if(add_file(uri_unescaped)) added_count++;
 
         g_free(uri_unescaped);
@@ -119,9 +119,7 @@ drag_received(GtkWidget *widget, GdkDragContext *drag_context, gint x, gint y,
       i++;
     }
 
-	char msg[256];
-	snprintf(msg, 256, "%i files added", added_count);
-	statusbar_print(1, msg);
+	statusbar_printf(1, "import complete. %i files added", added_count);
 
     uri_list_free(list);
   }

@@ -7,12 +7,13 @@
 #include <gmodule.h>
 
 typedef void            action;
-typedef struct _shm_seg shm_seg;
+#include <ayyi/ayyi_typedefs.h>
 #include <ayyi/ayyi_types.h>
 #include <ayyi/ayyi_shm.h>
 #include <ayyi/ayyi_utils.h>
 #include <ayyi/ayyi_msg.h>
 #include <ayyi/ayyi_dbus.h>
+#include <ayyi/ayyi_log.h>
 
 #include <ayyi/ayyi_client.h>
 
@@ -37,7 +38,15 @@ SpectrogramSymbols* spectrogram_symbols = NULL;
 void
 ayyi_client_init()
 {
-	ayyi.song = NULL;
+	ayyi_log_init();
+
+	ayyi.song   = NULL;
+	ayyi.amixer = NULL;
+	ayyi.on_shm = NULL;
+
+	ayyi_shm_init ();
+
+	ayyi.trans_id = 1;
 }
 
 
@@ -52,7 +61,7 @@ ayyi_client_load_plugins()
 	if(!g_file_test(plugin_path, G_FILE_TEST_EXISTS)) return;
 
 	int found = 0;
-	dbg(0, "scanning for plugins (%s) ...", plugin_path);
+	dbg(2, "scanning for plugins (%s) ...", plugin_path);
 	GDir* dir = g_dir_open(plugin_path, 0, &error);
 	if (!error) {
 		gchar* filename = (gchar*)g_dir_read_name(dir);
@@ -80,7 +89,7 @@ ayyi_client_load_plugins()
 		g_error_free(error);
 		error = NULL;
 	}
-	dbg(0, "ayyi plugins found: %i.", found);
+	log_print(0, "ayyi plugins loaded: %i.", found);
 }
 
 
@@ -165,7 +174,7 @@ plugin_load(const gchar* filename)
 							if(dbus_g_proxy_call(pservice.proxy, "GetShmSingle", &error, G_TYPE_STRING, "", G_TYPE_INVALID, G_TYPE_UINT, &seg->id, G_TYPE_INVALID)){
 								ayyi_shm_import();
 								plugin->client_data = seg->address; //TODO does it need to be translated? no, dont think so.
-								dbg(0, "client_data=%p offset=%i", plugin->client_data, (unsigned)plugin->client_data - (unsigned)plugin->client_data);
+								dbg(2, "client_data=%p offset=%i", plugin->client_data, (unsigned)plugin->client_data - (unsigned)plugin->client_data);
 							} else {
 								if(error){
 									dbg (0, "GetShm: %s\n", error->message);
@@ -174,7 +183,16 @@ plugin_load(const gchar* filename)
 								success = FALSE;
 							}
 						}
-						else warn_gerror("plugin dbus connection failed", &error);
+						else{
+                    switch(error->code){
+                      case 98742:
+                        log_print(0, "plugin service not available: %s", plugin->service_name);
+                        break;
+                      default:
+                        warn_gerror("plugin dbus connection failed", &error);
+                        break;
+                    }
+                  }
 					}
 					break;
 			}
@@ -213,7 +231,7 @@ ayyi_print_object_type (uint32_t object_type)
 const char*
 ayyi_print_prop_type (uint32_t prop_type)
 {
-	static char* types[] = {"AYYI_NO_PROP", "AYYI_NAME", "AYYI_STIME", "AYYI_LENGTH", "AYYI_HEIGHT", "AYYI_END", "AYYI_TRACK", "AYYI_MUTE", "AYYI_ARM", "AYYI_SOLO", 
+	static char* types[] = {"AYYI_NO_PROP", "AYYI_NAME", "AYYI_STIME", "AYYI_LENGTH", "AYYI_HEIGHT", "AYYI_COLOUR", "AYYI_END", "AYYI_TRACK", "AYYI_MUTE", "AYYI_ARM", "AYYI_SOLO", 
 	                        "AYYI_SDEF", "AYYI_INSET", "AYYI_FADEIN", "AYYI_FADEOUT", "AYYI_OUTPUT",
 	                        "AYYI_AUX1_OUTPUT", "AYYI_AUX2_OUTPUT", "AYYI_AUX3_OUTPUT", "AYYI_AUX4_OUTPUT",
 	                        "AYYI_PREPOST", "AYYI_SPLIT",

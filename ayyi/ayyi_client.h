@@ -3,15 +3,22 @@
 
 struct _ayyi_client
 {
-	GList*                    segs;
-	struct _shm_song*         song;
-	struct _shm_seg_mixer*    amixer;
+	GList*                  segs;
+	struct _shm_song*       song;
+	struct _shm_seg_mixer*  amixer;
 
-	int                       got_song;   //TRUE when we must have _all_ required shm pointers.
+	//TODO is this obsoleted by service->on_shm() ?
+	gboolean                (*on_shm)(struct _shm_seg*); //application callback
+	int                     got_song;   // TRUE when we must have _all_ required shm pointers.
+
+	GList*                  actionlist;
+	unsigned                trans_id;   // list of AyyiAction*
+
+	gboolean                offline;    // TRUE if we are not and should not attempt to connect to core apps.
 };
 
 typedef struct plugin {
-	guint		api_version;
+	guint       api_version;
 	gchar*      name;
 	guint       type;          // plugin type (e.g. renderer, parser or feed list provider)
 
@@ -42,9 +49,9 @@ extern struct _ayyi_client ayyi;
 #endif
 
 typedef struct {
-    guint       api_version;
-    char*       name;
-    char*       (*get_hello)();
+	guint       api_version;
+	char*       name;
+	char*       (*get_hello)();
 	float       (*get_meterlevel)();
 } SpectrogramSymbols;
 

@@ -161,7 +161,6 @@ GtkWindow
 				dnd_file_drag_types, dnd_file_drag_types_count,
 				GDK_ACTION_COPY | GDK_ACTION_MOVE | GDK_ACTION_ASK);
 		g_signal_connect(G_OBJECT(file_view), "drag_data_get", G_CALLBACK(view_details_dnd_get), NULL);
-
 	}
 	make_fileview_pane();
 
@@ -271,7 +270,7 @@ window_on_allocate(GtkWidget *win, gpointer user_data)
 		g_object_set(app.cell1, "cell-background-gdk", &app.bg_colour_mod1, "cell-background-set", TRUE, NULL);
 		g_object_set(app.cell1, "foreground-gdk", &app.fg_colour, "foreground-set", TRUE, NULL);
 
-		view_details_set_alt_colours(VIEW_DETAILS(app.fm_view), &app.bg_colour_mod1, &app.fg_colour);
+		if(app.fm_view) view_details_set_alt_colours(VIEW_DETAILS(app.fm_view), &app.bg_colour_mod1, &app.fg_colour);
 
 		colour_box_update();
 		app.colourbox_dirty = FALSE;
@@ -296,7 +295,7 @@ window_on_configure(GtkWidget *widget, GdkEventConfigure *event, gpointer user_d
 
 			//set the position of the left pane elements.
 			//As the allocation is somehow bigger than its container, we just do it v approximately.
-			if(GTK_WIDGET_REALIZED(app.vpaned)){
+			if(app.vpaned && GTK_WIDGET_REALIZED(app.vpaned)){
 				//dbg(0, "height=%i %i %i", app.hpaned->allocation.height, app.statusbar->allocation.y, app.inspector->widget->allocation.height);
 				guint inspector_y = height - app.hpaned->allocation.y - 210;
 				gtk_paned_set_position(GTK_PANED(app.vpaned), inspector_y);

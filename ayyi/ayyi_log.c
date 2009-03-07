@@ -5,8 +5,6 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <sys/types.h>
-//#include <jack/jack.h>
-//#include <fst.h>
 #include <gtk/gtk.h>
 #include <ayyi/ayyi_utils.h>
 
@@ -49,15 +47,34 @@ log_append(const char* str, int type)
   if(app_log.print_to_ui){
     char status[128];
     snprintf(status, 127, "%s%s", str, type==LOG_OK ? " ok" : /*type==LOG_FAIL ? " fail!" :*/ "");
-    app_log.print_to_ui(status);
+    app_log.print_to_ui(status, type);
   }
 
   //output to stdout:
+  char goto_rhs[32];
+  sprintf(goto_rhs, "\x1b[A\x1b[%iC", MIN(get_terminal_width() - 12, 80)); //go up one line, then goto rhs
+
   if(type==LOG_WARN) printf("%s ", smwarn);
+  if(!type) printf("%s", bold);
   printf(str);
-  if(type==LOG_OK)   printf("\n%s %s", go_rhs, ok);
-  if(type==LOG_FAIL) printf("\n%s%s", go_rhs, fail);
+  if(!type) printf("%s", white);
+  if(type==LOG_OK)   printf("\n%s %s", goto_rhs, ok);
+  if(type==LOG_FAIL) printf("\n%s%s", goto_rhs, fail);
   printf("\n");
+}
+
+
+void 
+log_print(int type, char* format, ...)
+{
+  char str[256];
+
+  va_list argp;           //points to each unnamed arg in turn
+  va_start(argp, format); //make ap (arg pointer) point to 1st unnamed arg
+  vsprintf(str, format, argp);
+  va_end(argp);           //clean up
+
+  log_append(str, type);
 }
 
 

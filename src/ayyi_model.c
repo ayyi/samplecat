@@ -29,7 +29,8 @@ pool__file_exists(char* fname)
 	// looks through the core fil array looking for the given filename.
 	// @param fname - must be either absolute path, or relative to song root.
 
-	dbg (0, "looking for '%s'...", fname);
+	g_return_val_if_fail (ayyi.got_song, FALSE);
+	dbg (2, "looking for '%s'...", fname);
 
 	char leafname[256];
 	audio_path_get_leaf(fname, leafname); //this means we cant have different files with the same name. Fix later...

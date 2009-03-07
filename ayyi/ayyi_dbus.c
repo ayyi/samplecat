@@ -12,6 +12,7 @@
 #include <ayyi/ayyi_utils.h>
 #include <ayyi/ayyi_time.h>
 #include <ayyi/ayyi_client.h>
+#include <ayyi/ayyi_server.h>
 #include <ayyi/engine_proxy.h>
 #include <ayyi/ayyi_dbus.h>
 
@@ -23,9 +24,7 @@
 
 extern DBusGProxy *proxy;
 
-void app_on_shm();
-
-extern char seg_strs[3][16];
+//extern char seg_strs[3][16];
 
 static void     dbus_shm_notify          (DBusGProxy*, DBusGProxyCall*, gpointer data);
 static char*    dbus_introspect          (DBusGConnection*);
@@ -99,9 +98,16 @@ dbus_server_connect(Service* server, GError** error)
 				else dbg (0, "service not running on this bus? (%s)", busses[i].name); //TODO busname may be wrong if connection made previously.
 			}
 			else{
-				printf("failed to open connection to %s%s%s bus", bold, busses[i].name, white);
-				if(error->code != 0) printf(": %i %s\n", error->code, error->message);
-				printf("\n");
+				switch(error->code){
+					case DBUS_GERROR_FILE_NOT_FOUND:
+						printf("%s dbus not running?\n", busses[i].name);
+						break;
+					default:
+						printf("failed to open connection to %s%s%s bus", bold, busses[i].name, white);
+						if(error->code != 0) printf(": %i %s\n", error->code, error->message);
+						printf("\n");
+						break;
+				}
 				g_error_free (error);
 				continue;
 			}
@@ -121,7 +127,7 @@ dbus_server_connect(Service* server, GError** error)
 	if(!connection[0] && !connection[1]){ if(!*error) g_set_error (error, AYYI_DBUS_ERROR, 93642, "no connections made to any dbus."); return FALSE; }
 
 	if(!acquired){
-		g_set_error (error,	AYYI_DBUS_ERROR, 98742, "service not found: %s", server->service);
+		g_set_error (error, AYYI_DBUS_ERROR, 98742, "service not found: %s. session_bus=%s system_bus=%s", server->service, connection[0]?"y":"n", connection[1]?"y":"n");
 		return FALSE;
 	}
 
@@ -140,7 +146,7 @@ dbus_server_connect(Service* server, GError** error)
 gboolean
 dbus_server_get_shm(Service* server)
 {
-	dbg (0, "...");
+	dbg (2, "...");
 
 	if(!ayyi.segs){ gwarn("no shm segs have been configured."); return FALSE; }
 
@@ -181,6 +187,56 @@ dbus_server_get_shm(Service* server)
 }
 
 
+gboolean
+dbus_server_get_shm__server(AyyiServer* ayyi)
+{
+	//FIXME refactor to use client version instead: dbus_server_get_shm()
+
+	//attempt to import all shm segments listed in ayyi->foreign_shm_segs
+	dbg (1, "...");
+
+	//char segs[3][16]= {"", "song", "mixer"};
+	//int type;
+	//for(type=1;type<=2;type++){
+
+	//ASSERT_POINTER_FALSE(shm.segs, "app.shm_segs");
+	GList* list = ayyi->foreign_shm_segs;
+	for(;list;list=list->next){
+#define DBUS_SYNC
+#ifdef DBUS_SYNC
+		AyyiShmSeg* seg = list->data;
+
+		GError *error = NULL;
+		//char **strs;
+		//char **strs_p;
+		//guint id;
+		//if(!dbus_g_proxy_call(proxy, "GetShm", &error, G_TYPE_INVALID, G_TYPE_STRV, &strs, G_TYPE_INVALID)){
+		if(!dbus_g_proxy_call(proxy, "GetShmSingle", &error, G_TYPE_STRING, seg_strs[seg->type], G_TYPE_INVALID, G_TYPE_UINT, &seg->id, G_TYPE_INVALID)){
+
+			//just to demonstrate remote exceptions versus regular GError
+			if(error->domain == DBUS_GERROR && error->code == DBUS_GERROR_REMOTE_EXCEPTION){
+				gerr ("caught remote method exception %s: %s", dbus_g_error_get_name(error), error->message);
+			}else{
+				gerr ("GetShm: %s", error->message);
+			}
+			g_error_free(error);
+
+			return FALSE;
+		}
+		dbg (1, "fd=%i\n", seg->id);
+		//for (strs_p = strs; *strs_p; strs_p++) printf ("got string: \"%s\"", *strs_p);
+		//g_strfreev (strs);
+
+		dbus_shm_notify(proxy, NULL, seg);
+
+#else
+		dbus_g_proxy_begin_call(proxy, "GetShmSingle", dbus_shm_notify, NULL, NULL, G_TYPE_STRING, segs[i], G_TYPE_INVALID);
+#endif
+	}
+	return TRUE;
+}
+
+
 static void
 dbus_shm_notify(DBusGProxy *proxy, DBusGProxyCall *call, gpointer _seg)
 {
@@ -203,7 +259,7 @@ dbus_shm_notify(DBusGProxy *proxy, DBusGProxyCall *call, gpointer _seg)
 	}
 
 	ayyi_shm_import();
-	//app_on_shm();
+
 	if(known_services[0].on_shm) known_services[0].on_shm();
 	else gwarn("no on_shm callback set.");
 }

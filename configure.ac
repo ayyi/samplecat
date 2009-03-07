@@ -119,6 +119,7 @@ fi
 
 if test x$have_dnotify = xyes; then
    AC_DEFINE(USE_DNOTIFY,1,[Use dnotify on Linux])
+   AC_DEFINE(USE_NOTIFY,1,[Use notification])
 fi
 
 AM_CONDITIONAL(ENABLE_DNOTIFY, test x$have_dnotify = xyes)
@@ -170,6 +171,8 @@ if `test "$tracker_found" = "yes"`; then
     enable_tracker="yes"
     TRACKER_CFLAGS=`pkg-config --cflags-only-I tracker`
     TRACKER_LDFLAGS=`pkg-config --libs-only-l tracker`
+else
+    enable_tracker="no"
 fi;
 AC_SUBST(TRACKER_CFLAGS)
 AC_SUBST(TRACKER_LDFLAGS)
@@ -205,6 +208,7 @@ AC_CONFIG_FILES([Makefile])
 AC_CONFIG_FILES([src/Makefile])
 AC_CONFIG_FILES([src/file_manager/Makefile])
 AC_CONFIG_FILES([src/gimp/Makefile])
+AC_CONFIG_FILES([src/xdgmime/Makefile])
 AC_CONFIG_FILES([ayyi/Makefile])
 AC_OUTPUT
 

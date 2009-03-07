@@ -75,11 +75,18 @@ typedef void GimpActionGroup;
 //#include "usericons.h"
 #include "menu.h"
 
+#ifdef USE_NOTIFY
+static GHashTable *notify_fd_to_dir = NULL;
+#endif
+#ifdef USE_INOTIFY
+# include <sys/inotify.h>
+GIOChannel *inotify_channel;
+static int inotify_fd;
+#endif
 #ifdef USE_DNOTIFY
 /* Newer Linux kernels can tell us when the directories we are watching
  * change, using the dnotify system.
  */
-static GHashTable *dnotify_fd_to_dir = NULL;
 gboolean dnotify_wakeup_flag = FALSE;
 static int dnotify_last_fd = -1;
 #endif
@@ -116,8 +123,16 @@ dir_init(void)
 	PF;
 	dir_cache = g_fscache_new((GFSLoadFunc) dir_new, (GFSUpdateFunc) update, NULL);
 
-	/* Check for dnotify support in the kernel */
-#ifdef USE_DNOTIFY
+#ifdef USE_NOTIFY
+	notify_fd_to_dir = g_hash_table_new(NULL, NULL);
+
+# ifdef USE_INOTIFY
+	inotify_fd = inotify_init();
+	inotify_channel = g_io_channel_unix_new(inotify_fd);
+	g_io_add_watch(inotify_channel, G_IO_IN, inotify_handler, NULL);
+# endif
+	
+# ifdef USE_DNOTIFY
 	{
 		struct sigaction act;
 
@@ -134,8 +149,8 @@ dir_init(void)
 		act.sa_flags = 0;
 		sigaction(SIGIO, &act, NULL);
 
-		dnotify_fd_to_dir = g_hash_table_new(NULL, NULL);
 	}
+# endif
 #endif
 }
 
@@ -150,8 +165,6 @@ dir_init(void)
 void
 dir_attach(Directory *dir, DirCallback callback, gpointer data)
 {
-	PF;
-
 	g_return_if_fail(dir != NULL);
 	g_return_if_fail(callback != NULL);
 
@@ -159,22 +172,53 @@ dir_attach(Directory *dir, DirCallback callback, gpointer data)
 	user->callback = callback;
 	user->data = data;
 
+#ifdef USE_INOTIFY
+	if (!dir->users)
+	{
+		int fd;
+
+		if (dir->notify_fd != -1)
+			g_warning("dir_attach: inotify error\n");
+
+		fd = inotify_add_watch( inotify_fd,
+					dir->pathname,
+					IN_CREATE | IN_DELETE | IN_MOVE |
+					IN_ATTRIB); 
+		
+		g_return_if_fail(g_hash_table_lookup(notify_fd_to_dir,
+						 GINT_TO_POINTER(fd)) == NULL);
+		if (fd != -1)
+		{
+		  
+			dir->notify_fd = fd;
+			g_hash_table_insert(notify_fd_to_dir,
+					    GINT_TO_POINTER(fd), dir);
+		}
+	}
+#endif
+#ifdef USE_NOTIFY
 #ifdef USE_DNOTIFY
 	if (!dir->users)
 	{
 		int fd;
 		
-		if (dir->dnotify_fd != -1) g_warning("dir_attach: dnotify error\n");
+		if (dir->notify_fd != -1)
+			g_warning("dir_attach: dnotify error\n");
 		
 		fd = open(dir->pathname, O_RDONLY);
-		g_return_if_fail(g_hash_table_lookup(dnotify_fd_to_dir, GINT_TO_POINTER(fd)) == NULL);
-		if (fd != -1) {
-			dir->dnotify_fd = fd;
-			g_hash_table_insert(dnotify_fd_to_dir, GINT_TO_POINTER(fd), dir);
+		g_return_if_fail(g_hash_table_lookup(notify_fd_to_dir,
+				 GINT_TO_POINTER(fd)) == NULL);
+		if (fd != -1)
+		{
+			dir->notify_fd = fd;
+			g_hash_table_insert(notify_fd_to_dir,
+					GINT_TO_POINTER(fd), dir);
 			fcntl(fd, F_SETSIG, SIGRTMIN);
-			fcntl(fd, F_NOTIFY, DN_CREATE | DN_DELETE | DN_RENAME | DN_ATTRIB | DN_MULTISHOT);
+			fcntl(fd, F_NOTIFY, DN_CREATE | DN_DELETE | DN_RENAME |
+					    DN_ATTRIB | DN_MULTISHOT);
 		}
 	}
+#endif
 #endif
 	
 	dir->users = g_list_prepend(dir->users, user);
@@ -218,14 +262,22 @@ dir_detach(Directory *dir, DirCallback callback, gpointer data)
 			/* May stop scanning if noone's watching */
 			set_idle_callback(dir);
 
-#ifdef USE_DNOTIFY
-			if (!dir->users && dir->dnotify_fd != -1)
+#ifdef USE_NOTIFY
+			if (!dir->users && dir->notify_fd != -1)
 			{
-				close(dir->dnotify_fd);
-				g_hash_table_remove(dnotify_fd_to_dir,
-					GINT_TO_POINTER(dir->dnotify_fd));
-				dir->dnotify_fd = -1;
+# ifdef USE_DNOTIFY
+				close(dir->notify_fd);
+# endif
+				g_hash_table_remove(notify_fd_to_dir,
+					GINT_TO_POINTER(dir->notify_fd));
+				dir->notify_fd = -1;
 			}
+# ifdef USE_INOTIFY
+			if (dir->inotify_source) {
+				g_source_remove(dir->inotify_source);
+				dir->inotify_source = 0;
+			}
+# endif
 #endif
 			return;
 		}
@@ -269,22 +321,28 @@ dir_check_this(const guchar *path)
 	g_free(real_path);
 }
 
-#ifdef USE_DNOTIFY
+#ifdef USE_NOTIFY
 static void
-drop_dnotify(gpointer key, gpointer value, gpointer data)
+drop_notify(gpointer key, gpointer value, gpointer data)
 {
+#ifdef USE_INOTIFY
+        inotify_rm_watch(inotify_fd, GPOINTER_TO_INT(key));
+#endif
+#ifdef USE_DNOTIFY
 	close(GPOINTER_TO_INT(key));
+#endif
 }
 #endif
 
 /* Used when we fork an action child, otherwise we can't delete or unmount
- * any directory which we're watching!
+ * any directory which we're watching via dnotify!  inotify does not have
+ * this problem
  */
 void
-dir_drop_all_dnotifies(void)
+dir_drop_all_notifies(void)
 {
 #ifdef USE_DNOTIFY
-	g_hash_table_foreach(dnotify_fd_to_dir, drop_dnotify, NULL);
+	g_hash_table_foreach(notify_fd_to_dir, drop_notify, NULL);
 #endif
 }
 
@@ -403,16 +461,14 @@ static gboolean
 recheck_callback(gpointer data)
 {
 	Directory *dir = (Directory *) data;
-	GList	*next;
-	guchar	*leaf;
 	
 	g_return_val_if_fail(dir != NULL, FALSE);
 	g_return_val_if_fail(dir->recheck_list != NULL, FALSE);
 
 	/* Remove the first name from the list */
-	next = dir->recheck_list;
+	GList* next = dir->recheck_list;
 	dir->recheck_list = g_list_remove_link(dir->recheck_list, next);
-	leaf = (guchar *) next->data;
+	guchar* leaf = (guchar *) next->data;
 	g_list_free_1(next);
 
 	/* usleep(800); */
@@ -421,8 +477,7 @@ recheck_callback(gpointer data)
 
 	g_free(leaf);
 
-	if (dir->recheck_list)
-		return TRUE;	/* Call again */
+	if (dir->recheck_list) return TRUE;	/* Call again */
 
 	/* The recheck_list list empty. Stop scanning, unless
 	 * needs_update, in which case we start scanning again.
@@ -496,8 +551,7 @@ dnotify_wakeup(void)
 
 	dnotify_wakeup_flag = FALSE;
 
-	dir = g_hash_table_lookup(dnotify_fd_to_dir,
-				  GINT_TO_POINTER(dnotify_last_fd));
+	dir = g_hash_table_lookup(notify_fd_to_dir, GINT_TO_POINTER(dnotify_last_fd));
 
 	if (dir)
 		dir_rescan_soon(dir);
@@ -508,7 +562,7 @@ dnotify_wakeup(void)
  *			INTERNAL FUNCTIONS			*
  ****************************************************************/
 
-#ifdef USE_DNOTIFY
+#ifdef USE_NOTIFY
 static gint
 rescan_soon_timeout(gpointer data)
 {
@@ -915,8 +969,11 @@ static void directory_init(GTypeInstance *object, gpointer gclass)
 	dir->pathname = NULL;
 	dir->error = NULL;
 	dir->rescan_timeout = -1;
-#ifdef USE_DNOTIFY
-	dir->dnotify_fd = -1;
+#ifdef USE_NOTIFY
+	dir->notify_fd = -1;
+#endif
+#ifdef USE_INOTIFY
+	dir->inotify_source = 0;
 #endif
 
 	dir->new_items = g_ptr_array_new();
@@ -968,6 +1025,7 @@ static Directory *dir_new(const char *pathname)
 static void
 dir_rescan(Directory *dir)
 {
+	PF;
 	DIR		*d;
 	struct dirent	*ent;
 	guint		i;
@@ -1089,7 +1147,8 @@ dir_rescan(Directory *dir)
 
 #ifdef USE_DNOTIFY
 /* Signal handler - don't do anything dangerous here */
-static void dnotify_handler(int sig, siginfo_t *si, void *data)
+static void
+dnotify_handler(int sig, siginfo_t *si, void *data)
 {
 	/* Note: there is currently only one place to store the fd,
 	 * so we'll miss updates to several directories if they happen
@@ -1098,5 +1157,41 @@ static void dnotify_handler(int sig, siginfo_t *si, void *data)
 	dnotify_last_fd = si->si_fd;
 	dnotify_wakeup_flag = TRUE;
 	write(to_wakeup_pipe, "\0", 1);	/* Wake up! */
+}
+#endif
+
+#ifdef USE_INOTIFY
+static gboolean
+inotify_handler(GIOChannel *source, GIOCondition condition, gpointer udata)
+{
+	int fd = g_io_channel_unix_get_fd(source);
+	Directory *dir;
+	char buf[sizeof(struct inotify_event)+1024];
+	int len, i = 0;
+
+	len = read(fd, buf, sizeof(buf));
+	if (len<0)
+	{
+		if (errno != EINTR)
+			perror("read");
+		return TRUE;
+	}
+	else if (!len)
+		return TRUE;
+
+	while (i<len)
+	{
+		struct inotify_event *event=(struct inotify_event *) (buf+i);
+
+		dir = g_hash_table_lookup(notify_fd_to_dir,
+					  GINT_TO_POINTER(event->wd));
+		if (dir)
+			dir_rescan_soon(dir);
+    
+		i += sizeof(*event)+event->len;
+	}
+
+
+	return TRUE;
 }
 #endif

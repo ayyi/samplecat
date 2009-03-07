@@ -1,3 +1,10 @@
+20090308
+-merged upstream changes into dir.c (mostly inotify stuff)
+-ayyi updates and fixes
+
+20081219
+-experimental support for <a href="http://projects.gnome.org/tracker/">Tracker</a>.
+
 20080920
 -added support for keyboard shortuts using GimpAction. Currently only CTL-Q / CTL-W to quit is used.
 -initial Ayyi support added with configure option. Connects to server, but does nothing else.

@@ -5,8 +5,8 @@
 #include <glib.h>
 #include <jack/jack.h>
 
-typedef struct _shm_seg  shm_seg;
-typedef void             action;
+typedef void action;
+#include <ayyi/ayyi_typedefs.h>
 #include <ayyi/ayyi_types.h>
 #include <ayyi/ayyi_utils.h>
 #include <ayyi/interface.h>

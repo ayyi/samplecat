@@ -14,7 +14,7 @@ ayyi_connect()
 	Service* ardourd = &known_services[0];
 
 	ayyi_shm_init();
-	shm_seg_new(0, 0);
+	shm_seg_new(0, SEG_TYPE_SONG);
 
 	GError* error = NULL;
 	if((dbus_server_connect (ardourd, &error))){
@@ -32,7 +32,10 @@ void
 on_shm(struct _shm_seg* seg)
 {
 	PF;
-	//return TRUE;
+	if (ayyi.got_song) {
+		//synchronise local data cache.
+		//ayyi_song__load();
+	}
 }
 
 

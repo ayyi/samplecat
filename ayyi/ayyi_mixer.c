@@ -5,8 +5,8 @@
 #include <glib.h>
 #include <jack/jack.h>
 
-typedef struct _shm_seg shm_seg;
 typedef void            action;
+#include <ayyi/ayyi_typedefs.h>
 #include <ayyi/ayyi_types.h>
 #include <ayyi/ayyi_utils.h>
 #include <ayyi/ayyi_msg.h>
@@ -68,7 +68,8 @@ ayyi_mixer_track_get(int slot)
 	return track;
 #endif
 
-	return ayyi_container_get_item(&ayyi.amixer->tracks, slot, translate_mixer_address);
+	//return ayyi_container_get_item(&ayyi.amixer->tracks, slot, translate_mixer_address);
+	return ayyi_mixer_container_get_item(&ayyi.amixer->tracks, slot);
 }
 
 
@@ -269,6 +270,13 @@ ayyi_mixer_container_count_items(AyyiContainer* container)
 }
 
 
+gboolean
+ayyi_mixer_container_verify(AyyiContainer* container)
+{
+	return ayyi_client_container_verify(container, translate_mixer_address);
+}
+
+
 struct _ayyi_aux*
 ayyi_mixer__aux_get(struct _ayyi_channel* chan, int idx)
 {
@@ -339,6 +347,8 @@ void* //temporarily used in ayyi_shm
 translate_mixer_address(void* address)
 {
 	//pointers in shm have to be translated to the address range of the imported segment.
+
+	//unfortunately we cannot make this static as it is used by all mixer shm data types, eg ayyi_list.
 
 	ASSERT_POINTER_FALSE(address, "address");
 

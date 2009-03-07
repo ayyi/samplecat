@@ -4,6 +4,7 @@
 #define ayyi_song__audio_region_get(A) ayyi_song_container_get_item(&ayyi.song->regions, A)
 #define ayyi_song__midi_region_get(A) ayyi_song_container_get_item(&ayyi.song->midi_regions, A)
 #define ayyi_song__connection_get(A) ayyi_song_container_get_item(&ayyi.song->connections, A)
+#define ayyi_song__filesource_get(A) ayyi_song_container_get_item(&ayyi.song->filesources, A)
 
 #define ayyi_song__audio_track_next(A) ayyi_song_container_next_item(&ayyi.song->audio_tracks, A)
 #define ayyi_song__midi_track_next(A) ayyi_song_container_next_item(&ayyi.song->midi_tracks, A)
@@ -21,6 +22,9 @@
 
 #define IS_MASTER(A) ((A->flags & master) !=  0)
 
+#define ARDOUR_SOUND_DIR1 "interchange/"
+#define ARDOUR_SOUND_DIR2 "audiofiles"
+
 void*    ayyi_song_translate_address     (void* address);
 void     ayyi_song__print_automation_list(AyyiChannel*);
 int      ayyi_song__track_lookup_by_id   (uint64_t id);
@@ -35,13 +39,19 @@ int      ayyi_song_container_count_items (AyyiContainer*);
 int      ayyi_song_container_find        (AyyiContainer*, void*);
 gboolean ayyi_song_container_verify      (AyyiContainer*);
 
-gboolean      ayyi_track_pod_index_ok    (int pod_index);
-gboolean      ayyi_region_pod_index_ok   (int shm_index);
+gboolean        ayyi_track_pod_index_ok    (int pod_index);
+gboolean        ayyi_region_pod_index_ok   (int shm_index);
 
-int           ayyi_part_get_track_num    (region_base_shared*);
+void            ayyi_region_delete         (uint32_t region_idx);
 
-route_shared* ayyi_track_next_armed      (route_shared*);
+int             ayyi_part_get_track_num    (AyyiRegionBase*);
 
-gboolean      ayyi_file_get_other_channel(filesource_shared*, char* other);
-void          ayyi_song__pool_print      ();
+AyyiTrack*      ayyi_track_next_armed      (route_shared*);
+
+gboolean        ayyi_file_get_other_channel(filesource_shared*, char* other);
+void            ayyi_song__get_audiodir    (char* dir);
+void            ayyi_song__pool_print      ();
+
+AyyiConnection* ayyi_track__get_output     (AyyiTrack*);
+gboolean        ayyi_connection_is_input   (AyyiConnection*);
 

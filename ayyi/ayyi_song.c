@@ -14,6 +14,8 @@ typedef void             action;
 #include <ayyi/ayyi_shm.h>
 #include <ayyi/ayyi_client.h>
 #include <ayyi/interface.h>
+#include <ayyi/ayyi_msg.h>
+#include <ayyi/ayyi_action.h>
 #include <ayyi/ayyi_song.h>
 
 #define translate(A) ayyi_song_translate_address(A)
@@ -118,8 +120,8 @@ is_song_shm_local(void* p)
 
 	shm_seg* seg_info = ayyi_song__get_info();
 	unsigned segment_end = (unsigned)ayyi.song + seg_info->size;
-	gerr ("address is not in song shm: %p (expected %p - %p)\n", p, ayyi.song, (void*)segment_end);
-	if((unsigned)p > (unsigned)ayyi.song) gerr ("shm offset=%u\n", (unsigned)p - (unsigned)ayyi.song);
+	gerr ("address is not in song shm: %p (expected %p - %p)", p, ayyi.song, (void*)segment_end);
+	if((unsigned)p > (unsigned)ayyi.song) gerr ("shm offset=%u", (unsigned)p - (unsigned)ayyi.song);
 	return FALSE;
 }
 
@@ -154,7 +156,7 @@ ayyi_song__get_audio_part_list()
 		part_list = g_list_append(part_list, GINT_TO_POINTER(region->shm_idx));
 	}
 
-	dbg (0, "num audio parts found: %i", g_list_length(part_list));
+	dbg (2, "num audio parts found: %i", g_list_length(part_list));
 	//if(debug > 1) ardour_print_part_list();
 	return part_list;
 }
@@ -203,7 +205,7 @@ ayyi_song_container_prev_item(AyyiContainer* container, void* old)
 			dbg (0, "b=%i i=%i", b, i);
 			void* next = ayyi_song_translate_address(table[i]);
 			if(!next) continue; //unused slot.
-			if(!is_song_shm_local(next)){ gerr ("bad shm pointer. table[%u]=%p\n", i, table[i]); return NULL; }
+			if(!is_song_shm_local(next)){ gerr ("bad shm pointer. table[%u]=%p", i, table[i]); return NULL; }
 			return next;
 		}
 	}
@@ -292,6 +294,19 @@ ayyi_song__container_index_ok(AyyiContainer* container, int shm_idx)
 }
 
 
+void
+ayyi_region_delete_async(uint32_t region_idx)
+{
+	PF;
+
+	AyyiAction* a    = ayyi_action_new("region delete %i \"%s\"", region_idx, "");
+	a->op            = AYYI_DEL;
+	a->obj_type      = AYYI_OBJECT_AUDIO_PART;
+	a->obj_idx.idx1  = region_idx;
+	ayyi_action_execute(a);
+}
+
+
 static struct block*
 route_get_block(int block_num)
 {
@@ -308,20 +323,22 @@ region_get_block(int block_num)
 #endif
 
 
-#if 0
 int
-ayyi_part_get_track_num(region_base_shared* region)
+ayyi_part_get_track_num(AyyiRegionBase* region)
 {
 	g_return_val_if_fail(region, -1);
 	if(!strlen(region->playlist_name)){ gwarn ("unable to determine track. part has no playlist! (%s)\n", region->name); return 0; }
 
 	//FIXME this calls a fn from a higher layer
+	#warning FIXME calling a fn from a higher layer
+#if 0
 	int ayyi_song__get_tracknum_from_playlist(char* playlist_name); //temp declaration
 	int t = ayyi_song__get_tracknum_from_playlist(region->playlist_name);
-
+#else
+	int t = -1;
+#endif
 	return t;
 }
-#endif
 
 
 route_shared*
@@ -349,7 +366,7 @@ ayyi_track_next_armed(route_shared* prev)
 			dbg (2, "b=%i i=%i", b, i);
 			route_shared* next = ayyi_song_translate_address(route_table[i]);
 			if(!next) continue;
-			if(!is_song_shm_local(next)){ gerr ("bad shm pointer. route_table[%u]=%p\n", i, route_table[i]); return NULL; }
+			if(!is_song_shm_local(next)){ gerr ("bad shm pointer. route_table[%u]=%p", i, route_table[i]); return NULL; }
 			if(!next->armed) continue;
 			return next;
 		}
@@ -405,6 +422,30 @@ ayyi_file_get_other_channel(filesource_shared* filesource, char* other)
 
 
 void
+ayyi_song__get_audiodir(char* dir)
+{
+	//strictly speaking, i think Ardour files can be anywhere. The path is in the XML file.
+	//But we dont currently share the full path, so we have to assume that they are in the Interchange folder.
+
+	char d[256]; snprintf(d, 255, "%s%s%s", ayyi.song->path, ARDOUR_SOUND_DIR1, ayyi.song->snapshot);
+	if(!g_file_test(d, G_FILE_TEST_EXISTS)){
+		snprintf(d, 255, "%s%s", ayyi.song->path, ARDOUR_SOUND_DIR1);
+		GList* dir_list = get_dirlist(d);
+		if(dir_list){
+			strncpy(d, (char*)dir_list->data, 255);
+
+			//free the dir list
+			GList* l = dir_list; for(;l;l=l->next) g_free(l->data);
+			g_list_free(dir_list);
+		}
+	}
+
+	snprintf(dir, 255, "%s/%s/", d, ARDOUR_SOUND_DIR2);
+	dbg (2, "using dir: %s", dir);
+}
+
+
+void
 ayyi_song__pool_print()
 {
 	//list all the pool items in shm. See also pool_print() for the gui data.
@@ -415,6 +456,23 @@ ayyi_song__pool_print()
 		printf("%4i %12Lu %6i %s\n", file->shm_idx, file->id, file->length, file->name);
 	}
 	UNDERLINE;
+}
+
+
+AyyiConnection*
+ayyi_track__get_output(AyyiTrack* ayyi_trk)
+{
+	AyyiList* routing = ayyi_list__first(ayyi_trk->output_routing);
+	int idx = routing ? routing->id : 0;
+	if(routing) dbg (2, "output_idx=%i name=%s", routing->id, ayyi_trk->output_name);
+	return ayyi_song__connection_get(idx);
+}
+
+
+gboolean
+ayyi_connection_is_input(AyyiConnection* connection)
+{
+	return (connection->io == 1);
 }
 
 

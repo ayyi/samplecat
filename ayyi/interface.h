@@ -1,5 +1,5 @@
-#ifndef __SM_ARDOUR__
-#define __SM_ARDOUR__
+#ifndef __ayyi_interface_h__
+#define __ayyi_interface_h__
 
 #define AYYI_SHM_VERSION 1
 #define CONTAINER_SIZE 128
@@ -151,7 +151,6 @@ struct _route_shared {
 	void*          object;
 	char           input_name[128];
 	int            input_idx;
-	int            output_idx;
 	int            input_minimum;
 	int            input_maximum;
 	int            output_minimum;
@@ -196,23 +195,23 @@ struct _port_shared {
 
 struct _ayyi_channel {
 	int            shm_idx;
-	char           name[256];
+	char           name[AYYI_FILENAME_MAX];
 	void*          object;
 	double         level;
 	int            has_pan;
 	float          pan;
 	float          visible_peak_power[2];
-	int            plugin         [AYYI_PLUGINS_PER_CHANNEL];
-	char           insert_active  [AYYI_PLUGINS_PER_CHANNEL];
-	char           insert_bypassed[AYYI_PLUGINS_PER_CHANNEL];
-	struct _ayyi_aux* aux         [AYYI_AUX_PER_CHANNEL];
+	int            plugin          [AYYI_PLUGINS_PER_CHANNEL];
+	char           insert_active   [AYYI_PLUGINS_PER_CHANNEL];
+	char           insert_bypassed [AYYI_PLUGINS_PER_CHANNEL];
+	struct _ayyi_aux* aux          [AYYI_AUX_PER_CHANNEL];
 	struct _container automation[2];
 	struct _ayyi_list* automation_list;
 };
 typedef struct _ayyi_channel AyyiChannel;
 
 struct _plugin_shared {
-	char           name[256];
+	char           name[AYYI_FILENAME_MAX];
 	char           category[64];
 	uint32_t       n_inputs;
 	uint32_t       n_outputs;
@@ -270,4 +269,4 @@ struct _shm_seg_mixer
 };
 typedef struct _shm_seg_mixer Shm_seg_mixer;
 
-#endif //__SM_ARDOUR__
+#endif //__ayyi_interface_h__

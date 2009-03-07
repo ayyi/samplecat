@@ -1,15 +1,16 @@
+#define __ayyi_shm_c__
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
 #include <unistd.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <sys/shm.h>
+#include <fcntl.h>
 #include <glib.h>
 #include <jack/jack.h>
 
-typedef struct _song_pos song_pos;
-typedef struct _shm_seg  shm_seg;
-typedef void             action;
+#include <ayyi/ayyi_typedefs.h>
 #include <ayyi/ayyi_types.h>
 #include <ayyi/ayyi_msg.h>
 #include <ayyi/ayyi_shm.h>
@@ -17,18 +18,20 @@ typedef void             action;
 #include <ayyi/ayyi_utils.h>
 #include <ayyi/ayyi_time.h>
 #include <ayyi/ayyi_seg0.h>
+#include <ayyi/ayyi_log.h>
 #include <ayyi/interface.h>
 
 int shm_page_size = 0;
-
-gboolean (*on_shm_callback)     (struct _shm_seg*) = NULL; //application callback
+char nodes_dir[32] = "/tmp/ayyi/nodes/";
+char tmp_dir[32] = "/tmp/ayyi/";
 
 void*    ayyi_song_translate_address(void* address);
-void*    translate_mixer_address(void* address); //tmp!!
+void*    translate_mixer_address(void*);
 gboolean is_song_shm_local_quiet(void* p); //tmp!!
 shm_seg* ayyi_song__get_info    ();
 
 static gboolean is_shm_seg_local(void*);
+static gboolean ayyi_shm_is_complete();
 
 #define GET_TRANSLATOR \
 	gboolean is_song = is_song_shm_local_quiet(container); \
@@ -36,7 +39,7 @@ static gboolean is_shm_seg_local(void*);
 	if(is_song) translator = ayyi_song_translate_address; \
 	else        translator = translate_mixer_address; \
 
-char seg_strs[3][16] = {"", "song", "mixer"};
+//char seg_strs[3][16] = {"", "song", "mixer"};
 
 
 gboolean       is_mixer_shm_local(void*);
@@ -309,7 +312,7 @@ ayyi_shm_init()
 shm_seg*
 shm_seg_new(int id, int type)
 {
-	if(type >= SEG_TYPE_LAST){ gerr ("bad segment type. %i", type); return NULL; }
+	if(type >= AYYI_SEG_TYPE_LAST){ gerr ("bad segment type. %i", type); return NULL; }
 
 	shm_seg* shm_seg = g_new0(struct _shm_seg, 1);
 	shm_seg->id      = id;
@@ -339,29 +342,28 @@ ayyi_shm_import()
 				return FALSE;
 			}
 
-			printf("ayyi data import: %s \n%s %s\n", seg_strs[shm_seg->type], go_rhs, ok);
+			log_print(LOG_OK, "ayyi data import: %s", seg_strs[shm_seg->type]);
 			shm_seg->attached = TRUE;
 			shm_seg->address = shmptr;
 
 			switch(shm_seg->type){
-				case 1:
+				case SEG_TYPE_NOT_SET:
+					gerr ("unexpected shm segment type %i", shm_seg->type);
+					good = FALSE;
+					break;
+				case SEG_TYPE_SONG:
 					ayyi.song = shmptr;
-					if(!on_shm_callback){ gerr("callback not set"); break; }
-					if(!(good = on_shm_callback(shm_seg))){
-#if 0
-						log_printf(LOG_FAIL, "imported song data invalid.");
-#endif
-						gwarn("imported song data invalid.");
-						ayyi.song = NULL;
+					if(ayyi.on_shm){
+						if(!(good = ayyi.on_shm(shm_seg))){
+							log_print(LOG_FAIL, "imported song data invalid.");
+							ayyi.song = NULL;
+						}
 					}
 					break;
 				case 2:
 					ayyi.amixer = shmptr;
-					if(!(good = on_shm_callback(shm_seg))){
-#if 0
-						log_printf(LOG_FAIL, "imported mixer data invalid.");
-#endif
-						gwarn("imported mixer data invalid.");
+					if(!(good = ayyi.on_shm(shm_seg))){
+						log_print(LOG_FAIL, "imported mixer data invalid.");
 						ayyi.amixer = NULL;
 					}
 					break;
@@ -369,10 +371,80 @@ ayyi_shm_import()
 					//gerr ("unexpected shm segment type %i", shm_seg->type);
 					break;
 			}
+
+			if(good && ayyi_shm_is_complete()){
+				dbg(2, "shm complete. TODO notify app?");
+				ayyi.got_song = TRUE;
+			}
 		}// else printf("%s(): segment has no id!\n", __func__);
 	}
 
 	return good;
+}
+
+
+static gboolean
+ayyi_shm_is_complete()
+{
+	GList* list = ayyi.segs;
+	for(;list;list=list->next){
+		shm_seg* shm_seg = list->data;
+		if(!shm_seg->attached){ dbg(2, "not complete."); return FALSE; }
+	}
+	return TRUE;
+}
+
+
+gboolean
+shm_seg__attach(AyyiShmSeg* seg)
+{
+	char proj = 'D'; //FIXME
+
+	if(!g_file_test(tmp_dir, G_FILE_TEST_IS_DIR)){
+		if(mkdir(tmp_dir, O_RDWR) == -1){
+			gerr("cannot create tmp dir '%s'", tmp_dir);
+			return FALSE;
+		}
+	}
+
+	if(!g_file_test(nodes_dir, G_FILE_TEST_IS_DIR)){
+		if(mkdir(nodes_dir, O_RDWR) == -1){
+			gerr("cannot create tmp dir '%s'", nodes_dir);
+			return FALSE;
+		}
+	}
+
+	char node_name[256];
+	sprintf(node_name, "%s%s-%d", nodes_dir, seg->name, (int)getpid());
+	if(!g_file_test(node_name, G_FILE_TEST_EXISTS)) creat(node_name, O_RDWR);
+	if((seg->_shmkey = ftok(node_name, proj)) == -1){
+		gerr("ftok: node_name=%s %s", node_name, fail);
+		return FALSE;
+	}
+
+	if((seg->_shmfd = shmget(seg->_shmkey, seg->size, IPC_CREAT|0400)) == -1){
+		gerr("shmget %s", fail);
+		return FALSE;
+	}
+	//printf("%s(): _shmfd=%i\n", __func__, _shmfd);
+
+	if((seg->address = (char*)shmat(seg->_shmfd, 0, 0)) == (char*)-1){
+		/*if (debug > -1)*/ gerr("shmat [FAIL]");
+		return FALSE;
+	}
+
+	//for (i=0;i<num_pages;i++) memset(_addr + i*DAE_SHM_PAGE_SIZE, 0, DAE_SHM_PAGE_SIZE);
+
+	//strcpy(name, "song"); //FIXME hack so that malloc can cast correctly. It acts as a seg "type" field. 
+
+	return TRUE;
+}
+
+
+gboolean
+shm_seg__validate()
+{
+	return TRUE;
 }
 
 

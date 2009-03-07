@@ -139,7 +139,7 @@ void        do_search(char* search, char *dir);
 
 gboolean    new_search(GtkWidget*, gpointer userdata);
 
-void        scan_dir();
+void        scan_dir(const char* path, int* added_count);
 
 gboolean    add_file(char* path);
 gboolean    add_dir(char* uri);
