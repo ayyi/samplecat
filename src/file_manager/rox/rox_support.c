@@ -1245,7 +1245,7 @@ CollateKey *collate_key_new(const guchar *name)
 			tmp = g_utf8_strdown((char*)name, i - name);
 			new.text = (guchar*)g_utf8_collate_key(tmp, -1);
 			g_free(tmp);
-			new.number = strtol(i, &endp, 10);
+			new.number = strtol((gchar*)i, &endp, 10);
 
 			g_array_append_val(array, new);
 

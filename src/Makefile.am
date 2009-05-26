@@ -40,7 +40,7 @@ samplecat_SOURCES = \
 	pixmaps.c pixmaps.h \
 	diritem.c diritem.h \
 	dh-link.c dh-link.h \
-	tree.c tree.h \
+	dh_tree.c dh_tree.h \
 	cellrenderer_hypertext.c cellrenderer_hypertext.h \
 	dnd.c dnd.h \
 	db.c db.h \

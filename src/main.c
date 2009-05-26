@@ -38,7 +38,7 @@ This software is licensed under the GPL. See accompanying file COPYING.
 #include "audio.h"
 #include "overview.h"
 #include "cellrenderer_hypertext.h"
-#include "tree.h"
+#include "dh_tree.h"
 #include "listview.h"
 #include "window.h"
 #include "inspector.h"
@@ -56,7 +56,7 @@ This software is licensed under the GPL. See accompanying file COPYING.
 #include "rox/dir.h"
 #include "file_manager.h"
 
-//#define DEBUG_NO_THREADS 1
+#undef DEBUG_NO_THREADS
 
 //#if defined(HAVE_STPCPY) && !defined(HAVE_mit_thread)
   #define strmov(A,B) stpcpy((A),(B))
@@ -157,7 +157,7 @@ main(int argc, char** argv)
 	app.mutex = g_mutex_new();
 	gtk_init(&argc, &argv);
 
-	if(!db_connect()){
+	if(!db__connect()){
 	#ifdef QUIT_WITHOUT_DB
 		on_quit(NULL, GINT_TO_POINTER(1));
 	#endif
@@ -215,23 +215,13 @@ main(int argc, char** argv)
 }
 
 
-gboolean
-dir_tree_on_link_selected(GObject *ignored, DhLink *link, gpointer data)
+void
+update_search_dir(gchar* uri)
 {
-	/*
-	what does it mean if link->uri is empty?
-	*/
-	ASSERT_POINTER_FALSE(link, "link");
+	set_search_dir(uri);
 
-	dbg(0, "uri=%s", link->uri);
-	//FIXME segfault if we use this if()
-	//if(strlen(link->uri)){
-		set_search_dir(link->uri);
-
-		const gchar* text = app.search ? gtk_entry_get_text(GTK_ENTRY(app.search)) : "";
-		do_search((gchar*)text, link->uri);
-	//}
-	return FALSE;
+	const gchar* text = app.search ? gtk_entry_get_text(GTK_ENTRY(app.search)) : "";
+	do_search((gchar*)text, uri);
 }
 
 
@@ -246,16 +236,13 @@ dir_tree_update(gpointer data)
 	*/
 	dbg(0, "FIXME !! dir list window not updated.\n");
 
-	GNode *node;
-	node = app.dir_tree;
-
-	db_get_dirs();
+	update_dir_node_list();
 
 #ifdef NOT_BROKEN
 	dh_book_tree_reload((DhBookTree*)app.dir_treeview);
 #endif
 
-	return FALSE; //source should be removed.
+	return IDLE_STOP;
 }
 
 
@@ -532,7 +519,7 @@ scan_dir(const char* path, int* added_count)
 		}
 		g_dir_close(dir);
 	}else{
-		errprintf("scan_dir(): cannot open directory. %s\n", error->message);
+		perr("cannot open directory. %s\n", error->message);
 		g_error_free(error);
 		error = NULL;
 	}
@@ -544,7 +531,7 @@ do_search(char *search, char *dir)
 {
 	//fill the display with the results for the given search phrase.
 
-	if(!db_is_connected()){ listview__show_db_missing(); return; }
+	if(!db__is_connected()){ listview__show_db_missing(); return; }
 
 	if(!search) search = app.search_phrase;
 	if(!dir)    dir    = app.search_dir;
@@ -878,60 +865,37 @@ row_clear_tags(GtkTreeIter* iter, int id)
 
 
 void
-db_get_dirs()
+update_dir_node_list()
 {
 	/*
 	builds a node list of directories listed in the database.
 	*/
-	if (!app.dir_tree) { errprintf("db_get_dirs(): dir_tree not initialised.\n"); return; }
+	if (!app.dir_tree) { errprintf("update_dir_node_list(): dir_tree not initialised.\n"); return; }
 
-	if(!db_is_connected()) return;
+	if(!db__is_connected()) return;
 
-	char qry[1024];
-	MYSQL *mysql=&app.mysql;
-	MYSQL_RES *result;
-	MYSQL_ROW row;
+	db__dir_iter_new();
 
 	g_node_destroy(app.dir_tree);    //remove any previous nodes.
 	app.dir_tree = g_node_new(NULL); //make an empty root node.
 
-	snprintf(qry, 1024, "SELECT DISTINCT filedir FROM samples ORDER BY filedir");
+	if(1/*result*/){// there are rows
+		DhLink* link = dh_link_new(DH_LINK_TYPE_PAGE, "all directories", "");
+		GNode* leaf = g_node_new(link);
+		g_node_insert(app.dir_tree, -1, leaf);
 
-	if(mysql_exec_sql(mysql, qry)==0){
-		result = mysql_store_result(mysql);
-		if(result){// there are rows
-			DhLink* link = NULL;
-			GNode* leaf = NULL;
-			char uri[256];
-			gint position;
+		char* u;
+		while((u = db__dir_iter_next())){
 
-			//snprintf(uri, 256, "%s", "all directories");
-			link = dh_link_new(DH_LINK_TYPE_PAGE, "all directories", "");
+			link = dh_link_new(DH_LINK_TYPE_PAGE, u, u);
 			leaf = g_node_new(link);
-			g_node_insert(app.dir_tree, -1, leaf);
 
-			while((row = mysql_fetch_row(result))){
-
-				//printf("db_get_dirs(): dir=%s\n", row[0]);
-				snprintf(uri, 256, "%s", row[0]);
-				link = dh_link_new(DH_LINK_TYPE_PAGE, row[0], uri);
-				leaf = g_node_new(link);
-
-				position = -1;//end
-				g_node_insert(app.dir_tree, position, leaf);
-			}
-			mysql_free_result(result);
-		}
-		else{  // mysql_store_result() returned nothing
-		  if(mysql_field_count(mysql) > 0){
-				// mysql_store_result() should have returned data
-				printf( "Error getting records: %s\n", mysql_error(mysql));
-		  }
+			gint position = -1;//end
+			g_node_insert(app.dir_tree, position, leaf);
 		}
 	}
-	else{
-		printf( "db_get_dirs(): failed to find any records: %s\n", mysql_error(mysql));
-	}
+
+	db__dir_iter_free();
 }
 
 
@@ -955,7 +919,7 @@ add_file(char* path)
 	uri must be "unescaped" before calling this fn. Method string must be removed.
 	*/
 	dbg(0, "%s", path);
-	if(!db_is_connected()) return FALSE;
+	if(!db__is_connected()) return FALSE;
 	gboolean ok = TRUE;
 
 	sample* sample = sample_new(); //free'd after db and store are updated.
@@ -1019,7 +983,7 @@ add_file(char* path)
 		samplerate_format(samplerate_s, sample->sample_rate);
 		dbg(0, "sql=%s", sql2);
 
-		sample->id = db_insert(sql2);
+		sample->id = db__insert(sql2);
 
 		GtkTreeIter iter;
 		gtk_list_store_append(app.store, &iter);
@@ -1029,7 +993,7 @@ add_file(char* path)
 		if((treepath = gtk_tree_model_get_path(GTK_TREE_MODEL(app.store), &iter))){
 			sample->row_ref = gtk_tree_row_reference_new(GTK_TREE_MODEL(app.store), treepath);
 			gtk_tree_path_free(treepath);
-		}else errprintf("add_file(): failed to make treepath from inserted iter.\n");
+		}else perr("failed to make treepath from inserted iter.\n");
 
 		dbg(2, "setting store... filename=%s mime=%s", filename, mime_string);
 		gtk_list_store_set(app.store, &iter,
@@ -1334,13 +1298,13 @@ edit_row(GtkWidget *widget, gpointer user_data)
 
 			GtkTreeViewColumn* focus_column = app.col_tags;
 			GtkCellRenderer*   focus_cell   = app.cell_tags;
-	    	//g_signal_handlers_block_by_func(app.view, cursor_changed, self);
-    		gtk_widget_grab_focus(app.view);
+			//g_signal_handlers_block_by_func(app.view, cursor_changed, self);
+			gtk_widget_grab_focus(app.view);
 			gtk_tree_view_set_cursor_on_cell(GTK_TREE_VIEW(app.view), treepath,
 			                                 focus_column, //GtkTreeViewColumn *focus_column - this needs to be set for start_editing to work.
 			                                 focus_cell,   //the cell to be edited.
 			                                 START_EDITING);
-    		//g_signal_handlers_unblock_by_func(treeview, cursor_changed, self);
+			//g_signal_handlers_unblock_by_func(treeview, cursor_changed, self);
 
 
 		} else errprintf("edit_row(): cannot get iter.\n");

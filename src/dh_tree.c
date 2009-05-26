@@ -31,7 +31,7 @@
 #include <gtk/gtktreestore.h>
 
 //#include "dh-marshal.h"
-#include "tree.h"
+#include "dh_tree.h"
 #include "dh-link.h"
 //#include "rox_global.h"
 //#include "type.h"
@@ -310,7 +310,7 @@ book_tree_create_pixbufs (DhBookTree *tree)
     GdkPixbuf* iconbuf = NULL;
     MIME_type* mime_type = mime_type_lookup("inode/directory");
     type_to_icon(mime_type);
-    if ( mime_type->image == NULL ) printf("db_get_dirs(): no icon.\n");
+    if ( mime_type->image == NULL ) dbg("no icon.");
     iconbuf = mime_type->image->sm_pixbuf;
 	*/
 	GdkPixbuf* iconbuf = mime_type_get_pixbuf(inode_directory);

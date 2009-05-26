@@ -20,7 +20,7 @@
 #include "file_manager.h"
 #include "file_view.h"
 #include "inspector.h"
-#include "tree.h"
+#include "dh_tree.h"
 #include "db.h"
 #include "window.h"
 
@@ -30,23 +30,24 @@ extern unsigned debug;
 
 char* categories[] = {"drums", "perc", "bass", "keys", "synth", "strings", "brass", "fx", "impulses"};
  
-GtkWidget*        view_details_new();
-void              view_details_dnd_get(GtkWidget*, GdkDragContext*, GtkSelectionData*, guint info, guint time, gpointer data);
+GtkWidget*        view_details_new                ();
+void              view_details_dnd_get            (GtkWidget*, GdkDragContext*, GtkSelectionData*, guint info, guint time, gpointer data);
 
-static gboolean   window_on_destroy(GtkWidget*, gpointer);
-static void       window_on_realise(GtkWidget*, gpointer);
-static void       window_on_allocate(GtkWidget*, gpointer);
-static gboolean   window_on_configure(GtkWidget*, GdkEventConfigure*, gpointer user_data);
+static gboolean   window_on_destroy               (GtkWidget*, gpointer);
+static void       window_on_realise               (GtkWidget*, gpointer);
+static void       window_on_allocate              (GtkWidget*, gpointer);
+static gboolean   window_on_configure             (GtkWidget*, GdkEventConfigure*, gpointer);
 static gboolean   filter_new();
-static GtkWidget* colour_box_new(GtkWidget* parent);
-static gboolean   colour_box_exists(GdkColor* colour);
-static gboolean   colour_box_add(GdkColor* colour);
-static GtkWidget* scrolled_window_new();
-static GtkWidget* message_panel__new();
-static GtkWidget* message_panel__add_msg(const gchar* msg, const gchar* stock_id);
-static void       window_on_fileview_row_selected(GtkTreeView*, gpointer user_data);
-static void       menu__add_to_db(GtkMenuItem*, gpointer user_data);
+static GtkWidget* colour_box_new                  (GtkWidget* parent);
+static gboolean   colour_box_exists               (GdkColor*);
+static gboolean   colour_box_add                  (GdkColor*);
+static GtkWidget* scrolled_window_new             ();
+static GtkWidget* message_panel__new              ();
+static GtkWidget* message_panel__add_msg          (const gchar* msg, const gchar* stock_id);
+static void       window_on_fileview_row_selected (GtkTreeView*, gpointer);
+static void       menu__add_to_db                 (GtkMenuItem*, gpointer);
 static void       make_fm_menu_actions();
+static gboolean   dir_tree_on_link_selected       (GObject*, DhLink*, gpointer data);
 
 
 struct _accel menu_keys[] = {
@@ -137,7 +138,7 @@ GtkWindow
 	gtk_paned_add1(GTK_PANED(r_vpaned), scroll);
 
 	listview__new();
-	if(!db_is_connected()) gtk_widget_set_no_show_all(app.view, true); //dont show main view if no database.
+	if(!db__is_connected()) gtk_widget_set_no_show_all(app.view, true); //dont show main view if no database.
 	gtk_container_add(GTK_CONTAINER(app.scroll), app.view);
 
 	//--------
@@ -326,12 +327,14 @@ left_pane()
 	gtk_widget_show(vpaned2);
 	gtk_paned_add1(GTK_PANED(app.vpaned), vpaned2);
 
+	if(db__is_connected()){
 #ifndef NO_USE_DEVHELP_DIRTREE
-	GtkWidget* tree = dir_tree_new();
-	gtk_paned_add1(GTK_PANED(vpaned2), tree);
-	gtk_widget_show(tree);
-	g_signal_connect(tree, "link_selected", G_CALLBACK(dir_tree_on_link_selected), NULL);
+		GtkWidget* tree = dir_tree_new();
+		gtk_paned_add1(GTK_PANED(vpaned2), tree);
+		gtk_widget_show(tree);
+		g_signal_connect(tree, "link_selected", G_CALLBACK(dir_tree_on_link_selected), NULL);
 #endif
+	}
 
 	gint expand = TRUE;
 	ViewDirTree* dir_list = app.dir_treeview2 = vdtree_new(g_get_home_dir(), expand);
@@ -526,11 +529,11 @@ message_panel__new()
 {
 	GtkWidget* vbox = app.msg_panel = gtk_vbox_new(FALSE, 2);
 
-	char* msg; msg = db_is_connected() ? "" : "no database available";
+	char* msg; msg = db__is_connected() ? "" : "no database available";
 	GtkWidget* hbox = message_panel__add_msg(msg, GTK_STOCK_INFO);
 	gtk_box_pack_start((GtkBox*)vbox, hbox, FALSE, FALSE, 2);
 
-	if(db_is_connected()) gtk_widget_set_no_show_all(app.msg_panel, true); //initially hidden.
+	if(db__is_connected()) gtk_widget_set_no_show_all(app.msg_panel, true); //initially hidden.
 	return vbox;
 }
 
@@ -540,7 +543,7 @@ dir_tree_new()
 {
 	//data:
 	app.dir_tree = g_node_new(NULL); //this is unneccesary ?
-	db_get_dirs();
+	update_dir_node_list();
 
 	//view:
 	app.dir_treeview = dh_book_tree_new(app.dir_tree);
@@ -673,6 +676,23 @@ make_fm_menu_actions()
 
 		fm_add_menu_item(action);
 	}
+}
+
+
+static gboolean
+dir_tree_on_link_selected(GObject *ignored, DhLink *link, gpointer data)
+{
+	/*
+	what does it mean if link->uri is empty?
+	*/
+	ASSERT_POINTER_FALSE(link, "link");
+
+	dbg(0, "uri=%s", link->uri);
+	//FIXME segfault if we use this if()
+	//if(strlen(link->uri)){
+		update_search_dir(link->uri);
+	//}
+	return FALSE;
 }
 
 

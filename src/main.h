@@ -148,7 +148,7 @@ gboolean    get_file_info_sndfile(sample* sample);
 gboolean    on_overview_done(gpointer sample);
 
 void        db_update_pixbuf(sample*);
-void        db_get_dirs();
+void        update_dir_node_list();
 
 void        keywords_on_edited(GtkCellRendererText*, gchar *path_string, gchar *new_text, gpointer user_data);
 void        delete_row(GtkWidget*, gpointer user_data);
@@ -165,7 +165,7 @@ void        path_cell_data_func(GtkTreeViewColumn *tree_column, GtkCellRenderer 
 void        path_cell_bg_lighter(GtkTreeViewColumn *tree_column, GtkCellRenderer *cell, GtkTreeModel *tree_model, GtkTreeIter *iter);
 void        tag_cell_data(GtkTreeViewColumn *tree_column, GtkCellRenderer *cell, GtkTreeModel *tree_model, GtkTreeIter *iter, gpointer data);
 
-gboolean    dir_tree_on_link_selected(GObject *ignored, DhLink *link, gpointer data);
+void        update_search_dir(gchar* uri);
 gboolean    dir_tree_update(gpointer data);
 void        set_search_dir(char* dir);
 

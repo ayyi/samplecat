@@ -6,11 +6,14 @@
 #define PF_DONE printf("%s(): done.\n", __func__);
 #define ASSERT_POINTER(A, B) if((unsigned)A < 1024){ errprintf2(__func__, "bad %s pointer (%p).\n", B, A); return; }
 #ifndef USE_AYYI
+#define gwarn(A, ...) g_warning("%s(): "A, __func__, ##__VA_ARGS__);
 #define ASSERT_POINTER_FALSE(A, B) if(GPOINTER_TO_UINT(A) < 1024){ errprintf2(__func__, "bad %s pointer (%p).\n", B, A); return FALSE; } 
+#define GERR_WARN if(error){ gwarn("%s", error->message); g_error_free(error); error = NULL; }
 #endif
 
 #define HAS_ALPHA_FALSE 0
 #define BITS_PER_CHAR_8 8
+#define IDLE_STOP FALSE
 
 #ifndef false
   #define false FALSE

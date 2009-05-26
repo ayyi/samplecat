@@ -49,53 +49,53 @@ drag_received(GtkWidget *widget, GdkDragContext *drag_context, gint x, gint y,
 
   if(g_str_has_prefix((char*)data->data, "colour:")){
 
-	if(get_mouseover_row() > -1){
-	//if(widget==app.view){
+    if(get_mouseover_row() > -1){
+    //if(widget==app.view){
       dbg(1, "treeview!");
-	}
+    }
 
-	char* colour_string = (char*)data->data + 7;
-	unsigned colour_index = atoi(colour_string) ? atoi(colour_string) - 1 : 0;
+    char* colour_string = (char*)data->data + 7;
+    unsigned colour_index = atoi(colour_string) ? atoi(colour_string) - 1 : 0;
 
-	//which row are we on?
-	GtkTreePath* path;
-	GtkTreeIter iter;
-	gint x, treeview_top;
-	gdk_window_get_position(app.view->window, &x, &treeview_top);
-	dbg(2, "treeview_top=%i", y);
+    //which row are we on?
+    GtkTreePath* path;
+    GtkTreeIter iter;
+    gint x, treeview_top;
+    gdk_window_get_position(app.view->window, &x, &treeview_top);
+    dbg(2, "treeview_top=%i", y);
 
 #ifdef HAVE_GTK_2_12
-	dbg(0, "warning: untested gtk2.12 fn.");
-	gint bx, by;
-	gtk_tree_view_convert_widget_to_bin_window_coords(GTK_TREE_VIEW(app.view), x, y, &bx, &by);
+    dbg(0, "warning: untested gtk2.12 fn.");
+    gint bx, by;
+    gtk_tree_view_convert_widget_to_bin_window_coords(GTK_TREE_VIEW(app.view), x, y, &bx, &by);
 #else
-	gint by = y - treeview_top - 20;
+    gint by = y - treeview_top - 20;
 #endif
 
-	if(gtk_tree_view_get_path_at_pos(GTK_TREE_VIEW(app.view), x, by, &path, NULL, NULL, NULL)){
+    if(gtk_tree_view_get_path_at_pos(GTK_TREE_VIEW(app.view), x, by, &path, NULL, NULL, NULL)){
 
-		gtk_tree_model_get_iter(GTK_TREE_MODEL(app.store), &iter, path);
-		gchar* path_str = gtk_tree_model_get_string_from_iter(GTK_TREE_MODEL(app.store), &iter);
-		dbg(2, "path=%s y=%i final_y=%i", path_str, y, y - treeview_top);
+      gtk_tree_model_get_iter(GTK_TREE_MODEL(app.store), &iter, path);
+      gchar* path_str = gtk_tree_model_get_string_from_iter(GTK_TREE_MODEL(app.store), &iter);
+      dbg(2, "path=%s y=%i final_y=%i", path_str, y, y - treeview_top);
 
-		listview__item_set_colour(path, colour_index);
+      listview__item_set_colour(path, colour_index);
 
-		statusbar_print(1, "colour set");
-		gtk_tree_path_free(path);
+      statusbar_print(1, "colour set");
+      gtk_tree_path_free(path);
     }
-	else dbg(0, "path not found.");
+    else dbg(0, "path not found.");
 
     return FALSE;
   }
 
-  if(info==GPOINTER_TO_INT(GDK_SELECTION_TYPE_STRING)) printf(" type=string.\n");
+  if(info == GPOINTER_TO_INT(GDK_SELECTION_TYPE_STRING)) printf(" type=string.\n");
 
-  if(info==GPOINTER_TO_INT(TARGET_URI_LIST)){
+  if(info == GPOINTER_TO_INT(TARGET_URI_LIST)){
     dbg(0, "type=uri_list. len=%i", data->length);
     GList* list = uri_list_to_glist((char*)data->data);
-	if(g_list_length(list) < 1) warnprintf("drag_received(): drag drop: uri list parsing found no uri's.\n");
+    if(g_list_length(list) < 1) warnprintf("drag_received(): drag drop: uri list parsing found no uri's.\n");
     int i=0, added_count=0;
-	GList* l = list;
+    GList* l = list;
     for(;l;l=l->next){
       char* u = l->data;
 
@@ -110,8 +110,10 @@ drag_received(GtkWidget *widget, GdkDragContext *drag_context, gint x, gint y,
 
         char* uri_unescaped = vfs_unescape_string(u + strlen(method_string) + 1, NULL);
 
-		if(is_dir(uri_unescaped)) scan_dir(uri_unescaped, &added_count);
-        else if(add_file(uri_unescaped)) added_count++;
+        char* uri = (strstr(uri_unescaped, "///") == uri_unescaped) ? uri_unescaped + 2 : uri_unescaped;
+
+        if(is_dir(uri)) scan_dir(uri, &added_count);
+        else if(add_file(uri)) added_count++;
 
         g_free(uri_unescaped);
       }
@@ -119,7 +121,7 @@ drag_received(GtkWidget *widget, GdkDragContext *drag_context, gint x, gint y,
       i++;
     }
 
-	statusbar_printf(1, "import complete. %i files added", added_count);
+    statusbar_printf(1, "import complete. %i files added", added_count);
 
     uri_list_free(list);
   }

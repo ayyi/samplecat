@@ -5,8 +5,8 @@ Copyright (C) Tim Orford 2007-2008
 This software is licensed under the GPL. See accompanying file COPYING.
 
 */
-#ifdef USE_TRACKER
 #include "config.h"
+#ifdef USE_TRACKER
 #include <stdio.h>
 #include <stdlib.h>
 #define __USE_GNU

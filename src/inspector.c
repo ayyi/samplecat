@@ -296,7 +296,7 @@ on_notes_insert(GtkTextView *textview, gchar *arg1, gpointer user_data)
 static gboolean
 on_notes_focus_out(GtkWidget *widget, gpointer userdata)
 {
-	if(!db_is_connected()) return FALSE;
+	if(!db__is_connected()) return FALSE;
 
 	GtkTextBuffer* textbuf = gtk_text_view_get_buffer(GTK_TEXT_VIEW(widget));
 	if(!textbuf){ errprintf("on_notes_focus_out(): bad arg: widget.\n"); return FALSE; }

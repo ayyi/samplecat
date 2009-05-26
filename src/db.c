@@ -57,7 +57,7 @@ static gboolean is_connected = FALSE;
 	*/
 
 gboolean
-db_connect()
+db__connect()
 {
 	MYSQL *mysql = &app.mysql;
 
@@ -86,14 +86,14 @@ db_connect()
  
 
 gboolean
-db_is_connected()
+db__is_connected()
 {
-  return is_connected;
+	return is_connected;
 }
 
 
 int
-db_insert(char *qry)
+db__insert(char *qry)
 {
 	MYSQL *mysql = &app.mysql;
 	int id = 0;
@@ -126,7 +126,7 @@ db_delete_row(int id)
 int 
 mysql_exec_sql(MYSQL *mysql, const char *create_definition)
 {
-   return mysql_real_query(mysql, create_definition, strlen(create_definition));
+	return mysql_real_query(mysql, create_definition, strlen(create_definition));
 }
 
 
@@ -147,6 +147,65 @@ db_update_path(const char* old_path, const char* new_path)
 		ok = TRUE;
 	}
 	return ok;
+}
+
+
+MYSQL_RES *dir_iter_result = NULL;
+
+void
+db__dir_iter_new()
+{
+	#define DIR_LIST_QRY "SELECT DISTINCT filedir FROM samples ORDER BY filedir"
+	MYSQL *mysql = &app.mysql;
+
+	if(dir_iter_result) gwarn("previous query not free'd?");
+
+	//char qry[1024];
+	//snprintf(qry, 1024, DIR_LIST_QRY);
+
+	if(mysql_exec_sql(mysql, DIR_LIST_QRY) == 0){
+		dir_iter_result = mysql_store_result(mysql);
+		/*
+		else{  // mysql_store_result() returned nothing
+		  if(mysql_field_count(mysql) > 0){
+				// mysql_store_result() should have returned data
+				printf( "Error getting records: %s\n", mysql_error(mysql));
+		  }
+		}
+		*/
+	}
+	else{
+		dbg("failed to find any records: %s", mysql_error(mysql));
+	}
+}
+
+
+char*
+db__dir_iter_next()
+{
+	if(!dir_iter_result) return NULL;
+
+	MYSQL_ROW row;
+	row = mysql_fetch_row(dir_iter_result);
+	if(!row) return NULL;
+
+	//printf("update_dir_node_list(): dir=%s\n", row[0]);
+
+	/*
+	char uri[256];
+	snprintf(uri, 256, "%s", row[0]);
+
+	return uri;
+	*/
+	return row[0];
+}
+
+
+void
+db__dir_iter_free()
+{
+	if(dir_iter_result) mysql_free_result(dir_iter_result);
+	dir_iter_result = NULL;
 }
 
 
