@@ -98,6 +98,8 @@ static int in_callback = 0;
 
 GFSCache *dir_cache = NULL;
 
+extern int debug;
+
 /* Static prototypes */
 static void       update(Directory *dir, gchar *pathname, gpointer data);
 static void       set_idle_callback(Directory *dir);
@@ -120,7 +122,6 @@ static void       dnotify_handler(int sig, siginfo_t *si, void *data);
 void
 dir_init(void)
 {
-	PF;
 	dir_cache = g_fscache_new((GFSLoadFunc) dir_new, (GFSUpdateFunc) update, NULL);
 
 #ifdef USE_NOTIFY

@@ -34,6 +34,8 @@ typedef void GimpActionGroup;
 
 #include "fscache.h"
 
+extern int debug;
+
 typedef struct _GFSCacheKey GFSCacheKey;
 typedef struct _GFSCacheData GFSCacheData;
 

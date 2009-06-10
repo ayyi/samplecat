@@ -43,7 +43,6 @@ struct __decoder_session
 
 int                            jack_init();
 void                           jack_close();
-//int                          jack_process(jack_nframes_t nframes, void *arg);
 void                           jack_shutdown(void *arg);
 int                            jack_process_flac(jack_nframes_t nframes, void *arg);
 

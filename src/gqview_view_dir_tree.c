@@ -1236,7 +1236,7 @@ static gint vdtree_populate_path_by_iter(ViewDirTree *vdt, GtkTreeIter *iter, gi
 
 static FileData *vdtree_populate_path(ViewDirTree *vdt, const gchar *path, gint expand, gint force)
 {
-	dbg(0, "path=%s", path);
+	dbg(2, "path=%s", path);
 	GList *list;
 	GList *work;
 	FileData *fd = NULL;
@@ -1261,10 +1261,10 @@ static FileData *vdtree_populate_path(ViewDirTree *vdt, const gchar *path, gint 
 	while (work)
 		{
 		PathData *pd = work->data;
-		dbg(0, "pd=%s node=%p", pd->name, pd->node);
+		dbg(2, "pd=%s node=%p", pd->name, pd->node);
 		if (pd->node == NULL) //item is not already in the model.
 			{
-			dbg(0, "pd=%s", pd->name);
+			dbg(2, "pd=%s", pd->name);
 			PathData *parent_pd;
 			GtkTreeIter parent_iter;
 			GtkTreeIter iter;
@@ -1640,7 +1640,6 @@ static gint vdtree_sort_cb(GtkTreeModel *store, GtkTreeIter *a, GtkTreeIter *b, 
 
 static void vdtree_setup_root(ViewDirTree *vdt)
 {
-	PF;
 	const gchar *path = "/";
 
 	FileData *fd = g_new0(FileData, 1);

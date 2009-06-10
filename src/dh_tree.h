@@ -57,7 +57,7 @@ struct _DhBookTreeClass
 };
 
 GType            dh_book_tree_get_type      (void);
-GtkWidget *      dh_book_tree_new           (GNode       *books);
-void             dh_book_tree_reload        (DhBookTree  *tree);
-void             dh_book_tree_show_uri      (DhBookTree  *book_tree, const gchar *uri);
+GtkWidget *      dh_book_tree_new           (GNode**);
+void             dh_book_tree_reload        (DhBookTree*);
+void             dh_book_tree_show_uri      (DhBookTree*, const gchar *uri);
 #endif /* __DH_BOOK_TREE_H__ */

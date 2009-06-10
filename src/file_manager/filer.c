@@ -75,6 +75,7 @@
 #include "rox/cell_icon.h"
 
 extern GFSCache* pixmap_cache;
+extern int debug;
 
 #if 0
 static XMLwrapper *groups = NULL;
@@ -1355,7 +1356,6 @@ filer_change_to(Filer* filer_window, const char *path, const char *from)
 	//if (filer_window->mini_type == MINI_PATH) g_idle_add((GSourceFunc) minibuffer_show_cb, filer_window);
 
 	fm_menu__dir_update();
-	PF_DONE;
 }
 
 /* Returns a list containing the full (sym) pathname of every selected item.

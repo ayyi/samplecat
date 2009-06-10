@@ -21,6 +21,7 @@
 #include "menu.h"
 
 extern Filer filer;
+extern int debug;
 
 //static gint updating_menu = 0;      // Non-zero => ignore activations
 

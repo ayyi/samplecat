@@ -25,6 +25,9 @@ sample*
 sample_new()
 {
 	sample* sample = g_new0(struct _sample, 1);
+
+	sample->bg_colour = app.bg_colour;
+
 	return sample;
 }
 
@@ -36,13 +39,20 @@ sample_new_from_model(GtkTreePath *path)
 	GtkTreeIter iter;
 	gtk_tree_model_get_iter(model, &iter, path);
 
-	gchar *fpath, *fname, *mimetype; int id;
-	gtk_tree_model_get(model, &iter, COL_FNAME, &fpath, COL_NAME, &fname, COL_IDX, &id, COL_MIMETYPE, &mimetype, -1);
+	gchar *fpath, *fname, *mimetype; int id; unsigned colour_index;
+	gtk_tree_model_get(model, &iter, COL_FNAME, &fpath, COL_NAME, &fname, COL_IDX, &id, COL_MIMETYPE, &mimetype, COL_COLOUR, &colour_index, -1);
+
+	//unfortunately because we removed home dir for display purposes, we have to put it back here. Need to review strategy.
+	char prefix[128] = "";
+	if(!g_path_is_absolute(fpath)){
+		snprintf(prefix, 127, g_get_home_dir());
+	}
 
 	sample* sample = g_new0(struct _sample, 1);
 	sample->id     = id;
 	sample->pixbuf = NULL;
-	snprintf(sample->filename, 255, "%s/%s", fpath, fname);
+	sample->row_ref = gtk_tree_row_reference_new(GTK_TREE_MODEL(app.store), path);
+	snprintf(sample->filename, 255, "%s/%s/%s", prefix, fpath, fname);
 	if(!strcmp(mimetype, "audio/x-flac")) sample->filetype = TYPE_FLAC; else sample->filetype = TYPE_SNDFILE; 
 	return sample;
 }

@@ -61,7 +61,7 @@ the flac code here works with version 1.1.2 and earlier.
 */
 
 
-int
+static int
 jack_process(jack_nframes_t nframes, void* arg)
 {
 	//return non-zero on error.
@@ -91,7 +91,6 @@ jack_process(jack_nframes_t nframes, void* arg)
 		memcpy(out2, buffer, nframes * frame_size);
 	}else if(audition.sfinfo.channels == 2){
 		//de-interleave:
-		//printf("jack_process(): stereo: size=%i n=%i\n", frame_size, nframes);
 		int frame;
 		for(frame=0;frame<nframes;frame++){
 			src_offset = frame * 2;
@@ -101,7 +100,7 @@ jack_process(jack_nframes_t nframes, void* arg)
 		}
 		printf("\n");
 	}else{
-		printf("jack_process(): unsupported channel count (%i).\n", audition.sfinfo.channels);
+		dbg(3, "unsupported channel count (%i).\n", audition.sfinfo.channels);
 		playback_stop();
 		return 1;
 	}
@@ -177,7 +176,7 @@ jack_process_stop_playback(gpointer data)
 void
 jack_shutdown(void *arg)
 {
-	printf("jack_shutdown(): FIXME\n");
+	dbg(0, "FIXME");
 }
 
 int
@@ -201,7 +200,7 @@ jack_init()
 
 	audition.nframes = jack_get_buffer_size(jack_client);
 
-	printf("jack_init(): samplerate=%" PRIu32 " buffersize=%i\n", jack_get_sample_rate(jack_client), audition.nframes);
+	dbg(1, "samplerate=%" PRIu32 " buffersize=%i", jack_get_sample_rate(jack_client), audition.nframes);
 
 	// tell the JACK server that we are ready to roll
 	if (jack_activate(jack_client)){ fprintf (stderr, "cannot activate client"); return 1; }
@@ -231,7 +230,7 @@ jack_init()
 
 	free (ports);
 
-	printf("jack_init(): done ok.\n");
+	dbg(1, "done ok.");
 	return 1;
 }
 
@@ -261,7 +260,7 @@ audition_init()
 void
 audition_reset()
 {
-	printf("audition_reset()...\n");
+	dbg(1, "...");
 	if(audition.rb1){ jack_ringbuffer_free(audition.rb1); jack_ringbuffer_free(audition.rb2); }
 #ifdef HAVE_FLAC_1_1_1
 	if(audition.session) decoder_session_free(audition.session);
@@ -280,7 +279,7 @@ _decoder_session*
 flac_decoder_session_new()
 {
 	_decoder_session* session = malloc(sizeof(*session));
-	printf("flac_decoder_session_new(): size=%i\n", sizeof(*session));
+	dbg(1, "size=%i", sizeof(*session));
 	session->output_peakfile = FALSE;
 	session->flacstream = NULL;
 	session->sample = NULL;
@@ -288,7 +287,7 @@ flac_decoder_session_new()
 	session->frame_num = 0;
 	session->total_samples = 0;
 	session->total_frames = 0;
-	printf("flac_decoder_session_new(): session=%p\n", session);
+	dbg(1, "session=%p", session);
 	return session;
 }
 
@@ -312,7 +311,7 @@ flac_decoder_sesssion_init(_decoder_session* session, sample* sample)
 		session->max[x] = 0;
 		session->min[x] = 0;
 	}
-	return TRUE;
+	return true;
 }
 
 

@@ -43,7 +43,7 @@ drag_received(GtkWidget *widget, GdkDragContext *drag_context, gint x, gint y,
 {
   //this receives drops for the whole window.
 
-  if(!data || data->length < 0){ errprintf("drag_received(): no data!\n"); return -1; }
+  if(!data || data->length < 0){ perr("no data!\n"); return -1; }
 
   dbg(1, "%s", data->data);
 

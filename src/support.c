@@ -115,6 +115,23 @@ debug_printf(const char* func, int level, const char *format, ...)
 
 
 void
+log_handler(const gchar* log_domain, GLogLevelFlags log_level, const gchar* message, gpointer user_data)
+{
+	switch(log_level){
+		case G_LOG_LEVEL_CRITICAL:
+			printf("%s %s\n", err, message);
+			break;
+		case G_LOG_LEVEL_WARNING:
+			printf("%s %s\n", warn, message);
+			break;
+		default:
+			printf("log_handler(): level=%i %s\n", log_level, message);
+			break;
+	}
+}
+
+
+void
 samplerate_format(char* str, int samplerate)
 {
 	snprintf(str, 32, "%f", ((float)samplerate) / 1000);

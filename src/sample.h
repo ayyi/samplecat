@@ -12,7 +12,7 @@ struct _sample
 	int          bitdepth;
 	short        minmax[OVERVIEW_WIDTH]; //peak data before it is copied onto the pixbuf.
 	GdkPixbuf*   pixbuf;
-
+	GdkColor     bg_colour;
 };
 
 sample*     sample_new               ();

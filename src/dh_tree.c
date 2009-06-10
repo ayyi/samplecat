@@ -1,5 +1,5 @@
-/* -*- Mode: C; tab-width: 8; indent-tabs-mode: t; c-basic-offset: 8 -*- */
 /*
+ * Copyright (C) 2007-2009 Tim Orford
  * Copyright (C) 2001-2003 Mikael Hallendal <micke@imendio.com>
  * Copyright (C) 2003      CodeFactory AB
  *
@@ -23,19 +23,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <gdk/gdkkeysyms.h>
-#include <gdk-pixbuf/gdk-pixbuf.h>
-#include <gtk/gtkcellrenderertext.h>
-#include <gtk/gtkcellrendererpixbuf.h>
-#include <gtk/gtkscrolledwindow.h>
-#include <gtk/gtktreeselection.h>
-#include <gtk/gtktreestore.h>
+#include <gtk/gtk.h>
 
-//#include "dh-marshal.h"
+#include "typedefs.h"
+#include "support.h"
 #include "dh_tree.h"
 #include "dh-link.h"
-//#include "rox_global.h"
-//#include "type.h"
-//#include "pixmaps.h"
 
 #define d(x)
 
@@ -55,23 +48,20 @@ struct _DhBookTreePriv {
 	GtkTreeStore      *store;
 
 	DhBookTreePixbufs *pixbufs;
- 	GNode             *link_tree;
+ 	GNode            **link_tree;
 };
 
-static void book_tree_class_init           (DhBookTreeClass      *klass);
-static void book_tree_init                 (DhBookTree           *tree);
+static void book_tree_class_init           (DhBookTreeClass*);
+static void book_tree_init                 (DhBookTree*);
 
-static void book_tree_finalize             (GObject              *object);
+static void book_tree_finalize             (GObject*);
 
-static void book_tree_add_columns          (DhBookTree           *tree);
-static void book_tree_setup_selection      (DhBookTree           *tree);
-static void book_tree_populate_tree        (DhBookTree           *tree);
-static void book_tree_insert_node          (DhBookTree           *tree,
-					    GNode                *node,
-					    GtkTreeIter          *parent_iter);
-static void book_tree_create_pixbufs       (DhBookTree           *tree);
-static void book_tree_selection_changed_cb (GtkTreeSelection     *selection,
-					    DhBookTree           *tree);
+static void book_tree_add_columns          (DhBookTree*);
+static void book_tree_setup_selection      (DhBookTree*);
+static void book_tree_populate_tree        (DhBookTree*);
+static void book_tree_insert_node          (DhBookTree*, GNode*, GtkTreeIter* parent_iter);
+static void book_tree_create_pixbufs       (DhBookTree*);
+static void book_tree_selection_changed_cb (GtkTreeSelection*, DhBookTree*);
 
 enum {
         LINK_SELECTED,
@@ -229,29 +219,22 @@ book_tree_setup_selection (DhBookTree *tree)
 static void
 book_tree_populate_tree (DhBookTree *tree)
 {
-	DhBookTreePriv *priv;
-	GNode          *node;
-	
 	g_return_if_fail (tree != NULL);
 	g_return_if_fail (DH_IS_BOOK_TREE (tree));
 
-	priv = tree->priv;
+	DhBookTreePriv *priv = tree->priv;
 
-	/* Use the link tree ... */
-/* 	books = dh_bookshelf_get_books (priv->bookshelf); */
-
-	for (node = g_node_first_child (priv->link_tree);
-	     node;
-	     node = g_node_next_sibling (node)) {
+	int i = 0;
+	GNode *node = g_node_first_child (*priv->link_tree);
+	for (; node; node = g_node_next_sibling (node)) {
 		book_tree_insert_node (tree, node, NULL);
+		i++;
 	}
+	dbg(2, "n_nodes=%i", i);
 }
 
 static void
-book_tree_insert_node (DhBookTree  *tree, 
-		       GNode       *node,
-		       GtkTreeIter *parent_iter)
-
+book_tree_insert_node (DhBookTree *tree, GNode *node, GtkTreeIter *parent_iter)
 {
 	DhBookTreePriv      *priv;
 	GtkTreeIter          iter;
@@ -342,11 +325,9 @@ book_tree_selection_changed_cb (GtkTreeSelection *selection, DhBookTree *tree)
 }
 
 GtkWidget *
-dh_book_tree_new (GNode *books)
+dh_book_tree_new (GNode **books)
 {
-	DhBookTree *tree;
-
-	tree = g_object_new (DH_TYPE_BOOK_TREE, NULL);
+	DhBookTree *tree = g_object_new (DH_TYPE_BOOK_TREE, NULL);
 
 	tree->priv->link_tree = books;
 

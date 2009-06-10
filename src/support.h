@@ -2,7 +2,7 @@
 
 #define dbg(A, B, ...) debug_printf(__func__, A, B, ##__VA_ARGS__)
 #define perr(A, ...) errprintf2(__func__, A, ##__VA_ARGS__)
-#define PF printf("%s()...\n", __func__);
+#define PF {if(debug) printf("%s()...\n", __func__);}
 #define PF_DONE printf("%s(): done.\n", __func__);
 #define ASSERT_POINTER(A, B) if((unsigned)A < 1024){ errprintf2(__func__, "bad %s pointer (%p).\n", B, A); return; }
 #ifndef USE_AYYI
@@ -14,6 +14,8 @@
 #define HAS_ALPHA_FALSE 0
 #define BITS_PER_CHAR_8 8
 #define IDLE_STOP FALSE
+#define HANDLED TRUE
+#define NOT_HANDLED FALSE
 
 #ifndef false
   #define false FALSE
@@ -42,21 +44,22 @@ struct _accel {
 	gpointer      user_data;
 };
 
-void         errprintf(char* fmt, ...);
-void         errprintf2(const char* func, char* format, ...);
-void         warnprintf(char* format, ...);
-void         debug_printf(const char* func, int level, const char* format, ...);
+void         errprintf          (char* fmt, ...);
+void         errprintf2         (const char* func, char* format, ...);
+void         warnprintf         (char* format, ...);
+void         debug_printf       (const char* func, int level, const char* format, ...);
+void         log_handler        (const gchar* log_domain, GLogLevelFlags, const gchar* message, gpointer);
 
-void         samplerate_format(char* str, int samplerate);
+void         samplerate_format  (char* str, int samplerate);
 //gint         strcmp2(gconstpointer a, gconstpointer b);
 //GPtrArray*   list_dir(const guchar *path);
-gboolean     file_exists(const char *path);
-gboolean     is_dir(const char *path);
-gboolean     dir_is_empty(const char *path);
-void         file_extension(const char* path, char* extn);
-gboolean     is_sub_dir(const char *sub_obj, const char *parent);
-void         file_move(const char* path, const char* dest);
-char*        fork_exec_wait(const char **argv);
+gboolean     file_exists        (const char *path);
+gboolean     is_dir             (const char *path);
+gboolean     dir_is_empty       (const char *path);
+void         file_extension     (const char* path, char* extn);
+gboolean     is_sub_dir         (const char *sub_obj, const char *parent);
+void         file_move          (const char* path, const char* dest);
+char*        fork_exec_wait     (const char **argv);
 
 //-----------------------------------------------------------------
 

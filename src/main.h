@@ -8,7 +8,7 @@ char warn[32];
 #define NON_HOMOGENOUS 0
 #define START_EDITING 1
 
-#define PALETTE_SIZE 12
+#define PALETTE_SIZE 17
 
 #define POINTER_OK_NULL(A, B, C) if((unsigned)A < 1024){ errprintf("%s(): bad %s pointer (%p).\n", B, C, A); return NULL; }
 #ifndef USE_AYYI
@@ -110,6 +110,8 @@ struct _app
 
 	MYSQL                mysql;
 
+	GAsyncQueue*         msg_queue;
+
 	//nasty!
 	gint       mouse_x;
 	gint       mouse_y;
@@ -154,7 +156,6 @@ void        keywords_on_edited(GtkCellRendererText*, gchar *path_string, gchar *
 void        delete_row(GtkWidget*, gpointer user_data);
 void        update_row(GtkWidget*, gpointer user_data);
 void        edit_row  (GtkWidget*, gpointer user_data);
-GtkWidget*  make_context_menu();
 gboolean    treeview_on_motion(GtkWidget *widget, GdkEventMotion *event, gpointer user_data);
 void        clear_store();
 gboolean    treeview_get_cell(GtkTreeView *view, guint x, guint y, GtkCellRenderer **cell);
@@ -172,9 +173,6 @@ void        set_search_dir(char* dir);
 void        on_entry_activate(GtkEntry *entry, gpointer user_data);
 
 gboolean    keyword_is_dupe(char* new, char* existing);
-
-int         colour_drag_dataget(GtkWidget *widget, GdkDragContext *drag_context, GtkSelectionData *data, guint info, guint time, gpointer user_data);
-//int         colour_drag_datareceived(GtkWidget *widget, GdkDragContext *drag_context, gint x, gint y, GtkSelectionData *data, guint info, guint time, gpointer user_data);
 
 gboolean	on_directory_list_changed();
 gboolean    toggle_recursive_add(GtkWidget*, gpointer user_data);

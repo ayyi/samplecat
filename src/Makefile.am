@@ -42,6 +42,7 @@ samplecat_SOURCES = \
 	dh-link.c dh-link.h \
 	dh_tree.c dh_tree.h \
 	cellrenderer_hypertext.c cellrenderer_hypertext.h \
+	colour_box.c colour_box.h \
 	dnd.c dnd.h \
 	db.c db.h \
 	observer.c observer.h \

@@ -115,6 +115,8 @@ static const char *stocks[] = {
 
 static GtkIconSize mount_icon_size = -1;
 
+extern int debug;
+
 /* Static prototypes */
 
 static void load_default_pixmaps(void);

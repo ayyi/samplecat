@@ -62,7 +62,8 @@ This software is licensed under the GPL. See accompanying file COPYING.
   #define strmov(A,B) stpcpy((A),(B))
 //#endif
 
-void       dir_init();
+void              dir_init();
+static GtkWidget* make_context_menu();
 
 struct _app app;
 struct _palette palette;
@@ -94,19 +95,17 @@ static const struct option long_options[] = {
   { "input",            1, NULL, 'i' },
   { "offline",          0, NULL, 'o' },
   { "help",             0, NULL, 'h' },
-  { "verbose",          0, NULL, 'v' },
+  { "verbose",          1, NULL, 'v' },
 };
 
-static const char* const short_options = "i:ohv";
+static const char* const short_options = "i:ohv:";
 
 static const char* const usage =
   "Usage: %s [ options ]\n"
   " -o --offline   dont connect to core. For testing only.\n"
-  " -v --verbose   show more information (currently has no effect).\n"
+  " -v --verbose   show more information.\n"
   " -h --help      show this usage information and quit.\n"
   "\n";
-
-GAsyncQueue* msg_queue = NULL;
 
 
 void
@@ -121,6 +120,7 @@ app_init()
 	app.search_dir       = NULL;
 	app.search_category  = NULL;
 	app.window           = NULL;
+	app.msg_queue        = NULL;
 
 	int i; for(i=0;i<PALETTE_SIZE;i++) app.colour_button[i] = NULL;
 	app.colourbox_dirty = TRUE;
@@ -146,9 +146,25 @@ main(int argc, char** argv)
 	sprintf(err,    "%serror!%s", red, white);
 	sprintf(warn,   "%swarning:%s", yellow, white);
 
+	g_log_set_handler ("Gtk", G_LOG_LEVEL_CRITICAL | G_LOG_FLAG_FATAL | G_LOG_FLAG_RECURSION, log_handler, NULL);
+
 	app_init();
 
 	printf("%s"PACKAGE_NAME". Version "PACKAGE_VERSION"%s\n", yellow, white);
+
+	int opt;
+	while((opt = getopt_long (argc, argv, short_options, long_options, NULL)) != -1) {
+		switch(opt) {
+			case 'v':
+				printf("using debug level: %s\n", optarg);
+				int d = atoi(optarg);
+				if(d<0 || d>5) { gwarn ("bad arg. debug=%i", d); } else debug = d;
+				break;
+			case '?':
+				printf("unknown option: %c\n", optopt);
+				break;
+		}
+	}
 
 	config_load();
 
@@ -172,9 +188,9 @@ main(int argc, char** argv)
 #ifndef DEBUG_NO_THREADS
 	dbg(3, "creating overview thread...");
 	GError *error = NULL;
-	msg_queue = g_async_queue_new();
+	app.msg_queue = g_async_queue_new();
 	if(!g_thread_create(overview_thread, NULL, FALSE, &error)){
-		errprintf("%s(): error creating thread: %s\n", error->message, __func__);
+		perr("error creating thread: %s\n", error->message, __func__);
 		g_error_free(error);
 	}
 #endif
@@ -234,13 +250,9 @@ dir_tree_update(gpointer data)
 	note: destroying the whole node tree is wasteful - can we just make modifications to it?
 
 	*/
-	dbg(0, "FIXME !! dir list window not updated.\n");
-
 	update_dir_node_list();
 
-#ifdef NOT_BROKEN
 	dh_book_tree_reload((DhBookTree*)app.dir_treeview);
-#endif
 
 	return IDLE_STOP;
 }
@@ -255,7 +267,7 @@ set_search_dir(char* dir)
 
 	if(!dir){ perr("dir!\n"); return; }
 
-	dbg (1, "dir=%s\n", dir);
+	dbg (1, "dir=%s", dir);
 	app.search_dir = dir;
 }
 
@@ -317,7 +329,7 @@ path_cell_bg_lighter(GtkTreeViewColumn *tree_column, GtkCellRenderer *cell, GtkT
 
 	//printf("path_cell_bg_lighter(): index=%i #%s %x %x %x\n", colour_index, hexstring, colour.red, colour.green, colour.blue);
 
-	//if(strlen(colour) != 7 ){ errprintf("path_cell_data_func(): bad colour string (%s) index=%u.\n", colour, colour_index); return; }
+	//if(strlen(colour) != 7 ){ perr("bad colour string (%s) index=%u.\n", colour, colour_index); return; }
 
 	g_object_set(cell, "cell-background-set", TRUE, "cell-background-gdk", &colour2, NULL);
 }
@@ -533,22 +545,11 @@ do_search(char *search, char *dir)
 
 	if(!db__is_connected()){ listview__show_db_missing(); return; }
 
-	if(!search) search = app.search_phrase;
-	if(!dir)    dir    = app.search_dir;
-
 	unsigned channels, colour;
 	float samplerate; char samplerate_s[32];
 	char length[64];
 	GtkTreeIter iter;
 
-	MYSQL_RES *result;
-	MYSQL_ROW row;
-	unsigned long *lengths;
-	unsigned int num_fields;
-	char query[1024];
-	char where[512]="";
-	char where_dir[512]="";
-	char category[256]="";
 	char sb_text[256];
 	char sample_name[256];
 	GdkPixbuf* pixbuf  = NULL;
@@ -559,32 +560,7 @@ do_search(char *search, char *dir)
 	GdkPixdata pixdata;
 	gboolean online = FALSE;
 
-	MYSQL *mysql = &app.mysql;
-
-	//lets assume that the search_phrase filter should *always* be in effect.
-
-	if(app.search_category) snprintf(category, 256, "AND keywords LIKE '%%%s%%' ", app.search_category);
-
-	if(dir && strlen(dir)){
-		snprintf(where_dir, 512, "AND filedir='%s' %s ", dir, category);
-	}
-
-	//strmov(dst, src) moves all the  characters  of  src to dst, and returns a pointer to the new closing NUL in dst. 
-	//strmov(query_def, "SELECT * FROM samples"); //this is defined in mysql m_string.h
-	//strcpy(query, "SELECT * FROM samples WHERE 1 ");
-
-	if(strlen(search)){ 
-		snprintf(where, 512, "AND (filename LIKE '%%%s%%' OR filedir LIKE '%%%s%%' OR keywords LIKE '%%%s%%') ", search, search, search); //FIXME duplicate category LIKE's
-	}
-
-	//append the dir-where part:
-	char* a = where + strlen(where);
-	strmov(a, where_dir);
-
-	snprintf(query, 1024, "SELECT * FROM samples WHERE 1 %s", where);
-
-	printf("%s\n", query);
-	if(mysql_exec_sql(mysql, query)==0){ //success
+	if(db__search_iter_new(search, dir)){
 
 		treeview_block_motion_handler(); //dont know exactly why but this prevents a segfault.
 
@@ -598,14 +574,14 @@ do_search(char *search, char *dir)
 		*/ 
 
 		#define MAX_DISPLAY_ROWS 1000
-		result = mysql_store_result(mysql);
-		if(result){// there are rows
-			num_fields = mysql_num_fields(result);
+		if(1/*result*/){// there are rows
+			//unsigned num_fields = mysql_num_fields(result);
 			char keywords[256];
 
 			int row_count = 0;
-			while((row = mysql_fetch_row(result)) && row_count < MAX_DISPLAY_ROWS){
-				lengths = mysql_fetch_lengths(result); //free? 
+			unsigned long *lengths;
+			MYSQL_ROW row;
+			while((row = db__search_iter_next(&lengths)) && row_count < MAX_DISPLAY_ROWS){
 				/*
 				for(i = 0; i < num_fields; i++){ 
 					printf("[%s] ", row[i] ? row[i] : "NULL"); 
@@ -674,16 +650,17 @@ do_search(char *search, char *dir)
 				if(pixbuf) g_object_unref(pixbuf);
 				row_count++;
 			}
-			mysql_free_result(result);
+			db__search_iter_free();
 
 			if(0 && row_count < MAX_DISPLAY_ROWS){
 				snprintf(sb_text, 256, "%i samples found.", row_count);
 			}else{
-				uint32_t tot_rows = (uint32_t)mysql_affected_rows(mysql);
+				uint32_t tot_rows = (uint32_t)mysql_affected_rows(&app.mysql);
 				snprintf(sb_text, 256, "showing %i of %i samples", row_count, tot_rows);
 			}
 			statusbar_print(1, sb_text);
 		}
+		/*
 		else{  // mysql_store_result() returned nothing
 			if(mysql_field_count(mysql) > 0){
 				// mysql_store_result() should have returned data
@@ -691,11 +668,9 @@ do_search(char *search, char *dir)
 			}
 			else dbg(0, "failed to find any records (fieldcount<1): %s", mysql_error(mysql));
 		}
+		*/
 
 		//treeview_unblock_motion_handler();  //causes a segfault even before it is run ??!!
-	}
-	else{
-		dbg(0, "Failed to find any records: %s", mysql_error(mysql));
 	}
 }
 
@@ -779,19 +754,19 @@ on_category_set_clicked(GtkComboBox *widget, gpointer user_data)
 					snprintf(sql, 1024, "UPDATE samples SET keywords='%s' WHERE id=%i", tags_new, id);
 					printf("on_category_set_clicked(): row: %s sql=%s\n", fname, sql);
 					if(mysql_query(&app.mysql, sql)){
-						errprintf("on_category_set_clicked(): update failed! sql=%s\n", sql);
+						perr("update failed! sql=%s\n", sql);
 						return;
 					}
 					//update the store:
 					gtk_list_store_set(app.store, &iter, COL_KEYWORDS, tags_new, -1);
 					*/
 				}else{
-					printf("on_category_set_clicked(): keyword is a dupe - not applying.\n");
+					dbg(0, "keyword is a dupe - not applying.");
 					statusbar_print(1, "ignoring duplicate keyword.");
 				}
 			}
 
-		} else errprintf("on_category_set_clicked() bad iter! i=%i (<%i)\n", i, g_list_length(selectionlist));
+		} else perr("bad iter! i=%i (<%i)\n", i, g_list_length(selectionlist));
 	}
 	g_list_foreach(selectionlist, (GFunc)gtk_tree_path_free, NULL);
 	g_list_free(selectionlist);
@@ -805,28 +780,28 @@ row_set_tags(GtkTreeIter* iter, int id, const char* tags_new)
 {
 	char sql[1024];
 	snprintf(sql, 1024, "UPDATE samples SET keywords='%s' WHERE id=%i", tags_new, id);
-	printf("on_category_set_clicked(): sql=%s\n", sql);
+	dbg(0, "sql=%s", sql);
 	if(mysql_query(&app.mysql, sql)){
-		errprintf("on_category_set_clicked(): update failed! sql=%s\n", sql);
-		return FALSE;
+		perr("update failed! sql=%s\n", sql);
+		return false;
 	}
 	//update the store:
 	gtk_list_store_set(app.store, iter, COL_KEYWORDS, tags_new, -1);
-	return TRUE;
+	return true;
 }
 
 
 gboolean
 row_set_tags_from_id(int id, GtkTreeRowReference* row_ref, const char* tags_new)
 {
-	if(!id){ errprintf("row_set_tags_from_id(): bad arg: id (%i)\n", id); return FALSE; }
-	ASSERT_POINTER_FALSE(row_ref, "row_ref");
+	if(!id){ perr("bad arg: id (%i)\n", id); return false; }
+	g_return_val_if_fail(row_ref, false);
 
 	char sql[1024];
 	snprintf(sql, 1024, "UPDATE samples SET keywords='%s' WHERE id=%i", tags_new, id);
 	printf("on_category_set_clicked(): sql=%s\n", sql);
 	if(mysql_query(&app.mysql, sql)){
-		errprintf("on_category_set_clicked(): update failed! sql=%s\n", sql);
+		perr("update failed! sql=%s\n", sql);
 		return FALSE;
 	}
 
@@ -840,7 +815,7 @@ row_set_tags_from_id(int id, GtkTreeRowReference* row_ref, const char* tags_new)
 
 		gtk_list_store_set(app.store, &iter, COL_KEYWORDS, tags_new, -1);
 	}
-	else { errprintf("row_set_tags_from_id(): cannot get row path: id=%i.\n", id); return FALSE; }
+	else { perr("cannot get row path: id=%i.\n", id); return FALSE; }
 
 	return TRUE;
 }
@@ -849,13 +824,13 @@ row_set_tags_from_id(int id, GtkTreeRowReference* row_ref, const char* tags_new)
 gboolean
 row_clear_tags(GtkTreeIter* iter, int id)
 {
-	if(!id){ errprintf("row_clear_tags(): bad arg: id\n"); return FALSE; }
+	if(!id){ perr("bad arg: id\n"); return FALSE; }
 
 	char sql[1024];
 	snprintf(sql, 1024, "UPDATE samples SET keywords='' WHERE id=%i", id);
 	printf("row_clear_tags(): sql=%s\n", sql);
 	if(mysql_query(&app.mysql, sql)){
-		errprintf("on_category_set_clicked(): update failed! sql=%s\n", sql);
+		perr("update failed! sql=%s\n", sql);
 		return FALSE;
 	}
 	//update the store:
@@ -870,14 +845,13 @@ update_dir_node_list()
 	/*
 	builds a node list of directories listed in the database.
 	*/
-	if (!app.dir_tree) { errprintf("update_dir_node_list(): dir_tree not initialised.\n"); return; }
 
 	if(!db__is_connected()) return;
 
 	db__dir_iter_new();
 
-	g_node_destroy(app.dir_tree);    //remove any previous nodes.
-	app.dir_tree = g_node_new(NULL); //make an empty root node.
+	if(app.dir_tree) g_node_destroy(app.dir_tree);
+	app.dir_tree = g_node_new(NULL);
 
 	if(1/*result*/){// there are rows
 		DhLink* link = dh_link_new(DH_LINK_TYPE_PAGE, "all directories", "");
@@ -896,6 +870,7 @@ update_dir_node_list()
 	}
 
 	db__dir_iter_free();
+	dbg(2, "size=%i", g_node_n_children(app.dir_tree));
 }
 
 
@@ -1007,7 +982,7 @@ add_file(char* path)
 						  -1);
 
 		dbg(2, "sending message: sample=%p filename=%s (%p)", sample, sample->filename, sample->filename);
-		g_async_queue_push(msg_queue, sample); //notify the overview thread.
+		g_async_queue_push(app.msg_queue, sample); //notify the overview thread.
 
 		on_directory_list_changed();
 
@@ -1070,7 +1045,7 @@ get_file_info_sndfile(sample* sample)
 	sample->length      = (sfinfo.frames * 1000) / sfinfo.samplerate;
 
 	if(sample->channels<1 || sample->channels>100){ dbg(0, "bad channel count: %i", sample->channels); return FALSE; }
-	if(sf_close(sffile)) printf("error! bad file close.\n");
+	if(sf_close(sffile)) perr("bad file close.\n");
 
 	return TRUE;
 }
@@ -1079,24 +1054,26 @@ get_file_info_sndfile(sample* sample)
 gboolean
 on_overview_done(gpointer data)
 {
-	sample* sample = data;
 	PF;
-	if(!sample){ errprintf("on_overview_done(): bad arg: sample.\n"); return FALSE; }
-	if(!sample->pixbuf){ errprintf("on_overview_done(): overview creation failed (no pixbuf).\n"); return FALSE; }
+	sample* sample = data;
+	g_return_val_if_fail(sample, false);
+	if(!sample->pixbuf){ perr("overview creation failed (no pixbuf).\n"); return false; }
 
 	db_update_pixbuf(sample);
 
-	GtkTreePath* treepath;
-	if((treepath = gtk_tree_row_reference_get_path(sample->row_ref))){ //it's possible the row may no longer be visible.
-		GtkTreeIter iter;
-		if(gtk_tree_model_get_iter(GTK_TREE_MODEL(app.store), &iter, treepath)){
-			if(GDK_IS_PIXBUF(sample->pixbuf)){
-				gtk_list_store_set(app.store, &iter, COL_OVERVIEW, sample->pixbuf, -1);
-			}else errprintf("on_overview_done(): pixbuf is not a pixbuf.\n");
+	if(sample->row_ref){
+		GtkTreePath* treepath;
+		if((treepath = gtk_tree_row_reference_get_path(sample->row_ref))){ //it's possible the row may no longer be visible.
+			GtkTreeIter iter;
+			if(gtk_tree_model_get_iter(GTK_TREE_MODEL(app.store), &iter, treepath)){
+				if(GDK_IS_PIXBUF(sample->pixbuf)){
+					gtk_list_store_set(app.store, &iter, COL_OVERVIEW, sample->pixbuf, -1);
+				}else perr("pixbuf is not a pixbuf.\n");
 
-		}else errprintf("on_overview_done(): failed to get row iter. row_ref=%p\n", sample->row_ref);
-		gtk_tree_path_free(treepath);
-	}
+			}else perr("failed to get row iter. row_ref=%p\n", sample->row_ref);
+			gtk_tree_path_free(treepath);
+		}else perr("failed to get path from rowref. row_ref=%p\n", sample->row_ref);
+	} else warnprintf("%s(): rowref not set!", __func__);
 
 	sample_free(sample);
 	return FALSE; //source should be removed.
@@ -1129,7 +1106,7 @@ db_update_pixbuf(sample *sample)
 
 		//at this pt, refcount should be two, we make it 1 so that pixbuf is destroyed with the row:
 		//g_object_unref(pixbuf); //FIXME
-	}else errprintf("db_update_pixbuf(): no pixbuf.\n");
+	}else perr("no pixbuf.\n");
 }
 
 
@@ -1145,7 +1122,7 @@ keywords_on_edited(GtkCellRendererText *cell, gchar *path_string, gchar *new_tex
 	GtkTreeModel* store = GTK_TREE_MODEL(app.store);
 	GtkTreePath* path = gtk_tree_path_new_from_string(path_string);
 	gtk_tree_model_get_iter(store, &iter, path);
-	gtk_tree_model_get(store, &iter, COL_IDX, &idx,  COL_NAME, &filename, -1);
+	gtk_tree_model_get(store, &iter, COL_IDX, &idx, COL_NAME, &filename, -1);
 	dbg(0, "filename=%s", filename);
 
 	//convert to lowercase:
@@ -1209,7 +1186,7 @@ delete_row(GtkWidget *widget, gpointer user_data)
 				int id;
 				gtk_tree_model_get(model, &iter, COL_NAME, &fname, COL_IDX, &id, -1);
 
-				if(!db_delete_row(id)) return;
+				if(!db__delete_row(id)) return;
 
 				//update the store:
 				gtk_list_store_remove(app.store, &iter);
@@ -1234,8 +1211,8 @@ update_row(GtkWidget *widget, gpointer user_data)
 
 	GtkTreeSelection* selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(app.view));
 	GList* selectionlist = gtk_tree_selection_get_selected_rows(selection, &(model));
-	if(!selectionlist){ errprintf("update_row(): no files selected?\n"); return; }
-	dbg(0, "%i rows selected.", g_list_length(selectionlist));
+	if(!selectionlist){ perr("no files selected?\n"); return; }
+	dbg(2, "%i rows selected.", g_list_length(selectionlist));
 
 	//GDate* date = g_date_new();
 	//g_get_current_time(date);
@@ -1251,7 +1228,7 @@ update_row(GtkWidget *widget, gpointer user_data)
 
 		snprintf(path, 256, "%s/%s", fdir, fname);
 		if(file_exists(path)){
-			online=1;
+			online = 1;
 
 			MIME_type* mime_type = mime_type_lookup(mimetype);
 			type_to_icon(mime_type);
@@ -1259,17 +1236,19 @@ update_row(GtkWidget *widget, gpointer user_data)
 			iconbuf = mime_type->image->sm_pixbuf;
 
 		}else{
-			online=0;
+			online = 0;
 			iconbuf = NULL;
 		}
 		gtk_list_store_set(app.store, &iter, COL_ICON, iconbuf, -1);
 
-		char sql[1024];
-		snprintf(sql, 1024, "UPDATE samples SET online=%i, last_checked=NOW() WHERE id=%i", online, id);
-		dbg(0, "row: %s path=%s sql=%s", fname, path, sql);
+		gchar* sql = g_strdup_printf("UPDATE samples SET online=%i, last_checked=NOW() WHERE id=%i", online, id);
+		dbg(2, "row: %s path=%s sql=%s", fname, path, sql);
 		if(mysql_query(&app.mysql, sql)){
-			errprintf("update_row(): update failed! sql=%s\n", sql);
+			perr("update failed! sql=%s\n", sql);
 		}
+		g_free(sql);
+
+		statusbar_printf(1, "online status updated (%s)", online ? "online" : "not online");
 	}
 	g_list_free(selectionlist);
 	//g_date_free(date);
@@ -1284,10 +1263,10 @@ edit_row(GtkWidget *widget, gpointer user_data)
 	GtkTreeView* treeview = GTK_TREE_VIEW(app.view);
 
 	GtkTreeSelection* selection = gtk_tree_view_get_selection(treeview);
-	if(!selection){ errprintf("edit_row(): cannot get selection.\n");/* return;*/ }
+	if(!selection){ perr("cannot get selection.\n");/* return;*/ }
 	GtkTreeModel* model = GTK_TREE_MODEL(app.store);
 	GList* selectionlist = gtk_tree_selection_get_selected_rows(selection, &(model));
-	if(!selectionlist){ errprintf("edit_row(): no files selected?\n"); return; }
+	if(!selectionlist){ perr("no files selected?\n"); return; }
 
 	GtkTreePath *treepath;
 	if((treepath = g_list_nth_data(selectionlist, 0))){
@@ -1307,7 +1286,7 @@ edit_row(GtkWidget *widget, gpointer user_data)
 			//g_signal_handlers_unblock_by_func(treeview, cursor_changed, self);
 
 
-		} else errprintf("edit_row(): cannot get iter.\n");
+		} else perr("cannot get iter.\n");
 		//free path_str ??
 		gtk_tree_path_free(treepath);
 	}
@@ -1315,7 +1294,7 @@ edit_row(GtkWidget *widget, gpointer user_data)
 }
 
 
-GtkWidget*
+static GtkWidget*
 make_context_menu()
 {
 	GtkWidget *menu = gtk_menu_new();
@@ -1641,28 +1620,6 @@ keyword_is_dupe(char* new, char* existing)
 }
 
 
-int
-colour_drag_dataget(GtkWidget *widget, GdkDragContext *drag_context,
-                    GtkSelectionData *data,
-                    guint info,
-                    guint time,
-                    gpointer user_data)
-{
-	char text[16];
-	gboolean data_sent = FALSE;
-	PF;
-
-	int box_num = GPOINTER_TO_UINT(user_data); //box_num corresponds to the colour index.
-
-	//convert to a pseudo uri string:
-	sprintf(text, "colour:%i%c%c", box_num + 1, 13, 10); //1 based to avoid atoi problems.
-
-	gtk_selection_data_set(data, GDK_SELECTION_TYPE_STRING, BITS_PER_CHAR_8, (guchar*)text, strlen(text));
-	data_sent = TRUE;
-
-	return FALSE;
-}
-
 /*
 int
 colour_drag_datareceived(GtkWidget *widget, GdkDragContext *drag_context,
@@ -1701,8 +1658,8 @@ tag_edit_start(int tnum)
   GtkWidget* edit   = app.inspector->edit;
   GtkWidget *label = app.inspector->tags;
 
-  if(!GTK_IS_WIDGET(app.inspector->edit)){ errprintf("tag_edit_start(): edit widget missing.\n"); return;}
-  if(!GTK_IS_WIDGET(label))              { errprintf("tags_edit_start(): label widget is missing.\n"); return;}
+  if(!GTK_IS_WIDGET(app.inspector->edit)){ perr("edit widget missing.\n"); return;}
+  if(!GTK_IS_WIDGET(label))              { perr("label widget is missing.\n"); return;}
 
   //show the rename widget:
   gtk_entry_set_text(GTK_ENTRY(app.inspector->edit), gtk_label_get_text(GTK_LABEL(label)));
@@ -1941,10 +1898,12 @@ config_save()
 	FILE* fp;
 	if(!(fp = fopen(app.config_filename, "w"))){
 		errprintf("cannot open config file for writing (%s).\n", app.config_filename);
+		statusbar_printf(1, "cannot open config file for writing (%s).", app.config_filename);
 		return FALSE;
 	}
 	if(fprintf(fp, "%s", string) < 0){
 		errprintf("error writing data to config file (%s).\n", app.config_filename);
+		statusbar_printf(1, "error writing data to config file (%s).", app.config_filename);
 	}
 	fclose(fp);
 	g_free(string);

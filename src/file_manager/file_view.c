@@ -60,6 +60,7 @@
 #define N_COLUMNS 11
 
 extern Filer filer;
+extern int debug;
 
 static gpointer parent_class = NULL;
 
@@ -1371,7 +1372,6 @@ view_details_delete_if(ViewIface *view, gboolean (*test)(gpointer item, gpointer
 static void
 view_details_clear(ViewIface *view)
 {
-	PF;
 	GPtrArray *items = ((ViewDetails *) view)->items;
 	GtkTreeModel *model = (GtkTreeModel *) view;
 
@@ -1475,10 +1475,9 @@ view_details_get_iter_at_point(ViewIface *view, ViewIter *iter, GdkWindow *src, 
 static void
 view_details_cursor_to_iter(ViewIface *view, ViewIter *iter)
 {
-	GtkTreePath *path;
 	ViewDetails *view_details = (ViewDetails *) view;
 
-	path = gtk_tree_path_new();
+	GtkTreePath *path = gtk_tree_path_new();
 
 	if (iter)
 		gtk_tree_path_append_index(path, iter->i);
@@ -1490,7 +1489,10 @@ view_details_cursor_to_iter(ViewIface *view, ViewIter *iter)
 		gtk_tree_path_append_index(path, view_details->items->len);
 	}
 
-	gtk_tree_view_set_cursor((GtkTreeView *) view, path, NULL, FALSE);
+	if(GTK_WIDGET_REALIZED((GtkWidget*)view)){
+		gtk_tree_view_set_cursor((GtkTreeView *) view, path, NULL, FALSE);
+	}
+	else dbg(0, "cannot set cursor, widget not realised.");
 	gtk_tree_path_free(path);
 }
 

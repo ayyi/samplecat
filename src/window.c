@@ -22,6 +22,7 @@
 #include "inspector.h"
 #include "dh_tree.h"
 #include "db.h"
+#include "colour_box.h"
 #include "window.h"
 
 extern struct _app app;
@@ -38,9 +39,6 @@ static void       window_on_realise               (GtkWidget*, gpointer);
 static void       window_on_allocate              (GtkWidget*, gpointer);
 static gboolean   window_on_configure             (GtkWidget*, GdkEventConfigure*, gpointer);
 static gboolean   filter_new();
-static GtkWidget* colour_box_new                  (GtkWidget* parent);
-static gboolean   colour_box_exists               (GdkColor*);
-static gboolean   colour_box_add                  (GdkColor*);
 static GtkWidget* scrolled_window_new             ();
 static GtkWidget* message_panel__new              ();
 static GtkWidget* message_panel__add_msg          (const gchar* msg, const gchar* stock_id);
@@ -259,6 +257,9 @@ window_on_allocate(GtkWidget *win, gpointer user_data)
 		if(colour_lighter(&colour, &colour)) colour_box_add(&colour);
 		if(colour_lighter(&colour, &colour)) colour_box_add(&colour);
 
+		gdk_color_parse("#5f5eff", &colour);
+		if(colour_box_add(&colour)) dbg(0, "add ok!"); else dbg(0, "add bad!!!!!!!!!!");
+
 		//make modifier colours:
 		colour_get_style_bg(&app.bg_colour_mod1, GTK_STATE_NORMAL);
 		app.bg_colour_mod1.red   = MIN(app.bg_colour_mod1.red   + 0x1000, 0xffff);
@@ -330,7 +331,9 @@ left_pane()
 	if(db__is_connected()){
 #ifndef NO_USE_DEVHELP_DIRTREE
 		GtkWidget* tree = dir_tree_new();
-		gtk_paned_add1(GTK_PANED(vpaned2), tree);
+		GtkWidget* scroll = scrolled_window_new();
+		gtk_container_add((GtkContainer*)scroll, tree);
+		gtk_paned_add1(GTK_PANED(vpaned2), scroll);
 		gtk_widget_show(tree);
 		g_signal_connect(tree, "link_selected", G_CALLBACK(dir_tree_on_link_selected), NULL);
 #endif
@@ -339,9 +342,7 @@ left_pane()
 	gint expand = TRUE;
 	ViewDirTree* dir_list = app.dir_treeview2 = vdtree_new(g_get_home_dir(), expand);
 	vdtree_set_select_func(dir_list, dir_on_select, NULL); //callback
-	//app.dir_treeview2 = GTK_WIDGET(dir_list);
 	GtkWidget* fs_tree = dir_list->widget;
-	//gtk_paned_add1(GTK_PANED(app.vpaned), tree);
 	gtk_paned_add2(GTK_PANED(vpaned2), fs_tree);
 	gtk_widget_show(fs_tree);
 
@@ -422,78 +423,6 @@ filter_new()
 
 
 static GtkWidget*
-colour_box_new(GtkWidget* parent)
-{
-	GtkWidget* e;
-	int i;
-	for(i=PALETTE_SIZE-1;i>=0;i--){
-		e = app.colour_button[i] = gtk_event_box_new();
-
-		gtk_drag_source_set(e, GDK_BUTTON1_MASK | GDK_BUTTON2_MASK, dnd_file_drag_types, dnd_file_drag_types_count, GDK_ACTION_COPY | GDK_ACTION_MOVE | GDK_ACTION_LINK);
-		g_signal_connect(G_OBJECT(e), "drag-data-get", G_CALLBACK(colour_drag_dataget), GUINT_TO_POINTER(i));
-
-		gtk_widget_show(e);
-
-		gtk_box_pack_end(GTK_BOX(parent), e, TRUE, TRUE, 0);
-	}
-	return e;
-}
-
-
-void
-colour_box_update()
-{
-	//show the current palette colours in the colour_box
-	int i;
-	GdkColor colour;
-	char colour_string[16];
-	for(i=PALETTE_SIZE-1;i>=0;i--){
-		snprintf(colour_string, 16, "#%s", app.config.colour[i]);
-		if(!gdk_color_parse(colour_string, &colour)) warnprintf("colour_box_update(): parsing of colour string failed.\n");
-		//printf("colour_box_update(): colour: %x %x %x\n", colour.red, colour.green, colour.blue);
-
-		if(app.colour_button[i]){
-			if(colour.red != app.colour_button[i]->style->bg[GTK_STATE_NORMAL].red) 
-				gtk_widget_modify_bg(app.colour_button[i], GTK_STATE_NORMAL, &colour);
-		}
-	}
-}
-
-
-static gboolean
-colour_box_exists(GdkColor* colour)
-{
-	//returns true if a similar colour already exists in the colour_box.
-
-	GdkColor existing_colour;
-	char string[8];
-	int i;
-	for(i=0;i<PALETTE_SIZE;i++){
-		snprintf(string, 8, "#%s", app.config.colour[i]);
-		if(!gdk_color_parse(string, &existing_colour)) warnprintf("colour_box_exists(): parsing of colour string failed (%s).\n", string);
-		if(is_similar(colour, &existing_colour, 0xff)) return TRUE;
-	}
-
-	return FALSE;
-}
-
-
-static gboolean
-colour_box_add(GdkColor* colour)
-{
-	static unsigned slot = 0;
-
-	if(slot >= PALETTE_SIZE){ if(debug) warnprintf("colour_box_add() colour_box full.\n"); return FALSE; }
-
-	//only add a colour if a similar colour isnt already there.
-	if(colour_box_exists(colour)) return FALSE;
-
-	hexstring_from_gdkcolor(app.config.colour[slot++], colour);
-	return TRUE;
-}
-
-
-static GtkWidget*
 scrolled_window_new()
 {
 	GtkWidget* scroll = gtk_scrolled_window_new(NULL, NULL); //adjustments created automatically.
@@ -542,11 +471,10 @@ GtkWidget*
 dir_tree_new()
 {
 	//data:
-	app.dir_tree = g_node_new(NULL); //this is unneccesary ?
 	update_dir_node_list();
 
 	//view:
-	app.dir_treeview = dh_book_tree_new(app.dir_tree);
+	app.dir_treeview = dh_book_tree_new(&app.dir_tree);
 
 	return app.dir_treeview;
 }
@@ -685,7 +613,7 @@ dir_tree_on_link_selected(GObject *ignored, DhLink *link, gpointer data)
 	/*
 	what does it mean if link->uri is empty?
 	*/
-	ASSERT_POINTER_FALSE(link, "link");
+	g_return_val_if_fail(link, false);
 
 	dbg(0, "uri=%s", link->uri);
 	//FIXME segfault if we use this if()

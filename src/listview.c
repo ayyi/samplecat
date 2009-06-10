@@ -22,6 +22,7 @@
 extern struct _app app;
 int             playback_init(sample* sample);
 void            playback_stop();
+extern int      debug;
 
 static gboolean listview__on_row_clicked(GtkWidget*, GdkEventButton*, gpointer user_data);
 static void     listview__dnd_get       (GtkWidget*, GdkDragContext*, GtkSelectionData*, guint info, guint time, gpointer data);
@@ -288,8 +289,8 @@ listview__on_row_clicked(GtkWidget *widget, GdkEventButton *event, gpointer user
                            NULL, NULL,  //fn and data used to position the menu.
                            event->button, event->time);
 		}
-		return TRUE;
-	} else return FALSE;
+		return true;
+	} else return false;
 }
 
 
@@ -302,17 +303,26 @@ listview__item_set_colour(GtkTreePath* path, unsigned colour)
 
 	char sql[1024];
 	snprintf(sql, 1024, "UPDATE samples SET colour=%u WHERE id=%i", colour, id);
-	printf("item_set_colour(): sql=%s\n", sql);
+	dbg(0, "sql=%s", sql);
 	if(mysql_query(&app.mysql, sql)){
-		errprintf("item_set_colour(): update failed! sql=%s\n", sql);
-		return FALSE;
+		perr("update failed! sql=%s\n", sql);
+		return false;
 	}
 
 	GtkTreeIter iter;
 	gtk_tree_model_get_iter(GTK_TREE_MODEL(app.store), &iter, path);
 	gtk_list_store_set(GTK_LIST_STORE(app.store), &iter, COL_COLOUR, colour, -1);
 
-	return TRUE;
+	sample* sample = sample_new_from_model(path);
+	if(sample && g_file_test(sample->filename, G_FILE_TEST_IS_REGULAR)){
+		char colour_string[16];
+		snprintf(colour_string, 16, "#%s", app.config.colour[colour]);
+		if(!gdk_color_parse(colour_string, &sample->bg_colour)) warnprintf("%s(): parsing of colour string failed.\n", __func__);
+		g_async_queue_push(app.msg_queue, sample); //request the overview thread to update.
+	}
+	else dbg(0, "cannot update overview for offline sample. %s", sample->filename);
+
+	return true;
 }
 
 

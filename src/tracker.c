@@ -1,6 +1,6 @@
 /*
 
-Copyright (C) Tim Orford 2007-2008
+Copyright (C) Tim Orford 2007-2009
 
 This software is licensed under the GPL. See accompanying file COPYING.
 
