@@ -53,7 +53,7 @@ struct _app
 {
 	gboolean       loaded;
 
-	char           config_filename[256];
+	char*          config_filename;
 	struct _config config;
 	char           search_phrase[256];
 	char*          search_dir;
@@ -117,6 +117,12 @@ struct _app
 	gint       mouse_y;
 
 	GMutex*    mutex;
+};
+
+struct _samplecat_result
+{
+	GdkPixbuf* icon;
+	int        idx;
 };
 
 struct _palette {

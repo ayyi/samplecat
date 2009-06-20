@@ -1,6 +1,6 @@
 /*
 
-Copyright (C) Tim Orford 2007-2008
+Copyright (C) Tim Orford 2007-2009
 
 This software is licensed under the GPL. See accompanying file COPYING.
 
@@ -16,15 +16,12 @@ This software is licensed under the GPL. See accompanying file COPYING.
 #include <gtk/gtk.h>
 
 #include <gdk-pixbuf/gdk-pixdata.h>
-#ifdef OLD
-  #include <libart_lgpl/libart.h>
-#endif
 #ifdef USE_AYYI
   #include "ayyi.h"
   #include "ayyi_model.h"
 #endif
 #ifdef USE_TRACKER
-  #include "tracker.h"
+  //#include "tracker.h"
   #include <src/tracker_.h>
 #endif
 
@@ -79,18 +76,6 @@ char green [16];
 char yellow[16];
 char bold  [16];
 
-//mysql table layout (database column numbers):
-enum {
-  MYSQL_NAME = 1,
-  MYSQL_DIR = 2,
-  MYSQL_KEYWORDS = 3,
-  MYSQL_PIXBUF = 4
-};
-#define MYSQL_ONLINE 8
-#define MYSQL_MIMETYPE 10
-#define MYSQL_NOTES 11
-#define MYSQL_COLOUR 12
-
 static const struct option long_options[] = {
   { "input",            1, NULL, 'i' },
   { "offline",          0, NULL, 'o' },
@@ -106,6 +91,13 @@ static const char* const usage =
   " -v --verbose   show more information.\n"
   " -h --help      show this usage information and quit.\n"
   "\n";
+
+struct _backend
+{
+	gboolean    (*search_iter_new)(char* search, char* dir);
+	void        (*search_iter_free)();
+};
+struct _backend backend = {NULL, NULL};
 
 
 void
@@ -125,7 +117,7 @@ app_init()
 	int i; for(i=0;i<PALETTE_SIZE;i++) app.colour_button[i] = NULL;
 	app.colourbox_dirty = TRUE;
 
-	snprintf(app.config_filename, 256, "%s/.samplecat", g_get_home_dir());
+	app.config_filename = g_strdup_printf("%s/." PACKAGE, g_get_home_dir());
 }
 
 
@@ -177,6 +169,9 @@ main(int argc, char** argv)
 	#ifdef QUIT_WITHOUT_DB
 		on_quit(NULL, GINT_TO_POINTER(1));
 	#endif
+	}else{
+		backend.search_iter_new = db__search_iter_new;
+		backend.search_iter_free = db__search_iter_free;
 	}
 
 	type_init();
@@ -213,18 +208,11 @@ main(int argc, char** argv)
 #endif
 
 #ifdef USE_TRACKER
-	//note: trackerd doesnt have to be running - it will be auto-started.
-	//TODO dont do this until the gui has loaded.
-	TrackerClient* tc = tracker_connect(TRUE);
-	if(tc){
-		tracker_search(tc);
-		tracker_disconnect (tc);
-	}
-	else warnprintf("cant connect to tracker daemon.");
+	g_idle_add((GSourceFunc)tracker__init, NULL);
 #endif
 
 	app.loaded = TRUE;
-	dbg(0, "loaded");
+	dbg(1, "loaded");
 
 	gtk_main();
 	exit(0);
@@ -537,30 +525,21 @@ scan_dir(const char* path, int* added_count)
 	}
 }
 
-
+#define BACKEND_IS_MYSQL (backend.search_iter_new == db__search_iter_new)
 void
 do_search(char *search, char *dir)
 {
 	//fill the display with the results for the given search phrase.
 
-	if(!db__is_connected()){ listview__show_db_missing(); return; }
+	//if(!db__is_connected()){ listview__show_db_missing(); return; }
+	if(!backend.search_iter_new){ listview__show_db_missing(); return; }
 
-	unsigned channels, colour;
-	float samplerate; char samplerate_s[32];
-	char length[64];
-	GtkTreeIter iter;
-
-	char sb_text[256];
-	char sample_name[256];
-	GdkPixbuf* pixbuf  = NULL;
-	GdkPixbuf* iconbuf = NULL;
 #ifdef USE_AYYI
 	GdkPixbuf* ayyi_icon = NULL;
 #endif
-	GdkPixdata pixdata;
-	gboolean online = FALSE;
+	SamplecatResult* result = g_new(SamplecatResult, 1);
 
-	if(db__search_iter_new(search, dir)){
+	if(backend.search_iter_new(search, dir)){
 
 		treeview_block_motion_handler(); //dont know exactly why but this prevents a segfault.
 
@@ -574,91 +553,23 @@ do_search(char *search, char *dir)
 		*/ 
 
 		#define MAX_DISPLAY_ROWS 1000
-		if(1/*result*/){// there are rows
-			//unsigned num_fields = mysql_num_fields(result);
-			char keywords[256];
+		if(BACKEND_IS_MYSQL){
 
 			int row_count = 0;
 			unsigned long *lengths;
 			MYSQL_ROW row;
 			while((row = db__search_iter_next(&lengths)) && row_count < MAX_DISPLAY_ROWS){
-				/*
-				for(i = 0; i < num_fields; i++){ 
-					printf("[%s] ", row[i] ? row[i] : "NULL"); 
-				}
-				printf("\n"); 
-				*/
-
-				//deserialise the pixbuf field:
-				pixbuf = NULL;
-				if(row[MYSQL_PIXBUF]){
-					//printf("%s(): deserializing...\n", __func__); 
-					if(gdk_pixdata_deserialize(&pixdata, lengths[4], (guint8*)row[MYSQL_PIXBUF], NULL)){
-						pixbuf = gdk_pixbuf_from_pixdata(&pixdata, TRUE, NULL);
-					}
-				}
-				format_time(length, row[5]);
-				if(row[MYSQL_KEYWORDS]) snprintf(keywords, 256, "%s", row[MYSQL_KEYWORDS]); else keywords[0] = 0;
-				//if(row[5]==NULL) length     = 0; else length     = atoi(row[5]);
-				if(row[6]==NULL) samplerate = 0; else samplerate = atoi(row[6]); samplerate_format(samplerate_s, samplerate);
-				if(row[7]==NULL) channels   = 0; else channels   = atoi(row[7]);
-				if(row[MYSQL_ONLINE]==NULL) online = 0; else online = atoi(row[MYSQL_ONLINE]);
-				if(row[MYSQL_COLOUR]==NULL) colour = 0; else colour = atoi(row[MYSQL_COLOUR]);
-
-				strncpy(sample_name, row[MYSQL_NAME], 255);
-				//TODO markup should be set in cellrenderer, not model!
-#if 0
-				if(GTK_WIDGET_REALIZED(app.view)){
-					//check colours dont clash:
-					long c_num = strtol(app.config.colour[colour], NULL, 16);
-					dbg(2, "rowcolour=%s", app.config.colour[colour]);
-					GdkColor row_colour; color_rgba_to_gdk(&row_colour, c_num << 8);
-					if(is_similar(&row_colour, &app.fg_colour, 0x60)){
-						snprintf(sample_name, 255, "%s%s%s", "<span foreground=\"blue\">", row[MYSQL_NAME], "</span>");
-					}
-				}
-#endif
-
-#ifdef USE_AYYI
-				//is the file loaded in the current Ayyi song?
-				if(ayyi.got_song){
-					gchar* fullpath = g_build_filename(row[MYSQL_DIR], sample_name, NULL);
-					if(pool__file_exists(fullpath)) dbg(0, "exists"); else dbg(0, "doesnt exist");
-					g_free(fullpath);
-				}
-#endif
-				//icon (only shown if the sound file is currently available):
-				if(online){
-					MIME_type* mime_type = mime_type_lookup(row[MYSQL_MIMETYPE]);
-					type_to_icon(mime_type);
-					if ( ! mime_type->image ) dbg(0, "no icon.");
-					iconbuf = mime_type->image->sm_pixbuf;
-				} else iconbuf = NULL;
-
-				//strip the homedir from the dir string:
-				char* path = strstr(row[MYSQL_DIR], g_get_home_dir());
-				path = path ? path + strlen(g_get_home_dir()) + 1 : row[MYSQL_DIR];
-
-				gtk_list_store_append(app.store, &iter);
-				gtk_list_store_set(app.store, &iter, COL_ICON, iconbuf,
-#ifdef USE_AYYI
-				                     COL_AYYI_ICON, ayyi_icon,
-#endif
-				                     COL_IDX, atoi(row[0]), COL_NAME, sample_name, COL_FNAME, path, COL_KEYWORDS, keywords, 
-				                     COL_OVERVIEW, pixbuf, COL_LENGTH, length, COL_SAMPLERATE, samplerate_s, COL_CHANNELS, channels, 
-				                     COL_MIMETYPE, row[MYSQL_MIMETYPE], COL_NOTES, row[MYSQL_NOTES], COL_COLOUR, colour, -1);
-				if(pixbuf) g_object_unref(pixbuf);
+				db__add_row_to_model(row, lengths);
 				row_count++;
 			}
-			db__search_iter_free();
+			backend.search_iter_free();
 
 			if(0 && row_count < MAX_DISPLAY_ROWS){
-				snprintf(sb_text, 256, "%i samples found.", row_count);
+				statusbar_printf(1, "%i samples found.", row_count);
 			}else{
 				uint32_t tot_rows = (uint32_t)mysql_affected_rows(&app.mysql);
-				snprintf(sb_text, 256, "showing %i of %i samples", row_count, tot_rows);
+				statusbar_printf(1, "showing %i of %i samples", row_count, tot_rows);
 			}
-			statusbar_print(1, sb_text);
 		}
 		/*
 		else{  // mysql_store_result() returned nothing
@@ -1838,7 +1749,7 @@ config_load()
 			}
 			set_search_dir(app.config.show_dir);
 		}
-		else{ warnprintf("config_load(): cannot find Samplecat key group.\n"); return FALSE; }
+		else{ warnprintf("%s(): cannot find Samplecat key group.\n", __func__); return false; }
 		g_free(groupname);
 	}else{
 		printf("unable to load config file: %s.\n", error->message);
@@ -1846,10 +1757,10 @@ config_load()
 		error = NULL;
 		config_new();
 		config_save();
-		return FALSE;
+		return false;
 	}
 
-	return TRUE;
+	return true;
 }
 
 
@@ -1924,6 +1835,7 @@ config_new()
 		"database_user=username\n"
 		"database_pass=pass\n"
 		"database_name=samplelib\n"
+		"show_dir=\n"
 		);
 
 	if(!g_key_file_load_from_data(app.key_file, data, strlen(data), G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS, &error)){

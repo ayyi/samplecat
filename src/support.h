@@ -68,39 +68,39 @@ GList*       uri_list_from_text(gchar* data, gint files_only);
 gchar*       uri_text_escape(const gchar* text);
 void         uri_text_decode(gchar* text);
 
-void         pixbuf_clear(GdkPixbuf*, GdkColor*);
+void         pixbuf_clear              (GdkPixbuf*, GdkColor*);
 #ifdef OLD
-void         pixbuf_draw_line(GdkPixbuf *pixbuf, struct _ArtDRect *pts, double line_width, GdkColor *colour);
+void         pixbuf_draw_line          (GdkPixbuf*, struct _ArtDRect *pts, double line_width, GdkColor *colour);
 #else
-void         pixbuf_draw_line(cairo_t*, rect *pts, double line_width, GdkColor *colour);
+void         pixbuf_draw_line          (cairo_t*, rect *pts, double line_width, GdkColor *colour);
 #endif
 //GdkPixbuf*   scale_pixbuf(GdkPixbuf *src, int max_w, int max_h);
 //GdkPixbuf*   scale_pixbuf_up(GdkPixbuf *src, int max_w, int max_h);
-GdkPixbuf*   create_spotlight_pixbuf(GdkPixbuf *src, GdkColor*);
+GdkPixbuf*   create_spotlight_pixbuf   (GdkPixbuf *src, GdkColor*);
 
-void         colour_get_style_fg(GdkColor *color, int state);
-void         colour_get_style_bg(GdkColor *color, int state);
-void         colour_get_style_base(GdkColor *color, int state);
-void         colour_get_style_text(GdkColor *color, int state);
-void         colour_get_float(GdkColor*, float* r, float* g, float* b, const unsigned char alpha);
-gchar*       gdkcolor_get_hexstring(GdkColor* c);
-void         hexstring_from_gdkcolor(char* hexstring, GdkColor* c);
-void         color_rgba_to_gdk(GdkColor* colour, uint32_t rgba);
-gboolean     colour_lighter(GdkColor* lighter, GdkColor* colour);
-gboolean     colour_darker(GdkColor* lighter, GdkColor* colour);
-gboolean     is_black(GdkColor* colour);
-gboolean     is_white(GdkColor* colour);
-gboolean     is_similar(GdkColor* colour1, GdkColor* colour2, char min_diff);
-gboolean     is_similar_rgb(unsigned colour1, unsigned colour2);
+void         colour_get_style_fg       (GdkColor*, int state);
+void         colour_get_style_bg       (GdkColor*, int state);
+void         colour_get_style_base     (GdkColor*, int state);
+void         colour_get_style_text     (GdkColor*, int state);
+void         colour_get_float          (GdkColor*, float* r, float* g, float* b, const unsigned char alpha);
+gchar*       gdkcolor_get_hexstring    (GdkColor*);
+void         hexstring_from_gdkcolor   (char* hexstring, GdkColor*);
+void         color_rgba_to_gdk         (GdkColor*, uint32_t rgba);
+gboolean     colour_lighter            (GdkColor* lighter, GdkColor*);
+gboolean     colour_darker             (GdkColor* lighter, GdkColor*);
+gboolean     is_black                  (GdkColor*);
+gboolean     is_white                  (GdkColor*);
+gboolean     is_similar                (GdkColor* colour1, GdkColor* colour2, int min_diff);
+gboolean     is_similar_rgb            (unsigned colour1, unsigned colour2);
 
-void         format_time(char* length, char* milliseconds);
-void         format_time_int(char* length, int milliseconds);
+void         format_time               (char* length, char* milliseconds);
+void         format_time_int           (char* length, int milliseconds);
 
-gint         treecell_get_row(GtkWidget *widget, GdkRectangle *cell_area);
-void         statusbar_print(int n, char *s);
-void         statusbar_printf(int n, char* fmt, ...);
+gint         treecell_get_row          (GtkWidget *widget, GdkRectangle *cell_area);
+void         statusbar_print           (int n, char *s);
+void         statusbar_printf          (int n, char* fmt, ...);
 
-void         make_accels(GtkAccelGroup*, GimpActionGroup*, struct _accel*, int count, gpointer user_data);
+void         make_accels               (GtkAccelGroup*, GimpActionGroup*, struct _accel*, int count, gpointer user_data);
 
 const gchar* gimp_get_mod_name_shift ();
 const gchar* gimp_get_mod_name_control();

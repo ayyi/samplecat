@@ -139,7 +139,7 @@ view_details_new(Filer* filer_window)
 	PF;
 	ViewDetails* view_details = g_object_new(view_details_get_type(), NULL);
 	view_details->filer_window = filer_window;
-	view_details->use_alt_colours = FALSE;
+	view_details->use_alt_colours = false;
 
 	filer_window->menu = fm_make_context_menu();
 
@@ -2005,6 +2005,7 @@ view_details_set_alt_colours(ViewDetails* view, GdkColor* bg, GdkColor* fg)
 	PF;
 	view->alt_bg = *bg;
 	view->alt_fg = *fg;
+	view->use_alt_colours = true;
 }
 
 
@@ -2014,9 +2015,11 @@ view_details_on_realise(ViewDetails* view, gpointer user_data)
 	static gboolean done = FALSE;
 
 	if(!done){
-		g_object_set(view->cell_leaf, "cell-background-gdk", &view->alt_bg, "cell-background-set", TRUE, NULL);
-		g_object_set(view->cell_leaf, "foreground-gdk", &view->alt_fg, "foreground-set", TRUE, NULL);
-		done = TRUE;
+		if(view->use_alt_colours){
+			g_object_set(view->cell_leaf, "cell-background-gdk", &view->alt_bg, "cell-background-set", TRUE, NULL);
+			g_object_set(view->cell_leaf, "foreground-gdk", &view->alt_fg, "foreground-set", TRUE, NULL);
+		}
+		done = true;
 	}
 }
 

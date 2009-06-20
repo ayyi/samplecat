@@ -1370,7 +1370,7 @@ vdtree_select_row(ViewDirTree *vdt, FileData *fd)
 
 gint vdtree_set_path(ViewDirTree *vdt, const gchar *path)
 {
-	dbg(0, "path=%s", path);
+	dbg(1, "path=%s", path);
 	FileData *fd;
 	GtkTreeIter iter;
 

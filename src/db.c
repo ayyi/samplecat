@@ -4,9 +4,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <gtk/gtk.h>
-#ifdef OLD
-  #include <libart_lgpl/libart.h>
-#endif
+#include <gdk-pixbuf/gdk-pixdata.h>
 
 #include <mysql/mysql.h>
 #include <mysql/errmsg.h>
@@ -15,11 +13,27 @@
 #include <gqview2/typedefs.h>
 #include "support.h"
 #include "main.h"
+#include "rox/rox_global.h"
+#include "mimetype.h"
+#include "pixmaps.h"
+#include "listview.h"
 #include "db.h"
 
 //#if defined(HAVE_STPCPY) && !defined(HAVE_mit_thread)
   #define strmov(A,B) stpcpy((A),(B))
 //#endif
+
+//mysql table layout (database column numbers):
+enum {
+  MYSQL_NAME = 1,
+  MYSQL_DIR = 2,
+  MYSQL_KEYWORDS = 3,
+  MYSQL_PIXBUF = 4
+};
+#define MYSQL_ONLINE 8
+#define MYSQL_MIMETYPE 10
+#define MYSQL_NOTES 11
+#define MYSQL_COLOUR 12
 
 extern struct _app app;
 extern char err [32];
@@ -301,6 +315,97 @@ db__dir_iter_free()
 {
 	if(dir_iter_result) mysql_free_result(dir_iter_result);
 	dir_iter_result = NULL;
+}
+
+
+void
+db__iter_to_result(SamplecatResult* result)
+{
+	memset(result, 0, sizeof(SamplecatResult));
+}
+
+
+void
+db__add_row_to_model(MYSQL_ROW row, unsigned long* lengths)
+{
+	GdkPixbuf* pixbuf  = NULL;
+	GdkPixbuf* iconbuf = NULL;
+	GdkPixdata pixdata;
+	char length[64];
+	char keywords[256];
+	char sample_name[256];
+	float samplerate; char samplerate_s[32];
+	unsigned channels, colour;
+	gboolean online = FALSE;
+	GtkTreeIter iter;
+
+	//db__iter_to_result(result);
+
+	/*
+	for(i = 0; i < num_fields; i++){ 
+		printf("[%s] ", row[i] ? row[i] : "NULL"); 
+	}
+	printf("\n"); 
+	*/
+	//deserialise the pixbuf field:
+	pixbuf = NULL;
+	if(row[MYSQL_PIXBUF]){
+		//printf("%s(): deserializing...\n", __func__); 
+		if(gdk_pixdata_deserialize(&pixdata, lengths[4], (guint8*)row[MYSQL_PIXBUF], NULL)){
+			pixbuf = gdk_pixbuf_from_pixdata(&pixdata, TRUE, NULL);
+		}
+	}
+	format_time(length, row[5]);
+	if(row[MYSQL_KEYWORDS]) snprintf(keywords, 256, "%s", row[MYSQL_KEYWORDS]); else keywords[0] = 0;
+	//if(row[5]==NULL) length     = 0; else length     = atoi(row[5]);
+	if(row[6]==NULL) samplerate = 0; else samplerate = atoi(row[6]); samplerate_format(samplerate_s, samplerate);
+	if(row[7]==NULL) channels   = 0; else channels   = atoi(row[7]);
+	if(row[MYSQL_ONLINE]==NULL) online = 0; else online = atoi(row[MYSQL_ONLINE]);
+	if(row[MYSQL_COLOUR]==NULL) colour = 0; else colour = atoi(row[MYSQL_COLOUR]);
+
+	strncpy(sample_name, row[MYSQL_NAME], 255);
+	//TODO markup should be set in cellrenderer, not model!
+#if 0
+	if(GTK_WIDGET_REALIZED(app.view)){
+		//check colours dont clash:
+		long c_num = strtol(app.config.colour[colour], NULL, 16);
+		dbg(2, "rowcolour=%s", app.config.colour[colour]);
+		GdkColor row_colour; color_rgba_to_gdk(&row_colour, c_num << 8);
+		if(is_similar(&row_colour, &app.fg_colour, 0x60)){
+			snprintf(sample_name, 255, "%s%s%s", "<span foreground=\"blue\">", row[MYSQL_NAME], "</span>");
+		}
+	}
+#endif
+
+#ifdef USE_AYYI
+	//is the file loaded in the current Ayyi song?
+	if(ayyi.got_song){
+		gchar* fullpath = g_build_filename(row[MYSQL_DIR], sample_name, NULL);
+		if(pool__file_exists(fullpath)) dbg(0, "exists"); else dbg(0, "doesnt exist");
+		g_free(fullpath);
+	}
+#endif
+	//icon (only shown if the sound file is currently available):
+	if(online){
+		MIME_type* mime_type = mime_type_lookup(row[MYSQL_MIMETYPE]);
+		type_to_icon(mime_type);
+		if ( ! mime_type->image ) dbg(0, "no icon.");
+		iconbuf = mime_type->image->sm_pixbuf;
+	} else iconbuf = NULL;
+
+	//strip the homedir from the dir string:
+	char* path = strstr(row[MYSQL_DIR], g_get_home_dir());
+	path = path ? path + strlen(g_get_home_dir()) + 1 : row[MYSQL_DIR];
+
+	gtk_list_store_append(app.store, &iter);
+	gtk_list_store_set(app.store, &iter, COL_ICON, iconbuf,
+#ifdef USE_AYYI
+	                   COL_AYYI_ICON, ayyi_icon,
+#endif
+	                   COL_IDX, atoi(row[0]), COL_NAME, sample_name, COL_FNAME, path, COL_KEYWORDS, keywords, 
+	                   COL_OVERVIEW, pixbuf, COL_LENGTH, length, COL_SAMPLERATE, samplerate_s, COL_CHANNELS, channels, 
+	                   COL_MIMETYPE, row[MYSQL_MIMETYPE], COL_NOTES, row[MYSQL_NOTES], COL_COLOUR, colour, -1);
+	if(pixbuf) g_object_unref(pixbuf);
 }
 
 

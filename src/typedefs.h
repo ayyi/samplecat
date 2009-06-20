@@ -15,6 +15,7 @@ typedef enum {
 
 typedef struct _sample sample;
 typedef struct _GimpActionGroup GimpActionGroup;
+typedef struct _samplecat_result SamplecatResult;
 
 #ifndef true
   #define true TRUE

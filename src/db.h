@@ -14,3 +14,5 @@ void        db__dir_iter_new();
 char*       db__dir_iter_next();
 void        db__dir_iter_free();
 
+void        db__iter_to_result(SamplecatResult*);
+void        db__add_row_to_model(MYSQL_ROW, unsigned long* lengths);

@@ -1340,7 +1340,7 @@ is_black(GdkColor* colour)
 
 
 gboolean
-is_similar(GdkColor* colour1, GdkColor* colour2, char min_diff)
+is_similar(GdkColor* colour1, GdkColor* colour2, int min_diff)
 {
 	GdkColor difference;
 	difference.red   = ABS(colour1->red   - colour2->red);
@@ -1443,7 +1443,7 @@ statusbar_print(int n, char *s)
   GtkWidget *statusbar = NULL;
   if     (n==1) statusbar = app.statusbar;
   else if(n==2) statusbar = app.statusbar2;
-  else { errprintf("statusbar_print(): bad statusbar index (%i)\n", n); n=1; }
+  else { perr("bad statusbar index (%i)\n", n); n=1; }
 
   if((unsigned int)statusbar<1024) return; //window may not be open.
 
@@ -1469,7 +1469,7 @@ statusbar_printf(int n, char* fmt, ...)
   GtkWidget *statusbar = NULL;
   if     (n==1) statusbar = app.statusbar;
   else if(n==2) statusbar = app.statusbar2;
-  else { errprintf("statusbar_print(): bad statusbar index (%i)\n", n); n=1; }
+  else { perr("bad statusbar index (%i)\n", n); n=1; }
 
   if((unsigned)statusbar<1024) return; //window may not be open.
 
