@@ -83,17 +83,12 @@ GdkPixbuf*
 make_overview_sndfile(sample* sample)
 {
   /*
-  we need to load a file onto a pixbuf.
-
-  specimen: 
-		-loads complete file into ram. (true)
-		-makes a widget not a bitmap.
-	probably not much we can use....
+  load a file onto a pixbuf.
 
   */
   dbg (1, "...");
 
-  char *filename = sample->filename;
+  char* filename = sample->filename;
 
   SF_INFO        sfinfo;   //the libsndfile struct pointer
   SNDFILE        *sffile;
@@ -132,8 +127,8 @@ make_overview_sndfile(sample* sample)
   short* data = malloc(sizeof(*data) * buffer_len);
 
   int x=0, frame, ch;
-  int srcidx_start=0;       //index into the source buffer for each sample pt.
-  int srcidx_stop =0;
+  int srcidx_start = 0;     //index into the source buffer for each sample pt.
+  int srcidx_stop = 0;
   short min;                //negative peak value for each pixel.
   short max;                //positive peak value for each pixel.
   short sample_val;

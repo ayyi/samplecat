@@ -19,10 +19,14 @@
 extern struct _app app;
 extern Filer       filer;
 extern unsigned    debug;
+static GtkWidget*  clicked_widget = NULL;
+
 static gboolean    colour_box__exists              (GdkColor*);
+static void        colour_box__set_colour          (int, GdkColor*);
 static gboolean    colour_box__on_event            (GtkWidget*, GdkEvent*, gpointer);
 static int         colour_box__drag_dataget        (GtkWidget*, GdkDragContext*, GtkSelectionData*, guint info, guint time, gpointer);
 static GtkWidget*  colour_box__make_context_menu   ();
+static int         colour_box__lookup_idx          (GtkWidget*);
 static void        menu__open_selector             (GtkMenuItem*, gpointer);
 
 struct _colour_box self = {NULL};
@@ -51,9 +55,9 @@ colour_box_new(GtkWidget* parent)
 		g_signal_connect(G_OBJECT(e), "drag-data-get", G_CALLBACK(colour_box__drag_dataget), GUINT_TO_POINTER(i));
 		g_signal_connect(G_OBJECT(e), "event", G_CALLBACK(colour_box__on_event), GUINT_TO_POINTER(i));
 
-		gtk_widget_show(e);
+		gtk_widget_set_no_show_all(e, true);
 
-		gtk_box_pack_end(GTK_BOX(parent), e, TRUE, TRUE, 0);
+		gtk_box_pack_end(GTK_BOX(parent), e, true, true, 0);
 	}
 
 	if(!self.menu) self.menu = colour_box__make_context_menu();
@@ -70,14 +74,19 @@ colour_box_update()
 	GdkColor colour;
 	char colour_string[16];
 	for(i=PALETTE_SIZE-1;i>=0;i--){
-		snprintf(colour_string, 16, "#%s", app.config.colour[i]);
-		if(!gdk_color_parse(colour_string, &colour)) warnprintf("colour_box_update(): parsing of colour string failed.\n");
-		dbg(1, "colour: %x %x %x", colour.red, colour.green, colour.blue);
+		GtkWidget* widget = app.colour_button[i];
+		if(app.colour_button[i] && strlen(app.config.colour[i])){
+			dbg(0, "%i %s", i, app.config.colour[i]);
+			snprintf(colour_string, 16, "#%s", app.config.colour[i]);
+			if(!gdk_color_parse(colour_string, &colour)) warnprintf("colour_box_update(): parsing of colour string failed.\n");
+			dbg(1, "colour: %x %x %x", colour.red, colour.green, colour.blue);
 
-		if(app.colour_button[i]){
 			if(colour.red != app.colour_button[i]->style->bg[GTK_STATE_NORMAL].red) 
 				gtk_widget_modify_bg(app.colour_button[i], GTK_STATE_NORMAL, &colour);
+
+			gtk_widget_show(widget);
 		}
+		else gtk_widget_hide(widget);
 	}
 }
 
@@ -94,7 +103,7 @@ colour_box__exists(GdkColor* colour)
 		if(strlen(app.config.colour[i])){
 			snprintf(string, 8, "#%s", app.config.colour[i]);
 			if(!gdk_color_parse(string, &existing_colour)) warnprintf("%s(): parsing of colour string failed (%s).\n", __func__, string);
-			if(is_similar(colour, &existing_colour, 0x3ff)) return true;
+			if(is_similar(colour, &existing_colour, 0x10)) return true;
 		}
 	}
 
@@ -107,7 +116,7 @@ colour_box_add(GdkColor* colour)
 {
 	static unsigned slot = 0;
 
-	if(slot >= PALETTE_SIZE){ if(debug) warnprintf("colour_box_add() colour_box full.\n"); return FALSE; }
+	if(slot >= PALETTE_SIZE){ if(debug) warnprintf("%s(): colour_box full.\n", __func__); return false; }
 
 	//only add a colour if a similar colour isnt already there.
 	if(colour_box__exists(colour)){ dbg(1, "dup colour - not adding..."); return false; }
@@ -117,12 +126,23 @@ colour_box_add(GdkColor* colour)
 }
 
 
+static void
+colour_box__set_colour(int i, GdkColor* colour)
+{
+	g_return_if_fail(i < PALETTE_SIZE);
+	g_return_if_fail(app.colour_button[i]);
+	hexstring_from_gdkcolor(app.config.colour[i], colour);
+	gtk_widget_modify_bg(app.colour_button[i], GTK_STATE_NORMAL, colour);
+}
+
+
 static gboolean
 colour_box__on_event(GtkWidget* widget, GdkEvent* event, gpointer user_data)
 {
 	switch (event->type){
 		case GDK_BUTTON_PRESS:
 			dbg (1, "button=%i", event->button.type);
+			clicked_widget = widget;
 			if(event->button.button == 3){
 				gtk_menu_popup(GTK_MENU(self.menu), NULL, NULL, 0, event, event->button.button, (guint32)(event->button.time));
 				return HANDLED;
@@ -141,7 +161,7 @@ static int
 colour_box__drag_dataget(GtkWidget *widget, GdkDragContext *drag_context, GtkSelectionData *data, guint info, guint time, gpointer user_data)
 {
 	char text[16];
-	gboolean data_sent = FALSE;
+	gboolean data_sent = false;
 	PF;
 
 	int box_num = GPOINTER_TO_UINT(user_data); //box_num corresponds to the colour index.
@@ -172,7 +192,7 @@ colour_box__make_context_menu()
 			GtkWidget* ico = gtk_image_new_from_pixbuf(pixbuf);
 			gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(menu_item), ico);
 		}
-		if(item->callback) g_signal_connect (G_OBJECT(menu_item), "activate", G_CALLBACK(item->callback), NULL);
+		if(item->callback) g_signal_connect (G_OBJECT(menu_item), "activate", G_CALLBACK(item->callback), GINT_TO_POINTER(i));
 	}
 
 	gtk_widget_show_all(menu);
@@ -180,22 +200,46 @@ colour_box__make_context_menu()
 }
 
 
+static int
+colour_box__lookup_idx(GtkWidget* widget)
+{
+	int i; for(i=0;i<PALETTE_SIZE;i++){
+		if(app.colour_button[i] == widget) return i;
+	}
+	return -1;
+}
+
+
 static void
 menu__open_selector(GtkMenuItem* menuitem, gpointer user_data)
 {
-	void on_colour_change(GtkColorSelection* colorselection, gpointer user_dat)
+	dbg(0, "data=%p", user_data);
+	void on_colour_change(GtkColorSelection* colorselection, gpointer user_data)
 	{
-		dbg(0, "!");
+		int box_idx = colour_box__lookup_idx(clicked_widget);
+		if(box_idx > -1){
+			GdkColor colour;
+			gtk_color_selection_get_current_color (colorselection, &colour);
+			colour_box__set_colour(box_idx, &colour);
+		}
+	}
+
+	void on_ok(GtkButton* button, gpointer user_data)
+	{
+		dbg(0, "...");
+		gtk_widget_destroy(gtk_widget_get_toplevel((GtkWidget*)button));
 	}
 
 	GtkWidget* window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	GtkWidget* v = gtk_vbox_new(NON_HOMOGENOUS, 2);
 	gtk_container_add((GtkContainer*)window, v);
 	GtkWidget* sel = gtk_color_selection_new();
+	GtkWidget* b = gtk_button_new_with_label("Ok");
 	gtk_box_pack_start((GtkBox*)v, sel, EXPAND_FALSE, FILL_FALSE, 0);
-	gtk_box_pack_start((GtkBox*)v, gtk_button_new_with_label("Ok"), EXPAND_FALSE, FILL_FALSE, 0);
+	gtk_box_pack_start((GtkBox*)v, b, EXPAND_FALSE, FILL_FALSE, 0);
 	gtk_widget_show_all(window);
-	g_signal_connect (G_OBJECT(sel), "color-changed", G_CALLBACK(on_colour_change), NULL);
+	g_signal_connect (G_OBJECT(b), "clicked", G_CALLBACK(on_ok), user_data);
+	g_signal_connect (G_OBJECT(sel), "color-changed", G_CALLBACK(on_colour_change), user_data);
 }
 
 

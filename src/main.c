@@ -78,16 +78,14 @@ char bold  [16];
 
 static const struct option long_options[] = {
   { "input",            1, NULL, 'i' },
-  { "offline",          0, NULL, 'o' },
   { "help",             0, NULL, 'h' },
   { "verbose",          1, NULL, 'v' },
 };
 
-static const char* const short_options = "i:ohv:";
+static const char* const short_options = "i:hv:";
 
 static const char* const usage =
   "Usage: %s [ options ]\n"
-  " -o --offline   dont connect to core. For testing only.\n"
   " -v --verbose   show more information.\n"
   " -h --help      show this usage information and quit.\n"
   "\n";
@@ -103,7 +101,7 @@ struct _backend backend = {NULL, NULL};
 void
 app_init()
 {
-	app.loaded           = FALSE;
+	app.loaded           = false;
 	//app.fg_colour.pixel = 0;
 	app.dir_tree         = NULL;
 	app.statusbar        = NULL;
@@ -115,7 +113,8 @@ app_init()
 	app.msg_queue        = NULL;
 
 	int i; for(i=0;i<PALETTE_SIZE;i++) app.colour_button[i] = NULL;
-	app.colourbox_dirty = TRUE;
+	app.colourbox_dirty = true;
+	memset(app.config.colour, 0, PALETTE_SIZE * 8);
 
 	app.config_filename = g_strdup_printf("%s/." PACKAGE, g_get_home_dir());
 }
@@ -184,7 +183,7 @@ main(int argc, char** argv)
 	dbg(3, "creating overview thread...");
 	GError *error = NULL;
 	app.msg_queue = g_async_queue_new();
-	if(!g_thread_create(overview_thread, NULL, FALSE, &error)){
+	if(!g_thread_create(overview_thread, NULL, false, &error)){
 		perr("error creating thread: %s\n", error->message, __func__);
 		g_error_free(error);
 	}
@@ -211,7 +210,7 @@ main(int argc, char** argv)
 	g_idle_add((GSourceFunc)tracker__init, NULL);
 #endif
 
-	app.loaded = TRUE;
+	app.loaded = true;
 	dbg(1, "loaded");
 
 	gtk_main();
@@ -287,14 +286,17 @@ path_cell_data_func(GtkTreeViewColumn *tree_column, GtkCellRenderer *cell, GtkTr
 	gtk_tree_model_get(GTK_TREE_MODEL(app.store), iter, COL_COLOUR, &colour_index, -1);
 	if(colour_index > PALETTE_SIZE){ warnprintf("path_cell_data_func(): bad colour data. Index out of range (%u).\n", colour_index); return; }
 
-	char colour[16];
-	snprintf(colour, 16, "#%s", app.config.colour[colour_index]);
-	//printf("path_cell_data_func(): colour=%i %s\n", colour_index, colour);
+	char colour[16] = "";
+	if(strlen(app.config.colour[colour_index])){
+		snprintf(colour, 16, "#%s", app.config.colour[colour_index]);
+		//printf("path_cell_data_func(): colour=%i %s\n", colour_index, colour);
 
-	if(strlen(colour) != 7 ){ perr("bad colour string (%s) index=%u.\n", colour, colour_index); return; }
+		if(strlen(colour) != 7 ){ perr("bad colour string (%s) index=%u.\n", colour, colour_index); return; }
+	}
+	else colour_index = 0;
 
-	if(colour_index) g_object_set(cell, "cell-background-set", TRUE, "cell-background", colour, NULL);
-	else             g_object_set(cell, "cell-background-set", FALSE, NULL);
+	if(colour_index) g_object_set(cell, "cell-background-set", true, "cell-background", colour, NULL);
+	else             g_object_set(cell, "cell-background-set", false, NULL);
 }
 
 
@@ -309,17 +311,17 @@ path_cell_bg_lighter(GtkTreeViewColumn *tree_column, GtkCellRenderer *cell, GtkT
 		colour_index = 4; //FIXME temp
 	}
 
-	GdkColor colour, colour2;
-	char hexstring[8];
-	snprintf(hexstring, 8, "#%s", app.config.colour[colour_index]);
-	if(!gdk_color_parse(hexstring, &colour)) warnprintf("path_cell_bg_lighter(): parsing of colour string failed.\n");
-	colour_lighter(&colour2, &colour);
+	if(strlen(app.config.colour[colour_index])){
+		GdkColor colour, colour2;
+		char hexstring[8];
+		snprintf(hexstring, 8, "#%s", app.config.colour[colour_index]);
+		if(!gdk_color_parse(hexstring, &colour)) warnprintf("path_cell_bg_lighter(): parsing of colour string failed.\n");
+		colour_lighter(&colour2, &colour);
 
-	//printf("path_cell_bg_lighter(): index=%i #%s %x %x %x\n", colour_index, hexstring, colour.red, colour.green, colour.blue);
+		//printf("path_cell_bg_lighter(): index=%i #%s %x %x %x\n", colour_index, hexstring, colour.red, colour.green, colour.blue);
 
-	//if(strlen(colour) != 7 ){ perr("bad colour string (%s) index=%u.\n", colour, colour_index); return; }
-
-	g_object_set(cell, "cell-background-set", TRUE, "cell-background-gdk", &colour2, NULL);
+		g_object_set(cell, "cell-background-set", true, "cell-background-gdk", &colour2, NULL);
+	}
 }
 
 
@@ -453,12 +455,12 @@ tag_cell_data(GtkTreeViewColumn *tree_column, GtkCellRenderer *cell, GtkTreeMode
 			//printf("tag_cell_data(): setting text: %s\n", text);
 			celltext->text = text;
 			celltext->extra_attrs = attrs;
-			hypercell->markup_set = TRUE;
+			hypercell->markup_set = true;
 		}
 	}
 	}
 	//else g_object_set(cell, "markup", "outside", NULL);
-	//else hypercell->markup_set = FALSE;
+	//else hypercell->markup_set = false;
 
 	g_free(path_str);
 
@@ -478,7 +480,7 @@ tag_cell_data(GtkTreeViewColumn *tree_column, GtkCellRenderer *cell, GtkTreeMode
 			//if (celltext->extra_attrs) pango_attr_list_unref (celltext->extra_attrs);
 			celltext->text = text;
 			celltext->extra_attrs = attrs;
-	hypercell->markup_set = TRUE;
+	hypercell->markup_set = true;
 	*/
 }
 
@@ -713,7 +715,7 @@ row_set_tags_from_id(int id, GtkTreeRowReference* row_ref, const char* tags_new)
 	printf("on_category_set_clicked(): sql=%s\n", sql);
 	if(mysql_query(&app.mysql, sql)){
 		perr("update failed! sql=%s\n", sql);
-		return FALSE;
+		return false;
 	}
 
 	//update the store:
@@ -726,27 +728,27 @@ row_set_tags_from_id(int id, GtkTreeRowReference* row_ref, const char* tags_new)
 
 		gtk_list_store_set(app.store, &iter, COL_KEYWORDS, tags_new, -1);
 	}
-	else { perr("cannot get row path: id=%i.\n", id); return FALSE; }
+	else { perr("cannot get row path: id=%i.\n", id); return false; }
 
-	return TRUE;
+	return true;
 }
 
 
 gboolean
 row_clear_tags(GtkTreeIter* iter, int id)
 {
-	if(!id){ perr("bad arg: id\n"); return FALSE; }
+	if(!id){ perr("bad arg: id\n"); return false; }
 
 	char sql[1024];
 	snprintf(sql, 1024, "UPDATE samples SET keywords='' WHERE id=%i", id);
 	printf("row_clear_tags(): sql=%s\n", sql);
 	if(mysql_query(&app.mysql, sql)){
 		perr("update failed! sql=%s\n", sql);
-		return FALSE;
+		return false;
 	}
 	//update the store:
 	gtk_list_store_set(app.store, iter, COL_KEYWORDS, "", -1);
-	return TRUE;
+	return true;
 }
 
 
@@ -794,7 +796,7 @@ new_search(GtkWidget *widget, gpointer userdata)
 	const gchar* text = gtk_entry_get_text(GTK_ENTRY(app.search));
 	
 	do_search((gchar*)text, app.search_dir);
-	return FALSE;
+	return false;
 }
 
 
@@ -805,8 +807,8 @@ add_file(char* path)
 	uri must be "unescaped" before calling this fn. Method string must be removed.
 	*/
 	dbg(0, "%s", path);
-	if(!db__is_connected()) return FALSE;
-	gboolean ok = TRUE;
+	if(!db__is_connected()) return false;
+	gboolean ok = true;
 
 	sample* sample = sample_new(); //free'd after db and store are updated.
 	snprintf(sample->filename, 256, "%s", path);
@@ -828,7 +830,7 @@ add_file(char* path)
 	if(!strcmp(extn, "rfl")){
 		printf("cannot add file: file type \"%s\" not supported.\n", extn);
 		statusbar_print(1, "cannot add file: rfl files not supported.");
-		ok = FALSE;
+		ok = false;
 		goto out;
 	}
 
@@ -836,20 +838,20 @@ add_file(char* path)
 
 	if(!strcmp(mime_type->media_type, "text")){
 		printf("ignoring text file...\n");
-		ok = FALSE;
+		ok = false;
 		goto out;
 	}
 
 	if(!strcmp(mime_string, "audio/mpeg")){
 		printf("cannot add file: file type \"%s\" not supported.\n", mime_string);
 		statusbar_print(1, "cannot add file: mpeg files not supported.");
-		ok = FALSE;
+		ok = false;
 		goto out;
 	}
 	if(!strcmp(mime_string, "application/x-par2")){
 		printf("cannot add file: file type \"%s\" not supported.\n", mime_string);
 		statusbar_print(1, "cannot add file: mpeg files not supported.");
-		ok = FALSE;
+		ok = false;
 		goto out;
 	}
 
@@ -898,7 +900,7 @@ add_file(char* path)
 		on_directory_list_changed();
 
 	}else{
-		ok = FALSE;
+		ok = false;
 	}
 
 out:
@@ -915,7 +917,7 @@ add_dir(char *uri)
 
 	//GDir* dir = g_dir_open(const gchar *path, guint flags, GError **error);
 
-	return FALSE;
+	return false;
 }
 
 
@@ -943,7 +945,7 @@ get_file_info_sndfile(sample* sample)
 	if(!(sffile = sf_open(filename, SFM_READ, &sfinfo))){
 		dbg(0, "not able to open input file %s.", filename);
 		puts(sf_strerror(NULL));    // print the error message from libsndfile:
-		return FALSE;
+		return false;
 	}
 
 	char chanwidstr[64];
@@ -955,10 +957,10 @@ get_file_info_sndfile(sample* sample)
 	sample->sample_rate = sfinfo.samplerate;
 	sample->length      = (sfinfo.frames * 1000) / sfinfo.samplerate;
 
-	if(sample->channels<1 || sample->channels>100){ dbg(0, "bad channel count: %i", sample->channels); return FALSE; }
+	if(sample->channels<1 || sample->channels>100){ dbg(0, "bad channel count: %i", sample->channels); return false; }
 	if(sf_close(sffile)) perr("bad file close.\n");
 
-	return TRUE;
+	return true;
 }
 
 
@@ -987,7 +989,7 @@ on_overview_done(gpointer data)
 	} else warnprintf("%s(): rowref not set!", __func__);
 
 	sample_free(sample);
-	return FALSE; //source should be removed.
+	return false; //source should be removed.
 }
 
 
@@ -1227,7 +1229,7 @@ make_context_menu()
 
 	menu_item = gtk_menu_item_new_with_label ("Open");
 	gtk_menu_shell_append (GTK_MENU_SHELL(menu), menu_item);
-	gtk_widget_set_sensitive(GTK_WIDGET(menu_item), FALSE);
+	gtk_widget_set_sensitive(GTK_WIDGET(menu_item), false);
 	gtk_widget_show (menu_item);
 
 	//-------
@@ -1351,7 +1353,7 @@ treeview_on_motion(GtkWidget *widget, GdkEventMotion *event, gpointer user_data)
 						if (joined && !pango_parse_markup(joined, -1, 0, &attrs, &text, NULL, &error)){
 							g_warning("Failed to set cell text from markup due to error parsing markup: %s", error->message);
 							g_error_free(error);
-							return FALSE;
+							return false;
 						}
 
 						//if (celltext->text) g_free (celltext->text);
@@ -1360,7 +1362,7 @@ treeview_on_motion(GtkWidget *widget, GdkEventMotion *event, gpointer user_data)
 						printf("treeview_on_motion(): setting text: %s\n", text);
 						//celltext->text = text;
 						//celltext->extra_attrs = attrs;
-						//hypercell->markup_set = TRUE;
+						//hypercell->markup_set = true;
 						gtk_list_store_set(app.store, &iter, COL_KEYWORDS, joined, -1);
 
 						if (joined) g_free(joined);
@@ -1388,7 +1390,7 @@ treeview_on_motion(GtkWidget *widget, GdkEventMotion *event, gpointer user_data)
 
 	dbg(0, "setting rowref=%p", prev_row_ref);
 	app.mouseover_row_ref = prev_row_ref;
-	return FALSE;
+	return false;
 }
 
 
@@ -1416,7 +1418,7 @@ treeview_get_cell(GtkTreeView *view, guint x, guint y, GtkCellRenderer **cell)
 
 	g_list_free(columns);
 
-	if(colm == NULL) return FALSE; // not found
+	if(colm == NULL) return false; // not found
 
 	// (2) find the cell renderer within the column 
 
@@ -1432,14 +1434,14 @@ treeview_get_cell(GtkTreeView *view, guint x, guint y, GtkCellRenderer **cell)
 		if(x >= colm_x && x < (colm_x + width)){
 			*cell = checkcell;
 			g_list_free(cells);
-			return TRUE;
+			return true;
 		}
 
 		colm_x += width;
 	}
 
 	g_list_free(cells);
-	return FALSE; // not found
+	return false; // not found
 }
 
 
@@ -1463,8 +1465,8 @@ treeview_get_tags_cell(GtkTreeView *view, guint x, guint y, GtkCellRenderer **ce
 
 	g_list_free(columns);
 
-	if(colm == NULL) return FALSE; // not found
-	if(colm != app.col_tags) return FALSE;
+	if(colm == NULL) return false; // not found
+	if(colm != app.col_tags) return false;
 
 	// (2) find the cell renderer within the column 
 
@@ -1484,7 +1486,7 @@ treeview_get_tags_cell(GtkTreeView *view, guint x, guint y, GtkCellRenderer **ce
 		if(y >= cell_rect.y && y < (cell_rect.y + cell_rect.height)){
 			*cell = checkcell;
 			g_list_free(cells);
-			return TRUE;
+			return true;
 		}
 
 		//colm_y += height;
@@ -1492,7 +1494,7 @@ treeview_get_tags_cell(GtkTreeView *view, guint x, guint y, GtkCellRenderer **ce
 
 	g_list_free(cells);
 	printf("not found in column. cell_height=%i\n", cell_rect.height);
-	return FALSE; // not found
+	return false; // not found
 }
 
 
@@ -1512,7 +1514,7 @@ keyword_is_dupe(char* new, char* existing)
 	//gint g_ascii_strncasecmp(const gchar *s1, const gchar *s2, gsize n);
 	//gchar*      g_utf8_casefold(const gchar *str, gssize len);
 
-	gboolean found = FALSE;
+	gboolean found = false;
 
 	//split the existing keyword string into separate words.
 	gchar** split = g_strsplit(existing, " ", 0);
@@ -1520,7 +1522,7 @@ keyword_is_dupe(char* new, char* existing)
 	while(split[word_index]){
 		if(!strcmp(split[word_index], new)){
 			dbg(0, "'%s' already in string '%s'", new, existing);
-			found = TRUE;
+			found = true;
 			break;
 		}
 		word_index++;
@@ -1541,7 +1543,7 @@ colour_drag_datareceived(GtkWidget *widget, GdkDragContext *drag_context,
 {
   printf("colour_drag_colour_drag_datareceived()!\n");
 
-  return FALSE;
+  return false;
 }
 */
 
@@ -1613,9 +1615,9 @@ tag_edit_stop(GtkWidget *widget, GdkEventCrossing *event, gpointer user_data)
   Currently it works ok if focus is removed before calling.
   */
 
-  //static gboolean busy = FALSE;
+  //static gboolean busy = false;
   //if(busy){"track_label_edit_stop(): busy!\n"; return;} //only run once at a time!
-  //busy = TRUE;
+  //busy = true;
 
   GtkWidget* edit = app.inspector->edit;
   GtkWidget* parent = app.inspector->tags_ev;
@@ -1652,7 +1654,7 @@ tag_edit_stop(GtkWidget *widget, GdkEventCrossing *event, gpointer user_data)
   gtk_widget_unref(app.inspector->tags); //remove 'artificial' ref added in edit_start.
   
   dbg(0, "finished.");
-  //busy = FALSE;
+  //busy = false;
 }
 
 
@@ -1665,7 +1667,7 @@ on_directory_list_changed()
 	*/
 
 	g_idle_add(dir_tree_update, NULL);
-	return FALSE;
+	return false;
 }
 
 
@@ -1674,7 +1676,7 @@ toggle_recursive_add(GtkWidget *widget, gpointer user_data)
 {
 	PF;
 	if(app.add_recursive) app.add_recursive = false; else app.add_recursive = true;
-	return FALSE;
+	return false;
 }
 
 
@@ -1810,7 +1812,7 @@ config_save()
 	if(!(fp = fopen(app.config_filename, "w"))){
 		errprintf("cannot open config file for writing (%s).\n", app.config_filename);
 		statusbar_printf(1, "cannot open config file for writing (%s).", app.config_filename);
-		return FALSE;
+		return false;
 	}
 	if(fprintf(fp, "%s", string) < 0){
 		errprintf("error writing data to config file (%s).\n", app.config_filename);
@@ -1818,7 +1820,7 @@ config_save()
 	}
 	fclose(fp);
 	g_free(string);
-	return TRUE;
+	return true;
 }
 
 

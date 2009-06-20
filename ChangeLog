@@ -1,3 +1,12 @@
+20090610
+-added ability to change colourbox colours.
+-update overviews on colour change
+
+20090526
+-added missing header files.
+-database refactoring.
+-fixed '///' file-paths on import.
+
 20090308
 -merged upstream changes into dir.c (mostly inotify stuff)
 -ayyi updates and fixes

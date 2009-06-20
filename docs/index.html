@@ -35,11 +35,21 @@ MySql is used for the database.
 <p>
 Currently, basic functionality is working, but the application lacks the bells and whistles to make it a serious tool.
 </p>
+
 <p>
-  <strong>20081219</strong>: Have been experimenting with support for <a href="http://projects.gnome.org/tracker/">Tracker</a>. Hope to be able to add a tracker thumbnailer.
+<strong>20090610</strong>: Added ability to change colourbox colours. Update overviews on colour change.
 </p>
 <p>
-<strong>20080920</strong>: Added support for keyboard shortuts using GimpAction. Currently only CTL-Q / CTL-W to quit is used. Initial Ayyi support added with configure option. Connects to server, but does nothing else.
+<strong>20090526</strong>: Added missing header files, database refactoring, fixed '///' file-paths on import.
+</p>
+<p>
+<strong>20090308</strong>: merged upstream changes into file manager (mostly inotify stuff).
+</p>
+<p>
+<strong>20081219</strong>: Have been experimenting with support for <a href="http://projects.gnome.org/tracker/">Tracker</a>. Hope to be able to add a tracker thumbnailer. It might be nice to be a able to use Tracker as a backend.
+</p>
+<p>
+<strong>20080920</strong>: Added support for keyboard shortcuts using GimpAction. Currently only CTL-Q / CTL-W to quit is used. Initial Ayyi support added with configure option. Connects to server, but does nothing else.
 </p>
 <p>
 <strong>20080910</strong>: Changed directory tree to use the home directory as its root instead of '/'. Added limit to number of database items showable at once
@@ -52,12 +62,6 @@ Currently, basic functionality is working, but the application lacks the bells a
 </p>
 <p>
 <strong>20070922</strong>: Fixed dnd import bug, and added some more simple file management functionality.
-</p>
-<p>
-<strong>20070907</strong>: Gnome-vfs dependency removed. Initial support for moving and copying samples added.
-</p>
-<p>
-<strong>20070906</strong>: Problems reported linking against libart, so libart has been removed as a dependency. Drawing is now done with Cairo. Tarball updated.
 </p>
 
 <h3>features</h3>
@@ -75,7 +79,7 @@ Currently, basic functionality is working, but the application lacks the bells a
 
 <h3>installation</h3>
 <ul>
-  <li><a href="http://orford.org/assets/samplecat-0.0.5.tar.gz">download source</a> (or use the <a href="http://orford.org/assets/samplecat-0.0.5.ebuild">gentoo ebuild</a>)
+  <li><a href="http://orford.org/assets/samplecat-0.0.6.tar.gz">download source</a> (or use the <a href="http://orford.org/assets/samplecat-0.0.6.ebuild">gentoo ebuild</a>)
   <li>untar, configure, make, make install.
   <li>dependencies: mysqlclient, gtk+2.4, jack, libsndfile.
 </ul>
@@ -93,7 +97,7 @@ Currently, basic functionality is working, but the application lacks the bells a
 <h3>limitations</h3>
 <ul>
   <li>currently, audtioning is stereo only. Files with more than 2 channels cannot be auditioned.
-  <li>Auditioning is done at the system sample rate with no resampling.
+  <li>Auditioning is done at the system sample rate with no resampling and no volume control.
   <li>mySql is currently the only database supported.
 </ul>
 

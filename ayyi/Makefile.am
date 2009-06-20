@@ -46,5 +46,5 @@ libayyi_a_SOURCES = \
 	engine_proxy.h \
 	interface.h
 
-EXTRA_DIST =
+EXTRA_DIST = ayyi_server.h dbus_marshallers.h dbus_marshallers.c
 
