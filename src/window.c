@@ -40,12 +40,11 @@ static void       window_on_allocate              (GtkWidget*, gpointer);
 static gboolean   window_on_configure             (GtkWidget*, GdkEventConfigure*, gpointer);
 static gboolean   filter_new();
 static GtkWidget* scrolled_window_new             ();
-static GtkWidget* message_panel__new              ();
-static GtkWidget* message_panel__add_msg          (const gchar* msg, const gchar* stock_id);
 static void       window_on_fileview_row_selected (GtkTreeView*, gpointer);
 static void       menu__add_to_db                 (GtkMenuItem*, gpointer);
 static void       make_fm_menu_actions();
 static gboolean   dir_tree_on_link_selected       (GObject*, DhLink*, gpointer data);
+static GtkWidget* message_panel__new              ();
 
 
 struct _accel menu_keys[] = {
@@ -136,7 +135,7 @@ GtkWindow
 	gtk_paned_add1(GTK_PANED(r_vpaned), scroll);
 
 	listview__new();
-	if(!db__is_connected()) gtk_widget_set_no_show_all(app.view, true); //dont show main view if no database.
+	if(0 && !db__is_connected()) gtk_widget_set_no_show_all(app.view, true); //dont show main view if no database.
 	gtk_container_add(GTK_CONTAINER(app.scroll), app.view);
 
 	//--------
@@ -257,8 +256,7 @@ window_on_allocate(GtkWidget *win, gpointer user_data)
 		if(colour_lighter(&colour, &colour)) colour_box_add(&colour);
 		if(colour_lighter(&colour, &colour)) colour_box_add(&colour);
 
-		gdk_color_parse("#5f5eff", &colour);
-		if(colour_box_add(&colour)) dbg(0, "add ok!"); else dbg(0, "add bad!!!!!!!!!!");
+		gdk_color_parse("#5f5eff", &colour); //temp!
 
 		//make modifier colours:
 		colour_get_style_bg(&app.bg_colour_mod1, GTK_STATE_NORMAL);
@@ -273,7 +271,7 @@ window_on_allocate(GtkWidget *win, gpointer user_data)
 		g_object_set(app.cell1, "foreground-gdk", &app.fg_colour, "foreground-set", TRUE, NULL);
 
 		if(is_similar(&app.bg_colour_mod1, &app.fg_colour, 0xFF)) perr("colours not set properly!");
-		dbg(0, "%s %s", gdkcolor_get_hexstring(&app.bg_colour_mod1), gdkcolor_get_hexstring(&app.fg_colour));
+		dbg(2, "%s %s", gdkcolor_get_hexstring(&app.bg_colour_mod1), gdkcolor_get_hexstring(&app.fg_colour));
 		if(app.fm_view) view_details_set_alt_colours(VIEW_DETAILS(app.fm_view), &app.bg_colour_mod1, &app.fg_colour);
 
 		colour_box_update();
@@ -434,7 +432,7 @@ scrolled_window_new()
 }
 
 
-static GtkWidget*
+GtkWidget*
 message_panel__add_msg(const gchar* msg, const gchar* stock_id)
 {
 	//TODO expire old messages. Limit to 5 and add close button?
@@ -451,6 +449,8 @@ message_panel__add_msg(const gchar* msg, const gchar* stock_id)
 
 	GtkWidget* label = gtk_label_new(msg);
 	gtk_box_pack_start((GtkBox*)hbox, label, FALSE, FALSE, 2);
+
+	gtk_box_pack_start((GtkBox*)app.msg_panel, hbox, FALSE, FALSE, 2);
 	return hbox;
 }
 
@@ -458,11 +458,18 @@ message_panel__add_msg(const gchar* msg, const gchar* stock_id)
 static GtkWidget*
 message_panel__new()
 {
+	PF;
 	GtkWidget* vbox = app.msg_panel = gtk_vbox_new(FALSE, 2);
 
-	char* msg; msg = db__is_connected() ? "" : "no database available";
+#if 0
+#ifndef USE_TRACKER
+	char* msg = db__is_connected() ? "" : "no database available";
+#else
+	char* msg = "";
+#endif
 	GtkWidget* hbox = message_panel__add_msg(msg, GTK_STOCK_INFO);
 	gtk_box_pack_start((GtkBox*)vbox, hbox, FALSE, FALSE, 2);
+#endif
 
 	if(db__is_connected()) gtk_widget_set_no_show_all(app.msg_panel, true); //initially hidden.
 	return vbox;

@@ -76,10 +76,9 @@ colour_box_update()
 	for(i=PALETTE_SIZE-1;i>=0;i--){
 		GtkWidget* widget = app.colour_button[i];
 		if(app.colour_button[i] && strlen(app.config.colour[i])){
-			dbg(0, "%i %s", i, app.config.colour[i]);
 			snprintf(colour_string, 16, "#%s", app.config.colour[i]);
-			if(!gdk_color_parse(colour_string, &colour)) warnprintf("colour_box_update(): parsing of colour string failed.\n");
-			dbg(1, "colour: %x %x %x", colour.red, colour.green, colour.blue);
+			if(!gdk_color_parse(colour_string, &colour)){ warnprintf("%s(): %i: parsing of colour string failed. %s\n", __func__, i, colour_string); continue; }
+			dbg(2, "%i colour: %x %x %x", i, colour.red, colour.green, colour.blue);
 
 			if(colour.red != app.colour_button[i]->style->bg[GTK_STATE_NORMAL].red) 
 				gtk_widget_modify_bg(app.colour_button[i], GTK_STATE_NORMAL, &colour);
@@ -116,10 +115,12 @@ colour_box_add(GdkColor* colour)
 {
 	static unsigned slot = 0;
 
+	//char d[32]; hexstring_from_gdkcolor(d, colour); dbg(0, " %i: %s", slot, d);
+
 	if(slot >= PALETTE_SIZE){ if(debug) warnprintf("%s(): colour_box full.\n", __func__); return false; }
 
 	//only add a colour if a similar colour isnt already there.
-	if(colour_box__exists(colour)){ dbg(1, "dup colour - not adding..."); return false; }
+	if(colour_box__exists(colour)){ dbg(2, "dup colour - not adding..."); return false; }
 
 	hexstring_from_gdkcolor(app.config.colour[slot++], colour);
 	return true;

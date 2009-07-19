@@ -10,6 +10,7 @@
 #include "dh-link.h"
 
 #include "typedefs.h"
+#include "src/types.h"
 #include <gqview2/typedefs.h>
 #include "support.h"
 #include "main.h"
@@ -17,6 +18,9 @@
 #include "dnd.h"
 #include "cellrenderer_hypertext.h"
 #include "inspector.h"
+#include "rox/rox_global.h"
+#include "mimetype.h"
+#include "pixmaps.h"
 #include "listview.h"
 
 extern struct _app app;
@@ -24,9 +28,10 @@ int             playback_init(sample* sample);
 void            playback_stop();
 extern int      debug;
 
-static gboolean listview__on_row_clicked(GtkWidget*, GdkEventButton*, gpointer user_data);
-static void     listview__dnd_get       (GtkWidget*, GdkDragContext*, GtkSelectionData*, guint info, guint time, gpointer data);
+static gboolean listview__on_row_clicked(GtkWidget*, GdkEventButton*, gpointer);
+static void     listview__dnd_get       (GtkWidget*, GdkDragContext*, GtkSelectionData*, guint info, guint time, gpointer);
 static gint     listview__drag_received (GtkWidget*, GdkDragContext*, gint x, gint y, GtkSelectionData*, guint info, guint time, gpointer user_data);
+static gboolean listview__on_motion     (GtkWidget*, GdkEventMotion*, gpointer);
 
 
 void
@@ -35,15 +40,15 @@ listview__new()
 	//the main pane. A treeview with a list of samples.
 
 	GtkWidget *view = app.view = gtk_tree_view_new_with_model(GTK_TREE_MODEL(app.store));
-	//g_signal_connect(view, "motion-notify-event", (GCallback)treeview_on_motion, NULL); //FIXME this is causing segfaults?
+	g_signal_connect(view, "motion-notify-event", (GCallback)listview__on_motion, NULL); //FIXME this is causing segfaults?
 	g_signal_connect(view, "drag-data-received", G_CALLBACK(listview__drag_received), NULL); //currently the window traps this before we get here.
 	g_signal_connect(view, "drag-motion", G_CALLBACK(drag_motion), NULL);
 	//gtk_tree_view_set_fixed_height_mode(GTK_TREE_VIEW(view), TRUE); //supposed to be faster. gtk >= 2.6
 
 	//set up as dnd source:
 	gtk_drag_source_set(app.view, GDK_BUTTON1_MASK | GDK_BUTTON2_MASK,
-			    dnd_file_drag_types, dnd_file_drag_types_count,
-			    GDK_ACTION_COPY | GDK_ACTION_MOVE | GDK_ACTION_ASK);
+	                    dnd_file_drag_types, dnd_file_drag_types_count,
+	                    GDK_ACTION_COPY | GDK_ACTION_MOVE | GDK_ACTION_ASK);
 	g_signal_connect(G_OBJECT(app.view), "drag_data_get", G_CALLBACK(listview__dnd_get), NULL);
 
 	//icon:
@@ -174,13 +179,6 @@ listview__new()
 }
 
 
-void
-list__update()
-{
-	do_search(NULL, NULL);
-}
-
-
 int
 listview__path_get_id(GtkTreePath* path)
 {
@@ -199,6 +197,8 @@ listview__path_get_id(GtkTreePath* path)
 void
 listview__show_db_missing()
 {
+	PF;
+	//TODO deprecated - use message window instead.
 	static gboolean done = FALSE;
 	if(done) return;
 
@@ -390,15 +390,15 @@ void
 treeview_block_motion_handler()
 {
 	if(app.view){
-		gulong id1= g_signal_handler_find(app.view,
+		gulong id1 = g_signal_handler_find(app.view,
 							   G_SIGNAL_MATCH_FUNC, // | G_SIGNAL_MATCH_DATA,
 							   0,//arrange->hzoom_handler,   //guint signal_id      ?handler_id?
 							   0,        //GQuark detail
 							   0,        //GClosure *closure
-							   treeview_on_motion, //callback
+							   listview__on_motion, //callback
 							   NULL);    //data
 		if(id1) g_signal_handler_block(app.view, id1);
-		else warnprintf("treeview_block_motion_handler(): failed to find handler.\n");
+		else warnprintf("%s(): failed to find handler.\n", __func__);
 
 		gtk_tree_row_reference_free(app.mouseover_row_ref);
 		app.mouseover_row_ref = NULL;
@@ -411,16 +411,235 @@ treeview_unblock_motion_handler()
 {
 	PF;
 	if(app.view){
-		gulong id1= g_signal_handler_find(app.view,
+		gulong id1 = g_signal_handler_find(app.view,
 							   G_SIGNAL_MATCH_FUNC, // | G_SIGNAL_MATCH_DATA,
 							   0,        //guint signal_id
 							   0,        //GQuark detail
 							   0,        //GClosure *closure
-							   treeview_on_motion, //callback
+							   listview__on_motion, //callback
 							   NULL);    //data
 		if(id1) g_signal_handler_unblock(app.view, id1);
 		else warnprintf("%s(): failed to find handler.\n", __func__);
 	}
+}
+
+
+void
+listmodel__update()
+{
+	do_search(NULL, NULL);
+}
+
+
+void
+listmodel__add_result(SamplecatResult* result)
+{
+	g_return_if_fail(result);
+
+	GdkPixbuf* pixbuf  = NULL;
+	//GdkPixdata pixdata;
+	char length[64];
+	char keywords[256];
+	char sample_name[256];
+	float samplerate; char samplerate_s[32];
+	//unsigned channels, colour;
+	gboolean online = FALSE;
+	GtkTreeIter iter;
+
+	//db__iter_to_result(result);
+
+	//deserialise the pixbuf field:
+	/*
+	pixbuf = NULL;
+	if(row[MYSQL_PIXBUF]){
+		//printf("%s(): deserializing...\n", __func__); 
+		if(gdk_pixdata_deserialize(&pixdata, lengths[4], (guint8*)row[MYSQL_PIXBUF], NULL)){
+			pixbuf = gdk_pixbuf_from_pixdata(&pixdata, TRUE, NULL);
+		}
+	}
+	*/
+
+#if 0
+	format_time(length, row[5]);
+	if(row[MYSQL_KEYWORDS]) snprintf(keywords, 256, "%s", row[MYSQL_KEYWORDS]); else keywords[0] = 0;
+	//if(row[5]==NULL) length     = 0; else length     = atoi(row[5]);
+	if(row[6]==NULL) samplerate = 0; else samplerate = atoi(row[6]); samplerate_format(samplerate_s, samplerate);
+	if(row[7]==NULL) channels   = 0; else channels   = atoi(row[7]);
+	if(row[MYSQL_ONLINE]==NULL) online = 0; else online = atoi(row[MYSQL_ONLINE]);
+	if(row[MYSQL_COLOUR]==NULL) colour = 0; else colour = atoi(row[MYSQL_COLOUR]);
+
+	strncpy(sample_name, row[MYSQL_NAME], 255);
+
+//#ifdef USE_AYYI
+	//is the file loaded in the current Ayyi song?
+	if(ayyi.got_song){
+		gchar* fullpath = g_build_filename(row[MYSQL_DIR], sample_name, NULL);
+		if(pool__file_exists(fullpath)) dbg(0, "exists"); else dbg(0, "doesnt exist");
+		g_free(fullpath);
+	}
+//#endif
+#endif
+
+	//icon (only shown if the sound file is currently available):
+	GdkPixbuf* iconbuf = NULL;
+	if(1 || online){
+		MIME_type* mime_type = mime_type_lookup(result->mime_type);
+		if(mime_type){
+			type_to_icon(mime_type);
+			if (!mime_type->image) dbg(0, "no icon.");
+			iconbuf = mime_type->image->sm_pixbuf;
+		}
+	}
+
+	//strip the homedir from the dir string:
+	char* path = result->dir ? strstr(result->dir, g_get_home_dir()) : "";
+	path = path ? path + strlen(g_get_home_dir()) + 1 : result->dir;
+
+	gtk_list_store_append(app.store, &iter);
+	//dbg(0, "name=%s", result->sample_name);
+	gtk_list_store_set(app.store, &iter, COL_ICON, iconbuf,
+	                   COL_NAME, result->sample_name,
+	                   COL_FNAME, path,
+	                   COL_IDX, result->idx,
+	                   COL_MIMETYPE, result->mime_type,
+	                   -1);
+#if 0
+#ifdef USE_AYYI
+	                   COL_AYYI_ICON, ayyi_icon,
+#endif
+	                   COL_KEYWORDS, keywords, 
+	                   COL_OVERVIEW, pixbuf, COL_LENGTH, length, COL_SAMPLERATE, samplerate_s, COL_CHANNELS, channels, 
+``                     COL_NOTES, row[MYSQL_NOTES], COL_COLOUR, colour,
+#endif
+	if(pixbuf) g_object_unref(pixbuf);
+}
+
+
+static gboolean
+listview__on_motion(GtkWidget *widget, GdkEventMotion *event, gpointer user_data)
+{
+	//static gint prev_row_num = 0;
+	static GtkTreeRowReference* prev_row_ref = NULL;
+	static gchar prev_text[256] = "";
+	app.mouse_x = event->x;
+	app.mouse_y = event->y;
+	//gdouble x = event->x; //distance from left edge of treeview.
+	//gdouble y = event->y; //distance from bottom of column heads.
+	//GdkRectangle rect;
+	//gtk_tree_view_get_cell_area(widget, GtkTreePath *path, GtkTreeViewColumn *column, &rect);
+
+	//GtkCellRenderer *cell = app.cell_tags;
+	//GList* gtk_cell_view_get_cell_renderers(GtkCellView *cell_view);
+	//GList* gtk_tree_view_column_get_cell_renderers(GtkTreeViewColumn *tree_column);
+
+	/*
+	GtkCellRenderer *cell_renderer = NULL;
+	if(treeview_get_tags_cell(GTK_TREE_VIEW(app.view), (gint)event->x, (gint)event->y, &cell_renderer)){
+		printf("%s() tags cell found!\n", __func__);
+		g_object_set(cell_renderer, "markup", "<b>important</b>", "text", NULL, NULL);
+	}
+	*/
+
+	//dbg(1, "x=%f y=%f. l=%i", x, y, rect.x, rect.width);
+
+
+	//which row are we on?
+	GtkTreePath* path;
+	GtkTreeIter iter, prev_iter;
+	//GtkTreeRowReference* row_ref = NULL;
+	if(gtk_tree_view_get_path_at_pos(GTK_TREE_VIEW(app.view), (gint)event->x, (gint)event->y, &path, NULL, NULL, NULL)){
+
+		gtk_tree_model_get_iter(GTK_TREE_MODEL(app.store), &iter, path);
+		gchar* path_str = gtk_tree_model_get_string_from_iter(GTK_TREE_MODEL(app.store), &iter);
+
+		if(prev_row_ref){
+			GtkTreePath* prev_path;
+			if((prev_path = gtk_tree_row_reference_get_path(prev_row_ref))){
+			
+				gtk_tree_model_get_iter(GTK_TREE_MODEL(app.store), &prev_iter, prev_path);
+				gchar* prev_path_str = gtk_tree_model_get_string_from_iter(GTK_TREE_MODEL(app.store), &prev_iter);
+
+				//if(row_ref != prev_row_ref){
+				//if(prev_path && (path != prev_path)){
+				if(prev_path && (atoi(path_str) != atoi(prev_path_str))){
+					dbg(0, "new row! path=%p (%s) prev_path=%p (%s)", path, path_str, prev_path, prev_path_str);
+
+					//restore text to previous row:
+					gtk_list_store_set(app.store, &prev_iter, COL_KEYWORDS, prev_text, -1);
+
+					//store original text:
+					gchar* txt;
+					gtk_tree_model_get(GTK_TREE_MODEL(app.store), &iter, COL_KEYWORDS, &txt, -1);
+					dbg(0, "text=%s", prev_text);
+					snprintf(prev_text, 256, "%s", txt);
+					g_free(txt);
+
+					/*
+					//split by word, etc:
+					if(strlen(prev_text)){
+						g_strstrip(prev_text);
+						const gchar *str = prev_text;//"<b>pre</b> light";
+						//split the string:
+						gchar** split = g_strsplit(str, " ", 100);
+						//printf("split: [%s] %p %p %p %s\n", str, split[0], split[1], split[2], split[0]);
+						int word_index = 0;
+						gchar* joined = NULL;
+						if(split[word_index]){
+							gchar word[64];
+							snprintf(word, 64, "<u>%s</u>", split[word_index]);
+							//g_free(split[word_index]);
+							split[word_index] = word;
+							joined = g_strjoinv(" ", split);
+							dbg(0, "joined: %s", joined);
+						}
+						//g_strfreev(split); //segfault - doesnt like reassigning split[word_index] ?
+
+						//g_object_set();
+						gchar *text = NULL;
+						GError *error = NULL;
+						PangoAttrList *attrs = NULL;
+
+						if (joined && !pango_parse_markup(joined, -1, 0, &attrs, &text, NULL, &error)){
+							g_warning("Failed to set cell text from markup due to error parsing markup: %s", error->message);
+							g_error_free(error);
+							return false;
+						}
+
+						//if (celltext->text) g_free (celltext->text);
+						//if (celltext->extra_attrs) pango_attr_list_unref (celltext->extra_attrs);
+
+						dbg(1, "setting text: %s", text);
+						//celltext->text = text;
+						//celltext->extra_attrs = attrs;
+						//hypercell->markup_set = true;
+						gtk_list_store_set(app.store, &iter, COL_KEYWORDS, joined, -1);
+
+						if (joined) g_free(joined);
+					}
+						*/
+
+					g_free(prev_row_ref);
+					prev_row_ref = gtk_tree_row_reference_new(GTK_TREE_MODEL(app.store), path);
+					//prev_row_ref = row_ref;
+				}
+			}else{
+				//table has probably changed. previous row is not available.
+				g_free(prev_row_ref);
+				prev_row_ref = NULL;
+			}
+
+			gtk_tree_path_free(prev_path);
+
+		}else{
+			prev_row_ref = gtk_tree_row_reference_new(GTK_TREE_MODEL(app.store), path);
+		}
+
+		gtk_tree_path_free(path);
+	}
+
+	dbg(0, "setting rowref=%p", prev_row_ref);
+	app.mouseover_row_ref = prev_row_ref;
+	return false;
 }
 
 

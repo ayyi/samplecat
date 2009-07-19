@@ -10,6 +10,7 @@
 #include <mysql/errmsg.h>
 #include "dh-link.h"
 #include "typedefs.h"
+#include "src/types.h"
 #include <gqview2/typedefs.h>
 #include "support.h"
 #include "main.h"
@@ -28,10 +29,10 @@ enum {
   MYSQL_NAME = 1,
   MYSQL_DIR = 2,
   MYSQL_KEYWORDS = 3,
-  MYSQL_PIXBUF = 4
+  MYSQL_PIXBUF = 4,
+  MYSQL_ONLINE = 8,
+  MYSQL_MIMETYPE = 10,
 };
-#define MYSQL_ONLINE 8
-#define MYSQL_MIMETYPE 10
 #define MYSQL_NOTES 11
 #define MYSQL_COLOUR 12
 
@@ -328,7 +329,6 @@ db__iter_to_result(SamplecatResult* result)
 void
 db__add_row_to_model(MYSQL_ROW row, unsigned long* lengths)
 {
-	GdkPixbuf* pixbuf  = NULL;
 	GdkPixbuf* iconbuf = NULL;
 	GdkPixdata pixdata;
 	char length[64];
@@ -347,14 +347,16 @@ db__add_row_to_model(MYSQL_ROW row, unsigned long* lengths)
 	}
 	printf("\n"); 
 	*/
+
 	//deserialise the pixbuf field:
-	pixbuf = NULL;
+	GdkPixbuf* pixbuf = NULL;
 	if(row[MYSQL_PIXBUF]){
 		//printf("%s(): deserializing...\n", __func__); 
 		if(gdk_pixdata_deserialize(&pixdata, lengths[4], (guint8*)row[MYSQL_PIXBUF], NULL)){
 			pixbuf = gdk_pixbuf_from_pixdata(&pixdata, TRUE, NULL);
 		}
 	}
+
 	format_time(length, row[5]);
 	if(row[MYSQL_KEYWORDS]) snprintf(keywords, 256, "%s", row[MYSQL_KEYWORDS]); else keywords[0] = 0;
 	//if(row[5]==NULL) length     = 0; else length     = atoi(row[5]);

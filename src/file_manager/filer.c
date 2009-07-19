@@ -408,7 +408,7 @@ update_display(Directory *dir, DirAction action, GPtrArray* items, Filer* filer_
 	switch (action)
 	{
 		case DIR_ADD:
-			dbg(0, "DIR_ADD...");
+			dbg(2, "DIR_ADD...");
 			view_add_items(view, items);
 			/* Open and resize if currently hidden */
 			//open_filer_window(filer_window);

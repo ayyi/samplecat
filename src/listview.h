@@ -21,10 +21,13 @@ enum
 };
 
 void        listview__new();
-void        list__update();
-int         listview__path_get_id(GtkTreePath* path);
+int         listview__path_get_id(GtkTreePath*);
 void        listview__show_db_missing();
-gboolean    listview__item_set_colour(GtkTreePath* path, unsigned colour);
+gboolean    listview__item_set_colour(GtkTreePath*, unsigned colour);
 
 void        treeview_block_motion_handler();
 void        treeview_unblock_motion_handler();
+
+void        listmodel__update();
+void        listmodel__add_result(SamplecatResult*);
+

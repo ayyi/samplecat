@@ -20,12 +20,12 @@ This software is licensed under the GPL. See accompanying file COPYING.
   #include "ayyi.h"
   #include "ayyi_model.h"
 #endif
+#include "typedefs.h"
 #ifdef USE_TRACKER
   //#include "tracker.h"
   #include <src/tracker_.h>
 #endif
 
-#include "typedefs.h"
 #include "mysql/mysql.h"
 #include "dh-link.h"
 #include "support.h"
@@ -96,6 +96,9 @@ struct _backend
 	void        (*search_iter_free)();
 };
 struct _backend backend = {NULL, NULL};
+#define BACKEND_IS_MYSQL (backend.search_iter_new == db__search_iter_new)
+#define BACKEND_IS_TRACKER (backend.search_iter_new == tracker__search_iter_new)
+#define BACKEND_IS_NULL (backend.search_iter_new == NULL)
 
 
 void
@@ -151,6 +154,10 @@ main(int argc, char** argv)
 				int d = atoi(optarg);
 				if(d<0 || d>5) { gwarn ("bad arg. debug=%i", d); } else debug = d;
 				break;
+			case 'h':
+				printf(usage, argv[0]);
+				exit(EXIT_SUCCESS);
+				break;
 			case '?':
 				printf("unknown option: %c\n", optopt);
 				break;
@@ -164,13 +171,12 @@ main(int argc, char** argv)
 	app.mutex = g_mutex_new();
 	gtk_init(&argc, &argv);
 
-	if(!db__connect()){
-	#ifdef QUIT_WITHOUT_DB
-		on_quit(NULL, GINT_TO_POINTER(1));
-	#endif
+	if(db__connect()){
+		set_backend(BACKEND_MYSQL);
 	}else{
-		backend.search_iter_new = db__search_iter_new;
-		backend.search_iter_free = db__search_iter_free;
+		#ifdef QUIT_WITHOUT_DB
+		on_quit(NULL, GINT_TO_POINTER(1));
+		#endif
 	}
 
 	type_init();
@@ -207,11 +213,14 @@ main(int argc, char** argv)
 #endif
 
 #ifdef USE_TRACKER
-	g_idle_add((GSourceFunc)tracker__init, NULL);
+	if(BACKEND_IS_NULL) g_idle_add((GSourceFunc)tracker__init, NULL);
+#else
+	//if(BACKEND_IS_NULL) listview__show_db_missing();
 #endif
 
 	app.loaded = true;
 	dbg(1, "loaded");
+	message_panel__add_msg("hello", GTK_STOCK_INFO);
 
 	gtk_main();
 	exit(0);
@@ -527,19 +536,21 @@ scan_dir(const char* path, int* added_count)
 	}
 }
 
-#define BACKEND_IS_MYSQL (backend.search_iter_new == db__search_iter_new)
 void
 do_search(char *search, char *dir)
 {
 	//fill the display with the results for the given search phrase.
+	PF;
 
-	//if(!db__is_connected()){ listview__show_db_missing(); return; }
-	if(!backend.search_iter_new){ listview__show_db_missing(); return; }
+	if(!backend.search_iter_new){
+		//listview__show_db_missing();
+		return;
+	}
 
 #ifdef USE_AYYI
 	GdkPixbuf* ayyi_icon = NULL;
 #endif
-	SamplecatResult* result = g_new(SamplecatResult, 1);
+	//SamplecatResult* result = g_new(SamplecatResult, 1);
 
 	if(backend.search_iter_new(search, dir)){
 
@@ -556,7 +567,6 @@ do_search(char *search, char *dir)
 
 		#define MAX_DISPLAY_ROWS 1000
 		if(BACKEND_IS_MYSQL){
-
 			int row_count = 0;
 			unsigned long *lengths;
 			MYSQL_ROW row;
@@ -571,6 +581,21 @@ do_search(char *search, char *dir)
 			}else{
 				uint32_t tot_rows = (uint32_t)mysql_affected_rows(&app.mysql);
 				statusbar_printf(1, "showing %i of %i samples", row_count, tot_rows);
+			}
+		}
+		else if(BACKEND_IS_TRACKER){
+			int row_count = 0;
+			SamplecatResult* result;
+			while((result = tracker__search_iter_next()) && row_count < MAX_DISPLAY_ROWS){
+				listmodel__add_result(result);
+				row_count++;
+			}
+			backend.search_iter_free();
+
+			if(0 && row_count < MAX_DISPLAY_ROWS){
+				statusbar_printf(1, "%i samples found.", row_count);
+			}else{
+				statusbar_printf(1, "showing %i samples", row_count);
 			}
 		}
 		/*
@@ -1267,134 +1292,6 @@ make_context_menu()
 }
 
 gboolean
-treeview_on_motion(GtkWidget *widget, GdkEventMotion *event, gpointer user_data)
-{
-	//static gint prev_row_num = 0;
-	static GtkTreeRowReference* prev_row_ref = NULL;
-	static gchar prev_text[256] = "";
-	app.mouse_x = event->x;
-	app.mouse_y = event->y;
-	//gdouble x = event->x; //distance from left edge of treeview.
-	//gdouble y = event->y; //distance from bottom of column heads.
-	//GdkRectangle rect;
-	//gtk_tree_view_get_cell_area(widget, GtkTreePath *path, GtkTreeViewColumn *column, &rect);
-
-	//GtkCellRenderer *cell = app.cell_tags;
-	//GList* gtk_cell_view_get_cell_renderers(GtkCellView *cell_view);
-	//GList* gtk_tree_view_column_get_cell_renderers(GtkTreeViewColumn *tree_column);
-
-	/*
-	GtkCellRenderer *cell_renderer = NULL;
-	if(treeview_get_tags_cell(GTK_TREE_VIEW(app.view), (gint)event->x, (gint)event->y, &cell_renderer)){
-		printf("treeview_on_motion() tags cell found!\n");
-		g_object_set(cell_renderer, "markup", "<b>important</b>", "text", NULL, NULL);
-	}
-	*/
-
-	//printf("treeview_on_motion(): x=%f y=%f. l=%i\n", x, y, rect.x, rect.width);
-
-
-	//which row are we on?
-	GtkTreePath* path;
-	GtkTreeIter iter, prev_iter;
-	//GtkTreeRowReference* row_ref = NULL;
-	if(gtk_tree_view_get_path_at_pos(GTK_TREE_VIEW(app.view), (gint)event->x, (gint)event->y, &path, NULL, NULL, NULL)){
-
-		gtk_tree_model_get_iter(GTK_TREE_MODEL(app.store), &iter, path);
-		gchar* path_str = gtk_tree_model_get_string_from_iter(GTK_TREE_MODEL(app.store), &iter);
-
-		if(prev_row_ref){
-			GtkTreePath* prev_path;
-			if((prev_path = gtk_tree_row_reference_get_path(prev_row_ref))){
-			
-				gtk_tree_model_get_iter(GTK_TREE_MODEL(app.store), &prev_iter, prev_path);
-				gchar* prev_path_str = gtk_tree_model_get_string_from_iter(GTK_TREE_MODEL(app.store), &prev_iter);
-
-				//if(row_ref != prev_row_ref){
-				//if(prev_path && (path != prev_path)){
-				if(prev_path && (atoi(path_str) != atoi(prev_path_str))){
-					dbg(0, "new row! path=%p (%s) prev_path=%p (%s)", path, path_str, prev_path, prev_path_str);
-
-					//restore text to previous row:
-					gtk_list_store_set(app.store, &prev_iter, COL_KEYWORDS, prev_text, -1);
-
-					//store original text:
-					gchar* txt;
-					gtk_tree_model_get(GTK_TREE_MODEL(app.store), &iter, COL_KEYWORDS, &txt, -1);
-					dbg(0, "text=%s", prev_text);
-					snprintf(prev_text, 256, "%s", txt);
-					g_free(txt);
-
-					/*
-					//split by word, etc:
-					if(strlen(prev_text)){
-						g_strstrip(prev_text);
-						const gchar *str = prev_text;//"<b>pre</b> light";
-						//split the string:
-						gchar** split = g_strsplit(str, " ", 100);
-						//printf("split: [%s] %p %p %p %s\n", str, split[0], split[1], split[2], split[0]);
-						int word_index = 0;
-						gchar* joined = NULL;
-						if(split[word_index]){
-							gchar word[64];
-							snprintf(word, 64, "<u>%s</u>", split[word_index]);
-							//g_free(split[word_index]);
-							split[word_index] = word;
-							joined = g_strjoinv(" ", split);
-							printf("treeview_on_motion(): joined: %s\n", joined);
-						}
-						//g_strfreev(split); //segfault - doesnt like reassigning split[word_index] ?
-
-						//g_object_set();
-						gchar *text = NULL;
-						GError *error = NULL;
-						PangoAttrList *attrs = NULL;
-
-						if (joined && !pango_parse_markup(joined, -1, 0, &attrs, &text, NULL, &error)){
-							g_warning("Failed to set cell text from markup due to error parsing markup: %s", error->message);
-							g_error_free(error);
-							return false;
-						}
-
-						//if (celltext->text) g_free (celltext->text);
-						//if (celltext->extra_attrs) pango_attr_list_unref (celltext->extra_attrs);
-
-						printf("treeview_on_motion(): setting text: %s\n", text);
-						//celltext->text = text;
-						//celltext->extra_attrs = attrs;
-						//hypercell->markup_set = true;
-						gtk_list_store_set(app.store, &iter, COL_KEYWORDS, joined, -1);
-
-						if (joined) g_free(joined);
-					}
-						*/
-
-					g_free(prev_row_ref);
-					prev_row_ref = gtk_tree_row_reference_new(GTK_TREE_MODEL(app.store), path);
-					//prev_row_ref = row_ref;
-				}
-			}else{
-				//table has probably changed. previous row is not available.
-				g_free(prev_row_ref);
-				prev_row_ref = NULL;
-			}
-
-			gtk_tree_path_free(prev_path);
-
-		}else{
-			prev_row_ref = gtk_tree_row_reference_new(GTK_TREE_MODEL(app.store), path);
-		}
-
-		gtk_tree_path_free(path);
-	}
-
-	dbg(0, "setting rowref=%p", prev_row_ref);
-	app.mouseover_row_ref = prev_row_ref;
-	return false;
-}
-
-
-gboolean
 treeview_get_cell(GtkTreeView *view, guint x, guint y, GtkCellRenderer **cell)
 {
 	//taken from the treeview tutorial:
@@ -1876,6 +1773,25 @@ on_quit(GtkMenuItem *menuitem, gpointer user_data)
 
 	dbg (1, "done.");
 	exit(exit_code);
+}
+
+
+void
+set_backend(BackendType type)
+{
+	switch(type){
+		case BACKEND_MYSQL:
+			backend.search_iter_new = db__search_iter_new;
+			backend.search_iter_free = db__search_iter_free;
+			break;
+		case BACKEND_TRACKER:
+			backend.search_iter_new = tracker__search_iter_new;
+			backend.search_iter_free = tracker__search_iter_free;
+			dbg(0, "backend is tracker.");
+			break;
+		default:
+			break;
+	}
 }
 
 

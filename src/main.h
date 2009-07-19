@@ -119,12 +119,6 @@ struct _app
 	GMutex*    mutex;
 };
 
-struct _samplecat_result
-{
-	GdkPixbuf* icon;
-	int        idx;
-};
-
 struct _palette {
   guint red[8];
   guint grn[8];
@@ -162,7 +156,6 @@ void        keywords_on_edited(GtkCellRendererText*, gchar *path_string, gchar *
 void        delete_row(GtkWidget*, gpointer user_data);
 void        update_row(GtkWidget*, gpointer user_data);
 void        edit_row  (GtkWidget*, gpointer user_data);
-gboolean    treeview_on_motion(GtkWidget *widget, GdkEventMotion *event, gpointer user_data);
 void        clear_store();
 gboolean    treeview_get_cell(GtkTreeView *view, guint x, guint y, GtkCellRenderer **cell);
 gboolean    treeview_get_tags_cell(GtkTreeView *view, guint x, guint y, GtkCellRenderer **cell);
@@ -192,4 +185,6 @@ gboolean    config_load();
 void        config_new();
 gboolean    config_save();
 void        on_quit(GtkMenuItem *menuitem, gpointer user_data);
+
+void        set_backend(BackendType);
 

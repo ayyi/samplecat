@@ -1,9 +1,9 @@
 #include "../config.h"
 #include <gtk/gtk.h>
 #include <mysql/mysql.h>
+#include "typedefs.h"
 #include "listview.h"
 #include "dh-link.h"
-#include "typedefs.h"
 #include <gqview2/typedefs.h>
 #include "support.h"
 #include "main.h"
@@ -40,7 +40,7 @@ observer__files_moved(GList* file_list, const char* dest)
 void
 observer__icon_theme()
 {
-	list__update();
+	listmodel__update();
 	vdtree_on_icon_theme_changed((ViewDirTree*)app.dir_treeview2);
 	file_manager__update_all();
 }

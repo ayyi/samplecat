@@ -13,6 +13,12 @@ typedef enum {
 	SORT_PATH
 } SortType;
 
+typedef enum {
+	BACKEND_NONE = 0,
+	BACKEND_MYSQL,
+	BACKEND_TRACKER,
+} BackendType;
+
 typedef struct _sample sample;
 typedef struct _GimpActionGroup GimpActionGroup;
 typedef struct _samplecat_result SamplecatResult;
