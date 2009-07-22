@@ -1,9 +1,9 @@
 
 gboolean    db__connect();
 gboolean    db__is_connected();
-int         db__insert(char *qry);
+int         db__insert(char* qry);
 gboolean    db__delete_row(int id);
-int         mysql_exec_sql(MYSQL*, const char *create_definition);
+int         mysql_exec_sql(MYSQL*, const char* create_definition);
 int         db__update_path(const char* old_path, const char* new_path);
 
 gboolean    db__search_iter_new(char* search, char* dir);

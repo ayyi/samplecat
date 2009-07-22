@@ -728,6 +728,7 @@ static void select_lasso(ViewDetails *view_details, GdkFunction fn)
 }
 #endif
 
+#if 0
 static gboolean
 view_details_button_release(GtkWidget *widget, GdkEventButton *ev)
 {
@@ -753,6 +754,7 @@ view_details_button_release(GtkWidget *widget, GdkEventButton *ev)
 */
 	return TRUE;
 }
+#endif
 
 static gint
 view_details_motion_notify(GtkWidget *widget, GdkEventMotion *event)

@@ -28,6 +28,12 @@ AYYI_SRC =
 AYYI_LIBS =
 endif
 
+if ENABLE_SQLITE
+SQLITE_SRC = db/sqlite.c db/sqlite.h
+else
+SQLITE_SRC =
+endif
+
 samplecat_SOURCES = \
 	typedefs.h \
 	main.c main.h file_manager/rox/rox_global.h \
@@ -49,6 +55,7 @@ samplecat_SOURCES = \
 	fscache.c fscache.h \
 	support.c support.h \
 	tracker.c tracker_.h \
+	$(SQLITE_SRC) \
 	$(AYYI_SRC) \
 	$(GQVIEW1_SRC)
 
@@ -59,5 +66,8 @@ samplecat_LDADD = \
 	$(AYYI_LIBS) \
 	$(DBUS_LDFLAGS) \
 	$(TRACKER_LDFLAGS) \
+	$(SQLITE_LDFLAGS) \
 	$(GTK_LIBS) $(DB_LIBS) $(JACK_LIBS) $(SNDFILE_LIBS) $(FLAC_LIBS) $(GTHREAD_LIBS)
+
+EXTRA_DIST = db/sqlite.c db/sqlite.h
 

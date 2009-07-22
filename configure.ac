@@ -1,5 +1,5 @@
 AC_PREREQ(2.59)
-AC_INIT([Samplecat],[0.0.6],[tim@orford.org])
+AC_INIT([Samplecat],[0.0.7],[tim@orford.org])
 AC_CONFIG_SRCDIR([src/main.c])
 AC_CONFIG_HEADER([config.h])
 AM_INIT_AUTOMAKE
@@ -65,7 +65,7 @@ DB_LIBS=`/usr/bin/mysql_config --libs`
 AC_SUBST(DB_CFLAGS)
 AC_SUBST(DB_LIBS)
 
-VFS_CFLAGS="-I/usr/include/gnome-vfs-2.0"
+VFS_CFLAGS=`pkg-config gnome-vfs-2.0 --cflags`
 VFS_LIBS="-lgnomevfs-2"
 AC_SUBST(VFS_CFLAGS)
 AC_SUBST(VFS_LIBS)
@@ -180,6 +180,19 @@ AC_SUBST(TRACKER_LDFLAGS)
 
 dnl -----------------------------------------------------------------------------
 
+AC_ARG_ENABLE(sqlite, AS_HELP_STRING([--enable-sqlite],[build with sqlite support]),enable_sqlite=$enableval,enable_sqlite=auto)
+AM_CONDITIONAL(ENABLE_SQLITE, test "$enable_sqlite" = "yes")
+if `test "$enable_sqlite" = "yes"`; then
+    AC_DEFINE(USE_SQLITE, 1, Use sqlite backend)
+fi;
+
+SQLITE_CFLAGS=`pkg-config sqlite3 --cflags`
+SQLITE_LDFLAGS=`pkg-config sqlite3 --libs`
+AC_SUBST(SQLITE_CFLAGS)
+AC_SUBST(SQLITE_LDFLAGS)
+
+dnl -----------------------------------------------------------------------------
+
 AC_ARG_ENABLE(ayyi, AS_HELP_STRING([--enable-ayyi],[build with ayyi support]),enable_ayyi=$enableval,enable_ayyi=auto)
 AM_CONDITIONAL(ENABLE_AYYI, test "$enable_ayyi" = "yes")
 if test "$enable_ayyi" = "yes"; then
@@ -217,4 +230,5 @@ AC_MSG_RESULT([Building direct flac support:     $enable_flac])
 AC_MSG_RESULT([Building dnotify support:         $have_dnotify])
 AC_MSG_RESULT([Building ayyi support:            $enable_ayyi])
 AC_MSG_RESULT([Building tracker support:         $enable_tracker])
+AC_MSG_RESULT([Building sqlite support:          $enable_sqlite])
 AC_MSG_RESULT([])

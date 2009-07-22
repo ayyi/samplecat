@@ -25,6 +25,9 @@ This software is licensed under the GPL. See accompanying file COPYING.
   //#include "tracker.h"
   #include <src/tracker_.h>
 #endif
+#ifdef USE_SQLITE
+  #include "db/sqlite.h"
+#endif
 
 #include "mysql/mysql.h"
 #include "dh-link.h"
@@ -59,6 +62,8 @@ This software is licensed under the GPL. See accompanying file COPYING.
   #define strmov(A,B) stpcpy((A),(B))
 //#endif
 
+#define SQL_LEN 66000
+
 void              dir_init();
 static GtkWidget* make_context_menu();
 
@@ -77,16 +82,19 @@ char yellow[16];
 char bold  [16];
 
 static const struct option long_options[] = {
-  { "input",            1, NULL, 'i' },
-  { "help",             0, NULL, 'h' },
+  { "no-gui",           0, NULL, 'g' },
   { "verbose",          1, NULL, 'v' },
+  { "add",              1, NULL, 'a' },
+  { "help",             0, NULL, 'h' },
 };
 
-static const char* const short_options = "i:hv:";
+static const char* const short_options = "gv:a:h";
 
 static const char* const usage =
   "Usage: %s [ options ]\n"
   " -v --verbose   show more information.\n"
+  " -g --no-gui    run as command line app.\n"
+  " -a --add       add these files.\n"
   " -h --help      show this usage information and quit.\n"
   "\n";
 
@@ -94,6 +102,7 @@ struct _backend
 {
 	gboolean    (*search_iter_new)(char* search, char* dir);
 	void        (*search_iter_free)();
+	int         (*insert)(char*);
 };
 struct _backend backend = {NULL, NULL};
 #define BACKEND_IS_MYSQL (backend.search_iter_new == db__search_iter_new)
@@ -104,16 +113,14 @@ struct _backend backend = {NULL, NULL};
 void
 app_init()
 {
-	app.loaded           = false;
-	//app.fg_colour.pixel = 0;
-	app.dir_tree         = NULL;
-	app.statusbar        = NULL;
-	app.statusbar2       = NULL;
+	memset(&app, 0, sizeof(app));
+	/*
 	app.search_phrase[0] = '\0';
 	app.search_dir       = NULL;
 	app.search_category  = NULL;
 	app.window           = NULL;
 	app.msg_queue        = NULL;
+	*/
 
 	int i; for(i=0;i<PALETTE_SIZE;i++) app.colour_button[i] = NULL;
 	app.colourbox_dirty = true;
@@ -126,11 +133,6 @@ app_init()
 int 
 main(int argc, char** argv)
 {
-#if 0
-	//make gdb break on g errors:
-	g_log_set_always_fatal( G_LOG_FLAG_RECURSION | G_LOG_FLAG_FATAL | G_LOG_LEVEL_ERROR | G_LOG_LEVEL_CRITICAL | G_LOG_LEVEL_WARNING );
-#endif
-
 	//init console escape commands:
 	sprintf(white,  "%c[0;39m", 0x1b);
 	sprintf(red,    "%c[1;31m", 0x1b);
@@ -140,6 +142,7 @@ main(int argc, char** argv)
 	sprintf(err,    "%serror!%s", red, white);
 	sprintf(warn,   "%swarning:%s", yellow, white);
 
+	g_log_set_handler (NULL, G_LOG_LEVEL_WARNING | G_LOG_LEVEL_CRITICAL | G_LOG_FLAG_FATAL | G_LOG_FLAG_RECURSION, log_handler, NULL);
 	g_log_set_handler ("Gtk", G_LOG_LEVEL_CRITICAL | G_LOG_FLAG_FATAL | G_LOG_FLAG_RECURSION, log_handler, NULL);
 
 	app_init();
@@ -154,9 +157,17 @@ main(int argc, char** argv)
 				int d = atoi(optarg);
 				if(d<0 || d>5) { gwarn ("bad arg. debug=%i", d); } else debug = d;
 				break;
+			case 'g':
+				pwarn("no-gui mode is experimental!\n");
+				app.no_gui = true;
+				break;
 			case 'h':
 				printf(usage, argv[0]);
 				exit(EXIT_SUCCESS);
+				break;
+			case 'a':
+				printf("add=%s\n", optarg);
+				app.args.add = g_strdup(optarg);
 				break;
 			case '?':
 				printf("unknown option: %c\n", optopt);
@@ -171,19 +182,44 @@ main(int argc, char** argv)
 	app.mutex = g_mutex_new();
 	gtk_init(&argc, &argv);
 
+	type_init();
+	pixmaps_init();
+	dir_init();
+
 	if(db__connect()){
 		set_backend(BACKEND_MYSQL);
+		backend.insert = db__insert;
 	}else{
 		#ifdef QUIT_WITHOUT_DB
 		on_quit(NULL, GINT_TO_POINTER(1));
 		#endif
 	}
 
-	type_init();
-	pixmaps_init();
-	dir_init();
+#ifdef USE_SQLITE
+	if(!sqlite__connect()){
+	#ifdef QUIT_WITHOUT_DB
+		on_quit(NULL, GINT_TO_POINTER(EXIT_FAILURE));
+	#endif
+	}else{
+		if(!backend.search_iter_new){
+			backend.search_iter_new = sqlite__search_iter_new;
+			backend.search_iter_free = sqlite__search_iter_free;
+			backend.insert = sqlite__insert;
+		}
+		//backend.insert = sqlite__insert; //tmp! FIXME
+		if(app.args.add){
+			add_file(app.args.add);
+		}
+		if(app.no_gui){
+			if(sqlite__search_iter_new("", NULL)){
+				sqlite__search_iter_free();
+			}
+			else gwarn("sqlite__search_iter_new failed.");
+		}
+	}
+#endif
 
-	file_manager__init();
+	if(!app.no_gui) file_manager__init();
 
 #ifndef DEBUG_NO_THREADS
 	dbg(3, "creating overview thread...");
@@ -201,11 +237,10 @@ main(int argc, char** argv)
 	                               #endif
 	                               G_TYPE_INT, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING, GDK_TYPE_PIXBUF, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_INT, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_INT);
 
-	window_new(); 
+	if(!app.no_gui) window_new(); 
+	if(!app.no_gui) app.context_menu = make_context_menu();
  
 	do_search(app.search_phrase, app.search_dir);
-
-	app.context_menu = make_context_menu();
 
 #ifdef USE_AYYI
 	ayyi_client_init();
@@ -223,7 +258,7 @@ main(int argc, char** argv)
 	message_panel__add_msg("hello", GTK_STOCK_INFO);
 
 	gtk_main();
-	exit(0);
+	exit(EXIT_SUCCESS);
 }
 
 
@@ -539,6 +574,7 @@ scan_dir(const char* path, int* added_count)
 void
 do_search(char *search, char *dir)
 {
+	PF;
 	//fill the display with the results for the given search phrase.
 	PF;
 
@@ -550,7 +586,10 @@ do_search(char *search, char *dir)
 #ifdef USE_AYYI
 	GdkPixbuf* ayyi_icon = NULL;
 #endif
-	//SamplecatResult* result = g_new(SamplecatResult, 1);
+
+#if 0
+	SamplecatResult* result = g_new(SamplecatResult, 1);
+#endif
 
 	if(backend.search_iter_new(search, dir)){
 
@@ -578,11 +617,14 @@ do_search(char *search, char *dir)
 
 			if(0 && row_count < MAX_DISPLAY_ROWS){
 				statusbar_printf(1, "%i samples found.", row_count);
+			}else if(!row_count){
+				statusbar_printf(1, "no samples found. filters: dir=%s", app.search_dir);
 			}else{
 				uint32_t tot_rows = (uint32_t)mysql_affected_rows(&app.mysql);
 				statusbar_printf(1, "showing %i of %i samples", row_count, tot_rows);
 			}
 		}
+		#ifdef USE_TRACKER
 		else if(BACKEND_IS_TRACKER){
 			int row_count = 0;
 			SamplecatResult* result;
@@ -598,6 +640,7 @@ do_search(char *search, char *dir)
 				statusbar_printf(1, "showing %i samples", row_count);
 			}
 		}
+		#endif
 		/*
 		else{  // mysql_store_result() returned nothing
 			if(mysql_field_count(mysql) > 0){
@@ -683,21 +726,10 @@ on_category_set_clicked(GtkComboBox *widget, gpointer user_data)
 
 				if(!keyword_is_dupe(category, tags)){
 					char tags_new[1024];
-					snprintf(tags_new, 1024, "%s %s", tags, category);
+					snprintf(tags_new, 1024, "%s %s", tags ? tags : "", category);
 					g_strstrip(tags_new);//trim
 
 					row_set_tags(&iter, id, tags_new);
-					/*
-					char sql[1024];
-					snprintf(sql, 1024, "UPDATE samples SET keywords='%s' WHERE id=%i", tags_new, id);
-					printf("on_category_set_clicked(): row: %s sql=%s\n", fname, sql);
-					if(mysql_query(&app.mysql, sql)){
-						perr("update failed! sql=%s\n", sql);
-						return;
-					}
-					//update the store:
-					gtk_list_store_set(app.store, &iter, COL_KEYWORDS, tags_new, -1);
-					*/
 				}else{
 					dbg(0, "keyword is a dupe - not applying.");
 					statusbar_print(1, "ignoring duplicate keyword.");
@@ -718,7 +750,7 @@ row_set_tags(GtkTreeIter* iter, int id, const char* tags_new)
 {
 	char sql[1024];
 	snprintf(sql, 1024, "UPDATE samples SET keywords='%s' WHERE id=%i", tags_new, id);
-	dbg(0, "sql=%s", sql);
+	dbg(1, "sql=%s", sql);
 	if(mysql_query(&app.mysql, sql)){
 		perr("update failed! sql=%s\n", sql);
 		return false;
@@ -831,20 +863,18 @@ add_file(char* path)
 	/*
 	uri must be "unescaped" before calling this fn. Method string must be removed.
 	*/
-	dbg(0, "%s", path);
+	dbg(1, "%s", path);
 	if(!db__is_connected()) return false;
 	gboolean ok = true;
 
 	sample* sample = sample_new(); //free'd after db and store are updated.
 	snprintf(sample->filename, 256, "%s", path);
 
-	#define SQL_LEN 66000
-	char sql[1024], sql2[SQL_LEN];
 	char length_ms[64];
 	char samplerate_s[32];
 	gchar* filedir = g_path_get_dirname(path);
 	gchar* filename = g_path_get_basename(path);
-	snprintf(sql, 1024, "INSERT samples SET filename='%s', filedir='%s'", filename, filedir);
+
 
 	MIME_type* mime_type = type_from_path(filename);
 	char mime_string[64];
@@ -861,42 +891,38 @@ add_file(char* path)
 
 	sample_set_type_from_mime_string(sample, mime_string);
 
+	gboolean mimetype_is_unsupported(char* mime_string)
+	{
+		char unsupported[][64] = {"audio/mpeg", "application/x-par2"};
+		int i; for(i=0;i<G_N_ELEMENTS(unsupported);i++){
+			if(!strcmp(mime_string, unsupported[i])){
+				return true;
+			}
+		}
+		return false;
+	}
+	if(mimetype_is_unsupported(mime_string)){
+		printf("cannot add file: file type \"%s\" not supported.\n", mime_string);
+		statusbar_printf(1, "cannot add file: %s files not supported", mime_string);
+		ok = false;
+		goto out;
+	}
+
 	if(!strcmp(mime_type->media_type, "text")){
 		printf("ignoring text file...\n");
 		ok = false;
 		goto out;
 	}
 
-	if(!strcmp(mime_string, "audio/mpeg")){
-		printf("cannot add file: file type \"%s\" not supported.\n", mime_string);
-		statusbar_print(1, "cannot add file: mpeg files not supported.");
-		ok = false;
-		goto out;
-	}
-	if(!strcmp(mime_string, "application/x-par2")){
-		printf("cannot add file: file type \"%s\" not supported.\n", mime_string);
-		statusbar_print(1, "cannot add file: mpeg files not supported.");
-		ok = false;
-		goto out;
-	}
-
-	/* better way to do the string appending (or use glib?):
-	tmppos = strmov(tmp, "INSERT INTO test_blob (a_blob) VALUES ('");
-	tmppos += mysql_real_escape_string(conn, tmppos, fbuffer, fsize);
-	tmppos = strmov(tmppos, "')");
-	*tmppos++ = (char)0;
-	mysql_query(conn, tmp);
-	*/
-
 	if(get_file_info(sample)){
 
-		//snprintf(sql2, SQL_LEN, "%s, pixbuf='%s', length=%i, sample_rate=%i, channels=%i, mimetype='%s/%s' ", sql, blob, sample.length, sample.sample_rate, sample.channels, mime_type->media_type, mime_type->subtype);
-		snprintf(sql2, SQL_LEN, "%s, length=%i, sample_rate=%i, channels=%i, mimetype='%s/%s' ", sql, sample->length, sample->sample_rate, sample->channels, mime_type->media_type, mime_type->subtype);
+		gchar* sql = g_strdup_printf("INSERT INTO samples SET filename='%s', filedir='%s', length=%i, sample_rate=%i, channels=%i, mimetype='%s/%s' ", filename, filedir, sample->length, sample->sample_rate, sample->channels, mime_type->media_type, mime_type->subtype);
 		format_time_int(length_ms, sample->length);
 		samplerate_format(samplerate_s, sample->sample_rate);
-		dbg(0, "sql=%s", sql2);
+		dbg(1, "sql=%s", sql);
 
-		sample->id = db__insert(sql2);
+		sample->id = backend.insert(sql);
+		g_free(sql);
 
 		GtkTreeIter iter;
 		gtk_list_store_append(app.store, &iter);
@@ -1407,6 +1433,8 @@ keyword_is_dupe(char* new, char* existing)
 {
 	//return true if the word 'new' is contained in the 'existing' string.
 
+	if(!existing) return false;
+
 	//FIXME make case insensitive.
 	//gint g_ascii_strncasecmp(const gchar *s1, const gchar *s2, gsize n);
 	//gchar*      g_utf8_casefold(const gchar *str, gssize len);
@@ -1771,6 +1799,10 @@ on_quit(GtkMenuItem *menuitem, gpointer user_data)
 	mysql=&app.mysql;
 	mysql_close(mysql);
 
+#ifdef USE_SQLITE
+	sqlite__disconnect();
+#endif
+
 	dbg (1, "done.");
 	exit(exit_code);
 }
@@ -1785,9 +1817,11 @@ set_backend(BackendType type)
 			backend.search_iter_free = db__search_iter_free;
 			break;
 		case BACKEND_TRACKER:
+			#ifdef USE_TRACKER
 			backend.search_iter_new = tracker__search_iter_new;
 			backend.search_iter_free = tracker__search_iter_free;
 			dbg(0, "backend is tracker.");
+			#endif
 			break;
 		default:
 			break;

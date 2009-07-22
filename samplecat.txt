@@ -69,7 +69,7 @@ file system trees:
 -auditioning
 	-perhaps use the dssi sampleplayer plugin like sonikvisualiser does?
 
--what does Paul Davis's SFDB do? old url no longer works (see Ardour).
-
 -papers on automatic metadata and searching: http://audioclas.iua.upf.edu/documents.shtml
+
+-tracker:
 

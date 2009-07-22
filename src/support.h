@@ -2,6 +2,7 @@
 
 #define dbg(A, B, ...) debug_printf(__func__, A, B, ##__VA_ARGS__)
 #define perr(A, ...) errprintf2(__func__, A, ##__VA_ARGS__)
+#define pwarn(A, ...) warnprintf2(__func__, A, ##__VA_ARGS__)
 #define PF {if(debug) printf("%s()...\n", __func__);}
 #define PF_DONE printf("%s(): done.\n", __func__);
 #define ASSERT_POINTER(A, B) if((unsigned)A < 1024){ errprintf2(__func__, "bad %s pointer (%p).\n", B, A); return; }
@@ -47,6 +48,7 @@ struct _accel {
 void         errprintf          (char* fmt, ...);
 void         errprintf2         (const char* func, char* format, ...);
 void         warnprintf         (char* format, ...);
+void         warnprintf2        (const char* func, char *format, ...);
 void         debug_printf       (const char* func, int level, const char* format, ...);
 void         log_handler        (const gchar* log_domain, GLogLevelFlags, const gchar* message, gpointer);
 

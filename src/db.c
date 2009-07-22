@@ -408,6 +408,12 @@ db__add_row_to_model(MYSQL_ROW row, unsigned long* lengths)
 	                   COL_OVERVIEW, pixbuf, COL_LENGTH, length, COL_SAMPLERATE, samplerate_s, COL_CHANNELS, channels, 
 	                   COL_MIMETYPE, row[MYSQL_MIMETYPE], COL_NOTES, row[MYSQL_NOTES], COL_COLOUR, colour, -1);
 	if(pixbuf) g_object_unref(pixbuf);
+
+#if 0
+	if(app.no_gui){
+		printf(" %s\n", sample_name);
+	}
+#endif
 }
 
 

@@ -59,6 +59,10 @@ struct _app
 	char*          search_dir;
 	gchar*         search_category;
 	gboolean       add_recursive;
+	gboolean       no_gui;
+	struct _args {
+		char*      add;
+	}              args;
 
 	GKeyFile*      key_file;   //config file data.
 

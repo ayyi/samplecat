@@ -91,7 +91,7 @@ drag_received(GtkWidget *widget, GdkDragContext *drag_context, gint x, gint y,
   if(info == GPOINTER_TO_INT(GDK_SELECTION_TYPE_STRING)) printf(" type=string.\n");
 
   if(info == GPOINTER_TO_INT(TARGET_URI_LIST)){
-    dbg(0, "type=uri_list. len=%i", data->length);
+    dbg(1, "type=uri_list. len=%i", data->length);
     GList* list = uri_list_to_glist((char*)data->data);
     if(g_list_length(list) < 1) warnprintf("drag_received(): drag drop: uri list parsing found no uri's.\n");
     int i=0, added_count=0;
@@ -117,7 +117,7 @@ drag_received(GtkWidget *widget, GdkDragContext *drag_context, gint x, gint y,
 
         g_free(uri_unescaped);
       }
-      else warnprintf("drag_received(): drag drop: unknown format: '%s'. Ignoring.\n", u);
+      else pwarn("drag drop: unknown format: '%s'. Ignoring.\n", u);
       i++;
     }
 

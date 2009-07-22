@@ -97,6 +97,20 @@ warnprintf(char *format, ...)
 }
 
 
+void 
+warnprintf2(const char* func, char *format, ...)
+{
+  //fn prints a warning string, then passes arguments on to vprintf.
+
+  printf("%s %s(): ", warn, func);
+
+  va_list argp;
+  va_start(argp, format);
+  vprintf(format, argp);
+  va_end(argp);
+}
+
+
 #ifndef USE_AYYI
 void
 debug_printf(const char* func, int level, const char *format, ...)

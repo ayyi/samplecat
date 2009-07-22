@@ -289,7 +289,7 @@ const char *format_size(off_t size)
 		units = "B";
 
 	g_free(buffer);
-	buffer = g_strdup_printf("%" SIZE_FMT " %s", size, units);
+	buffer = g_strdup_printf("%" SIZE_FMT " %s", (int)size, units);
 
 	return buffer;
 }
@@ -1251,13 +1251,13 @@ CollateKey *collate_key_new(const guchar *name)
 
 			g_return_val_if_fail(endp > (char *) i, NULL);
 
-			name = endp;
+			name = (guchar*)endp;
 			i = name - 1;
 		}
 	}
 
-	tmp = g_utf8_strdown(name, i - name);
-	new.text = g_utf8_collate_key(tmp, -1);
+	tmp = g_utf8_strdown((char*)name, i - name);
+	new.text = (guchar*)g_utf8_collate_key(tmp, -1);
 	g_free(tmp);
 	new.number = -1;
 	g_array_append_val(array, new);
@@ -1420,7 +1420,7 @@ GPtrArray *list_dir(const guchar *path)
 	const char *leaf;
 	GPtrArray *names;
 	
-	dir = g_dir_open(path, 0, &error);
+	dir = g_dir_open((char*)path, 0, &error);
 	if (error)
 	{
 		g_warning("Can't list directory:\n%s", error->message);
