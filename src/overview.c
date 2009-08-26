@@ -17,6 +17,7 @@
 
 #include "mysql/mysql.h"
 #include "dh-link.h"
+#include "file_manager.h"
 #include "typedefs.h"
 #include <gqview2/typedefs.h>
 #include "support.h"
@@ -26,7 +27,6 @@
 #include "sample.h"
 #include "cellrenderer_hypertext.h"
 
-#include "rox/rox_global.h"
 #include "mimetype.h"
 #include "pixmaps.h"
 

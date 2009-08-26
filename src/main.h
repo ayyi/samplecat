@@ -49,6 +49,23 @@ struct _config
 	char      column_widths[4][64];
 };
 
+
+struct _backend
+{
+	gboolean    (*search_iter_new)  (char* search, char* dir);
+	void        (*search_iter_free) ();
+	int         (*insert)           (sample*, MIME_type*);
+	gboolean    (*update_colour)    (int, int);
+};
+#ifdef __main_c__
+struct _backend backend = {NULL, NULL, NULL, NULL};
+#else
+extern struct _backend backend;
+#endif
+
+#define BACKEND_IS_NULL (backend.search_iter_new == NULL)
+
+
 struct _app
 {
 	gboolean       loaded;
@@ -134,14 +151,14 @@ enum {
 	TYPE_FLAC,
 };
 
-void        on_view_category_changed(GtkComboBox *widget, gpointer user_data);
-void        on_category_changed(GtkComboBox *widget, gpointer user_data);
-void        on_category_set_clicked(GtkComboBox *widget, gpointer user_data);
-gboolean    row_set_tags(GtkTreeIter* iter, int id, const char* tags_new);
+void        on_view_category_changed(GtkComboBox*, gpointer user_data);
+void        on_category_changed(GtkComboBox*, gpointer user_data);
+void        on_category_set_clicked(GtkComboBox*, gpointer user_data);
+gboolean    row_set_tags(GtkTreeIter*, int id, const char* tags_new);
 gboolean    row_set_tags_from_id(int id, GtkTreeRowReference* row_ref, const char* tags_new);
 gboolean    row_clear_tags(GtkTreeIter* iter, int id);
 
-void        do_search(char* search, char *dir);
+void        do_search(char* search, char* dir);
 
 gboolean    new_search(GtkWidget*, gpointer userdata);
 
@@ -165,15 +182,12 @@ gboolean    treeview_get_cell(GtkTreeView *view, guint x, guint y, GtkCellRender
 gboolean    treeview_get_tags_cell(GtkTreeView *view, guint x, guint y, GtkCellRenderer **cell);
 
 gint        get_mouseover_row();
-void        path_cell_data_func(GtkTreeViewColumn *tree_column, GtkCellRenderer *cell, GtkTreeModel *tree_model, GtkTreeIter *iter, gpointer data);
-void        path_cell_bg_lighter(GtkTreeViewColumn *tree_column, GtkCellRenderer *cell, GtkTreeModel *tree_model, GtkTreeIter *iter);
-void        tag_cell_data(GtkTreeViewColumn *tree_column, GtkCellRenderer *cell, GtkTreeModel *tree_model, GtkTreeIter *iter, gpointer data);
 
 void        update_search_dir(gchar* uri);
 gboolean    dir_tree_update(gpointer data);
 void        set_search_dir(char* dir);
 
-void        on_entry_activate(GtkEntry *entry, gpointer user_data);
+void        on_entry_activate(GtkEntry*, gpointer);
 
 gboolean    keyword_is_dupe(char* new, char* existing);
 

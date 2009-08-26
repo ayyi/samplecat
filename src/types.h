@@ -1,10 +1,15 @@
 
 struct _samplecat_result
 {
-	GdkPixbuf* icon;
 	int        idx;
 	char*      sample_name;
 	char*      dir;
-	char*      mime_type;
+	char*      keywords;
+	GdkPixbuf* overview;
+	char*      mimetype;
+	unsigned   length;
+	unsigned   sample_rate;
+	char*      notes;
+	int        colour;
 };
 

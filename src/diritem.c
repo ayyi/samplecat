@@ -39,7 +39,8 @@
 #include <sys/param.h>
 #include <sys/stat.h>
 
-#include "rox/rox_global.h"
+#include "file_manager.h"
+#include "src/typedefs.h"
 #include "rox/rox_support.h"
 
 #include "diritem.h"

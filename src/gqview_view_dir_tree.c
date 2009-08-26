@@ -18,14 +18,9 @@
 #include "gqview.h"
 #include "gqview_view_dir_tree.h"
 
-//#include "dnd.h"
-//#include "dupe.h"
 #include "filelist.h"
-//#include "layout.h"
-//#include "layout_image.h"
 #include "layout_util.h"
 #include "utilops.h"
-//#include "ui_bookmark.h"
 #include "ui_fileops.h"
 #include "ui_menu.h"
 #include "ui_tree_edit.h"
@@ -33,15 +28,12 @@
 #include <gdk/gdkkeysyms.h> /* for keyboard values */
 
 #include "dnd.h"
-//#include "type.h"
-typedef struct _MIME_type MIME_type;
 GdkPixbuf* mime_type_get_pixbuf(MIME_type*);
 
 
 #define VDTREE_INDENT 14
 #define VDTREE_PAD 4
 
-//extern struct _app app;
 extern MIME_type *inode_directory;
 
 enum {

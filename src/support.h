@@ -53,22 +53,24 @@ void         debug_printf       (const char* func, int level, const char* format
 void         log_handler        (const gchar* log_domain, GLogLevelFlags, const gchar* message, gpointer);
 
 void         samplerate_format  (char* str, int samplerate);
+gchar*       dir_format         (char*);
 //gint         strcmp2(gconstpointer a, gconstpointer b);
 //GPtrArray*   list_dir(const guchar *path);
-gboolean     file_exists        (const char *path);
-gboolean     is_dir             (const char *path);
-gboolean     dir_is_empty       (const char *path);
-void         file_extension     (const char* path, char* extn);
-gboolean     is_sub_dir         (const char *sub_obj, const char *parent);
-void         file_move          (const char* path, const char* dest);
-char*        fork_exec_wait     (const char **argv);
+gboolean     file_exists        (const char*);
+gboolean     is_dir             (const char*);
+gboolean     dir_is_empty       (const char*);
+void         file_extension     (const char*, char* extn);
+gboolean     is_sub_dir         (const char* sub_obj, const char *parent);
+void         file_move          (const char*, const char* dest);
+char*        fork_exec_wait     (const char** argv);
+gboolean     ensure_config_dir  ();
 
 //-----------------------------------------------------------------
 
-gchar*       uri_text_from_list(GList*, gint* len, gint plain_text);
-GList*       uri_list_from_text(gchar* data, gint files_only);
-gchar*       uri_text_escape(const gchar* text);
-void         uri_text_decode(gchar* text);
+gchar*       uri_text_from_list        (GList*, gint* len, gint plain_text);
+GList*       uri_list_from_text        (gchar* data, gint files_only);
+gchar*       uri_text_escape           (const gchar*);
+void         uri_text_decode           (gchar*);
 
 void         pixbuf_clear              (GdkPixbuf*, GdkColor*);
 #ifdef OLD
@@ -98,22 +100,22 @@ gboolean     is_similar_rgb            (unsigned colour1, unsigned colour2);
 void         format_time               (char* length, char* milliseconds);
 void         format_time_int           (char* length, int milliseconds);
 
-gint         treecell_get_row          (GtkWidget *widget, GdkRectangle *cell_area);
-void         statusbar_print           (int n, char *s);
+gint         treecell_get_row          (GtkWidget*, GdkRectangle*);
+void         statusbar_print           (int n, char*);
 void         statusbar_printf          (int n, char* fmt, ...);
 
 void         make_accels               (GtkAccelGroup*, GimpActionGroup*, struct _accel*, int count, gpointer user_data);
 
-const gchar* gimp_get_mod_name_shift ();
-const gchar* gimp_get_mod_name_control();
-const gchar* gimp_get_mod_name_alt ();
-const gchar* gimp_get_mod_separator ();
-const gchar* gimp_get_mod_string (GdkModifierType modifiers);
-gchar*       gimp_strip_uline(const gchar* str);
-gchar*       gimp_get_accel_string(guint key, GdkModifierType modifiers);
+const gchar* gimp_get_mod_name_shift   ();
+const gchar* gimp_get_mod_name_control ();
+const gchar* gimp_get_mod_name_alt     ();
+const gchar* gimp_get_mod_separator    ();
+const gchar* gimp_get_mod_string       (GdkModifierType modifiers);
+gchar*       gimp_strip_uline          (const gchar* str);
+gchar*       gimp_get_accel_string     (guint key, GdkModifierType modifiers);
 
-GList*       uri_list_to_glist(const char *uri_list);
-void         uri_list_free(GList*);
-const gchar* vfs_get_method_string(const gchar *substring, gchar **method_string);
-char*        vfs_unescape_string (const gchar *escaped_string, const gchar *illegal_characters);
+GList*       uri_list_to_glist         (const char *uri_list);
+void         uri_list_free             (GList*);
+const gchar* vfs_get_method_string     (const gchar *substring, gchar **method_string);
+char*        vfs_unescape_string       (const gchar *escaped_string, const gchar *illegal_characters);
 

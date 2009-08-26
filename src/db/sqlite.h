@@ -1,9 +1,12 @@
 
-int         sqlite__connect();
-void        sqlite__disconnect();
+#define BACKEND_IS_SQLITE (backend.search_iter_new == sqlite__search_iter_new)
 
-int         sqlite__insert(char*);
-int         sqlite__add_row (int argc, char *argv[]);
-gboolean    sqlite__search_iter_new(char* search, char* dir);
-//MYSQL_ROW   db__search_iter_next(unsigned long** lengths);
-void        sqlite__search_iter_free();
+int              sqlite__connect          ();
+void             sqlite__disconnect       ();
+
+int              sqlite__insert           (sample*, MIME_type*);
+gboolean         sqlite__update_colour    (int id, int colour);
+
+gboolean         sqlite__search_iter_new  (char* search, char* dir);
+SamplecatResult* sqlite__search_iter_next (unsigned long** lengths);
+void             sqlite__search_iter_free ();

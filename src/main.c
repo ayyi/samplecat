@@ -5,6 +5,7 @@ Copyright (C) Tim Orford 2007-2009
 This software is licensed under the GPL. See accompanying file COPYING.
 
 */
+#define __main_c__
 #include "config.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -20,16 +21,16 @@ This software is licensed under the GPL. See accompanying file COPYING.
   #include "ayyi.h"
   #include "ayyi_model.h"
 #endif
+#include "file_manager.h"
 #include "typedefs.h"
 #ifdef USE_TRACKER
   //#include "tracker.h"
   #include <src/tracker_.h>
 #endif
-#ifdef USE_SQLITE
-  #include "db/sqlite.h"
-#endif
-
 #include "mysql/mysql.h"
+
+#include "types.h"
+#include "mimetype.h"
 #include "dh-link.h"
 #include "support.h"
 #include "gqview_view_dir_tree.h"
@@ -42,19 +43,20 @@ This software is licensed under the GPL. See accompanying file COPYING.
 #include "listview.h"
 #include "window.h"
 #include "inspector.h"
-#include "db.h"
+#include "db/db.h"
 #include "dnd.h"
+#include "console_view.h"
 #ifdef USE_GQVIEW_1_DIRTREE
   #include "filelist.h"
   #include "view_dir_list.h"
   #include "view_dir_tree.h"
 #endif
 
-#include "rox/rox_global.h"
-#include "mimetype.h"
 #include "pixmaps.h"
-#include "rox/dir.h"
-#include "file_manager.h"
+
+#ifdef USE_SQLITE
+  #include "db/sqlite.h"
+#endif
 
 #undef DEBUG_NO_THREADS
 
@@ -98,29 +100,11 @@ static const char* const usage =
   " -h --help      show this usage information and quit.\n"
   "\n";
 
-struct _backend
-{
-	gboolean    (*search_iter_new)(char* search, char* dir);
-	void        (*search_iter_free)();
-	int         (*insert)(char*);
-};
-struct _backend backend = {NULL, NULL};
-#define BACKEND_IS_MYSQL (backend.search_iter_new == db__search_iter_new)
-#define BACKEND_IS_TRACKER (backend.search_iter_new == tracker__search_iter_new)
-#define BACKEND_IS_NULL (backend.search_iter_new == NULL)
-
 
 void
 app_init()
 {
 	memset(&app, 0, sizeof(app));
-	/*
-	app.search_phrase[0] = '\0';
-	app.search_dir       = NULL;
-	app.search_category  = NULL;
-	app.window           = NULL;
-	app.msg_queue        = NULL;
-	*/
 
 	int i; for(i=0;i<PALETTE_SIZE;i++) app.colour_button[i] = NULL;
 	app.colourbox_dirty = true;
@@ -158,7 +142,6 @@ main(int argc, char** argv)
 				if(d<0 || d>5) { gwarn ("bad arg. debug=%i", d); } else debug = d;
 				break;
 			case 'g':
-				pwarn("no-gui mode is experimental!\n");
 				app.no_gui = true;
 				break;
 			case 'h':
@@ -186,9 +169,8 @@ main(int argc, char** argv)
 	pixmaps_init();
 	dir_init();
 
-	if(db__connect()){
+	if(mysql__connect()){
 		set_backend(BACKEND_MYSQL);
-		backend.insert = db__insert;
 	}else{
 		#ifdef QUIT_WITHOUT_DB
 		on_quit(NULL, GINT_TO_POINTER(1));
@@ -197,27 +179,17 @@ main(int argc, char** argv)
 
 #ifdef USE_SQLITE
 	if(!sqlite__connect()){
-	#ifdef QUIT_WITHOUT_DB
+		#ifdef QUIT_WITHOUT_DB
 		on_quit(NULL, GINT_TO_POINTER(EXIT_FAILURE));
-	#endif
+		#endif
 	}else{
-		if(!backend.search_iter_new){
-			backend.search_iter_new = sqlite__search_iter_new;
-			backend.search_iter_free = sqlite__search_iter_free;
-			backend.insert = sqlite__insert;
-		}
-		//backend.insert = sqlite__insert; //tmp! FIXME
-		if(app.args.add){
-			add_file(app.args.add);
-		}
-		if(app.no_gui){
-			if(sqlite__search_iter_new("", NULL)){
-				sqlite__search_iter_free();
-			}
-			else gwarn("sqlite__search_iter_new failed.");
-		}
+		if(BACKEND_IS_NULL) set_backend(BACKEND_SQLITE);
 	}
 #endif
+
+	if(app.args.add){
+		add_file(app.args.add);
+	}
 
 	if(!app.no_gui) file_manager__init();
 
@@ -241,6 +213,8 @@ main(int argc, char** argv)
 	if(!app.no_gui) app.context_menu = make_context_menu();
  
 	do_search(app.search_phrase, app.search_dir);
+
+	if(app.no_gui) exit(EXIT_SUCCESS);
 
 #ifdef USE_AYYI
 	ayyi_client_init();
@@ -324,212 +298,6 @@ get_mouseover_row()
 
 
 void
-path_cell_data_func(GtkTreeViewColumn *tree_column, GtkCellRenderer *cell, GtkTreeModel *tree_model, GtkTreeIter *iter, gpointer data)
-{
-	unsigned colour_index = 0;
-	gtk_tree_model_get(GTK_TREE_MODEL(app.store), iter, COL_COLOUR, &colour_index, -1);
-	if(colour_index > PALETTE_SIZE){ warnprintf("path_cell_data_func(): bad colour data. Index out of range (%u).\n", colour_index); return; }
-
-	char colour[16] = "";
-	if(strlen(app.config.colour[colour_index])){
-		snprintf(colour, 16, "#%s", app.config.colour[colour_index]);
-		//printf("path_cell_data_func(): colour=%i %s\n", colour_index, colour);
-
-		if(strlen(colour) != 7 ){ perr("bad colour string (%s) index=%u.\n", colour, colour_index); return; }
-	}
-	else colour_index = 0;
-
-	if(colour_index) g_object_set(cell, "cell-background-set", true, "cell-background", colour, NULL);
-	else             g_object_set(cell, "cell-background-set", false, NULL);
-}
-
-
-void
-path_cell_bg_lighter(GtkTreeViewColumn *tree_column, GtkCellRenderer *cell, GtkTreeModel *tree_model, GtkTreeIter *iter)
-{
-	unsigned colour_index = 0;
-	gtk_tree_model_get(GTK_TREE_MODEL(app.store), iter, COL_COLOUR, &colour_index, -1);
-	if(colour_index > PALETTE_SIZE){ warnprintf("path_cell_data_func(): bad colour data. Index out of range (%u).\n", colour_index); return; }
-
-	if(colour_index == 0){
-		colour_index = 4; //FIXME temp
-	}
-
-	if(strlen(app.config.colour[colour_index])){
-		GdkColor colour, colour2;
-		char hexstring[8];
-		snprintf(hexstring, 8, "#%s", app.config.colour[colour_index]);
-		if(!gdk_color_parse(hexstring, &colour)) warnprintf("path_cell_bg_lighter(): parsing of colour string failed.\n");
-		colour_lighter(&colour2, &colour);
-
-		//printf("path_cell_bg_lighter(): index=%i #%s %x %x %x\n", colour_index, hexstring, colour.red, colour.green, colour.blue);
-
-		g_object_set(cell, "cell-background-set", true, "cell-background-gdk", &colour2, NULL);
-	}
-}
-
-
-void
-tag_cell_data(GtkTreeViewColumn *tree_column, GtkCellRenderer *cell, GtkTreeModel *tree_model, GtkTreeIter *iter, gpointer data)
-{
-	/*
-	handle translation of model data to display format for "tag" data.
-
-	note: some stuff here is duplicated in the custom cellrenderer - not sure exactly what happens where!
-
-	mouseovers:
-		-usng this fn to do mousovers is slightly difficult.
-		-fn is called when mouse enters or leaves a cell. 
-			However, because of padding (appears to be 1 pixel), it is not always inside the cell area when this callback occurs!!
-			!!!!cell_area.background_area <----try this.
-	*/
-
-	//set background colour:
-	path_cell_data_func(tree_column, cell, tree_model, iter, data);
-
-	//----------------------
-
-	GtkCellRendererText *celltext = (GtkCellRendererText *)cell;
-	GtkCellRendererHyperText *hypercell = (GtkCellRendererHyperText *)cell;
-	GtkTreePath* path = gtk_tree_model_get_path(GTK_TREE_MODEL(app.store), iter);
-	GdkRectangle cellrect;
-
-	gint mouse_row_num = get_mouseover_row();
-
-	gchar* path_str = gtk_tree_model_get_string_from_iter(GTK_TREE_MODEL(app.store), iter);
-	gint cell_row_num = atoi(path_str);
-
-	//----------------------
-
-	//get the coords for this cell:
-	gtk_tree_view_get_cell_area(GTK_TREE_VIEW(app.view), path, tree_column, &cellrect);
-	gtk_tree_path_free(path);
-	//printf("tag_cell_data(): %s mouse_y=%i cell_y=%i-%i.\n", path_str, app.mouse_y, cellrect.y, cellrect.y + cellrect.height);
-	//if(//(app.mouse_x > cellrect.x) && (app.mouse_x < (cellrect.x + cellrect.width)) &&
-	//			(app.mouse_y >= cellrect.y) && (app.mouse_y <= (cellrect.y + cellrect.height))){
-	if(cell_row_num == mouse_row_num){
-	if((app.mouse_x > cellrect.x) && (app.mouse_x < (cellrect.x + cellrect.width))){
-		//printf("tag_cell_data(): mouseover! row_num=%i\n", mouse_row_num);
-		//printf("tag_cell_data():  inside: x=%i y=%i\n", cellrect.x, cellrect.y);
-
-		if(strlen(celltext->text)){
-			g_strstrip(celltext->text);//trim
-
-			gint mouse_cell_x = app.mouse_x - cellrect.x;
-
-			//make a layout to find word sizes:
-
-			PangoContext* context = gtk_widget_get_pango_context(app.view); //free?
-			PangoLayout* layout = pango_layout_new(context);
-			pango_layout_set_text(layout, celltext->text, strlen(celltext->text));
-
-			int line_num = 0;
-			PangoLayoutLine* layout_line = pango_layout_get_line(layout, line_num);
-			int char_pos;
-			gboolean trailing = 0;
-			//printf("tag_cell_data(): line len: %i\n", layout_line->length);
-			int i;
-			for(i=0;i<layout_line->length;i++){
-				//pango_layout_line_index_to_x(layout_line, i, trailing, &char_pos);
-				//printf("tag_cell_data(): x=%i\n", (int)(char_pos/PANGO_SCALE));
-			}
-
-			//-------------------------
-
-			//split the string into words:
-
-			const gchar *str = celltext->text;
-			gchar** split = g_strsplit(str, " ", 100);
-			//printf("split: [%s] %p %p %p %s\n", str, split[0], split[1], split[2], split[0]);
-			int char_index = 0;
-			int word_index = 0;
-			int mouse_word = 0;
-			gchar formatted[256] = "";
-			char word[256] = "";
-			while(split[word_index]){
-				char_index += strlen(split[word_index]);
-
-				pango_layout_line_index_to_x(layout_line, char_index, trailing, &char_pos);
-				if(char_pos/PANGO_SCALE > mouse_cell_x){
-					mouse_word = word_index;
-					dbg(0, "word=%i\n", word_index);
-
-					snprintf(word, 256, "<u>%s</u> ", split[word_index]);
-					g_strlcat(formatted, word, 256);
-					//g_free(split[word_index]);
-					//split[word_index] = word;
-
-					while(split[++word_index]){
-						//snprintf(formatted, 256, "%s ", split[word_index]);
-						snprintf(word, 256, "%s ", split[word_index]);
-						g_strlcat(formatted, word, 256);
-					}
-
-					break;
-				}
-
-				snprintf(word, 256, "%s ", split[word_index]);
-				g_strlcat(formatted, word, 256);
-
-				word_index++;
-			}
-			dbg(0, "joined: %s\n", formatted);
-
-			g_object_unref(layout);
-
-			//-------------------------
-
-			//set new markup:
-
-			//g_object_set();
-			gchar *text = NULL;
-			GError *error = NULL;
-			PangoAttrList *attrs = NULL;
-
-			if (formatted && !pango_parse_markup(formatted, -1, 0, &attrs, &text, NULL, &error)){
-				g_warning("Failed to set cell text from markup due to error parsing markup: %s", error->message);
-				g_error_free(error);
-				return;
-			}
-			//if (joined) g_free(joined);
-			if (celltext->text) g_free(celltext->text);
-			if (celltext->extra_attrs) pango_attr_list_unref(celltext->extra_attrs);
-
-			//setting text here doesnt seem to work (text is set but not displayed), but setting markup does.
-			//printf("tag_cell_data(): setting text: %s\n", text);
-			celltext->text = text;
-			celltext->extra_attrs = attrs;
-			hypercell->markup_set = true;
-		}
-	}
-	}
-	//else g_object_set(cell, "markup", "outside", NULL);
-	//else hypercell->markup_set = false;
-
-	g_free(path_str);
-
-
-/*
-			gchar *text = NULL;
-			GError *error = NULL;
-			PangoAttrList *attrs = NULL;
-			
-			printf("tag_cell_data(): text=%s\n", celltext->text);
-			if (!pango_parse_markup(celltext->text, -1, 0, &attrs, &text, NULL, &error)){
-				g_warning("Failed to set cell text from markup due to error parsing markup: %s", error->message);
-				g_error_free(error);
-				return;
-			}
-			//if (celltext->text) g_free (celltext->text);
-			//if (celltext->extra_attrs) pango_attr_list_unref (celltext->extra_attrs);
-			celltext->text = text;
-			celltext->extra_attrs = attrs;
-	hypercell->markup_set = true;
-	*/
-}
-
-
-void
 file_selector()
 {
 	//GtkWidget*  gtk_file_selection_new("Select files to add");
@@ -609,8 +377,8 @@ do_search(char *search, char *dir)
 			int row_count = 0;
 			unsigned long *lengths;
 			MYSQL_ROW row;
-			while((row = db__search_iter_next(&lengths)) && row_count < MAX_DISPLAY_ROWS){
-				db__add_row_to_model(row, lengths);
+			while((row = mysql__search_iter_next(&lengths)) && row_count < MAX_DISPLAY_ROWS){
+				mysql__add_row_to_model(row, lengths);
 				row_count++;
 			}
 			backend.search_iter_free();
@@ -624,6 +392,26 @@ do_search(char *search, char *dir)
 				statusbar_printf(1, "showing %i of %i samples", row_count, tot_rows);
 			}
 		}
+		#ifdef USE_SQLITE
+		else if(BACKEND_IS_SQLITE){
+			int row_count = 0;
+			SamplecatResult* result;
+			while((result = sqlite__search_iter_next(NULL)) && row_count < MAX_DISPLAY_ROWS){
+				if(app.no_gui){
+					if(!row_count) console__show_result_header();
+					console__show_result(result);
+				}else{
+					dbg(0, "mimetype=%s", result->mimetype);
+					listmodel__add_result(result);
+				}
+				row_count++;
+			}
+			if(app.no_gui){
+				printf("total %i samples found.\n", row_count);
+			}
+			sqlite__search_iter_free();
+		}
+		#endif
 		#ifdef USE_TRACKER
 		else if(BACKEND_IS_TRACKER){
 			int row_count = 0;
@@ -816,9 +604,9 @@ update_dir_node_list()
 	builds a node list of directories listed in the database.
 	*/
 
-	if(!db__is_connected()) return;
+	if(!mysql__is_connected()) return;
 
-	db__dir_iter_new();
+	mysql__dir_iter_new();
 
 	if(app.dir_tree) g_node_destroy(app.dir_tree);
 	app.dir_tree = g_node_new(NULL);
@@ -829,7 +617,7 @@ update_dir_node_list()
 		g_node_insert(app.dir_tree, -1, leaf);
 
 		char* u;
-		while((u = db__dir_iter_next())){
+		while((u = mysql__dir_iter_next())){
 
 			link = dh_link_new(DH_LINK_TYPE_PAGE, u, u);
 			leaf = g_node_new(link);
@@ -839,7 +627,7 @@ update_dir_node_list()
 		}
 	}
 
-	db__dir_iter_free();
+	mysql__dir_iter_free();
 	dbg(2, "size=%i", g_node_n_children(app.dir_tree));
 }
 
@@ -864,7 +652,7 @@ add_file(char* path)
 	uri must be "unescaped" before calling this fn. Method string must be removed.
 	*/
 	dbg(1, "%s", path);
-	if(!db__is_connected()) return false;
+	if(!mysql__is_connected()) return false;
 	gboolean ok = true;
 
 	sample* sample = sample_new(); //free'd after db and store are updated.
@@ -915,14 +703,10 @@ add_file(char* path)
 	}
 
 	if(get_file_info(sample)){
-
-		gchar* sql = g_strdup_printf("INSERT INTO samples SET filename='%s', filedir='%s', length=%i, sample_rate=%i, channels=%i, mimetype='%s/%s' ", filename, filedir, sample->length, sample->sample_rate, sample->channels, mime_type->media_type, mime_type->subtype);
 		format_time_int(length_ms, sample->length);
 		samplerate_format(samplerate_s, sample->sample_rate);
-		dbg(1, "sql=%s", sql);
 
-		sample->id = backend.insert(sql);
-		g_free(sql);
+		sample->id = backend.insert(sample, mime_type);
 
 		GtkTreeIter iter;
 		gtk_list_store_append(app.store, &iter);
@@ -1150,7 +934,7 @@ delete_row(GtkWidget *widget, gpointer user_data)
 				int id;
 				gtk_tree_model_get(model, &iter, COL_NAME, &fname, COL_IDX, &id, -1);
 
-				if(!db__delete_row(id)) return;
+				if(!mysql__delete_row(id)) return;
 
 				//update the store:
 				gtk_list_store_remove(app.store, &iter);
@@ -1263,12 +1047,13 @@ make_context_menu()
 {
 	GtkWidget *menu = gtk_menu_new();
 
-	GtkWidget* menu_item = gtk_menu_item_new_with_label ("Delete");
+	GtkWidget* menu_item = gtk_image_menu_item_new_from_stock(GTK_STOCK_DELETE, /*GtkAccelGroup *accel_group*/NULL);
 	gtk_menu_shell_append (GTK_MENU_SHELL(menu), menu_item);
 	g_signal_connect (G_OBJECT(menu_item), "activate", G_CALLBACK(delete_row), NULL);
 	gtk_widget_show (menu_item);
 
-	menu_item = gtk_menu_item_new_with_label ("Update");
+	menu_item = gtk_image_menu_item_new_from_stock(GTK_STOCK_REFRESH, NULL);
+	//menu_item = gtk_menu_item_new_with_label ("Update");
 	gtk_menu_shell_append (GTK_MENU_SHELL(menu), menu_item);
 	g_signal_connect (G_OBJECT(menu_item), "activate", G_CALLBACK(update_row), NULL);
 	gtk_widget_show (menu_item);
@@ -1648,7 +1433,7 @@ config_load()
 	GError *error = NULL;
 	app.key_file = g_key_file_new();
 	if(g_key_file_load_from_file(app.key_file, app.config_filename, G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS, &error)){
-		printf("ini file loaded.\n");
+		if(debug) printf("ini file loaded.\n");
 		gchar* groupname = g_key_file_get_start_group(app.key_file);
 		dbg (2, "group=%s.", groupname);
 		if(!strcmp(groupname, "Samplecat")){
@@ -1813,8 +1598,20 @@ set_backend(BackendType type)
 {
 	switch(type){
 		case BACKEND_MYSQL:
-			backend.search_iter_new = db__search_iter_new;
-			backend.search_iter_free = db__search_iter_free;
+			backend.search_iter_new  = mysql__search_iter_new;
+			backend.search_iter_free = mysql__search_iter_free;
+			backend.insert           = mysql__insert;
+			backend.update_colour    = mysql__update_colour;
+			break;
+		case BACKEND_SQLITE:
+			#ifdef USE_SQLITE
+			backend.search_iter_new = sqlite__search_iter_new;
+			//backend.search_iter_next = sqlite__search_iter_next;
+			backend.search_iter_free = sqlite__search_iter_free;
+			backend.insert           = sqlite__insert;
+			backend.update_colour    = sqlite__update_colour;
+			dbg(0, "backend is sqlite.");
+			#endif
 			break;
 		case BACKEND_TRACKER:
 			#ifdef USE_TRACKER

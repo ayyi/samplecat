@@ -4,14 +4,15 @@
 #include <string.h>
 #include <libgen.h>
 #include <gtk/gtk.h>
+#include "file_manager/file_manager.h"
 #include "typedefs.h"
 #include "support.h"
 #include "mysql/mysql.h"
 #include "dh-link.h"
 #include "gqview_view_dir_tree.h"
+#include "mimetype.h"
 #include "main.h"
-#include "db.h"
-#include "rox/rox_global.h"
+#include "db/db.h"
 #include "mimetype.h"
 #include "sample.h"
 #include "listview.h"
@@ -296,7 +297,7 @@ on_notes_insert(GtkTextView *textview, gchar *arg1, gpointer user_data)
 static gboolean
 on_notes_focus_out(GtkWidget *widget, gpointer userdata)
 {
-	if(!db__is_connected()) return FALSE;
+	if(!mysql__is_connected()) return FALSE;
 
 	GtkTextBuffer* textbuf = gtk_text_view_get_buffer(GTK_TEXT_VIEW(widget));
 	if(!textbuf){ errprintf("on_notes_focus_out(): bad arg: widget.\n"); return FALSE; }

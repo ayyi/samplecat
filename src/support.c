@@ -23,6 +23,7 @@
 #endif
 
 #include "dh-link.h"
+#include "file_manager.h"
 #include "typedefs.h"
 #include <gqview2/typedefs.h>
 #include <gimp/gimpaction.h>
@@ -30,7 +31,6 @@
 #include "support.h"
 #include "main.h"
 #include "gqview2/ui_fileops.h"
-#include "rox/rox_global.h"
 #include "rox/rox_support.h"
 
 #define HEX_ESCAPE '%'
@@ -153,6 +153,14 @@ samplerate_format(char* str, int samplerate)
 		str[strlen(str)-1] = '\0';
 	}
 	if(str[strlen(str)-1]=='.') str[strlen(str)-1] = '\0';
+}
+
+
+gchar*
+dir_format(char* dir)
+{
+	if(strstr(dir, g_get_home_dir()) == dir) return dir + strlen(g_get_home_dir()) + 1;
+	else return dir;
 }
 
 
@@ -594,6 +602,18 @@ fork_exec_wait(const char **argv)
 	if (errors) g_strstrip(errors);
 
 	return errors;
+}
+
+
+gboolean
+ensure_config_dir()
+{
+	static char* file = NULL;
+	if(!file) file = g_strdup_printf("%s/.config/" PACKAGE, g_get_home_dir());
+
+	if(file_exists(file)) return TRUE;
+	#warning ensure_config_dir: create config directory.
+	return TRUE;
 }
 
 

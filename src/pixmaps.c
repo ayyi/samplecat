@@ -43,7 +43,8 @@
 
 #include <gtk/gtk.h>
 
-#include "rox/rox_global.h"
+#include "file_manager.h"
+#include "src/typedefs.h"
 #include "fscache.h"
 //#include "gui_support.h"
 #include "rox/rox_support.h"
@@ -60,7 +61,6 @@
 #ifdef OLD
   #include <libart_lgpl/libart.h>
 #endif
-typedef void GimpActionGroup;
 #include "support.h"
 
 GFSCache *pixmap_cache = NULL;

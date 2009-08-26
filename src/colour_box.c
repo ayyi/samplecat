@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <gtk/gtk.h>
+#include "file_manager.h"
 #include "typedefs.h"
 #include <gimp/gimpaction.h>
 #include <gimp/gimpactiongroup.h>
@@ -13,7 +14,6 @@
 #include "main.h"
 #include "listview.h"
 #include "dnd.h"
-#include "file_manager.h"
 #include "colour_box.h"
 
 extern struct _app app;

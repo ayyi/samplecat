@@ -47,6 +47,7 @@
 # include <libgnomevfs/gnome-vfs-application-registry.h>
 #endif
 
+#include "file_manager/typedefs.h"
 #include "rox/rox_global.h"
 
 #include "string.h"
@@ -71,7 +72,6 @@
 #ifdef OLD
   #include <libart_lgpl/libart.h>
 #endif
-typedef void GimpActionGroup;
 #include "support.h"
 #include "observer.h"
 extern unsigned debug;
@@ -1029,7 +1029,7 @@ set_icon_theme()
 
 	while (1)
 	{
-		dbg(0, "setting theme: %s.", theme_name);
+		dbg(1, "setting theme: %s.", theme_name);
 		gtk_icon_theme_set_custom_theme(icon_theme, theme_name);
 		return;
 

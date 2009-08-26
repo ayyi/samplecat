@@ -9,16 +9,17 @@
 #include <mysql/mysql.h>
 #include <mysql/errmsg.h>
 #include "dh-link.h"
+#include "file_manager.h"
 #include "typedefs.h"
 #include "src/types.h"
 #include <gqview2/typedefs.h>
 #include "support.h"
-#include "main.h"
-#include "rox/rox_global.h"
 #include "mimetype.h"
 #include "pixmaps.h"
+#include "main.h"
 #include "listview.h"
-#include "db.h"
+#include "sample.h"
+#include "db/db.h"
 
 //#if defined(HAVE_STPCPY) && !defined(HAVE_mit_thread)
   #define strmov(A,B) stpcpy((A),(B))
@@ -37,13 +38,14 @@ enum {
 #define MYSQL_COLOUR 12
 
 extern struct _app app;
-extern char err [32];
-extern char warn[32];
 extern unsigned debug;
 
 static gboolean is_connected = FALSE;
 static MYSQL_RES *dir_iter_result = NULL;
 static MYSQL_RES *search_result = NULL;
+static SamplecatResult result;
+
+static int mysql__exec_sql (const char* sql);
 
 
 /*
@@ -69,20 +71,9 @@ static MYSQL_RES *search_result = NULL;
 	BLOB can handle up to 64k.
 
 */
-	/*
-	Calls:
-	MYSQL *mysql_init(MYSQL *mysql)
-	char *mysql_get_server_info(MYSQL *mysql)
-	void mysql_close(MYSQL *mysql)
-	*/
- 
-	/*
-	MYSQL *mysql_real_connect(MYSQL *mysql, const char *host, const char *user, const char *passwd, const char *db,
-			unsigned int port, const char *unix_socket, unsigned int client_flag)
-	*/
 
 gboolean
-db__connect()
+mysql__connect()
 {
 	MYSQL *mysql = &app.mysql;
 
@@ -114,31 +105,38 @@ db__connect()
  
 
 gboolean
-db__is_connected()
+mysql__is_connected()
 {
 	return is_connected;
 }
 
 
 int
-db__insert(char *qry)
+mysql__insert(sample* sample, MIME_type *mime_type)
 {
 	MYSQL *mysql = &app.mysql;
 	int id = 0;
+	gchar* filedir = g_path_get_dirname(sample->filename);
+	gchar* filename = g_path_get_basename(sample->filename);
 
-	if(mysql_exec_sql(mysql, qry)==0){
-		if(debug) printf("db_insert(): ok!\n");
+	gchar* sql = g_strdup_printf("INSERT INTO samples SET filename='%s', filedir='%s', length=%i, sample_rate=%i, channels=%i, mimetype='%s/%s' ", filename, filedir, sample->length, sample->sample_rate, sample->channels, mime_type->media_type, mime_type->subtype);
+	dbg(1, "sql=%s", sql);
+
+	if(mysql__exec_sql(sql)==0){
+		dbg(0, "ok!");
 		id = mysql_insert_id(mysql);
 	}else{
 		perr("not ok...\n");
-		return 0;
 	}
+	g_free(sql);
+	g_free(filedir);
+	g_free(filename);
 	return id;
 }
 
 
 gboolean
-db__delete_row(int id)
+mysql__delete_row(int id)
 {
 	char sql[1024];
 	snprintf(sql, 1024, "DELETE FROM samples WHERE id=%i", id);
@@ -151,18 +149,17 @@ db__delete_row(int id)
 }
 
 
-int 
-mysql_exec_sql(MYSQL *mysql, const char *create_definition)
+static int 
+mysql__exec_sql(const char* sql)
 {
-	return mysql_real_query(mysql, create_definition, strlen(create_definition));
+	return mysql_real_query(&app.mysql, sql, strlen(sql));
 }
 
 
 gboolean
-db__update_path(const char* old_path, const char* new_path)
+mysql__update_path(const char* old_path, const char* new_path)
 {
 	gboolean ok = false;
-	MYSQL *mysql = &app.mysql;
 
 	char* filename = NULL; //FIXME
 	char* old_dir = NULL; //FIXME
@@ -171,10 +168,24 @@ db__update_path(const char* old_path, const char* new_path)
 	snprintf(query, 1023, "UPDATE samples SET filedir='%s' WHERE filename='%s' AND filedir='%s'", new_path, filename, old_dir);
 	dbg(0, "%s", query);
 
-	if(!mysql_exec_sql(mysql, query)){
+	if(!mysql__exec_sql(query)){
 		ok = TRUE;
 	}
 	return ok;
+}
+
+
+gboolean
+mysql__update_colour(int id, int colour)
+{
+	char sql[1024];
+	snprintf(sql, 1024, "UPDATE samples SET colour=%u WHERE id=%i", colour, id);
+	dbg(1, "sql=%s", sql);
+	if(mysql_query(&app.mysql, sql)){
+		perr("update failed! sql=%s", sql);
+		return false;
+	}
+	return true;
 }
 
 
@@ -182,7 +193,7 @@ db__update_path(const char* old_path, const char* new_path)
 
 
 gboolean
-db__search_iter_new(char* search, char* dir)
+mysql__search_iter_new(char* search, char* dir)
 {
 	//return TRUE on success.
 
@@ -221,12 +232,12 @@ db__search_iter_new(char* search, char* dir)
 
 	dbg(1, "%s", query);
 
-	int e; if((e = mysql_exec_sql(mysql, query)) != 0){
+	int e; if((e = mysql__exec_sql(query)) != 0){
 		statusbar_printf(1, "Failed to find any records: %s", mysql_error(mysql));
 
 		if((e == CR_SERVER_GONE_ERROR) || (e == CR_SERVER_LOST)){ //default is to time out after 8 hours
 			dbg(0, "mysql connection timed out. Reconnecting... (not tested!)");
-			db__connect();
+			mysql__connect();
 		}else{
 			dbg(0, "Failed to find any records: %s", mysql_error(mysql));
 		}
@@ -238,7 +249,7 @@ db__search_iter_new(char* search, char* dir)
 
 
 MYSQL_ROW
-db__search_iter_next(unsigned long** lengths)
+mysql__search_iter_next(unsigned long** lengths)
 {
 	if(!search_result) return NULL;
 
@@ -250,8 +261,23 @@ db__search_iter_next(unsigned long** lengths)
 }
 
 
+SamplecatResult*
+mysql__search_iter_next_(unsigned long** lengths)
+{
+	if(!search_result) return NULL;
+
+	memset(&result, 0, sizeof(SamplecatResult));
+
+	MYSQL_ROW row;
+	row = mysql_fetch_row(search_result);
+	if(!row) return NULL;
+	*lengths = mysql_fetch_lengths(search_result); //free? 
+	return &result;
+}
+
+
 void
-db__search_iter_free()
+mysql__search_iter_free()
 {
 	if(search_result) mysql_free_result(search_result);
 	search_result = NULL;
@@ -262,7 +288,7 @@ db__search_iter_free()
 
 
 void
-db__dir_iter_new()
+mysql__dir_iter_new()
 {
 	#define DIR_LIST_QRY "SELECT DISTINCT filedir FROM samples ORDER BY filedir"
 	MYSQL *mysql = &app.mysql;
@@ -272,7 +298,7 @@ db__dir_iter_new()
 	//char qry[1024];
 	//snprintf(qry, 1024, DIR_LIST_QRY);
 
-	if(mysql_exec_sql(mysql, DIR_LIST_QRY) == 0){
+	if(mysql__exec_sql(DIR_LIST_QRY) == 0){
 		dir_iter_result = mysql_store_result(mysql);
 		/*
 		else{  // mysql_store_result() returned nothing
@@ -291,7 +317,7 @@ db__dir_iter_new()
 
 
 char*
-db__dir_iter_next()
+mysql__dir_iter_next()
 {
 	if(!dir_iter_result) return NULL;
 
@@ -312,7 +338,7 @@ db__dir_iter_next()
 
 
 void
-db__dir_iter_free()
+mysql__dir_iter_free()
 {
 	if(dir_iter_result) mysql_free_result(dir_iter_result);
 	dir_iter_result = NULL;
@@ -320,14 +346,14 @@ db__dir_iter_free()
 
 
 void
-db__iter_to_result(SamplecatResult* result)
+mysql__iter_to_result(SamplecatResult* result)
 {
 	memset(result, 0, sizeof(SamplecatResult));
 }
 
 
 void
-db__add_row_to_model(MYSQL_ROW row, unsigned long* lengths)
+mysql__add_row_to_model(MYSQL_ROW row, unsigned long* lengths)
 {
 	GdkPixbuf* iconbuf = NULL;
 	GdkPixdata pixdata;
@@ -395,16 +421,18 @@ db__add_row_to_model(MYSQL_ROW row, unsigned long* lengths)
 		iconbuf = mime_type->image->sm_pixbuf;
 	} else iconbuf = NULL;
 
+#if 0
 	//strip the homedir from the dir string:
 	char* path = strstr(row[MYSQL_DIR], g_get_home_dir());
 	path = path ? path + strlen(g_get_home_dir()) + 1 : row[MYSQL_DIR];
+#endif
 
 	gtk_list_store_append(app.store, &iter);
 	gtk_list_store_set(app.store, &iter, COL_ICON, iconbuf,
 #ifdef USE_AYYI
 	                   COL_AYYI_ICON, ayyi_icon,
 #endif
-	                   COL_IDX, atoi(row[0]), COL_NAME, sample_name, COL_FNAME, path, COL_KEYWORDS, keywords, 
+	                   COL_IDX, atoi(row[0]), COL_NAME, sample_name, COL_FNAME, row[MYSQL_DIR], COL_KEYWORDS, keywords, 
 	                   COL_OVERVIEW, pixbuf, COL_LENGTH, length, COL_SAMPLERATE, samplerate_s, COL_CHANNELS, channels, 
 	                   COL_MIMETYPE, row[MYSQL_MIMETYPE], COL_NOTES, row[MYSQL_NOTES], COL_COLOUR, colour, -1);
 	if(pixbuf) g_object_unref(pixbuf);

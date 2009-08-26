@@ -12,14 +12,13 @@
 #include "typedefs.h"
 #include "src/types.h"
 #include <gqview2/typedefs.h>
+#include "mimetype.h"
 #include "support.h"
 #include "main.h"
 #include "sample.h"
 #include "dnd.h"
 #include "cellrenderer_hypertext.h"
 #include "inspector.h"
-#include "rox/rox_global.h"
-#include "mimetype.h"
 #include "pixmaps.h"
 #include "listview.h"
 
@@ -32,6 +31,10 @@ static gboolean listview__on_row_clicked(GtkWidget*, GdkEventButton*, gpointer);
 static void     listview__dnd_get       (GtkWidget*, GdkDragContext*, GtkSelectionData*, guint info, guint time, gpointer);
 static gint     listview__drag_received (GtkWidget*, GdkDragContext*, gint x, gint y, GtkSelectionData*, guint info, guint time, gpointer user_data);
 static gboolean listview__on_motion     (GtkWidget*, GdkEventMotion*, gpointer);
+static void     path_cell_data          (GtkTreeViewColumn*, GtkCellRenderer*, GtkTreeModel*, GtkTreeIter*, gpointer);
+static void     tag_cell_data           (GtkTreeViewColumn*, GtkCellRenderer*, GtkTreeModel*, GtkTreeIter*, gpointer);
+static void     cell_bg_lighter         (GtkTreeViewColumn*, GtkCellRenderer*, GtkTreeModel*, GtkTreeIter*);
+static void     cell_data_bg            (GtkTreeViewColumn*, GtkCellRenderer*, GtkTreeModel*, GtkTreeIter*, gpointer);
 
 
 void
@@ -59,7 +62,7 @@ listview__new()
 	g_object_set(G_OBJECT(cell9), "xalign", 0.0, NULL);
 	gtk_tree_view_column_set_resizable(col9, TRUE);
 	gtk_tree_view_column_set_min_width(col9, 0);
-	gtk_tree_view_column_set_cell_data_func(col9, cell9, path_cell_data_func, NULL, NULL);
+	gtk_tree_view_column_set_cell_data_func(col9, cell9, cell_data_bg, NULL, NULL);
 
 #ifdef SHOW_INDEX
 	GtkCellRenderer* cell0 = gtk_cell_renderer_text_new();
@@ -75,7 +78,7 @@ listview__new()
 	gtk_tree_view_column_set_min_width(col1, 0);
 	//gtk_tree_view_column_set_spacing(col1, 10);
 	//g_object_set(cell1, "ypad", 0, NULL);
-	gtk_tree_view_column_set_cell_data_func(col1, cell1, (gpointer)path_cell_bg_lighter, NULL, NULL);
+	gtk_tree_view_column_set_cell_data_func(col1, cell1, (gpointer)cell_bg_lighter, NULL, NULL);
 
 	gtk_tree_view_column_set_sizing(col1, GTK_TREE_VIEW_COLUMN_FIXED);
 	int width = atoi(app.config.column_widths[0]);
@@ -90,7 +93,7 @@ listview__new()
 	gtk_tree_view_column_set_reorderable(col2, TRUE);
 	gtk_tree_view_column_set_min_width(col2, 0);
 	//g_object_set(cell2, "ypad", 0, NULL);
-	gtk_tree_view_column_set_cell_data_func(col2, cell2, path_cell_data_func, NULL, NULL);
+	gtk_tree_view_column_set_cell_data_func(col2, cell2, path_cell_data, NULL, NULL);
 #ifdef USE_AYYI
 	//icon that shows when file is in current active song.
 	GtkCellRenderer *ayyi_renderer = gtk_cell_renderer_pixbuf_new();
@@ -115,8 +118,6 @@ listview__new()
 	g_object_set(cell3, "editable", TRUE, NULL);
 	g_signal_connect(cell3, "edited", (GCallback)keywords_on_edited, NULL);
 	gtk_tree_view_column_add_attribute(column3, cell3, "markup", COL_KEYWORDS);
-
-	//GtkTreeCellDataFunc
 	gtk_tree_view_column_set_cell_data_func(column3, cell3, tag_cell_data, NULL, NULL);
 
 	GtkCellRenderer *cell4 = gtk_cell_renderer_pixbuf_new();
@@ -127,7 +128,7 @@ listview__new()
 	gtk_tree_view_column_set_resizable(col4, TRUE);
 	gtk_tree_view_column_set_min_width(col4, 0);
 	//g_object_set(cell4, "ypad", 0, NULL);
-	gtk_tree_view_column_set_cell_data_func(col4, cell4, path_cell_data_func, NULL, NULL);
+	gtk_tree_view_column_set_cell_data_func(col4, cell4, cell_data_bg, NULL, NULL);
 
 	GtkCellRenderer* cell5 = gtk_cell_renderer_text_new();
 	GtkTreeViewColumn *col5 = gtk_tree_view_column_new_with_attributes("Length", cell5, "text", COL_LENGTH, NULL);
@@ -137,7 +138,7 @@ listview__new()
 	gtk_tree_view_column_set_min_width(col5, 0);
 	g_object_set(G_OBJECT(cell5), "xalign", 1.0, NULL);
 	//g_object_set(cell5, "ypad", 0, NULL);
-	gtk_tree_view_column_set_cell_data_func(col5, cell5, path_cell_data_func, NULL, NULL);
+	gtk_tree_view_column_set_cell_data_func(col5, cell5, cell_data_bg, NULL, NULL);
 
 	GtkCellRenderer* cell6 = gtk_cell_renderer_text_new();
 	GtkTreeViewColumn *col6 = gtk_tree_view_column_new_with_attributes("Srate", cell6, "text", COL_SAMPLERATE, NULL);
@@ -147,7 +148,7 @@ listview__new()
 	gtk_tree_view_column_set_min_width(col6, 0);
 	g_object_set(G_OBJECT(cell6), "xalign", 1.0, NULL);
 	//g_object_set(cell6, "ypad", 0, NULL);
-	gtk_tree_view_column_set_cell_data_func(col6, cell6, path_cell_data_func, NULL, NULL);
+	gtk_tree_view_column_set_cell_data_func(col6, cell6, cell_data_bg, NULL, NULL);
 
 	GtkCellRenderer* cell7 = gtk_cell_renderer_text_new();
 	GtkTreeViewColumn *col7 = gtk_tree_view_column_new_with_attributes("Chs", cell7, "text", COL_CHANNELS, NULL);
@@ -156,7 +157,7 @@ listview__new()
 	gtk_tree_view_column_set_reorderable(col7, TRUE);
 	gtk_tree_view_column_set_min_width(col7, 0);
 	g_object_set(G_OBJECT(cell7), "xalign", 1.0, NULL);
-	gtk_tree_view_column_set_cell_data_func(col7, cell7, path_cell_data_func, NULL, NULL);
+	gtk_tree_view_column_set_cell_data_func(col7, cell7, cell_data_bg, NULL, NULL);
 
 	GtkCellRenderer* cell8 = gtk_cell_renderer_text_new();
 	GtkTreeViewColumn *col8 = gtk_tree_view_column_new_with_attributes("Mimetype", cell8, "text", COL_MIMETYPE, NULL);
@@ -165,7 +166,7 @@ listview__new()
 	gtk_tree_view_column_set_reorderable(col8, TRUE);
 	gtk_tree_view_column_set_min_width(col8, 0);
 	//g_object_set(G_OBJECT(cell8), "xalign", 1.0, NULL);
-	gtk_tree_view_column_set_cell_data_func(col8, cell8, path_cell_data_func, NULL, NULL);
+	gtk_tree_view_column_set_cell_data_func(col8, cell8, cell_data_bg, NULL, NULL);
 
 	GtkTreeSelection* selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(app.view));
 	gtk_tree_selection_set_mode(selection, GTK_SELECTION_MULTIPLE);
@@ -301,13 +302,7 @@ listview__item_set_colour(GtkTreePath* path, unsigned colour)
 
 	int id = listview__path_get_id(path);
 
-	char sql[1024];
-	snprintf(sql, 1024, "UPDATE samples SET colour=%u WHERE id=%i", colour, id);
-	dbg(0, "sql=%s", sql);
-	if(mysql_query(&app.mysql, sql)){
-		perr("update failed! sql=%s\n", sql);
-		return false;
-	}
+	if(!backend.update_colour(colour, id)) return false;
 
 	GtkTreeIter iter;
 	gtk_tree_model_get_iter(GTK_TREE_MODEL(app.store), &iter, path);
@@ -317,7 +312,7 @@ listview__item_set_colour(GtkTreePath* path, unsigned colour)
 	if(sample && g_file_test(sample->filename, G_FILE_TEST_IS_REGULAR)){
 		char colour_string[16];
 		snprintf(colour_string, 16, "#%s", app.config.colour[colour]);
-		if(!gdk_color_parse(colour_string, &sample->bg_colour)) warnprintf("%s(): parsing of colour string failed.\n", __func__);
+		if(!gdk_color_parse(colour_string, &sample->bg_colour)) gwarn("parsing of colour string failed.\n");
 		g_async_queue_push(app.msg_queue, sample); //request the overview thread to update.
 	}
 	else dbg(0, "cannot update overview for offline sample. %s", sample->filename);
@@ -483,7 +478,7 @@ listmodel__add_result(SamplecatResult* result)
 	//icon (only shown if the sound file is currently available):
 	GdkPixbuf* iconbuf = NULL;
 	if(1 || online){
-		MIME_type* mime_type = mime_type_lookup(result->mime_type);
+		MIME_type* mime_type = mime_type_lookup(result->mimetype);
 		if(mime_type){
 			type_to_icon(mime_type);
 			if (!mime_type->image) dbg(0, "no icon.");
@@ -501,7 +496,7 @@ listmodel__add_result(SamplecatResult* result)
 	                   COL_NAME, result->sample_name,
 	                   COL_FNAME, path,
 	                   COL_IDX, result->idx,
-	                   COL_MIMETYPE, result->mime_type,
+	                   COL_MIMETYPE, result->mimetype,
 	                   -1);
 #if 0
 #ifdef USE_AYYI
@@ -640,6 +635,221 @@ listview__on_motion(GtkWidget *widget, GdkEventMotion *event, gpointer user_data
 	dbg(0, "setting rowref=%p", prev_row_ref);
 	app.mouseover_row_ref = prev_row_ref;
 	return false;
+}
+
+
+static void
+path_cell_data(GtkTreeViewColumn *tree_column, GtkCellRenderer *cell, GtkTreeModel *tree_model, GtkTreeIter *iter, gpointer data)
+{
+	cell_data_bg(tree_column, cell, tree_model, iter, data);
+
+	GtkCellRendererText *celltext = (GtkCellRendererText*)cell;
+#warning path_cell_data(): check celltext.
+	celltext->text = dir_format(celltext->text);
+}
+
+
+static void
+tag_cell_data(GtkTreeViewColumn *tree_column, GtkCellRenderer *cell, GtkTreeModel *tree_model, GtkTreeIter *iter, gpointer data)
+{
+	/*
+	handle translation of model data to display format for "tag" data.
+
+	note: some stuff here is duplicated in the custom cellrenderer - not sure exactly what happens where!
+
+	mouseovers:
+		-usng this fn to do mousovers is slightly difficult.
+		-fn is called when mouse enters or leaves a cell. 
+			However, because of padding (appears to be 1 pixel), it is not always inside the cell area when this callback occurs!!
+			!!!!cell_area.background_area <----try this.
+	*/
+
+	//set background colour:
+	cell_data_bg(tree_column, cell, tree_model, iter, data);
+
+	//----------------------
+
+	GtkCellRendererText *celltext = (GtkCellRendererText *)cell;
+	GtkCellRendererHyperText *hypercell = (GtkCellRendererHyperText *)cell;
+	GtkTreePath* path = gtk_tree_model_get_path(GTK_TREE_MODEL(app.store), iter);
+	GdkRectangle cellrect;
+
+	gint mouse_row_num = get_mouseover_row();
+
+	gchar* path_str = gtk_tree_model_get_string_from_iter(GTK_TREE_MODEL(app.store), iter);
+	gint cell_row_num = atoi(path_str);
+
+	//----------------------
+
+	//get the coords for this cell:
+	gtk_tree_view_get_cell_area(GTK_TREE_VIEW(app.view), path, tree_column, &cellrect);
+	gtk_tree_path_free(path);
+	//dbg(0, "%s mouse_y=%i cell_y=%i-%i.\n", path_str, app.mouse_y, cellrect.y, cellrect.y + cellrect.height);
+	//if(//(app.mouse_x > cellrect.x) && (app.mouse_x < (cellrect.x + cellrect.width)) &&
+	//			(app.mouse_y >= cellrect.y) && (app.mouse_y <= (cellrect.y + cellrect.height))){
+	if(cell_row_num == mouse_row_num){
+	if((app.mouse_x > cellrect.x) && (app.mouse_x < (cellrect.x + cellrect.width))){
+		//printf("tag_cell_data(): mouseover! row_num=%i\n", mouse_row_num);
+		//printf("tag_cell_data():  inside: x=%i y=%i\n", cellrect.x, cellrect.y);
+
+		if(strlen(celltext->text)){
+			g_strstrip(celltext->text);//trim
+
+			gint mouse_cell_x = app.mouse_x - cellrect.x;
+
+			//make a layout to find word sizes:
+
+			PangoContext* context = gtk_widget_get_pango_context(app.view); //free?
+			PangoLayout* layout = pango_layout_new(context);
+			pango_layout_set_text(layout, celltext->text, strlen(celltext->text));
+
+			int line_num = 0;
+			PangoLayoutLine* layout_line = pango_layout_get_line(layout, line_num);
+			int char_pos;
+			gboolean trailing = 0;
+			//printf("tag_cell_data(): line len: %i\n", layout_line->length);
+			int i;
+			for(i=0;i<layout_line->length;i++){
+				//pango_layout_line_index_to_x(layout_line, i, trailing, &char_pos);
+				//printf("tag_cell_data(): x=%i\n", (int)(char_pos/PANGO_SCALE));
+			}
+
+			//-------------------------
+
+			//split the string into words:
+
+			const gchar *str = celltext->text;
+			gchar** split = g_strsplit(str, " ", 100);
+			//printf("split: [%s] %p %p %p %s\n", str, split[0], split[1], split[2], split[0]);
+			int char_index = 0;
+			int word_index = 0;
+			int mouse_word = 0;
+			gchar formatted[256] = "";
+			char word[256] = "";
+			while(split[word_index]){
+				char_index += strlen(split[word_index]);
+
+				pango_layout_line_index_to_x(layout_line, char_index, trailing, &char_pos);
+				if(char_pos/PANGO_SCALE > mouse_cell_x){
+					mouse_word = word_index;
+					dbg(0, "word=%i\n", word_index);
+
+					snprintf(word, 256, "<u>%s</u> ", split[word_index]);
+					g_strlcat(formatted, word, 256);
+					//g_free(split[word_index]);
+					//split[word_index] = word;
+
+					while(split[++word_index]){
+						//snprintf(formatted, 256, "%s ", split[word_index]);
+						snprintf(word, 256, "%s ", split[word_index]);
+						g_strlcat(formatted, word, 256);
+					}
+
+					break;
+				}
+
+				snprintf(word, 256, "%s ", split[word_index]);
+				g_strlcat(formatted, word, 256);
+
+				word_index++;
+			}
+			dbg(0, "joined: %s\n", formatted);
+
+			g_object_unref(layout);
+
+			//-------------------------
+
+			//set new markup:
+
+			//g_object_set();
+			gchar *text = NULL;
+			GError *error = NULL;
+			PangoAttrList *attrs = NULL;
+
+			if (formatted && !pango_parse_markup(formatted, -1, 0, &attrs, &text, NULL, &error)){
+				g_warning("Failed to set cell text from markup due to error parsing markup: %s", error->message);
+				g_error_free(error);
+				return;
+			}
+			//if (joined) g_free(joined);
+			if (celltext->text) g_free(celltext->text);
+			if (celltext->extra_attrs) pango_attr_list_unref(celltext->extra_attrs);
+
+			//setting text here doesnt seem to work (text is set but not displayed), but setting markup does.
+			//printf("tag_cell_data(): setting text: %s\n", text);
+			celltext->text = text;
+			celltext->extra_attrs = attrs;
+			hypercell->markup_set = true;
+		}
+	}
+	}
+	//else g_object_set(cell, "markup", "outside", NULL);
+	//else hypercell->markup_set = false;
+
+	g_free(path_str);
+
+
+/*
+			gchar *text = NULL;
+			GError *error = NULL;
+			PangoAttrList *attrs = NULL;
+			
+			dbg(0, "text=%s\n", celltext->text);
+			if (!pango_parse_markup(celltext->text, -1, 0, &attrs, &text, NULL, &error)){
+				g_warning("Failed to set cell text from markup due to error parsing markup: %s", error->message);
+				g_error_free(error);
+				return;
+			}
+			//if (celltext->text) g_free (celltext->text);
+			//if (celltext->extra_attrs) pango_attr_list_unref (celltext->extra_attrs);
+			celltext->text = text;
+			celltext->extra_attrs = attrs;
+	hypercell->markup_set = true;
+	*/
+}
+
+
+static void
+cell_bg_lighter(GtkTreeViewColumn *tree_column, GtkCellRenderer *cell, GtkTreeModel *tree_model, GtkTreeIter *iter)
+{
+	unsigned colour_index = 0;
+	gtk_tree_model_get(GTK_TREE_MODEL(app.store), iter, COL_COLOUR, &colour_index, -1);
+	if(colour_index > PALETTE_SIZE){ gwarn("bad colour data. Index out of range (%u).\n", colour_index); return; }
+
+	if(colour_index == 0){
+		colour_index = 4; //FIXME temp
+	}
+
+	if(strlen(app.config.colour[colour_index])){
+		GdkColor colour, colour2;
+		char hexstring[8];
+		snprintf(hexstring, 8, "#%s", app.config.colour[colour_index]);
+		if(!gdk_color_parse(hexstring, &colour)) gwarn("parsing of colour string failed.\n");
+		colour_lighter(&colour2, &colour);
+
+		g_object_set(cell, "cell-background-set", true, "cell-background-gdk", &colour2, NULL);
+	}
+}
+
+
+static void
+cell_data_bg(GtkTreeViewColumn *tree_column, GtkCellRenderer *cell, GtkTreeModel *tree_model, GtkTreeIter *iter, gpointer data)
+{
+	unsigned colour_index = 0;
+	gtk_tree_model_get(GTK_TREE_MODEL(app.store), iter, COL_COLOUR, &colour_index, -1);
+	if(colour_index > PALETTE_SIZE){ gwarn("bad colour data. Index out of range (%u).\n", colour_index); return; }
+
+	char colour[16] = "";
+	if(strlen(app.config.colour[colour_index])){
+		snprintf(colour, 16, "#%s", app.config.colour[colour_index]);
+		//dbg(1, "colour=%i %s", colour_index, colour);
+
+		if(strlen(colour) != 7 ){ perr("bad colour string (%s) index=%u.\n", colour, colour_index); return; }
+	}
+	else colour_index = 0;
+
+	if(colour_index) g_object_set(cell, "cell-background-set", true, "cell-background", colour, NULL);
+	else             g_object_set(cell, "cell-background-set", false, NULL);
 }
 
 

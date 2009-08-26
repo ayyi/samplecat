@@ -60,7 +60,7 @@ typedef struct _ViewIter ViewIter;
  * a link to the image and the type's name (used so that the image can
  * be refreshed, among other things).
  */
-typedef struct _MIME_type MIME_type;
+//typedef struct _MIME_type MIME_type;
 
 /* Icon is an abstract base class for pinboard and panel icons.
  * It contains the name and path of the icon, as well as its DirItem.
@@ -90,7 +90,9 @@ typedef struct _Panel Panel;
  * version of the file is already cached.
  * Caches are used to access directories, images and XML files.
  */
+#ifndef GFSCache
 typedef struct _GFSCache GFSCache;
+#endif
 
 /* Each cached XML file is represented by one of these */
 typedef struct _XMLwrapper XMLwrapper;

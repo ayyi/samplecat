@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <gtk/gtk.h>
+#include "file_manager.h"
 #include "typedefs.h"
 #include <gimp/gimpaction.h>
 #include <gimp/gimpactiongroup.h>
@@ -11,17 +12,16 @@
 #include "mysql/mysql.h"
 #include "dh-link.h"
 #include "gqview_view_dir_tree.h"
+#include "rox/rox_global.h"
+#include "rox/dir.h"
 #include "main.h"
 #include "listview.h"
 #include "menu.h"
 #include "dnd.h"
-#include "rox/rox_global.h"
-#include "rox/dir.h"
-#include "file_manager.h"
 #include "file_view.h"
 #include "inspector.h"
 #include "dh_tree.h"
-#include "db.h"
+#include "db/db.h"
 #include "colour_box.h"
 #include "window.h"
 
@@ -135,7 +135,7 @@ GtkWindow
 	gtk_paned_add1(GTK_PANED(r_vpaned), scroll);
 
 	listview__new();
-	if(0 && !db__is_connected()) gtk_widget_set_no_show_all(app.view, true); //dont show main view if no database.
+	if(0 && !mysql__is_connected()) gtk_widget_set_no_show_all(app.view, true); //dont show main view if no database.
 	gtk_container_add(GTK_CONTAINER(app.scroll), app.view);
 
 	//--------
@@ -328,7 +328,7 @@ left_pane()
 	gtk_widget_show(vpaned2);
 	gtk_paned_add1(GTK_PANED(app.vpaned), vpaned2);
 
-	if(db__is_connected()){
+	if(mysql__is_connected()){
 #ifndef NO_USE_DEVHELP_DIRTREE
 		GtkWidget* tree = dir_tree_new();
 		GtkWidget* scroll = scrolled_window_new();
@@ -471,7 +471,7 @@ message_panel__new()
 	gtk_box_pack_start((GtkBox*)vbox, hbox, FALSE, FALSE, 2);
 #endif
 
-	if(db__is_connected()) gtk_widget_set_no_show_all(app.msg_panel, true); //initially hidden.
+	if(mysql__is_connected()) gtk_widget_set_no_show_all(app.msg_panel, true); //initially hidden.
 	return vbox;
 }
 

@@ -34,7 +34,6 @@
 
 #define DATA_DIR "~/"
 
-typedef struct _MIME_type MIME_type;
 GdkPixbuf* mime_type_get_pixbuf(MIME_type*);
 extern MIME_type *inode_directory;
 

@@ -57,10 +57,7 @@
 #include <string.h>
 #include <unistd.h>
 
-//#include <fcntl.h>
-//#include <sys/stat.h>
-
-typedef void GimpActionGroup;
+#include "file_manager/typedefs.h"
 #include "support.h"
 #include "rox_global.h"
 

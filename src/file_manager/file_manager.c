@@ -27,7 +27,8 @@
 #include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
 
-#include "../typedefs.h"
+//#include "../typedefs.h"
+#include "file_manager/typedefs.h"
 //#include "support.h"
 //#include "rox/rox_global.h"
 #include "file_manager.h"
