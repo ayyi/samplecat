@@ -5,14 +5,13 @@
 #include <libgen.h>
 #include <gtk/gtk.h>
 #include "file_manager/file_manager.h"
+#include "gqview_view_dir_tree.h"
 #include "typedefs.h"
 #include "support.h"
 #include "mysql/mysql.h"
 #include "dh-link.h"
-#include "gqview_view_dir_tree.h"
 #include "mimetype.h"
 #include "main.h"
-#include "db/db.h"
 #include "mimetype.h"
 #include "sample.h"
 #include "listview.h"
@@ -297,24 +296,20 @@ on_notes_insert(GtkTextView *textview, gchar *arg1, gpointer user_data)
 static gboolean
 on_notes_focus_out(GtkWidget *widget, gpointer userdata)
 {
-	if(!mysql__is_connected()) return FALSE;
+	if(!backend.update_notes) return FALSE;
 
 	GtkTextBuffer* textbuf = gtk_text_view_get_buffer(GTK_TEXT_VIEW(widget));
-	if(!textbuf){ errprintf("on_notes_focus_out(): bad arg: widget.\n"); return FALSE; }
+	g_return_val_if_fail(textbuf, false);
 
 	GtkTextIter start_iter, end_iter;
 	gtk_text_buffer_get_start_iter(textbuf,  &start_iter);
 	gtk_text_buffer_get_end_iter  (textbuf,  &end_iter);
 	gchar* notes = gtk_text_buffer_get_text(textbuf, &start_iter, &end_iter, TRUE);
-	dbg(0, "start=%i end=%i", gtk_text_iter_get_offset(&start_iter), gtk_text_iter_get_offset(&end_iter));
+	dbg(2, "start=%i end=%i", gtk_text_iter_get_offset(&start_iter), gtk_text_iter_get_offset(&end_iter));
 
 	unsigned id = app.inspector->row_id;
-	char sql[1024];
-	snprintf(sql, 1024, "UPDATE samples SET notes='%s' WHERE id=%u", notes, id);
-	if(mysql_query(&app.mysql, sql)){
-		errprintf("on_notes_focus_out(): update failed! sql=%s\n", sql);
-		return FALSE;
-	}else{
+	if(backend.update_notes(id, notes)){
+		statusbar_printf(1, "notes updated");
 		GtkTreePath *path;
 		if((path = gtk_tree_row_reference_get_path(app.inspector->row_ref))){
 			GtkTreeIter iter;

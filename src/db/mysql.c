@@ -12,14 +12,13 @@
 #include "file_manager.h"
 #include "typedefs.h"
 #include "src/types.h"
-#include <gqview2/typedefs.h>
 #include "support.h"
 #include "mimetype.h"
 #include "pixmaps.h"
 #include "main.h"
 #include "listview.h"
 #include "sample.h"
-#include "db/db.h"
+#include "db/mysql.h"
 
 //#if defined(HAVE_STPCPY) && !defined(HAVE_mit_thread)
   #define strmov(A,B) stpcpy((A),(B))
@@ -31,6 +30,9 @@ enum {
   MYSQL_DIR = 2,
   MYSQL_KEYWORDS = 3,
   MYSQL_PIXBUF = 4,
+  MYSQL_LENGTH = 5,
+  MYSQL_SAMPLERATE = 6,
+  MYSQL_CHANNELS = 7,
   MYSQL_ONLINE = 8,
   MYSQL_MIMETYPE = 10,
 };
@@ -45,7 +47,8 @@ static MYSQL_RES *dir_iter_result = NULL;
 static MYSQL_RES *search_result = NULL;
 static SamplecatResult result;
 
-static int mysql__exec_sql (const char* sql);
+static int  mysql__exec_sql (const char* sql);
+static void clear_result    ();
 
 
 /*
@@ -114,7 +117,6 @@ mysql__is_connected()
 int
 mysql__insert(sample* sample, MIME_type *mime_type)
 {
-	MYSQL *mysql = &app.mysql;
 	int id = 0;
 	gchar* filedir = g_path_get_dirname(sample->filename);
 	gchar* filename = g_path_get_basename(sample->filename);
@@ -123,8 +125,8 @@ mysql__insert(sample* sample, MIME_type *mime_type)
 	dbg(1, "sql=%s", sql);
 
 	if(mysql__exec_sql(sql)==0){
-		dbg(0, "ok!");
-		id = mysql_insert_id(mysql);
+		dbg(1, "ok!");
+		id = mysql_insert_id(&app.mysql);
 	}else{
 		perr("not ok...\n");
 	}
@@ -186,6 +188,19 @@ mysql__update_colour(int id, int colour)
 		return false;
 	}
 	return true;
+}
+
+
+gboolean
+mysql__update_notes(int id, char* notes)
+{
+	char sql[1024];
+	snprintf(sql, 1024, "UPDATE samples SET notes='%s' WHERE id=%u", notes, id);
+	if(mysql_query(&app.mysql, sql)){
+		perr("update failed! sql=%s\n", sql);
+		return false;
+	}
+	else return true;
 }
 
 
@@ -266,12 +281,38 @@ mysql__search_iter_next_(unsigned long** lengths)
 {
 	if(!search_result) return NULL;
 
-	memset(&result, 0, sizeof(SamplecatResult));
+	clear_result();
 
-	MYSQL_ROW row;
-	row = mysql_fetch_row(search_result);
+	MYSQL_ROW row = mysql_fetch_row(search_result);
 	if(!row) return NULL;
+
 	*lengths = mysql_fetch_lengths(search_result); //free? 
+
+	//deserialise the pixbuf field:
+	GdkPixdata pixdata;
+	GdkPixbuf* pixbuf = NULL;
+	if(row[MYSQL_PIXBUF]){
+		//dbg(0, "pixbuf_length=%i", (*lengths)[MYSQL_PIXBUF]);
+		if(gdk_pixdata_deserialize(&pixdata, (*lengths)[MYSQL_PIXBUF], (guint8*)row[MYSQL_PIXBUF], NULL)){
+			pixbuf = gdk_pixbuf_from_pixdata(&pixdata, TRUE, NULL);
+		}
+	}
+
+	int get_int(MYSQL_ROW row, int i)
+	{
+		return row[i] ? atoi(row[i]) : 0;
+	}
+
+	result.sample_name = row[MYSQL_NAME];
+	result.dir         = row[MYSQL_DIR];
+	result.keywords    = row[MYSQL_KEYWORDS];
+	result.length      = get_int(row, MYSQL_LENGTH);
+	result.sample_rate = get_int(row, MYSQL_SAMPLERATE);
+	result.channels    = get_int(row, MYSQL_CHANNELS);
+	result.overview    = pixbuf;
+	result.notes       = row[MYSQL_KEYWORDS];
+	result.colour      = get_int(row, MYSQL_COLOUR);
+	result.mimetype    = row[MYSQL_MIMETYPE];
 	return &result;
 }
 
@@ -356,7 +397,6 @@ void
 mysql__add_row_to_model(MYSQL_ROW row, unsigned long* lengths)
 {
 	GdkPixbuf* iconbuf = NULL;
-	GdkPixdata pixdata;
 	char length[64];
 	char keywords[256];
 	char sample_name[256];
@@ -367,26 +407,18 @@ mysql__add_row_to_model(MYSQL_ROW row, unsigned long* lengths)
 
 	//db__iter_to_result(result);
 
-	/*
-	for(i = 0; i < num_fields; i++){ 
-		printf("[%s] ", row[i] ? row[i] : "NULL"); 
-	}
-	printf("\n"); 
-	*/
-
 	//deserialise the pixbuf field:
+	GdkPixdata pixdata;
 	GdkPixbuf* pixbuf = NULL;
 	if(row[MYSQL_PIXBUF]){
-		//printf("%s(): deserializing...\n", __func__); 
-		if(gdk_pixdata_deserialize(&pixdata, lengths[4], (guint8*)row[MYSQL_PIXBUF], NULL)){
+		if(gdk_pixdata_deserialize(&pixdata, lengths[MYSQL_PIXBUF], (guint8*)row[MYSQL_PIXBUF], NULL)){
 			pixbuf = gdk_pixbuf_from_pixdata(&pixdata, TRUE, NULL);
 		}
 	}
 
-	format_time(length, row[5]);
+	format_time(length, row[MYSQL_LENGTH]);
 	if(row[MYSQL_KEYWORDS]) snprintf(keywords, 256, "%s", row[MYSQL_KEYWORDS]); else keywords[0] = 0;
-	//if(row[5]==NULL) length     = 0; else length     = atoi(row[5]);
-	if(row[6]==NULL) samplerate = 0; else samplerate = atoi(row[6]); samplerate_format(samplerate_s, samplerate);
+	if(!row[MYSQL_SAMPLERATE]) samplerate = 0; else samplerate = atoi(row[MYSQL_SAMPLERATE]); samplerate_format(samplerate_s, samplerate);
 	if(row[7]==NULL) channels   = 0; else channels   = atoi(row[7]);
 	if(row[MYSQL_ONLINE]==NULL) online = 0; else online = atoi(row[MYSQL_ONLINE]);
 	if(row[MYSQL_COLOUR]==NULL) colour = 0; else colour = atoi(row[MYSQL_COLOUR]);
@@ -442,6 +474,14 @@ mysql__add_row_to_model(MYSQL_ROW row, unsigned long* lengths)
 		printf(" %s\n", sample_name);
 	}
 #endif
+}
+
+
+static void
+clear_result()
+{
+	if(result.overview) g_object_unref(result.overview);
+	memset(&result, 0, sizeof(SamplecatResult));
 }
 
 

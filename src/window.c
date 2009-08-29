@@ -5,13 +5,13 @@
 #include <string.h>
 #include <gtk/gtk.h>
 #include "file_manager.h"
+#include "gqview_view_dir_tree.h"
 #include "typedefs.h"
 #include <gimp/gimpaction.h>
 #include <gimp/gimpactiongroup.h>
 #include "support.h"
 #include "mysql/mysql.h"
 #include "dh-link.h"
-#include "gqview_view_dir_tree.h"
 #include "rox/rox_global.h"
 #include "rox/dir.h"
 #include "main.h"
@@ -21,7 +21,7 @@
 #include "file_view.h"
 #include "inspector.h"
 #include "dh_tree.h"
-#include "db/db.h"
+#include "db/mysql.h"
 #include "colour_box.h"
 #include "window.h"
 
@@ -624,7 +624,7 @@ dir_tree_on_link_selected(GObject *ignored, DhLink *link, gpointer data)
 	*/
 	g_return_val_if_fail(link, false);
 
-	dbg(0, "uri=%s", link->uri);
+	dbg(1, "uri=%s", link->uri);
 	//FIXME segfault if we use this if()
 	//if(strlen(link->uri)){
 		update_search_dir(link->uri);

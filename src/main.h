@@ -52,10 +52,12 @@ struct _config
 
 struct _backend
 {
-	gboolean    (*search_iter_new)  (char* search, char* dir);
+	gboolean         (*search_iter_new)  (char* search, char* dir);
+	SamplecatResult* (*search_iter_next) (unsigned long**);
 	void        (*search_iter_free) ();
 	int         (*insert)           (sample*, MIME_type*);
 	gboolean    (*update_colour)    (int, int);
+	gboolean    (*update_notes)     (int, char*);
 };
 #ifdef __main_c__
 struct _backend backend = {NULL, NULL, NULL, NULL};
@@ -82,6 +84,8 @@ struct _app
 	}              args;
 
 	GKeyFile*      key_file;   //config file data.
+
+	GList*         backends;
 
 	int            playing_id; //database index of the file that is currently playing, or zero if none playing.
 

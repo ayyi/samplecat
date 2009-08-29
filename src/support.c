@@ -24,8 +24,8 @@
 
 #include "dh-link.h"
 #include "file_manager.h"
-#include "typedefs.h"
 #include <gqview2/typedefs.h>
+#include "typedefs.h"
 #include <gimp/gimpaction.h>
 #include <gimp/gimpactiongroup.h>
 #include "support.h"
@@ -159,7 +159,7 @@ samplerate_format(char* str, int samplerate)
 gchar*
 dir_format(char* dir)
 {
-	if(strstr(dir, g_get_home_dir()) == dir) return dir + strlen(g_get_home_dir()) + 1;
+	if(dir && (strstr(dir, g_get_home_dir()) == dir)) return dir + strlen(g_get_home_dir()) + 1;
 	else return dir;
 }
 

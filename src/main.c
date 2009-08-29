@@ -15,13 +15,14 @@ This software is licensed under the GPL. See accompanying file COPYING.
 #include <getopt.h>
 #include <sndfile.h>
 #include <gtk/gtk.h>
-
 #include <gdk-pixbuf/gdk-pixdata.h>
+
 #ifdef USE_AYYI
   #include "ayyi.h"
   #include "ayyi_model.h"
 #endif
 #include "file_manager.h"
+#include "gqview_view_dir_tree.h"
 #include "typedefs.h"
 #ifdef USE_TRACKER
   //#include "tracker.h"
@@ -33,7 +34,6 @@ This software is licensed under the GPL. See accompanying file COPYING.
 #include "mimetype.h"
 #include "dh-link.h"
 #include "support.h"
-#include "gqview_view_dir_tree.h"
 #include "main.h"
 #include "sample.h"
 #include "audio.h"
@@ -43,7 +43,7 @@ This software is licensed under the GPL. See accompanying file COPYING.
 #include "listview.h"
 #include "window.h"
 #include "inspector.h"
-#include "db/db.h"
+#include "db/mysql.h"
 #include "dnd.h"
 #include "console_view.h"
 #ifdef USE_GQVIEW_1_DIRTREE
@@ -66,8 +66,9 @@ This software is licensed under the GPL. See accompanying file COPYING.
 
 #define SQL_LEN 66000
 
-void              dir_init();
-static GtkWidget* make_context_menu();
+extern void       dir_init          ();
+static GtkWidget* make_context_menu ();
+static gboolean   can_use_backend   (const char*);
 
 struct _app app;
 struct _palette palette;
@@ -84,17 +85,19 @@ char yellow[16];
 char bold  [16];
 
 static const struct option long_options[] = {
+  { "backend",          1, NULL, 'b' },
   { "no-gui",           0, NULL, 'g' },
   { "verbose",          1, NULL, 'v' },
   { "add",              1, NULL, 'a' },
   { "help",             0, NULL, 'h' },
 };
 
-static const char* const short_options = "gv:a:h";
+static const char* const short_options = "b:gv:a:h";
 
 static const char* const usage =
   "Usage: %s [ options ]\n"
   " -v --verbose   show more information.\n"
+  " -b --backend   select which database type to use.\n"
   " -g --no-gui    run as command line app.\n"
   " -a --add       add these files.\n"
   " -h --help      show this usage information and quit.\n"
@@ -133,6 +136,15 @@ main(int argc, char** argv)
 
 	printf("%s"PACKAGE_NAME". Version "PACKAGE_VERSION"%s\n", yellow, white);
 
+	#define ADD_BACKEND(A) app.backends = g_list_append(app.backends, A)
+	ADD_BACKEND("mysql");
+#ifdef USE_SQLITE
+	ADD_BACKEND("sqlite");
+#endif
+#ifdef USE_TRACKER
+	app.backends = g_list_append(app.backends, "tracker");
+#endif
+
 	int opt;
 	while((opt = getopt_long (argc, argv, short_options, long_options, NULL)) != -1) {
 		switch(opt) {
@@ -140,6 +152,17 @@ main(int argc, char** argv)
 				printf("using debug level: %s\n", optarg);
 				int d = atoi(optarg);
 				if(d<0 || d>5) { gwarn ("bad arg. debug=%i", d); } else debug = d;
+				break;
+			case 'b':
+				//if a particular backend is requested, and is available, reduce the backend list to just this one.
+				dbg(0, "backend '%s' requested.", optarg);
+				if(can_use_backend(optarg)){
+					list_clear(app.backends);
+					//app.backends = g_list_append(app.backends, optarg);
+					ADD_BACKEND(optarg);
+					dbg(0, "n_backends=%i", g_list_length(app.backends));
+				}
+				else gwarn("requested backend not available: '%s'", optarg);
 				break;
 			case 'g':
 				app.no_gui = true;
@@ -169,21 +192,25 @@ main(int argc, char** argv)
 	pixmaps_init();
 	dir_init();
 
-	if(mysql__connect()){
-		set_backend(BACKEND_MYSQL);
-	}else{
-		#ifdef QUIT_WITHOUT_DB
-		on_quit(NULL, GINT_TO_POINTER(1));
-		#endif
+	if(can_use_backend("mysql")){
+		if(mysql__connect()){
+			set_backend(BACKEND_MYSQL);
+		}else{
+			#ifdef QUIT_WITHOUT_DB
+			on_quit(NULL, GINT_TO_POINTER(1));
+			#endif
+		}
 	}
 
 #ifdef USE_SQLITE
-	if(!sqlite__connect()){
-		#ifdef QUIT_WITHOUT_DB
-		on_quit(NULL, GINT_TO_POINTER(EXIT_FAILURE));
-		#endif
-	}else{
-		if(BACKEND_IS_NULL) set_backend(BACKEND_SQLITE);
+	if(can_use_backend("sqlite")){
+		if(!sqlite__connect()){
+			#ifdef QUIT_WITHOUT_DB
+			on_quit(NULL, GINT_TO_POINTER(EXIT_FAILURE));
+			#endif
+		}else{
+			if(BACKEND_IS_NULL) set_backend(BACKEND_SQLITE);
+		}
 	}
 #endif
 
@@ -342,8 +369,9 @@ scan_dir(const char* path, int* added_count)
 void
 do_search(char *search, char *dir)
 {
-	PF;
 	//fill the display with the results for the given search phrase.
+
+	#define MAX_DISPLAY_ROWS 1000
 	PF;
 
 	if(!backend.search_iter_new){
@@ -372,15 +400,27 @@ do_search(char *search, char *dir)
 		gtk_tree_view_set_model(GTK_TREE_VIEW(view), NULL);
 		*/ 
 
-		#define MAX_DISPLAY_ROWS 1000
 		if(BACKEND_IS_MYSQL){
 			int row_count = 0;
 			unsigned long *lengths;
+#if 0
 			MYSQL_ROW row;
 			while((row = mysql__search_iter_next(&lengths)) && row_count < MAX_DISPLAY_ROWS){
 				mysql__add_row_to_model(row, lengths);
 				row_count++;
 			}
+#else
+			SamplecatResult* result;
+			while((result = backend.search_iter_next(&lengths)) && row_count < MAX_DISPLAY_ROWS){
+				if(app.no_gui){
+					if(!row_count) console__show_result_header();
+					console__show_result(result);
+				}else{
+					listmodel__add_result(result);
+				}
+				row_count++;
+			}
+#endif
 			backend.search_iter_free();
 
 			if(0 && row_count < MAX_DISPLAY_ROWS){
@@ -401,7 +441,6 @@ do_search(char *search, char *dir)
 					if(!row_count) console__show_result_header();
 					console__show_result(result);
 				}else{
-					dbg(0, "mimetype=%s", result->mimetype);
 					listmodel__add_result(result);
 				}
 				row_count++;
@@ -909,7 +948,7 @@ delete_row(GtkWidget *widget, gpointer user_data)
 	GtkTreeSelection* selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(app.view));
 	GList* selectionlist = gtk_tree_selection_get_selected_rows(selection, &(model));
 	if(!selectionlist){ perr("no files selected?\n"); return; }
-	dbg(0, "%i rows selected.", g_list_length(selectionlist));
+	dbg(1, "%i rows selected.", g_list_length(selectionlist));
 
 	GList* selected_row_refs = NULL;
 	GtkTreeRowReference* row_ref = NULL;
@@ -1599,9 +1638,11 @@ set_backend(BackendType type)
 	switch(type){
 		case BACKEND_MYSQL:
 			backend.search_iter_new  = mysql__search_iter_new;
+			backend.search_iter_next = mysql__search_iter_next_;
 			backend.search_iter_free = mysql__search_iter_free;
 			backend.insert           = mysql__insert;
 			backend.update_colour    = mysql__update_colour;
+			backend.update_notes     = mysql__update_notes;
 			break;
 		case BACKEND_SQLITE:
 			#ifdef USE_SQLITE
@@ -1610,6 +1651,7 @@ set_backend(BackendType type)
 			backend.search_iter_free = sqlite__search_iter_free;
 			backend.insert           = sqlite__insert;
 			backend.update_colour    = sqlite__update_colour;
+			backend.update_notes     = NULL;
 			dbg(0, "backend is sqlite.");
 			#endif
 			break;
@@ -1623,6 +1665,19 @@ set_backend(BackendType type)
 		default:
 			break;
 	}
+}
+
+
+static gboolean
+can_use_backend(const char* backend)
+{
+	GList* l = app.backends;
+	for(;l;l=l->next){
+		if(!strcmp(l->data, backend)){
+			return true;
+		}
+	}
+	return false;
 }
 
 

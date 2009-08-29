@@ -7,6 +7,7 @@ int         mysql__insert           (sample*, MIME_type*);
 gboolean    mysql__delete_row       (int id);
 int         mysql__update_path      (const char* old_path, const char* new_path);
 gboolean    mysql__update_colour    (int id, int colour);
+gboolean    mysql__update_notes     (int id, char*);
 
 gboolean    mysql__search_iter_new  (char* search, char* dir);
 MYSQL_ROW   mysql__search_iter_next (unsigned long** lengths);

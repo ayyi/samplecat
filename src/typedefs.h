@@ -30,6 +30,10 @@ typedef struct _GimpActionGroup    GimpActionGroup;
 typedef struct _GFSCache           GFSCache;
 #endif
 
+#ifndef __gqview2_typedefs_h__
+typedef struct _ViewDirTree ViewDirTree;
+#endif
+
 #ifndef true
   #define true TRUE
 #endif

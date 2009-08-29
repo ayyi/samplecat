@@ -7,7 +7,6 @@
 #include "file_manager.h"
 #include "typedefs.h"
 #include "mimetype.h"
-#include <gqview2/typedefs.h>
 #include <gimp/gimpaction.h>
 #include <gimp/gimpactiongroup.h>
 
@@ -281,11 +280,11 @@ sqlite__search_iter_next(unsigned long** lengths)
 		result.keywords    = (char*)sqlite3_column_text(ppStmt, COLUMN_KEYWORDS);
 		result.length      = sqlite3_column_int(ppStmt, COLUMN_LENGTH);
 		result.sample_rate = sqlite3_column_int(ppStmt, COLUMN_SAMPLERATE);
+		result.channels    = sqlite3_column_int(ppStmt, COLUMN_CHANNELS);
 		result.overview    = (GdkPixbuf*)sqlite3_column_blob(ppStmt, COLUMN_PIXBUF);
 		result.notes       = (char*)sqlite3_column_text(ppStmt, COLUMN_NOTES);
 		result.colour      = sqlite3_column_int(ppStmt, COLUMN_COLOUR);
 		result.mimetype    = (char*)sqlite3_column_text(ppStmt, COLUMN_MIMETYPE);
-		//dbg(0, "filename=%s", result.sample_name);
 		return &result;
 	}
 	else return NULL;

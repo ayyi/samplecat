@@ -9,9 +9,9 @@
 #endif
 #include "dh-link.h"
 
+//#include <gqview2/typedefs.h>
 #include "typedefs.h"
 #include "src/types.h"
-#include <gqview2/typedefs.h>
 #include "mimetype.h"
 #include "support.h"
 #include "main.h"
@@ -303,6 +303,8 @@ listview__item_set_colour(GtkTreePath* path, unsigned colour)
 	int id = listview__path_get_id(path);
 
 	if(!backend.update_colour(colour, id)) return false;
+
+	statusbar_printf(1, "colour updated");
 
 	GtkTreeIter iter;
 	gtk_tree_model_get_iter(GTK_TREE_MODEL(app.store), &iter, path);
@@ -644,8 +646,11 @@ path_cell_data(GtkTreeViewColumn *tree_column, GtkCellRenderer *cell, GtkTreeMod
 	cell_data_bg(tree_column, cell, tree_model, iter, data);
 
 	GtkCellRendererText *celltext = (GtkCellRendererText*)cell;
-#warning path_cell_data(): check celltext.
-	celltext->text = dir_format(celltext->text);
+	if(celltext){
+		gchar* text = g_strdup(dir_format(celltext->text));
+		g_free(celltext->text);
+		celltext->text = text;
+	}
 }
 
 

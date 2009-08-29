@@ -54,7 +54,7 @@ samplecat_SOURCES = \
 	cellrenderer_hypertext.c cellrenderer_hypertext.h \
 	colour_box.c colour_box.h \
 	dnd.c dnd.h \
-	db/db.c db/db.h \
+	db/mysql.c db/mysql.h \
 	observer.c observer.h \
 	fscache.c fscache.h \
 	support.c support.h \

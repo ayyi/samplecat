@@ -10,8 +10,8 @@
  */
 
 
-#ifndef TYPEDEFS_H
-#define TYPEDEFS_H
+#ifndef __gqview2_typedefs_h__
+#define __gqview2_typedefs_h__
 
 
 /*

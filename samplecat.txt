@@ -1,6 +1,6 @@
 todo:
+	-insert: dupe-checking not working.
 	-show warning icon in statusbar - eggtrayicon.c ?
-	-dont show /home/bob/ in the path - show these as relative paths.
 	-freshly imported files dont have the icon set.
 	-check out libsexy SexyUrlLabel (for tags) 
 	-check out chickensys samplemanage.
