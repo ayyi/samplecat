@@ -19,7 +19,6 @@
 #include "dh-link.h"
 #include "file_manager.h"
 #include "typedefs.h"
-#include <gqview2/typedefs.h>
 #include "support.h"
 #include "main.h"
 #include "audio.h"

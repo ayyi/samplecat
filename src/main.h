@@ -57,6 +57,7 @@ struct _backend
 	void        (*search_iter_free) ();
 	int         (*insert)           (sample*, MIME_type*);
 	gboolean    (*update_colour)    (int, int);
+	gboolean    (*update_keywords)  (int, char*);
 	gboolean    (*update_notes)     (int, char*);
 };
 #ifdef __main_c__
@@ -80,6 +81,7 @@ struct _app
 	gboolean       add_recursive;
 	gboolean       no_gui;
 	struct _args {
+		char*      search;
 		char*      add;
 	}              args;
 
@@ -177,7 +179,6 @@ gboolean    on_overview_done(gpointer sample);
 void        db_update_pixbuf(sample*);
 void        update_dir_node_list();
 
-void        keywords_on_edited(GtkCellRendererText*, gchar *path_string, gchar *new_text, gpointer user_data);
 void        delete_row(GtkWidget*, gpointer user_data);
 void        update_row(GtkWidget*, gpointer user_data);
 void        edit_row  (GtkWidget*, gpointer user_data);

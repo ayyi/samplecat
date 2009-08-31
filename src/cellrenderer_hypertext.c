@@ -32,7 +32,7 @@
 #include "mysql/mysql.h"
 #include "dh-link.h"
 #include "typedefs.h"
-#include <gqview2/typedefs.h>
+//#include <gqview2/typedefs.h>
 #include "support.h"
 #include "main.h"
 extern struct _app app;

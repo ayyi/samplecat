@@ -88,17 +88,19 @@ static const struct option long_options[] = {
   { "backend",          1, NULL, 'b' },
   { "no-gui",           0, NULL, 'g' },
   { "verbose",          1, NULL, 'v' },
+  { "search",           1, NULL, 's' },
   { "add",              1, NULL, 'a' },
   { "help",             0, NULL, 'h' },
 };
 
-static const char* const short_options = "b:gv:a:h";
+static const char* const short_options = "b:gv:s:a:h";
 
 static const char* const usage =
   "Usage: %s [ options ]\n"
   " -v --verbose   show more information.\n"
   " -b --backend   select which database type to use.\n"
   " -g --no-gui    run as command line app.\n"
+  " -s --search    search using this phrase.\n"
   " -a --add       add these files.\n"
   " -h --help      show this usage information and quit.\n"
   "\n";
@@ -171,6 +173,10 @@ main(int argc, char** argv)
 				printf(usage, argv[0]);
 				exit(EXIT_SUCCESS);
 				break;
+			case 's':
+				printf("search=%s\n", optarg);
+				app.args.search = g_strdup(optarg);
+				break;
 			case 'a':
 				printf("add=%s\n", optarg);
 				app.args.add = g_strdup(optarg);
@@ -213,6 +219,12 @@ main(int argc, char** argv)
 		}
 	}
 #endif
+#ifdef USE_TRACKER
+	if(BACKEND_IS_NULL && can_use_backend("tracker")){
+		tracker__init();
+		set_backend(BACKEND_TRACKER);
+	}
+#endif
 
 	if(app.args.add){
 		add_file(app.args.add);
@@ -249,7 +261,7 @@ main(int argc, char** argv)
 #endif
 
 #ifdef USE_TRACKER
-	if(BACKEND_IS_NULL) g_idle_add((GSourceFunc)tracker__init, NULL);
+	if(!app.no_gui && BACKEND_IS_NULL) g_idle_add((GSourceFunc)tracker__init, NULL);
 #else
 	//if(BACKEND_IS_NULL) listview__show_db_missing();
 #endif
@@ -456,7 +468,12 @@ do_search(char *search, char *dir)
 			int row_count = 0;
 			SamplecatResult* result;
 			while((result = tracker__search_iter_next()) && row_count < MAX_DISPLAY_ROWS){
+				if(app.no_gui && row_count > 20) continue;
 				listmodel__add_result(result);
+				if(app.no_gui){
+					if(!row_count) console__show_result_header();
+					console__show_result(result);
+				}
 				row_count++;
 			}
 			backend.search_iter_free();
@@ -674,9 +691,7 @@ update_dir_node_list()
 gboolean
 new_search(GtkWidget *widget, gpointer userdata)
 {
-	//the search box focus-out signal ocurred.
-	//printf("new search...\n");
-
+	gwarn("deprecated function");
 	const gchar* text = gtk_entry_get_text(GTK_ENTRY(app.search));
 	
 	do_search((gchar*)text, app.search_dir);
@@ -894,46 +909,6 @@ db_update_pixbuf(sample *sample)
 		//at this pt, refcount should be two, we make it 1 so that pixbuf is destroyed with the row:
 		//g_object_unref(pixbuf); //FIXME
 	}else perr("no pixbuf.\n");
-}
-
-
-void
-keywords_on_edited(GtkCellRendererText *cell, gchar *path_string, gchar *new_text, gpointer user_data)
-{
-	//the keywords column has been edited. Update the database to reflect the new text.
-
-	PF;
-	GtkTreeIter iter;
-	int idx;
-	gchar *filename;
-	GtkTreeModel* store = GTK_TREE_MODEL(app.store);
-	GtkTreePath* path = gtk_tree_path_new_from_string(path_string);
-	gtk_tree_model_get_iter(store, &iter, path);
-	gtk_tree_model_get(store, &iter, COL_IDX, &idx, COL_NAME, &filename, -1);
-	dbg(0, "filename=%s", filename);
-
-	//convert to lowercase:
-	//gchar* lower = g_ascii_strdown(new_text, -1);
-	//g_free(lower);
-
-	char sql[1024];
-	char* tmppos;
-	tmppos = strmov(sql, "UPDATE samples SET keywords='");
-	//tmppos += mysql_real_escape_string(conn, tmppos, fbuffer, fsize);
-	tmppos = strmov(tmppos, new_text);
-	tmppos = strmov(tmppos, "' WHERE id=");
-	char idx_str[64];
-	snprintf(idx_str, 64, "%i", idx);
-	tmppos = strmov(tmppos, idx_str);
-	*tmppos++ = (char)0;
-	dbg(0, "sql=%s", sql);
-	if(mysql_query(&app.mysql, sql)){
-		dbg(0, "update failed! sql=%s", sql);
-		return;
-	}
-
-	//update the store:
-	gtk_list_store_set(app.store, &iter, COL_KEYWORDS, new_text, -1);
 }
 
 
@@ -1248,6 +1223,7 @@ treeview_get_tags_cell(GtkTreeView *view, guint x, guint y, GtkCellRenderer **ce
 void
 on_entry_activate(GtkEntry *entry, gpointer user_data)
 {
+	gwarn("deprecated function");
 	dbg(0, "entry activated!");
 }
 
@@ -1313,8 +1289,8 @@ tag_edit_start(int tnum)
 
   PF;
 
-  static gulong handler1 =0; // the edit box "focus_out" handler.
-  //static gulong handler2 =0; // the edit box RETURN key trap.
+  static gulong handler1 = 0; // the edit box "focus_out" handler.
+  //static gulong handler2 = 0; // the edit box RETURN key trap.
   
   GtkWidget* parent = app.inspector->tags_ev;
   GtkWidget* edit   = app.inspector->edit;
@@ -1642,6 +1618,7 @@ set_backend(BackendType type)
 			backend.search_iter_free = mysql__search_iter_free;
 			backend.insert           = mysql__insert;
 			backend.update_colour    = mysql__update_colour;
+			backend.update_keywords  = mysql__update_keywords;
 			backend.update_notes     = mysql__update_notes;
 			break;
 		case BACKEND_SQLITE:
@@ -1651,6 +1628,7 @@ set_backend(BackendType type)
 			backend.search_iter_free = sqlite__search_iter_free;
 			backend.insert           = sqlite__insert;
 			backend.update_colour    = sqlite__update_colour;
+			backend.update_keywords  = NULL;
 			backend.update_notes     = NULL;
 			dbg(0, "backend is sqlite.");
 			#endif

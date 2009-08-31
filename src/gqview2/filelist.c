@@ -10,14 +10,14 @@
  */
 
 #include <gtk/gtk.h>
+#include "file_manager/file_manager.h"
+#include "gqview_view_dir_tree.h"
 #include "../typedefs.h"
 #include "support.h"
 
 #include "gqview.h"
 #include "filelist.h"
 
-//#include "cache.h"
-//#include "rcfile.h"
 #include "ui_fileops.h"
 
 

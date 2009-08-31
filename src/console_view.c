@@ -20,16 +20,26 @@ console__show_result_header()
 {
 	int terminal_width; terminal_width = get_terminal_width();
 
-	printf("filters: %s\n", app.search_dir);
+	printf("filters: text='%s' dir=%s\n", app.search_phrase, strlen(app.search_dir) ? app.search_dir : "<all directories>");
 
-	printf("  name                 directory                            length  ch rate mimetype\n");
+	printf("  name                 directory                            length ch rate mimetype\n");
 }
 
 
 void
 console__show_result(SamplecatResult* result)
 {
-	printf("  %-20s %-35s %7i %i %5i %s\n", result->sample_name, dir_format(result->dir), result->length, result->channels, result->sample_rate, result->mimetype);
+	#define DIR_MAX 35
+	char dir[DIR_MAX];
+	snprintf(dir, DIR_MAX-1, dir_format(result->dir));
+	dir[DIR_MAX-1] = '\0';
+
+	#define SNAME_MAX 20
+	char name[SNAME_MAX];
+	snprintf(name, SNAME_MAX-1, result->sample_name);
+	name[SNAME_MAX-1] = '\0';
+
+	printf("  %-20s %-35s %7i %i %5i %s\n", name, dir, result->length, result->channels, result->sample_rate, result->mimetype);
 }
 
 

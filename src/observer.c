@@ -1,13 +1,13 @@
 #include "../config.h"
 #include <gtk/gtk.h>
 #include <mysql/mysql.h>
+#include "file_manager/file_manager.h"
+#include "gqview_view_dir_tree.h"
 #include "typedefs.h"
 #include "listview.h"
 #include "dh-link.h"
-#include <gqview2/typedefs.h>
 #include "support.h"
 #include "main.h"
-#include "gqview_view_dir_tree.h"
 
 void file_manager__update_all();
 

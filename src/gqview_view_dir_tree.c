@@ -11,12 +11,13 @@
  * This software comes with no warranty of any kind, use at your own risk!
  */
 #include <gtk/gtk.h>
-
-#include "typedefs.h"
-#include "support.h"
+#include "file_manager/file_manager.h"
 
 #include "gqview.h"
 #include "gqview_view_dir_tree.h"
+
+#include "typedefs.h"
+#include "support.h"
 
 #include "filelist.h"
 #include "layout_util.h"
@@ -1899,7 +1900,7 @@ vdtree_on_icon_theme_changed(ViewDirTree *vdt)
 }
 
 
-typedef struct _Filer Filer;
+//typedef struct _Filer Filer;
 extern Filer filer; //tmp - use a callback for fn below, or something
 void filer_change_to(Filer *filer_window, const char *path, const char *from);
 

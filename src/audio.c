@@ -38,7 +38,7 @@
 #include "typedefs.h"
 #include "sample.h"
 #include "support.h"
-#include <gqview2/typedefs.h>
+//#include <gqview2/typedefs.h>
 #include "main.h"
 #include "audio.h"
 extern struct _app app;

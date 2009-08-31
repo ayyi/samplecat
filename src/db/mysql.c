@@ -192,6 +192,19 @@ mysql__update_colour(int id, int colour)
 
 
 gboolean
+mysql__update_keywords(int id, char* keywords)
+{
+	char sql[1024];
+	snprintf(sql, 1024, "UPDATE samples SET keywords='%s' WHERE id=%u", keywords, id);
+	if(mysql_query(&app.mysql, sql)){
+		perr("update failed! sql=%s\n", sql);
+		return false;
+	}
+	else return true;
+}
+
+
+gboolean
 mysql__update_notes(int id, char* notes)
 {
 	char sql[1024];

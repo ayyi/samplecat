@@ -382,17 +382,26 @@ filter_new()
 	gtk_misc_set_padding(GTK_MISC(label1), 5,5);
 	gtk_widget_show(label1);
 	gtk_box_pack_start(GTK_BOX(hbox), label1, FALSE, FALSE, 0);
-	
+
+	gboolean on_focus_out(GtkWidget *widget, GdkEventFocus *event, gpointer user_data)
+	{
+		PF;
+		const gchar* text = gtk_entry_get_text(GTK_ENTRY(app.search));
+		if(strcmp(text, app.search_phrase)){
+			strncpy(app.search_phrase, text, 255);
+			do_search((gchar*)text, app.search_dir);
+		}
+		return NOT_HANDLED;
+	}
+
 	GtkWidget *entry = app.search = gtk_entry_new();
 	gtk_entry_set_max_length(GTK_ENTRY(entry), 64);
 	gtk_entry_set_text(GTK_ENTRY(entry), app.search_phrase);
 	gtk_widget_show(entry);	
 	gtk_box_pack_start(GTK_BOX(hbox), entry, EXPAND_TRUE, TRUE, 0);
-	g_signal_connect(G_OBJECT(entry), "focus-out-event", G_CALLBACK(new_search), NULL);
-	//this is supposed to enable REUTRN to enter the text - does it work?
+	g_signal_connect(G_OBJECT(entry), "focus-out-event", G_CALLBACK(on_focus_out), NULL);
 	gtk_entry_set_activates_default(GTK_ENTRY(entry), TRUE);
-	//g_signal_connect(G_OBJECT(entry), "activate", G_CALLBACK(on_entry_activate), NULL);
-	g_signal_connect(G_OBJECT(entry), "activate", G_CALLBACK(new_search), NULL);
+	g_signal_connect(G_OBJECT(entry), "activate", G_CALLBACK(on_focus_out), NULL);
 
 	//----------------------------------------------------------------------
 

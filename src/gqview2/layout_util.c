@@ -9,6 +9,8 @@
  * This software comes with no warranty of any kind, use at your own risk!
  */
 #include <gtk/gtk.h>
+#include "file_manager/file_manager.h"
+#include "gqview_view_dir_tree.h"
 #include "../typedefs.h"
 #include "support.h"
 

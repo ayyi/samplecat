@@ -31,6 +31,7 @@ static gboolean listview__on_row_clicked(GtkWidget*, GdkEventButton*, gpointer);
 static void     listview__dnd_get       (GtkWidget*, GdkDragContext*, GtkSelectionData*, guint info, guint time, gpointer);
 static gint     listview__drag_received (GtkWidget*, GdkDragContext*, gint x, gint y, GtkSelectionData*, guint info, guint time, gpointer user_data);
 static gboolean listview__on_motion     (GtkWidget*, GdkEventMotion*, gpointer);
+static void     listview__on_keywords_edited(GtkCellRendererText*, gchar *path_string, gchar *new_text, gpointer);
 static void     path_cell_data          (GtkTreeViewColumn*, GtkCellRenderer*, GtkTreeModel*, GtkTreeIter*, gpointer);
 static void     tag_cell_data           (GtkTreeViewColumn*, GtkCellRenderer*, GtkTreeModel*, GtkTreeIter*, gpointer);
 static void     cell_bg_lighter         (GtkTreeViewColumn*, GtkCellRenderer*, GtkTreeModel*, GtkTreeIter*);
@@ -116,7 +117,7 @@ listview__new()
 	gtk_tree_view_column_set_reorderable(column3, TRUE);
 	gtk_tree_view_column_set_min_width(column3, 0);
 	g_object_set(cell3, "editable", TRUE, NULL);
-	g_signal_connect(cell3, "edited", (GCallback)keywords_on_edited, NULL);
+	g_signal_connect(cell3, "edited", (GCallback)listview__on_keywords_edited, NULL);
 	gtk_tree_view_column_add_attribute(column3, cell3, "markup", COL_KEYWORDS);
 	gtk_tree_view_column_set_cell_data_func(column3, cell3, tag_cell_data, NULL, NULL);
 
@@ -637,6 +638,56 @@ listview__on_motion(GtkWidget *widget, GdkEventMotion *event, gpointer user_data
 	dbg(0, "setting rowref=%p", prev_row_ref);
 	app.mouseover_row_ref = prev_row_ref;
 	return false;
+}
+
+
+static void
+listview__on_keywords_edited(GtkCellRendererText *cell, gchar *path_string, gchar *new_text, gpointer user_data)
+{
+	//the keywords column has been edited. Update the database to reflect the new text.
+
+	PF;
+	GtkTreeIter iter;
+	int idx;
+	gchar *filename;
+	GtkTreeModel* store = GTK_TREE_MODEL(app.store);
+	GtkTreePath* path = gtk_tree_path_new_from_string(path_string);
+	gtk_tree_model_get_iter(store, &iter, path);
+	gtk_tree_model_get(store, &iter, COL_IDX, &idx, COL_NAME, &filename, -1);
+	//dbg(0, "filename=%s", filename);
+	gtk_tree_path_free(path);
+
+	//convert to lowercase:
+	//gchar* lower = g_ascii_strdown(new_text, -1);
+	//g_free(lower);
+
+	if(backend.update_keywords && backend.update_keywords(idx, new_text)){
+
+		/*
+		#define strmov(A,B) stpcpy((A),(B))
+		char sql[1024];
+		char* tmppos;
+		tmppos = strmov(sql, "UPDATE samples SET keywords='");
+		//tmppos += mysql_real_escape_string(conn, tmppos, fbuffer, fsize);
+		tmppos = strmov(tmppos, new_text);
+		tmppos = strmov(tmppos, "' WHERE id=");
+		char idx_str[64];
+		snprintf(idx_str, 64, "%i", idx);
+		tmppos = strmov(tmppos, idx_str);
+		*tmppos++ = (char)0;
+		dbg(0, "sql=%s", sql);
+		if(mysql_query(&app.mysql, sql)){
+			dbg(0, "update failed! sql=%s", sql);
+			return;
+		}
+		*/
+
+		//update the store:
+		gtk_list_store_set(app.store, &iter, COL_KEYWORDS, new_text, -1);
+
+		statusbar_printf(1, "keywords updated");
+	}
+	else statusbar_printf(1, "database error! keywords not updated");
 }
 
 

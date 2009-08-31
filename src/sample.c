@@ -5,11 +5,11 @@
 #include <jack/jack.h>
 #include <sndfile.h>
 #include "file_manager/file_manager.h"
+#include "gqview_view_dir_tree.h"
 #include "typedefs.h"
 #include "mysql/mysql.h"
 #include "dh-link.h"
 #include "support.h"
-#include "gqview_view_dir_tree.h"
 #include "main.h"
 #include "audio.h"
 #include "overview.h"

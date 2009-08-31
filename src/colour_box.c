@@ -5,12 +5,12 @@
 #include <string.h>
 #include <gtk/gtk.h>
 #include "file_manager.h"
+#include "gqview_view_dir_tree.h"
 #include "typedefs.h"
 #include <gimp/gimpaction.h>
 #include <gimp/gimpactiongroup.h>
 #include "support.h"
 #include "mysql/mysql.h"
-#include "gqview_view_dir_tree.h"
 #include "main.h"
 #include "listview.h"
 #include "dnd.h"
