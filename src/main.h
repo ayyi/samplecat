@@ -57,8 +57,8 @@ struct _backend
 	void        (*search_iter_free) ();
 	int         (*insert)           (sample*, MIME_type*);
 	gboolean    (*update_colour)    (int, int);
-	gboolean    (*update_keywords)  (int, char*);
-	gboolean    (*update_notes)     (int, char*);
+	gboolean    (*update_keywords)  (int, const char*);
+	gboolean    (*update_notes)     (int, const char*);
 };
 #ifdef __main_c__
 struct _backend backend = {NULL, NULL, NULL, NULL};
@@ -159,10 +159,8 @@ enum {
 
 void        on_view_category_changed(GtkComboBox*, gpointer user_data);
 void        on_category_changed(GtkComboBox*, gpointer user_data);
-void        on_category_set_clicked(GtkComboBox*, gpointer user_data);
 gboolean    row_set_tags(GtkTreeIter*, int id, const char* tags_new);
 gboolean    row_set_tags_from_id(int id, GtkTreeRowReference* row_ref, const char* tags_new);
-gboolean    row_clear_tags(GtkTreeIter* iter, int id);
 
 void        do_search(char* search, char* dir);
 

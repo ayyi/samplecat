@@ -98,7 +98,7 @@ gboolean     is_white                  (GdkColor*);
 gboolean     is_similar                (GdkColor* colour1, GdkColor* colour2, int min_diff);
 gboolean     is_similar_rgb            (unsigned colour1, unsigned colour2);
 
-void         format_time               (char* length, char* milliseconds);
+void         format_time               (char* length, const char* milliseconds);
 void         format_time_int           (char* length, int milliseconds);
 
 gint         treecell_get_row          (GtkWidget*, GdkRectangle*);

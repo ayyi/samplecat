@@ -43,6 +43,13 @@ console__show_result(SamplecatResult* result)
 }
 
 
+void
+console__show_result_footer(int row_count)
+{
+	printf("total %i samples found.\n", row_count);
+}
+
+
 static int
 get_terminal_width()
 {

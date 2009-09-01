@@ -12,5 +12,6 @@ struct _samplecat_result
 	int        channels;
 	char*      notes;
 	int        colour;
+	gboolean   online;
 };
 

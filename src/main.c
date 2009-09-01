@@ -386,17 +386,10 @@ do_search(char *search, char *dir)
 	#define MAX_DISPLAY_ROWS 1000
 	PF;
 
-	if(!backend.search_iter_new){
-		//listview__show_db_missing();
-		return;
-	}
+	if(BACKEND_IS_NULL) return;
 
 #ifdef USE_AYYI
 	GdkPixbuf* ayyi_icon = NULL;
-#endif
-
-#if 0
-	SamplecatResult* result = g_new(SamplecatResult, 1);
 #endif
 
 	if(backend.search_iter_new(search, dir)){
@@ -412,16 +405,13 @@ do_search(char *search, char *dir)
 		gtk_tree_view_set_model(GTK_TREE_VIEW(view), NULL);
 		*/ 
 
-		if(BACKEND_IS_MYSQL){
+		if(BACKEND_IS_MYSQL
+			#ifdef USE_SQLITE
+			|| BACKEND_IS_SQLITE
+			#endif
+			){
 			int row_count = 0;
 			unsigned long *lengths;
-#if 0
-			MYSQL_ROW row;
-			while((row = mysql__search_iter_next(&lengths)) && row_count < MAX_DISPLAY_ROWS){
-				mysql__add_row_to_model(row, lengths);
-				row_count++;
-			}
-#else
 			SamplecatResult* result;
 			while((result = backend.search_iter_next(&lengths)) && row_count < MAX_DISPLAY_ROWS){
 				if(app.no_gui){
@@ -432,7 +422,8 @@ do_search(char *search, char *dir)
 				}
 				row_count++;
 			}
-#endif
+			if(app.no_gui) console__show_result_footer(row_count);
+
 			backend.search_iter_free();
 
 			if(0 && row_count < MAX_DISPLAY_ROWS){
@@ -444,11 +435,12 @@ do_search(char *search, char *dir)
 				statusbar_printf(1, "showing %i of %i samples", row_count, tot_rows);
 			}
 		}
+/*
 		#ifdef USE_SQLITE
 		else if(BACKEND_IS_SQLITE){
 			int row_count = 0;
 			SamplecatResult* result;
-			while((result = sqlite__search_iter_next(NULL)) && row_count < MAX_DISPLAY_ROWS){
+			while((result = backend.search_iter_next(NULL)) && row_count < MAX_DISPLAY_ROWS){
 				if(app.no_gui){
 					if(!row_count) console__show_result_header();
 					console__show_result(result);
@@ -457,12 +449,11 @@ do_search(char *search, char *dir)
 				}
 				row_count++;
 			}
-			if(app.no_gui){
-				printf("total %i samples found.\n", row_count);
-			}
+			if(app.no_gui) console__show_result_footer(row_count);
 			sqlite__search_iter_free();
 		}
 		#endif
+*/
 		#ifdef USE_TRACKER
 		else if(BACKEND_IS_TRACKER){
 			int row_count = 0;
@@ -541,86 +532,18 @@ on_view_category_changed(GtkComboBox *widget, gpointer user_data)
 }
 
 
-void
-on_category_set_clicked(GtkComboBox *widget, gpointer user_data)
-{
-	//add selected category to selected samples.
-
-	PF;
-
-	//selected category?
-	gchar* category = gtk_combo_box_get_active_text(GTK_COMBO_BOX(app.category));
-
-	GtkTreeSelection* selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(app.view));
-	GList* selectionlist = gtk_tree_selection_get_selected_rows(selection, NULL);
-	if(!selectionlist){ printf("on_category_set_clicked(): no files selected.\n"); return; }
-
-	int i;
-	GtkTreeIter iter;
-	for(i=0;i<g_list_length(selectionlist);i++){
-		GtkTreePath *treepath_selection = g_list_nth_data(selectionlist, i);
-
-		if(gtk_tree_model_get_iter(GTK_TREE_MODEL(app.store), &iter, treepath_selection)){
-			gchar *fname; gchar *tags;
-			int id;
-			gtk_tree_model_get(GTK_TREE_MODEL(app.store), &iter, COL_NAME, &fname, COL_KEYWORDS, &tags, COL_IDX, &id, -1);
-
-			if(!strcmp(category, "no categories")) row_clear_tags(&iter, id);
-			else{
-
-				if(!keyword_is_dupe(category, tags)){
-					char tags_new[1024];
-					snprintf(tags_new, 1024, "%s %s", tags ? tags : "", category);
-					g_strstrip(tags_new);//trim
-
-					row_set_tags(&iter, id, tags_new);
-				}else{
-					dbg(0, "keyword is a dupe - not applying.");
-					statusbar_print(1, "ignoring duplicate keyword.");
-				}
-			}
-
-		} else perr("bad iter! i=%i (<%i)\n", i, g_list_length(selectionlist));
-	}
-	g_list_foreach(selectionlist, (GFunc)gtk_tree_path_free, NULL);
-	g_list_free(selectionlist);
-
-	g_free(category);
-}
-
-
-gboolean
-row_set_tags(GtkTreeIter* iter, int id, const char* tags_new)
-{
-	char sql[1024];
-	snprintf(sql, 1024, "UPDATE samples SET keywords='%s' WHERE id=%i", tags_new, id);
-	dbg(1, "sql=%s", sql);
-	if(mysql_query(&app.mysql, sql)){
-		perr("update failed! sql=%s\n", sql);
-		return false;
-	}
-	//update the store:
-	gtk_list_store_set(app.store, iter, COL_KEYWORDS, tags_new, -1);
-	return true;
-}
-
-
 gboolean
 row_set_tags_from_id(int id, GtkTreeRowReference* row_ref, const char* tags_new)
 {
 	if(!id){ perr("bad arg: id (%i)\n", id); return false; }
 	g_return_val_if_fail(row_ref, false);
 
-	char sql[1024];
-	snprintf(sql, 1024, "UPDATE samples SET keywords='%s' WHERE id=%i", tags_new, id);
-	printf("on_category_set_clicked(): sql=%s\n", sql);
-	if(mysql_query(&app.mysql, sql)){
-		perr("update failed! sql=%s\n", sql);
+	if(!backend.update_keywords(id, tags_new)){
+		statusbar_print(1, "database error. keywords not updated");
 		return false;
 	}
 
 	//update the store:
-
 	GtkTreePath *path;
 	if((path = gtk_tree_row_reference_get_path(row_ref))){
 		GtkTreeIter iter;
@@ -631,24 +554,6 @@ row_set_tags_from_id(int id, GtkTreeRowReference* row_ref, const char* tags_new)
 	}
 	else { perr("cannot get row path: id=%i.\n", id); return false; }
 
-	return true;
-}
-
-
-gboolean
-row_clear_tags(GtkTreeIter* iter, int id)
-{
-	if(!id){ perr("bad arg: id\n"); return false; }
-
-	char sql[1024];
-	snprintf(sql, 1024, "UPDATE samples SET keywords='' WHERE id=%i", id);
-	printf("row_clear_tags(): sql=%s\n", sql);
-	if(mysql_query(&app.mysql, sql)){
-		perr("update failed! sql=%s\n", sql);
-		return false;
-	}
-	//update the store:
-	gtk_list_store_set(app.store, iter, COL_KEYWORDS, "", -1);
 	return true;
 }
 
@@ -1623,13 +1528,13 @@ set_backend(BackendType type)
 			break;
 		case BACKEND_SQLITE:
 			#ifdef USE_SQLITE
-			backend.search_iter_new = sqlite__search_iter_new;
-			//backend.search_iter_next = sqlite__search_iter_next;
+			backend.search_iter_new  = sqlite__search_iter_new;
+			backend.search_iter_next = sqlite__search_iter_next;
 			backend.search_iter_free = sqlite__search_iter_free;
 			backend.insert           = sqlite__insert;
 			backend.update_colour    = sqlite__update_colour;
-			backend.update_keywords  = NULL;
-			backend.update_notes     = NULL;
+			backend.update_keywords  = sqlite__update_keywords;
+			backend.update_notes     = sqlite__update_notes;
 			dbg(0, "backend is sqlite.");
 			#endif
 			break;

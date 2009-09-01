@@ -1415,9 +1415,9 @@ is_similar_rgb(unsigned colour1, unsigned colour2)
 
 
 void
-format_time(char* length, char* milliseconds)
+format_time(char* length, const char* milliseconds)
 {
-	if(!length){ errprintf("format_time()!\n"); return; }
+	g_return_if_fail(length);
 	if(!milliseconds){ snprintf(length, 64, " "); return; }
 
 	gchar secs_str[64] = "";
@@ -1432,18 +1432,15 @@ format_time(char* length, char* milliseconds)
 	}else snprintf(secs_str, 64, "%i", secs);
 	
 	snprintf(length, 64, "%s%s.%03i", mins_str, secs_str, t % 1000);
-	//printf("format_time(): %s\n", length);
 }
 
 
 void
 format_time_int(char* length, int milliseconds)
 {
-	if(!length){ errprintf("format_time()!\n"); return; }
-	//if(!milliseconds){ snprintf(length, 64, " "); return; }
+	g_return_if_fail(length);
 
 	snprintf(length, 64, "%i.%03i", milliseconds / 1000, milliseconds % 1000);
-	//printf("format_time(): %s\n", length);
 }
 
 

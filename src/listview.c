@@ -9,7 +9,6 @@
 #endif
 #include "dh-link.h"
 
-//#include <gqview2/typedefs.h>
 #include "typedefs.h"
 #include "src/types.h"
 #include "mimetype.h"
@@ -23,8 +22,8 @@
 #include "listview.h"
 
 extern struct _app app;
-int             playback_init(sample* sample);
-void            playback_stop();
+int             playback_init           (sample*);
+void            playback_stop           ();
 extern int      debug;
 
 static gboolean listview__on_row_clicked(GtkWidget*, GdkEventButton*, gpointer);
@@ -44,7 +43,7 @@ listview__new()
 	//the main pane. A treeview with a list of samples.
 
 	GtkWidget *view = app.view = gtk_tree_view_new_with_model(GTK_TREE_MODEL(app.store));
-	g_signal_connect(view, "motion-notify-event", (GCallback)listview__on_motion, NULL); //FIXME this is causing segfaults?
+	g_signal_connect(view, "motion-notify-event", (GCallback)listview__on_motion, NULL);
 	g_signal_connect(view, "drag-data-received", G_CALLBACK(listview__drag_received), NULL); //currently the window traps this before we get here.
 	g_signal_connect(view, "drag-motion", G_CALLBACK(drag_motion), NULL);
 	//gtk_tree_view_set_fixed_height_mode(GTK_TREE_VIEW(view), TRUE); //supposed to be faster. gtk >= 2.6
@@ -189,9 +188,9 @@ listview__path_get_id(GtkTreePath* path)
 	gchar *filename;
 	GtkTreeModel* store = GTK_TREE_MODEL(app.store);
 	gtk_tree_model_get_iter(store, &iter, path);
-	gtk_tree_model_get(store, &iter, COL_IDX, &id,  COL_NAME, &filename, -1);
+	gtk_tree_model_get(store, &iter, COL_IDX, &id, COL_NAME, &filename, -1);
 
-	dbg(0, "filename=%s", filename);
+	dbg(1, "filename=%s", filename);
 	return id;
 }
 
@@ -258,7 +257,7 @@ listview__on_row_clicked(GtkWidget *widget, GdkEventButton *event, gpointer user
 					int id;
 					gtk_tree_model_get(model, &iter, /*COL_FNAME, &fpath, COL_NAME, &fname, */COL_KEYWORDS, &tags, COL_IDX, &id, -1);
 
-					if(strlen(tags)){
+					if(tags && strlen(tags)){
 						gtk_entry_set_text(GTK_ENTRY(app.search), tags);
 						do_search(tags, NULL);
 					}
@@ -303,7 +302,7 @@ listview__item_set_colour(GtkTreePath* path, unsigned colour)
 
 	int id = listview__path_get_id(path);
 
-	if(!backend.update_colour(colour, id)) return false;
+	if(!backend.update_colour(id, colour)) return false;
 
 	statusbar_printf(1, "colour updated");
 
@@ -318,7 +317,7 @@ listview__item_set_colour(GtkTreePath* path, unsigned colour)
 		if(!gdk_color_parse(colour_string, &sample->bg_colour)) gwarn("parsing of colour string failed.\n");
 		g_async_queue_push(app.msg_queue, sample); //request the overview thread to update.
 	}
-	else dbg(0, "cannot update overview for offline sample. %s", sample->filename);
+	else dbg(0, "cannot update overview for offline sample. id=%i %s", id, sample->filename);
 
 	return true;
 }
@@ -434,40 +433,11 @@ listmodel__add_result(SamplecatResult* result)
 {
 	g_return_if_fail(result);
 
-	GdkPixbuf* pixbuf  = NULL;
-	//GdkPixdata pixdata;
-	char length[64];
-	char keywords[256];
-	char sample_name[256];
-	float samplerate; char samplerate_s[32];
-	//unsigned channels, colour;
-	gboolean online = FALSE;
-	GtkTreeIter iter;
-
-	//db__iter_to_result(result);
-
-	//deserialise the pixbuf field:
-	/*
-	pixbuf = NULL;
-	if(row[MYSQL_PIXBUF]){
-		//printf("%s(): deserializing...\n", __func__); 
-		if(gdk_pixdata_deserialize(&pixdata, lengths[4], (guint8*)row[MYSQL_PIXBUF], NULL)){
-			pixbuf = gdk_pixbuf_from_pixdata(&pixdata, TRUE, NULL);
-		}
-	}
-	*/
+	char samplerate_s[32]; float samplerate = result->sample_rate; samplerate_format(samplerate_s, samplerate);
+	char* keywords = result->keywords ? result->keywords : "";
+	char length[64]; format_time_int(length, result->length);
 
 #if 0
-	format_time(length, row[5]);
-	if(row[MYSQL_KEYWORDS]) snprintf(keywords, 256, "%s", row[MYSQL_KEYWORDS]); else keywords[0] = 0;
-	//if(row[5]==NULL) length     = 0; else length     = atoi(row[5]);
-	if(row[6]==NULL) samplerate = 0; else samplerate = atoi(row[6]); samplerate_format(samplerate_s, samplerate);
-	if(row[7]==NULL) channels   = 0; else channels   = atoi(row[7]);
-	if(row[MYSQL_ONLINE]==NULL) online = 0; else online = atoi(row[MYSQL_ONLINE]);
-	if(row[MYSQL_COLOUR]==NULL) colour = 0; else colour = atoi(row[MYSQL_COLOUR]);
-
-	strncpy(sample_name, row[MYSQL_NAME], 255);
-
 //#ifdef USE_AYYI
 	//is the file loaded in the current Ayyi song?
 	if(ayyi.got_song){
@@ -480,7 +450,8 @@ listmodel__add_result(SamplecatResult* result)
 
 	//icon (only shown if the sound file is currently available):
 	GdkPixbuf* iconbuf = NULL;
-	if(1 || online){
+#if 0
+	if(result->online){
 		MIME_type* mime_type = mime_type_lookup(result->mimetype);
 		if(mime_type){
 			type_to_icon(mime_type);
@@ -488,28 +459,26 @@ listmodel__add_result(SamplecatResult* result)
 			iconbuf = mime_type->image->sm_pixbuf;
 		}
 	}
+#endif
 
 	//strip the homedir from the dir string:
 	char* path = result->dir ? strstr(result->dir, g_get_home_dir()) : "";
 	path = path ? path + strlen(g_get_home_dir()) + 1 : result->dir;
 
+	GtkTreeIter iter;
 	gtk_list_store_append(app.store, &iter);
-	//dbg(0, "name=%s", result->sample_name);
 	gtk_list_store_set(app.store, &iter, COL_ICON, iconbuf,
 	                   COL_NAME, result->sample_name,
 	                   COL_FNAME, path,
 	                   COL_IDX, result->idx,
 	                   COL_MIMETYPE, result->mimetype,
-	                   -1);
-#if 0
+	                   COL_KEYWORDS, keywords, 
+	                   COL_OVERVIEW, result->overview, COL_LENGTH, length, COL_SAMPLERATE, samplerate_s, COL_CHANNELS, result->channels, 
+	                   COL_NOTES, result->notes, COL_COLOUR, result->colour,
 #ifdef USE_AYYI
 	                   COL_AYYI_ICON, ayyi_icon,
 #endif
-	                   COL_KEYWORDS, keywords, 
-	                   COL_OVERVIEW, pixbuf, COL_LENGTH, length, COL_SAMPLERATE, samplerate_s, COL_CHANNELS, channels, 
-``                     COL_NOTES, row[MYSQL_NOTES], COL_COLOUR, colour,
-#endif
-	if(pixbuf) g_object_unref(pixbuf);
+	                   -1);
 }
 
 

@@ -26,7 +26,8 @@
 
 //mysql table layout (database column numbers):
 enum {
-  MYSQL_NAME = 1,
+  MYSQL_ID = 0,
+  MYSQL_NAME,
   MYSQL_DIR = 2,
   MYSQL_KEYWORDS = 3,
   MYSQL_PIXBUF = 4,
@@ -180,32 +181,34 @@ mysql__update_path(const char* old_path, const char* new_path)
 gboolean
 mysql__update_colour(int id, int colour)
 {
-	char sql[1024];
-	snprintf(sql, 1024, "UPDATE samples SET colour=%u WHERE id=%i", colour, id);
+	char* sql = g_strdup_printf("UPDATE samples SET colour=%u WHERE id=%i", colour, id);
 	dbg(1, "sql=%s", sql);
-	if(mysql_query(&app.mysql, sql)){
+	gboolean fail;
+	if((fail = mysql_query(&app.mysql, sql))){
 		perr("update failed! sql=%s", sql);
-		return false;
 	}
-	return true;
+	g_free(sql);
+	return !fail;
 }
 
 
 gboolean
-mysql__update_keywords(int id, char* keywords)
+mysql__update_keywords(int id, const char* keywords)
 {
-	char sql[1024];
-	snprintf(sql, 1024, "UPDATE samples SET keywords='%s' WHERE id=%u", keywords, id);
-	if(mysql_query(&app.mysql, sql)){
+	if(!id) gwarn("id not set.");
+	char* sql = g_strdup_printf("UPDATE samples SET keywords='%s' WHERE id=%u", keywords, id);
+	dbg(1, "sql=%s", sql);
+	gboolean fail;
+	if((fail = mysql_query(&app.mysql, sql))){
 		perr("update failed! sql=%s\n", sql);
-		return false;
 	}
-	else return true;
+	g_free(sql);
+	return !fail;
 }
 
 
 gboolean
-mysql__update_notes(int id, char* notes)
+mysql__update_notes(int id, const char* notes)
 {
 	char sql[1024];
 	snprintf(sql, 1024, "UPDATE samples SET notes='%s' WHERE id=%u", notes, id);
@@ -316,6 +319,7 @@ mysql__search_iter_next_(unsigned long** lengths)
 		return row[i] ? atoi(row[i]) : 0;
 	}
 
+	result.idx         = atoi(row[MYSQL_ID]);
 	result.sample_name = row[MYSQL_NAME];
 	result.dir         = row[MYSQL_DIR];
 	result.keywords    = row[MYSQL_KEYWORDS];
@@ -326,6 +330,7 @@ mysql__search_iter_next_(unsigned long** lengths)
 	result.notes       = row[MYSQL_KEYWORDS];
 	result.colour      = get_int(row, MYSQL_COLOUR);
 	result.mimetype    = row[MYSQL_MIMETYPE];
+	result.online      = get_int(row, MYSQL_ONLINE);
 	return &result;
 }
 
@@ -477,7 +482,7 @@ mysql__add_row_to_model(MYSQL_ROW row, unsigned long* lengths)
 #ifdef USE_AYYI
 	                   COL_AYYI_ICON, ayyi_icon,
 #endif
-	                   COL_IDX, atoi(row[0]), COL_NAME, sample_name, COL_FNAME, row[MYSQL_DIR], COL_KEYWORDS, keywords, 
+	                   COL_IDX, atoi(row[MYSQL_ID]), COL_NAME, sample_name, COL_FNAME, row[MYSQL_DIR], COL_KEYWORDS, keywords, 
 	                   COL_OVERVIEW, pixbuf, COL_LENGTH, length, COL_SAMPLERATE, samplerate_s, COL_CHANNELS, channels, 
 	                   COL_MIMETYPE, row[MYSQL_MIMETYPE], COL_NOTES, row[MYSQL_NOTES], COL_COLOUR, colour, -1);
 	if(pixbuf) g_object_unref(pixbuf);

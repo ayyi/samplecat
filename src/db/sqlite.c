@@ -184,6 +184,20 @@ sqlite__update_colour(int id, int colour)
 }
 
 
+gboolean
+sqlite__update_keywords(int id, const char* keywords)
+{
+	return false;
+}
+
+
+gboolean
+sqlite__update_notes(int id, const char* notes)
+{
+	return false;
+}
+
+
 #ifdef NEVER
 static int
 delete_row (int argc, char *argv[])
