@@ -7,8 +7,8 @@
 #include "file_manager/file_manager.h"
 #include "gqview_view_dir_tree.h"
 #include "typedefs.h"
+#include "types.h"
 #include "support.h"
-#include "mysql/mysql.h"
 #include "dh-link.h"
 #include "mimetype.h"
 #include "main.h"
@@ -16,6 +16,9 @@
 #include "sample.h"
 #include "listview.h"
 #include "inspector.h"
+#ifdef USE_TRACKER
+  #include <src/db/tracker_.h>
+#endif
 
 extern struct _app app;
 
@@ -186,40 +189,58 @@ inspector_update_from_listview(GtkTreePath *path)
 
 	if (app.inspector->row_ref){ gtk_tree_row_reference_free(app.inspector->row_ref); app.inspector->row_ref = NULL; }
 
-	sample* sample = sample_new_from_model(path);
-
 	GtkTreeIter iter;
 	gtk_tree_model_get_iter(GTK_TREE_MODEL(app.store), &iter, path);
 	gchar *tags;
 	gchar *fpath;
 	gchar *fname;
-	gchar *length;
-	gchar *samplerate;
-	int channels;
 	gchar *mimetype;
 	gchar *notes;
 	GdkPixbuf* pixbuf = NULL;
+	gchar *length;
 	int id;
-	gtk_tree_model_get(GTK_TREE_MODEL(app.store), &iter, COL_NAME, &fname, COL_FNAME, &fpath, COL_KEYWORDS, &tags, COL_LENGTH, &length, COL_SAMPLERATE, &samplerate, COL_CHANNELS, &channels, COL_MIMETYPE, &mimetype, COL_NOTES, &notes, COL_OVERVIEW, &pixbuf, COL_IDX, &id, -1);
+	gtk_tree_model_get(GTK_TREE_MODEL(app.store), &iter, COL_NAME, &fname, COL_FNAME, &fpath, COL_LENGTH, &length, COL_KEYWORDS, &tags, COL_MIMETYPE, &mimetype, COL_NOTES, &notes, COL_OVERVIEW, &pixbuf, COL_IDX, &id, -1);
 
-	char ch_str[64]; snprintf(ch_str, 64, "%u channels", channels);
-	char fs_str[64]; snprintf(fs_str, 64, "%s kHz",      samplerate);
+	sample* sample = sample_new_from_model(path);
+	if(BACKEND_IS_TRACKER){
+		g_return_if_fail(length);
+		if(!strlen(length)){
+			//this sample hasnt been previously selected, and non-db info isnt available.
+			//-get the info directly from the file, and set it into the main treeview.
+			if(!get_file_info_sndfile(sample)){
+				perr("cannot open file?\n");
+				return;
+			}
+			char l[64]; format_time_int(l, sample->length);
+			char samplerate_s[32]; float samplerate = sample->sample_rate; samplerate_format(samplerate_s, samplerate);
+			gtk_list_store_set(app.store, &iter, COL_LENGTH, l, COL_SAMPLERATE, samplerate_s, COL_CHANNELS, sample->channels, -1);
+		}
+	}
+
+	char ch_str[64]; snprintf(ch_str, 63, "%u channels", sample->channels);
+	char fs_str[64]; snprintf(fs_str, 63, "%i kHz",      sample->sample_rate);
+	char len   [32]; snprintf(len,    31, "%i",          sample->length);
 
 	gtk_label_set_text(GTK_LABEL(app.inspector->name),       fname);
-	gtk_label_set_text(GTK_LABEL(app.inspector->filename),   sample->filename);
 	gtk_label_set_text(GTK_LABEL(app.inspector->tags),       tags);
-	gtk_label_set_text(GTK_LABEL(app.inspector->length),     length);
-	gtk_label_set_text(GTK_LABEL(app.inspector->channels),   ch_str);
 	gtk_label_set_text(GTK_LABEL(app.inspector->samplerate), fs_str);
+	gtk_label_set_text(GTK_LABEL(app.inspector->channels),   ch_str);
+	gtk_label_set_text(GTK_LABEL(app.inspector->filename),   sample->filename);
 	gtk_label_set_text(GTK_LABEL(app.inspector->mimetype),   mimetype);
+	gtk_label_set_text(GTK_LABEL(app.inspector->length),     len);
+#ifdef USE_TRACKER
+	gtk_list_store_set(app.store, &iter, COL_OVERVIEW, sample->pixbuf, -1); //check this
+	gtk_image_set_from_pixbuf(GTK_IMAGE(app.inspector->image), sample->pixbuf);
+#else
 	gtk_text_buffer_set_text(app.inspector->notes, notes ? notes : "", -1);
 	gtk_image_set_from_pixbuf(GTK_IMAGE(app.inspector->image), pixbuf);
+#endif
 
 	//store a reference to the row id in the inspector widget:
 	//g_object_set_data(G_OBJECT(app.inspector->name), "id", GUINT_TO_POINTER(id));
 	app.inspector->row_id = id;
 	app.inspector->row_ref = gtk_tree_row_reference_new(GTK_TREE_MODEL(app.store), path);
-	if(!app.inspector->row_ref) errprintf("inspector_update(): setting row_ref failed!\n");
+	if(!app.inspector->row_ref) perr("setting row_ref failed!\n");
 
 	free(sample);
 }
@@ -309,7 +330,7 @@ on_notes_focus_out(GtkWidget *widget, gpointer userdata)
 
 	unsigned id = app.inspector->row_id;
 	if(backend.update_notes(id, notes)){
-		statusbar_printf(1, "notes updated");
+		statusbar_print(1, "notes updated");
 		GtkTreePath *path;
 		if((path = gtk_tree_row_reference_get_path(app.inspector->row_ref))){
 			GtkTreeIter iter;

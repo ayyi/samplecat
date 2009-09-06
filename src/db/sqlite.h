@@ -9,6 +9,6 @@ gboolean         sqlite__update_colour    (int id, int colour);
 gboolean         sqlite__update_keywords  (int id, const char*);
 gboolean         sqlite__update_notes     (int id, const char*);
 
-gboolean         sqlite__search_iter_new  (char* search, char* dir);
+gboolean         sqlite__search_iter_new  (char* search, char* dir, int* n_results);
 SamplecatResult* sqlite__search_iter_next (unsigned long** lengths);
 void             sqlite__search_iter_free ();

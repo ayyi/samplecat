@@ -16,7 +16,6 @@
 #include <sys/param.h>
 #include <errno.h>
 
-#include "mysql/mysql.h"
 #include <gtk/gtk.h>
 #ifdef OLD
   #include <libart_lgpl/libart.h>
@@ -148,6 +147,8 @@ log_handler(const gchar* log_domain, GLogLevelFlags log_level, const gchar* mess
 void
 samplerate_format(char* str, int samplerate)
 {
+	if(!samplerate){ str[0] = '\0'; return; }
+
 	snprintf(str, 32, "%f", ((float)samplerate) / 1000);
 	while(str[strlen(str)-1]=='0'){
 		str[strlen(str)-1] = '\0';
@@ -410,7 +411,7 @@ do_move(const char *path, const char *dest)
 		//printf_send("!%s\nFailed to move %s as %s\n", err, path, dest_path);
 		dbg(0, "!%s\nFailed to move %s as %s\n", err, path, dest);
 		dbg(0, "FIXME change to using print callback to application");
-		statusbar_printf(1, "!%s: Failed to move %s as %s", err, path, dest);
+		statusbar_print(1, "!%s: Failed to move %s as %s", err, path, dest);
 		g_free(err);
 	}
 	else
@@ -419,7 +420,7 @@ do_move(const char *path, const char *dest)
 
 		//if (is_dir) send_mount_path(path);
 		if (is_dir) dbg(0, "?%s", path);
-		else        statusbar_printf(1, "file '%s' moved.", path);
+		else        statusbar_print(1, "file '%s' moved.", path);
 	}
 }
 
@@ -1374,6 +1375,14 @@ is_black(GdkColor* colour)
 
 
 gboolean
+is_dark(GdkColor* colour)
+{
+	int average = (colour->red + colour->green + colour->blue) / 3;
+	return (average < 0x7fff);
+}
+
+
+gboolean
 is_similar(GdkColor* colour1, GdkColor* colour2, int min_diff)
 {
 	GdkColor difference;
@@ -1440,7 +1449,8 @@ format_time_int(char* length, int milliseconds)
 {
 	g_return_if_fail(length);
 
-	snprintf(length, 64, "%i.%03i", milliseconds / 1000, milliseconds % 1000);
+	if(!milliseconds) length[0] = '\0';
+	else snprintf(length, 64, "%i.%03i", milliseconds / 1000, milliseconds % 1000);
 }
 
 
@@ -1468,25 +1478,7 @@ treecell_get_row(GtkWidget *widget, GdkRectangle *cell_area)
 
 
 void
-statusbar_print(int n, char *s)
-{
-  //prints to one of the root statusbar contexts.
-  GtkWidget *statusbar = NULL;
-  if     (n==1) statusbar = app.statusbar;
-  else if(n==2) statusbar = app.statusbar2;
-  else { perr("bad statusbar index (%i)\n", n); n=1; }
-
-  if((unsigned int)statusbar<1024) return; //window may not be open.
-
-  gchar buff[128];
-  gint cid = gtk_statusbar_get_context_id(GTK_STATUSBAR(statusbar), "dummy");
-  snprintf(buff, 128, "  %s", s); //experimental padding.
-  gtk_statusbar_push(GTK_STATUSBAR(statusbar), cid, buff);
-}
-
-
-void
-statusbar_printf(int n, char* fmt, ...)
+statusbar_print(int n, char* fmt, ...)
 {
   if(n<1||n>3) n = 1;
 
@@ -1496,6 +1488,8 @@ statusbar_printf(int n, char* fmt, ...)
   va_start(argp, fmt);
   vsnprintf(s, 127, fmt, argp);
   va_end(argp);
+
+  if(debug) printf("%s\n", s);
 
   GtkWidget *statusbar = NULL;
   if     (n==1) statusbar = app.statusbar;

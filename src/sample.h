@@ -16,8 +16,9 @@ struct _sample
 };
 
 sample*     sample_new               ();
-sample*     sample_new_from_model    (GtkTreePath *path);
+sample*     sample_new_from_model    (GtkTreePath*);
 sample*     sample_new_from_fileview (GtkTreeModel*, GtkTreeIter*);
+sample*     sample_new_from_result   (SamplecatResult*);
 void        sample_free              (sample*);
 
 void        sample_set_type_from_mime_string(sample*, char*);

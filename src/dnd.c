@@ -14,7 +14,6 @@ This software is licensed under the GPL. See accompanying file COPYING.
   #include <libart_lgpl/libart.h>
 #endif
 
-#include "mysql/mysql.h"
 #include "dh-link.h"
 #include "typedefs.h"
 #include "support.h"
@@ -120,7 +119,7 @@ drag_received(GtkWidget *widget, GdkDragContext *drag_context, gint x, gint y,
       i++;
     }
 
-    statusbar_printf(1, "import complete. %i files added", added_count);
+    statusbar_print(1, "import complete. %i files added", added_count);
 
     uri_list_free(list);
   }

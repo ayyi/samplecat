@@ -29,7 +29,6 @@
 
 #include <sndfile.h>
 
-#include "mysql/mysql.h"
 #include "dh-link.h"
 #ifdef HAVE_FLAC_1_1_1
   #include <FLAC/all.h>

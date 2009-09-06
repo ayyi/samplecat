@@ -1,5 +1,6 @@
 #include "../config.h"
 #define __USE_GNU
+#include <stdlib.h>
 #include <string.h>
 #include <gtk/gtk.h>
 #include <jack/jack.h>
@@ -7,7 +8,7 @@
 #include "file_manager/file_manager.h"
 #include "gqview_view_dir_tree.h"
 #include "typedefs.h"
-#include "mysql/mysql.h"
+#include "types.h"
 #include "dh-link.h"
 #include "support.h"
 #include "main.h"
@@ -40,22 +41,19 @@ sample_new_from_model(GtkTreePath *path)
 	gtk_tree_model_get_iter(model, &iter, path);
 
 	gchar *fpath, *fname, *mimetype; int id; unsigned colour_index;
-	gtk_tree_model_get(model, &iter, COL_FNAME, &fpath, COL_NAME, &fname, COL_IDX, &id, COL_MIMETYPE, &mimetype, COL_COLOUR, &colour_index, -1);
+	gchar *length;
+	gchar *samplerate;
+	int channels;
+	gtk_tree_model_get(model, &iter, COL_FNAME, &fpath, COL_NAME, &fname, COL_IDX, &id, COL_LENGTH, &length, COL_SAMPLERATE, &samplerate, COL_CHANNELS, &channels, COL_MIMETYPE, &mimetype, COL_COLOUR, &colour_index, -1);
 	g_return_val_if_fail(mimetype, NULL);
-
-#if 0
-	//unfortunately because we removed home dir for display purposes, we have to put it back here. Need to review strategy.
-	char prefix[128] = "";
-	if(!g_path_is_absolute(fpath)){
-		snprintf(prefix, 127, g_get_home_dir());
-	}
-#endif
 
 	sample* sample = g_new0(struct _sample, 1);
 	sample->id     = id;
+	sample->length = atoi(length);
+	sample->sample_rate = atoi(samplerate);
 	sample->pixbuf = NULL;
+	sample->channels = channels;
 	sample->row_ref = gtk_tree_row_reference_new(GTK_TREE_MODEL(app.store), path);
-	//snprintf(sample->filename, 255, "%s/%s/%s", prefix, fpath, fname);
 	snprintf(sample->filename, 255, "%s/%s", fpath, fname);
 	if(!strcmp(mimetype, "audio/x-flac")) sample->filetype = TYPE_FLAC; else sample->filetype = TYPE_SNDFILE; 
 	return sample;
@@ -74,6 +72,25 @@ sample_new_from_fileview(GtkTreeModel* model, GtkTreeIter* iter)
 	sample* sample = g_new0(struct _sample, 1);
 	snprintf(sample->filename, 255, "%s/%s", filer.real_path, fname);
 	return sample;
+}
+
+
+sample*
+sample_new_from_result(SamplecatResult* r)
+{
+	sample* s      = g_new0(struct _sample, 1);
+	s->id          = r->idx;
+	s->row_ref     = r->row_ref;
+	snprintf(s->filename, 255, "%s/%s", r->dir, r->sample_name);
+	s->filetype    = TYPE_SNDFILE;
+	s->sample_rate = r->sample_rate;
+	s->length      = r->length;
+	s->frames      = 0;
+	s->channels    = r->channels;
+	s->bitdepth    = 0;
+	s->pixbuf      = r->overview;
+	color_rgba_to_gdk(&s->bg_colour, r->colour);
+	return s;
 }
 
 

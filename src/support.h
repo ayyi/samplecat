@@ -95,6 +95,7 @@ gboolean     colour_lighter            (GdkColor* lighter, GdkColor*);
 gboolean     colour_darker             (GdkColor* lighter, GdkColor*);
 gboolean     is_black                  (GdkColor*);
 gboolean     is_white                  (GdkColor*);
+gboolean     is_dark                   (GdkColor*);
 gboolean     is_similar                (GdkColor* colour1, GdkColor* colour2, int min_diff);
 gboolean     is_similar_rgb            (unsigned colour1, unsigned colour2);
 
@@ -102,8 +103,7 @@ void         format_time               (char* length, const char* milliseconds);
 void         format_time_int           (char* length, int milliseconds);
 
 gint         treecell_get_row          (GtkWidget*, GdkRectangle*);
-void         statusbar_print           (int n, char*);
-void         statusbar_printf          (int n, char* fmt, ...);
+void         statusbar_print           (int n, char* fmt, ...);
 
 void         make_accels               (GtkAccelGroup*, GimpActionGroup*, struct _accel*, int count, gpointer user_data);
 

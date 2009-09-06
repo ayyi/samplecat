@@ -15,7 +15,6 @@
   #include <cairo.h>
 #endif
 
-#include "mysql/mysql.h"
 #include "dh-link.h"
 #include "file_manager.h"
 #include "typedefs.h"
@@ -85,7 +84,7 @@ make_overview_sndfile(sample* sample)
   load a file onto a pixbuf.
 
   */
-  dbg (1, "...");
+  PF;
 
   char* filename = sample->filename;
 
@@ -97,7 +96,7 @@ make_overview_sndfile(sample* sample)
   dbg (1, "row_ref=%p", sample->row_ref);
 
   if(!(sffile = sf_open(filename, SFM_READ, &sfinfo))){
-    perr("not able to open input file (%p) %s.\n", filename, filename);
+    perr("not able to open input file %s.\n", filename);
     puts(sf_strerror(NULL));    // print the error message from libsndfile
     return NULL;
   }
@@ -106,6 +105,26 @@ make_overview_sndfile(sample* sample)
                                      8,                     //int bits_per_sample
                                      OVERVIEW_WIDTH, OVERVIEW_HEIGHT);
   pixbuf_clear(pixbuf, &app.fg_colour);
+
+  //check colour contrast
+  if(
+    (app.fg_colour.red   >> 8 == sample->bg_colour.red   >> 8) &&
+    (app.fg_colour.green >> 8 == sample->bg_colour.green >> 8) &&
+    (app.fg_colour.blue  >> 8 == sample->bg_colour.blue  >> 8)
+    //*app.fg_colour == *sample->bg_colour
+  ){
+    dbg(1, "bad colour combination! overriding set colours");
+	if(is_dark(&app.fg_colour)){
+    	sample->bg_colour.red   = 0xdfff;
+    	sample->bg_colour.green = 0xdfff;
+    	sample->bg_colour.blue  = 0xdfff;
+    }
+    else{
+      sample->bg_colour.red   = 0x2000;
+      sample->bg_colour.green = 0x2000;
+      sample->bg_colour.blue  = 0x2000;
+    }
+  }
 
   //FIXME cairo doesnt support any 24bpp formats.
   cairo_format_t format;
@@ -116,7 +135,7 @@ make_overview_sndfile(sample* sample)
   colour_get_float(&sample->bg_colour, &r, &g, &b, 0xff);
   cairo_set_source_rgb (cr, b, g, r);
   cairo_set_line_width (cr, 1.0);
-  
+  //dbg(0, "bg_colour=%.1f %.1f %.1f fg_colour=%s", b, g, r, gdkcolor_get_hexstring(&app.fg_colour));
 
   //how many samples should we load at a time? Lets make it a multiple of the image width.
   //-this will use up a lot of ram for a large file, 600M file will use 4MB.

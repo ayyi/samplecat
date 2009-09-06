@@ -17,15 +17,14 @@ This software is licensed under the GPL. See accompanying file COPYING.
 #include <gtk/gtk.h>
 
 #include "typedefs.h"
-#include "mysql/mysql.h"
 #include "support.h"
 #include "src/types.h"
 #include "tracker.h"
-#include <src/tracker_.h>
+#include <db/tracker_.h>
 
 extern int debug;
-//extern struct _app app;
-//void set_backend(BackendType);
+
+static void tracker__on_dbus_timeout();
 
 static TrackerClient* tc = NULL;
 static SamplecatResult result;
@@ -42,21 +41,40 @@ struct _iter iter = {};
 
 
 gboolean
-tracker__init(gpointer data)
+tracker__init(gpointer callback)
 {
 	PF;
 	//note: trackerd doesnt have to be running - it will be auto-started.
 	if((tc = tracker_connect(TRUE))){
-		//set_backend(BACKEND_TRACKER);
-
-		//temporary:
-		//void do_search(char* search, char *dir);
-		//do_search(NULL, NULL);
-
+		if(callback){
+			void (*fn)() = callback;
+			fn();
+		}
 		//tracker_disconnect (tc); //FIXME we dont disconnect!
 	}
-	else warnprintf("cant connect to tracker daemon.");
+	else pwarn("cant connect to tracker daemon.");
 	return IDLE_STOP;
+}
+
+
+int
+tracker__insert(sample* sample, MIME_type* mimetype)
+{
+	return 0;
+}
+
+
+gboolean
+tracker__delete_row(int id)
+{
+	return false;
+}
+
+
+gboolean
+tracker__update_pixbuf(sample* sample)
+{
+	return true;
 }
 
 
@@ -254,9 +272,10 @@ get_hit_count (GPtrArray* out_array, GError* error, gpointer user_data)
 }
 
 gboolean
-tracker__search_iter_new(char* search, char* dir)
+tracker__search_iter_new(char* search, char* dir, int* n_results)
 {
 	PF;
+	g_return_val_if_fail(tc, false);
 
 	char* mimes[4];
 	mimes[0] = g_strdup("audio/x-wav");
@@ -332,14 +351,19 @@ tracker__search_iter_new(char* search, char* dir)
                     &error);
 		g_free(rdf);
 		if(error){
-			gwarn("query error: %s", error->message);
+			if(error->code == 4){
+				tracker__on_dbus_timeout();
+			}else{
+				gwarn("query error: %i: %s", error->code, error->message);
+			}
 			g_error_free (error);
 			error = NULL;
+			return false;
 		}
 		else if(iter.qresult){
 			//int length = qresult->len;
 
-			dbg(0, "query: nresults=%i (%s)", iter.qresult->len, search);
+			dbg(1, "query: nresults=%i (%s)", iter.qresult->len, search);
 		}
 		else dbg(0, "no results! search=%s", search);
 
@@ -362,7 +386,11 @@ tracker__search_iter_new(char* search, char* dir)
 	}
 
 	if(error){
-		warnprintf("internal tracker error: %s\n", error->message);
+		if(error->code == 4){
+			tracker__on_dbus_timeout();
+		}else{
+			warnprintf("internal tracker error: %s\n", error->message);
+		}
 		g_error_free (error);
 	}
 	return false;
@@ -383,6 +411,7 @@ tracker__search_iter_next()
 		result.dir = g_path_get_dirname(meta[0]);
 		result.idx = iter.idx;           //TODO this idx is pretty meaningless.
 		result.mimetype = "audio/x-wav"; //TODO
+		result.online = true;
 
 		iter.idx++;
 	}else{
@@ -418,6 +447,28 @@ tracker__search_iter_free()
 	}else{
 		g_strfreev(iter.result);
 	}
+}
+
+
+gboolean
+tracker__update_colour(int id, int colour)
+{
+	pwarn("FIXME");
+	return true;
+}
+
+
+static void
+tracker__on_dbus_timeout()
+{
+	statusbar_print(1, "tracker: dbus timeout");
+}
+
+
+gboolean
+tracker__update_online(int id, gboolean online)
+{
+	return false;
 }
 
 

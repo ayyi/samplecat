@@ -6,7 +6,6 @@
 #include <gtk/gtk.h>
 #include <gdk-pixbuf/gdk-pixdata.h>
 
-#include <mysql/mysql.h>
 #include <mysql/errmsg.h>
 #include "dh-link.h"
 #include "file_manager.h"
@@ -39,6 +38,8 @@ enum {
 };
 #define MYSQL_NOTES 11
 #define MYSQL_COLOUR 12
+
+MYSQL mysql = {{NULL}, NULL, NULL};
 
 extern struct _app app;
 extern unsigned debug;
@@ -79,27 +80,25 @@ static void clear_result    ();
 gboolean
 mysql__connect()
 {
-	MYSQL *mysql = &app.mysql;
-
-	if(!app.mysql.host){
-		if(!mysql_init(&app.mysql)){
+	if(!mysql.host){
+		if(!mysql_init(&mysql)){
 			printf("Failed to initiate MySQL connection.\n");
 			exit(1);
 		}
 	}
 	dbg (1, "MySQL Client Version is %s", mysql_get_client_info());
-	app.mysql.reconnect = true;
+	mysql.reconnect = true;
 
-	if(!mysql_real_connect(mysql, app.config.database_host, app.config.database_user, app.config.database_pass, app.config.database_name, 0, NULL, 0)){
-		errprintf("cannot connect to database: %s\n", mysql_error(mysql));
+	if(!mysql_real_connect(&mysql, app.config.database_host, app.config.database_user, app.config.database_pass, app.config.database_name, 0, NULL, 0)){
+		errprintf("cannot connect to database: %s\n", mysql_error(&mysql));
 		//currently this wont be displayed, as the window is not yet opened.
-		statusbar_printf(1, "cannot connect to database: %s\n", mysql_error(mysql));
+		statusbar_print(1, "cannot connect to database: %s\n", mysql_error(&mysql));
 		return false;
 	}
-	if(debug) printf("MySQL Server Version is %s\n", mysql_get_server_info(mysql));
+	if(debug) printf("MySQL Server Version is %s\n", mysql_get_server_info(&mysql));
 
-	if(mysql_select_db(mysql, app.config.database_name)){
-		errprintf("Failed to connect to Database: %s\n", mysql_error(mysql));
+	if(mysql_select_db(&mysql, app.config.database_name)){
+		errprintf("Failed to connect to Database: %s\n", mysql_error(&mysql));
 		return false;
 	}
 
@@ -115,6 +114,13 @@ mysql__is_connected()
 }
 
 
+void
+mysql__disconnect()
+{
+	mysql_close(&mysql);
+}
+
+
 int
 mysql__insert(sample* sample, MIME_type *mime_type)
 {
@@ -127,7 +133,7 @@ mysql__insert(sample* sample, MIME_type *mime_type)
 
 	if(mysql__exec_sql(sql)==0){
 		dbg(1, "ok!");
-		id = mysql_insert_id(&app.mysql);
+		id = mysql_insert_id(&mysql);
 	}else{
 		perr("not ok...\n");
 	}
@@ -144,7 +150,7 @@ mysql__delete_row(int id)
 	char sql[1024];
 	snprintf(sql, 1024, "DELETE FROM samples WHERE id=%i", id);
 	dbg(2, "row: sql=%s", sql);
-	if(mysql_query(&app.mysql, sql)){
+	if(mysql_query(&mysql, sql)){
 		perr("delete failed! sql=%s\n", sql);
 		return false;
 	}
@@ -155,7 +161,7 @@ mysql__delete_row(int id)
 static int 
 mysql__exec_sql(const char* sql)
 {
-	return mysql_real_query(&app.mysql, sql, strlen(sql));
+	return mysql_real_query(&mysql, sql, strlen(sql));
 }
 
 
@@ -184,7 +190,7 @@ mysql__update_colour(int id, int colour)
 	char* sql = g_strdup_printf("UPDATE samples SET colour=%u WHERE id=%i", colour, id);
 	dbg(1, "sql=%s", sql);
 	gboolean fail;
-	if((fail = mysql_query(&app.mysql, sql))){
+	if((fail = mysql_query(&mysql, sql))){
 		perr("update failed! sql=%s", sql);
 	}
 	g_free(sql);
@@ -199,7 +205,7 @@ mysql__update_keywords(int id, const char* keywords)
 	char* sql = g_strdup_printf("UPDATE samples SET keywords='%s' WHERE id=%u", keywords, id);
 	dbg(1, "sql=%s", sql);
 	gboolean fail;
-	if((fail = mysql_query(&app.mysql, sql))){
+	if((fail = mysql_query(&mysql, sql))){
 		perr("update failed! sql=%s\n", sql);
 	}
 	g_free(sql);
@@ -212,7 +218,7 @@ mysql__update_notes(int id, const char* notes)
 {
 	char sql[1024];
 	snprintf(sql, 1024, "UPDATE samples SET notes='%s' WHERE id=%u", notes, id);
-	if(mysql_query(&app.mysql, sql)){
+	if(mysql_query(&mysql, sql)){
 		perr("update failed! sql=%s\n", sql);
 		return false;
 	}
@@ -220,15 +226,59 @@ mysql__update_notes(int id, const char* notes)
 }
 
 
+
+#define SQL_LEN 66000
+gboolean
+mysql__update_pixbuf(sample *sample)
+{
+	GdkPixbuf* pixbuf = sample->pixbuf;
+	if(pixbuf){
+		//serialise the pixbuf:
+		guint8 blob[SQL_LEN];
+		GdkPixdata pixdata;
+		gdk_pixdata_from_pixbuf(&pixdata, pixbuf, 0);
+		guint length;
+		guint8* ser = gdk_pixdata_serialize(&pixdata, &length);
+		mysql_real_escape_string(&mysql, (char*)blob, (char*)ser, length);
+
+		char sql[SQL_LEN];
+		snprintf(sql, SQL_LEN, "UPDATE samples SET pixbuf='%s' WHERE id=%i", blob, sample->id);
+		if(mysql_query(&mysql, sql)){
+			pwarn("update failed! sql=%s\n", sql);
+			return false;
+		}
+
+		free(ser);
+
+		//at this pt, refcount should be two, we make it 1 so that pixbuf is destroyed with the row:
+		//g_object_unref(pixbuf); //FIXME
+	}else perr("no pixbuf.\n");
+
+	return true;
+}
+
+
+gboolean
+mysql__update_online(int id, gboolean online)
+{
+	gchar* sql = g_strdup_printf("UPDATE samples SET online=%i, last_checked=NOW() WHERE id=%i", online, id);
+	dbg(2, "row: sql=%s", sql);
+	if(mysql_query(&mysql, sql)){
+		perr("update failed! sql=%s\n", sql);
+	}
+	g_free(sql);
+	return true;
+}
+
+
 //-------------------------------------------------------------
 
 
 gboolean
-mysql__search_iter_new(char* search, char* dir)
+mysql__search_iter_new(char* search, char* dir, int* n_results)
 {
 	//return TRUE on success.
 
-	MYSQL *mysql = &app.mysql;
 	char query[1024];
 	char where[512]="";
 	char category[256]="";
@@ -264,17 +314,23 @@ mysql__search_iter_new(char* search, char* dir)
 	dbg(1, "%s", query);
 
 	int e; if((e = mysql__exec_sql(query)) != 0){
-		statusbar_printf(1, "Failed to find any records: %s", mysql_error(mysql));
+		statusbar_print(1, "Failed to find any records: %s", mysql_error(&mysql));
 
 		if((e == CR_SERVER_GONE_ERROR) || (e == CR_SERVER_LOST)){ //default is to time out after 8 hours
 			dbg(0, "mysql connection timed out. Reconnecting... (not tested!)");
 			mysql__connect();
 		}else{
-			dbg(0, "Failed to find any records: %s", mysql_error(mysql));
+			dbg(0, "Failed to find any records: %s", mysql_error(&mysql));
 		}
 		return false;
 	}
-	search_result = mysql_store_result(mysql);
+	search_result = mysql_store_result(&mysql);
+
+	if(n_results){
+		uint32_t tot_rows = (uint32_t)mysql_affected_rows(&mysql);
+		*n_results = tot_rows;
+	}
+
 	return true;
 }
 
@@ -350,7 +406,6 @@ void
 mysql__dir_iter_new()
 {
 	#define DIR_LIST_QRY "SELECT DISTINCT filedir FROM samples ORDER BY filedir"
-	MYSQL *mysql = &app.mysql;
 
 	if(dir_iter_result) gwarn("previous query not free'd?");
 
@@ -358,7 +413,7 @@ mysql__dir_iter_new()
 	//snprintf(qry, 1024, DIR_LIST_QRY);
 
 	if(mysql__exec_sql(DIR_LIST_QRY) == 0){
-		dir_iter_result = mysql_store_result(mysql);
+		dir_iter_result = mysql_store_result(&mysql);
 		/*
 		else{  // mysql_store_result() returned nothing
 		  if(mysql_field_count(mysql) > 0){
@@ -370,7 +425,7 @@ mysql__dir_iter_new()
 		dbg(2, "num_rows=%i", mysql_num_rows(dir_iter_result));
 	}
 	else{
-		dbg(0, "failed to find any records: %s", mysql_error(mysql));
+		dbg(0, "failed to find any records: %s", mysql_error(&mysql));
 	}
 }
 

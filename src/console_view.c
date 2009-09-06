@@ -3,7 +3,6 @@
 #include <stdio.h>
 #include <sys/ioctl.h>
 #include <gtk/gtk.h>
-#include "mysql/mysql.h" //FIXME
 #include "src/typedefs.h"
 #include "src/types.h"
 #include "support.h"

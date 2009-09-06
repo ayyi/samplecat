@@ -3,7 +3,6 @@
 #include <stdint.h>
 #include <string.h>
 #include <gtk/gtk.h>
-#include "mysql/mysql.h"
 #ifdef USE_AYYI
 #include <ayyi/ayyi.h>
 #endif
@@ -304,7 +303,7 @@ listview__item_set_colour(GtkTreePath* path, unsigned colour)
 
 	if(!backend.update_colour(id, colour)) return false;
 
-	statusbar_printf(1, "colour updated");
+	statusbar_print(1, "colour updated");
 
 	GtkTreeIter iter;
 	gtk_tree_model_get_iter(GTK_TREE_MODEL(app.store), &iter, path);
@@ -448,28 +447,26 @@ listmodel__add_result(SamplecatResult* result)
 //#endif
 #endif
 
-	//icon (only shown if the sound file is currently available):
-	GdkPixbuf* iconbuf = NULL;
-#if 0
-	if(result->online){
-		MIME_type* mime_type = mime_type_lookup(result->mimetype);
+	GdkPixbuf* get_iconbuf_from_mimetype(char* mimetype)
+	{
+		GdkPixbuf* iconbuf = NULL;
+		MIME_type* mime_type = mime_type_lookup(mimetype);
 		if(mime_type){
 			type_to_icon(mime_type);
 			if (!mime_type->image) dbg(0, "no icon.");
 			iconbuf = mime_type->image->sm_pixbuf;
 		}
+		return iconbuf;
 	}
-#endif
 
-	//strip the homedir from the dir string:
-	char* path = result->dir ? strstr(result->dir, g_get_home_dir()) : "";
-	path = path ? path + strlen(g_get_home_dir()) + 1 : result->dir;
+	//icon (only shown if the sound file is currently available):
+	GdkPixbuf* iconbuf = result->online ? get_iconbuf_from_mimetype(result->mimetype) : NULL;
 
 	GtkTreeIter iter;
 	gtk_list_store_append(app.store, &iter);
 	gtk_list_store_set(app.store, &iter, COL_ICON, iconbuf,
 	                   COL_NAME, result->sample_name,
-	                   COL_FNAME, path,
+	                   COL_FNAME, result->dir,
 	                   COL_IDX, result->idx,
 	                   COL_MIMETYPE, result->mimetype,
 	                   COL_KEYWORDS, keywords, 
@@ -479,6 +476,23 @@ listmodel__add_result(SamplecatResult* result)
 	                   COL_AYYI_ICON, ayyi_icon,
 #endif
 	                   -1);
+
+	GtkTreePath* treepath;
+	if((treepath = gtk_tree_model_get_path(GTK_TREE_MODEL(app.store), &iter))){
+		GtkTreeRowReference* row_ref = gtk_tree_row_reference_new(GTK_TREE_MODEL(app.store), treepath);
+		gtk_tree_path_free(treepath);
+		result->row_ref = row_ref;
+	}
+
+	if(!result->overview){
+		if(result->row_ref){
+			sample* sample = sample_new_from_result(result);
+			dbg(2, "no overview: sending request: filename=%s", result->sample_name);
+
+			g_async_queue_push(app.msg_queue, sample);
+		}
+		else pwarn("cannot request overview without row_ref.");
+	}
 }
 
 
@@ -604,7 +618,7 @@ listview__on_motion(GtkWidget *widget, GdkEventMotion *event, gpointer user_data
 		gtk_tree_path_free(path);
 	}
 
-	dbg(0, "setting rowref=%p", prev_row_ref);
+	dbg(2, "setting rowref=%p", prev_row_ref);
 	app.mouseover_row_ref = prev_row_ref;
 	return false;
 }
@@ -654,9 +668,9 @@ listview__on_keywords_edited(GtkCellRendererText *cell, gchar *path_string, gcha
 		//update the store:
 		gtk_list_store_set(app.store, &iter, COL_KEYWORDS, new_text, -1);
 
-		statusbar_printf(1, "keywords updated");
+		statusbar_print(1, "keywords updated");
 	}
-	else statusbar_printf(1, "database error! keywords not updated");
+	else statusbar_print(1, "database error! keywords not updated");
 }
 
 

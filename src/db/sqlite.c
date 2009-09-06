@@ -244,7 +244,7 @@ delete_row (int argc, char *argv[])
 
 
 gboolean
-sqlite__search_iter_new(char* search, char* dir)
+sqlite__search_iter_new(char* search, char* dir, int* n_results)
 {
 	PF;
 	char* where = "";

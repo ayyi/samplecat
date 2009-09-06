@@ -10,7 +10,6 @@
 #include <gimp/gimpaction.h>
 #include <gimp/gimpactiongroup.h>
 #include "support.h"
-#include "mysql/mysql.h"
 #include "main.h"
 #include "listview.h"
 #include "dnd.h"

@@ -52,16 +52,23 @@ struct _config
 
 struct _backend
 {
-	gboolean         (*search_iter_new)  (char* search, char* dir);
+	gboolean         pending;
+
+	gboolean         (*search_iter_new)  (char* search, char* dir, int* n_results);
 	SamplecatResult* (*search_iter_next) (unsigned long**);
-	void        (*search_iter_free) ();
-	int         (*insert)           (sample*, MIME_type*);
-	gboolean    (*update_colour)    (int, int);
-	gboolean    (*update_keywords)  (int, const char*);
-	gboolean    (*update_notes)     (int, const char*);
+	void             (*search_iter_free) ();
+	int              (*insert)           (sample*, MIME_type*);
+	gboolean         (*delete)           (int);
+	gboolean         (*update_colour)    (int, int);
+	gboolean         (*update_keywords)  (int, const char*);
+	gboolean         (*update_notes)     (int, const char*);
+	gboolean         (*update_pixbuf)    (sample*);
+	gboolean         (*update_online)    (int, gboolean);
+
+	void             (*disconnect)       ();
 };
 #ifdef __main_c__
-struct _backend backend = {NULL, NULL, NULL, NULL};
+struct _backend backend = {false, NULL, NULL, NULL, NULL, NULL, NULL};
 #else
 extern struct _backend backend;
 #endif
@@ -135,7 +142,7 @@ struct _app
 	GdkColor             base_colour;
 	GdkColor             text_colour;
 
-	MYSQL                mysql;
+	//MYSQL                mysql;
 
 	GAsyncQueue*         msg_queue;
 
@@ -153,7 +160,7 @@ struct _palette {
 };
 
 enum {
-	TYPE_SNDFILE=1,
+	TYPE_SNDFILE = 1,
 	TYPE_FLAC,
 };
 

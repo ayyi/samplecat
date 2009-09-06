@@ -10,7 +10,6 @@
 #include <gimp/gimpaction.h>
 #include <gimp/gimpactiongroup.h>
 #include "support.h"
-#include "mysql/mysql.h"
 #include "dh-link.h"
 #include "rox/rox_global.h"
 #include "rox/dir.h"
@@ -719,6 +718,9 @@ row_clear_tags(GtkTreeIter* iter, int id)
 {
 	if(!id){ perr("bad arg: id\n"); return false; }
 
+	gwarn("test me! (refactored)");
+	backend.update_keywords(id, "");
+#if 0
 	char sql[1024];
 	snprintf(sql, 1024, "UPDATE samples SET keywords='' WHERE id=%i", id);
 	dbg(1, "sql=%s\n", sql);
@@ -726,6 +728,8 @@ row_clear_tags(GtkTreeIter* iter, int id)
 		perr("update failed! sql=%s\n", sql);
 		return false;
 	}
+#endif
+
 	//update the store:
 	gtk_list_store_set(app.store, iter, COL_KEYWORDS, "", -1);
 	return true;

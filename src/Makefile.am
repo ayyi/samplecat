@@ -28,6 +28,8 @@ AYYI_SRC =
 AYYI_LIBS =
 endif
 
+MYSQL_SRC = db/mysql.c db/mysql.h
+
 if ENABLE_SQLITE
 SQLITE_SRC = db/sqlite.c db/sqlite.h
 else
@@ -35,7 +37,7 @@ SQLITE_SRC =
 endif
 
 if ENABLE_TRACKER
-TRACKER_SRC = tracker.c tracker_.h
+TRACKER_SRC = db/tracker.c db/tracker_.h
 endif
 
 samplecat_SOURCES = \
@@ -54,11 +56,11 @@ samplecat_SOURCES = \
 	cellrenderer_hypertext.c cellrenderer_hypertext.h \
 	colour_box.c colour_box.h \
 	dnd.c dnd.h \
-	db/mysql.c db/mysql.h \
 	observer.c observer.h \
 	fscache.c fscache.h \
 	support.c support.h \
 	console_view.c console_view.h \
+	$(MYSQL_SRC) \
 	$(TRACKER_SRC) \
 	$(SQLITE_SRC) \
 	$(AYYI_SRC) \
@@ -74,5 +76,5 @@ samplecat_LDADD = \
 	$(SQLITE_LDFLAGS) \
 	$(GTK_LIBS) $(DB_LIBS) $(JACK_LIBS) $(SNDFILE_LIBS) $(FLAC_LIBS) $(GTHREAD_LIBS)
 
-EXTRA_DIST = db/sqlite.c db/sqlite.h tracker.c tracker_.h
+EXTRA_DIST = db/sqlite.c db/sqlite.h db/tracker.c db/tracker_.h
 

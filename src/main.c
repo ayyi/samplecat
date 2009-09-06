@@ -25,10 +25,11 @@ This software is licensed under the GPL. See accompanying file COPYING.
 #include "gqview_view_dir_tree.h"
 #include "typedefs.h"
 #ifdef USE_TRACKER
-  //#include "tracker.h"
-  #include <src/tracker_.h>
+  #include <src/db/tracker_.h>
 #endif
-#include "mysql/mysql.h"
+#ifdef USE_MYSQL
+  #include "db/mysql.h"
+#endif
 
 #include "types.h"
 #include "mimetype.h"
@@ -43,7 +44,6 @@ This software is licensed under the GPL. See accompanying file COPYING.
 #include "listview.h"
 #include "window.h"
 #include "inspector.h"
-#include "db/mysql.h"
 #include "dnd.h"
 #include "console_view.h"
 #ifdef USE_GQVIEW_1_DIRTREE
@@ -64,8 +64,6 @@ This software is licensed under the GPL. See accompanying file COPYING.
   #define strmov(A,B) stpcpy((A),(B))
 //#endif
 
-#define SQL_LEN 66000
-
 extern void       dir_init          ();
 static GtkWidget* make_context_menu ();
 static gboolean   can_use_backend   (const char*);
@@ -76,6 +74,7 @@ GList* mime_types; // list of MIME_type*
 extern GList* themes; 
 
 unsigned debug = 0;
+static gboolean search_pending = false;
 
 //strings for console output:
 char white [16];
@@ -198,6 +197,7 @@ main(int argc, char** argv)
 	pixmaps_init();
 	dir_init();
 
+#ifdef USE_MYSQL
 	if(can_use_backend("mysql")){
 		if(mysql__connect()){
 			set_backend(BACKEND_MYSQL);
@@ -207,7 +207,7 @@ main(int argc, char** argv)
 			#endif
 		}
 	}
-
+#endif
 #ifdef USE_SQLITE
 	if(can_use_backend("sqlite")){
 		if(!sqlite__connect()){
@@ -221,8 +221,21 @@ main(int argc, char** argv)
 #endif
 #ifdef USE_TRACKER
 	if(BACKEND_IS_NULL && can_use_backend("tracker")){
-		tracker__init();
-		set_backend(BACKEND_TRACKER);
+		void on_tracker_init()
+		{
+			dbg(0, "...");
+			set_backend(BACKEND_TRACKER);
+			if(search_pending){
+				do_search(app.search_phrase, app.search_dir);
+			}
+		}
+		if(app.no_gui){
+			tracker__init(on_tracker_init);
+		}
+		else {
+			backend.pending = true;
+			g_idle_add_full(G_PRIORITY_LOW, (GSourceFunc)tracker__init, on_tracker_init, NULL);
+		}
 	}
 #endif
 
@@ -237,7 +250,7 @@ main(int argc, char** argv)
 	GError *error = NULL;
 	app.msg_queue = g_async_queue_new();
 	if(!g_thread_create(overview_thread, NULL, false, &error)){
-		perr("error creating thread: %s\n", error->message, __func__);
+		perr("error creating thread: %s\n", error->message);
 		g_error_free(error);
 	}
 #endif
@@ -250,8 +263,12 @@ main(int argc, char** argv)
 
 	if(!app.no_gui) window_new(); 
 	if(!app.no_gui) app.context_menu = make_context_menu();
- 
-	do_search(app.search_phrase, app.search_dir);
+
+	if(!backend.pending){ 
+		do_search(app.search_phrase, app.search_dir);
+	}else{
+		search_pending = true;
+	}
 
 	if(app.no_gui) exit(EXIT_SUCCESS);
 
@@ -331,7 +348,6 @@ get_mouseover_row()
 		g_free(path_str);
 		gtk_tree_path_free(path);
 	}
-	//else printf("get_mouseover_row() failed. rowref=%p\n", app.mouseover_row_ref);
 	return row_num;
 }
 
@@ -363,7 +379,7 @@ scan_dir(const char* path, int* added_count)
 
 			if(!g_file_test(filepath, G_FILE_TEST_IS_DIR)){
 				add_file(filepath);
-				statusbar_printf(1, "%i files added", ++*added_count);
+				statusbar_print(1, "%i files added", ++*added_count);
 			}
 			// IS_DIR
 			else if(app.add_recursive){
@@ -392,7 +408,8 @@ do_search(char *search, char *dir)
 	GdkPixbuf* ayyi_icon = NULL;
 #endif
 
-	if(backend.search_iter_new(search, dir)){
+	int n_results = 0;
+	if(backend.search_iter_new(search, dir, &n_results)){
 
 		treeview_block_motion_handler(); //dont know exactly why but this prevents a segfault.
 
@@ -405,7 +422,12 @@ do_search(char *search, char *dir)
 		gtk_tree_view_set_model(GTK_TREE_VIEW(view), NULL);
 		*/ 
 
-		if(BACKEND_IS_MYSQL
+		if(
+			#ifdef USE_MYSQL
+			BACKEND_IS_MYSQL
+			#else
+			false
+			#endif
 			#ifdef USE_SQLITE
 			|| BACKEND_IS_SQLITE
 			#endif
@@ -427,12 +449,11 @@ do_search(char *search, char *dir)
 			backend.search_iter_free();
 
 			if(0 && row_count < MAX_DISPLAY_ROWS){
-				statusbar_printf(1, "%i samples found.", row_count);
+				statusbar_print(1, "%i samples found.", row_count);
 			}else if(!row_count){
-				statusbar_printf(1, "no samples found. filters: dir=%s", app.search_dir);
+				statusbar_print(1, "no samples found. filters: dir=%s", app.search_dir);
 			}else{
-				uint32_t tot_rows = (uint32_t)mysql_affected_rows(&app.mysql);
-				statusbar_printf(1, "showing %i of %i samples", row_count, tot_rows);
+				statusbar_print(1, "showing %i of %i samples", row_count, n_results);
 			}
 		}
 /*
@@ -470,9 +491,9 @@ do_search(char *search, char *dir)
 			backend.search_iter_free();
 
 			if(0 && row_count < MAX_DISPLAY_ROWS){
-				statusbar_printf(1, "%i samples found.", row_count);
+				statusbar_print(1, "%i samples found.", row_count);
 			}else{
-				statusbar_printf(1, "showing %i samples", row_count);
+				statusbar_print(1, "showing %i samples", row_count);
 			}
 		}
 		#endif
@@ -565,8 +586,9 @@ update_dir_node_list()
 	builds a node list of directories listed in the database.
 	*/
 
-	if(!mysql__is_connected()) return;
+	if(BACKEND_IS_NULL) return;
 
+#ifdef USE_MYSQL
 	mysql__dir_iter_new();
 
 	if(app.dir_tree) g_node_destroy(app.dir_tree);
@@ -590,6 +612,9 @@ update_dir_node_list()
 
 	mysql__dir_iter_free();
 	dbg(2, "size=%i", g_node_n_children(app.dir_tree));
+#else
+#warning fix update_dir_node_list for non-mysql backends!
+#endif
 }
 
 
@@ -611,7 +636,7 @@ add_file(char* path)
 	uri must be "unescaped" before calling this fn. Method string must be removed.
 	*/
 	dbg(1, "%s", path);
-	if(!mysql__is_connected()) return false;
+	if(BACKEND_IS_NULL) return false;
 	gboolean ok = true;
 
 	sample* sample = sample_new(); //free'd after db and store are updated.
@@ -650,7 +675,7 @@ add_file(char* path)
 	}
 	if(mimetype_is_unsupported(mime_string)){
 		printf("cannot add file: file type \"%s\" not supported.\n", mime_string);
-		statusbar_printf(1, "cannot add file: %s files not supported", mime_string);
+		statusbar_print(1, "cannot add file: %s files not supported", mime_string);
 		ok = false;
 		goto out;
 	}
@@ -679,14 +704,14 @@ add_file(char* path)
 
 		dbg(2, "setting store... filename=%s mime=%s", filename, mime_string);
 		gtk_list_store_set(app.store, &iter,
-						  COL_IDX, sample->id,
-						  COL_NAME, filename,
-						  COL_FNAME, filedir,
-						  COL_LENGTH, length_ms,
-						  COL_SAMPLERATE, samplerate_s,
-						  COL_CHANNELS, sample->channels,
-						  COL_MIMETYPE, mime_string,
-						  -1);
+		                   COL_IDX, sample->id,
+		                   COL_NAME, filename,
+		                   COL_FNAME, filedir,
+		                   COL_LENGTH, length_ms,
+		                   COL_SAMPLERATE, samplerate_s,
+		                   COL_CHANNELS, sample->channels,
+		                   COL_MIMETYPE, mime_string,
+		                   -1);
 
 		dbg(2, "sending message: sample=%p filename=%s (%p)", sample, sample->filename, sample->filename);
 		g_async_queue_push(app.msg_queue, sample); //notify the overview thread.
@@ -739,6 +764,8 @@ get_file_info_sndfile(sample* sample)
 	if(!(sffile = sf_open(filename, SFM_READ, &sfinfo))){
 		dbg(0, "not able to open input file %s.", filename);
 		puts(sf_strerror(NULL));    // print the error message from libsndfile:
+		int e = sf_error(NULL);
+		dbg(0, "error=%i", e);
 		return false;
 	}
 
@@ -766,7 +793,7 @@ on_overview_done(gpointer data)
 	g_return_val_if_fail(sample, false);
 	if(!sample->pixbuf){ perr("overview creation failed (no pixbuf).\n"); return false; }
 
-	db_update_pixbuf(sample);
+	backend.update_pixbuf(sample);
 
 	if(sample->row_ref){
 		GtkTreePath* treepath;
@@ -780,40 +807,10 @@ on_overview_done(gpointer data)
 			}else perr("failed to get row iter. row_ref=%p\n", sample->row_ref);
 			gtk_tree_path_free(treepath);
 		}else perr("failed to get path from rowref. row_ref=%p\n", sample->row_ref);
-	} else warnprintf("%s(): rowref not set!", __func__);
+	} else pwarn("rowref not set!\n");
 
 	sample_free(sample);
 	return false; //source should be removed.
-}
-
-
-void
-db_update_pixbuf(sample *sample)
-{
-	GdkPixbuf* pixbuf = sample->pixbuf;
-	if(pixbuf){
-		//serialise the pixbuf:
-		guint8 blob[SQL_LEN];
-		GdkPixdata pixdata;
-		gdk_pixdata_from_pixbuf(&pixdata, pixbuf, 0);
-		guint length;
-		guint8* ser = gdk_pixdata_serialize(&pixdata, &length);
-		mysql_real_escape_string(&app.mysql, (char*)blob, (char*)ser, length);
-		//printf("db_update_pixbuf() serial length: %i, strlen: %i\n", length, strlen(ser));
-
-		char sql[SQL_LEN];
-		snprintf(sql, SQL_LEN, "UPDATE samples SET pixbuf='%s' WHERE id=%i", blob, sample->id);
-		if(mysql_query(&app.mysql, sql)){
-			printf("db_update_pixbuf(): update failed! sql=%s\n", sql);
-			return;
-		}
-
-
-		free(ser);
-
-		//at this pt, refcount should be two, we make it 1 so that pixbuf is destroyed with the row:
-		//g_object_unref(pixbuf); //FIXME
-	}else perr("no pixbuf.\n");
 }
 
 
@@ -853,7 +850,7 @@ delete_row(GtkWidget *widget, gpointer user_data)
 				int id;
 				gtk_tree_model_get(model, &iter, COL_NAME, &fname, COL_IDX, &id, -1);
 
-				if(!mysql__delete_row(id)) return;
+				if(!backend.delete(id)) return;
 
 				//update the store:
 				gtk_list_store_remove(app.store, &iter);
@@ -862,7 +859,7 @@ delete_row(GtkWidget *widget, gpointer user_data)
 	}
 	g_list_free(selected_row_refs); //FIXME free the row_refs?
 
-	statusbar_printf(1, "%i rows deleted", i);
+	statusbar_print(1, "%i rows deleted", i);
 	on_directory_list_changed();
 }
 
@@ -899,7 +896,7 @@ update_row(GtkWidget *widget, gpointer user_data)
 
 			MIME_type* mime_type = mime_type_lookup(mimetype);
 			type_to_icon(mime_type);
-			if ( mime_type->image == NULL ) dbg(0, "no icon.");
+			if (!mime_type->image) dbg(0, "no icon.");
 			iconbuf = mime_type->image->sm_pixbuf;
 
 		}else{
@@ -908,14 +905,9 @@ update_row(GtkWidget *widget, gpointer user_data)
 		}
 		gtk_list_store_set(app.store, &iter, COL_ICON, iconbuf, -1);
 
-		gchar* sql = g_strdup_printf("UPDATE samples SET online=%i, last_checked=NOW() WHERE id=%i", online, id);
-		dbg(2, "row: %s path=%s sql=%s", fname, path, sql);
-		if(mysql_query(&app.mysql, sql)){
-			perr("update failed! sql=%s\n", sql);
-		}
-		g_free(sql);
+		backend.update_online(id, online);
 
-		statusbar_printf(1, "online status updated (%s)", online ? "online" : "not online");
+		statusbar_print(1, "online status updated (%s)", online ? "online" : "not online");
 	}
 	g_list_free(selectionlist);
 	//g_date_free(date);
@@ -1163,20 +1155,6 @@ keyword_is_dupe(char* new, char* existing)
 }
 
 
-/*
-int
-colour_drag_datareceived(GtkWidget *widget, GdkDragContext *drag_context,
-                    gint x, gint y, GtkSelectionData *data,
-                    guint info,
-                    guint time,
-                    gpointer user_data)
-{
-  printf("colour_drag_colour_drag_datareceived()!\n");
-
-  return false;
-}
-*/
-
 void
 tag_edit_start(int tnum)
 {
@@ -1381,7 +1359,7 @@ config_load()
 			}
 			set_search_dir(app.config.show_dir);
 		}
-		else{ warnprintf("%s(): cannot find Samplecat key group.\n", __func__); return false; }
+		else{ pwarn("cannot find Samplecat key group.\n"); return false; }
 		g_free(groupname);
 	}else{
 		printf("unable to load config file: %s.\n", error->message);
@@ -1441,12 +1419,12 @@ config_save()
 	FILE* fp;
 	if(!(fp = fopen(app.config_filename, "w"))){
 		errprintf("cannot open config file for writing (%s).\n", app.config_filename);
-		statusbar_printf(1, "cannot open config file for writing (%s).", app.config_filename);
+		statusbar_print(1, "cannot open config file for writing (%s).", app.config_filename);
 		return false;
 	}
 	if(fprintf(fp, "%s", string) < 0){
 		errprintf("error writing data to config file (%s).\n", app.config_filename);
-		statusbar_printf(1, "error writing data to config file (%s).", app.config_filename);
+		statusbar_print(1, "error writing data to config file (%s).", app.config_filename);
 	}
 	fclose(fp);
 	g_free(string);
@@ -1500,13 +1478,7 @@ on_quit(GtkMenuItem *menuitem, gpointer user_data)
 	gtk_main_quit();
 #endif
 
-	MYSQL* mysql;
-	mysql=&app.mysql;
-	mysql_close(mysql);
-
-#ifdef USE_SQLITE
-	sqlite__disconnect();
-#endif
+	backend.disconnect();
 
 	dbg (1, "done.");
 	exit(exit_code);
@@ -1516,15 +1488,23 @@ on_quit(GtkMenuItem *menuitem, gpointer user_data)
 void
 set_backend(BackendType type)
 {
+	backend.pending = false;
+
 	switch(type){
 		case BACKEND_MYSQL:
+			#ifdef USE_MYSQL
 			backend.search_iter_new  = mysql__search_iter_new;
 			backend.search_iter_next = mysql__search_iter_next_;
 			backend.search_iter_free = mysql__search_iter_free;
 			backend.insert           = mysql__insert;
+			backend.delete           = mysql__delete_row;
+			backend.disconnect       = mysql__disconnect;
 			backend.update_colour    = mysql__update_colour;
 			backend.update_keywords  = mysql__update_keywords;
 			backend.update_notes     = mysql__update_notes;
+			backend.update_pixbuf    = mysql__update_pixbuf;
+			backend.update_online    = mysql__update_online;
+			#endif
 			break;
 		case BACKEND_SQLITE:
 			#ifdef USE_SQLITE
@@ -1532,16 +1512,23 @@ set_backend(BackendType type)
 			backend.search_iter_next = sqlite__search_iter_next;
 			backend.search_iter_free = sqlite__search_iter_free;
 			backend.insert           = sqlite__insert;
+			backend.disconnect       = sqlite__disconnect;
 			backend.update_colour    = sqlite__update_colour;
 			backend.update_keywords  = sqlite__update_keywords;
 			backend.update_notes     = sqlite__update_notes;
+			backend.update_online    = NULL;
 			dbg(0, "backend is sqlite.");
 			#endif
 			break;
 		case BACKEND_TRACKER:
 			#ifdef USE_TRACKER
-			backend.search_iter_new = tracker__search_iter_new;
+			backend.search_iter_new  = tracker__search_iter_new;
 			backend.search_iter_free = tracker__search_iter_free;
+			backend.insert           = tracker__insert;
+			backend.delete           = tracker__delete_row;
+			backend.update_colour    = tracker__update_colour;
+			backend.update_pixbuf    = tracker__update_pixbuf;
+			backend.update_online    = tracker__update_online;
 			dbg(0, "backend is tracker.");
 			#endif
 			break;
