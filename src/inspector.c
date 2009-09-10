@@ -202,6 +202,7 @@ inspector_update_from_listview(GtkTreePath *path)
 	gtk_tree_model_get(GTK_TREE_MODEL(app.store), &iter, COL_NAME, &fname, COL_FNAME, &fpath, COL_LENGTH, &length, COL_KEYWORDS, &tags, COL_MIMETYPE, &mimetype, COL_NOTES, &notes, COL_OVERVIEW, &pixbuf, COL_IDX, &id, -1);
 
 	sample* sample = sample_new_from_model(path);
+	#ifdef USE_TRACKER
 	if(BACKEND_IS_TRACKER){
 		g_return_if_fail(length);
 		if(!strlen(length)){
@@ -216,6 +217,7 @@ inspector_update_from_listview(GtkTreePath *path)
 			gtk_list_store_set(app.store, &iter, COL_LENGTH, l, COL_SAMPLERATE, samplerate_s, COL_CHANNELS, sample->channels, -1);
 		}
 	}
+	#endif
 
 	char ch_str[64]; snprintf(ch_str, 63, "%u channels", sample->channels);
 	char fs_str[64]; snprintf(fs_str, 63, "%i kHz",      sample->sample_rate);

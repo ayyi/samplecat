@@ -7,6 +7,7 @@
 #include <ayyi/ayyi.h>
 #endif
 #include "dh-link.h"
+#include "file_manager/support.h"
 
 #include "typedefs.h"
 #include "src/types.h"

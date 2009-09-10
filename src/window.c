@@ -153,6 +153,12 @@ GtkWindow
 		gtk_widget_show(file_view);
 		g_signal_connect(G_OBJECT(file_view), "cursor-changed", G_CALLBACK(window_on_fileview_row_selected), NULL);
 
+		void window_on_theme_changed(GtkWidget* widget, gpointer data)
+		{
+			PF;
+		}
+		g_signal_connect(G_OBJECT(file_manager__get_signaller()), "theme_changed", G_CALLBACK(window_on_theme_changed), NULL);
+
 		make_fm_menu_actions();
 
 		//set up fileview as dnd source:
@@ -621,7 +627,7 @@ make_fm_menu_actions()
 		gtk_action_set_accel_path(action, path);
 		gtk_action_set_accel_group(action, accel_group);
 
-		fm_add_menu_item(action);
+		fm__add_menu_item(action);
 	}
 }
 

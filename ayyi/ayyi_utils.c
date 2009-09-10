@@ -1,4 +1,4 @@
-#define AYYI_UTILS_C
+#define __ayyi_utils_c__
 #include <stdio.h>
 #include <stdarg.h>
 #include <sys/ioctl.h>

@@ -7,6 +7,7 @@
 #include "file_manager.h"
 #include "gqview_view_dir_tree.h"
 #include "typedefs.h"
+#include "types.h"
 #include <gimp/gimpaction.h>
 #include <gimp/gimpactiongroup.h>
 #include "support.h"
@@ -30,14 +31,7 @@ static void        menu__open_selector             (GtkMenuItem*, gpointer);
 
 struct _colour_box self = {NULL};
 
-typedef struct
-{
-    char*     label;
-    GCallback callback;
-    char*     stock_id;
-} menu_def;
-
-static menu_def _menu_def[] = {
+static MenuDef _menu_def[] = {
     {"Select Colour", G_CALLBACK(menu__open_selector), GTK_STOCK_SELECT_COLOR},
 };
 
@@ -182,7 +176,7 @@ colour_box__make_context_menu()
 	GtkWidget *menu = gtk_menu_new();
 
 	int i; for(i=0;i<G_N_ELEMENTS(_menu_def);i++){
-		menu_def* item = &_menu_def[i];
+		MenuDef* item = &_menu_def[i];
 		GtkWidget* menu_item = gtk_image_menu_item_new_with_label (item->label);
 		gtk_menu_shell_append (GTK_MENU_SHELL(menu), menu_item);
 		if(item->stock_id){

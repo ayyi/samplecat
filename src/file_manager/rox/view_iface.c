@@ -25,7 +25,8 @@
 #include <sys/stat.h>
 #include <gtk/gtk.h>
 
-#include "file_manager/typedefs.h"
+#include "file_manager/file_manager.h"
+#include "src/typedefs.h"
 #include "support.h"
 
 #include "rox_global.h"

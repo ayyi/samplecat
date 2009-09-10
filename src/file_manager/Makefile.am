@@ -8,7 +8,7 @@ AM_CFLAGS = \
 	-I../xdgmime \
 	-DG_LOG_DOMAIN=\"FileMan\" \
 	-I$(top_srcdir)/src \
-	$(GTK_CFLAGS) $(DB_CFLAGS) $(FLAC_CFLAGS) $(XML_CFLAGS)
+	$(GTK_CFLAGS)
 
 noinst_LIBRARIES = libfilemanager.a
 
@@ -16,20 +16,18 @@ BUILT_SOURCES =
 
 CLEANFILES =
 
-libfilemanager_headers = \
-	file_manager.h \
-	file_view.h
-
 libfilemanager_a_SOURCES = \
 	$(libgdl_headers) \
-	file_manager.c \
-	file_view.c \
-	filer.c filer.h rox/display.c rox/display.h rox/view_iface.c rox/view_iface.h rox/rox_support.c rox/rox_support.h rox/cell_icon.c rox/cell_icon.h \
-	menu.c menu.h \
+	file_manager.c file_manager.h \
+	vala/filemanager.c vala/filemanager.h \
+	file_view.c file_view.h \
+	filer.c filer.h \
 	mimetype.c mimetype.h \
+	support.c support.h \
+	rox/display.c rox/display.h rox/view_iface.c rox/view_iface.h rox/rox_support.c rox/rox_support.h cell_icon.c cell_icon.h \
+	menu.c menu.h \
 	rox/dir.c rox/dir.h
 
 EXTRA_DIST = \
-	file_manager.h \
 	file_view.h
 

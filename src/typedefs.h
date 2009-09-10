@@ -10,6 +10,7 @@ typedef enum {
 
 typedef struct _sample sample;
 typedef struct _samplecat_result   SamplecatResult;
+typedef struct _menu_def MenuDef;
 
 #ifndef __file_manager_h__
 typedef enum {

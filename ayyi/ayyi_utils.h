@@ -1,3 +1,5 @@
+#ifndef __ayyi_utils_h__
+#define __ayyi_utils_h__
 
 #define dbg(A, B, ...) debug_printf(__func__, A, B, ##__VA_ARGS__)
 #define gerr(A, ...) g_critical("%s(): "A, __func__, ##__VA_ARGS__)
@@ -13,21 +15,23 @@
 #define GERR_WARN if(error){ gwarn("%s", error->message); g_error_free(error); error = NULL; }
 #define UNDERLINE printf("-----------------------------------------------------\n")
 
-void        debug_printf   (const char* func, int level, const char *format, ...);
-void        errprintf      (char *fmt, ...);
-void        errprintf2     (const char* func, char *format, ...);
-void        errprintf3     (const char* func, char *format, ...);
-void        warnprintf2    (const char* func, char *format, ...);
-void        warn_gerror    (const char* msg, GError** error);
-void        info_gerror    (const char* msg, GError** error);
+void        debug_printf             (const char* func, int level, const char *format, ...);
+void        errprintf                (char *fmt, ...);
+void        errprintf2               (const char* func, char *format, ...);
+void        errprintf3               (const char* func, char *format, ...);
+void        warnprintf2              (const char* func, char *format, ...);
+void        warn_gerror              (const char* msg, GError** error);
+void        info_gerror              (const char* msg, GError** error);
 
-gchar*      path_from_utf8 (const gchar* utf8);
+gchar*      path_from_utf8           (const gchar* utf8);
 
-GList*      get_dirlist    (const char*);
+GList*      get_dirlist              (const char*);
 
-int         get_terminal_width();
+void        string_increment_suffix  (char* newstr, const char* orig, int new_max);
 
-#ifdef AYYI_UTILS_C
+int         get_terminal_width       ();
+
+#ifdef __ayyi_utils_c__
 char white [16] = "\x1b[0;39m";
 char bold  [16] = "\x1b[1;39m";
 char yellow[16] = "\x1b[1;33m";
@@ -50,3 +54,5 @@ extern char go_rhs[32];
 extern char ok    [];
 extern char fail  [];
 #endif
+
+#endif //__ayyi_utils_h__

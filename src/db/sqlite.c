@@ -138,6 +138,13 @@ sqlite__insert(sample* sample, MIME_type *mime_type)
 }
 
 
+gboolean
+sqlite__delete_row(int id)
+{
+	return false;
+}
+
+
 #if 0
 gboolean
 sqlite__add_row (int argc, char *argv[])
@@ -193,6 +200,20 @@ sqlite__update_keywords(int id, const char* keywords)
 
 gboolean
 sqlite__update_notes(int id, const char* notes)
+{
+	return false;
+}
+
+
+gboolean
+sqlite__update_pixbuf(sample* sample)
+{
+	return false;
+}
+
+
+gboolean
+sqlite__update_online(int id, gboolean online)
 {
 	return false;
 }

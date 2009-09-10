@@ -122,7 +122,6 @@ static void encoding_dialog(const gchar *path)
 
 	g_string_free(string, TRUE);
 }
-#endif
 
 gchar *path_to_utf8(const gchar *path)
 {
@@ -146,6 +145,7 @@ gchar *path_to_utf8(const gchar *path)
 
 	return utf8;
 }
+#endif
 
 #ifndef USE_AYYI
 gchar *path_from_utf8(const gchar *utf8)

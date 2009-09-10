@@ -28,19 +28,20 @@
 #include <string.h>
 #include <sys/stat.h>
 
-#include "typedefs.h"
-#include "support.h"
-#include "rox_global.h"
+#include "file_manager/file_manager.h"
+#include "src/typedefs.h"
+#include "src/support.h"
+#include "rox/rox_global.h"
 
 #include "file_view.h"
-#include "rox/cell_icon.h"
-#include "dir.h"
+#include "cell_icon.h"
+#include "rox/dir.h"
 #include "filer.h"
-#include "display.h"
+#include "rox/display.h"
 #include "diritem.h"
 #include "pixmaps.h"
 #include "mimetype.h"
-#include "rox_support.h"
+#include "rox/rox_support.h"
 #include "fscache.h"
 
 typedef struct _CellIcon CellIcon;

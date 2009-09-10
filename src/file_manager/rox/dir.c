@@ -57,19 +57,17 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "file_manager/typedefs.h"
-#include "support.h"
+#include "file_manager/file_manager.h"
+#include "src/typedefs.h"
+#include "src/support.h"
 #include "rox_global.h"
 
 #include "dir.h"
 #include "diritem.h"
 #include "rox_support.h"
-//#include "gui_support.h"
 #include "fscache.h"
-//#include "mount.h"
 #include "pixmaps.h"
 #include "mimetype.h"
-//#include "usericons.h"
 #include "menu.h"
 
 #ifdef USE_NOTIFY

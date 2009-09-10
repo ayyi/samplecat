@@ -1,4 +1,3 @@
-#include "../config.h"
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -16,33 +15,33 @@
 #include <sys/param.h>
 #include <errno.h>
 
+#include "mysql/mysql.h"
 #include <gtk/gtk.h>
 #ifdef OLD
   #include <libart_lgpl/libart.h>
 #endif
 
-#include "dh-link.h"
-#include "file_manager/file_manager.h"
+#include "ayyi/ayyi_utils.h"
 #include "file_manager/support.h"
-#include <gqview2/typedefs.h>
-#include "typedefs.h"
-#include "types.h"
-#include <gimp/gimpaction.h>
-#include <gimp/gimpactiongroup.h>
-#include "src/support.h"
-#include "main.h"
-#include "gqview2/ui_fileops.h"
+#include "rox/rox_global.h"
 #include "rox/rox_support.h"
 
 #define HEX_ESCAPE '%'
-#define N_(A) A 
-#define gettext(A) A
 
 extern struct _app app;
 extern unsigned debug;
 
+static const char* action_leaf = NULL;
+static int  from_parent = 0;
 
-#ifndef USE_AYYI
+static void        do_move(const char *path, const char *dest);
+static const char* make_dest_path(const char *object, const char *dir);
+static void        send_check_path(const gchar *path);
+static void        check_flags();
+static void        process_flag(char flag);
+
+
+#if 0
 void
 errprintf(char *format, ...)
 {
@@ -72,7 +71,6 @@ errprintf2(const char* func, char *format, ...)
   vprintf(format, argp);
   va_end(argp);
 }
-#endif
 
 
 void
@@ -89,21 +87,6 @@ warnprintf(char *format, ...)
 }
 
 
-void 
-warnprintf2(const char* func, char *format, ...)
-{
-  //fn prints a warning string, then passes arguments on to vprintf.
-
-  printf("%s %s(): ", warn, func);
-
-  va_list argp;
-  va_start(argp, format);
-  vprintf(format, argp);
-  va_end(argp);
-}
-
-
-#ifndef USE_AYYI
 void
 debug_printf(const char* func, int level, const char *format, ...)
 {
@@ -117,31 +100,11 @@ debug_printf(const char* func, int level, const char *format, ...)
 	}
 	va_end(args);
 }
-#endif
-
-
-void
-log_handler(const gchar* log_domain, GLogLevelFlags log_level, const gchar* message, gpointer user_data)
-{
-	switch(log_level){
-		case G_LOG_LEVEL_CRITICAL:
-			printf("%s %s\n", err, message);
-			break;
-		case G_LOG_LEVEL_WARNING:
-			printf("%s %s\n", warn, message);
-			break;
-		default:
-			printf("log_handler(): level=%i %s\n", log_level, message);
-			break;
-	}
-}
 
 
 void
 samplerate_format(char* str, int samplerate)
 {
-	if(!samplerate){ str[0] = '\0'; return; }
-
 	snprintf(str, 32, "%f", ((float)samplerate) / 1000);
 	while(str[strlen(str)-1]=='0'){
 		str[strlen(str)-1] = '\0';
@@ -150,15 +113,6 @@ samplerate_format(char* str, int samplerate)
 }
 
 
-gchar*
-dir_format(char* dir)
-{
-	if(dir && (strstr(dir, g_get_home_dir()) == dir)) return dir + strlen(g_get_home_dir()) + 1;
-	else return dir;
-}
-
-
-#if 0
 /* Used as the sort function for sorting GPtrArrays */
 gint 
 strcmp2(gconstpointer a, gconstpointer b)
@@ -203,7 +157,6 @@ list_dir(const guchar *path)
 
 	return names;
 }
-#endif //0
 
 /* Returns TRUE if the object exists, FALSE if it doesn't.
  * For symlinks, the file pointed to must exist.
@@ -265,13 +218,13 @@ file_extension(const char* path, char* extn)
 
 	g_strfreev(split);
 }
+#endif //0
 
 
 /* TRUE iff `sub' is (or would be) an object inside the directory `parent',
  * (or the two are the same item/directory).
  * FALSE if parent doesn't exist.
  */
-#if 0
 gboolean
 is_sub_dir(const char *sub_obj, const char *parent)
 {
@@ -324,34 +277,349 @@ is_sub_dir(const char *sub_obj, const char *parent)
 	return FALSE;
 }
 
+
+/* 'from' and 'to' are complete pathnames of files (not dirs or symlinks).
+ * This spawns 'cp' to do the copy.
+ * Use with a wrapper fn where neccesary to check files and report errors.
+ *
+ * Returns an error string, or NULL on success. g_free() the result.
+ */
+guchar*
+file_copy(const guchar* from, const guchar* to)
+{
+	const char *argv[] = {"cp", "-pRf", NULL, NULL, NULL};
+
+	argv[2] = (gchar*)from;
+	argv[3] = (gchar*)to;
+
+	return (guchar*)fork_exec_wait(argv);
+}
+
+
+/* Move path to dest.
+ * Check that path not moved into itself.
+ */
+void
+file_move(const char* path, const char* dest)
+{
+	if (is_sub_dir(make_dest_path(path, dest), path)) dbg(0, "!ERROR: Can't move/rename object into itself");
+	else {
+		do_move(path, dest);
+		send_check_path(dest);
+	}
+}
+
+
+static void
+do_move(const char *path, const char *dest)
+{
+	const char* argv[] = {"mv", "-f", NULL, NULL, NULL};
+	struct stat	info2;
+
+	check_flags();
+
+	//const char* dest_path = make_dest_path(path, dest);
+
+	gboolean is_dir = lstat(path, &info2) == 0 && S_ISDIR(info2.st_mode);
+
+	if (access(dest, F_OK) == 0)
+	{
+		struct stat	info;
+		if (lstat(dest, &info)) {
+			//send_error();
+			dbg(0, "error!");
+			return;
+		}
+
+		if (!is_dir && /*o_newer &&*/ info2.st_mtime > info.st_mtime)
+		{
+			/* Newer; keep going */
+		}
+		else
+		{
+			//statusbar_print(1, "file already exists.");
+			dbg(0, "FIXME add print callback to application");
+			return;
+#if 0
+			//printf_send("<%s", path);
+			dbg(0, "<%s", path);
+			//printf_send(">%s", dest_path);
+			dbg(0, ">%s", dest_path);
+			if (!printf_reply(from_parent, TRUE, "?'%s' already exists - overwrite?", dest_path)) return;
+		}
+
+		int err;
+		if (S_ISDIR(info.st_mode)) err = rmdir(dest_path);
+		else                       err = unlink(dest_path);
+
+		if (err) {
+			send_error();
+			if (errno != ENOENT) return;
+			printf_send("'Trying move anyway...\n");
+#endif
+		}
+	}
+#if 0
+	else if (!quiet)
+	{
+		printf_send("<%s", path);
+		printf_send(">");
+		if (!printf_reply(from_parent, FALSE, "?Move %s as %s?", path, dest_path)) return;
+	}
+	else if (!o_brief) printf_send("'Moving %s as %s\n", path, dest_path);
 #endif
 
+	argv[2] = path;
+	argv[3] = dest;
 
-gboolean
-ensure_config_dir()
-{
-	gboolean ret = FALSE;
-	static char* path = NULL;
-	path = g_strdup_printf("%s/.config/" PACKAGE, g_get_home_dir()); //is static - don't free.
-
-	if(file_exists(path)) ret = TRUE;
-	else{
-		#warning
-		#warning ensure_config_dir: check .config exists.
-		#warning ensure_config_dir: test create config directory.
-		#warning
-
-		if(!mkdir(path, 775)){
-			ret = TRUE;
-		}
-		else gwarn("cannot create config dir: %s", path);
+	char* err = fork_exec_wait(argv);
+	if (err)
+	{
+		//printf_send("!%s\nFailed to move %s as %s\n", err, path, dest_path);
+		dbg(0, "!%s\nFailed to move %s as %s\n", err, path, dest);
+		dbg(0, "FIXME add print callback to application");
+		//statusbar_printf(1, "!%s: Failed to move %s as %s", err, path, dest);
+		g_free(err);
 	}
-	//g_free(path); -- no, is static.
-	return ret;
+	else
+	{
+		send_check_path(dest);
+
+		//if (is_dir) send_mount_path(path);
+		if (is_dir) dbg(0, "?%s", path);
+		//else        statusbar_printf(1, "file '%s' moved.", path);
+		else dbg(0, "FIXME add print callback to application");
+	}
 }
 
 
 #if 0
+/* Like g_strdup, but does realpath() too (if possible) */
+char*
+pathdup(const char* path)
+{
+	char real[MAXPATHLEN];
+
+	g_return_val_if_fail(path != NULL, NULL);
+
+	if (realpath(path, real))
+		return g_strdup(real);
+
+	return g_strdup(path);
+}
+#endif
+
+
+/* We want to copy 'object' into directory 'dir'. If 'action_leaf'
+ * is set then that is the new leafname, otherwise the leafname stays
+ * the same.
+ */
+static const char*
+make_dest_path(const char *object, const char *dir)
+{
+	const char *leaf;
+
+	if (action_leaf)
+		leaf = action_leaf;
+	else
+	{
+		leaf = strrchr(object, '/');
+		if (!leaf)
+			leaf = object;		/* Error? */
+		else
+			leaf++;
+	}
+
+	return (const char*)make_path(dir, leaf);
+}
+
+
+/* Notify the filer that this item has been updated */
+static void
+send_check_path(const gchar *path)
+{
+	//printf_send("s%s", path);
+	dbg(0, "s%s", path);
+}
+
+
+/* If the parent has sent any flag toggles, read them */
+static void
+check_flags(void)
+{
+	fd_set set;
+	int	got;
+	char retval;
+	struct timeval tv;
+
+	FD_ZERO(&set);
+
+	while (1)
+	{
+		FD_SET(from_parent, &set);
+		tv.tv_sec = 0;
+		tv.tv_usec = 0;
+		got = select(from_parent + 1, &set, NULL, NULL, &tv);
+
+		if (got == -1) g_error("select() failed: %s\n", g_strerror(errno));
+		else if (!got) return;
+
+		got = read(from_parent, &retval, 1);
+		if (got != 1) g_error("read() error: %s\n", g_strerror(errno));
+
+		process_flag(retval);
+	}
+}
+
+
+static void process_flag(char flag)
+{
+	dbg(0, "...");
+#if 0
+	switch (flag)
+	{
+		case 'Q':
+			quiet = !quiet;
+			break;
+		case 'F':
+			o_force = !o_force;
+			break;
+		case 'R':
+			o_recurse = !o_recurse;
+			break;
+		case 'B':
+			o_brief = !o_brief;
+			break;
+	        case 'W':
+		        o_newer = !o_newer;
+			break;
+		case 'E':
+			read_new_entry_text();
+			break;
+		default:
+			printf_send("!ERROR: Bad message '%c'\n", flag);
+			break;
+	}
+#endif
+}
+
+#if 0
+/* Join the path to the leaf (adding a / between them) and
+ * return a pointer to a static buffer with the result. Buffer is valid
+ * until the next call to make_path.
+ * The return value may be used as 'dir' for the next call.
+ */
+const guchar*
+make_path(const char *dir, const char *leaf)
+{
+	static GString *buffer = NULL;
+
+	if (!buffer)
+		buffer = g_string_new(NULL);
+
+	g_return_val_if_fail(dir != NULL, buffer->str);
+	g_return_val_if_fail(leaf != NULL, buffer->str);
+
+	if (buffer->str != dir)
+		g_string_assign(buffer, dir);
+
+	if (dir[0] != '/' || dir[1] != '\0')
+		g_string_append_c(buffer, '/');	/* For anything except "/" */
+
+	g_string_append(buffer, leaf);
+
+	return buffer->str;
+}
+#endif
+
+
+/* Fork and exec argv. Wait and return the child's exit status.
+ * -1 if spawn fails.
+ * Returns the error string from the command if any, or NULL on success.
+ * If the process returns a non-zero exit status without producing a message,
+ * a suitable message is created.
+ * g_free() the result.
+ */
+char*
+fork_exec_wait(const char **argv)
+{
+	int	status;
+	gchar	*errors = NULL;
+	GError	*error = NULL;
+
+	if (!g_spawn_sync(NULL, (char **) argv, NULL,
+		     G_SPAWN_SEARCH_PATH | G_SPAWN_STDOUT_TO_DEV_NULL,
+		     NULL, NULL,
+		     NULL, &errors, &status, &error))
+	{
+		char* msg = g_strdup(error->message);
+		g_error_free(error);
+		return msg;
+	}
+
+	if (errors && !*errors) null_g_free(&errors);
+
+	if (!WIFEXITED(status))
+	{
+		if (!errors) errors = g_strdup("(Subprocess crashed?)");
+	}
+	else if (WEXITSTATUS(status))
+	{
+		if (!errors) errors = g_strdup("ERROR");
+	}
+
+	if (errors) g_strstrip(errors);
+
+	return errors;
+}
+
+
+gchar*
+uri_text_from_list(GList *list, gint *len, gint plain_text)
+{
+    gchar *uri_text = NULL;
+    GString *string;
+    GList *work;
+
+    if (!list) {
+        if (len) *len = 0;
+        return NULL;
+    }
+
+    string = g_string_new("");
+
+    work = list;
+    while (work) {
+        const gchar *name8; /* dnd filenames are in utf-8 */
+
+        name8 = work->data;
+
+        if (!plain_text)
+            {
+            gchar *escaped;
+
+            escaped = uri_text_escape(name8);
+            g_string_append(string, "file:");
+            g_string_append(string, escaped);
+            g_free(escaped);
+
+            g_string_append(string, "\r\n");
+            }
+        else
+            {
+            g_string_append(string, name8);
+            if (work->next) g_string_append(string, "\n");
+            }
+
+        work = work->next;
+        }
+
+    uri_text = string->str;
+    if (len) *len = string->len;
+    g_string_free(string, FALSE);
+
+    return uri_text;
+}
 
 static void
 uri_list_parse_encoded_chars(GList *list)
@@ -367,10 +635,9 @@ uri_list_parse_encoded_chars(GList *list)
         work = work->next;
         }
 }
-#endif
 
-#if 0
-GList *uri_list_from_text(gchar *data, gint files_only)
+GList*
+uri_list_from_text(gchar *data, gint files_only)
 {
     GList *list = NULL;
     gint b, e;
@@ -405,203 +672,144 @@ GList *uri_list_from_text(gchar *data, gint files_only)
 
     return list;
 }
-#endif
 
-#if 0
-//below is stuff from gnome-vfs-uri.c
-//-i think eventually we might as well statically link the whole file.
+static gint escape_char_list[] = {
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,   /*   0 */
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,   /*  10 */
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,   /*  20 */
+/*       spc !  "  #  $  %  &  '           */
+    1, 1, 0, 0, 1, 1, 0, 1, 0, 0,   /*  30 */
+/*  (  )  *  +  ,  -  .  /  0  1           */
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   /*  40 */
+/*  2  3  4  5  6  7  8  9  :  ;           */
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 1,   /*  50 */
+/*  <  =  >  ?  @  A  B  C  D  E           */
+    1, 0, 1, 1, 0, 0, 0, 0, 0, 0,   /*  60 */
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   /*  70 */
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   /*  80 */
+/*  Z  [  \  ]  ^  _  `  a  b  c           */
+    0, 1, 1, 1, 1, 0, 1, 0, 0, 0,   /*  90 */
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   /* 100 */
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   /* 110 */
+/*  x  y  z  {  |  }  ~ del                */
+    0, 0, 0, 1, 1, 1, 0, 0      /* 120, 127 is end */
+};
 
+static gchar *hex_char = "0123456789ABCDEF";
 
-/**
- * gnome_vfs_uri_list_parse:
- * @uri_list:
- *
- * Extracts a list of #GnomeVFSURI objects from a standard text/uri-list,
- * such as one you would get on a drop operation.  Use
- * #gnome_vfs_uri_list_free when you are done with the list.
- *
- * Return value: A GList of GnomeVFSURIs
- **/
-GList*
-gnome_vfs_uri_list_parse(const gchar* uri_list)
+static gint
+escape_test(guchar c)
 {
-    /* Note that this is mostly very stolen from old libgnome/gnome-mime.c */
+    if (c < 32 || c > 127) return TRUE;
+    return (escape_char_list[c] != 0);
+}
 
-    const gchar *p, *q;
-    gchar *retval;
-    GnomeVFSURI/*gchar*/ *uri;
-    GList *result = NULL;
 
-    g_return_val_if_fail (uri_list != NULL, NULL);
+static const gchar*
+escape_code(guchar c)
+{
+    static gchar text[4];
 
-    p = uri_list;
+    text[0] = '%';
+    text[1] = hex_char[c>>4];
+    text[2] = hex_char[c%16];
+    text[3] = '\0';
 
-    /* We don't actually try to validate the URI according to RFC
-     * 2396, or even check for allowed characters - we just ignore
-     * comments and trim whitespace off the ends.  We also
-     * allow LF delimination as well as the specified CRLF.
-     */
-    while (p != NULL) {
-        if (*p != '#') {
-            while (g_ascii_isspace (*p))
-                p++;
+    return text;
+}
 
-            q = p;
-            while ((*q != '\0')
-                   && (*q != '\n')
-                   && (*q != '\r'))
-                q++;
 
-            if (q > p) {
-                q--;
-                while (q > p
-                       && g_ascii_isspace (*q))
-                    q--;
+gchar*
+uri_text_escape(const gchar *text)
+{
+    GString *string;
+    gchar *result;
+    const gchar *p;
 
-                retval = g_malloc (q - p + 2);
-                strncpy (retval, p, q - p + 1);
-                retval[q - p + 1] = '\0';
+    if (!text) return NULL;
 
-                //uri = gnome_vfs_uri_new (retval);
-                uri = malloc(128);
-                snprintf(uri, 128, retval);
+    string = g_string_new("");
 
-                g_free(retval);
+    p = text;
+    while (*p != '\0')
+        {
+        if (escape_test(*p))
+            {
+            g_string_append(string, escape_code(*p));
+            }
+        else
+            {
+            g_string_append_c(string, *p);
+            }
+        p++;
+        }
 
-                if(uri != NULL) result = g_list_prepend(result, uri);
+    result = string->str;
+    g_string_free(string, FALSE);
+
+    /* dropped filenames are expected to be utf-8 compatible */
+    if (!g_utf8_validate(result, -1, NULL))
+        {
+        gchar *tmp;
+
+        tmp = g_locale_to_utf8(result, -1, NULL, NULL, NULL);
+        if (tmp)
+            {
+            g_free(result);
+            result = tmp;
             }
         }
-        p = strchr (p, '\n');
-        if (p != NULL)
-            p++;
-    }
 
-    return g_list_reverse(result);
+    return result;
 }
 
-
-const gchar *
-vfs_get_method_string(const gchar *substring, gchar **method_string)
+/* this operates on the passed string, decoding escaped characters */
+void uri_text_decode(gchar *text)
 {
-	//get the first part of a uri, eg "file://"
+    if (strchr(text, '%'))
+        {
+        gchar *w;
+        gchar *r;
 
-    const gchar *p;
-    char *method;
+        w = r = text;
 
-    for (p = substring;
-         g_ascii_isalnum (*p) || *p == '+' || *p == '-' || *p == '.';
-         p++)
-        ;
+        while(*r != '\0')
+            {
+            if (*r == '%' && *(r + 1) != '\0' && *(r + 2) != '\0')
+                {
+                gchar t[3];
+                gint n;
 
-    if (*p == ':') {
-        /* Found toplevel method specification.  */
-        method = g_strndup (substring, p - substring);
-        *method_string = g_ascii_strdown (method, -1);
-        g_free (method);
-        p++;
-    } else {
-        *method_string = g_strdup ("file");
-        p = substring;
-    }
-    return p;
+                r++;
+                t[0] = *r;
+                r++;
+                t[1] = *r;
+                t[2] = '\0';
+                n = (gint)strtol(t, NULL, 16);
+                if (n > 0 && n < 256)
+                    {
+                    *w = (gchar)n;
+                    }
+                else
+                    {
+                    /* invalid number, rewind and ignore this escape */
+                    r -= 2;
+                    *w = *r;
+                    }
+                }
+            else if (w != r)
+                {
+                *w = *r;
+                }
+            r++;
+            w++;
+            }
+        if (*w != '\0') *w = '\0';
+        }
 }
 
-/**
- * gnome_vfs_uri_list_free:
- * @list: list of GnomeVFSURI elements
- *
- * Decrements the reference count of each member of @list by one,
- * and frees the list itself.
- **/
-void
-gnome_vfs_uri_list_free (GList *list)
-{
-    g_list_free (gnome_vfs_uri_list_unref (list));
-}
 
-/**
- * gnome_vfs_uri_list_unref:
- * @list: list of GnomeVFSURI elements
- *
- * Decrements the reference count of the items in @list by one.
- * Note that the list is *not freed* even if each member of the list
- * is freed.
- *
- * Return value: @list
- **/
-GList *
-gnome_vfs_uri_list_unref (GList *list)
-{
-    g_list_foreach (list, (GFunc) gnome_vfs_uri_unref, NULL);
-    return list;
-}
-
-/**
- * gnome_vfs_uri_unref:
- * @uri: A GnomeVFSURI.
- *
- * Decrement @uri's reference count.  If the reference count reaches zero,
- * @uri is destroyed.
- **/
-void
-gnome_vfs_uri_unref (GnomeVFSURI *uri)
-{
-    GnomeVFSURI *p, *parent;
-
-    g_return_if_fail (uri != NULL);
-    g_return_if_fail (uri->ref_count > 0);
-
-    for (p = uri; p != NULL; p = parent) {
-        parent = p->parent;
-        g_assert (p->ref_count > 0);
-        p->ref_count--;
-        if (p->ref_count == 0)
-            destroy_element (p);
-    }
-}
-
-/* Destroy an URI element, but not its parent.  */
-static void
-destroy_element (GnomeVFSURI *uri)
-{
-    g_free (uri->text);
-    g_free (uri->fragment_id);
-    g_free (uri->method_string);
-
-    if (uri->parent == NULL) {
-        GnomeVFSToplevelURI *toplevel;
-
-        toplevel = (GnomeVFSToplevelURI *) uri;
-        g_free (toplevel->host_name);
-        g_free (toplevel->user_name);
-        g_free (toplevel->password);
-    }
-
-    g_free (uri);
-}
-
-/**
- * gnome_vfs_uri_get_toplevel:
- * @uri: A GnomeVFSURI.
- *
- * Retrieve the toplevel URI in @uri.
- *
- * Return value: A pointer to the toplevel URI object.
- **/
-GnomeVFSToplevelURI *
-gnome_vfs_uri_get_toplevel (const GnomeVFSURI *uri)
-{
-    const GnomeVFSURI *p;
-
-    g_return_val_if_fail (uri != NULL, NULL);
-
-    for (p = uri; p->parent != NULL; p = p->parent)
-        ;
-
-    return (GnomeVFSToplevelURI *) p;
-}
-
-#endif
+#if 0
 
 
 void
@@ -612,58 +820,10 @@ pixbuf_clear(GdkPixbuf *pixbuf, GdkColor *colour)
 }
 
 
-#ifdef OLD
-void
-pixbuf_draw_line(GdkPixbuf *pixbuf, struct _ArtDRect *pts, double line_width, GdkColor *colour)
-{
-  art_u8 *buffer = (art_u8*)gdk_pixbuf_get_pixels(pixbuf);
-  int bufwidth  = gdk_pixbuf_get_width    (pixbuf);
-  int bufheight = gdk_pixbuf_get_height   (pixbuf);
-  int rowstride = gdk_pixbuf_get_rowstride(pixbuf);
-  art_u32 color_fg = ((colour->red/256)<< 24) | ((colour->green/256)<<16) | ((colour->blue/256)<<8) | (0xff); //
-
-  //define the line as a libart vector:
-  ArtVpath *vec = art_new(ArtVpath, 10);
-  vec[0].code = ART_MOVETO;
-  vec[0].x = pts->x0;
-  vec[0].y = pts->y0;
-  vec[1].code = ART_LINETO;
-  vec[1].x = pts->x1;
-  vec[1].y = pts->y1;
-  vec[2].code = ART_END;
-
-  ArtSVP *svp = art_svp_vpath_stroke(vec,
-                             ART_PATH_STROKE_JOIN_ROUND,//ArtPathStrokeJoinType join,
-                             ART_PATH_STROKE_CAP_BUTT,  //ArtPathStrokeCapType cap,
-                             line_width,                //double line_width,
-                             1.0,                       //??????? double miter_limit,
-                             1.0);                      //double flatness
-  //render to buffer:
-  art_rgb_svp_alpha(svp, 0, 0,
-                    bufwidth, bufheight,                //width, height,
-                    color_fg, buffer,
-                    rowstride,                          //number of bytes in each row.
-                    NULL);
-  free(vec);
-  free(svp);
-}
-#else
-void
-pixbuf_draw_line(cairo_t* cr, rect *pts, double line_width, GdkColor *colour)
-{
-  if(pts->y1 == pts->y2) return;
-  //cairo_move_to (cr, pts->x1, pts->y1);
-  //cairo_line_to (cr, pts->x2, pts->y2);
-  cairo_rectangle(cr, pts->x1, pts->y1, pts->x2 - pts->x1 + 1, pts->y2 - pts->y1 + 1);
-  cairo_fill (cr);
-  cairo_stroke (cr);
-}
-#endif
 
 /* Scale src down to fit in max_w, max_h and return the new pixbuf.
  * If src is small enough, then ref it and return that.
  */
-#if 0
 GdkPixbuf*
 scale_pixbuf(GdkPixbuf *src, int max_w, int max_h)
 {
@@ -720,6 +880,7 @@ scale_pixbuf_up(GdkPixbuf *src, int max_w, int max_h)
 						GDK_INTERP_BILINEAR);
 	}
 }
+#endif
 
 /* Create a new pixbuf by colourizing 'src' to 'color'. If the function fails,
  * 'src' will be returned (with an increased reference count, so it is safe to
@@ -784,9 +945,8 @@ error:
     g_object_ref(src);
     return src;
 }
-#endif
 
-
+#if 0
 void
 colour_get_style_fg(GdkColor *color, int state)
 {
@@ -930,15 +1090,7 @@ is_black(GdkColor* colour)
 
 
 gboolean
-is_dark(GdkColor* colour)
-{
-	int average = (colour->red + colour->green + colour->blue) / 3;
-	return (average < 0x7fff);
-}
-
-
-gboolean
-is_similar(GdkColor* colour1, GdkColor* colour2, int min_diff)
+is_similar(GdkColor* colour1, GdkColor* colour2, char min_diff)
 {
 	GdkColor difference;
 	difference.red   = ABS(colour1->red   - colour2->red);
@@ -979,9 +1131,9 @@ is_similar_rgb(unsigned colour1, unsigned colour2)
 
 
 void
-format_time(char* length, const char* milliseconds)
+format_time(char* length, char* milliseconds)
 {
-	g_return_if_fail(length);
+	if(!length){ errprintf("format_time()!\n"); return; }
 	if(!milliseconds){ snprintf(length, 64, " "); return; }
 
 	gchar secs_str[64] = "";
@@ -996,16 +1148,18 @@ format_time(char* length, const char* milliseconds)
 	}else snprintf(secs_str, 64, "%i", secs);
 	
 	snprintf(length, 64, "%s%s.%03i", mins_str, secs_str, t % 1000);
+	//printf("format_time(): %s\n", length);
 }
 
 
 void
 format_time_int(char* length, int milliseconds)
 {
-	g_return_if_fail(length);
+	if(!length){ errprintf("format_time()!\n"); return; }
+	//if(!milliseconds){ snprintf(length, 64, " "); return; }
 
-	if(!milliseconds) length[0] = '\0';
-	else snprintf(length, 64, "%i.%03i", milliseconds / 1000, milliseconds % 1000);
+	snprintf(length, 64, "%i.%03i", milliseconds / 1000, milliseconds % 1000);
+	//printf("format_time(): %s\n", length);
 }
 
 
@@ -1033,7 +1187,25 @@ treecell_get_row(GtkWidget *widget, GdkRectangle *cell_area)
 
 
 void
-statusbar_print(int n, char* fmt, ...)
+statusbar_print(int n, char *s)
+{
+  //prints to one of the root statusbar contexts.
+  GtkWidget *statusbar = NULL;
+  if     (n==1) statusbar = app.statusbar;
+  else if(n==2) statusbar = app.statusbar2;
+  else { errprintf("statusbar_print(): bad statusbar index (%i)\n", n); n=1; }
+
+  if((unsigned int)statusbar<1024) return; //window may not be open.
+
+  gchar buff[128];
+  gint cid = gtk_statusbar_get_context_id(GTK_STATUSBAR(statusbar), "dummy");
+  snprintf(buff, 128, "  %s", s); //experimental padding.
+  gtk_statusbar_push(GTK_STATUSBAR(statusbar), cid, buff);
+}
+
+
+void
+statusbar_printf(int n, char* fmt, ...)
 {
   if(n<1||n>3) n = 1;
 
@@ -1044,12 +1216,10 @@ statusbar_print(int n, char* fmt, ...)
   vsnprintf(s, 127, fmt, argp);
   va_end(argp);
 
-  if(debug) printf("%s\n", s);
-
   GtkWidget *statusbar = NULL;
   if     (n==1) statusbar = app.statusbar;
   else if(n==2) statusbar = app.statusbar2;
-  else { perr("bad statusbar index (%i)\n", n); n=1; }
+  else { errprintf("statusbar_print(): bad statusbar index (%i)\n", n); n=1; }
 
   if((unsigned)statusbar<1024) return; //window may not be open.
 
@@ -1057,353 +1227,6 @@ statusbar_print(int n, char* fmt, ...)
   gtk_statusbar_push(GTK_STATUSBAR(statusbar), cid, s);
 }
 
-
-static void
-shortcuts_add_action(GtkAction* action, GimpActionGroup* action_group)
-{
-  g_return_if_fail(action_group);
-
-  gtk_action_group_add_action(GTK_ACTION_GROUP(action_group), action);
-  dbg(2, "group=%s group_size=%i action=%s", gtk_action_group_get_name(GTK_ACTION_GROUP(action_group)), g_list_length(gtk_action_group_list_actions(GTK_ACTION_GROUP(action_group))), gtk_action_get_name(action));
-}
-
-
-void
-make_accels(GtkAccelGroup* accel_group, GimpActionGroup* action_group, struct _accel* keys, int count, gpointer user_data)
-{
-  //add keyboard shortcuts from the key array to the accelerator group.
-
-  //@param action_group - if NULL, global group is used.
-
-  ASSERT_POINTER(accel_group, "accel_group");
-  ASSERT_POINTER(keys, "keys");
-
-  int k;
-  for(k=0;k<count;k++){
-    struct _accel* key = &keys[k];
-    dbg (2, "user_data=%p %s.", user_data, key->name);
-    GClosure* closure = NULL;
-    if(key->callback){
-      closure = g_cclosure_new(G_CALLBACK(key->callback), keys[k].user_data ? keys[k].user_data : user_data, NULL);
-#ifdef REAL
-      gtk_accel_group_connect(accel_group, keys[k].keycode, keys[k].mask, GTK_ACCEL_MASK, closure);
-#endif
-    }
-
-    gchar path[64]; sprintf(path, "<%s>/Categ/%s", action_group ? gtk_action_group_get_name(GTK_ACTION_GROUP(action_group)) : "Global", keys[k].name);
-    dbg(2, "path=%s", path);
-    if(closure) gtk_accel_group_connect_by_path(accel_group, path, closure);
-    gtk_accel_map_add_entry(path, key->key[0].code, key->key[0].mask);
-    dbg(2, "done");
-
-    //gchar name[64]; sprintf(name, "Action %i", k);
-    dbg(2, "stock_item=%p", key->stock_item);
-    dbg(2, "stock-id=%s", key->stock_item? key->stock_item->stock_id : "gtk-file");
-    gchar* label = key->name;
-    GtkAction* action = gtk_action_new(key->name, label, "Tooltip", key->stock_item? key->stock_item->stock_id : "gtk-file");
-    gtk_action_set_accel_path(action, path);
-    gtk_action_set_accel_group(action, accel_group);
-    shortcuts_add_action(action, action_group);
-
-    struct s_key* alt_key = &key->key[1];
-    int n_keys = alt_key->code ? 2 : 1;   //accels either have 1 or 2 keys
-    if(n_keys == 2){
-      guchar* stock_id = (guchar*)( key->stock_item ? g_strconcat(key->stock_item->stock_id, "-ALT", NULL) : "gtk-file"); //free!
-      GtkAction* action = gtk_action_new((char*)stock_id, label, "Tooltip", (char*)stock_id);
-      gtk_action_set_accel_path(action, path);
-      gtk_action_set_accel_group(action, accel_group);
-      shortcuts_add_action(action, action_group);
-    }
-  }
-}
-
-
-void
-add_menu_items_from_defn(GtkWidget* menu, MenuDef* menu_def, int n)
-{
-	int i; for(i=0;i<n;i++){
-		MenuDef* item = &menu_def[i];
-		if(!item->label[0] == '\0'){
-			GtkWidget* menu_item = gtk_image_menu_item_new_with_label (item->label);
-			gtk_menu_shell_append (GTK_MENU_SHELL(menu), menu_item);
-			if(item->stock_id){
-				GtkIconSet* set = gtk_style_lookup_icon_set(gtk_widget_get_style(menu), item->stock_id);
-				GdkPixbuf* pixbuf = gtk_icon_set_render_icon(set, gtk_widget_get_style(menu), GTK_TEXT_DIR_LTR, GTK_STATE_NORMAL, GTK_ICON_SIZE_MENU, menu, NULL);
-
-				GtkWidget* ico = gtk_image_new_from_pixbuf(pixbuf);
-				gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(menu_item), ico);
-			}
-			if(item->callback) g_signal_connect (G_OBJECT(menu_item), "activate", G_CALLBACK(item->callback), GINT_TO_POINTER(i));
-			if(!item->sensitive) gtk_widget_set_sensitive(GTK_WIDGET(menu_item), false);
-		}else{
-			GtkWidget* menu_item = gtk_separator_menu_item_new();
-			gtk_menu_shell_append (GTK_MENU_SHELL(menu), menu_item);
-		}
-	}
-}
-
-
-/**
- * gimp_strip_uline:
- * @str: underline infested string (or %NULL)
- *
- * This function returns a copy of @str stripped of underline
- * characters. This comes in handy when needing to strip mnemonics
- * from menu paths etc.
- *
- * In some languages, mnemonics are handled by adding the mnemonic
- * character in brackets (like "File (_F)"). This function recognizes
- * this construct and removes the whole bracket construction to get
- * rid of the mnemonic (see bug #157561).
- *
- * Return value: A (possibly stripped) copy of @str which should be
- *               freed using g_free() when it is not needed any longer.
- **/
-gchar*
-gimp_strip_uline (const gchar* str)
-{
-  gchar    *escaped;
-  gchar    *p;
-  gboolean  past_bracket = FALSE;
-
-  if (! str) return NULL;
-
-  p = escaped = g_strdup (str);
-
-  while (*str)
-    {
-      if (*str == '_')
-        {
-          /*  "__" means a literal "_" in the menu path  */
-          if (str[1] == '_')
-            {
-             *p++ = *str++;
-             *p++ = *str++;
-            }
-
-          /*  find the "(_X)" construct and remove it entirely  */
-          if (past_bracket && str[1] && *(g_utf8_next_char (str + 1)) == ')')
-            {
-              str = g_utf8_next_char (str + 1) + 1;
-              p--;
-            }
-          else
-            {
-              str++;
-            }
-        }
-      else
-        {
-          past_bracket = (*str == '(');
-
-          *p++ = *str++;
-        }
-    }
-
-  *p = '\0';
-
-  return escaped;
-}
-
-/*  The format string which is used to display modifier names
- *  <Shift>, <Ctrl> and <Alt>
- */
-#define GIMP_MOD_NAME_FORMAT_STRING N_("<%s>")
-
-const gchar*
-gimp_get_mod_name_shift ()
-{
-  static gchar *mod_name_shift = NULL;
-
-  if (! mod_name_shift)
-    {
-      GtkAccelLabelClass *accel_label_class;
-
-      accel_label_class = g_type_class_ref (GTK_TYPE_ACCEL_LABEL);
-      mod_name_shift = g_strdup_printf (gettext (GIMP_MOD_NAME_FORMAT_STRING),
-                                        accel_label_class->mod_name_shift);
-      g_type_class_unref (accel_label_class);
-    }
-
-  return (const gchar *) mod_name_shift;
-}
-
-
-const gchar*
-gimp_get_mod_name_control()
-{
-  static gchar *mod_name_control = NULL;
-
-  if (! mod_name_control)
-    {
-      GtkAccelLabelClass *accel_label_class;
-
-      accel_label_class = g_type_class_ref (GTK_TYPE_ACCEL_LABEL);
-      mod_name_control = g_strdup_printf (gettext (GIMP_MOD_NAME_FORMAT_STRING),
-                                          accel_label_class->mod_name_control);
-      g_type_class_unref (accel_label_class);
-    }
-
-  return (const gchar *) mod_name_control;
-}
-
-
-const gchar*
-gimp_get_mod_name_alt ()
-{
-  static gchar *mod_name_alt = NULL;
-
-  if (! mod_name_alt)
-    {
-      GtkAccelLabelClass *accel_label_class;
-
-      accel_label_class = g_type_class_ref (GTK_TYPE_ACCEL_LABEL);
-      mod_name_alt = g_strdup_printf (gettext (GIMP_MOD_NAME_FORMAT_STRING),
-                                      accel_label_class->mod_name_alt);
-      g_type_class_unref (accel_label_class);
-    }
-
-  return (const gchar *) mod_name_alt;
-}
-
-
-const gchar*
-gimp_get_mod_separator ()
-{
-  static gchar *mod_separator = NULL;
-
-  if (! mod_separator)
-    {
-      GtkAccelLabelClass *accel_label_class;
-
-      accel_label_class = g_type_class_ref (GTK_TYPE_ACCEL_LABEL);
-      mod_separator = g_strdup (accel_label_class->mod_separator);
-      g_type_class_unref (accel_label_class);
-    }
-
-  return (const gchar *) mod_separator;
-}
-
-
-const gchar*
-gimp_get_mod_string (GdkModifierType modifiers)
-{
-  static struct
-  {
-    GdkModifierType  modifiers;
-    gchar           *name;
-  }
-  modifier_strings[] =
-  {
-    { GDK_SHIFT_MASK,                                    NULL },
-    { GDK_CONTROL_MASK,                                  NULL },
-    { GDK_MOD1_MASK,                                     NULL },
-    { GDK_SHIFT_MASK | GDK_CONTROL_MASK,                 NULL },
-    { GDK_SHIFT_MASK | GDK_MOD1_MASK,                    NULL },
-    { GDK_CONTROL_MASK | GDK_MOD1_MASK,                  NULL },
-    { GDK_SHIFT_MASK | GDK_CONTROL_MASK | GDK_MOD1_MASK, NULL }
-  };
-
-  gint i;
-
-  for (i = 0; i < G_N_ELEMENTS (modifier_strings); i++)
-    {
-      if (modifiers == modifier_strings[i].modifiers)
-        {
-          if (! modifier_strings[i].name)
-            {
-              GString *str = g_string_new ("");
-
-              if (modifiers & GDK_SHIFT_MASK)
-                {
-                  g_string_append (str, gimp_get_mod_name_shift ());
-                }
-
-              if (modifiers & GDK_CONTROL_MASK)
-                {
-                  if (str->len)
-                    g_string_append (str, gimp_get_mod_separator ());
-
-                  g_string_append (str, gimp_get_mod_name_control ());
-                }
-              if (modifiers & GDK_MOD1_MASK)
-                {
-                  if (str->len)
-                    g_string_append (str, gimp_get_mod_separator ());
-
-                  g_string_append (str, gimp_get_mod_name_alt ());
-                }
-
-              modifier_strings[i].name = g_string_free (str, FALSE);
-            }
-
-          return modifier_strings[i].name;
-        }
-    }
-
-  return NULL;
-}
-
-
-static void
-gimp_substitute_underscores (gchar *str)
-{
-  gchar *p;
-
-  for (p = str; *p; p++)
-    if (*p == '_')
-      *p = ' ';
-}
-
-
-gchar*
-gimp_get_accel_string (guint key, GdkModifierType modifiers)
-{
-  GtkAccelLabelClass *accel_label_class;
-  GString            *gstring;
-  gunichar            ch;
-
-  accel_label_class = g_type_class_peek (GTK_TYPE_ACCEL_LABEL);
-
-  gstring = g_string_new (gimp_get_mod_string (modifiers));
-
-  if (gstring->len > 0)
-    g_string_append (gstring, gimp_get_mod_separator ());
-
-  ch = gdk_keyval_to_unicode (key);
-
-  if (ch && (g_unichar_isgraph (ch) || ch == ' ') &&
-      (ch < 0x80 || accel_label_class->latin1_to_char))
-    {
-      switch (ch)
-        {
-        case ' ':
-          g_string_append (gstring, "Space");
-          break;
-        case '\\':
-          g_string_append (gstring, "Backslash");
-          break;
-        default:
-          g_string_append_unichar (gstring, g_unichar_toupper (ch));
-          break;
-        }
-    }
-  else
-    {
-      gchar *tmp;
-
-      tmp = gtk_accelerator_name (key, 0);
-
-      if (tmp[0] != 0 && tmp[1] == 0)
-        tmp[0] = g_ascii_toupper (tmp[0]);
-
-      gimp_substitute_underscores (tmp);
-      g_string_append (gstring, tmp);
-      g_free (tmp);
-    }
-
-  return g_string_free (gstring, FALSE);
-}
 
 
 //from Rox:
@@ -1559,4 +1382,72 @@ vfs_unescape_string (const gchar *escaped_string, const gchar *illegal_character
 
 }
 
+#endif //0
+
+gchar*
+path_to_utf8(const gchar *path)
+{
+	gchar *utf8;
+	GError *error = NULL;
+
+	if (!path) return NULL;
+
+	utf8 = g_filename_to_utf8(path, -1, NULL, NULL, &error);
+	if (error)
+		{
+		printf("Unable to convert filename to UTF-8:\n%s\n%s\n", path, error->message);
+		g_error_free(error);
+		//encoding_dialog(path);
+		}
+	if (!utf8)
+		{
+		/* just let it through, but bad things may happen */
+		utf8 = g_strdup(path);
+		}
+
+	return utf8;
+}
+
+void
+fm__escape_for_menu(char* string)
+{
+	//gtk uses underscores as nmemonic identifiers, so any literal underscores need to be escaped.
+
+	//no memory is allocated. Caller must make sure @string is long enough to hold an expanded string.
+
+	const char* oldpiece = "_";
+	const char* newpiece = "__";
+	int str_index, newstr_index, oldpiece_index, end, new_len, old_len, cpy_len;
+	char* c;
+	static char newstring[256];
+
+	if((c = (char *) strstr(string, oldpiece)) == NULL) return;
+
+	new_len        = strlen(newpiece);
+	old_len        = strlen(oldpiece);
+	end            = strlen(string)   - old_len;
+	oldpiece_index = c - string;
+
+	newstr_index = 0;
+	str_index = 0;
+	while(str_index <= end && c != NULL){
+		//copy characters from the left of matched pattern occurence
+		cpy_len = oldpiece_index-str_index;
+		strncpy(newstring+newstr_index, string+str_index, cpy_len);
+		newstr_index += cpy_len;
+		str_index    += cpy_len;
+
+		//copy replacement characters instead of matched pattern
+		strcpy(newstring+newstr_index, newpiece);
+		newstr_index += new_len;
+		str_index    += old_len;
+
+		//check for another pattern match
+		if((c = (char *) strstr(string+str_index, oldpiece)) != NULL) oldpiece_index = c - string;
+	}
+
+	//copy remaining characters from the right of last matched pattern
+	strcpy(newstring+newstr_index, string+str_index);
+	strcpy(string, newstring);
+}
 

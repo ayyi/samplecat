@@ -11,7 +11,7 @@ AM_CFLAGS = \
 	-I./file_manager \
 	-I./gimp \
 	-I./xdgmime \
-	$(GTK_CFLAGS) $(DBUS_CFLAGS) $(DB_CFLAGS) $(FLAC_CFLAGS) $(TRACKER_CFLAGS) $(XML_CFLAGS)
+	$(GTK_CFLAGS) $(DBUS_CFLAGS) $(MYSQL_CFLAGS) $(FLAC_CFLAGS) $(TRACKER_CFLAGS) $(XML_CFLAGS)
 
 bin_PROGRAMS = samplecat
 
@@ -74,7 +74,7 @@ samplecat_LDADD = \
 	$(DBUS_LDFLAGS) \
 	$(TRACKER_LDFLAGS) \
 	$(SQLITE_LDFLAGS) \
-	$(GTK_LIBS) $(DB_LIBS) $(JACK_LIBS) $(SNDFILE_LIBS) $(FLAC_LIBS) $(GTHREAD_LIBS)
+	$(GTK_LIBS) $(MYSQL_LDFLAGS) $(JACK_LIBS) $(SNDFILE_LIBS) $(FLAC_LIBS) $(GTHREAD_LIBS)
 
 EXTRA_DIST = db/sqlite.c db/sqlite.h db/tracker.c db/tracker_.h
 

@@ -12,6 +12,7 @@
  */
 #include <gtk/gtk.h>
 #include "file_manager/file_manager.h"
+#include "file_manager/support.h"
 
 #include "gqview.h"
 #include "gqview_view_dir_tree.h"

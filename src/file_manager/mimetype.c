@@ -47,7 +47,8 @@
 # include <libgnomevfs/gnome-vfs-application-registry.h>
 #endif
 
-#include "file_manager/typedefs.h"
+#include "file_manager/file_manager.h"
+#include "src/typedefs.h"
 #include "rox/rox_global.h"
 
 #include "string.h"
@@ -72,7 +73,7 @@
 #ifdef OLD
   #include <libart_lgpl/libart.h>
 #endif
-#include "support.h"
+#include "src/support.h"
 #include "observer.h"
 extern unsigned debug;
 
@@ -88,7 +89,7 @@ char theme_name[64] = "Amaranth";
 //static char *get_action_save_path(GtkWidget *dialog);
 static MIME_type *get_mime_type(const gchar *type_name, gboolean can_create);
 //static gboolean remove_handler_with_confirm(const guchar *path);
-static void set_icon_theme(void);
+/*static*/ void _set_icon_theme(void);
 static GList *build_icon_theme(/*Option *option, xmlNode *node, */guchar *label);
 static void print_icon_list();
 
@@ -164,7 +165,7 @@ void type_init(void)
 	//			  opt_type_colours[i][1]);
 	//alloc_type_colours();
 
-	set_icon_theme();
+	_set_icon_theme();
 
 	//option_add_notify(options_changed);
 
@@ -185,7 +186,7 @@ mime_type_get_pixbuf(MIME_type* mime_type)
 static void
 on_theme_select(GtkMenuItem* menuitem, gpointer user_data)
 {
-	ASSERT_POINTER(menuitem, "menuitem");
+	g_return_if_fail(menuitem);
 
 	gchar* name = g_object_get_data(G_OBJECT(menuitem), "theme");
 	dbg(0, "theme=%s", name);
@@ -193,8 +194,8 @@ on_theme_select(GtkMenuItem* menuitem, gpointer user_data)
 	if(name && strlen(name)) strncpy(theme_name, name, 64);
 
 	print_icon_list();
-	set_icon_theme();
-	observer__icon_theme();
+	_set_icon_theme();
+	observer__icon_theme(); //TODO replace this with a signal or callback
 }
 
 /* Read-load all the glob patterns.
@@ -1015,8 +1016,8 @@ print_icon_list()
 }
 
 
-static void
-set_icon_theme()
+/*static */void
+_set_icon_theme()
 {
 	//const char *home_dir = g_get_home_dir();
 	GtkIconInfo *info;

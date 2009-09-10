@@ -35,17 +35,16 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
-//#include <libxml/parser.h>
 #include <math.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <gtk/gtk.h>
 
-typedef void GimpActionGroup;
+#include "file_manager/file_manager.h"
+#include "src/typedefs.h"
 #include "support.h"
 #include "rox_global.h"
 
-//#include "main.h"
 //#include "options.h"
 #include "rox_support.h"
 //#include "fscache.h"

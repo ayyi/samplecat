@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007, Tim Orford
+ * Copyright (C) 2007-2009, Tim Orford
  * Copyright (C) 2006, Thomas Leonard and others (see changelog for details).
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -22,16 +22,13 @@
 
 #include <stdlib.h>
 #include <stdint.h>
+#include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
 
-//#include "../typedefs.h"
-#include "file_manager/typedefs.h"
-//#include "support.h"
-//#include "rox/rox_global.h"
-#include "file_manager.h"
+#include "file_manager/file_manager.h"
 #include "rox/view_iface.h"
 #include "file_view.h"
 #include "rox/dir.h"
@@ -39,20 +36,28 @@
 #include "rox/rox_support.h"
 #include "mimetype.h"
 
+#include "src/typedefs.h"
+#include "src/support.h"
+
 
 Filer filer;
 GList* all_filer_windows = NULL;
-
+static AyyiFilemanager* new_file_manager = NULL;
+static gboolean initialised = FALSE;
+extern char theme_name[];
 
 Filer*
 file_manager__init()
 {
-	filer.filter = FILER_SHOW_ALL;
-	filer.filter_string = NULL;
-	filer.regexp = NULL;
-	filer.filter_directories = FALSE;
+	filer.filter               = FILER_SHOW_ALL;
+	filer.filter_string        = NULL;
+	filer.regexp               = NULL;
+	filer.filter_directories   = FALSE;
 	filer.display_style_wanted = SMALL_ICONS;
-	filer.sort_type = SORT_NAME;
+	filer.sort_type            = SORT_NAME;
+
+	new_file_manager = ayyi_filemanager_new();
+
 	return &filer;
 }
 
@@ -94,4 +99,25 @@ file_manager__update_all(void)
 			filer_update_dir(filer_window, TRUE);
 	}
 }
+
+
+void
+file_manager__set_icon_theme(const char* name)
+{
+	dbg(0, "...");
+
+	strncpy(theme_name, name, 63);
+	_set_icon_theme();
+
+	ayyi_filemanager_set_icon_theme(new_file_manager, name);
+	ayyi_filemanager_emit_theme_changed(new_file_manager);
+}
+
+
+AyyiFilemanager*
+file_manager__get_signaller()
+{
+	return new_file_manager;
+}
+
 

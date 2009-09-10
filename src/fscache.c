@@ -27,11 +27,9 @@
  */
 
 #include <gtk/gtk.h>
-typedef void GimpActionGroup;
+#include "file_manager/file_manager.h"
+#include "typedefs.h"
 #include "support.h"
-
-#include "rox/rox_global.h"
-
 #include "fscache.h"
 
 extern int debug;

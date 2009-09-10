@@ -25,7 +25,7 @@ This software is licensed under the GPL. See accompanying file COPYING.
 #include "gqview_view_dir_tree.h"
 #include "typedefs.h"
 #ifdef USE_TRACKER
-  #include <src/db/tracker_.h>
+  #include "src/db/tracker_.h"
 #endif
 #ifdef USE_MYSQL
   #include "db/mysql.h"
@@ -953,63 +953,44 @@ edit_row(GtkWidget *widget, gpointer user_data)
 }
 
 
+static MenuDef _menu_def[] = {
+    {"Delete",         G_CALLBACK(delete_row), GTK_STOCK_DELETE,      true},
+    {"Update",         G_CALLBACK(update_row), GTK_STOCK_REFRESH,     true},
+    {"Edit tags",      G_CALLBACK(edit_row),   GTK_STOCK_EDIT,        true},
+    {"Open",           G_CALLBACK(edit_row),   GTK_STOCK_OPEN,       false},
+    {"Open Directory", G_CALLBACK(NULL),       GTK_STOCK_OPEN,        true},
+    {"",                                                                  },
+    {"Prefs",          G_CALLBACK(NULL),       GTK_STOCK_PREFERENCES, true},
+};
+
 static GtkWidget*
 make_context_menu()
 {
 	GtkWidget *menu = gtk_menu_new();
 
-	GtkWidget* menu_item = gtk_image_menu_item_new_from_stock(GTK_STOCK_DELETE, /*GtkAccelGroup *accel_group*/NULL);
-	gtk_menu_shell_append (GTK_MENU_SHELL(menu), menu_item);
-	g_signal_connect (G_OBJECT(menu_item), "activate", G_CALLBACK(delete_row), NULL);
-	gtk_widget_show (menu_item);
+	add_menu_items_from_defn(menu, _menu_def, G_N_ELEMENTS(_menu_def));
 
-	menu_item = gtk_image_menu_item_new_from_stock(GTK_STOCK_REFRESH, NULL);
-	//menu_item = gtk_menu_item_new_with_label ("Update");
-	gtk_menu_shell_append (GTK_MENU_SHELL(menu), menu_item);
-	g_signal_connect (G_OBJECT(menu_item), "activate", G_CALLBACK(update_row), NULL);
-	gtk_widget_show (menu_item);
+	GList* menu_items = gtk_container_get_children((GtkContainer*)menu);
 
-	menu_item = gtk_menu_item_new_with_label ("Edit Tags");
-	gtk_menu_shell_append (GTK_MENU_SHELL(menu), menu_item);
-	g_signal_connect (G_OBJECT(menu_item), "activate", G_CALLBACK(edit_row), NULL);
-	gtk_widget_show (menu_item);
-
-	menu_item = gtk_menu_item_new_with_label ("Open");
-	gtk_menu_shell_append (GTK_MENU_SHELL(menu), menu_item);
-	gtk_widget_set_sensitive(GTK_WIDGET(menu_item), false);
-	gtk_widget_show (menu_item);
-
-	//-------
-
-	//separator
-	menu_item = gtk_separator_menu_item_new();
-	gtk_menu_shell_append (GTK_MENU_SHELL(menu), menu_item);
-	gtk_widget_show (menu_item);
-
-	//-------
-
-	GtkWidget* prefs = gtk_menu_item_new_with_label("Prefs");
-	gtk_widget_show(prefs);
-	gtk_container_add(GTK_CONTAINER(menu), prefs);
+	GtkWidget* prefs = g_list_last(menu_items)->data;
 
 	GtkWidget* sub = gtk_menu_new();
 	gtk_menu_item_set_submenu(GTK_MENU_ITEM(prefs), sub);
 
-	menu_item = gtk_check_menu_item_new_with_mnemonic("Add Recursively");
+	GtkWidget* menu_item = gtk_check_menu_item_new_with_mnemonic("Add Recursively");
 	gtk_menu_shell_append(GTK_MENU_SHELL(sub), menu_item);
-	gtk_widget_show(menu_item);
 	gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menu_item), app.add_recursive);
 	g_signal_connect(G_OBJECT(menu_item), "activate", G_CALLBACK(toggle_recursive_add), NULL);
 
 	if(themes){
 		GtkWidget* theme_menu = gtk_menu_item_new_with_label("Icon Themes");
-		gtk_widget_show(theme_menu);
 		gtk_container_add(GTK_CONTAINER(sub), theme_menu);
 
 		GtkWidget* sub_menu = themes->data;
 		gtk_menu_item_set_submenu(GTK_MENU_ITEM(theme_menu), sub_menu);
 	}
 
+	gtk_widget_show_all(menu);
 	return menu;
 }
 
@@ -1504,6 +1485,7 @@ set_backend(BackendType type)
 			backend.update_notes     = mysql__update_notes;
 			backend.update_pixbuf    = mysql__update_pixbuf;
 			backend.update_online    = mysql__update_online;
+			printf("backend is mysql.\n");
 			#endif
 			break;
 		case BACKEND_SQLITE:
@@ -1512,12 +1494,14 @@ set_backend(BackendType type)
 			backend.search_iter_next = sqlite__search_iter_next;
 			backend.search_iter_free = sqlite__search_iter_free;
 			backend.insert           = sqlite__insert;
+			backend.delete           = sqlite__delete_row;
 			backend.disconnect       = sqlite__disconnect;
 			backend.update_colour    = sqlite__update_colour;
 			backend.update_keywords  = sqlite__update_keywords;
 			backend.update_notes     = sqlite__update_notes;
-			backend.update_online    = NULL;
-			dbg(0, "backend is sqlite.");
+			backend.update_pixbuf    = sqlite__update_pixbuf;
+			backend.update_online    = sqlite__update_online;
+			printf("backend is sqlite.\n");
 			#endif
 			break;
 		case BACKEND_TRACKER:
@@ -1529,7 +1513,7 @@ set_backend(BackendType type)
 			backend.update_colour    = tracker__update_colour;
 			backend.update_pixbuf    = tracker__update_pixbuf;
 			backend.update_online    = tracker__update_online;
-			dbg(0, "backend is tracker.");
+			printf("backend is tracker.\n");
 			#endif
 			break;
 		default:

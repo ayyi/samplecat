@@ -37,8 +37,9 @@
 #include <gdk/gdkx.h>
 #include <gdk/gdkkeysyms.h>
 
-#include "typedefs.h"
-#include "support.h"
+#include "file_manager.h"
+#include "src/typedefs.h"
+#include "src/support.h"
 #include "rox_global.h"
 
 #define display_dirs_first TRUE

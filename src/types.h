@@ -17,3 +17,10 @@ struct _samplecat_result
 	gboolean   online;
 };
 
+struct _menu_def
+{
+    char*     label;
+    GCallback callback;
+    char*     stock_id;
+	gboolean  sensitive;
+};

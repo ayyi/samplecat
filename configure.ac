@@ -1,5 +1,5 @@
 AC_PREREQ(2.59)
-AC_INIT([Samplecat],[0.0.7],[tim@orford.org])
+AC_INIT([Samplecat],[0.0.8],[tim@orford.org])
 AC_CONFIG_SRCDIR([src/main.c])
 AC_CONFIG_HEADER([config.h])
 AM_INIT_AUTOMAKE
@@ -60,10 +60,49 @@ else
   HAVE_GTK_2_10="no"
 fi;
 
-DB_CFLAGS="-I/usr/include/mysql"
-DB_LIBS=`/usr/bin/mysql_config --libs`
-AC_SUBST(DB_CFLAGS)
-AC_SUBST(DB_LIBS)
+dnl -----------------------------------------------------------------------------
+
+# test for mysql
+enable_mysql=no
+mysqlfail=false
+SAVE_LDFLAGS=$LDFLAGS
+SAVE_CPPFLAGS=$CPPFLAGS
+AC_MSG_CHECKING(for mysql)
+AC_ARG_WITH(mysql,
+  [  --with-mysql=PFX        base of MySQL installation],
+  [AC_MSG_RESULT("$with_mysql")
+   if test "$with_mysql" != "no"
+   then
+    if test "$with_mysql" != "yes"
+    then
+      LDFLAGS="-L$with_mysql/lib -L$with_mysql/lib/mysql $LDFLAGS $ZLIBS"
+      CPPFLAGS="-I$with_mysql/include $CPPFLAGS"
+    fi
+    AC_CHECK_HEADERS(mysql/mysql.h,
+     AC_CHECK_LIB(mysqlclient, mysql_init,
+      MYSQL_LDFLAGS=`/usr/bin/mysql_config --libs`
+      MYSQL_CFLAGS="-I$with_mysql/include"
+
+      enable_mysql=yes), [], [$CYGWIN_MYSQL_MAGIC])
+   fi
+  ],
+  [AC_MSG_RESULT([--with-mysql not specified])
+   LDFLAGS="-L/usr/lib/mysql $LDFLAGS $ZLIBS"
+   AC_CHECK_LIB(mysqlclient, mysql_init,
+    [AC_CHECK_HEADERS(mysql/mysql.h,
+      MYSQL_LDFLAGS=`/usr/bin/mysql_config --libs`
+      enable_mysql=yes
+
+     , [], [$CYGWIN_MYSQL_MAGIC])])
+  ])
+
+AC_SUBST(MYSQL_LDFLAGS)
+AC_SUBST(MYSQL_CFLAGS)
+if test x$enable_mysql = xyes; then
+   AC_DEFINE(USE_MYSQL,1,[Enable Mysql as backend])
+fi
+
+dnl -----------------------------------------------------------------------------
 
 VFS_CFLAGS=`pkg-config gnome-vfs-2.0 --cflags`
 VFS_LIBS="-lgnomevfs-2"
@@ -226,9 +265,10 @@ AC_CONFIG_FILES([ayyi/Makefile])
 AC_OUTPUT
 
 AC_MSG_RESULT([])
+AC_MSG_RESULT([Building mysql support:           $enable_mysql])
+AC_MSG_RESULT([Building sqlite support:          $enable_sqlite])
+AC_MSG_RESULT([Building tracker support:         $enable_tracker])
 AC_MSG_RESULT([Building direct flac support:     $enable_flac])
 AC_MSG_RESULT([Building dnotify support:         $have_dnotify])
 AC_MSG_RESULT([Building ayyi support:            $enable_ayyi])
-AC_MSG_RESULT([Building tracker support:         $enable_tracker])
-AC_MSG_RESULT([Building sqlite support:          $enable_sqlite])
 AC_MSG_RESULT([])

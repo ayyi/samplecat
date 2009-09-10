@@ -1,4 +1,3 @@
-#warning move mysql out of app struct
 #include <string.h>
 #include <stdio.h>
 #include <sys/ioctl.h>

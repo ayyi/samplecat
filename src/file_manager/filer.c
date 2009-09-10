@@ -35,8 +35,9 @@
 #include <gdk/gdkx.h>
 #include <gdk/gdkkeysyms.h>
 
-#include "typedefs.h"
-#include "support.h"
+#include "file_manager/file_manager.h"
+#include "src/typedefs.h"
+#include "src/support.h"
 
 #include "rox/rox_global.h"
 
@@ -72,7 +73,7 @@
 #include "bookmarks.h"
 #include "xtypes.h"
 #endif
-#include "rox/cell_icon.h"
+#include "cell_icon.h"
 
 extern GFSCache* pixmap_cache;
 extern int debug;
@@ -94,7 +95,7 @@ static GdkWindow *motion_window = NULL;
 FilerWindow 	*window_with_focus = NULL;
 #endif //0
 
-extern GList *all_filer_windows;
+extern GList* all_filer_windows;
 
 #if 0
 static GHashTable *window_with_id = NULL;
@@ -420,6 +421,7 @@ update_display(Directory *dir, DirAction action, GPtrArray* items, Filer* filer_
 		case DIR_START_SCAN:
 			dbg(2, "DIR_START_SCAN");
 			set_scanning_display(filer_window, TRUE);
+			if(filer_window->public_on_dir_change) filer_window->public_on_dir_change();
 			//toolbar_update_info(filer_window);
 			break;
 		case DIR_END_SCAN:
@@ -463,7 +465,6 @@ update_display(Directory *dir, DirAction action, GPtrArray* items, Filer* filer_
 /*static */void
 attach(Filer* filer_window)
 {
-	PF;
 	//gdk_window_set_cursor(filer_window->window->window, busy_cursor);
 	view_clear(filer_window->view);
 	filer_window->scanning = TRUE;
@@ -488,8 +489,7 @@ attach(Filer* filer_window)
 static void
 detach(Filer* filer_window)
 {
-	if(!filer_window->directory){ errprintf("%s(): filer_window->directory NULL\n"); return; }
-	g_return_if_fail(filer_window->directory != NULL);
+	g_return_if_fail(filer_window->directory);
 
 	dir_detach(filer_window->directory, (DirCallback) update_display, filer_window);
 	g_object_unref(filer_window->directory);
@@ -1114,7 +1114,8 @@ static void group_restore(FilerWindow *filer_window, char *name)
 	g_hash_table_destroy(in_group);
 }
 
-static gboolean popup_menu(GtkWidget *widget, FilerWindow *filer_window)
+static gboolean
+popup_menu(GtkWidget *widget, FilerWindow *filer_window)
 {
 	ViewIter iter;
 	GdkEvent *event;
@@ -1129,7 +1130,8 @@ static gboolean popup_menu(GtkWidget *widget, FilerWindow *filer_window)
 	return TRUE;
 }
 
-void filer_window_toggle_cursor_item_selected(FilerWindow *filer_window)
+void
+filer_window_toggle_cursor_item_selected(FilerWindow *filer_window)
 {
 	ViewIface *view = filer_window->view;
 	ViewIter iter;
@@ -1240,7 +1242,8 @@ filer_key_press_event(GtkWidget	*widget,GdkEventKey *event, Filer* filer_window)
 	return TRUE;
 }
 
-void filer_open_parent(FilerWindow *filer_window)
+void
+filer_open_parent(FilerWindow *filer_window)
 {
 	char	*dir;
 	const char *current = filer_window->sym_path;
@@ -1355,14 +1358,14 @@ filer_change_to(Filer* filer_window, const char *path, const char *from)
 
 	//if (filer_window->mini_type == MINI_PATH) g_idle_add((GSourceFunc) minibuffer_show_cb, filer_window);
 
-	fm_menu__dir_update();
+	fm__menu_dir_update();
 }
 
 /* Returns a list containing the full (sym) pathname of every selected item.
  * You must g_free() each item in the list.
  */
 GList*
-filer_selected_items(Filer *filer_window)
+fm_selected_items(Filer *filer_window)
 {
 	GList	*retval = NULL;
 	guchar	*dir = (guchar*)filer_window->sym_path;
@@ -1372,7 +1375,7 @@ filer_selected_items(Filer *filer_window)
 	view_get_iter(filer_window->view, &iter, VIEW_ITER_SELECTED);
 	while ((item = iter.next(&iter)))
 	{
-		retval = g_list_prepend(retval,	g_strdup((char*)make_path((char*)dir, item->leafname)));
+		retval = g_list_prepend(retval, g_strdup((char*)make_path((char*)dir, item->leafname)));
 	}
 
 	return g_list_reverse(retval);

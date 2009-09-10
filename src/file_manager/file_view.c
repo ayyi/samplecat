@@ -29,21 +29,25 @@
 #include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
 
-#include "typedefs.h"
-#include "support.h"
+//#include "file_manager/typedefs.h"
 #include "file_manager.h"
+#include "rox/rox_global.h"
+#include "src/typedefs.h"
+#include "src/types.h"
+#include "rox/rox_support.h"
+#warning dont include app support files!
+#include "src/support.h"
 
 #include "rox/view_iface.h"
 #include "file_view.h"
 #include "rox/dir.h"
 #include "diritem.h"
-#include "rox/rox_support.h"
 #include "mimetype.h"
 #include "rox/display.h"
 #include "pixmaps.h"
 #include "dnd.h"
 #include "menu.h"
-#include "rox/cell_icon.h"
+#include "cell_icon.h"
 
 /* These are the column numbers in the ListStore */
 #define COL_LEAF 0

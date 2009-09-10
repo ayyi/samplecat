@@ -11,16 +11,18 @@
 
 #include <gtk/gtk.h>
 
-#include "typedefs.h"
-#include "support.h"
+#include "file_manager/file_manager.h"
+#include "file_manager/support.h"
+#include "src/typedefs.h"
+#include "src/support.h"
 #include "rox/rox_global.h"
 #include "rox/dir.h"
-#include "file_manager.h"
 #include "rox/display.h"
 #include "mimetype.h"
 #include "menu.h"
 
 extern Filer filer;
+extern GList* themes;
 extern int debug;
 
 //static gint updating_menu = 0;      // Non-zero => ignore activations
@@ -137,6 +139,17 @@ fm_make_context_menu()
 {
 	GtkWidget* menu = gtk_menu_new();
 
+	/*
+	//show the current directory name
+	//FIXME initially the dir path is not set. We need to set it in a callback.
+	//const char* name = dir_get_name(filer.directory);
+	const char* name = filer.real_path ? filer.real_path : "Directory";
+	GtkWidget* title = gtk_menu_item_new_with_label(name);
+	gtk_container_add(GTK_CONTAINER(menu), title);
+
+	menu_separator_new(menu);
+	*/
+
 	int i; for(i=0;i<A_SIZE(fm_menu_def);i++){
 		dbg(2, "i=%i", i);
 		menu_def* item = &fm_menu_def[i];
@@ -159,6 +172,21 @@ fm_make_context_menu()
 	GtkWidget* submenu = fm_make_subdir_menu();
 	gtk_menu_item_set_submenu(GTK_MENU_ITEM(cd), submenu);
 
+	/*
+	//TODO needs to be made optional?
+	if(themes){
+		GtkWidget* theme_menu = gtk_image_menu_item_new_with_label("Icon Themes");
+		GtkIconSet* set = gtk_style_lookup_icon_set(gtk_widget_get_style(menu), GTK_STOCK_PROPERTIES);
+		GdkPixbuf* pixbuf = gtk_icon_set_render_icon(set, gtk_widget_get_style(menu), GTK_TEXT_DIR_LTR, GTK_STATE_NORMAL, GTK_ICON_SIZE_MENU, menu, NULL);
+		GtkWidget* ico = gtk_image_new_from_pixbuf(pixbuf);
+		gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(theme_menu), ico);
+		gtk_container_add(GTK_CONTAINER(menu), theme_menu);
+
+		GtkWidget* sub_menu = themes->data;
+		gtk_menu_item_set_submenu(GTK_MENU_ITEM(theme_menu), sub_menu);
+	}
+	*/
+
 	gtk_widget_show_all(menu);
 	return menu;
 }
@@ -170,11 +198,22 @@ fm_make_subdir_menu()
 	GtkWidget* submenu = gtk_menu_new();
 
 	if (filer.real_path) {
+
+		//TODO we should use existing data instead of recanning the directory.
+		//     Why are there no directories in the hashtable?
+#if 0
+		GPtrArray* array = g_ptr_array_new();
+		g_hash_table_foreach(filer.directory->known_items, temp, array);
+#endif
+
 		GDir* dir = g_dir_open((char*)filer.real_path, 0, NULL);
 		const char* leaf;
+		char escaped[256];
 		if (dir) {
 			while ((leaf = g_dir_read_name(dir))) {
 				if (leaf[0] == '.') continue;
+				strncpy(escaped, leaf, 255);
+				fm__escape_for_menu(escaped);
 				gchar* filename = g_build_filename(filer.real_path, leaf, NULL);
 				if (g_file_test(filename, G_FILE_TEST_IS_DIR)) {
 					GtkWidget* item = gtk_image_menu_item_new_with_mnemonic (leaf);
@@ -196,7 +235,7 @@ fm_make_subdir_menu()
  *   for application-level menu additions.
  */
 void
-fm_add_menu_item(GtkAction* action)
+fm__add_menu_item(GtkAction* action)
 {
 	GtkWidget* menu_item = gtk_action_create_menu_item(action);
 	gtk_menu_shell_append(GTK_MENU_SHELL(filer.menu), menu_item);
@@ -207,7 +246,7 @@ fm_add_menu_item(GtkAction* action)
 
 
 void
-fm_menu__dir_update()
+fm__menu_dir_update()
 {
 	//update menu items related to the current directory.
 	PF;

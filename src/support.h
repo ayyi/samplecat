@@ -61,17 +61,9 @@ gboolean     file_exists        (const char*);
 gboolean     is_dir             (const char*);
 gboolean     dir_is_empty       (const char*);
 void         file_extension     (const char*, char* extn);
-gboolean     is_sub_dir         (const char* sub_obj, const char *parent);
-void         file_move          (const char*, const char* dest);
-char*        fork_exec_wait     (const char** argv);
 gboolean     ensure_config_dir  ();
 
 //-----------------------------------------------------------------
-
-gchar*       uri_text_from_list        (GList*, gint* len, gint plain_text);
-GList*       uri_list_from_text        (gchar* data, gint files_only);
-gchar*       uri_text_escape           (const gchar*);
-void         uri_text_decode           (gchar*);
 
 void         pixbuf_clear              (GdkPixbuf*, GdkColor*);
 #ifdef OLD
@@ -81,7 +73,7 @@ void         pixbuf_draw_line          (cairo_t*, rect *pts, double line_width, 
 #endif
 //GdkPixbuf*   scale_pixbuf(GdkPixbuf *src, int max_w, int max_h);
 //GdkPixbuf*   scale_pixbuf_up(GdkPixbuf *src, int max_w, int max_h);
-GdkPixbuf*   create_spotlight_pixbuf   (GdkPixbuf *src, GdkColor*);
+//GdkPixbuf*   create_spotlight_pixbuf   (GdkPixbuf *src, GdkColor*);
 
 void         colour_get_style_fg       (GdkColor*, int state);
 void         colour_get_style_bg       (GdkColor*, int state);
@@ -106,6 +98,8 @@ gint         treecell_get_row          (GtkWidget*, GdkRectangle*);
 void         statusbar_print           (int n, char* fmt, ...);
 
 void         make_accels               (GtkAccelGroup*, GimpActionGroup*, struct _accel*, int count, gpointer user_data);
+
+void         add_menu_items_from_defn  (GtkWidget* menu, MenuDef*, int);
 
 const gchar* gimp_get_mod_name_shift   ();
 const gchar* gimp_get_mod_name_control ();
