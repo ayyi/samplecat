@@ -37,7 +37,7 @@ static gboolean   window_on_destroy               (GtkWidget*, gpointer);
 static void       window_on_realise               (GtkWidget*, gpointer);
 static void       window_on_allocate              (GtkWidget*, gpointer);
 static gboolean   window_on_configure             (GtkWidget*, GdkEventConfigure*, gpointer);
-static gboolean   filter_new();
+static gboolean   filter_new                      ();
 static GtkWidget* scrolled_window_new             ();
 static void       window_on_fileview_row_selected (GtkTreeView*, gpointer);
 static void       on_category_set_clicked         (GtkComboBox*, gpointer user_data);
@@ -572,7 +572,7 @@ tagshow_selector_new()
 static void
 window_on_fileview_row_selected(GtkTreeView* treeview, gpointer user_data)
 {
-	//a filesystem file has been clicked on. Can we show info for it?
+	//a filesystem file has been clicked on.
 	PF;
 	inspector_update_from_fileview(treeview);
 }

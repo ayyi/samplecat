@@ -2,6 +2,8 @@
 #define BACKEND_IS_TRACKER (backend.search_iter_new == tracker__search_iter_new)
 
 gboolean         tracker__init             ();
+void             tracker__disconnect       ();
+
 gboolean         tracker__update_pixbuf    (sample*);
 
 int              tracker__insert           (sample*, MIME_type*);
@@ -12,4 +14,5 @@ SamplecatResult* tracker__search_iter_next ();
 void             tracker__search_iter_free ();
 
 gboolean         tracker__update_colour    (int id, int colour);
+gboolean         tracker__update_keywords  (int id, const char*);
 gboolean         tracker__update_online    (int id, gboolean);

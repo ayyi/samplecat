@@ -65,6 +65,9 @@ This software is licensed under the GPL. See accompanying file COPYING.
 //#endif
 
 extern void       dir_init          ();
+static void       delete_row        (GtkWidget*, gpointer);
+static void       update_row        (GtkWidget*, gpointer);
+static void       edit_row          (GtkWidget*, gpointer);
 static GtkWidget* make_context_menu ();
 static gboolean   can_use_backend   (const char*);
 
@@ -223,7 +226,7 @@ main(int argc, char** argv)
 	if(BACKEND_IS_NULL && can_use_backend("tracker")){
 		void on_tracker_init()
 		{
-			dbg(0, "...");
+			dbg(2, "...");
 			set_backend(BACKEND_TRACKER);
 			if(search_pending){
 				do_search(app.search_phrase, app.search_dir);
@@ -403,6 +406,7 @@ do_search(char *search, char *dir)
 	PF;
 
 	if(BACKEND_IS_NULL) return;
+	search_pending = false;
 
 #ifdef USE_AYYI
 	GdkPixbuf* ayyi_icon = NULL;
@@ -630,11 +634,43 @@ new_search(GtkWidget *widget, gpointer userdata)
 
 
 gboolean
+mimestring_is_unsupported(char* mime_string)
+{
+	MIME_type* mime_type = mime_type_lookup(mime_string);
+	return mimetype_is_unsupported(mime_type, mime_string);
+}
+
+
+gboolean
+mimetype_is_unsupported(MIME_type* mime_type, char* mime_string)
+{
+	//TODO remove 2nd arg
+
+	char types[][16] = {"application", "image", "text", "video"};
+	int i; for(i=0;i<G_N_ELEMENTS(types);i++){
+		if(!strcmp(mime_type->media_type, types[i])){
+			return true;
+		}
+	}
+
+	char unsupported[][64] = {"audio/mpeg", "audio/x-tta", "audio/x-speex", "audio/x-musepack"};
+	for(i=0;i<G_N_ELEMENTS(unsupported);i++){
+		if(!strcmp(mime_string, unsupported[i])){
+			return true;
+		}
+	}
+	dbg(1, "mimetype ok: %s", mime_string);
+	return false;
+}
+
+
+gboolean
 add_file(char* path)
 {
 	/*
 	uri must be "unescaped" before calling this fn. Method string must be removed.
 	*/
+
 	dbg(1, "%s", path);
 	if(BACKEND_IS_NULL) return false;
 	gboolean ok = true;
@@ -646,7 +682,6 @@ add_file(char* path)
 	char samplerate_s[32];
 	gchar* filedir = g_path_get_dirname(path);
 	gchar* filename = g_path_get_basename(path);
-
 
 	MIME_type* mime_type = type_from_path(filename);
 	char mime_string[64];
@@ -663,25 +698,9 @@ add_file(char* path)
 
 	sample_set_type_from_mime_string(sample, mime_string);
 
-	gboolean mimetype_is_unsupported(char* mime_string)
-	{
-		char unsupported[][64] = {"audio/mpeg", "application/x-par2"};
-		int i; for(i=0;i<G_N_ELEMENTS(unsupported);i++){
-			if(!strcmp(mime_string, unsupported[i])){
-				return true;
-			}
-		}
-		return false;
-	}
-	if(mimetype_is_unsupported(mime_string)){
+	if(mimetype_is_unsupported(mime_type, mime_string)){
 		printf("cannot add file: file type \"%s\" not supported.\n", mime_string);
 		statusbar_print(1, "cannot add file: %s files not supported", mime_string);
-		ok = false;
-		goto out;
-	}
-
-	if(!strcmp(mime_type->media_type, "text")){
-		printf("ignoring text file...\n");
 		ok = false;
 		goto out;
 	}
@@ -814,7 +833,7 @@ on_overview_done(gpointer data)
 }
 
 
-void
+static void
 delete_row(GtkWidget *widget, gpointer user_data)
 {
 	//widget is likely to be a popupmenu.
@@ -864,7 +883,7 @@ delete_row(GtkWidget *widget, gpointer user_data)
 }
 
 
-void
+static void
 update_row(GtkWidget *widget, gpointer user_data)
 {
 	//sync the catalogue row with the filesystem.
@@ -914,7 +933,7 @@ update_row(GtkWidget *widget, gpointer user_data)
 }
 
 
-void
+static void
 edit_row(GtkWidget *widget, gpointer user_data)
 {
 	//currently this only works for the The tags cell.	
@@ -1095,14 +1114,6 @@ treeview_get_tags_cell(GtkTreeView *view, guint x, guint y, GtkCellRenderer **ce
 	g_list_free(cells);
 	printf("not found in column. cell_height=%i\n", cell_rect.height);
 	return false; // not found
-}
-
-
-void
-on_entry_activate(GtkEntry *entry, gpointer user_data)
-{
-	gwarn("deprecated function");
-	dbg(0, "entry activated!");
 }
 
 
@@ -1511,9 +1522,16 @@ set_backend(BackendType type)
 			backend.insert           = tracker__insert;
 			backend.delete           = tracker__delete_row;
 			backend.update_colour    = tracker__update_colour;
+			backend.update_keywords  = tracker__update_keywords;
 			backend.update_pixbuf    = tracker__update_pixbuf;
 			backend.update_online    = tracker__update_online;
+			backend.disconnect       = tracker__disconnect;
 			printf("backend is tracker.\n");
+
+			//hide unsupported inspector notes
+			GtkWidget* notes = app.inspector->text;
+			if(notes) gtk_widget_hide(notes);
+
 			#endif
 			break;
 		default:

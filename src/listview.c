@@ -216,18 +216,18 @@ listview__on_row_clicked(GtkWidget *widget, GdkEventButton *event, gpointer user
 {
 	GtkTreeView *treeview = GTK_TREE_VIEW(app.view);
 
-	//auditioning:
 	if(event->button == 1){
 		GtkTreePath *path;
 		if(gtk_tree_view_get_path_at_pos(GTK_TREE_VIEW(app.view), (gint)event->x, (gint)event->y, &path, NULL, NULL, NULL)){
 			inspector_update_from_listview(path);
 
+			//auditioning:
 			GdkRectangle rect;
 			gtk_tree_view_get_cell_area(treeview, path, app.col_pixbuf, &rect);
 			if(((gint)event->x > rect.x) && ((gint)event->x < (rect.x + rect.width))){
 
 				//overview column:
-				dbg(2, "column rect: %i %i %i %i", rect.x, rect.y, rect.width, rect.height);
+				dbg(2, "overview. column rect: %i %i %i %i", rect.x, rect.y, rect.width, rect.height);
 
 				/*
 				GtkTreeIter iter;
@@ -264,7 +264,7 @@ listview__on_row_clicked(GtkWidget *widget, GdkEventButton *event, gpointer user
 				}
 			}
 		}
-		return FALSE; //propogate the signal
+		return NOT_HANDLED;
 	}
 
 	//popup menu:
@@ -417,82 +417,6 @@ treeview_unblock_motion_handler()
 							   NULL);    //data
 		if(id1) g_signal_handler_unblock(app.view, id1);
 		else warnprintf("%s(): failed to find handler.\n", __func__);
-	}
-}
-
-
-void
-listmodel__update()
-{
-	do_search(NULL, NULL);
-}
-
-
-void
-listmodel__add_result(SamplecatResult* result)
-{
-	g_return_if_fail(result);
-
-	char samplerate_s[32]; float samplerate = result->sample_rate; samplerate_format(samplerate_s, samplerate);
-	char* keywords = result->keywords ? result->keywords : "";
-	char length[64]; format_time_int(length, result->length);
-
-#if 0
-//#ifdef USE_AYYI
-	//is the file loaded in the current Ayyi song?
-	if(ayyi.got_song){
-		gchar* fullpath = g_build_filename(row[MYSQL_DIR], sample_name, NULL);
-		if(pool__file_exists(fullpath)) dbg(0, "exists"); else dbg(0, "doesnt exist");
-		g_free(fullpath);
-	}
-//#endif
-#endif
-
-	GdkPixbuf* get_iconbuf_from_mimetype(char* mimetype)
-	{
-		GdkPixbuf* iconbuf = NULL;
-		MIME_type* mime_type = mime_type_lookup(mimetype);
-		if(mime_type){
-			type_to_icon(mime_type);
-			if (!mime_type->image) dbg(0, "no icon.");
-			iconbuf = mime_type->image->sm_pixbuf;
-		}
-		return iconbuf;
-	}
-
-	//icon (only shown if the sound file is currently available):
-	GdkPixbuf* iconbuf = result->online ? get_iconbuf_from_mimetype(result->mimetype) : NULL;
-
-	GtkTreeIter iter;
-	gtk_list_store_append(app.store, &iter);
-	gtk_list_store_set(app.store, &iter, COL_ICON, iconbuf,
-	                   COL_NAME, result->sample_name,
-	                   COL_FNAME, result->dir,
-	                   COL_IDX, result->idx,
-	                   COL_MIMETYPE, result->mimetype,
-	                   COL_KEYWORDS, keywords, 
-	                   COL_OVERVIEW, result->overview, COL_LENGTH, length, COL_SAMPLERATE, samplerate_s, COL_CHANNELS, result->channels, 
-	                   COL_NOTES, result->notes, COL_COLOUR, result->colour,
-#ifdef USE_AYYI
-	                   COL_AYYI_ICON, ayyi_icon,
-#endif
-	                   -1);
-
-	GtkTreePath* treepath;
-	if((treepath = gtk_tree_model_get_path(GTK_TREE_MODEL(app.store), &iter))){
-		GtkTreeRowReference* row_ref = gtk_tree_row_reference_new(GTK_TREE_MODEL(app.store), treepath);
-		gtk_tree_path_free(treepath);
-		result->row_ref = row_ref;
-	}
-
-	if(!result->overview){
-		if(result->row_ref){
-			sample* sample = sample_new_from_result(result);
-			dbg(2, "no overview: sending request: filename=%s", result->sample_name);
-
-			g_async_queue_push(app.msg_queue, sample);
-		}
-		else pwarn("cannot request overview without row_ref.");
 	}
 }
 

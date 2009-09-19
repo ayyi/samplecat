@@ -30,9 +30,10 @@ typedef struct _inspector
 	GtkWidget*     channels;
 	GtkWidget*     mimetype;
 	GtkWidget*     image;
+	GtkWidget*     text;
 	GtkTextBuffer* notes;
 	GtkWidget*     edit;
-} inspector;
+} Inspector;
 
 
 struct _config
@@ -99,7 +100,7 @@ struct _app
 	int            playing_id; //database index of the file that is currently playing, or zero if none playing.
 
 	GtkListStore*  store;
-	inspector*     inspector;
+	Inspector*     inspector;
 	
 	GtkWidget*     window;
 	GtkWidget*     vbox;
@@ -166,7 +167,6 @@ enum {
 
 void        on_view_category_changed(GtkComboBox*, gpointer user_data);
 void        on_category_changed(GtkComboBox*, gpointer user_data);
-gboolean    row_set_tags(GtkTreeIter*, int id, const char* tags_new);
 gboolean    row_set_tags_from_id(int id, GtkTreeRowReference* row_ref, const char* tags_new);
 
 void        do_search(char* search, char* dir);
@@ -175,18 +175,18 @@ gboolean    new_search(GtkWidget*, gpointer userdata);
 
 void        scan_dir(const char* path, int* added_count);
 
+gboolean    mimestring_is_unsupported(char*);
+gboolean    mimetype_is_unsupported(MIME_type*, char* mime_string);
+
 gboolean    add_file(char* path);
 gboolean    add_dir(char* uri);
 gboolean    get_file_info(sample*);
-gboolean    get_file_info_sndfile(sample* sample);
+gboolean    get_file_info_sndfile(sample*);
 gboolean    on_overview_done(gpointer sample);
 
 void        db_update_pixbuf(sample*);
 void        update_dir_node_list();
 
-void        delete_row(GtkWidget*, gpointer user_data);
-void        update_row(GtkWidget*, gpointer user_data);
-void        edit_row  (GtkWidget*, gpointer user_data);
 void        clear_store();
 gboolean    treeview_get_cell(GtkTreeView *view, guint x, guint y, GtkCellRenderer **cell);
 gboolean    treeview_get_tags_cell(GtkTreeView *view, guint x, guint y, GtkCellRenderer **cell);
@@ -196,8 +196,6 @@ gint        get_mouseover_row();
 void        update_search_dir(gchar* uri);
 gboolean    dir_tree_update(gpointer data);
 void        set_search_dir(char* dir);
-
-void        on_entry_activate(GtkEntry*, gpointer);
 
 gboolean    keyword_is_dupe(char* new, char* existing);
 

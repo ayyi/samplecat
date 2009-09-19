@@ -46,22 +46,23 @@ struct _accel {
 	gpointer      user_data;
 };
 
-void         errprintf          (char* fmt, ...);
-void         errprintf2         (const char* func, char* format, ...);
-void         warnprintf         (char* format, ...);
-void         warnprintf2        (const char* func, char *format, ...);
-void         debug_printf       (const char* func, int level, const char* format, ...);
-void         log_handler        (const gchar* log_domain, GLogLevelFlags, const gchar* message, gpointer);
+void         errprintf                 (char* fmt, ...);
+void         errprintf2                (const char* func, char* format, ...);
+void         warnprintf                (char* format, ...);
+void         warnprintf2               (const char* func, char *format, ...);
+void         debug_printf              (const char* func, int level, const char* format, ...);
+void         log_handler               (const gchar* log_domain, GLogLevelFlags, const gchar* message, gpointer);
 
-void         samplerate_format  (char* str, int samplerate);
-gchar*       dir_format         (char*);
+void         samplerate_format         (char*, int samplerate);
+gchar*       dir_format                (char*);
+gchar*       channels_format           (int);
 //gint         strcmp2(gconstpointer a, gconstpointer b);
 //GPtrArray*   list_dir(const guchar *path);
-gboolean     file_exists        (const char*);
-gboolean     is_dir             (const char*);
-gboolean     dir_is_empty       (const char*);
-void         file_extension     (const char*, char* extn);
-gboolean     ensure_config_dir  ();
+gboolean     file_exists               (const char*);
+gboolean     is_dir                    (const char*);
+gboolean     dir_is_empty              (const char*);
+void         file_extension            (const char*, char* extn);
+gboolean     ensure_config_dir         ();
 
 //-----------------------------------------------------------------
 
@@ -69,7 +70,7 @@ void         pixbuf_clear              (GdkPixbuf*, GdkColor*);
 #ifdef OLD
 void         pixbuf_draw_line          (GdkPixbuf*, struct _ArtDRect *pts, double line_width, GdkColor *colour);
 #else
-void         pixbuf_draw_line          (cairo_t*, rect *pts, double line_width, GdkColor *colour);
+void         pixbuf_draw_line          (cairo_t*, rect*, double line_width, GdkColor *colour);
 #endif
 //GdkPixbuf*   scale_pixbuf(GdkPixbuf *src, int max_w, int max_h);
 //GdkPixbuf*   scale_pixbuf_up(GdkPixbuf *src, int max_w, int max_h);
@@ -93,6 +94,8 @@ gboolean     is_similar_rgb            (unsigned colour1, unsigned colour2);
 
 void         format_time               (char* length, const char* milliseconds);
 void         format_time_int           (char* length, int milliseconds);
+
+char*        str_array_join            (const char**, const char*);
 
 gint         treecell_get_row          (GtkWidget*, GdkRectangle*);
 void         statusbar_print           (int n, char* fmt, ...);

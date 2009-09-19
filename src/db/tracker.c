@@ -15,16 +15,19 @@ This software is licensed under the GPL. See accompanying file COPYING.
 #include <getopt.h>
 #include <sndfile.h>
 #include <gtk/gtk.h>
+#include "tracker.h"
 
 #include "typedefs.h"
 #include "support.h"
+#include "mimetype.h"
+#include "listmodel.h"
 #include "src/types.h"
-#include "tracker.h"
 #include <db/tracker_.h>
 
 extern int debug;
 
 static void tracker__on_dbus_timeout();
+static void clear_result();
 
 static TrackerClient* tc = NULL;
 static SamplecatResult result;
@@ -54,6 +57,12 @@ tracker__init(gpointer callback)
 	}
 	else pwarn("cant connect to tracker daemon.");
 	return IDLE_STOP;
+}
+
+
+void
+tracker__disconnect()
+{
 }
 
 
@@ -401,7 +410,7 @@ SamplecatResult*
 tracker__search_iter_next()
 {
 	if(iter.qresult){
-		memset(&result, 0, sizeof(SamplecatResult));
+		clear_result();
 
 		if(iter.idx >= iter.qresult->len) return NULL;
 
@@ -410,8 +419,25 @@ tracker__search_iter_next()
 		result.sample_name = g_path_get_basename(meta[0]);
 		result.dir = g_path_get_dirname(meta[0]);
 		result.idx = iter.idx;           //TODO this idx is pretty meaningless.
-		result.mimetype = "audio/x-wav"; //TODO
 		result.online = true;
+
+		const MIME_type* mime_type = type_from_path(meta[0]);
+		char mime_string[64];
+		snprintf(mime_string, 64, "%s/%s", mime_type->media_type, mime_type->subtype);
+		result.mimetype = mime_string;
+
+		GError* error = NULL;
+		char** tags = tracker_keywords_get(tc, SERVICE_FILES, meta[0], &error);
+		if(error){
+			gwarn("keywords error: %s", error->message);
+			g_error_free (error);
+		}
+		else if(tags) {
+			char* t = str_array_join((const char**)tags, " ");
+			result.keywords = t;
+		} else {
+			dbg(0, "no tags");
+		}
 
 		iter.idx++;
 	}else{
@@ -458,10 +484,39 @@ tracker__update_colour(int id, int colour)
 }
 
 
-static void
-tracker__on_dbus_timeout()
+gboolean
+tracker__update_keywords(int id, const char* keywords)
 {
-	statusbar_print(1, "tracker: dbus timeout");
+	//backend interface is unfortunate here as tracker doesnt use an integer id, it uses filename.
+
+	dbg(1, "tags=%s", keywords);
+
+	gboolean ret = true;
+	GError* error = NULL;
+
+	gchar** tags = g_strsplit(keywords, " ", 100);
+
+	char* filename = listmodel__get_filename_from_id(id);
+	if(filename){
+		tracker_keywords_remove_all(tc, SERVICE_FILES, filename, &error);
+		if(error){
+			ret = false;
+			gwarn("tracker error: %s", error->message);
+			g_error_free (error);
+		}else{
+			tracker_keywords_add(tc, SERVICE_FILES, filename, tags, &error);
+			dbg(0, "track call done.");
+			if(error){
+				ret = false;
+				gwarn("tracker error: %s", error->message);
+				g_error_free (error);
+			}
+		}
+		g_free(filename);
+	}
+
+	g_strfreev(tags);
+	return ret;
 }
 
 
@@ -469,6 +524,21 @@ gboolean
 tracker__update_online(int id, gboolean online)
 {
 	return false;
+}
+
+
+static void
+tracker__on_dbus_timeout()
+{
+	statusbar_print(1, "tracker: dbus timeout");
+}
+
+
+static void
+clear_result()
+{
+	if(result.keywords) g_free(result.keywords);
+	memset(&result, 0, sizeof(SamplecatResult));
 }
 
 

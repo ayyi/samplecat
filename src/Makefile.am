@@ -44,6 +44,7 @@ samplecat_SOURCES = \
 	typedefs.h \
 	main.c main.h file_manager/rox/rox_global.h \
 	window.c window.h \
+	listmodel.c listmodel.h \
 	listview.c listview.h \
 	inspector.c inspector.h \
 	sample.c sample.h \

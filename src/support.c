@@ -158,6 +158,21 @@ dir_format(char* dir)
 }
 
 
+gchar*
+channels_format(int n_ch)
+{
+	switch(n_ch){
+		case 1:
+			return g_strdup("mono");
+			break;
+		case 2:
+			return g_strdup("stereo");
+			break;
+	}
+	return g_strdup_printf("%i channels", n_ch);
+}
+
+
 #if 0
 /* Used as the sort function for sorting GPtrArrays */
 gint 
@@ -336,8 +351,14 @@ ensure_config_dir()
 
 	if(file_exists(path)) ret = TRUE;
 	else{
+		char* config_dir = g_strdup_printf("%s/.config/", g_get_home_dir());
+		if(!file_exists(config_dir)){
+			if(mkdir(config_dir, 775)){
+				perr("cannot create config dir: %s", config_dir);
+			}
+		}
+		g_free(config_dir);
 		#warning
-		#warning ensure_config_dir: check .config exists.
 		#warning ensure_config_dir: test create config directory.
 		#warning
 
@@ -1006,6 +1027,32 @@ format_time_int(char* length, int milliseconds)
 
 	if(!milliseconds) length[0] = '\0';
 	else snprintf(length, 64, "%i.%03i", milliseconds / 1000, milliseconds % 1000);
+}
+
+
+char*
+str_array_join(const char** array, const char* separator)
+{
+	//result must be freed using g_free()
+	g_return_val_if_fail(separator, NULL);
+
+	int sep_len = strlen(separator);
+	int i = 0;
+	int len = 0;
+	while(array[i]){
+		len += strlen(array[i]) + sep_len;
+		i++;
+	}
+	if(!len) return NULL;
+	char* s = g_new0(char, len);
+	char* t = s;
+	i = 0;
+	while(array[i]){
+		strcat(s, array[i]);
+		strcat(s, separator);
+		i++;
+	}
+	return t;
 }
 
 
