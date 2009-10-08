@@ -55,9 +55,14 @@ struct _backend
 {
 	gboolean         pending;
 
-	gboolean         (*search_iter_new)  (char* search, char* dir, int* n_results);
+	gboolean         (*search_iter_new)  (char* search, char* dir, const char* category, int* n_results);
 	SamplecatResult* (*search_iter_next) (unsigned long**);
 	void             (*search_iter_free) ();
+
+	void             (*dir_iter_new)     ();
+	char*            (*dir_iter_next)    ();
+	void             (*dir_iter_free)    ();
+
 	int              (*insert)           (sample*, MIME_type*);
 	gboolean         (*delete)           (int);
 	gboolean         (*update_colour)    (int, int);
@@ -155,9 +160,9 @@ struct _app
 };
 
 struct _palette {
-  guint red[8];
-  guint grn[8];
-  guint blu[8];
+	guint red[8];
+	guint grn[8];
+	guint blu[8];
 };
 
 enum {
@@ -165,8 +170,6 @@ enum {
 	TYPE_FLAC,
 };
 
-void        on_view_category_changed(GtkComboBox*, gpointer user_data);
-void        on_category_changed(GtkComboBox*, gpointer user_data);
 gboolean    row_set_tags_from_id(int id, GtkTreeRowReference* row_ref, const char* tags_new);
 
 void        do_search(char* search, char* dir);
@@ -187,7 +190,6 @@ gboolean    on_overview_done(gpointer sample);
 void        db_update_pixbuf(sample*);
 void        update_dir_node_list();
 
-void        clear_store();
 gboolean    treeview_get_cell(GtkTreeView *view, guint x, guint y, GtkCellRenderer **cell);
 gboolean    treeview_get_tags_cell(GtkTreeView *view, guint x, guint y, GtkCellRenderer **cell);
 
@@ -199,13 +201,10 @@ void        set_search_dir(char* dir);
 
 gboolean    keyword_is_dupe(char* new, char* existing);
 
-gboolean	on_directory_list_changed();
+gboolean    on_directory_list_changed();
 gboolean    toggle_recursive_add(GtkWidget*, gpointer user_data);
 
 void        on_file_moved(GtkTreeIter);
-
-void        tag_edit_start(int tnum);
-void        tag_edit_stop(GtkWidget*, GdkEventCrossing*, gpointer user_data);
 
 gboolean    config_load();
 void        config_new();

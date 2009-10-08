@@ -31,7 +31,7 @@
 #include "file_manager/file_manager.h"
 #include "rox/view_iface.h"
 #include "file_view.h"
-#include "rox/dir.h"
+#include "dir.h"
 #include "diritem.h"
 #include "rox/rox_support.h"
 #include "mimetype.h"
@@ -42,7 +42,7 @@
 
 Filer filer;
 GList* all_filer_windows = NULL;
-static AyyiFilemanager* new_file_manager = NULL;
+static AyyiLibfilemanager* new_file_manager = NULL;
 static gboolean initialised = FALSE;
 extern char theme_name[];
 
@@ -56,9 +56,10 @@ file_manager__init()
 	filer.display_style_wanted = SMALL_ICONS;
 	filer.sort_type            = SORT_NAME;
 
-	new_file_manager = ayyi_filemanager_new();
+	new_file_manager = ayyi_libfilemanager_new(&filer);
 
 	return &filer;
+	//return &new_file_manager->file_window;
 }
 
 
@@ -101,20 +102,28 @@ file_manager__update_all(void)
 }
 
 
+//removed. call ayyi_filemanager_set_icon_theme(char*) instead.
+/*
 void
 file_manager__set_icon_theme(const char* name)
 {
-	dbg(0, "...");
-
 	strncpy(theme_name, name, 63);
 	_set_icon_theme();
 
 	ayyi_filemanager_set_icon_theme(new_file_manager, name);
-	ayyi_filemanager_emit_theme_changed(new_file_manager);
+	//ayyi_filemanager_emit_theme_changed(new_file_manager);
+}
+*/
+
+
+void
+file_manager__on_dir_changed()
+{
+	ayyi_libfilemanager_emit_dir_changed(new_file_manager);
 }
 
 
-AyyiFilemanager*
+AyyiLibfilemanager*
 file_manager__get_signaller()
 {
 	return new_file_manager;

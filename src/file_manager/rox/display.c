@@ -46,8 +46,7 @@
 #define display_caps_first FALSE
 
 #include "rox_support.h"
-//#include "main.h"
-#include "rox/dir.h"
+#include "dir.h"
 #include "../filer.h"
 #if 0
 #include "display.h"

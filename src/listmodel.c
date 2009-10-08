@@ -21,12 +21,34 @@
 #include "listmodel.h"
 
 extern struct _app app;
+extern unsigned debug;
 
 
 void
 listmodel__update()
 {
 	do_search(NULL, NULL);
+}
+
+
+void
+listmodel__clear()
+{
+	PF;
+
+	//gtk_list_store_clear(app.store);
+
+	GtkTreeIter iter;
+	GdkPixbuf* pixbuf = NULL;
+
+	while(gtk_tree_model_get_iter_first(GTK_TREE_MODEL(app.store), &iter)){
+
+		gtk_tree_model_get(GTK_TREE_MODEL(app.store), &iter, COL_OVERVIEW, &pixbuf, -1);
+
+		gtk_list_store_remove(app.store, &iter);
+
+		if(pixbuf) g_object_unref(pixbuf);
+	}
 }
 
 

@@ -49,7 +49,7 @@
 
 #include "file_manager/file_manager.h"
 #include "src/typedefs.h"
-#include "rox/rox_global.h"
+#include "rox_global.h"
 
 #include "string.h"
 #include "fscache.h"
@@ -70,9 +70,6 @@
 #include "xdgmime.h"
 //#include "xtypes.h"
 
-#ifdef OLD
-  #include <libart_lgpl/libart.h>
-#endif
 #include "src/support.h"
 #include "observer.h"
 extern unsigned debug;

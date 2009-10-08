@@ -20,6 +20,7 @@ enum
 };
 
 void      listmodel__update                ();
+void      listmodel__clear                 ();
 void      listmodel__add_result            (SamplecatResult*);
 
 char*     listmodel__get_filename_from_id  (int);

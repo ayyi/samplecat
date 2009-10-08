@@ -110,7 +110,6 @@ struct _Filer
 	char		*window_id;		/* For remote control */
 
 	GtkWidget*  menu;
-	void        (*public_on_dir_change)(); //used in place of a signal. Application can set this to be notified when the directory is changed.
 };
 
 void update_display(Directory *dir, DirAction action, GPtrArray* items, Filer* filer_window);
@@ -179,6 +178,8 @@ void filer_next_selected(FilerWindow *filer_window, int dir);
 void filer_save_settings(FilerWindow *fwin);
 #endif
 
-/*static */void attach(Filer* filer_window);
+/*static */void attach(Filer*);
+
+void filer_destroy(Filer*);
 
 #endif /* _FILER_H */

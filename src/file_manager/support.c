@@ -23,7 +23,7 @@
 
 #include "ayyi/ayyi_utils.h"
 #include "file_manager/support.h"
-#include "rox/rox_global.h"
+#include "rox_global.h"
 #include "rox/rox_support.h"
 
 #define HEX_ESCAPE '%'

@@ -39,10 +39,9 @@
 #include "src/typedefs.h"
 #include "src/support.h"
 
-#include "rox/rox_global.h"
-
+#include "rox_global.h"
 #include "rox/display.h"
-#include "rox/dir.h"
+#include "dir.h"
 #include "filer.h"
 #include "fscache.h"
 #include "rox/rox_support.h"
@@ -240,6 +239,11 @@ void filer_init(void)
 }
 #endif
 
+void
+filer_destroy(Filer* f)
+{
+}
+
 static gboolean
 if_deleted(gpointer item, gpointer removed)
 {
@@ -421,7 +425,9 @@ update_display(Directory *dir, DirAction action, GPtrArray* items, Filer* filer_
 		case DIR_START_SCAN:
 			dbg(2, "DIR_START_SCAN");
 			set_scanning_display(filer_window, TRUE);
-			if(filer_window->public_on_dir_change) filer_window->public_on_dir_change();
+
+			file_manager__on_dir_changed();
+
 			//toolbar_update_info(filer_window);
 			break;
 		case DIR_END_SCAN:

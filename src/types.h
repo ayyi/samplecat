@@ -7,20 +7,20 @@ struct _samplecat_result
 	char*                sample_name;
 	char*                dir;
 	char*                keywords;
-	GdkPixbuf* overview;
-	char*      mimetype;
-	unsigned   length;
-	unsigned   sample_rate;
-	int        channels;
-	char*      notes;
-	int        colour;
-	gboolean   online;
+	GdkPixbuf*           overview;
+	char*                mimetype;
+	unsigned             length;
+	unsigned             sample_rate;
+	int                  channels;
+	char*                notes;
+	int                  colour;
+	gboolean             online;
 };
 
 struct _menu_def
 {
-    char*     label;
-    GCallback callback;
-    char*     stock_id;
-	gboolean  sensitive;
+	char*                label;
+	GCallback            callback;
+	char*                stock_id;
+	gboolean             sensitive;
 };

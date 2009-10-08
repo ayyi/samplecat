@@ -78,7 +78,6 @@ drag_received(GtkWidget *widget, GdkDragContext *drag_context, gint x, gint y,
 
       listview__item_set_colour(path, colour_index);
 
-      statusbar_print(1, "colour set");
       gtk_tree_path_free(path);
     }
     else dbg(0, "path not found.");
@@ -91,8 +90,9 @@ drag_received(GtkWidget *widget, GdkDragContext *drag_context, gint x, gint y,
   if(info == GPOINTER_TO_INT(TARGET_URI_LIST)){
     dbg(1, "type=uri_list. len=%i", data->length);
     GList* list = uri_list_to_glist((char*)data->data);
-    if(g_list_length(list) < 1) warnprintf("drag_received(): drag drop: uri list parsing found no uri's.\n");
-    int i=0, added_count=0;
+    if(g_list_length(list) < 1) pwarn("drag drop: uri list parsing found no uri's.\n");
+    int i = 0;
+    int added_count = 0;
     GList* l = list;
     for(;l;l=l->next){
       char* u = l->data;

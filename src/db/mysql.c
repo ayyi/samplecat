@@ -5,9 +5,7 @@
 #include <unistd.h>
 #include <gtk/gtk.h>
 #include <gdk-pixbuf/gdk-pixdata.h>
-
 #include <mysql/errmsg.h>
-#include "dh-link.h"
 #include "file_manager.h"
 #include "typedefs.h"
 #include "src/types.h"
@@ -147,14 +145,15 @@ mysql__insert(sample* sample, MIME_type *mime_type)
 gboolean
 mysql__delete_row(int id)
 {
-	char sql[1024];
-	snprintf(sql, 1024, "DELETE FROM samples WHERE id=%i", id);
+	gboolean ok = true;
+	gchar* sql = g_strdup_printf("DELETE FROM samples WHERE id=%i", id);
 	dbg(2, "row: sql=%s", sql);
 	if(mysql_query(&mysql, sql)){
 		perr("delete failed! sql=%s\n", sql);
-		return false;
+		ok = false;
 	}
-	return true;
+	g_free(sql);
+	return ok;
 }
 
 
@@ -234,11 +233,12 @@ mysql__update_pixbuf(sample *sample)
 	GdkPixbuf* pixbuf = sample->pixbuf;
 	if(pixbuf){
 		//serialise the pixbuf:
-		guint8 blob[SQL_LEN];
 		GdkPixdata pixdata;
 		gdk_pixdata_from_pixbuf(&pixdata, pixbuf, 0);
 		guint length;
 		guint8* ser = gdk_pixdata_serialize(&pixdata, &length);
+
+		guint8 blob[SQL_LEN];
 		mysql_real_escape_string(&mysql, (char*)blob, (char*)ser, length);
 
 		char sql[SQL_LEN];
@@ -248,7 +248,7 @@ mysql__update_pixbuf(sample *sample)
 			return false;
 		}
 
-		free(ser);
+		g_free(ser);
 
 		//at this pt, refcount should be two, we make it 1 so that pixbuf is destroyed with the row:
 		//g_object_unref(pixbuf); //FIXME
@@ -275,13 +275,13 @@ mysql__update_online(int id, gboolean online)
 
 
 gboolean
-mysql__search_iter_new(char* search, char* dir, int* n_results)
+mysql__search_iter_new(char* search, char* dir, const char* category, int* n_results)
 {
 	//return TRUE on success.
 
 	char query[1024];
 	char where[512]="";
-	char category[256]="";
+	char qcategory[256]="";
 	char where_dir[512]="";
 
 	if(!search) search = app.search_phrase;
@@ -289,20 +289,16 @@ mysql__search_iter_new(char* search, char* dir, int* n_results)
 
 	if(search_result) gwarn("previous query not free'd?");
 
-	if(app.search_category) snprintf(category, 256, "AND keywords LIKE '%%%s%%' ", app.search_category);
+	if(app.search_category) snprintf(qcategory, 256, "AND keywords LIKE '%%%s%%' ", category);
 
 	//lets assume that the search_phrase filter should *always* be in effect.
 
 	if(dir && strlen(dir)){
-		snprintf(where_dir, 512, "AND filedir='%s' %s ", dir, category);
+		snprintf(where_dir, 512, "AND filedir='%s' %s ", dir, qcategory);
 	}
 
-	//strmov(dst, src) moves all the  characters  of  src to dst, and returns a pointer to the new closing NUL in dst. 
-	//strmov(query_def, "SELECT * FROM samples"); //this is defined in mysql m_string.h
-	//strcpy(query, "SELECT * FROM samples WHERE 1 ");
-
 	if(strlen(search)){ 
-		snprintf(where, 512, "AND (filename LIKE '%%%s%%' OR filedir LIKE '%%%s%%' OR keywords LIKE '%%%s%%') ", search, search, search); //FIXME duplicate category LIKE's
+		snprintf(where, 512, "AND (filename LIKE '%%%s%%' OR filedir LIKE '%%%s%%' OR keywords LIKE '%%%s%%') ", search, search, search);
 	}
 
 	//append the dir-where part:
@@ -364,7 +360,7 @@ mysql__search_iter_next_(unsigned long** lengths)
 	GdkPixdata pixdata;
 	GdkPixbuf* pixbuf = NULL;
 	if(row[MYSQL_PIXBUF]){
-		//dbg(0, "pixbuf_length=%i", (*lengths)[MYSQL_PIXBUF]);
+		dbg(3, "pixbuf_length=%i", (*lengths)[MYSQL_PIXBUF]);
 		if(gdk_pixdata_deserialize(&pixdata, (*lengths)[MYSQL_PIXBUF], (guint8*)row[MYSQL_PIXBUF], NULL)){
 			pixbuf = gdk_pixbuf_from_pixdata(&pixdata, TRUE, NULL);
 		}
@@ -383,7 +379,7 @@ mysql__search_iter_next_(unsigned long** lengths)
 	result.sample_rate = get_int(row, MYSQL_SAMPLERATE);
 	result.channels    = get_int(row, MYSQL_CHANNELS);
 	result.overview    = pixbuf;
-	result.notes       = row[MYSQL_KEYWORDS];
+	result.notes       = row[MYSQL_NOTES];
 	result.colour      = get_int(row, MYSQL_COLOUR);
 	result.mimetype    = row[MYSQL_MIMETYPE];
 	result.online      = get_int(row, MYSQL_ONLINE);
@@ -409,19 +405,8 @@ mysql__dir_iter_new()
 
 	if(dir_iter_result) gwarn("previous query not free'd?");
 
-	//char qry[1024];
-	//snprintf(qry, 1024, DIR_LIST_QRY);
-
-	if(mysql__exec_sql(DIR_LIST_QRY) == 0){
+	if(!mysql__exec_sql(DIR_LIST_QRY)){
 		dir_iter_result = mysql_store_result(&mysql);
-		/*
-		else{  // mysql_store_result() returned nothing
-		  if(mysql_field_count(mysql) > 0){
-				// mysql_store_result() should have returned data
-				printf( "Error getting records: %s\n", mysql_error(mysql));
-		  }
-		}
-		*/
 		dbg(2, "num_rows=%i", mysql_num_rows(dir_iter_result));
 	}
 	else{
@@ -435,19 +420,9 @@ mysql__dir_iter_next()
 {
 	if(!dir_iter_result) return NULL;
 
-	MYSQL_ROW row;
-	row = mysql_fetch_row(dir_iter_result);
-	if(!row) return NULL;
+	MYSQL_ROW row = mysql_fetch_row(dir_iter_result);
 
-	//printf("update_dir_node_list(): dir=%s\n", row[0]);
-
-	/*
-	char uri[256];
-	snprintf(uri, 256, "%s", row[0]);
-
-	return uri;
-	*/
-	return row[0];
+	return row ? row[0] : NULL;
 }
 
 

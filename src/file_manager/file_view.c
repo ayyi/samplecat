@@ -31,7 +31,7 @@
 
 //#include "file_manager/typedefs.h"
 #include "file_manager.h"
-#include "rox/rox_global.h"
+#include "rox_global.h"
 #include "src/typedefs.h"
 #include "src/types.h"
 #include "rox/rox_support.h"
@@ -40,7 +40,7 @@
 
 #include "rox/view_iface.h"
 #include "file_view.h"
-#include "rox/dir.h"
+#include "dir.h"
 #include "diritem.h"
 #include "mimetype.h"
 #include "rox/display.h"
@@ -145,7 +145,7 @@ view_details_new(Filer* filer_window)
 	view_details->filer_window = filer_window;
 	view_details->use_alt_colours = false;
 
-	filer_window->menu = fm_make_context_menu();
+	filer_window->menu = fm__make_context_menu();
 
 #if 0
 	gtk_range_set_adjustment(GTK_RANGE(filer_window->scrollbar),
@@ -1250,7 +1250,7 @@ view_details_add_items(ViewIface* view, GPtrArray* new_items)
 
 		g_ptr_array_add(items, vitem);
 
-		iter.user_data = GINT_TO_POINTER(items->len - 1); // !!! model just points the garray entry???? !!!
+		iter.user_data = GINT_TO_POINTER(items->len - 1); // !!! model just points to the garray entry???? !!!
 		gtk_tree_model_row_inserted(model, path, &iter);
 		gtk_tree_path_next(path);
 	}
@@ -1347,8 +1347,8 @@ view_details_delete_if(ViewIface *view, gboolean (*test)(gpointer item, gpointer
 {
 	GtkTreePath *path;
 	ViewDetails *view_details = (ViewDetails *) view;
-	int	    i = 0;
-	GPtrArray   *items = view_details->items;
+	int i = 0;
+	GPtrArray *items = view_details->items;
 	GtkTreeModel *model = (GtkTreeModel *) view;
 
 	path = gtk_tree_path_new();

@@ -15,8 +15,8 @@
 #include "file_manager/support.h"
 #include "src/typedefs.h"
 #include "src/support.h"
-#include "rox/rox_global.h"
-#include "rox/dir.h"
+#include "rox_global.h"
+#include "dir.h"
 #include "rox/display.h"
 #include "mimetype.h"
 #include "menu.h"
@@ -135,7 +135,7 @@ static menu_def fm_menu_def[] = {
 
 
 GtkWidget*
-fm_make_context_menu()
+fm__make_context_menu()
 {
 	GtkWidget* menu = gtk_menu_new();
 

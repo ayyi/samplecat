@@ -31,11 +31,11 @@
 #include "file_manager/file_manager.h"
 #include "src/typedefs.h"
 #include "src/support.h"
-#include "rox/rox_global.h"
+#include "rox_global.h"
 
 #include "file_view.h"
 #include "cell_icon.h"
-#include "rox/dir.h"
+#include "dir.h"
 #include "filer.h"
 #include "rox/display.h"
 #include "diritem.h"

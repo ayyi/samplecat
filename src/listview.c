@@ -191,6 +191,7 @@ listview__path_get_id(GtkTreePath* path)
 	gtk_tree_model_get(store, &iter, COL_IDX, &id, COL_NAME, &filename, -1);
 
 	dbg(1, "filename=%s", filename);
+	if(!id) pwarn("failed to get id! id must be non-zero.");
 	return id;
 }
 
@@ -298,12 +299,14 @@ listview__on_row_clicked(GtkWidget *widget, GdkEventButton *event, gpointer user
 gboolean
 listview__item_set_colour(GtkTreePath* path, unsigned colour)
 {
-	ASSERT_POINTER_FALSE(path, "path")
+	g_return_val_if_fail(path, false);
 
 	int id = listview__path_get_id(path);
 
-	if(!backend.update_colour(id, colour)) return false;
-
+	if(!backend.update_colour(id, colour)){
+		statusbar_print(1, "error! colour not updated");
+		return false;
+	}
 	statusbar_print(1, "colour updated");
 
 	GtkTreeIter iter;
@@ -684,7 +687,6 @@ tag_cell_data(GtkTreeViewColumn *tree_column, GtkCellRenderer *cell, GtkTreeMode
 
 			const gchar *str = celltext->text;
 			gchar** split = g_strsplit(str, " ", 100);
-			//printf("split: [%s] %p %p %p %s\n", str, split[0], split[1], split[2], split[0]);
 			int char_index = 0;
 			int word_index = 0;
 			int mouse_word = 0;
@@ -700,11 +702,8 @@ tag_cell_data(GtkTreeViewColumn *tree_column, GtkCellRenderer *cell, GtkTreeMode
 
 					snprintf(word, 256, "<u>%s</u> ", split[word_index]);
 					g_strlcat(formatted, word, 256);
-					//g_free(split[word_index]);
-					//split[word_index] = word;
 
 					while(split[++word_index]){
-						//snprintf(formatted, 256, "%s ", split[word_index]);
 						snprintf(word, 256, "%s ", split[word_index]);
 						g_strlcat(formatted, word, 256);
 					}
@@ -730,7 +729,7 @@ tag_cell_data(GtkTreeViewColumn *tree_column, GtkCellRenderer *cell, GtkTreeMode
 			GError *error = NULL;
 			PangoAttrList *attrs = NULL;
 
-			if (formatted && !pango_parse_markup(formatted, -1, 0, &attrs, &text, NULL, &error)){
+			if (/*formatted &&*/ !pango_parse_markup(formatted, -1, 0, &attrs, &text, NULL, &error)){
 				g_warning("Failed to set cell text from markup due to error parsing markup: %s", error->message);
 				g_error_free(error);
 				return;

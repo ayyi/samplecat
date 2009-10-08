@@ -1,5 +1,5 @@
 
-GtkWidget*      fm_make_context_menu();
+GtkWidget*      fm__make_context_menu();
 void            fm__add_menu_item    (GtkAction*);
 void            fm__menu_dir_update  ();
 //gboolean        ensure_filer_menu();

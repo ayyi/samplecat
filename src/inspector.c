@@ -26,9 +26,12 @@ extern int debug;
 static void       inspector_clear           ();
 static void       hide_fields               ();
 static void       show_fields               ();
-static gboolean   inspector_on_tags_clicked (GtkWidget*, GdkEventButton*, gpointer user_data);
+static gboolean   inspector_on_tags_clicked (GtkWidget*, GdkEventButton*, gpointer);
 static gboolean   on_notes_focus_out        (GtkWidget*, gpointer userdata);
-static void       inspector_on_notes_insert (GtkTextView*, gchar *arg1, gpointer user_data);
+static void       inspector_on_notes_insert (GtkTextView*, gchar *arg1, gpointer);
+static void       tag_edit_start            (int tnum);
+static void       tag_edit_stop             (GtkWidget*, GdkEventCrossing*, gpointer);
+
 
 
 GtkWidget*
@@ -133,9 +136,11 @@ inspector_pane()
 	GtkWidget *text1 = inspector->text = gtk_text_view_new();
 	inspector->notes = gtk_text_view_get_buffer(GTK_TEXT_VIEW(text1));
 	gtk_text_view_set_accepts_tab(GTK_TEXT_VIEW(text1), FALSE);
+#ifdef USE_TRACKER
 	if(BACKEND_IS_TRACKER){
 		gtk_widget_set_no_show_all(text1, true);
 	}
+#endif
 	g_signal_connect(G_OBJECT(text1), "focus-out-event", G_CALLBACK(on_notes_focus_out), NULL);
 	g_signal_connect(G_OBJECT(text1), "insert-at-cursor", G_CALLBACK(inspector_on_notes_insert), NULL);
 	gtk_box_pack_start(GTK_BOX(vbox), text1, FALSE, TRUE, 2);
@@ -366,6 +371,117 @@ on_notes_focus_out(GtkWidget *widget, gpointer userdata)
 
 	g_free(notes);
 	return FALSE;
+}
+
+
+static void
+tag_edit_start(int tnum)
+{
+  /*
+  initiate the inplace renaming of a tag label in the inspector following a double-click.
+
+  -rename widget has had an extra ref added at creation time, so we dont have to do it here.
+
+  -current strategy is too swap the non-editable gtklabel with the editable gtkentry widget.
+  -fn is fragile in that it makes too many assumptions about the widget layout (widget parent).
+
+  FIXME global keyboard shortcuts are still active during editing?
+  FIXME add ESC key to stop editing.
+  */
+
+  PF;
+
+  static gulong handler1 = 0; // the edit box "focus_out" handler.
+  //static gulong handler2 = 0; // the edit box RETURN key trap.
+  
+  GtkWidget* parent = app.inspector->tags_ev;
+  GtkWidget* edit   = app.inspector->edit;
+  GtkWidget *label = app.inspector->tags;
+
+  if(!GTK_IS_WIDGET(app.inspector->edit)){ perr("edit widget missing.\n"); return;}
+  if(!GTK_IS_WIDGET(label))              { perr("label widget is missing.\n"); return;}
+
+  //show the rename widget:
+  gtk_entry_set_text(GTK_ENTRY(app.inspector->edit), gtk_label_get_text(GTK_LABEL(label)));
+  gtk_widget_ref(label);//stops gtk deleting the widget.
+  gtk_container_remove(GTK_CONTAINER(parent), label);
+  gtk_container_add   (GTK_CONTAINER(parent), app.inspector->edit);
+
+  //our focus-out could be improved by properly focussing other widgets when clicked on (widgets that dont catch events?).
+
+  if(handler1) g_signal_handler_disconnect((gpointer)edit, handler1);
+  
+  handler1 = g_signal_connect((gpointer)app.inspector->edit, "focus-out-event", G_CALLBACK(tag_edit_stop), GINT_TO_POINTER(0));
+
+  /*
+  //this signal is no good as it quits when you move the mouse:
+  //g_signal_connect ((gpointer)arrange->wrename, "leave-notify-event", G_CALLBACK(track_label_edit_stop), 
+  //								GINT_TO_POINTER(tnum));
+  
+  if(handler2) g_signal_handler_disconnect((gpointer)arrange->wrename, handler2);
+  handler2 =   g_signal_connect(G_OBJECT(arrange->wrename), "key-press-event", 
+  								G_CALLBACK(track_entry_key_press), GINT_TO_POINTER(tnum));//traps the RET key.
+  */
+
+  //grab_focus allows us to start typing imediately. It also selects the whole string.
+  gtk_widget_grab_focus(GTK_WIDGET(app.inspector->edit));
+}
+
+
+static void
+tag_edit_stop(GtkWidget *widget, GdkEventCrossing *event, gpointer user_data)
+{
+  /*
+  tidy up widgets and notify core of label change.
+  called following a focus-out-event for the gtkEntry renaming widget.
+  -track number should correspond to the one being edited...???
+
+  warning! if called incorrectly, this fn can cause mysterious segfaults!!
+  Is it something to do with multiple focus-out events? This function causes the
+  rename widget to lose focus, it can run a 2nd time before completing the first: segfault!
+  Currently it works ok if focus is removed before calling.
+  */
+
+  //static gboolean busy = false;
+  //if(busy){"track_label_edit_stop(): busy!\n"; return;} //only run once at a time!
+  //busy = true;
+
+  GtkWidget* edit = app.inspector->edit;
+  GtkWidget* parent = app.inspector->tags_ev;
+
+  //g_signal_handler_disconnect((gpointer)edit, handler_id);
+  
+  //printf("track_label_edit_stop(): wrename_parent=%p.\n", arrange->wrename->parent);
+  //printf("track_label_edit_stop(): label_parent  =%p.\n", trkA[tnum]->wlabel);
+  
+  //printf("w:%p is_widget: %i\n", trkA[tnum]->wlabel, GTK_IS_WIDGET(trkA[tnum]->wlabel));
+
+  //make sure the rename widget is being shown:
+  /*
+  if(edit->parent != parent){printf(
+    "tags_edit_stop(): info: entry widget not in correct container! trk probably changed. parent=%p\n",
+	   							arrange->wrename->parent); }
+  */
+	   
+  //change the text in the label:
+  gtk_label_set_text(GTK_LABEL(app.inspector->tags), gtk_entry_get_text(GTK_ENTRY(edit)));
+  //printf("track_label_edit_stop(): text set.\n");
+
+  //update the data:
+  //update the string for the channel that the current track is using:
+  //int ch = track_get_ch_idx(tnum);
+  row_set_tags_from_id(app.inspector->row_id, app.inspector->row_ref, gtk_entry_get_text(GTK_ENTRY(edit)));
+
+  //swap back to the normal label:
+  gtk_container_remove(GTK_CONTAINER(parent), edit);
+  //gtk_container_remove(GTK_CONTAINER(arrange->wrename->parent), arrange->wrename);
+  //printf("track_label_edit_stop(): wrename unparented.\n");
+  
+  gtk_container_add(GTK_CONTAINER(parent), app.inspector->tags);
+  gtk_widget_unref(app.inspector->tags); //remove 'artificial' ref added in edit_start.
+  
+  dbg(0, "finished.");
+  //busy = false;
 }
 
 

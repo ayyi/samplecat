@@ -64,7 +64,7 @@
 
 #include "dir.h"
 #include "diritem.h"
-#include "rox_support.h"
+#include "rox/rox_support.h"
 #include "fscache.h"
 #include "pixmaps.h"
 #include "mimetype.h"

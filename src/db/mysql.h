@@ -15,7 +15,7 @@ gboolean         mysql__update_notes     (int id, const char*);
 gboolean         mysql__update_pixbuf    (sample*);
 gboolean         mysql__update_online    (int id, gboolean);
 
-gboolean         mysql__search_iter_new   (char* search, char* dir, int* n_results);
+gboolean         mysql__search_iter_new   (char* search, char* dir, const char* category, int* n_results);
 MYSQL_ROW        mysql__search_iter_next  (unsigned long** lengths);
 SamplecatResult* mysql__search_iter_next_ (unsigned long** lengths);
 void             mysql__search_iter_free  ();

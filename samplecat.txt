@@ -1,14 +1,18 @@
 todo:
 	-insert: dupe-checking not working.
+	-appears to freeze when importing from cdrom. move to idle function?
+	-GtkInfBar added in gtk 2.18 - we should probably use it instead of the message_panel__ functions in window.c 
 	-show warning icon in statusbar - eggtrayicon.c ?
 	-freshly imported files dont have the icon set.
 	-check out libsexy SexyUrlLabel (for tags) 
 	-check out chickensys samplemanage.
 	-recursive importing: gui is unresponsive - put in some mainloop stuff
-	-check with valgrind
+	-check with valgrind.
 	-how to programmatically enter treeview cell edit mode? (see code)
 	-why segfaults related to tree row_refs - see dir_tree_on_link_selected() 
-	-look at aqualung to see how they do the FFmpeg support.
+	-ffmpeg: look at aqualung to see how they do the FFmpeg support.
+	-add date to database so we can sort by date and show f-spot style bar chart for years.
+	-make samplecat an embeddable widget?
 
 dependencies:
 	-glib/gtk2 - v2.6 is needed for g_key_file
@@ -43,7 +47,7 @@ functionality status:
 		-add selector in the toolbar         done
 		-drag n drop to row                  done
 		-drag n drop to overview             no
-		-click to apply to selected.
+		-click to apply to selected.         check - probably not.
 	updates
 		-"locate": scan for moved file.      no
 		-sample versioning                   no

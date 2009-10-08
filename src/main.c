@@ -381,8 +381,8 @@ scan_dir(const char* path, int* added_count)
 			snprintf(filepath, 128, "%s/%s", path, file);
 
 			if(!g_file_test(filepath, G_FILE_TEST_IS_DIR)){
-				add_file(filepath);
-				statusbar_print(1, "%i files added", ++*added_count);
+				if(add_file(filepath)) (*added_count)++;
+				statusbar_print(1, "%i files added", *added_count);
 			}
 			// IS_DIR
 			else if(app.add_recursive){
@@ -413,11 +413,11 @@ do_search(char *search, char *dir)
 #endif
 
 	int n_results = 0;
-	if(backend.search_iter_new(search, dir, &n_results)){
+	if(backend.search_iter_new(search, dir, app.search_category, &n_results)){
 
 		treeview_block_motion_handler(); //dont know exactly why but this prevents a segfault.
 
-		clear_store();
+		listmodel__clear();
 
 		//detach the model from the view to speed up row inserts:
 		/*
@@ -460,25 +460,6 @@ do_search(char *search, char *dir)
 				statusbar_print(1, "showing %i of %i samples", row_count, n_results);
 			}
 		}
-/*
-		#ifdef USE_SQLITE
-		else if(BACKEND_IS_SQLITE){
-			int row_count = 0;
-			SamplecatResult* result;
-			while((result = backend.search_iter_next(NULL)) && row_count < MAX_DISPLAY_ROWS){
-				if(app.no_gui){
-					if(!row_count) console__show_result_header();
-					console__show_result(result);
-				}else{
-					listmodel__add_result(result);
-				}
-				row_count++;
-			}
-			if(app.no_gui) console__show_result_footer(row_count);
-			sqlite__search_iter_free();
-		}
-		#endif
-*/
 		#ifdef USE_TRACKER
 		else if(BACKEND_IS_TRACKER){
 			int row_count = 0;
@@ -516,52 +497,12 @@ do_search(char *search, char *dir)
 }
 
 
-void
-clear_store()
-{
-	PF;
-
-	//gtk_list_store_clear(app.store);
-
-	GtkTreeIter iter;
-	GdkPixbuf* pixbuf = NULL;
-
-	while(gtk_tree_model_get_iter_first(GTK_TREE_MODEL(app.store), &iter)){
-
-		gtk_tree_model_get(GTK_TREE_MODEL(app.store), &iter, COL_OVERVIEW, &pixbuf, -1);
-
-		gtk_list_store_remove(app.store, &iter);
-
-		if(pixbuf) g_object_unref(pixbuf);
-	}
-}
-
-
-void
-on_category_changed(GtkComboBox *widget, gpointer user_data)
-{
-	PF;
-}
-
-
-void
-on_view_category_changed(GtkComboBox *widget, gpointer user_data)
-{
-	//update the sample list with the new view-category.
-	PF;
-
-	if (app.search_category) g_free(app.search_category);
-	app.search_category = gtk_combo_box_get_active_text(GTK_COMBO_BOX(app.view_category));
-
-	do_search(app.search_phrase, app.search_dir);
-}
-
-
 gboolean
 row_set_tags_from_id(int id, GtkTreeRowReference* row_ref, const char* tags_new)
 {
 	if(!id){ perr("bad arg: id (%i)\n", id); return false; }
 	g_return_val_if_fail(row_ref, false);
+	dbg(0, "id=%i", id);
 
 	if(!backend.update_keywords(id, tags_new)){
 		statusbar_print(1, "database error. keywords not updated");
@@ -592,8 +533,7 @@ update_dir_node_list()
 
 	if(BACKEND_IS_NULL) return;
 
-#ifdef USE_MYSQL
-	mysql__dir_iter_new();
+	backend.dir_iter_new();
 
 	if(app.dir_tree) g_node_destroy(app.dir_tree);
 	app.dir_tree = g_node_new(NULL);
@@ -604,7 +544,7 @@ update_dir_node_list()
 		g_node_insert(app.dir_tree, -1, leaf);
 
 		char* u;
-		while((u = mysql__dir_iter_next())){
+		while((u = backend.dir_iter_next())){
 
 			link = dh_link_new(DH_LINK_TYPE_PAGE, u, u);
 			leaf = g_node_new(link);
@@ -614,11 +554,8 @@ update_dir_node_list()
 		}
 	}
 
-	mysql__dir_iter_free();
+	backend.dir_iter_free();
 	dbg(2, "size=%i", g_node_n_children(app.dir_tree));
-#else
-#warning fix update_dir_node_list for non-mysql backends!
-#endif
 }
 
 
@@ -687,6 +624,7 @@ add_file(char* path)
 	char mime_string[64];
 	snprintf(mime_string, 64, "%s/%s", mime_type->media_type, mime_type->subtype);
 
+#if 0
 	char extn[64];
 	file_extension(filename, extn);
 	if(!strcmp(extn, "rfl")){
@@ -695,6 +633,7 @@ add_file(char* path)
 		ok = false;
 		goto out;
 	}
+#endif
 
 	sample_set_type_from_mime_string(sample, mime_string);
 
@@ -825,7 +764,7 @@ on_overview_done(gpointer data)
 
 			}else perr("failed to get row iter. row_ref=%p\n", sample->row_ref);
 			gtk_tree_path_free(treepath);
-		}else perr("failed to get path from rowref. row_ref=%p\n", sample->row_ref);
+		} else dbg(2, "no path for rowref. row_ref=%p\n", sample->row_ref); //this is not an error. The row may not be part of the current search.
 	} else pwarn("rowref not set!\n");
 
 	sample_free(sample);
@@ -924,9 +863,10 @@ update_row(GtkWidget *widget, gpointer user_data)
 		}
 		gtk_list_store_set(app.store, &iter, COL_ICON, iconbuf, -1);
 
-		backend.update_online(id, online);
-
-		statusbar_print(1, "online status updated (%s)", online ? "online" : "not online");
+		if(backend.update_online(id, online)){
+			statusbar_print(1, "online status updated (%s)", online ? "online" : "not online");
+		}else
+			statusbar_print(1, "error! online status not updated");
 	}
 	g_list_free(selectionlist);
 	//g_date_free(date);
@@ -951,7 +891,7 @@ edit_row(GtkWidget *widget, gpointer user_data)
 		GtkTreeIter iter;
 		if(gtk_tree_model_get_iter(GTK_TREE_MODEL(app.store), &iter, treepath)){
 			gchar* path_str = gtk_tree_model_get_string_from_iter(GTK_TREE_MODEL(app.store), &iter);
-			dbg(0, "path=%s", path_str);
+			dbg(2, "path=%s", path_str);
 
 			GtkTreeViewColumn* focus_column = app.col_tags;
 			GtkCellRenderer*   focus_cell   = app.cell_tags;
@@ -964,8 +904,8 @@ edit_row(GtkWidget *widget, gpointer user_data)
 			//g_signal_handlers_unblock_by_func(treeview, cursor_changed, self);
 
 
+			g_free(path_str);
 		} else perr("cannot get iter.\n");
-		//free path_str ??
 		gtk_tree_path_free(treepath);
 	}
 	g_list_free(selectionlist);
@@ -1144,117 +1084,6 @@ keyword_is_dupe(char* new, char* existing)
 
 	g_strfreev(split);
 	return found;
-}
-
-
-void
-tag_edit_start(int tnum)
-{
-  /*
-  initiate the inplace renaming of a tag label in the inspector following a double-click.
-
-  -rename widget has had an extra ref added at creation time, so we dont have to do it here.
-
-  -current strategy is too swap the non-editable gtklabel with the editable gtkentry widget.
-  -fn is fragile in that it makes too many assumptions about the widget layout (widget parent).
-
-  FIXME global keyboard shortcuts are still active during editing?
-  FIXME add ESC key to stop editing.
-  */
-
-  PF;
-
-  static gulong handler1 = 0; // the edit box "focus_out" handler.
-  //static gulong handler2 = 0; // the edit box RETURN key trap.
-  
-  GtkWidget* parent = app.inspector->tags_ev;
-  GtkWidget* edit   = app.inspector->edit;
-  GtkWidget *label = app.inspector->tags;
-
-  if(!GTK_IS_WIDGET(app.inspector->edit)){ perr("edit widget missing.\n"); return;}
-  if(!GTK_IS_WIDGET(label))              { perr("label widget is missing.\n"); return;}
-
-  //show the rename widget:
-  gtk_entry_set_text(GTK_ENTRY(app.inspector->edit), gtk_label_get_text(GTK_LABEL(label)));
-  gtk_widget_ref(label);//stops gtk deleting the widget.
-  gtk_container_remove(GTK_CONTAINER(parent), label);
-  gtk_container_add   (GTK_CONTAINER(parent), app.inspector->edit);
-
-  //our focus-out could be improved by properly focussing other widgets when clicked on (widgets that dont catch events?).
-
-  if(handler1) g_signal_handler_disconnect((gpointer)edit, handler1);
-  
-  handler1 = g_signal_connect((gpointer)app.inspector->edit, "focus-out-event", G_CALLBACK(tag_edit_stop), GINT_TO_POINTER(0));
-
-  /*
-  //this signal is no good as it quits when you move the mouse:
-  //g_signal_connect ((gpointer)arrange->wrename, "leave-notify-event", G_CALLBACK(track_label_edit_stop), 
-  //								GINT_TO_POINTER(tnum));
-  
-  if(handler2) g_signal_handler_disconnect((gpointer)arrange->wrename, handler2);
-  handler2 =   g_signal_connect(G_OBJECT(arrange->wrename), "key-press-event", 
-  								G_CALLBACK(track_entry_key_press), GINT_TO_POINTER(tnum));//traps the RET key.
-  */
-
-  //grab_focus allows us to start typing imediately. It also selects the whole string.
-  gtk_widget_grab_focus(GTK_WIDGET(app.inspector->edit));
-}
-
-
-void
-tag_edit_stop(GtkWidget *widget, GdkEventCrossing *event, gpointer user_data)
-{
-  /*
-  tidy up widgets and notify core of label change.
-  called following a focus-out-event for the gtkEntry renaming widget.
-  -track number should correspond to the one being edited...???
-
-  warning! if called incorrectly, this fn can cause mysterious segfaults!!
-  Is it something to do with multiple focus-out events? This function causes the
-  rename widget to lose focus, it can run a 2nd time before completing the first: segfault!
-  Currently it works ok if focus is removed before calling.
-  */
-
-  //static gboolean busy = false;
-  //if(busy){"track_label_edit_stop(): busy!\n"; return;} //only run once at a time!
-  //busy = true;
-
-  GtkWidget* edit = app.inspector->edit;
-  GtkWidget* parent = app.inspector->tags_ev;
-
-  //g_signal_handler_disconnect((gpointer)edit, handler_id);
-  
-  //printf("track_label_edit_stop(): wrename_parent=%p.\n", arrange->wrename->parent);
-  //printf("track_label_edit_stop(): label_parent  =%p.\n", trkA[tnum]->wlabel);
-  
-  //printf("w:%p is_widget: %i\n", trkA[tnum]->wlabel, GTK_IS_WIDGET(trkA[tnum]->wlabel));
-
-  //make sure the rename widget is being shown:
-  /*
-  if(edit->parent != parent){printf(
-    "tags_edit_stop(): info: entry widget not in correct container! trk probably changed. parent=%p\n",
-	   							arrange->wrename->parent); }
-  */
-	   
-  //change the text in the label:
-  gtk_label_set_text(GTK_LABEL(app.inspector->tags), gtk_entry_get_text(GTK_ENTRY(edit)));
-  //printf("track_label_edit_stop(): text set.\n");
-
-  //update the data:
-  //update the string for the channel that the current track is using:
-  //int ch = track_get_ch_idx(tnum);
-  row_set_tags_from_id(app.inspector->row_id, app.inspector->row_ref, gtk_entry_get_text(GTK_ENTRY(edit)));
-
-  //swap back to the normal label:
-  gtk_container_remove(GTK_CONTAINER(parent), edit);
-  //gtk_container_remove(GTK_CONTAINER(arrange->wrename->parent), arrange->wrename);
-  //printf("track_label_edit_stop(): wrename unparented.\n");
-  
-  gtk_container_add(GTK_CONTAINER(parent), app.inspector->tags);
-  gtk_widget_unref(app.inspector->tags); //remove 'artificial' ref added in edit_start.
-  
-  dbg(0, "finished.");
-  //busy = false;
 }
 
 
@@ -1488,6 +1317,9 @@ set_backend(BackendType type)
 			backend.search_iter_new  = mysql__search_iter_new;
 			backend.search_iter_next = mysql__search_iter_next_;
 			backend.search_iter_free = mysql__search_iter_free;
+			backend.dir_iter_new     = mysql__dir_iter_new;
+			backend.dir_iter_next    = mysql__dir_iter_next;
+			backend.dir_iter_free    = mysql__dir_iter_free;
 			backend.insert           = mysql__insert;
 			backend.delete           = mysql__delete_row;
 			backend.disconnect       = mysql__disconnect;
@@ -1504,6 +1336,9 @@ set_backend(BackendType type)
 			backend.search_iter_new  = sqlite__search_iter_new;
 			backend.search_iter_next = sqlite__search_iter_next;
 			backend.search_iter_free = sqlite__search_iter_free;
+			backend.dir_iter_new     = sqlite__dir_iter_new;
+			backend.dir_iter_next    = sqlite__dir_iter_next;
+			backend.dir_iter_free    = sqlite__dir_iter_free;
 			backend.insert           = sqlite__insert;
 			backend.delete           = sqlite__delete_row;
 			backend.disconnect       = sqlite__disconnect;
@@ -1519,6 +1354,9 @@ set_backend(BackendType type)
 			#ifdef USE_TRACKER
 			backend.search_iter_new  = tracker__search_iter_new;
 			backend.search_iter_free = tracker__search_iter_free;
+			backend.dir_iter_new     = tracker__dir_iter_new;
+			backend.dir_iter_next    = tracker__dir_iter_next;
+			backend.dir_iter_free    = tracker__dir_iter_free;
 			backend.insert           = tracker__insert;
 			backend.delete           = tracker__delete_row;
 			backend.update_colour    = tracker__update_colour;

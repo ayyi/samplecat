@@ -28,7 +28,9 @@ AYYI_SRC =
 AYYI_LIBS =
 endif
 
+if ENABLE_MYSQL
 MYSQL_SRC = db/mysql.c db/mysql.h
+endif
 
 if ENABLE_SQLITE
 SQLITE_SRC = db/sqlite.c db/sqlite.h
@@ -41,8 +43,8 @@ TRACKER_SRC = db/tracker.c db/tracker_.h
 endif
 
 samplecat_SOURCES = \
-	typedefs.h \
-	main.c main.h file_manager/rox/rox_global.h \
+	typedefs.h types.h \
+	main.c main.h \
 	window.c window.h \
 	listmodel.c listmodel.h \
 	listview.c listview.h \

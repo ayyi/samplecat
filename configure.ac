@@ -62,45 +62,58 @@ fi;
 
 dnl -----------------------------------------------------------------------------
 
-# test for mysql
-enable_mysql=no
+dnl test for mysql
+
 mysqlfail=false
-SAVE_LDFLAGS=$LDFLAGS
-SAVE_CPPFLAGS=$CPPFLAGS
-AC_MSG_CHECKING(for mysql)
-AC_ARG_WITH(mysql,
-  [  --with-mysql=PFX        base of MySQL installation],
-  [AC_MSG_RESULT("$with_mysql")
-   if test "$with_mysql" != "no"
-   then
-    if test "$with_mysql" != "yes"
-    then
-      LDFLAGS="-L$with_mysql/lib -L$with_mysql/lib/mysql $LDFLAGS $ZLIBS"
-      CPPFLAGS="-I$with_mysql/include $CPPFLAGS"
-    fi
-    AC_CHECK_HEADERS(mysql/mysql.h,
-     AC_CHECK_LIB(mysqlclient, mysql_init,
-      MYSQL_LDFLAGS=`/usr/bin/mysql_config --libs`
-      MYSQL_CFLAGS="-I$with_mysql/include"
 
-      enable_mysql=yes), [], [$CYGWIN_MYSQL_MAGIC])
-   fi
-  ],
-  [AC_MSG_RESULT([--with-mysql not specified])
-   LDFLAGS="-L/usr/lib/mysql $LDFLAGS $ZLIBS"
-   AC_CHECK_LIB(mysqlclient, mysql_init,
-    [AC_CHECK_HEADERS(mysql/mysql.h,
-      MYSQL_LDFLAGS=`/usr/bin/mysql_config --libs`
-      enable_mysql=yes
+AC_ARG_ENABLE(mysql,
+	[AC_HELP_STRING([--disable-mysql], [disable use of Mysql as backend])],
+	[enable_mysql="$enableval"],
+	[enable_mysql="auto"]
+)
 
-     , [], [$CYGWIN_MYSQL_MAGIC])])
-  ])
+if test x$enable_mysql = xno ; then
+	:
+else
+    AC_MSG_CHECKING(for mysql)
+    AC_ARG_WITH(mysql,
+      [  --with-mysql=PFX        base of MySQL installation],
+      [AC_MSG_RESULT("$with_mysql")
+       if test "$with_mysql" != "no"
+       then
+        if test "$with_mysql" != "yes"
+        then
+          LDFLAGS="-L$with_mysql/lib -L$with_mysql/lib/mysql $LDFLAGS $ZLIBS"
+          CPPFLAGS="-I$with_mysql/include $CPPFLAGS"
+        fi
+        AC_CHECK_HEADERS(mysql/mysql.h,
+         AC_CHECK_LIB(mysqlclient, mysql_init,
+          MYSQL_LDFLAGS=`/usr/bin/mysql_config --libs`
+          MYSQL_CFLAGS="-I$with_mysql/include"
+
+          enable_mysql=yes), [], [$CYGWIN_MYSQL_MAGIC])
+       fi
+      ],
+      [AC_MSG_RESULT([--with-mysql not specified])
+       LDFLAGS="-L/usr/lib/mysql $LDFLAGS $ZLIBS"
+       AC_CHECK_LIB(mysqlclient, mysql_init,
+        [AC_CHECK_HEADERS(mysql/mysql.h,
+          MYSQL_LDFLAGS=`/usr/bin/mysql_config --libs`
+          enable_mysql=yes
+
+         , [], [$CYGWIN_MYSQL_MAGIC])])
+      ])
+fi
+
+# SAVE_LDFLAGS=$LDFLAGS
+# SAVE_CPPFLAGS=$CPPFLAGS
 
 AC_SUBST(MYSQL_LDFLAGS)
 AC_SUBST(MYSQL_CFLAGS)
 if test x$enable_mysql = xyes; then
    AC_DEFINE(USE_MYSQL,1,[Enable Mysql as backend])
 fi
+AM_CONDITIONAL(ENABLE_MYSQL, test "$enable_mysql" = "yes")
 
 dnl -----------------------------------------------------------------------------
 
@@ -203,16 +216,21 @@ AC_SUBST(DBUS_LDFLAGS)
 
 dnl -----------------------------------------------------------------------------
 
-AC_CHECK_LIB(trackerclient, tracker_connect, [tracker_found=yes])
-AM_CONDITIONAL(ENABLE_TRACKER, test "$tracker_found" = "yes")
-if `test "$tracker_found" = "yes"`; then
-    AC_DEFINE(USE_TRACKER, 1, Use Tracker metadata daemon)
-    enable_tracker="yes"
-    TRACKER_CFLAGS=`pkg-config --cflags-only-I tracker`
-    TRACKER_LDFLAGS=`pkg-config --libs-only-l tracker`
+AC_ARG_ENABLE(tracker, AS_HELP_STRING([--enable-tracker],[build with tracker support]),enable_tracker=$enableval,enable_tracker=auto)
+if `test "$enable_tracker" = "yes"`; then
+	AC_CHECK_LIB(trackerclient, tracker_connect, [tracker_found=yes])
+	if `test "$tracker_found" = "yes"`; then
+		AC_DEFINE(USE_TRACKER, 1, Use Tracker metadata daemon)
+		enable_tracker="yes"
+		TRACKER_CFLAGS=`pkg-config --cflags-only-I tracker`
+		TRACKER_LDFLAGS=`pkg-config --libs-only-l tracker`
+	else
+		enable_tracker="no"
+	fi;
 else
-    enable_tracker="no"
+	enable_tracker="no"
 fi;
+AM_CONDITIONAL(ENABLE_TRACKER, test "$tracker_found" = "yes")
 AC_SUBST(TRACKER_CFLAGS)
 AC_SUBST(TRACKER_LDFLAGS)
 

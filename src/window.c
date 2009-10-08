@@ -11,8 +11,6 @@
 #include <gimp/gimpactiongroup.h>
 #include "support.h"
 #include "dh-link.h"
-#include "rox/rox_global.h"
-#include "rox/dir.h"
 #include "main.h"
 #include "listview.h"
 #include "menu.h"
@@ -20,7 +18,9 @@
 #include "file_view.h"
 #include "inspector.h"
 #include "dh_tree.h"
+#ifdef USE_MYSQL
 #include "db/mysql.h"
+#endif
 #include "colour_box.h"
 #include "window.h"
 
@@ -40,11 +40,11 @@ static gboolean   window_on_configure             (GtkWidget*, GdkEventConfigure
 static gboolean   filter_new                      ();
 static GtkWidget* scrolled_window_new             ();
 static void       window_on_fileview_row_selected (GtkTreeView*, gpointer);
-static void       on_category_set_clicked         (GtkComboBox*, gpointer user_data);
+static void       on_category_set_clicked         (GtkComboBox*, gpointer);
 static gboolean   row_clear_tags                  (GtkTreeIter*, int id);
 static void       menu__add_to_db                 (GtkMenuItem*, gpointer);
 static void       make_fm_menu_actions();
-static gboolean   dir_tree_on_link_selected       (GObject*, DhLink*, gpointer data);
+static gboolean   dir_tree_on_link_selected       (GObject*, DhLink*, gpointer);
 static GtkWidget* message_panel__new              ();
 
 
@@ -136,7 +136,7 @@ GtkWindow
 	gtk_paned_add1(GTK_PANED(r_vpaned), scroll);
 
 	listview__new();
-	if(0 && !mysql__is_connected()) gtk_widget_set_no_show_all(app.view, true); //dont show main view if no database.
+	if(0 && BACKEND_IS_NULL) gtk_widget_set_no_show_all(app.view, true); //dont show main view if no database.
 	gtk_container_add(GTK_CONTAINER(app.scroll), app.view);
 
 	//--------
@@ -153,11 +153,11 @@ GtkWindow
 		gtk_widget_show(file_view);
 		g_signal_connect(G_OBJECT(file_view), "cursor-changed", G_CALLBACK(window_on_fileview_row_selected), NULL);
 
-		void window_on_theme_changed(GtkWidget* widget, gpointer data)
+		void window_on_dir_changed(GtkWidget* widget, gpointer data)
 		{
 			PF;
 		}
-		g_signal_connect(G_OBJECT(file_manager__get_signaller()), "theme_changed", G_CALLBACK(window_on_theme_changed), NULL);
+		g_signal_connect(G_OBJECT(file_manager__get_signaller()), "dir_changed", G_CALLBACK(window_on_dir_changed), NULL);
 
 		make_fm_menu_actions();
 
@@ -335,7 +335,7 @@ left_pane()
 	gtk_widget_show(vpaned2);
 	gtk_paned_add1(GTK_PANED(app.vpaned), vpaned2);
 
-	if(mysql__is_connected()){
+	if(!BACKEND_IS_NULL){
 #ifndef NO_USE_DEVHELP_DIRTREE
 		GtkWidget* tree = dir_tree_new();
 		GtkWidget* scroll = scrolled_window_new();
@@ -487,7 +487,7 @@ message_panel__new()
 	gtk_box_pack_start((GtkBox*)vbox, hbox, FALSE, FALSE, 2);
 #endif
 
-	if(mysql__is_connected()) gtk_widget_set_no_show_all(app.msg_panel, true); //initially hidden.
+	if(!BACKEND_IS_NULL) gtk_widget_set_no_show_all(app.msg_panel, true); //initially hidden.
 	return vbox;
 }
 
@@ -509,24 +509,6 @@ gboolean
 tag_selector_new()
 {
 	//the tag _edit_ selector
-
-	/*
-	//GtkWidget* combo = gtk_combo_box_new_text();
-	GtkWidget* combo = app.category = gtk_combo_box_new_text();
-	GtkComboBox* combo_ = GTK_COMBO_BOX(combo);
-	gtk_combo_box_append_text(combo_, "no categories");
-	gtk_combo_box_append_text(combo_, "drums");
-	gtk_combo_box_append_text(combo_, "perc");
-	gtk_combo_box_append_text(combo_, "keys");
-	gtk_combo_box_append_text(combo_, "strings");
-	gtk_combo_box_append_text(combo_, "fx");
-	gtk_combo_box_append_text(combo_, "impulses");
-	gtk_combo_box_set_active(combo_, 0);
-	gtk_widget_show(combo);	
-	gtk_box_pack_start(GTK_BOX(app.toolbar2), combo, EXPAND_FALSE, FALSE, 0);
-	g_signal_connect(combo, "changed", G_CALLBACK(on_category_changed), NULL);
-	//gtk_combo_box_get_active_text(combo);
-	*/
 
 	GtkWidget* combo2 = app.category = gtk_combo_box_entry_new_text();
 	GtkComboBox* combo_ = GTK_COMBO_BOX(combo2);
@@ -552,18 +534,34 @@ tagshow_selector_new()
 {
 	//the view-filter tag-select.
 
+	#define ALL_CATEGORIES "all categories"
+
 	GtkWidget* combo = app.view_category = gtk_combo_box_new_text();
 	GtkComboBox* combo_ = GTK_COMBO_BOX(combo);
-	gtk_combo_box_append_text(combo_, "all categories");
-	//dbg(0, "  size=%i", sizeof(categories));
+	gtk_combo_box_append_text(combo_, ALL_CATEGORIES);
 	int i; for(i=0;i<A_SIZE(categories);i++){
 		gtk_combo_box_append_text(combo_, categories[i]);
 	}
 	gtk_combo_box_set_active(combo_, 0);
 	gtk_widget_show(combo);	
 	gtk_box_pack_start(GTK_BOX(app.toolbar), combo, EXPAND_FALSE, FALSE, 0);
+
+	void
+	on_view_category_changed(GtkComboBox *widget, gpointer user_data)
+	{
+		//update the sample list with the new view-category.
+		PF;
+
+		if (app.search_category){ g_free(app.search_category); app.search_category = NULL; }
+		char* category = gtk_combo_box_get_active_text(GTK_COMBO_BOX(app.view_category));
+		if (strcmp(category, ALL_CATEGORIES)){
+			app.search_category = category;
+		}
+		else g_free(category);
+
+		do_search(app.search_phrase, app.search_dir);
+	}
 	g_signal_connect(combo, "changed", G_CALLBACK(on_view_category_changed), NULL);
-	//gtk_combo_box_get_active_text(combo);
 
 	return TRUE;
 }
@@ -665,16 +663,6 @@ on_category_set_clicked(GtkComboBox *widget, gpointer user_data)
 		}else{
 			return false;
 		}
-		/*
-		char sql[1024];
-		snprintf(sql, 1024, "UPDATE samples SET keywords='%s' WHERE id=%i", tags_new, id);
-		dbg(1, "sql=%s", sql);
-		if(mysql_query(&app.mysql, sql)){
-			perr("update failed! sql=%s\n", sql);
-			return false;
-		}
-		return true;
-		*/
 	}
 
 	//selected category?
@@ -693,7 +681,7 @@ on_category_set_clicked(GtkComboBox *widget, gpointer user_data)
 			gchar *fname; gchar *tags;
 			int id;
 			gtk_tree_model_get(GTK_TREE_MODEL(app.store), &iter, COL_NAME, &fname, COL_KEYWORDS, &tags, COL_IDX, &id, -1);
-			dbg(0, "id=%i name=%s", id, fname);
+			dbg(1, "id=%i name=%s", id, fname);
 
 			if(!strcmp(category, "no categories")) row_clear_tags(&iter, id);
 			else{

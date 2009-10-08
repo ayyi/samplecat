@@ -281,7 +281,7 @@ get_hit_count (GPtrArray* out_array, GError* error, gpointer user_data)
 }
 
 gboolean
-tracker__search_iter_new(char* search, char* dir, int* n_results)
+tracker__search_iter_new(char* search, char* dir, const char* category, int* n_results)
 {
 	PF;
 	g_return_val_if_fail(tc, false);
@@ -476,10 +476,30 @@ tracker__search_iter_free()
 }
 
 
+void
+tracker__dir_iter_new()
+{
+	gwarn("FIXME\n");
+}
+
+
+char*
+tracker__dir_iter_next()
+{
+	return NULL;
+}
+
+
+void
+tracker__dir_iter_free()
+{
+}
+
+
 gboolean
 tracker__update_colour(int id, int colour)
 {
-	pwarn("FIXME");
+	pwarn("FIXME\n");
 	return true;
 }
 

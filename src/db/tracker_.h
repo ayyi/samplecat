@@ -9,9 +9,13 @@ gboolean         tracker__update_pixbuf    (sample*);
 int              tracker__insert           (sample*, MIME_type*);
 gboolean         tracker__delete_row       (int id);
 
-gboolean         tracker__search_iter_new  (char* search, char* dir, int* n_results);
+gboolean         tracker__search_iter_new  (char* search, char* dir, const char* category, int* n_results);
 SamplecatResult* tracker__search_iter_next ();
 void             tracker__search_iter_free ();
+
+void             tracker__dir_iter_new     ();
+char*            tracker__dir_iter_next    ();
+void             tracker__dir_iter_free    ();
 
 gboolean         tracker__update_colour    (int id, int colour);
 gboolean         tracker__update_keywords  (int id, const char*);

@@ -51,14 +51,15 @@ overview_thread(gpointer data)
 			msg_list = g_list_append(msg_list, message);
 		}
 
-		while(msg_list!=NULL){
+		while(msg_list != NULL){
 			sample* sample = (struct _sample*)g_list_first(msg_list)->data;
 			dbg(1, "sample=%p filename=%s.", sample, sample->filename);
 			make_overview(sample);
 			g_idle_add(on_overview_done, sample); //notify();
 			msg_list = g_list_remove(msg_list, sample);
 		}
-		sleep(1); //FIXME
+		sleep(1); //FIXME this is a bit primitive - maybe the thread should have its own GMainLoop
+		          //-even better is to use a blocking call on the async queue, waiting for messages.
 	}
 }
 
