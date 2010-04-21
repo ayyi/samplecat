@@ -218,12 +218,15 @@ dnl ----------------------------------------------------------------------------
 
 AC_ARG_ENABLE(tracker, AS_HELP_STRING([--enable-tracker],[build with tracker support]),enable_tracker=$enableval,enable_tracker=auto)
 if `test "$enable_tracker" = "yes"`; then
-	AC_CHECK_LIB(trackerclient, tracker_connect, [tracker_found=yes])
+	dnl AC_CHECK_LIB(tracker-client-0.7, tracker_client_new, [tracker_found=yes])
+	AC_CHECK_LIB(tracker-client-0.9, tracker_client_new, [tracker_found=yes])
 	if `test "$tracker_found" = "yes"`; then
 		AC_DEFINE(USE_TRACKER, 1, Use Tracker metadata daemon)
 		enable_tracker="yes"
-		TRACKER_CFLAGS=`pkg-config --cflags-only-I tracker`
-		TRACKER_LDFLAGS=`pkg-config --libs-only-l tracker`
+		dnl TRACKER_CFLAGS=`pkg-config --cflags-only-I tracker-client-0.7`
+		dnl TRACKER_LDFLAGS=`pkg-config --libs-only-l tracker-client-0.7`
+		TRACKER_CFLAGS=`pkg-config --cflags-only-I tracker-client-0.9`
+		TRACKER_LDFLAGS=`pkg-config --libs-only-l tracker-client-0.9`
 	else
 		enable_tracker="no"
 	fi;

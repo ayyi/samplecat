@@ -20,6 +20,7 @@
 
 extern struct _app app;
 extern Filer filer;
+extern unsigned debug;
 
 
 sample*
@@ -99,6 +100,39 @@ sample_free(sample* sample)
 {
 	if(sample->row_ref) gtk_tree_row_reference_free(sample->row_ref);
 	g_free(sample);
+}
+
+
+gboolean
+sample_get_file_sndfile_info(sample* sample)
+{
+	char *filename = sample->filename;
+
+	SF_INFO        sfinfo;   //the libsndfile struct pointer
+	SNDFILE        *sffile;
+	sfinfo.format  = 0;
+
+	if(!(sffile = sf_open(filename, SFM_READ, &sfinfo))){
+		dbg(0, "not able to open input file %s.", filename);
+		puts(sf_strerror(NULL));    // print the error message from libsndfile:
+		int e = sf_error(NULL);
+		dbg(0, "error=%i", e);
+		return false;
+	}
+
+	char chanwidstr[64];
+	if     (sfinfo.channels==1) snprintf(chanwidstr, 64, "mono");
+	else if(sfinfo.channels==2) snprintf(chanwidstr, 64, "stereo");
+	else                        snprintf(chanwidstr, 64, "channels=%i", sfinfo.channels);
+	if(debug) printf("%iHz %s frames=%i\n", sfinfo.samplerate, chanwidstr, (int)sfinfo.frames);
+	sample->channels    = sfinfo.channels;
+	sample->sample_rate = sfinfo.samplerate;
+	sample->length      = (sfinfo.frames * 1000) / sfinfo.samplerate;
+
+	if(sample->channels<1 || sample->channels>100){ dbg(0, "bad channel count: %i", sample->channels); return false; }
+	if(sf_close(sffile)) perr("bad file close.\n");
+
+	return true;
 }
 
 

@@ -57,6 +57,15 @@ listmodel__add_result(SamplecatResult* result)
 {
 	g_return_if_fail(result);
 
+	sample* sample = NULL;
+	if(!result->sample_rate){
+		sample = sample_new_from_result(result);
+		sample_get_file_sndfile_info(sample);
+		result->sample_rate = sample->sample_rate;
+		result->length = sample->length;
+		result->channels = sample->channels;
+	}
+
 	char samplerate_s[32]; float samplerate = result->sample_rate; samplerate_format(samplerate_s, samplerate);
 	char* keywords = result->keywords ? result->keywords : "";
 	char length[64]; format_time_int(length, result->length);
@@ -107,12 +116,13 @@ listmodel__add_result(SamplecatResult* result)
 		GtkTreeRowReference* row_ref = gtk_tree_row_reference_new(GTK_TREE_MODEL(app.store), treepath);
 		gtk_tree_path_free(treepath);
 		result->row_ref = row_ref;
+		if(sample) sample->row_ref = result->row_ref;
 	}
 
 	if(!result->overview){
 		if(result->row_ref){
 			if(!mimestring_is_unsupported(result->mimetype)){
-				sample* sample = sample_new_from_result(result);
+				if(!sample) sample = sample_new_from_result(result);
 				dbg(2, "no overview: sending request: filename=%s", result->sample_name);
 
 				g_async_queue_push(app.msg_queue, sample);
@@ -137,7 +147,7 @@ listmodel__get_filename_from_id(int id)
 	do {
 		gtk_tree_model_get(GTK_TREE_MODEL(app.store), &iter, COL_IDX, &i, COL_NAME, &fname, COL_FNAME, &path, -1);
 		if(i == id){
-			dbg(0, "found %s/%s", path, fname);
+			dbg(2, "found %s/%s", path, fname);
 			return g_strdup_printf("%s/%s", path, fname);
 		}
 		row++;

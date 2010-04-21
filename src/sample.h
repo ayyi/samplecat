@@ -21,5 +21,6 @@ sample*     sample_new_from_fileview (GtkTreeModel*, GtkTreeIter*);
 sample*     sample_new_from_result   (SamplecatResult*);
 void        sample_free              (sample*);
 
+gboolean    sample_get_file_sndfile_info(sample*);
 void        sample_set_type_from_mime_string(sample*, char*);
 

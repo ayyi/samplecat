@@ -200,7 +200,7 @@ inspector_update_from_listview(GtkTreePath *path)
 				gtk_label_set_text(GTK_LABEL(i->name), basename(sample->filename));
 				return;
 			}
-			if(!get_file_info_sndfile(sample)){
+			if(!sample_get_file_sndfile_info(sample)){
 				perr("cannot open file?\n");
 				return;
 			}

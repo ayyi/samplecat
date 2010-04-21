@@ -10,6 +10,8 @@ char warn[32];
 
 #define PALETTE_SIZE 17
 
+#define MAX_DISPLAY_ROWS 1000
+
 #define POINTER_OK_NULL(A, B, C) if((unsigned)A < 1024){ errprintf("%s(): bad %s pointer (%p).\n", B, C, A); return NULL; }
 #ifndef USE_AYYI
 #define P_GERR if(error){ errprintf2("%s\n", error->message); g_error_free(error); error = NULL; }
@@ -184,7 +186,6 @@ gboolean    mimetype_is_unsupported(MIME_type*, char* mime_string);
 gboolean    add_file(char* path);
 gboolean    add_dir(char* uri);
 gboolean    get_file_info(sample*);
-gboolean    get_file_info_sndfile(sample*);
 gboolean    on_overview_done(gpointer sample);
 
 void        db_update_pixbuf(sample*);

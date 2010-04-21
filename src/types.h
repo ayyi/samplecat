@@ -1,5 +1,5 @@
 
-//TODO this is annoying similar to struct Sample - consider merging...
+//TODO this is annoyingly similar to struct Sample - consider merging...
 struct _samplecat_result
 {
 	int                  idx;

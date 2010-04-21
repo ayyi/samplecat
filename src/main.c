@@ -402,7 +402,6 @@ do_search(char *search, char *dir)
 {
 	//fill the display with the results for the given search phrase.
 
-	#define MAX_DISPLAY_ROWS 1000
 	PF;
 
 	if(BACKEND_IS_NULL) return;
@@ -437,7 +436,7 @@ do_search(char *search, char *dir)
 			#endif
 			){
 			int row_count = 0;
-			unsigned long *lengths;
+			unsigned long* lengths;
 			SamplecatResult* result;
 			while((result = backend.search_iter_next(&lengths)) && row_count < MAX_DISPLAY_ROWS){
 				if(app.no_gui){
@@ -477,6 +476,8 @@ do_search(char *search, char *dir)
 
 			if(0 && row_count < MAX_DISPLAY_ROWS){
 				statusbar_print(1, "%i samples found.", row_count);
+			}else if(!row_count){
+				statusbar_print(1, "no samples found. filters: dir=%s", app.search_dir);
 			}else{
 				statusbar_print(1, "showing %i samples", row_count);
 			}
@@ -582,6 +583,8 @@ gboolean
 mimetype_is_unsupported(MIME_type* mime_type, char* mime_string)
 {
 	//TODO remove 2nd arg
+
+	g_return_val_if_fail(mime_type, true);
 
 	char types[][16] = {"application", "image", "text", "video"};
 	int i; for(i=0;i<G_N_ELEMENTS(types);i++){
@@ -706,40 +709,7 @@ get_file_info(sample* sample)
 #else
 	if(0){}
 #endif
-	else                            return get_file_info_sndfile(sample);
-}
-
-
-gboolean
-get_file_info_sndfile(sample* sample)
-{
-	char *filename = sample->filename;
-
-	SF_INFO        sfinfo;   //the libsndfile struct pointer
-	SNDFILE        *sffile;
-	sfinfo.format  = 0;
-
-	if(!(sffile = sf_open(filename, SFM_READ, &sfinfo))){
-		dbg(0, "not able to open input file %s.", filename);
-		puts(sf_strerror(NULL));    // print the error message from libsndfile:
-		int e = sf_error(NULL);
-		dbg(0, "error=%i", e);
-		return false;
-	}
-
-	char chanwidstr[64];
-	if     (sfinfo.channels==1) snprintf(chanwidstr, 64, "mono");
-	else if(sfinfo.channels==2) snprintf(chanwidstr, 64, "stereo");
-	else                        snprintf(chanwidstr, 64, "channels=%i", sfinfo.channels);
-	if(debug) printf("%iHz %s frames=%i\n", sfinfo.samplerate, chanwidstr, (int)sfinfo.frames);
-	sample->channels    = sfinfo.channels;
-	sample->sample_rate = sfinfo.samplerate;
-	sample->length      = (sfinfo.frames * 1000) / sfinfo.samplerate;
-
-	if(sample->channels<1 || sample->channels>100){ dbg(0, "bad channel count: %i", sample->channels); return false; }
-	if(sf_close(sffile)) perr("bad file close.\n");
-
-	return true;
+	else                            return sample_get_file_sndfile_info(sample);
 }
 
 

@@ -215,11 +215,10 @@ reread_mime_files(void)
 static MIME_type*
 get_mime_type(const gchar *type_name, gboolean can_create)
 {
-	if(!type_name){ errprintf("get_mime_type(): bad arg: type_name NULL\n"); return NULL; }
-	MIME_type *mtype = NULL;
+	if(!type_name){ errprintf("%s(): bad arg: type_name NULL\n", __func__); return NULL; }
 	gchar *slash;
 
-	mtype = g_hash_table_lookup(type_hash, type_name);
+	MIME_type* mtype = g_hash_table_lookup(type_hash, type_name);
 	if (mtype || !can_create) return mtype;
 	dbg(2, "not found in cache: %s", type_name);
 
@@ -334,8 +333,7 @@ MIME_type *type_get_type(const guchar *path)
 MIME_type*
 type_from_path(const char *path)
 {
-	if(debug>-1) printf("type_from_path()...\n");
-	const char *type_name;
+	if(debug) printf("type_from_path()...\n");
 
 	/* Check for extended attribute first */
 	/*
@@ -345,8 +343,7 @@ type_from_path(const char *path)
 	*/
 
 	/* Try name and contents next */
-	type_name = xdg_mime_get_mime_type_for_file(path);
-	dbg(2, "type_name=%s.", type_name);
+	const char* type_name = xdg_mime_get_mime_type_for_file(path);
 	if (type_name) return get_mime_type(type_name, TRUE);
 
 	return NULL;
