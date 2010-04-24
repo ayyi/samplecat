@@ -345,30 +345,10 @@ is_sub_dir(const char *sub_obj, const char *parent)
 gboolean
 ensure_config_dir()
 {
-	gboolean ret = FALSE;
 	static char* path = NULL;
-	path = g_strdup_printf("%s/.config/" PACKAGE, g_get_home_dir()); //is static - don't free.
+	if(!path) path = g_strdup_printf("%s/.config/" PACKAGE, g_get_home_dir()); //is static - don't free.
 
-	if(file_exists(path)) ret = TRUE;
-	else{
-		char* config_dir = g_strdup_printf("%s/.config/", g_get_home_dir());
-		if(!file_exists(config_dir)){
-			if(mkdir(config_dir, 775)){
-				perr("cannot create config dir: %s", config_dir);
-			}
-		}
-		g_free(config_dir);
-		#warning
-		#warning ensure_config_dir: test create config directory.
-		#warning
-
-		if(!mkdir(path, 775)){
-			ret = TRUE;
-		}
-		else gwarn("cannot create config dir: %s", path);
-	}
-	//g_free(path); -- no, is static.
-	return ret;
+	return (!g_mkdir_with_parents(path, 488));
 }
 
 

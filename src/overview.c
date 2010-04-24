@@ -67,65 +67,65 @@ overview_thread(gpointer data)
 GdkPixbuf*
 make_overview(sample* sample)
 {
-  GdkPixbuf* pixbuf = NULL;
+	GdkPixbuf* pixbuf = NULL;
 #ifdef HAVE_FLAC_1_1_1
-  if (sample->filetype == TYPE_FLAC) pixbuf = make_overview_flac(sample);
+	if (sample->filetype == TYPE_FLAC) pixbuf = make_overview_flac(sample);
 #else
-  if(0){}
+	if(0){}
 #endif
-  else pixbuf = make_overview_sndfile(sample);
-  return pixbuf;
+	else pixbuf = make_overview_sndfile(sample);
+	return pixbuf;
 }
 
 
 GdkPixbuf*
 make_overview_sndfile(sample* sample)
 {
-  /*
-  load a file onto a pixbuf.
+	/*
+	load a file onto a pixbuf.
 
-  */
-  PF;
+	*/
+	PF;
 
-  char* filename = sample->filename;
+	char* filename = sample->filename;
 
-  SF_INFO        sfinfo;   //the libsndfile struct pointer
-  SNDFILE        *sffile;
-  sfinfo.format  = 0;
-  int            readcount;
+	SF_INFO        sfinfo;   //the libsndfile struct pointer
+	SNDFILE        *sffile;
+	sfinfo.format  = 0;
+	int            readcount;
 
-  dbg (1, "row_ref=%p", sample->row_ref);
+	dbg (2, "row_ref=%p", sample->row_ref);
 
-  if(!(sffile = sf_open(filename, SFM_READ, &sfinfo))){
-    perr("not able to open input file %s.\n", filename);
-    puts(sf_strerror(NULL));    // print the error message from libsndfile
-    return NULL;
-  }
+	if(!(sffile = sf_open(filename, SFM_READ, &sfinfo))){
+		if(debug){
+			perr("not able to open input file %s.\n", filename);
+			puts(sf_strerror(NULL));    // print the error message from libsndfile
+		}
+		return NULL;
+	}
 
-  GdkPixbuf* pixbuf = gdk_pixbuf_new(GDK_COLORSPACE_RGB, 1, //HAS_ALPHA_FALSE,
-                                     8,                     //int bits_per_sample
-                                     OVERVIEW_WIDTH, OVERVIEW_HEIGHT);
-  pixbuf_clear(pixbuf, &app.fg_colour);
+	GdkPixbuf* pixbuf = gdk_pixbuf_new(GDK_COLORSPACE_RGB, HAS_ALPHA_TRUE, BITS_PER_CHAR_8, OVERVIEW_WIDTH, OVERVIEW_HEIGHT);
+	pixbuf_clear(pixbuf, &app.fg_colour);
 
-  //check colour contrast
-  if(
-    (app.fg_colour.red   >> 8 == sample->bg_colour.red   >> 8) &&
-    (app.fg_colour.green >> 8 == sample->bg_colour.green >> 8) &&
-    (app.fg_colour.blue  >> 8 == sample->bg_colour.blue  >> 8)
-    //*app.fg_colour == *sample->bg_colour
-  ){
-    dbg(1, "bad colour combination! overriding set colours");
-	if(is_dark(&app.fg_colour)){
-    	sample->bg_colour.red   = 0xdfff;
-    	sample->bg_colour.green = 0xdfff;
-    	sample->bg_colour.blue  = 0xdfff;
-    }
-    else{
-      sample->bg_colour.red   = 0x2000;
-      sample->bg_colour.green = 0x2000;
-      sample->bg_colour.blue  = 0x2000;
-    }
-  }
+	//check colour contrast
+	if(
+		(app.fg_colour.red   >> 8 == sample->bg_colour.red   >> 8) &&
+		(app.fg_colour.green >> 8 == sample->bg_colour.green >> 8) &&
+		(app.fg_colour.blue  >> 8 == sample->bg_colour.blue  >> 8)
+		//*app.fg_colour == *sample->bg_colour
+	){
+		dbg(1, "bad colour combination! overriding set colours");
+		if(is_dark(&app.fg_colour)){
+			sample->bg_colour.red   = 0xdfff;
+			sample->bg_colour.green = 0xdfff;
+			sample->bg_colour.blue  = 0xdfff;
+		}
+		else{
+			sample->bg_colour.red   = 0x2000;
+			sample->bg_colour.green = 0x2000;
+			sample->bg_colour.blue  = 0x2000;
+		}
+	}
 
   //FIXME cairo doesnt support any 24bpp formats.
   cairo_format_t format;

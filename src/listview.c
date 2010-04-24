@@ -326,6 +326,50 @@ listview__item_set_colour(GtkTreePath* path, unsigned colour)
 }
 
 
+void
+listview__add_item(sample* sample)
+{
+	g_return_if_fail(sample->id);
+
+	gchar* filename = g_path_get_basename(sample->filename);
+	gchar* filedir = g_path_get_dirname(sample->filename);
+
+	//TODO better to get this from sample?
+	MIME_type* mime_type = type_from_path(filename);
+	char mime_string[64];
+	snprintf(mime_string, 64, "%s/%s", mime_type->media_type, mime_type->subtype);
+
+	char length_ms[64];
+	format_time_int(length_ms, sample->length);
+
+	char samplerate_s[32];
+	samplerate_format(samplerate_s, sample->sample_rate);
+
+	GtkTreeIter iter;
+	gtk_list_store_append(app.store, &iter);
+
+	//store a row reference:
+	GtkTreePath* treepath;
+	if((treepath = gtk_tree_model_get_path(GTK_TREE_MODEL(app.store), &iter))){
+		sample->row_ref = gtk_tree_row_reference_new(GTK_TREE_MODEL(app.store), treepath);
+		gtk_tree_path_free(treepath);
+	}else perr("failed to make treepath from inserted iter.\n");
+
+	dbg(2, "setting store... filename=%s mime=%s", filename, mime_string);
+	gtk_list_store_set(app.store, &iter,
+	                   COL_IDX, sample->id,
+	                   COL_NAME, filename,
+	                   COL_FNAME, filedir,
+	                   COL_LENGTH, length_ms,
+	                   COL_SAMPLERATE, samplerate_s,
+	                   COL_CHANNELS, sample->channels,
+	                   COL_MIMETYPE, mime_string,
+	                   -1);
+	g_free(filename);
+	g_free(filedir);
+}
+
+
 static void
 listview__dnd_get(GtkWidget *widget, GdkDragContext *context, GtkSelectionData *selection_data, guint info, guint time, gpointer data)
 {
@@ -565,7 +609,7 @@ listview__on_keywords_edited(GtkCellRendererText *cell, gchar *path_string, gcha
 	GtkTreePath* path = gtk_tree_path_new_from_string(path_string);
 	gtk_tree_model_get_iter(store, &iter, path);
 	gtk_tree_model_get(store, &iter, COL_IDX, &idx, COL_NAME, &filename, -1);
-	//dbg(0, "filename=%s", filename);
+	dbg(1, "filename=%s idx=%i", filename, idx);
 	gtk_tree_path_free(path);
 
 	//convert to lowercase:
@@ -574,26 +618,6 @@ listview__on_keywords_edited(GtkCellRendererText *cell, gchar *path_string, gcha
 
 	if(backend.update_keywords && backend.update_keywords(idx, new_text)){
 
-		/*
-		#define strmov(A,B) stpcpy((A),(B))
-		char sql[1024];
-		char* tmppos;
-		tmppos = strmov(sql, "UPDATE samples SET keywords='");
-		//tmppos += mysql_real_escape_string(conn, tmppos, fbuffer, fsize);
-		tmppos = strmov(tmppos, new_text);
-		tmppos = strmov(tmppos, "' WHERE id=");
-		char idx_str[64];
-		snprintf(idx_str, 64, "%i", idx);
-		tmppos = strmov(tmppos, idx_str);
-		*tmppos++ = (char)0;
-		dbg(0, "sql=%s", sql);
-		if(mysql_query(&app.mysql, sql)){
-			dbg(0, "update failed! sql=%s", sql);
-			return;
-		}
-		*/
-
-		//update the store:
 		gtk_list_store_set(app.store, &iter, COL_KEYWORDS, new_text, -1);
 
 		statusbar_print(1, "keywords updated");

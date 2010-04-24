@@ -333,7 +333,7 @@ MIME_type *type_get_type(const guchar *path)
 MIME_type*
 type_from_path(const char *path)
 {
-	if(debug) printf("type_from_path()...\n");
+	if(debug > 1) printf("type_from_path()...\n");
 
 	/* Check for extended attribute first */
 	/*

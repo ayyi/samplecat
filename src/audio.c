@@ -97,7 +97,7 @@ jack_process(jack_nframes_t nframes, void* arg)
 			memcpy(out2 + frame, buffer + src_offset + 1, frame_size);
 			//if(frame<8) printf("%i %i (%i) ", src_offset, src_offset + frame_size, dst_offset);
 		}
-		printf("\n");
+		//printf("\n");
 	}else{
 		dbg(3, "unsupported channel count (%i).\n", audition.sfinfo.channels);
 		playback_stop();
@@ -117,12 +117,12 @@ jack_process_flac(jack_nframes_t nframes, void *arg)
 
 	jack_ringbuffer_t* rb1 = audition.rb1;
 	jack_ringbuffer_t* rb2 = audition.rb2;
-	if((unsigned)rb1<1024) errprintf("jack_process_flac(): bad rb1.\n");
-	if((unsigned)rb2<1024) errprintf("jack_process_flac(): bad rb2.\n");
+	if((unsigned)rb1 < 1024) perr("bad rb1.\n");
+	if((unsigned)rb2 < 1024) perr("bad rb2.\n");
 
 	g_mutex_lock(app.mutex);
 	if(jack_ringbuffer_read_space(rb1) < bytes_to_copy){ //yes, its *bytes*.
-		warnprintf("jack_process_flac(): not enough data ready. Aborting playback...\n");
+		pwarn("not enough data ready. Aborting playback...\n");
 		g_idle_add_full(G_PRIORITY_HIGH_IDLE, (GSourceFunc)jack_process_stop_playback, NULL, NULL); //FIXME this is not aggressive enough
 		g_mutex_unlock(app.mutex);
 		return FALSE;

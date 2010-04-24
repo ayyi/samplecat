@@ -17,22 +17,19 @@
 #include "sample.h"
 #include "db/mysql.h"
 
-//#if defined(HAVE_STPCPY) && !defined(HAVE_mit_thread)
-  #define strmov(A,B) stpcpy((A),(B))
-//#endif
-
 //mysql table layout (database column numbers):
 enum {
   MYSQL_ID = 0,
   MYSQL_NAME,
-  MYSQL_DIR = 2,
-  MYSQL_KEYWORDS = 3,
-  MYSQL_PIXBUF = 4,
-  MYSQL_LENGTH = 5,
-  MYSQL_SAMPLERATE = 6,
-  MYSQL_CHANNELS = 7,
-  MYSQL_ONLINE = 8,
-  MYSQL_MIMETYPE = 10,
+  MYSQL_DIR,
+  MYSQL_KEYWORDS,
+  MYSQL_PIXBUF,
+  MYSQL_LENGTH,
+  MYSQL_SAMPLERATE,
+  MYSQL_CHANNELS,
+  MYSQL_ONLINE,
+  MYSQL_LAST_CHECKED,
+  MYSQL_MIMETYPE,
 };
 #define MYSQL_NOTES 11
 #define MYSQL_COLOUR 12
@@ -89,7 +86,7 @@ mysql__connect()
 
 	if(!mysql_real_connect(&mysql, app.config.database_host, app.config.database_user, app.config.database_pass, app.config.database_name, 0, NULL, 0)){
 		errprintf("cannot connect to database: %s\n", mysql_error(&mysql));
-		//currently this wont be displayed, as the window is not yet opened.
+		//currently this won't be displayed, as the window is not yet opened.
 		statusbar_print(1, "cannot connect to database: %s\n", mysql_error(&mysql));
 		return false;
 	}
@@ -279,37 +276,18 @@ mysql__search_iter_new(char* search, char* dir, const char* category, int* n_res
 {
 	//return TRUE on success.
 
-	char query[1024];
-	char where[512]="";
-	char qcategory[256]="";
-	char where_dir[512]="";
-
-	if(!search) search = app.search_phrase;
-	if(!dir)    dir    = app.search_dir;
+	gboolean ok = true;
 
 	if(search_result) gwarn("previous query not free'd?");
 
-	if(app.search_category) snprintf(qcategory, 256, "AND keywords LIKE '%%%s%%' ", category);
+	GString* q = g_string_new("SELECT * FROM samples WHERE 1 ");
+	if(strlen(search)) g_string_append_printf(q, "AND (filename LIKE '%%%s%%' OR filedir LIKE '%%%s%%' OR keywords LIKE '%%%s%%') ", search, search, search);
+	if(dir && strlen(dir)) g_string_append_printf(q, "AND filedir='%s' ", dir);
+	if(app.search_category) g_string_append_printf(q, "AND keywords LIKE '%%%s%%' ", category);
 
-	//lets assume that the search_phrase filter should *always* be in effect.
+	dbg(1, "%s", q->str);
 
-	if(dir && strlen(dir)){
-		snprintf(where_dir, 512, "AND filedir='%s' %s ", dir, qcategory);
-	}
-
-	if(strlen(search)){ 
-		snprintf(where, 512, "AND (filename LIKE '%%%s%%' OR filedir LIKE '%%%s%%' OR keywords LIKE '%%%s%%') ", search, search, search);
-	}
-
-	//append the dir-where part:
-	char* a = where + strlen(where);
-	strmov(a, where_dir);
-
-	snprintf(query, 1024, "SELECT * FROM samples WHERE 1 %s", where);
-
-	dbg(1, "%s", query);
-
-	int e; if((e = mysql__exec_sql(query)) != 0){
+	int e; if((e = mysql__exec_sql(q->str)) != 0){
 		statusbar_print(1, "Failed to find any records: %s", mysql_error(&mysql));
 
 		if((e == CR_SERVER_GONE_ERROR) || (e == CR_SERVER_LOST)){ //default is to time out after 8 hours
@@ -318,16 +296,18 @@ mysql__search_iter_new(char* search, char* dir, const char* category, int* n_res
 		}else{
 			dbg(0, "Failed to find any records: %s", mysql_error(&mysql));
 		}
-		return false;
-	}
-	search_result = mysql_store_result(&mysql);
+		ok = false;
+	} else {
+		search_result = mysql_store_result(&mysql);
 
-	if(n_results){
-		uint32_t tot_rows = (uint32_t)mysql_affected_rows(&mysql);
-		*n_results = tot_rows;
+		if(n_results){
+			uint32_t tot_rows = (uint32_t)mysql_affected_rows(&mysql);
+			*n_results = tot_rows;
+		}
 	}
 
-	return true;
+	g_string_free(q, true);
+	return ok;
 }
 
 

@@ -11,9 +11,11 @@
 #define gwarn(A, ...) g_warning("%s(): "A, __func__, ##__VA_ARGS__);
 #define ASSERT_POINTER_FALSE(A, B) if(GPOINTER_TO_UINT(A) < 1024){ errprintf2(__func__, "bad %s pointer (%p).\n", B, A); return FALSE; } 
 #define GERR_WARN if(error){ gwarn("%s", error->message); g_error_free(error); error = NULL; }
+#define g_error_clear(E) { if(E){ g_error_free(E); E = NULL; }}
 #endif
 
 #define HAS_ALPHA_FALSE 0
+#define HAS_ALPHA_TRUE 1
 #define BITS_PER_CHAR_8 8
 #define IDLE_STOP FALSE
 #define HANDLED TRUE

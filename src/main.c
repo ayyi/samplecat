@@ -60,10 +60,6 @@ This software is licensed under the GPL. See accompanying file COPYING.
 
 #undef DEBUG_NO_THREADS
 
-//#if defined(HAVE_STPCPY) && !defined(HAVE_mit_thread)
-  #define strmov(A,B) stpcpy((A),(B))
-//#endif
-
 extern void       dir_init          ();
 static void       delete_row        (GtkWidget*, gpointer);
 static void       update_row        (GtkWidget*, gpointer);
@@ -117,7 +113,7 @@ app_init()
 	app.colourbox_dirty = true;
 	memset(app.config.colour, 0, PALETTE_SIZE * 8);
 
-	app.config_filename = g_strdup_printf("%s/." PACKAGE, g_get_home_dir());
+	app.config_filename = g_strdup_printf("%s/.config/" PACKAGE "/" PACKAGE, g_get_home_dir());
 }
 
 
@@ -162,7 +158,6 @@ main(int argc, char** argv)
 				dbg(0, "backend '%s' requested.", optarg);
 				if(can_use_backend(optarg)){
 					list_clear(app.backends);
-					//app.backends = g_list_append(app.backends, optarg);
 					ADD_BACKEND(optarg);
 					dbg(0, "n_backends=%i", g_list_length(app.backends));
 				}
@@ -229,7 +224,7 @@ main(int argc, char** argv)
 			dbg(2, "...");
 			set_backend(BACKEND_TRACKER);
 			if(search_pending){
-				do_search(app.search_phrase, app.search_dir);
+				do_search(app.args.search ? app.args.search : app.search_phrase, app.search_dir);
 			}
 		}
 		if(app.no_gui){
@@ -268,7 +263,7 @@ main(int argc, char** argv)
 	if(!app.no_gui) app.context_menu = make_context_menu();
 
 	if(!backend.pending){ 
-		do_search(app.search_phrase, app.search_dir);
+		do_search(app.args.search ? app.args.search : app.search_phrase, app.search_dir);
 	}else{
 		search_pending = true;
 	}
@@ -483,15 +478,6 @@ do_search(char *search, char *dir)
 			}
 		}
 		#endif
-		/*
-		else{  // mysql_store_result() returned nothing
-			if(mysql_field_count(mysql) > 0){
-				// mysql_store_result() should have returned data
-				printf( "Error getting records: %s\n", mysql_error(mysql));
-			}
-			else dbg(0, "failed to find any records (fieldcount<1): %s", mysql_error(mysql));
-		}
-		*/
 
 		//treeview_unblock_motion_handler();  //causes a segfault even before it is run ??!!
 	}
@@ -599,7 +585,7 @@ mimetype_is_unsupported(MIME_type* mime_type, char* mime_string)
 			return true;
 		}
 	}
-	dbg(1, "mimetype ok: %s", mime_string);
+	dbg(2, "mimetype ok: %s", mime_string);
 	return false;
 }
 
@@ -618,8 +604,6 @@ add_file(char* path)
 	sample* sample = sample_new(); //free'd after db and store are updated.
 	snprintf(sample->filename, 256, "%s", path);
 
-	char length_ms[64];
-	char samplerate_s[32];
 	gchar* filedir = g_path_get_dirname(path);
 	gchar* filename = g_path_get_basename(path);
 
@@ -648,31 +632,10 @@ add_file(char* path)
 	}
 
 	if(get_file_info(sample)){
-		format_time_int(length_ms, sample->length);
-		samplerate_format(samplerate_s, sample->sample_rate);
 
 		sample->id = backend.insert(sample, mime_type);
 
-		GtkTreeIter iter;
-		gtk_list_store_append(app.store, &iter);
-
-		//store a row reference:
-		GtkTreePath* treepath;
-		if((treepath = gtk_tree_model_get_path(GTK_TREE_MODEL(app.store), &iter))){
-			sample->row_ref = gtk_tree_row_reference_new(GTK_TREE_MODEL(app.store), treepath);
-			gtk_tree_path_free(treepath);
-		}else perr("failed to make treepath from inserted iter.\n");
-
-		dbg(2, "setting store... filename=%s mime=%s", filename, mime_string);
-		gtk_list_store_set(app.store, &iter,
-		                   COL_IDX, sample->id,
-		                   COL_NAME, filename,
-		                   COL_FNAME, filedir,
-		                   COL_LENGTH, length_ms,
-		                   COL_SAMPLERATE, samplerate_s,
-		                   COL_CHANNELS, sample->channels,
-		                   COL_MIMETYPE, mime_string,
-		                   -1);
+		listview__add_item(sample);
 
 		dbg(2, "sending message: sample=%p filename=%s (%p)", sample, sample->filename, sample->filename);
 		g_async_queue_push(app.msg_queue, sample); //notify the overview thread.
@@ -714,12 +677,12 @@ get_file_info(sample* sample)
 
 
 gboolean
-on_overview_done(gpointer data)
+on_overview_done(gpointer _sample)
 {
 	PF;
-	sample* sample = data;
+	sample* sample = _sample;
 	g_return_val_if_fail(sample, false);
-	if(!sample->pixbuf){ perr("overview creation failed (no pixbuf).\n"); return false; }
+	if(!sample->pixbuf){ dbg(1, "overview creation failed (no pixbuf).\n"); return false; }
 
 	backend.update_pixbuf(sample);
 
@@ -1045,7 +1008,7 @@ keyword_is_dupe(char* new, char* existing)
 	int word_index = 0;
 	while(split[word_index]){
 		if(!strcmp(split[word_index], new)){
-			dbg(0, "'%s' already in string '%s'", new, existing);
+			dbg(1, "'%s' already in string '%s'", new, existing);
 			found = true;
 			break;
 		}
@@ -1141,10 +1104,11 @@ config_load()
 			for(k=0;k<num_keys;k++){
 				if((keyval = g_key_file_get_string(app.key_file, groupname, keys[k], &error))){
 					snprintf(loc[k], 64, "%s", keyval);
-                    dbg(2, "%s=%s", keys[k], keyval);
+					dbg(2, "%s=%s", keys[k], keyval);
 					g_free(keyval);
 				}else{
-					GERR_WARN;
+					if(error->code == 3) g_error_clear(error)
+					else { GERR_WARN; }
 					strcpy(loc[k], "");
 				}
 			}

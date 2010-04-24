@@ -1,5 +1,6 @@
 todo:
 	-insert: dupe-checking not working.
+	-can only dnd one file from filemanager onto database window.
 	-appears to freeze when importing from cdrom. move to idle function?
 	-GtkInfBar added in gtk 2.18 - we should probably use it instead of the message_panel__ functions in window.c 
 	-show warning icon in statusbar - eggtrayicon.c ?
@@ -13,6 +14,7 @@ todo:
 	-ffmpeg: look at aqualung to see how they do the FFmpeg support.
 	-add date to database so we can sort by date and show f-spot style bar chart for years.
 	-make samplecat an embeddable widget?
+	-player: look at sndfile-jackplay (in sndfile-tools)
 
 dependencies:
 	-glib/gtk2 - v2.6 is needed for g_key_file
@@ -59,10 +61,36 @@ threads:
 	-overview thread
 	-jack thread (only created on demand) x2
 
+metadata:
+	-gio/gvfs:
+		-try g_file_query_info() using the 'metadata' namespace
+		-uses different store to tracker! designed to be faster.
+		-gio/gvfs metadata breaks mv etc, as it will use the metadata. You are supposed to use 'gvfs-move'.
+			-the proper way to do this is to use xattrs, which are supported by the filesystem, however Nautilus guy says they are too slow.
+		-what metadata will gio/gvfs give us?
+			-custom icon
+			-per-folder default view
+			-per-folder background
+			-per folder (spatial) geometry
+			-per folder icon view and list view settings (colums, zoom level, etc)
+			-icon position in manual layout mode (e.g. on desktop)
+			-icon scaling
+			-emblems
+			-file annotations (a note you can add on a file)
+			note: thumbnails are stored in another way (see thumbnail spec)
+		-evince uses gfvs-metadata.
+
+removable media:
+	-currently we (probably?) dont store the volume name.
+	-you can get a (UUID) volume name using libudev.
+
 file system trees:
 	-the first implementation was based on devhelp and worked ok, but didnt do too much.
 	-second implementation used gqview's gtkclist implemtation - aborted due to implementation of gtktreeview theming into gtk2.10.
 	-3rd implementation uses gqviews gtktreeview imlementation - not yet finished.
+
+-databases:
+	-mysql has an 'embedded' mode, ie it can be used without a daemon. Ideally it would be nice to support this. Used by Amarok for example.
 
 -commercial competitors:
 	-soundminer: http://www.soundminer.com/SM_Site/Home.html
@@ -72,6 +100,10 @@ file system trees:
 
 -auditioning
 	-perhaps use the dssi sampleplayer plugin like sonikvisualiser does?
+
+-portability
+	-like all systems using a central database, the data is confined to one machine. If you scp or take disk to another machine, all your data is effectively lost.
+	-if a file is moved, its metadata is lost! (could maybe have a find function?)
 
 -papers on automatic metadata and searching: http://audioclas.iua.upf.edu/documents.shtml
 

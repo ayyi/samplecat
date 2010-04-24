@@ -1,3 +1,8 @@
+20100420
+-moved config file from ~/.samplecat to ~/.config/samplecat/samplecat
+-changed tracker support to use the 0.9 api instead of 0.6.
+-version changed to 0.0.9
+
 20090610
 -added ability to change colourbox colours.
 -update overviews on colour change

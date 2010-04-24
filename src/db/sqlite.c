@@ -57,6 +57,7 @@ sqlite__connect()
 	rc = sqlite3_open(db_name, &db); //if the file doesnt exist, it be created.
 	if (rc) {
 		fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
+		fprintf(stderr, "file=%s", db_name);
 		sqlite3_close(db);
 		return FALSE;
 	}
@@ -132,13 +133,15 @@ sqlite__insert(sample* sample, MIME_type *mime_type)
 		ret = -1;
 	}
 
+	sqlite3_int64 idx = sqlite3_last_insert_rowid(db);
+
 	dbg(1, "n_changes=%i", sqlite3_changes(db));
 
 	g_free(sql);
 	g_free(filedir);
 	g_free(filename);
 	g_free(mime_str);
-	return ret;
+	return (int)idx;
 }
 
 
@@ -390,7 +393,7 @@ sqlite__search_iter_new(char* search, char* dir, const char* category, int* n_re
 	}
 
 	char* sql = g_strdup_printf("SELECT * FROM samples WHERE 1 %s", where);
-	dbg(0, "sql=%s", sql);
+	dbg(1, "sql=%s", sql);
 
 	if(ppStmt) gwarn("ppStmt not reset from previous query?");
 	int n = sqlite3_prepare_v2(db, sql, -1, &ppStmt, NULL);

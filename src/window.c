@@ -28,7 +28,7 @@ extern struct _app app;
 extern Filer filer;
 extern unsigned debug;
 
-char* categories[] = {"drums", "perc", "bass", "keys", "synth", "strings", "brass", "fx", "impulses"};
+char* categories[] = {"drums", "perc", "bass", "keys", "synth", "strings", "brass", "fx", "impulse", "breaks"};
  
 GtkWidget*        view_details_new                ();
 void              view_details_dnd_get            (GtkWidget*, GdkDragContext*, GtkSelectionData*, guint info, guint time, gpointer data);
@@ -513,7 +513,7 @@ tag_selector_new()
 	GtkWidget* combo2 = app.category = gtk_combo_box_entry_new_text();
 	GtkComboBox* combo_ = GTK_COMBO_BOX(combo2);
 	gtk_combo_box_append_text(combo_, "no categories");
-	int i; for (i=0;i<A_SIZE(categories);i++) {
+	int i; for (i=0;i<G_N_ELEMENTS(categories);i++) {
 		gtk_combo_box_append_text(combo_, categories[i]);
 	}
 	gtk_widget_show(combo2);	
@@ -693,7 +693,7 @@ on_category_set_clicked(GtkComboBox *widget, gpointer user_data)
 
 					row_set_tags(&iter, id, tags_new);
 				}else{
-					dbg(0, "keyword is a dupe - not applying.");
+					dbg(1, "keyword is a dupe - not applying.");
 					statusbar_print(1, "ignoring duplicate keyword.");
 				}
 			}

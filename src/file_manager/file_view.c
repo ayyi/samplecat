@@ -1498,7 +1498,7 @@ view_details_cursor_to_iter(ViewIface *view, ViewIter *iter)
 	if(GTK_WIDGET_REALIZED((GtkWidget*)view)){
 		gtk_tree_view_set_cursor((GtkTreeView *) view, path, NULL, FALSE);
 	}
-	else dbg(0, "cannot set cursor, widget not realised.");
+	else dbg(2, "cannot set cursor, widget not realised.");
 	gtk_tree_path_free(path);
 }
 
@@ -1974,7 +1974,7 @@ view_details_dnd_get(GtkWidget* widget, GdkDragContext* context, GtkSelectionDat
 		GValue leaf = {0};
 		details_get_value(model, &iter, COL_LEAF, &leaf);
 
-		dbg(0, "leaf=%s", g_value_get_string(&leaf));
+		dbg(1, "leaf=%s", g_value_get_string(&leaf));
 		gchar* path = g_strconcat(view->filer_window->real_path, "/", g_value_get_string(&leaf), NULL);
 		g_value_unset(&leaf);
 
