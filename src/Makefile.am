@@ -39,7 +39,7 @@ SQLITE_SRC =
 endif
 
 if ENABLE_TRACKER
-TRACKER_SRC = db/tracker.c db/tracker_.h
+TRACKER_SRC = db/tracker.c db/tracker.h
 endif
 
 samplecat_SOURCES = \
@@ -79,5 +79,5 @@ samplecat_LDADD = \
 	$(SQLITE_LDFLAGS) \
 	$(GTK_LIBS) $(MYSQL_LDFLAGS) $(JACK_LIBS) $(SNDFILE_LIBS) $(FLAC_LIBS) $(GTHREAD_LIBS)
 
-EXTRA_DIST = db/sqlite.c db/sqlite.h db/tracker.c db/tracker_.h
+EXTRA_DIST = db/sqlite.c db/sqlite.h db/tracker.c db/tracker.h
 

@@ -1553,16 +1553,13 @@ char*
 vfs_unescape_string (const gchar *escaped_string, const gchar *illegal_characters)
 {
     const gchar *in;
-    gchar *out, *result;
     gint character;
 
-    if (escaped_string == NULL) {
-        return NULL;
-    }
+    if (escaped_string == NULL) return NULL;
 
-    result = g_malloc (strlen (escaped_string) + 1);
+    gchar* result = g_malloc (strlen (escaped_string) + 1);
 
-    out = result;
+    gchar* out = result;
     for (in = escaped_string; *in != '\0'; in++) {
         character = *in;
         if (*in == HEX_ESCAPE) {

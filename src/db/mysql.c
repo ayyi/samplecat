@@ -85,9 +85,13 @@ mysql__connect()
 	mysql.reconnect = true;
 
 	if(!mysql_real_connect(&mysql, app.config.database_host, app.config.database_user, app.config.database_pass, app.config.database_name, 0, NULL, 0)){
-		errprintf("cannot connect to database: %s\n", mysql_error(&mysql));
-		//currently this won't be displayed, as the window is not yet opened.
-		statusbar_print(1, "cannot connect to database: %s\n", mysql_error(&mysql));
+		if(mysql_errno(&mysql) == CR_CONNECTION_ERROR){
+			errprintf("cannot connect to database: MYSQL server not online.\n");
+		}else{
+			errprintf("cannot connect to database: %s\n", mysql_error(&mysql));
+			//currently this won't be displayed, as the window is not yet opened.
+			statusbar_print(1, "cannot connect to database: %s\n", mysql_error(&mysql));
+		}
 		return false;
 	}
 	if(debug) printf("MySQL Server Version is %s\n", mysql_get_server_info(&mysql));

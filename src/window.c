@@ -148,7 +148,7 @@ GtkWindow
 		GtkWidget* scroll2 = scrolled_window_new();
 		gtk_paned_add2(GTK_PANED(r_vpaned), scroll2);
 
-		GtkWidget* file_view = app.fm_view = file_manager__new_window(g_get_home_dir());
+		GtkWidget* file_view = app.fm_view = file_manager__new_window(app.config.browse_dir ? app.config.browse_dir : g_get_home_dir());
 		gtk_container_add(GTK_CONTAINER(scroll2), file_view);
 		gtk_widget_show(file_view);
 		g_signal_connect(G_OBJECT(file_view), "cursor-changed", G_CALLBACK(window_on_fileview_row_selected), NULL);

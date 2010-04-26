@@ -17,7 +17,7 @@
 #include "listview.h"
 #include "inspector.h"
 #ifdef USE_TRACKER
-  #include <src/db/tracker_.h>
+  #include "src/db/tracker.h"
 #endif
 
 extern struct _app app;

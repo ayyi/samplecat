@@ -450,7 +450,7 @@ sqlite__search_iter_next(unsigned long** lengths)
 		const char* blob = sqlite3_column_blob(ppStmt, COLUMN_PIXBUF);
 		if(blob){
 			int length = sqlite3_column_bytes(ppStmt, COLUMN_PIXBUF);
-			dbg(1, "pixbuf_length=%i", length);
+			dbg(2, "pixbuf_length=%i", length);
 			if(gdk_pixdata_deserialize(&pixdata, length, (guint8*)blob, NULL)){
 				pixbuf = gdk_pixbuf_from_pixdata(&pixdata, TRUE, NULL);
 			}

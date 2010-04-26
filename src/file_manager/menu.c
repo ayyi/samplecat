@@ -216,7 +216,7 @@ fm_make_subdir_menu()
 				fm__escape_for_menu(escaped);
 				gchar* filename = g_build_filename(filer.real_path, leaf, NULL);
 				if (g_file_test(filename, G_FILE_TEST_IS_DIR)) {
-					GtkWidget* item = gtk_image_menu_item_new_with_mnemonic (leaf);
+					GtkWidget* item = gtk_image_menu_item_new_with_label (leaf);
 					GtkWidget* ico = gtk_image_new_from_pixbuf(mime_type_get_pixbuf(inode_directory));
 					gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(item), ico);
 					gtk_container_add(GTK_CONTAINER(submenu), item);

@@ -1,6 +1,6 @@
 /*
 
-Copyright (C) Tim Orford 2007-2009
+Copyright (C) Tim Orford 2007-2010
 
 This software is licensed under the GPL. See accompanying file COPYING.
 
@@ -25,7 +25,7 @@ This software is licensed under the GPL. See accompanying file COPYING.
 #include "gqview_view_dir_tree.h"
 #include "typedefs.h"
 #ifdef USE_TRACKER
-  #include "src/db/tracker_.h"
+  #include "src/db/tracker.h"
 #endif
 #ifdef USE_MYSQL
   #include "db/mysql.h"
@@ -155,11 +155,11 @@ main(int argc, char** argv)
 				break;
 			case 'b':
 				//if a particular backend is requested, and is available, reduce the backend list to just this one.
-				dbg(0, "backend '%s' requested.", optarg);
+				dbg(1, "backend '%s' requested.", optarg);
 				if(can_use_backend(optarg)){
 					list_clear(app.backends);
 					ADD_BACKEND(optarg);
-					dbg(0, "n_backends=%i", g_list_length(app.backends));
+					dbg(1, "n_backends=%i", g_list_length(app.backends));
 				}
 				else gwarn("requested backend not available: '%s'", optarg);
 				break;
@@ -710,7 +710,6 @@ delete_row(GtkWidget *widget, gpointer user_data)
 {
 	//widget is likely to be a popupmenu.
 
-	GtkTreeIter iter;
 	GtkTreeModel* model = gtk_tree_view_get_model(GTK_TREE_VIEW(app.view));
 
 	GtkTreeSelection* selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(app.view));
@@ -719,21 +718,22 @@ delete_row(GtkWidget *widget, gpointer user_data)
 	dbg(1, "%i rows selected.", g_list_length(selectionlist));
 
 	GList* selected_row_refs = NULL;
-	GtkTreeRowReference* row_ref = NULL;
 
 	//get row refs for each selected row:
 	int i;
 	for(i=0;i<g_list_length(selectionlist);i++){
 		GtkTreePath *treepath_selection = g_list_nth_data(selectionlist, i);
 
-		row_ref = gtk_tree_row_reference_new(GTK_TREE_MODEL(app.store), treepath_selection);
+		GtkTreeRowReference* row_ref = gtk_tree_row_reference_new(GTK_TREE_MODEL(app.store), treepath_selection);
 		selected_row_refs = g_list_prepend(selected_row_refs, row_ref);
 	}
 	g_list_free(selectionlist);
 
 	GtkTreePath* path;
-	for(i=0;i<g_list_length(selected_row_refs);i++){
-		row_ref = g_list_nth_data(selected_row_refs, i);
+	GtkTreeIter iter;
+	GList* l = selected_row_refs;
+	for(;l;l=l->next){
+		GtkTreeRowReference* row_ref = l->data;
 		if((path = gtk_tree_row_reference_get_path(row_ref))){
 
 			if(gtk_tree_model_get_iter(model, &iter, path)){
@@ -745,6 +745,7 @@ delete_row(GtkWidget *widget, gpointer user_data)
 
 				//update the store:
 				gtk_list_store_remove(app.store, &iter);
+
 			} else perr("bad iter! i=%i (<%i)\n", i, g_list_length(selectionlist));
 		} else perr("cannot get path from row_ref!\n");
 	}
@@ -1094,10 +1095,10 @@ config_load()
 			gchar** keys = g_key_file_get_keys(app.key_file, "Samplecat", &length, &error);
 			*/
 
-			#define num_keys 10
+			#define num_keys 11
 			//FIXME 64 is not long enough for directories
-			char keys[num_keys][64] = {"database_host",          "database_user",          "database_pass",          "database_name",          "show_dir",          "window_height",          "window_width",         "icon_theme", "col1_width",                "filter"};
-			char* loc[num_keys]     = {app.config.database_host, app.config.database_user, app.config.database_pass, app.config.database_name, app.config.show_dir, app.config.window_height, app.config.window_width, theme_name,  app.config.column_widths[0], app.search_phrase};
+			char keys[num_keys][64] = {"database_host",          "database_user",          "database_pass",          "database_name",          "show_dir",          "window_height",          "window_width",         "icon_theme", "col1_width",                "filter",          "browse_dir"};
+			char* loc[num_keys]     = {app.config.database_host, app.config.database_user, app.config.database_pass, app.config.database_name, app.config.show_dir, app.config.window_height, app.config.window_width, theme_name,  app.config.column_widths[0], app.search_phrase, app.config.browse_dir};
 
 			int k;
 			gchar* keyval;
@@ -1161,6 +1162,12 @@ config_save()
 		g_key_file_set_value(app.key_file, "Samplecat", "col1_height", value);
 
 		g_key_file_set_value(app.key_file, "Samplecat", "filter", gtk_entry_get_text(GTK_ENTRY(app.search)));
+
+		AyyiLibfilemanager* fm = file_manager__get_signaller();
+		struct _Filer* f = fm->file_window;
+		if(f){
+			g_key_file_set_value(app.key_file, "Samplecat", "browse_dir", f->real_path);
+		}
 	}
 
 	GError *error = NULL;
@@ -1171,17 +1178,21 @@ config_save()
 		g_error_free(error);
 	}
 
-	FILE* fp;
-	if(!(fp = fopen(app.config_filename, "w"))){
-		errprintf("cannot open config file for writing (%s).\n", app.config_filename);
-		statusbar_print(1, "cannot open config file for writing (%s).", app.config_filename);
-		return false;
+	if(ensure_config_dir()){
+
+		FILE* fp;
+		if(!(fp = fopen(app.config_filename, "w"))){
+			errprintf("cannot open config file for writing (%s).\n", app.config_filename);
+			statusbar_print(1, "cannot open config file for writing (%s).", app.config_filename);
+			return false;
+		}
+		if(fprintf(fp, "%s", string) < 0){
+			errprintf("error writing data to config file (%s).\n", app.config_filename);
+			statusbar_print(1, "error writing data to config file (%s).", app.config_filename);
+		}
+		fclose(fp);
 	}
-	if(fprintf(fp, "%s", string) < 0){
-		errprintf("error writing data to config file (%s).\n", app.config_filename);
-		statusbar_print(1, "error writing data to config file (%s).", app.config_filename);
-	}
-	fclose(fp);
+	else errprintf("cannot create config directory.");
 	g_free(string);
 	return true;
 }

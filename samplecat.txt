@@ -39,7 +39,7 @@ functionality status:
 		-drag n drop                         done
 		-dupe checking                       test
 	export
-		-seismix
+		-seismix                             yes
 		-ardour/rosegarden etc               no
 		-drag n drop                         no - test ardour + rosegarden
 	formats

@@ -50,6 +50,7 @@ struct _config
 	char      colour[PALETTE_SIZE][8];
 	gboolean  add_recursive;
 	char      column_widths[4][64];
+	char      browse_dir[64];
 };
 
 

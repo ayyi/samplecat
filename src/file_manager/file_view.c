@@ -646,6 +646,14 @@ view_details_button_press(GtkWidget* widget, GdkEventButton* ev)
                    NULL, NULL, NULL, NULL,
                    (ev) ? ev->button : 0,
                    gdk_event_get_time((GdkEvent*)ev));
+
+		GtkTreeSelection* selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(widget));
+		GList* selectionlist = gtk_tree_selection_get_selected_rows(selection, NULL);
+		if(!selectionlist){
+			printf("!! no selection. TODO select the row.\n");
+		}
+		//return without calling parent so that selection is not changed.
+		return FALSE;
 	}
 
 	//if (bev->window != gtk_tree_view_get_bin_window(tree))
@@ -653,8 +661,7 @@ view_details_button_press(GtkWidget* widget, GdkEventButton* ev)
 
 	//if (dnd_motion_press(widget, bev)) filer_perform_action(filer_window, bev);
 
-	return TRUE;
-	//return FALSE;
+	return FALSE; //must return FALSE to allow gtk to do focus handling.
 }
 
 static int

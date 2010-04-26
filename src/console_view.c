@@ -29,7 +29,7 @@ console__show_result(SamplecatResult* result)
 {
 	#define DIR_MAX 35
 	char dir[DIR_MAX];
-	snprintf(dir, DIR_MAX-1, dir_format(result->dir));
+	strncpy(dir, dir_format(result->dir), DIR_MAX-1);
 	dir[DIR_MAX-1] = '\0';
 
 	#define SNAME_MAX 20
