@@ -121,7 +121,7 @@ mysql__disconnect()
 
 
 int
-mysql__insert(sample* sample, MIME_type *mime_type)
+mysql__insert(Sample* sample, MIME_type *mime_type)
 {
 	int id = 0;
 	gchar* filedir = g_path_get_dirname(sample->filename);
@@ -229,7 +229,7 @@ mysql__update_notes(int id, const char* notes)
 
 #define SQL_LEN 66000
 gboolean
-mysql__update_pixbuf(sample *sample)
+mysql__update_pixbuf(Sample *sample)
 {
 	GdkPixbuf* pixbuf = sample->pixbuf;
 	if(pixbuf){
@@ -269,6 +269,13 @@ mysql__update_online(int id, gboolean online)
 	}
 	g_free(sql);
 	return true;
+}
+
+
+gboolean
+mysql__update_peaklevel(int id, float level)
+{
+	return false;
 }
 
 

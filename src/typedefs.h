@@ -8,8 +8,9 @@ typedef enum {
 	BACKEND_TRACKER,
 } BackendType;
 
-typedef struct _sample sample;
+typedef struct _sample Sample;
 typedef struct _samplecat_result   SamplecatResult;
+typedef struct _samplecat_result   Result;
 typedef struct _menu_def MenuDef;
 
 #ifndef __file_manager_h__

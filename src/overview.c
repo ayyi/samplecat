@@ -3,7 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <getopt.h>
+#include <math.h>
+#include <sys/time.h>
 #include <sndfile.h>
 #include <jack/jack.h>
 #include <gtk/gtk.h>
@@ -31,6 +32,18 @@
 extern struct _app app;
 extern unsigned debug;
 
+static GdkPixbuf*  make_overview          (Sample*);
+static GdkPixbuf*  make_overview_sndfile  (Sample*);
+#ifdef HAVE_FLAC_1_1_1
+static GdkPixbuf*  make_overview_flac     (Sample*);
+static void        overview_draw_line     (GdkPixbuf*, int x, short max, short min);
+static GdkPixbuf*  overview_pixbuf_new    ();
+#endif
+static double      sndfile_calc_signal_max(Sample*);
+
+
+static GList* msg_list = NULL;
+
 gpointer
 overview_thread(gpointer data)
 {
@@ -40,32 +53,83 @@ overview_thread(gpointer data)
 
 	g_async_queue_ref(app.msg_queue);
 
-	GList* msg_list = NULL;
-	gpointer message;
-	while(1){
+	//GList* msg_list = NULL;
+	//while(1){
+	gboolean worker_timeout(gpointer data)
+	{
 
-		//any new work ?
+		//check for new work
 		while(g_async_queue_length(app.msg_queue)){
-			message = g_async_queue_pop(app.msg_queue);
-			dbg(1, "new message! %p", message);
+			struct _message* message = g_async_queue_pop(app.msg_queue);
 			msg_list = g_list_append(msg_list, message);
+			dbg(0, "new message! %p", message);
 		}
 
 		while(msg_list != NULL){
-			sample* sample = (struct _sample*)g_list_first(msg_list)->data;
-			dbg(1, "sample=%p filename=%s.", sample, sample->filename);
-			make_overview(sample);
-			g_idle_add(on_overview_done, sample); //notify();
-			msg_list = g_list_remove(msg_list, sample);
+			struct _message* message = g_list_first(msg_list)->data;
+			msg_list = g_list_remove(msg_list, message);
+
+			Sample* sample = message->sample;
+			if(message->type == MSG_TYPE_OVERVIEW){
+				dbg(0, "filename=%s.", sample->filename);
+				make_overview(sample);
+				g_idle_add(on_overview_done, sample); //notify();
+			}
+			else if(message->type == MSG_TYPE_PEAKLEVEL){
+				sample->peak_level = sndfile_calc_signal_max(message->sample);
+				g_idle_add(on_peaklevel_done, sample);
+			}
+
+			g_free(message);
 		}
-		sleep(1); //FIXME this is a bit primitive - maybe the thread should have its own GMainLoop
-		          //-even better is to use a blocking call on the async queue, waiting for messages.
+		/*
+		sleep(1); //FIXME
+		          //-maybe the thread should have its own GMainLoop
+		          //-or even better is to use a blocking call on the async queue, waiting for messages.
+		*/
+
+		return TIMER_CONTINUE;
 	}
+
+	GMainContext* context = g_main_context_new();
+	GSource* source = g_timeout_source_new(1000);
+	gpointer _data = NULL;
+	g_source_set_callback(source, worker_timeout, _data, NULL);
+	/*guint id = */g_source_attach(source, context);
+
+	g_main_loop_run (g_main_loop_new (context, 0));
+	return NULL;
 }
 
 
-GdkPixbuf*
-make_overview(sample* sample)
+void
+request_overview(Sample* sample)
+{
+	struct _message* message = g_new0(struct _message, 1);
+	message->type = MSG_TYPE_OVERVIEW;
+	message->sample = sample;
+
+	dbg(2, "sending message: sample=%p filename=%s (%p)", sample, sample->filename, sample->filename);
+	sample_ref(sample);
+	g_async_queue_push(app.msg_queue, message); //notify the overview thread.
+}
+
+
+void
+request_peaklevel(Sample* sample)
+{
+	struct _message* message = g_new0(struct _message, 1);
+	message->type = MSG_TYPE_PEAKLEVEL;
+	message->sample = sample;
+
+	dbg(2, "sending message: sample=%p filename=%s (%p)", sample, sample->filename, sample->filename);
+	sample_ref(sample);
+	g_async_queue_push(app.msg_queue, message);
+}
+
+
+static GdkPixbuf*
+make_overview(Sample* sample)
 {
 	GdkPixbuf* pixbuf = NULL;
 #ifdef HAVE_FLAC_1_1_1
@@ -78,8 +142,8 @@ make_overview(sample* sample)
 }
 
 
-GdkPixbuf*
-make_overview_sndfile(sample* sample)
+static GdkPixbuf*
+make_overview_sndfile(Sample* sample)
 {
 	/*
 	load a file onto a pixbuf.
@@ -275,7 +339,7 @@ make_overview_flac_process(FLAC__FileDecoder* flac, sample* sample, jack_ringbuf
   int frames_per_pix = total_samples / OVERVIEW_WIDTH;
   int buffer_size = (total_samples * channels ) / OVERVIEW_WIDTH; //FIXME remainder.
 
-  if(jack_ringbuffer_read_space(rb) < buffer_size) { errprintf("make_overview_flac_process(): ringbuffer not full.\n"); return 0; }
+  if(jack_ringbuffer_read_space(rb) < buffer_size) { perr("ringbuffer not full.\n"); return 0; }
 
   min = 0; max = 0;
   for(frame=0;frame<frames_per_pix;frame++){ //iterate over all the source samples for this pixel.
@@ -316,18 +380,79 @@ make_overview_flac_finish(FLAC__FileDecoder* flac, sample* sample)
   if(!GDK_IS_PIXBUF(sample->pixbuf)){ perr("pixbuf is not a pixbuf.\n"); return FALSE; }
   return TRUE;
 }
-#endif
 
 
-GdkPixbuf*
+static GdkPixbuf*
 overview_pixbuf_new()
 {
   GdkPixbuf* pixbuf = gdk_pixbuf_new(GDK_COLORSPACE_RGB,
                                         FALSE,  //gboolean has_alpha
                                         8,      //int bits_per_sample
                                         OVERVIEW_WIDTH, OVERVIEW_HEIGHT);  //int width, int height)
-  printf("overview_pixbuf_new(): pixbuf=%p\n", pixbuf);
+  dbg(2, "pixbuf=%p", pixbuf);
   pixbuf_clear(pixbuf, &app.fg_colour);
   return pixbuf;
+}
+#endif
+
+
+static double
+sndfile_calc_signal_max (Sample* sample)
+{
+	SNDFILE* sffile;
+	SF_INFO  sfinfo;
+	if(!(sffile = sf_open(sample->filename, SFM_READ, &sfinfo))){
+		dbg (0, "not able to open input file %s.", sample->filename);
+		puts(sf_strerror(NULL));              // print the error message from libsndfile:
+		return 0.0;
+	}
+
+#if 0
+	struct timeval time_start, time_stop;
+	gettimeofday(&time_start, NULL);
+#endif
+
+	int     read_len = 1024 * sfinfo.channels;
+	double* sf_data = g_malloc(sizeof(*sf_data) * read_len);
+
+	int readcount = 1;
+	double max_val = 0.0;
+	int k;
+	double temp;
+	while (readcount > 0){
+		readcount = sf_read_double (sffile, sf_data, read_len);
+		for (k = 0; k < readcount; k++){
+			temp = fabs (sf_data [k]);
+			max_val = temp > max_val ? temp : max_val;
+		};
+	};
+
+	sf_close(sffile);
+	g_free(sf_data);
+
+#if 0
+	{
+		gettimeofday(&time_stop, NULL);
+		time_t      secs = time_stop.tv_sec - time_start.tv_sec;
+		suseconds_t usec;
+		if(time_stop.tv_usec > time_start.tv_usec){
+		 usec = time_stop.tv_usec - time_start.tv_usec;
+		}else{
+		 secs -= 1;
+		 usec = time_stop.tv_usec + 1000000 - time_start.tv_usec;
+		}
+		dbg(0, "%lu:%06lu", secs, usec);
+	}
+	//12s for readcount==1
+	//6s for readcount==2
+	//3.5s for readcount==4
+	//1.8s for readcount==8
+	//0.6s for readcount==32
+	//0.4s for readcount==128
+	//0.3s for readcount==512
+	//0.3s for readcount==1024
+#endif
+
+	return max_val;
 }
 

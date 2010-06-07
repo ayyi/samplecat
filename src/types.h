@@ -12,6 +12,7 @@ struct _samplecat_result
 	unsigned             length;
 	unsigned             sample_rate;
 	int                  channels;
+	float                peak_level;
 	char*                notes;
 	int                  colour;
 	gboolean             online;

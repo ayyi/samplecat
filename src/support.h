@@ -18,6 +18,7 @@
 #define HAS_ALPHA_TRUE 1
 #define BITS_PER_CHAR_8 8
 #define IDLE_STOP FALSE
+#define TIMER_CONTINUE TRUE
 #define HANDLED TRUE
 #define NOT_HANDLED FALSE
 
@@ -114,8 +115,13 @@ const gchar* gimp_get_mod_string       (GdkModifierType modifiers);
 gchar*       gimp_strip_uline          (const gchar* str);
 gchar*       gimp_get_accel_string     (guint key, GdkModifierType modifiers);
 
+gchar*       str_replace               (const gchar* string, const gchar* search, const gchar* replace);
+
 GList*       uri_list_to_glist         (const char *uri_list);
 void         uri_list_free             (GList*);
 const gchar* vfs_get_method_string     (const gchar *substring, gchar **method_string);
 char*        vfs_unescape_string       (const gchar *escaped_string, const gchar *illegal_characters);
+
+float        gain2db                   (float);
+char*        gain2dbstring             (float);
 

@@ -71,7 +71,7 @@ tracker__disconnect()
 
 
 int
-tracker__insert(sample* sample, MIME_type* mimetype)
+tracker__insert(Sample* sample, MIME_type* mimetype)
 {
 	return 0;
 }
@@ -85,7 +85,7 @@ tracker__delete_row(int id)
 
 
 gboolean
-tracker__update_pixbuf(sample* sample)
+tracker__update_pixbuf(Sample* sample)
 {
 	return true;
 }
@@ -900,6 +900,13 @@ tracker__update_keywords(int id, const char* keywords)
 
 gboolean
 tracker__update_online(int id, gboolean online)
+{
+	return false;
+}
+
+
+gboolean
+tracker__update_peaklevel(int id, float level)
 {
 	return false;
 }

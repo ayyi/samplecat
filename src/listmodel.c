@@ -18,10 +18,22 @@
 #include "sample.h"
 #include "dnd.h"
 #include "pixmaps.h"
+#include "overview.h"
 #include "listmodel.h"
 
 extern struct _app app;
 extern unsigned debug;
+
+
+GtkListStore*
+listmodel__new()
+{
+	return gtk_list_store_new(NUM_COLS, GDK_TYPE_PIXBUF,
+	                               #ifdef USE_AYYI
+	                               GDK_TYPE_PIXBUF,
+	                               #endif
+	                               G_TYPE_INT, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING, GDK_TYPE_PIXBUF, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_INT, G_TYPE_STRING, G_TYPE_FLOAT, G_TYPE_STRING, G_TYPE_INT);
+}
 
 
 void
@@ -57,7 +69,7 @@ listmodel__add_result(SamplecatResult* result)
 {
 	g_return_if_fail(result);
 
-	sample* sample = NULL;
+	Sample* sample = NULL;
 	if(!result->sample_rate){
 		sample = sample_new_from_result(result);
 		sample_get_file_sndfile_info(sample);
@@ -104,6 +116,7 @@ listmodel__add_result(SamplecatResult* result)
 	                   COL_IDX, result->idx,
 	                   COL_MIMETYPE, result->mimetype,
 	                   COL_KEYWORDS, keywords, 
+	                   COL_PEAKLEVEL, result->peak_level,
 	                   COL_OVERVIEW, result->overview, COL_LENGTH, length, COL_SAMPLERATE, samplerate_s, COL_CHANNELS, result->channels, 
 	                   COL_NOTES, result->notes, COL_COLOUR, result->colour,
 #ifdef USE_AYYI
@@ -125,7 +138,7 @@ listmodel__add_result(SamplecatResult* result)
 				if(!sample) sample = sample_new_from_result(result);
 				dbg(2, "no overview: sending request: filename=%s", result->sample_name);
 
-				g_async_queue_push(app.msg_queue, sample);
+				request_overview(sample);
 			}
 		}
 		else pwarn("cannot request overview without row_ref.");
@@ -136,7 +149,7 @@ listmodel__add_result(SamplecatResult* result)
 char*
 listmodel__get_filename_from_id(int id)
 {
-	//result must be free'd.
+	//result must be free'd by caller.
 
 	GtkTreeIter iter;
 	gtk_tree_model_get_iter_first(GTK_TREE_MODEL(app.store), &iter);
@@ -156,4 +169,37 @@ listmodel__get_filename_from_id(int id)
 	gwarn("not found. %i", id);
 	return NULL;
 }
+
+
+void
+listmodel__set_overview(GtkTreeRowReference* row_ref, GdkPixbuf* pixbuf)
+{
+	GtkTreePath* treepath;
+	if((treepath = gtk_tree_row_reference_get_path(row_ref))){ //it's possible the row may no longer be visible.
+		GtkTreeIter iter;
+		if(gtk_tree_model_get_iter(GTK_TREE_MODEL(app.store), &iter, treepath)){
+			if(GDK_IS_PIXBUF(pixbuf)){
+				gtk_list_store_set(app.store, &iter, COL_OVERVIEW, pixbuf, -1);
+			}else perr("pixbuf is not a pixbuf.\n");
+
+		}else perr("failed to get row iter. row_ref=%p\n", row_ref);
+		gtk_tree_path_free(treepath);
+	} else dbg(2, "no path for rowref. row_ref=%p\n", row_ref); //this is not an error. The row may not be part of the current search.
+}
+
+
+void
+listmodel__set_peaklevel(GtkTreeRowReference* row_ref, float level)
+{
+	GtkTreePath* treepath;
+	if((treepath = gtk_tree_row_reference_get_path(row_ref))){ //it's possible the row may no longer be visible.
+		GtkTreeIter iter;
+		if(gtk_tree_model_get_iter(GTK_TREE_MODEL(app.store), &iter, treepath)){
+			gtk_list_store_set(app.store, &iter, COL_PEAKLEVEL, level, -1);
+
+		}else perr("failed to get row iter. row_ref=%p\n", row_ref);
+		gtk_tree_path_free(treepath);
+	} else dbg(2, "no path for rowref. row_ref=%p\n", row_ref); //this is not an error. The row may not be part of the current search.
+}
+
 

@@ -1,8 +1,16 @@
+typedef enum
+{
+	MSG_TYPE_OVERVIEW,
+	MSG_TYPE_PEAKLEVEL,
+} MsgType;
+
+struct _message
+{
+	MsgType type;
+	Sample* sample;
+};
 
 gpointer    overview_thread        (gpointer data);
-GdkPixbuf*  make_overview          (sample*);
-GdkPixbuf*  make_overview_sndfile  (sample*);
-GdkPixbuf*  make_overview_flac     (sample*);
-GdkPixbuf*  overview_pixbuf_new    ();
-void        overview_draw_line     (GdkPixbuf*, int x, short max, short min);
+void        request_overview       (Sample*);
+void        request_peaklevel      (Sample*);
 

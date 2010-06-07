@@ -6,9 +6,9 @@
 #include <gtk/gtk.h>
 #include "file_manager.h"
 #include "gqview_view_dir_tree.h"
-#include "typedefs.h"
 #include <gimp/gimpaction.h>
 #include <gimp/gimpactiongroup.h>
+#include "typedefs.h"
 #include "support.h"
 #include "dh-link.h"
 #include "main.h"
@@ -18,6 +18,13 @@
 #include "file_view.h"
 #include "inspector.h"
 #include "dh_tree.h"
+#ifdef HAVE_FFTW3
+#ifdef USE_OPENGL
+#include "gl_spectrogram_view.h"
+#else
+#include "spectrogram_widget.h"
+#endif
+#endif
 #ifdef USE_MYSQL
 #include "db/mysql.h"
 #endif
@@ -65,14 +72,14 @@ window_new()
 {
 /*
 GtkWindow
-+--GtkVbox
++--GtkVbox                        app.vbox
    +--search box
    |  +--label
    |  +--text entry
    |
    +--edit metadata hbox
    |
-   +--GtkAlignment
+   +--GtkAlignment                align1
    |  +-GtkHPaned
    |    +--vpaned (main left pane)
    |    |  +--directory tree
@@ -98,30 +105,25 @@ GtkWindow
 	g_signal_connect(window, "destroy", G_CALLBACK(window_on_destroy), NULL);
 
 	GtkWidget *vbox = app.vbox = gtk_vbox_new(FALSE, 0);
-	gtk_widget_show(vbox);
 	gtk_container_add(GTK_CONTAINER(window), vbox);
 
-	GtkWidget *hbox_statusbar = gtk_hbox_new(FALSE, 0);
-	gtk_widget_show(hbox_statusbar);
-	gtk_box_pack_end(GTK_BOX(vbox), hbox_statusbar, EXPAND_FALSE, FALSE, 0);
+	filter_new();
+	tagshow_selector_new();
+	tag_selector_new();
 
 	//alignment to give top border to main hpane.
 	GtkWidget* align1 = gtk_alignment_new(0.0, 0.0, 1.0, 1.0);
 	gtk_alignment_set_padding(GTK_ALIGNMENT(align1), 2, 1, 0, 0); //top, bottom, left, right.
-	gtk_widget_show(align1);
-	gtk_box_pack_end(GTK_BOX(vbox), align1, EXPAND_TRUE, TRUE, 0);
+	gtk_box_pack_start(GTK_BOX(vbox), align1, EXPAND_TRUE, TRUE, 0);
 
 	GtkWidget *hpaned = app.hpaned = gtk_hpaned_new();
 	gtk_paned_set_position(GTK_PANED(hpaned), 160);
-	//gtk_box_pack_end(GTK_BOX(vbox), hpaned, EXPAND_TRUE, TRUE, 0);
 	gtk_container_add(GTK_CONTAINER(align1), hpaned);
-	gtk_widget_show(hpaned);
 
 	GtkWidget* left = left_pane();
 	gtk_paned_add1(GTK_PANED(hpaned), left);
 
 	GtkWidget* rhs_vbox = gtk_vbox_new(NON_HOMOGENOUS, 0);
-	gtk_widget_show(rhs_vbox);
 	gtk_paned_add2(GTK_PANED(hpaned), rhs_vbox);
 
 	gtk_box_pack_start(GTK_BOX(rhs_vbox), message_panel__new(), EXPAND_FALSE, FILL_FALSE, 0);
@@ -130,7 +132,6 @@ GtkWindow
 	GtkWidget* r_vpaned = gtk_vpaned_new();
 	gtk_paned_set_position(GTK_PANED(r_vpaned), 300);
 	gtk_box_pack_start(GTK_BOX(rhs_vbox), r_vpaned, EXPAND_TRUE, TRUE, 0);
-	gtk_widget_show(r_vpaned);
 
 	GtkWidget* scroll = app.scroll = scrolled_window_new();
 	gtk_paned_add1(GTK_PANED(r_vpaned), scroll);
@@ -150,7 +151,6 @@ GtkWindow
 
 		GtkWidget* file_view = app.fm_view = file_manager__new_window(app.config.browse_dir ? app.config.browse_dir : g_get_home_dir());
 		gtk_container_add(GTK_CONTAINER(scroll2), file_view);
-		gtk_widget_show(file_view);
 		g_signal_connect(G_OBJECT(file_view), "cursor-changed", G_CALLBACK(window_on_fileview_row_selected), NULL);
 
 		void window_on_dir_changed(GtkWidget* widget, gpointer data)
@@ -169,26 +169,31 @@ GtkWindow
 	}
 	make_fileview_pane();
 
+#ifdef HAVE_FFTW3
+	if(app.view_options[SHOW_SPECTROGRAM].value){
+		show_spectrogram(true);
+
+		//gtk_widget_set_no_show_all(app.spectrogram, true);
+	}
+#endif
+
+	GtkWidget *hbox_statusbar = gtk_hbox_new(FALSE, 0);
+	gtk_box_pack_end(GTK_BOX(vbox), hbox_statusbar, EXPAND_FALSE, FALSE, 0);
+
 	GtkWidget* statusbar = app.statusbar = gtk_statusbar_new();
 	//gtk_statusbar_set_has_resize_grip(GTK_STATUSBAR(statusbar), TRUE);	//why does give a warning??????
 	gtk_statusbar_set_has_resize_grip(GTK_STATUSBAR(statusbar), FALSE);
 	gtk_container_set_border_width(GTK_CONTAINER(statusbar), 5);
 	gtk_box_pack_start(GTK_BOX(hbox_statusbar), statusbar, EXPAND_TRUE, FILL_TRUE, 0);
-	gtk_widget_show(statusbar);
 
 	GtkWidget *statusbar2 = app.statusbar2 = gtk_statusbar_new();
 	gtk_statusbar_set_has_resize_grip(GTK_STATUSBAR(statusbar2), FALSE);
 	gtk_container_set_border_width(GTK_CONTAINER(statusbar2), 5);
 	gtk_box_pack_start(GTK_BOX(hbox_statusbar), statusbar2, EXPAND_TRUE, FILL_TRUE, 0);
-	gtk_widget_show(statusbar2);
 
 	g_signal_connect(G_OBJECT(window), "realize", G_CALLBACK(window_on_realise), NULL);
 	g_signal_connect(G_OBJECT(window), "size-allocate", G_CALLBACK(window_on_allocate), NULL);
 	g_signal_connect(G_OBJECT(window), "configure_event", G_CALLBACK(window_on_configure), NULL);
-
-	filter_new();
-	tagshow_selector_new();
-	tag_selector_new();
 
 	GtkAccelGroup* accel_group = gtk_accel_group_new();
 	gboolean mnemonics = FALSE;
@@ -328,11 +333,9 @@ GtkWidget*
 left_pane()
 {
 	app.vpaned = gtk_vpaned_new();
-	gtk_widget_show(app.vpaned);
 
 	//make another vpane sitting inside the 1st:
 	GtkWidget* vpaned2 = app.vpaned2 = gtk_vpaned_new();
-	gtk_widget_show(vpaned2);
 	gtk_paned_add1(GTK_PANED(app.vpaned), vpaned2);
 
 	if(!BACKEND_IS_NULL){
@@ -341,7 +344,6 @@ left_pane()
 		GtkWidget* scroll = scrolled_window_new();
 		gtk_container_add((GtkContainer*)scroll, tree);
 		gtk_paned_add1(GTK_PANED(vpaned2), scroll);
-		gtk_widget_show(tree);
 		g_signal_connect(tree, "link_selected", G_CALLBACK(dir_tree_on_link_selected), NULL);
 #endif
 	}
@@ -351,7 +353,6 @@ left_pane()
 	vdtree_set_select_func(dir_list, dir_on_select, NULL); //callback
 	GtkWidget* fs_tree = dir_list->widget;
 	gtk_paned_add2(GTK_PANED(vpaned2), fs_tree);
-	gtk_widget_show(fs_tree);
 
 	//alternative dir tree:
 #ifdef USE_NICE_GQVIEW_CLIST_TREE
@@ -363,10 +364,9 @@ left_pane()
 	ViewDirTree *dir_list = vdtree_new(app.home_dir, expand);
 	GtkWidget* tree = dir_list->widget;
 	gtk_paned_add1(GTK_PANED(app.vpaned), tree);
-	gtk_widget_show(tree);
 #endif
 
-	inspector_pane();
+	inspector_new();
 	gtk_paned_add2(GTK_PANED(app.vpaned), app.inspector->widget);
 
 	return app.vpaned;
@@ -379,15 +379,13 @@ filter_new()
 	//search box
 	PF;
 
-	if(!app.window) return FALSE; //FIXME make this a macro with printf etc
+	g_return_val_if_fail(app.window, FALSE);
 
 	GtkWidget* hbox = app.toolbar = gtk_hbox_new(FALSE, 0);
-	gtk_widget_show(hbox);
 	gtk_box_pack_start(GTK_BOX(app.vbox), hbox, EXPAND_FALSE, FILL_FALSE, 0);
 
 	GtkWidget* label1 = gtk_label_new("Search");
 	gtk_misc_set_padding(GTK_MISC(label1), 5,5);
-	gtk_widget_show(label1);
 	gtk_box_pack_start(GTK_BOX(hbox), label1, FALSE, FALSE, 0);
 
 	gboolean on_focus_out(GtkWidget *widget, GdkEventFocus *event, gpointer user_data)
@@ -404,7 +402,6 @@ filter_new()
 	GtkWidget *entry = app.search = gtk_entry_new();
 	gtk_entry_set_max_length(GTK_ENTRY(entry), 64);
 	gtk_entry_set_text(GTK_ENTRY(entry), app.search_phrase);
-	gtk_widget_show(entry);	
 	gtk_box_pack_start(GTK_BOX(hbox), entry, EXPAND_TRUE, TRUE, 0);
 	g_signal_connect(G_OBJECT(entry), "focus-out-event", G_CALLBACK(on_focus_out), NULL);
 	gtk_entry_set_activates_default(GTK_ENTRY(entry), TRUE);
@@ -414,17 +411,14 @@ filter_new()
 
 	//second row (metadata edit):
 	GtkWidget* hbox_edit = app.toolbar2 = gtk_hbox_new(FALSE, 0);
-	gtk_widget_show(hbox_edit);
 	gtk_box_pack_start(GTK_BOX(app.vbox), hbox_edit, EXPAND_FALSE, FILL_FALSE, 0);
 
 	//left align the label:
 	GtkWidget* align1 = gtk_alignment_new(0.0, 0.5, 0.0, 0.0);
-	gtk_widget_show(align1);
 	gtk_box_pack_start(GTK_BOX(hbox_edit), align1, EXPAND_FALSE, FILL_FALSE, 0);
 
 	GtkWidget* label2 = gtk_label_new("Tag");
 	gtk_misc_set_padding(GTK_MISC(label2), 5,5);
-	gtk_widget_show(label2);
 	gtk_container_add(GTK_CONTAINER(align1), label2);	
 
 	//make the two lhs labels the same width:
@@ -728,5 +722,36 @@ row_clear_tags(GtkTreeIter* iter, int id)
 	gtk_list_store_set(app.store, iter, COL_KEYWORDS, "", -1);
 	return true;
 }
+
+
+#ifdef HAVE_FFTW3
+void
+show_spectrogram(gboolean enable)
+{
+	if(enable && !app.spectrogram){
+#ifdef USE_OPENGL
+		app.spectrogram = (GtkWidget*)gl_spectrogram_new();
+		gtk_widget_set_size_request(app.spectrogram, 100, 100);
+#else
+		app.spectrogram = (GtkWidget*)spectrogram_widget_new();
+#endif
+		gtk_box_pack_start(GTK_BOX(app.vbox), app.spectrogram, EXPAND_TRUE, FILL_TRUE, 0);
+
+		gchar* filename = listview__get_first_selected_filepath();
+		dbg(0, "file=%s", filename);
+#ifdef USE_OPENGL
+		gl_spectrogram_set_file((GlSpectrogram*)app.spectrogram, filename);
+#else
+		spectrogram_widget_set_file((SpectrogramWidget*)app.spectrogram, filename);
+#endif
+		g_free(filename);
+	}
+
+	if(app.spectrogram){
+		if(enable) gtk_widget_show(app.spectrogram);
+		else gtk_widget_hide(app.spectrogram);
+	}
+}
+#endif
 
 

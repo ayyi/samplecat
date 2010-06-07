@@ -335,7 +335,7 @@ decoder_session_free(_decoder_session* session)
 
 //gboolean
 int
-playback_init(sample* sample)
+playback_init(Sample* sample)
 {
 	//open a file ready for playback.
 

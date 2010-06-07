@@ -2,36 +2,21 @@
 samplecat installation
 ----------------------
 
-report problems to tim@orford.org
+Please report any problems to tim@orford.org
 
 
-1 - make
+1 - configure, make, make install.
 
-2 - copy "samplecat" to a bin directory.
+2 - if you are using Mysql, you need to setup the database.
+    (Sqlite setup is done automatically)
 
-3 - setup the database.
-    You need to make a single mysql table:
+    The datbase schema is contained in the file samples.sql
+    You can import this by runnig the command:
 
-	CREATE TABLE `samples` (
-	  `id` int(11) NOT NULL auto_increment,
-	  `filename` text NOT NULL,
-	  `filedir` text,
-	  `keywords` varchar(60) default '',
-	  `pixbuf` blob,
-	  `length` int(22) default NULL,
-	  `sample_rate` int(11) default NULL,
-	  `channels` int(4) default NULL,
-	  `online` int(1) default NULL,
-	  `last_checked` datetime default NULL,
-	  `mimetype` tinytext,
-	  `notes` mediumtext,
-	  `colour` tinyint(4) default NULL,
-	  PRIMARY KEY  (`id`)
-	)
+    mysql -u<USERNAME> -p < samples.sql
 
-	Run the command: mysql -u<USERNAME> -p < samples.sql
-
-4 - running the program will create a default config file 
-	(~/.samplecat) that you should edit with your db access info.
+3 - running the program will create a default config file 
+    (~/.config/samplecat/samplecat) that you should edit with
+    your db access info.
 
 

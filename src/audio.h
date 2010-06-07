@@ -25,7 +25,7 @@ typedef struct __audition
 #ifdef HAVE_FLAC_1_1_1
 struct __decoder_session
 {
-	sample*       sample;
+	Sample*       sample;
 	unsigned      sample_num;          // not being used currently 
 	unsigned      frame_num;           // not being used currently 
 	uint64_t      total_samples;       // total_frames * channels
@@ -46,17 +46,17 @@ void                           jack_close();
 void                           jack_shutdown(void *arg);
 int                            jack_process_flac(jack_nframes_t nframes, void *arg);
 
-int                            playback_init(sample* sample);
+int                            playback_init(Sample*);
 void                           playback_stop();
 
 void                           audition_init();
 void                           audition_reset();
 #ifdef HAVE_FLAC_1_1_1
 _decoder_session*              flac_decoder_session_new();
-gboolean                       flac_decoder_sesssion_init(_decoder_session* session, sample* sample);
+gboolean                       flac_decoder_sesssion_init(_decoder_session*, Sample*);
 void                           decoder_session_free(_decoder_session* session);
 
-gboolean                       get_file_info_flac(sample* sample);
+gboolean                       get_file_info_flac(Sample*);
 FLAC__FileDecoder*             flac_open(_decoder_session* session);
 gboolean                       flac_close(FLAC__FileDecoder* flacstream);
 gboolean                       flac_read(FLAC__FileDecoder* flacstream);

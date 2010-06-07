@@ -33,11 +33,14 @@ enum {
 	COLUMN_ONLINE,
 	COLUMN_LASTCHECKED,
 	COLUMN_MIMETYPE,
+	COLUMN_PEAKLEVEL,
 	COLUMN_NOTES,
 	COLUMN_COLOUR,
 };
 
+static gboolean sqlite__update_string(int id, const char*, const char*);
 static gboolean sqlite__update_int(int id, int, const char*);
+static gboolean sqlite__update_float(int id, float, const char*);
 
 
 void
@@ -81,7 +84,7 @@ sqlite__connect()
 		int n = sqlite3_exec(db, "CREATE TABLE samples ("
 			"id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, "
 			"filename VARCHAR(100), filedir VARCHAR(100), keywords VARCHAR(60), pixbuf BLOB, length int(22), sample_rate int(11), channels int(4), "
-			"online int(1), last_checked int(11), mimetype VARCHAR(32), notes VARCHAR(256), colour INTEGER(5))",
+			"online int(1), last_checked int(11), mimetype VARCHAR(32), peaklevel real, notes VARCHAR(256), colour INTEGER(5))",
 			on_create_table, 0, &errMsg);
 		if (n != SQLITE_OK) {
 			if (!strstr(errMsg, "already exists")) {
@@ -103,7 +106,7 @@ sqlite__disconnect()
 
 
 int
-sqlite__insert(sample* sample, MIME_type *mime_type)
+sqlite__insert(Sample* sample, MIME_type *mime_type)
 {
 	//TODO is supposed to return the new id?
 
@@ -120,11 +123,11 @@ sqlite__insert(sample* sample, MIME_type *mime_type)
 	gchar* mime_str = g_strdup_printf("%s/%s", mime_type->media_type, mime_type->subtype);
 	int colour = 0;
 	gchar* sql = g_strdup_printf(
-		"INSERT INTO samples(filename,filedir,length,sample_rate,channels,online,mimetype,colour) "
-		"VALUES ('%s','%s','%i','%i','%i','%i','%s', '%i')",
-		filename, filedir, sample->length, sample->sample_rate, sample->channels, 1, mime_str, colour
+		"INSERT INTO samples(filename,filedir,length,sample_rate,channels,online,mimetype,peaklevel,colour) "
+		"VALUES ('%s','%s','%i','%i','%i','%i','%s', '%f', '%i')",
+		filename, filedir, sample->length, sample->sample_rate, sample->channels, 1, mime_str, sample->peak_level, colour
 	);
-	dbg(1, "sql=%s", sql);
+	dbg(2, "sql=%s", sql);
 
 	char* errMsg = 0;
 	int n = sqlite3_exec(db, sql, on_insert, 0, &errMsg);
@@ -169,6 +172,30 @@ sqlite__delete_row(int id)
 
 
 static gboolean
+sqlite__update_string(int id, const char* value, const char* field)
+{
+	int on_update(void* NotUsed, int argc, char** argv, char** azColName)
+	{
+		PF;
+		return 0;
+	}
+
+	g_return_val_if_fail(id, false);
+	gboolean ok = true;
+	gchar* sql = g_strdup_printf("UPDATE samples SET %s='%s' WHERE id=%u", field, value, id);
+	dbg(0, "sql=%s", sql);
+	char* errMsg = 0;
+	int n = sqlite3_exec(db, sql, on_update, 0, &errMsg);
+	if (n != SQLITE_OK) {
+		gwarn("sqlite error: %s", errMsg);
+		ok = false;
+	}
+	g_free(sql);
+	return ok;
+}
+
+
+static gboolean
 sqlite__update_int(int id, int value, const char* field)
 {
 	g_return_val_if_fail(id, false);
@@ -183,8 +210,33 @@ sqlite__update_int(int id, int value, const char* field)
 	gchar* sql = g_strdup_printf("UPDATE samples SET %s=%i WHERE id=%i", field, value, id);
 	dbg(1, "sql=%s", sql);
 	char* errMsg = 0;
-    int n = sqlite3_exec(db, sql, on_update, 0, &errMsg);
-    if (n != SQLITE_OK) {
+	int n = sqlite3_exec(db, sql, on_update, 0, &errMsg);
+	if (n != SQLITE_OK) {
+		gwarn("sqlite error: %s", errMsg);
+		ok = false;
+	}
+	g_free(sql);
+	return ok;
+}
+
+
+static gboolean
+sqlite__update_float(int id, float value, const char* field)
+{
+	g_return_val_if_fail(id, false);
+
+	int on_update(void* NotUsed, int argc, char** argv, char** azColName)
+	{
+		PF;
+		return 0;
+	}
+
+	gboolean ok = true;
+	gchar* sql = g_strdup_printf("UPDATE samples SET %s=%f WHERE id=%i", field, value, id);
+	dbg(0, "sql=%s", sql);
+	char* errMsg = 0;
+	int n = sqlite3_exec(db, sql, on_update, 0, &errMsg);
+	if (n != SQLITE_OK) {
 		gwarn("sqlite error: %s", errMsg);
 		ok = false;
 	}
@@ -214,8 +266,8 @@ sqlite__update_keywords(int id, const char* keywords)
 	gchar* sql = g_strdup_printf("UPDATE samples SET keywords='%s' WHERE id=%u", keywords, id);
 	dbg(1, "sql=%s", sql);
 	char* errMsg = 0;
-    int n = sqlite3_exec(db, sql, on_update, 0, &errMsg);
-    if (n != SQLITE_OK) {
+	int n = sqlite3_exec(db, sql, on_update, 0, &errMsg);
+	if (n != SQLITE_OK) {
 		gwarn("sqlite error: %s", errMsg);
 		ok = false;
 	}
@@ -227,29 +279,12 @@ sqlite__update_keywords(int id, const char* keywords)
 gboolean
 sqlite__update_notes(int id, const char* notes)
 {
-	int on_update(void* NotUsed, int argc, char** argv, char** azColName)
-	{
-		PF;
-		return 0;
-	}
-
-	g_return_val_if_fail(id, false);
-	gboolean ok = true;
-	gchar* sql = g_strdup_printf("UPDATE samples SET notes='%s' WHERE id=%u", notes, id);
-	dbg(1, "sql=%s", sql);
-	char* errMsg = 0;
-    int n = sqlite3_exec(db, sql, on_update, 0, &errMsg);
-    if (n != SQLITE_OK) {
-		gwarn("sqlite error: %s", errMsg);
-		ok = false;
-	}
-	g_free(sql);
-	return ok;
+	return sqlite__update_string(id, notes, "notes");
 }
 
 
 gboolean
-sqlite__update_pixbuf(sample* sample)
+sqlite__update_pixbuf(Sample* sample)
 {
 	GdkPixbuf* pixbuf = sample->pixbuf;
 	g_return_val_if_fail(pixbuf, false);
@@ -303,13 +338,20 @@ sqlite__update_online(int id, gboolean online)
 	gchar* sql = g_strdup_printf("UPDATE samples SET online=%i, last_checked=datetime('now') WHERE id=%i", online, id);
 	dbg(1, "sql=%s", sql);
 	char* errMsg = 0;
-    int n = sqlite3_exec(db, sql, on_update, 0, &errMsg);
-    if (n != SQLITE_OK) {
+	int n = sqlite3_exec(db, sql, on_update, 0, &errMsg);
+	if (n != SQLITE_OK) {
 		gwarn("sqlite error: %s", errMsg);
 		ok = false;
 	}
 	g_free(sql);
 	return ok;
+}
+
+
+gboolean
+sqlite__update_peaklevel(int id, float level)
+{
+	return sqlite__update_float(id, level, "peaklevel");
 }
 
 
@@ -467,6 +509,7 @@ sqlite__search_iter_next(unsigned long** lengths)
 		result.notes       = (char*)sqlite3_column_text(ppStmt, COLUMN_NOTES);
 		result.colour      = sqlite3_column_int(ppStmt, COLUMN_COLOUR);
 		result.mimetype    = (char*)sqlite3_column_text(ppStmt, COLUMN_MIMETYPE);
+		result.peak_level  = sqlite3_column_double(ppStmt, COLUMN_PEAKLEVEL);
 		result.online      = sqlite3_column_int(ppStmt, COLUMN_ONLINE);
 		result.overview    = pixbuf;
 

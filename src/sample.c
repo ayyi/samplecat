@@ -23,10 +23,10 @@ extern Filer filer;
 extern unsigned debug;
 
 
-sample*
+Sample*
 sample_new()
 {
-	sample* sample = g_new0(struct _sample, 1);
+	Sample* sample = g_new0(struct _sample, 1);
 
 	sample->bg_colour = app.bg_colour;
 
@@ -34,7 +34,7 @@ sample_new()
 }
 
 
-sample*
+Sample*
 sample_new_from_model(GtkTreePath *path)
 {
 	GtkTreeModel *model = gtk_tree_view_get_model(GTK_TREE_VIEW(app.view));
@@ -48,7 +48,7 @@ sample_new_from_model(GtkTreePath *path)
 	gtk_tree_model_get(model, &iter, COL_FNAME, &fpath, COL_NAME, &fname, COL_IDX, &id, COL_LENGTH, &length, COL_SAMPLERATE, &samplerate, COL_CHANNELS, &channels, COL_MIMETYPE, &mimetype, COL_COLOUR, &colour_index, -1);
 	g_return_val_if_fail(mimetype, NULL);
 
-	sample* sample = g_new0(struct _sample, 1);
+	Sample* sample = g_new0(struct _sample, 1);
 	sample->id     = id;
 	sample->length = atoi(length);
 	sample->sample_rate = atoi(samplerate);
@@ -64,22 +64,22 @@ sample_new_from_model(GtkTreePath *path)
 //FIXME this is an internal detail of file_view. Use an accessor instead.
 #define FILE_VIEW_COL_LEAF 0
 
-sample*
+Sample*
 sample_new_from_fileview(GtkTreeModel* model, GtkTreeIter* iter)
 {
 	gchar* fname;
 	gtk_tree_model_get(model, iter, FILE_VIEW_COL_LEAF, &fname, -1);
 
-	sample* sample = g_new0(struct _sample, 1);
+	Sample* sample = g_new0(struct _sample, 1);
 	snprintf(sample->filename, 255, "%s/%s", filer.real_path, fname);
 	return sample;
 }
 
 
-sample*
+Sample*
 sample_new_from_result(SamplecatResult* r)
 {
-	sample* s      = g_new0(struct _sample, 1);
+	Sample* s      = g_new0(struct _sample, 1);
 	s->id          = r->idx;
 	s->row_ref     = r->row_ref;
 	snprintf(s->filename, 255, "%s/%s", r->dir, r->sample_name);
@@ -96,7 +96,22 @@ sample_new_from_result(SamplecatResult* r)
 
 
 void
-sample_free(sample* sample)
+sample_ref(Sample* sample)
+{
+	sample->ref_count++;
+}
+
+
+void
+sample_unref(Sample* sample)
+{
+	sample->ref_count--;
+	if(sample->ref_count < 1) sample_free(sample);
+}
+
+
+void
+sample_free(Sample* sample)
 {
 	if(sample->row_ref) gtk_tree_row_reference_free(sample->row_ref);
 	g_free(sample);
@@ -104,7 +119,7 @@ sample_free(sample* sample)
 
 
 gboolean
-sample_get_file_sndfile_info(sample* sample)
+sample_get_file_sndfile_info(Sample* sample)
 {
 	char *filename = sample->filename;
 
@@ -136,11 +151,99 @@ sample_get_file_sndfile_info(sample* sample)
 }
 
 
+gboolean
+sample_get_file_info(Sample* sample)
+{
+#ifdef HAVE_FLAC_1_1_1
+	if(sample->filetype==TYPE_FLAC) return get_file_info_flac(sample);
+#else
+	if(0){}
+#endif
+	else                            return sample_get_file_sndfile_info(sample);
+}
+
+
+gboolean
+result_get_file_sndfile_info(Result* sample)
+{
+	char *filename = sample->sample_name;
+
+	SF_INFO        sfinfo;   //the libsndfile struct pointer
+	SNDFILE        *sffile;
+	sfinfo.format  = 0;
+
+	if(!(sffile = sf_open(filename, SFM_READ, &sfinfo))){
+		dbg(0, "not able to open input file %s.", filename);
+		puts(sf_strerror(NULL));    // print the error message from libsndfile:
+		int e = sf_error(NULL);
+		dbg(0, "error=%i", e);
+		return false;
+	}
+
+	char chanwidstr[64];
+	if     (sfinfo.channels==1) snprintf(chanwidstr, 64, "mono");
+	else if(sfinfo.channels==2) snprintf(chanwidstr, 64, "stereo");
+	else                        snprintf(chanwidstr, 64, "channels=%i", sfinfo.channels);
+	if(debug) printf("%iHz %s frames=%i\n", sfinfo.samplerate, chanwidstr, (int)sfinfo.frames);
+	sample->channels    = sfinfo.channels;
+	sample->sample_rate = sfinfo.samplerate;
+	sample->length      = (sfinfo.frames * 1000) / sfinfo.samplerate;
+
+	if(sample->channels<1 || sample->channels>100){ dbg(0, "bad channel count: %i", sample->channels); return false; }
+	if(sf_close(sffile)) perr("bad file close.\n");
+
+	return true;
+}
+
+
 void
-sample_set_type_from_mime_string(sample* sample, char* mime_string)
+sample_set_type_from_mime_string(Sample* sample, char* mime_string)
 {
 	if(!strcmp(mime_string, "audio/x-flac")) sample->filetype = TYPE_FLAC;
 	dbg(2, "mimetype: %s type=%i", mime_string, sample->filetype);
+}
+
+
+Result*
+result_new_from_model(GtkTreePath* path)
+{
+	GtkTreeModel* model = gtk_tree_view_get_model(GTK_TREE_VIEW(app.view));
+	GtkTreeIter iter;
+	gtk_tree_model_get_iter(model, &iter, path);
+
+	gchar *fpath, *fname, *mimetype, *length, *notes; int id; unsigned colour_index;
+	gchar *samplerate;
+	int channels;
+	float peak_level;
+	GdkPixbuf* overview;
+	gtk_tree_model_get(model, &iter, COL_FNAME, &fpath, COL_NAME, &fname, COL_IDX, &id, COL_LENGTH, &length, COL_SAMPLERATE, &samplerate, COL_CHANNELS, &channels, COL_MIMETYPE, &mimetype, COL_PEAKLEVEL, &peak_level, COL_COLOUR, &colour_index, COL_OVERVIEW, &overview, COL_NOTES, &notes, -1);
+	g_return_val_if_fail(mimetype, NULL);
+
+	Result* sample = g_new0(Result, 1);
+	sample->idx    = id;
+	sample->length = atoi(length);
+	sample->sample_rate = atoi(samplerate);
+	sample->overview = NULL;
+	sample->channels = channels;
+	sample->row_ref = gtk_tree_row_reference_new(GTK_TREE_MODEL(app.store), path);
+	sample->sample_name = fname;
+	sample->dir = fpath;
+	//if(!strcmp(mimetype, "audio/x-flac")) sample->filetype = TYPE_FLAC; else sample->filetype = TYPE_SNDFILE; 
+	sample->mimetype = mimetype;
+	sample->peak_level = peak_level;
+	sample->overview = overview;
+	sample->notes = notes;
+	return sample;
+}
+
+
+void
+result_free(Result* result)
+{
+	if(result->row_ref) gtk_tree_row_reference_free(result->row_ref);
+
+	if(result->sample_name) g_free(result->sample_name);
+	g_free(result);
 }
 
 

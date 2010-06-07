@@ -263,6 +263,43 @@ AM_CONDITIONAL(ENABLE_AYYI, test "$enable_ayyi" = "yes")
 
 dnl -----------------------------------------------------------------------------
 
+enable_opengl="yes"
+OPENGL_CFLAGS=`pkg-config --cflags-only-I gtkglext-1.0`
+OPENGL_LDFLAGS=`pkg-config --libs-only-l gtkglext-1.0`
+AC_SUBST(OPENGL_CFLAGS)
+AC_SUBST(OPENGL_LDFLAGS)
+AC_DEFINE(USE_OPENGL, 1, Opengl features are enabled)
+AM_CONDITIONAL(ENABLE_OPENGL, test "yes" = "yes")
+
+dnl -----------------------------------------------------------------------------
+
+AC_ARG_ENABLE(fftw,
+	AC_HELP_STRING([--disable-fftw], [disable usage of FFTW ]),
+	ac_arg_fftw="N", ac_arg_fftw="Y")
+
+if test $ac_arg_fftw = "Y" ; then
+	PKG_CHECK_MODULES(FFTW3, fftw3 >= 0.15.0, ac_cv_fftw3=1, ac_cv_fftw3=0)
+	AC_DEFINE_UNQUOTED([HAVE_FFTW3],$ac_cv_fftw3,[Set to 1 if you have libfftw3.])
+
+	if test x$ac_cv_fftw3 = x1 ; then
+      ac_cv_fftw3=yes
+      HAVE_FFTW3=1
+      fi
+	fi
+
+if test x$ac_cv_fftw3 != xyes ; then
+	ac_cv_fftw3=no
+	HAVE_FFTW3=0
+	fi
+
+AC_SUBST(HAVE_FFTW3)
+AC_SUBST(FFTW3_CFLAGS)
+AC_SUBST(FFTW3_LIBS)
+AM_CONDITIONAL(ENABLE_FFTW3, test "$ac_cv_fftw3" = "yes")
+
+
+dnl -----------------------------------------------------------------------------
+
 SNDFILE_LIBS=`pkg-config --cflags --libs sndfile`
 AC_SUBST(SNDFILE_LIBS)
 
@@ -292,4 +329,5 @@ AC_MSG_RESULT([Building tracker support:         $enable_tracker])
 AC_MSG_RESULT([Building direct flac support:     $enable_flac])
 AC_MSG_RESULT([Building dnotify support:         $have_dnotify])
 AC_MSG_RESULT([Building ayyi support:            $enable_ayyi])
+AC_MSG_RESULT([Building opengl support:          $enable_opengl])
 AC_MSG_RESULT([])

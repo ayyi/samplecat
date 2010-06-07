@@ -1433,6 +1433,28 @@ gimp_get_accel_string (guint key, GdkModifierType modifiers)
 }
 
 
+gchar *
+str_replace(const gchar* string, const gchar* search, const gchar* replacement)
+{
+	gchar *str, **arr;
+
+	g_return_val_if_fail (string != NULL, NULL);
+	g_return_val_if_fail (search != NULL, NULL);
+
+	if (replacement == NULL) replacement = "";
+
+	arr = g_strsplit (string, search, -1);
+	if (arr != NULL && arr[0] != NULL)
+		str = g_strjoinv (replacement, arr);
+	else
+		str = g_strdup (string);
+
+	g_strfreev (arr);
+
+	return str;
+}
+
+
 //from Rox:
 
 /* Convert a list of URIs as a string into a GList of EscapedPath URIs.
@@ -1582,5 +1604,38 @@ vfs_unescape_string (const gchar *escaped_string, const gchar *illegal_character
     return result;
 
 }
+
+
+float
+gain2db(float gain)
+{
+	union {float f; int i;} t;
+	t.f = gain;
+	int * const    exp_ptr =  &t.i;
+	int            x = *exp_ptr;
+	const int      log_2 = ((x >> 23) & 255) - 128;
+	x &= ~(255 << 23);
+	x += 127 << 23;
+	*exp_ptr = x;
+
+	gain = ((-1.0f/3) * t.f + 2) * t.f - 2.0f/3;
+
+	return 20.0f * (gain + log_2) * 0.69314718f;
+}
+
+
+char*
+gain2dbstring(float gain)
+{
+	//result must be freed by caller
+
+	float dB = gain2db(gain);
+
+	if(dB < -200)
+		return g_strdup_printf("-200 dB");
+
+	return g_strdup_printf("%.2f dB", gain2db(gain));
+}
+
 
 

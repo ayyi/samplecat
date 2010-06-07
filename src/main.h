@@ -7,6 +7,7 @@ char warn[32];
 #define FILL_FALSE 0
 #define NON_HOMOGENOUS 0
 #define START_EDITING 1
+#define TIMER_STOP FALSE
 
 #define PALETTE_SIZE 17
 
@@ -14,7 +15,7 @@ char warn[32];
 
 #define POINTER_OK_NULL(A, B, C) if((unsigned)A < 1024){ errprintf("%s(): bad %s pointer (%p).\n", B, C, A); return NULL; }
 #ifndef USE_AYYI
-#define P_GERR if(error){ errprintf2("%s\n", error->message); g_error_free(error); error = NULL; }
+#define P_GERR if(error){ errprintf2(__func__, "%s\n", error->message); g_error_free(error); error = NULL; }
 #endif
 
 
@@ -31,6 +32,7 @@ typedef struct _inspector
 	GtkWidget*     samplerate;
 	GtkWidget*     channels;
 	GtkWidget*     mimetype;
+	GtkWidget*     level;
 	GtkWidget*     image;
 	GtkWidget*     text;
 	GtkTextBuffer* notes;
@@ -66,13 +68,14 @@ struct _backend
 	char*            (*dir_iter_next)    ();
 	void             (*dir_iter_free)    ();
 
-	int              (*insert)           (sample*, MIME_type*);
+	int              (*insert)           (Sample*, MIME_type*);
 	gboolean         (*delete)           (int);
 	gboolean         (*update_colour)    (int, int);
 	gboolean         (*update_keywords)  (int, const char*);
 	gboolean         (*update_notes)     (int, const char*);
-	gboolean         (*update_pixbuf)    (sample*);
+	gboolean         (*update_pixbuf)    (Sample*);
 	gboolean         (*update_online)    (int, gboolean);
+	gboolean         (*update_peaklevel) (int, float);
 
 	void             (*disconnect)       ();
 };
@@ -84,12 +87,18 @@ extern struct _backend backend;
 
 #define BACKEND_IS_NULL (backend.search_iter_new == NULL)
 
+enum {
+	SHOW_FILEMANAGER = 0,
+	SHOW_SPECTROGRAM,
+	MAX_VIEW_OPTIONS
+};
 
 struct _app
 {
 	gboolean       loaded;
 
 	char*          config_filename;
+	const char*    cache_dir;
 	struct _config config;
 	char           search_phrase[256];
 	char*          search_dir;
@@ -100,6 +109,12 @@ struct _app
 		char*      search;
 		char*      add;
 	}              args;
+
+	struct _view_option {
+		gboolean         value;
+		GtkWidget*       menu_item;
+		void             (*on_toggle)(GtkMenuItem*, gpointer);
+	} view_options[MAX_VIEW_OPTIONS];
 
 	GKeyFile*      key_file;   //config file data.
 
@@ -124,6 +139,7 @@ struct _app
 	GtkWidget*     category;
 	GtkWidget*     view_category;
 	GtkWidget*     context_menu;
+	GtkWidget*     spectrogram;
 
 	GtkWidget*     colour_button[PALETTE_SIZE];
 	gboolean       colourbox_dirty;
@@ -151,8 +167,6 @@ struct _app
 	GdkColor             base_colour;
 	GdkColor             text_colour;
 
-	//MYSQL                mysql;
-
 	GAsyncQueue*         msg_queue;
 
 	//nasty!
@@ -161,6 +175,9 @@ struct _app
 
 	GMutex*    mutex;
 };
+#ifndef __main_c__
+extern struct _app app;
+#endif
 
 struct _palette {
 	guint red[8];
@@ -173,7 +190,7 @@ enum {
 	TYPE_FLAC,
 };
 
-gboolean    row_set_tags_from_id(int id, GtkTreeRowReference* row_ref, const char* tags_new);
+gboolean    row_set_tags_from_id(int id, GtkTreeRowReference*, const char* tags_new);
 
 void        do_search(char* search, char* dir);
 
@@ -186,32 +203,28 @@ gboolean    mimetype_is_unsupported(MIME_type*, char* mime_string);
 
 gboolean    add_file(char* path);
 gboolean    add_dir(char* uri);
-gboolean    get_file_info(sample*);
 gboolean    on_overview_done(gpointer sample);
+gboolean    on_peaklevel_done(gpointer sample);
 
-void        db_update_pixbuf(sample*);
 void        update_dir_node_list();
 
-gboolean    treeview_get_cell(GtkTreeView *view, guint x, guint y, GtkCellRenderer **cell);
-gboolean    treeview_get_tags_cell(GtkTreeView *view, guint x, guint y, GtkCellRenderer **cell);
+gboolean    treeview_get_cell(GtkTreeView*, guint x, guint y, GtkCellRenderer**);
+gboolean    treeview_get_tags_cell(GtkTreeView*, guint x, guint y, GtkCellRenderer**);
 
 gint        get_mouseover_row();
 
 void        update_search_dir(gchar* uri);
-gboolean    dir_tree_update(gpointer data);
+gboolean    dir_tree_update(gpointer);
 void        set_search_dir(char* dir);
 
 gboolean    keyword_is_dupe(char* new, char* existing);
 
-gboolean    on_directory_list_changed();
-gboolean    toggle_recursive_add(GtkWidget*, gpointer user_data);
-
-void        on_file_moved(GtkTreeIter);
-
 gboolean    config_load();
 void        config_new();
 gboolean    config_save();
-void        on_quit(GtkMenuItem *menuitem, gpointer user_data);
+void        on_quit(GtkMenuItem*, gpointer user_data);
 
 void        set_backend(BackendType);
+
+void        observer__item_selected(Result*);
 

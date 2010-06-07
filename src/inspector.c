@@ -27,7 +27,7 @@ static void       inspector_clear           ();
 static void       hide_fields               ();
 static void       show_fields               ();
 static gboolean   inspector_on_tags_clicked (GtkWidget*, GdkEventButton*, gpointer);
-static gboolean   on_notes_focus_out        (GtkWidget*, gpointer userdata);
+static gboolean   on_notes_focus_out        (GtkWidget*, gpointer);
 static void       inspector_on_notes_insert (GtkTextView*, gchar *arg1, gpointer);
 static void       tag_edit_start            (int tnum);
 static void       tag_edit_stop             (GtkWidget*, GdkEventCrossing*, gpointer);
@@ -35,7 +35,7 @@ static void       tag_edit_stop             (GtkWidget*, GdkEventCrossing*, gpoi
 
 
 GtkWidget*
-inspector_pane()
+inspector_new()
 {
 	//close up on a single sample. Bottom left of main window.
 
@@ -131,6 +131,16 @@ inspector_pane()
 	
 	//-----------
 
+	char* labels[] = {"Level"};
+	GtkWidget* align = gtk_alignment_new(0.0, 0.5, 0.0, 0.0);
+	gtk_box_pack_start(GTK_BOX(vbox), align, EXPAND_FALSE, FILL_FALSE, 0);
+
+	GtkWidget* label = app.inspector->level = gtk_label_new(labels[0]);
+	gtk_misc_set_padding(GTK_MISC(label), margin_left, 2);
+	gtk_container_add(GTK_CONTAINER(align), label);	
+	
+	//-----------
+
 	//notes:
 
 	GtkWidget *text1 = inspector->text = gtk_text_view_new();
@@ -167,6 +177,63 @@ inspector_pane()
 
 
 void
+inspector_update_from_result(Result* sample)
+{
+	PF;
+	Inspector* i = app.inspector;
+	if(!i) return;
+	g_return_if_fail(sample);
+
+	#ifdef USE_TRACKER
+	if(BACKEND_IS_TRACKER){
+		if(!sample->length){
+			//this sample hasnt been previously selected, and non-db info isnt available.
+			//-get the info directly from the file, and set it into the main treeview.
+			MIME_type* mime_type = type_from_path(sample->sample_name);
+			char mime_string[64];
+			snprintf(mime_string, 64, "%s/%s", mime_type->media_type, mime_type->subtype);
+			if(mimestring_is_unsupported(mime_string)){
+				inspector_clear();
+				gtk_label_set_text(GTK_LABEL(i->name), basename(sample->sample_name));
+				return;
+			}
+			if(!result_get_file_sndfile_info(sample)){
+				perr("cannot open file?\n");
+				return;
+			}
+		}
+	}
+	#endif
+
+	char* ch_str = channels_format(sample->channels);
+	char fs_str[64]; snprintf(fs_str, 63, "%i kHz",      sample->sample_rate);
+	char len   [32]; snprintf(len,    31, "%i",          sample->length);
+	char* level = gain2dbstring(sample->peak_level);
+
+	gtk_label_set_text(GTK_LABEL(i->name),       sample->sample_name);
+	gtk_label_set_text(GTK_LABEL(i->tags),       sample->keywords);
+	gtk_label_set_text(GTK_LABEL(i->samplerate), fs_str);
+	gtk_label_set_text(GTK_LABEL(i->channels),   ch_str);
+	gtk_label_set_text(GTK_LABEL(i->filename),   sample->sample_name);
+	gtk_label_set_text(GTK_LABEL(i->mimetype),   sample->mimetype);
+	gtk_label_set_text(GTK_LABEL(i->length),     len);
+	gtk_label_set_text(GTK_LABEL(i->level),      level);
+	gtk_text_buffer_set_text(i->notes, sample->notes ? sample->notes : "", -1);
+	gtk_image_set_from_pixbuf(GTK_IMAGE(i->image), sample->overview);
+
+	show_fields();
+	g_free(level);
+	g_free(ch_str);
+
+	//store a reference to the row id in the inspector widget:
+	//g_object_set_data(G_OBJECT(app.inspector->name), "id", GUINT_TO_POINTER(id));
+	i->row_id = sample->idx;
+	i->row_ref = sample->row_ref;
+	if(!i->row_ref) perr("setting row_ref failed!\n");
+}
+
+
+void
 inspector_update_from_listview(GtkTreePath *path)
 {
 	PF;
@@ -188,7 +255,7 @@ inspector_update_from_listview(GtkTreePath *path)
 	int id;
 	gtk_tree_model_get(GTK_TREE_MODEL(app.store), &iter, COL_NAME, &fname, COL_FNAME, &fpath, COL_LENGTH, &length, COL_KEYWORDS, &tags, COL_MIMETYPE, &mimetype, COL_NOTES, &notes, COL_OVERVIEW, &pixbuf, COL_IDX, &id, -1);
 
-	sample* sample = sample_new_from_model(path);
+	Sample* sample = sample_new_from_model(path);
 	#ifdef USE_TRACKER
 	if(BACKEND_IS_TRACKER){
 		g_return_if_fail(length);
@@ -254,7 +321,7 @@ inspector_update_from_fileview(GtkTreeView* treeview)
 		g_list_foreach (list, (GFunc)gtk_tree_path_free, NULL);
 		g_list_free (list);
 
-		sample* sample = sample_new_from_fileview(model, &iter);
+		Sample* sample = sample_new_from_fileview(model, &iter);
 
 		if(sample){
 			MIME_type* mime_type = type_from_path(sample->filename);
@@ -266,7 +333,7 @@ inspector_update_from_fileview(GtkTreeView* treeview)
 				inspector_clear();
 				gtk_label_set_text(GTK_LABEL(i->name), basename(sample->filename));
 			}
-			else if(get_file_info(sample)){
+			else if(sample_get_file_info(sample)){
 				char ch_str[64]; snprintf(ch_str, 64, "%u channels", sample->channels);
 				char fs_str[64]; snprintf(fs_str, 64, "%u kHz",      sample->sample_rate);
 				char length[64]; snprintf(length, 64, "%u",          sample->length);

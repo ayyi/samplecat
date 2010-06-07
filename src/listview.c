@@ -17,24 +17,28 @@
 #include "sample.h"
 #include "dnd.h"
 #include "cellrenderer_hypertext.h"
-#include "inspector.h"
 #include "pixmaps.h"
+#include "overview.h"
 #include "listview.h"
 
 extern struct _app app;
-int             playback_init           (sample*);
-void            playback_stop           ();
+int             playback_init                    (Sample*);
+void            playback_stop                    ();
 extern int      debug;
 
-static gboolean listview__on_row_clicked(GtkWidget*, GdkEventButton*, gpointer);
-static void     listview__dnd_get       (GtkWidget*, GdkDragContext*, GtkSelectionData*, guint info, guint time, gpointer);
-static gint     listview__drag_received (GtkWidget*, GdkDragContext*, gint x, gint y, GtkSelectionData*, guint info, guint time, gpointer user_data);
-static gboolean listview__on_motion     (GtkWidget*, GdkEventMotion*, gpointer);
-static void     listview__on_keywords_edited(GtkCellRendererText*, gchar *path_string, gchar *new_text, gpointer);
-static void     path_cell_data          (GtkTreeViewColumn*, GtkCellRenderer*, GtkTreeModel*, GtkTreeIter*, gpointer);
-static void     tag_cell_data           (GtkTreeViewColumn*, GtkCellRenderer*, GtkTreeModel*, GtkTreeIter*, gpointer);
-static void     cell_bg_lighter         (GtkTreeViewColumn*, GtkCellRenderer*, GtkTreeModel*, GtkTreeIter*);
-static void     cell_data_bg            (GtkTreeViewColumn*, GtkCellRenderer*, GtkTreeModel*, GtkTreeIter*, gpointer);
+static gboolean listview__on_row_clicked         (GtkWidget*, GdkEventButton*, gpointer);
+static void     listview__on_cursor_change       (GtkTreeView*, gpointer);
+static void     listview__dnd_get                (GtkWidget*, GdkDragContext*, GtkSelectionData*, guint info, guint time, gpointer);
+static gint     listview__drag_received          (GtkWidget*, GdkDragContext*, gint x, gint y, GtkSelectionData*, guint info, guint time, gpointer user_data);
+static gboolean listview__on_motion              (GtkWidget*, GdkEventMotion*, gpointer);
+static void     listview__on_keywords_edited     (GtkCellRendererText*, gchar *path_string, gchar *new_text, gpointer);
+static void     path_cell_data                   (GtkTreeViewColumn*, GtkCellRenderer*, GtkTreeModel*, GtkTreeIter*, gpointer);
+static void     tag_cell_data                    (GtkTreeViewColumn*, GtkCellRenderer*, GtkTreeModel*, GtkTreeIter*, gpointer);
+static void     cell_bg_lighter                  (GtkTreeViewColumn*, GtkCellRenderer*, GtkTreeModel*, GtkTreeIter*);
+static void     cell_data_bg                     (GtkTreeViewColumn*, GtkCellRenderer*, GtkTreeModel*, GtkTreeIter*, gpointer);
+static gboolean listview__get_first_selected_iter(GtkTreeIter*);
+static GtkTreePath* listview__get_first_selected_path();
+static int      listview__path_get_id            (GtkTreePath*);
 
 
 void
@@ -173,6 +177,7 @@ listview__new()
 	gtk_tree_view_set_search_column(GTK_TREE_VIEW(app.view), COL_NAME);
 
 	g_signal_connect((gpointer)app.view, "button-press-event", G_CALLBACK(listview__on_row_clicked), NULL);
+	g_signal_connect((gpointer)app.view, "cursor-changed", G_CALLBACK(listview__on_cursor_change), NULL);
 
 #if 0 //showing is now conditional on the database - TODO check panel is still visible.
 	gtk_widget_show(view);
@@ -180,7 +185,7 @@ listview__new()
 }
 
 
-int
+static int
 listview__path_get_id(GtkTreePath* path)
 {
 	int id;
@@ -220,7 +225,6 @@ listview__on_row_clicked(GtkWidget *widget, GdkEventButton *event, gpointer user
 	if(event->button == 1){
 		GtkTreePath *path;
 		if(gtk_tree_view_get_path_at_pos(GTK_TREE_VIEW(app.view), (gint)event->x, (gint)event->y, &path, NULL, NULL, NULL)){
-			inspector_update_from_listview(path);
 
 			//auditioning:
 			GdkRectangle rect;
@@ -230,18 +234,8 @@ listview__on_row_clicked(GtkWidget *widget, GdkEventButton *event, gpointer user
 				//overview column:
 				dbg(2, "overview. column rect: %i %i %i %i", rect.x, rect.y, rect.width, rect.height);
 
-				/*
-				GtkTreeIter iter;
-				GtkTreeModel *model = gtk_tree_view_get_model(GTK_TREE_VIEW(app.view));
-				gtk_tree_model_get_iter(model, &iter, path);
-				gchar *fpath, *fname, *mimetype;
-				int id;
-				gtk_tree_model_get(model, &iter, COL_FNAME, &fpath, COL_NAME, &fname, COL_IDX, &id, COL_MIMETYPE, &mimetype, -1);
-
-				char file[256]; snprintf(file, 256, "%s/%s", fpath, fname);
-				*/
-
-				sample* sample = sample_new_from_model(path);
+				//TODO re-use the Result created above
+				Sample* sample = sample_new_from_model(path);
 
 				if(sample->id != app.playing_id){
 					if(!playback_init(sample)) sample_free(sample);
@@ -264,6 +258,7 @@ listview__on_row_clicked(GtkWidget *widget, GdkEventButton *event, gpointer user
 					}
 				}
 			}
+			gtk_tree_path_free(path);
 		}
 		return NOT_HANDLED;
 	}
@@ -296,6 +291,18 @@ listview__on_row_clicked(GtkWidget *widget, GdkEventButton *event, gpointer user
 }
 
 
+static void
+listview__on_cursor_change(GtkTreeView* widget, gpointer user_data)
+{
+	dbg(2, "...");
+	Result* result;
+	if((result = listview__get_first_selected_result())){
+		observer__item_selected(result);
+		result_free(result);
+	}
+}
+
+
 gboolean
 listview__item_set_colour(GtkTreePath* path, unsigned colour)
 {
@@ -313,12 +320,12 @@ listview__item_set_colour(GtkTreePath* path, unsigned colour)
 	gtk_tree_model_get_iter(GTK_TREE_MODEL(app.store), &iter, path);
 	gtk_list_store_set(GTK_LIST_STORE(app.store), &iter, COL_COLOUR, colour, -1);
 
-	sample* sample = sample_new_from_model(path);
+	Sample* sample = sample_new_from_model(path);
 	if(sample && g_file_test(sample->filename, G_FILE_TEST_IS_REGULAR)){
 		char colour_string[16];
 		snprintf(colour_string, 16, "#%s", app.config.colour[colour]);
 		if(!gdk_color_parse(colour_string, &sample->bg_colour)) gwarn("parsing of colour string failed.\n");
-		g_async_queue_push(app.msg_queue, sample); //request the overview thread to update.
+		request_overview(sample);
 	}
 	else dbg(0, "cannot update overview for offline sample. id=%i %s", id, sample->filename);
 
@@ -327,7 +334,7 @@ listview__item_set_colour(GtkTreePath* path, unsigned colour)
 
 
 void
-listview__add_item(sample* sample)
+listview__add_item(Sample* sample)
 {
 	g_return_if_fail(sample->id);
 
@@ -363,10 +370,93 @@ listview__add_item(sample* sample)
 	                   COL_LENGTH, length_ms,
 	                   COL_SAMPLERATE, samplerate_s,
 	                   COL_CHANNELS, sample->channels,
+	                   COL_PEAKLEVEL, sample->peak_level,
 	                   COL_MIMETYPE, mime_string,
 	                   -1);
 	g_free(filename);
 	g_free(filedir);
+}
+
+
+static gboolean
+listview__get_first_selected_iter(GtkTreeIter* iter)
+{
+	GtkTreeSelection* selection = gtk_tree_view_get_selection((GtkTreeView*)app.view);
+	GList* list                 = gtk_tree_selection_get_selected_rows(selection, NULL);
+	if(list){
+		GtkTreePath* path = list->data;
+
+		GtkTreeModel* model = gtk_tree_view_get_model((GtkTreeView*)app.view);
+		gtk_tree_model_get_iter(model, iter, path);
+
+		g_list_foreach (list, (GFunc)gtk_tree_path_free, NULL);
+		g_list_free (list);
+
+		return true;
+	}
+	return false;
+}
+
+
+static GtkTreePath*
+listview__get_first_selected_path()
+{
+	GtkTreeSelection* selection = gtk_tree_view_get_selection((GtkTreeView*)app.view);
+	GList* list                 = gtk_tree_selection_get_selected_rows(selection, NULL);
+	if(list){
+		GtkTreePath* path = gtk_tree_path_copy(list->data);
+
+		g_list_foreach (list, (GFunc)gtk_tree_path_free, NULL);
+		g_list_free (list);
+
+		return path;
+	}
+	return NULL;
+}
+
+
+Result*
+listview__get_first_selected_result()
+{
+	// Result must be freed after use.
+
+	GtkTreePath* path = listview__get_first_selected_path();
+	if(path){
+		Result* result = result_new_from_model(path);
+		gtk_tree_path_free(path);
+		return result;
+	}
+
+	return NULL;
+}
+
+
+gchar*
+listview__get_first_selected_filename()
+{
+	GtkTreeIter iter;
+	if(listview__get_first_selected_iter(&iter)){
+		gchar* fname;
+		gtk_tree_model_get(gtk_tree_view_get_model((GtkTreeView*)app.view), &iter, COL_NAME, &fname, -1);
+		return fname;
+	}
+	return NULL;
+}
+
+
+gchar*
+listview__get_first_selected_filepath()
+{
+	//returned value must be freed
+
+	GtkTreeIter iter;
+	if(listview__get_first_selected_iter(&iter)){
+		gchar* fname, *path;
+		gtk_tree_model_get(gtk_tree_view_get_model((GtkTreeView*)app.view), &iter, COL_NAME, &fname, COL_FNAME, &path, -1);
+		gchar* filepath = g_build_filename(path, fname, NULL);
+		return filepath;
+	}
+	return NULL;
 }
 
 

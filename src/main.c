@@ -51,6 +51,13 @@ This software is licensed under the GPL. See accompanying file COPYING.
   #include "view_dir_list.h"
   #include "view_dir_tree.h"
 #endif
+#ifdef HAVE_FFTW3
+#ifdef USE_OPENGL
+#include "gl_spectrogram_view.h"
+#else
+#include "spectrogram_widget.h"
+#endif
+#endif
 
 #include "pixmaps.h"
 
@@ -60,12 +67,18 @@ This software is licensed under the GPL. See accompanying file COPYING.
 
 #undef DEBUG_NO_THREADS
 
-extern void       dir_init          ();
-static void       delete_row        (GtkWidget*, gpointer);
-static void       update_row        (GtkWidget*, gpointer);
-static void       edit_row          (GtkWidget*, gpointer);
-static GtkWidget* make_context_menu ();
-static gboolean   can_use_backend   (const char*);
+extern void       dir_init                  ();
+static void       delete_row                (GtkMenuItem*, gpointer);
+static void       update_row                (GtkWidget*, gpointer);
+static void       edit_row                  (GtkWidget*, gpointer);
+static GtkWidget* make_context_menu         ();
+static gboolean   can_use_backend           (const char*);
+static gboolean   toggle_recursive_add      (GtkWidget*, gpointer);
+static gboolean   on_directory_list_changed ();
+#ifdef NEVER
+static void       on_file_moved             (GtkTreeIter);
+#endif
+
 
 struct _app app;
 struct _palette palette;
@@ -114,6 +127,7 @@ app_init()
 	memset(app.config.colour, 0, PALETTE_SIZE * 8);
 
 	app.config_filename = g_strdup_printf("%s/.config/" PACKAGE "/" PACKAGE, g_get_home_dir());
+	app.cache_dir = g_build_filename(g_get_home_dir(), ".config", PACKAGE, "cache", NULL);
 }
 
 
@@ -253,11 +267,7 @@ main(int argc, char** argv)
 	}
 #endif
 
-	app.store = gtk_list_store_new(NUM_COLS, GDK_TYPE_PIXBUF,
-	                               #ifdef USE_AYYI
-	                               GDK_TYPE_PIXBUF,
-	                               #endif
-	                               G_TYPE_INT, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING, GDK_TYPE_PIXBUF, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_INT, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_INT);
+	app.store = listmodel__new();
 
 	if(!app.no_gui) window_new(); 
 	if(!app.no_gui) app.context_menu = make_context_menu();
@@ -601,8 +611,8 @@ add_file(char* path)
 	if(BACKEND_IS_NULL) return false;
 	gboolean ok = true;
 
-	sample* sample = sample_new(); //free'd after db and store are updated.
-	snprintf(sample->filename, 256, "%s", path);
+	Sample* sample = sample_new(); //free'd after db and store are updated.
+	strncpy(sample->filename, path, 255);
 
 	gchar* filedir = g_path_get_dirname(path);
 	gchar* filename = g_path_get_basename(path);
@@ -610,17 +620,6 @@ add_file(char* path)
 	MIME_type* mime_type = type_from_path(filename);
 	char mime_string[64];
 	snprintf(mime_string, 64, "%s/%s", mime_type->media_type, mime_type->subtype);
-
-#if 0
-	char extn[64];
-	file_extension(filename, extn);
-	if(!strcmp(extn, "rfl")){
-		printf("cannot add file: file type \"%s\" not supported.\n", extn);
-		statusbar_print(1, "cannot add file: rfl files not supported.");
-		ok = false;
-		goto out;
-	}
-#endif
 
 	sample_set_type_from_mime_string(sample, mime_string);
 
@@ -631,14 +630,14 @@ add_file(char* path)
 		goto out;
 	}
 
-	if(get_file_info(sample)){
+	if(sample_get_file_info(sample)){
 
 		sample->id = backend.insert(sample, mime_type);
 
 		listview__add_item(sample);
 
-		dbg(2, "sending message: sample=%p filename=%s (%p)", sample, sample->filename, sample->filename);
-		g_async_queue_push(app.msg_queue, sample); //notify the overview thread.
+		request_overview(sample);
+		request_peaklevel(sample);
 
 		on_directory_list_changed();
 
@@ -665,51 +664,45 @@ add_dir(char *uri)
 
 
 gboolean
-get_file_info(sample* sample)
-{
-#ifdef HAVE_FLAC_1_1_1
-	if(sample->filetype==TYPE_FLAC) return get_file_info_flac(sample);
-#else
-	if(0){}
-#endif
-	else                            return sample_get_file_sndfile_info(sample);
-}
-
-
-gboolean
 on_overview_done(gpointer _sample)
 {
 	PF;
-	sample* sample = _sample;
+	Sample* sample = _sample;
 	g_return_val_if_fail(sample, false);
 	if(!sample->pixbuf){ dbg(1, "overview creation failed (no pixbuf).\n"); return false; }
 
 	backend.update_pixbuf(sample);
 
 	if(sample->row_ref){
-		GtkTreePath* treepath;
-		if((treepath = gtk_tree_row_reference_get_path(sample->row_ref))){ //it's possible the row may no longer be visible.
-			GtkTreeIter iter;
-			if(gtk_tree_model_get_iter(GTK_TREE_MODEL(app.store), &iter, treepath)){
-				if(GDK_IS_PIXBUF(sample->pixbuf)){
-					gtk_list_store_set(app.store, &iter, COL_OVERVIEW, sample->pixbuf, -1);
-				}else perr("pixbuf is not a pixbuf.\n");
-
-			}else perr("failed to get row iter. row_ref=%p\n", sample->row_ref);
-			gtk_tree_path_free(treepath);
-		} else dbg(2, "no path for rowref. row_ref=%p\n", sample->row_ref); //this is not an error. The row may not be part of the current search.
+		listmodel__set_overview(sample->row_ref, sample->pixbuf);
 	} else pwarn("rowref not set!\n");
 
-	sample_free(sample);
-	return false; //source should be removed.
+	sample_unref(sample);
+	return IDLE_STOP;
+}
+
+
+gboolean
+on_peaklevel_done(gpointer _sample)
+{
+	PF;
+	Sample* sample = _sample;
+	dbg(0, "peaklevel=%.2f id=%i rowref=%p", sample->peak_level, sample->id, sample->row_ref);
+
+	backend.update_peaklevel(sample->id, sample->peak_level);
+
+	if(sample->row_ref){
+		listmodel__set_peaklevel(sample->row_ref, sample->peak_level);
+	} else pwarn("rowref not set!\n");
+
+	sample_unref(sample);
+	return IDLE_STOP;
 }
 
 
 static void
-delete_row(GtkWidget *widget, gpointer user_data)
+delete_row(GtkMenuItem* widget, gpointer user_data)
 {
-	//widget is likely to be a popupmenu.
-
 	GtkTreeModel* model = gtk_tree_view_get_model(GTK_TREE_VIEW(app.view));
 
 	GtkTreeSelection* selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(app.view));
@@ -720,18 +713,19 @@ delete_row(GtkWidget *widget, gpointer user_data)
 	GList* selected_row_refs = NULL;
 
 	//get row refs for each selected row:
-	int i;
-	for(i=0;i<g_list_length(selectionlist);i++){
-		GtkTreePath *treepath_selection = g_list_nth_data(selectionlist, i);
+	GList* l = selectionlist;
+	for(;l;l=l->next){
+		GtkTreePath* treepath_selection = l->data;
 
 		GtkTreeRowReference* row_ref = gtk_tree_row_reference_new(GTK_TREE_MODEL(app.store), treepath_selection);
 		selected_row_refs = g_list_prepend(selected_row_refs, row_ref);
 	}
 	g_list_free(selectionlist);
 
+	int n = 0;
 	GtkTreePath* path;
 	GtkTreeIter iter;
-	GList* l = selected_row_refs;
+	l = selected_row_refs;
 	for(;l;l=l->next){
 		GtkTreeRowReference* row_ref = l->data;
 		if((path = gtk_tree_row_reference_get_path(row_ref))){
@@ -745,13 +739,14 @@ delete_row(GtkWidget *widget, gpointer user_data)
 
 				//update the store:
 				gtk_list_store_remove(app.store, &iter);
+				n++;
 
-			} else perr("bad iter! i=%i (<%i)\n", i, g_list_length(selectionlist));
+			} else perr("bad iter!\n");
 		} else perr("cannot get path from row_ref!\n");
 	}
 	g_list_free(selected_row_refs); //FIXME free the row_refs?
 
-	statusbar_print(1, "%i rows deleted", i);
+	statusbar_print(1, "%i rows deleted", n);
 	on_directory_list_changed();
 }
 
@@ -853,6 +848,7 @@ static MenuDef _menu_def[] = {
     {"Open",           G_CALLBACK(edit_row),   GTK_STOCK_OPEN,       false},
     {"Open Directory", G_CALLBACK(NULL),       GTK_STOCK_OPEN,        true},
     {"",                                                                  },
+    {"View",           G_CALLBACK(NULL),       GTK_STOCK_PREFERENCES, true},
     {"Prefs",          G_CALLBACK(NULL),       GTK_STOCK_PREFERENCES, true},
 };
 
@@ -869,6 +865,46 @@ make_context_menu()
 
 	GtkWidget* sub = gtk_menu_new();
 	gtk_menu_item_set_submenu(GTK_MENU_ITEM(prefs), sub);
+
+	{
+		GList* last = g_list_last(menu_items);
+		GList* prev = last->prev;
+		GtkWidget* view = prev->data;
+
+		GtkWidget* sub = gtk_menu_new();
+		gtk_menu_item_set_submenu(GTK_MENU_ITEM(view), sub);
+
+		void set_view_toggle_state(GtkMenuItem* item, struct _view_option* option)
+		{
+			option->value = !option->value;
+			gulong sig_id = g_signal_handler_find(item, G_SIGNAL_MATCH_FUNC, 0, 0, 0, option->on_toggle, NULL);
+			if(sig_id){
+				g_signal_handler_block(item, sig_id);
+				gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(item), option->value);
+				g_signal_handler_unblock(item, sig_id);
+			}
+		}
+
+		gboolean toggle_view_spectrogram(GtkMenuItem* item, gpointer userdata)
+		{
+			PF;
+			gboolean on = gtk_check_menu_item_get_active(GTK_CHECK_MENU_ITEM(item));
+			dbg(0, "on=%i", on);
+			struct _view_option* option = &app.view_options[SHOW_SPECTROGRAM];
+			option->value = on;
+
+			show_spectrogram(on);
+
+			return HANDLED;
+		}
+		GtkWidget* menu_item = gtk_check_menu_item_new_with_mnemonic("Spectrogram");
+		gtk_menu_shell_append(GTK_MENU_SHELL(sub), menu_item);
+		gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menu_item), app.add_recursive);
+		struct _view_option* option = &app.view_options[SHOW_SPECTROGRAM];
+		option->value = !option->value; //toggle before it gets toggled back.
+		set_view_toggle_state((GtkMenuItem*)menu_item, option);
+		g_signal_connect(G_OBJECT(menu_item), "activate", G_CALLBACK(toggle_view_spectrogram), NULL);
+	}
 
 	GtkWidget* menu_item = gtk_check_menu_item_new_with_mnemonic("Add Recursively");
 	gtk_menu_shell_append(GTK_MENU_SHELL(sub), menu_item);
@@ -1021,7 +1057,7 @@ keyword_is_dupe(char* new, char* existing)
 }
 
 
-gboolean
+static gboolean
 on_directory_list_changed()
 {
 	/*
@@ -1034,7 +1070,7 @@ on_directory_list_changed()
 }
 
 
-gboolean
+static gboolean
 toggle_recursive_add(GtkWidget *widget, gpointer user_data)
 {
 	PF;
@@ -1043,7 +1079,8 @@ toggle_recursive_add(GtkWidget *widget, gpointer user_data)
 }
 
 
-void
+#ifdef NEVER
+static void
 on_file_moved(GtkTreeIter iter)
 {
 	PF;
@@ -1059,6 +1096,7 @@ on_file_moved(GtkTreeIter iter)
 	int id;
 	gtk_tree_model_get(GTK_TREE_MODEL(app.store), &iter, COL_NAME, &fname, COL_FNAME, &fpath, COL_KEYWORDS, &tags, COL_LENGTH, &length, COL_SAMPLERATE, &samplerate, COL_CHANNELS, &channels, COL_MIMETYPE, &mimetype, COL_NOTES, &notes, COL_IDX, &id, -1);
 }
+#endif
 
 
 extern char theme_name[];
@@ -1273,6 +1311,7 @@ set_backend(BackendType type)
 			backend.update_notes     = mysql__update_notes;
 			backend.update_pixbuf    = mysql__update_pixbuf;
 			backend.update_online    = mysql__update_online;
+			backend.update_peaklevel = mysql__update_peaklevel;
 			printf("backend is mysql.\n");
 			#endif
 			break;
@@ -1292,6 +1331,7 @@ set_backend(BackendType type)
 			backend.update_notes     = sqlite__update_notes;
 			backend.update_pixbuf    = sqlite__update_pixbuf;
 			backend.update_online    = sqlite__update_online;
+			backend.update_peaklevel = sqlite__update_peaklevel;
 			printf("backend is sqlite.\n");
 			#endif
 			break;
@@ -1308,6 +1348,7 @@ set_backend(BackendType type)
 			backend.update_keywords  = tracker__update_keywords;
 			backend.update_pixbuf    = tracker__update_pixbuf;
 			backend.update_online    = tracker__update_online;
+			backend.update_peaklevel = tracker__update_peaklevel;
 			backend.disconnect       = tracker__disconnect;
 			printf("backend is tracker.\n");
 
@@ -1333,6 +1374,27 @@ can_use_backend(const char* backend)
 		}
 	}
 	return false;
+}
+
+
+void
+observer__item_selected(Result* result)
+{
+	//TODO move these to idle functions
+
+	inspector_update_from_result(result);
+
+#ifdef HAVE_FFTW3
+	if(app.spectrogram){
+		char* path = g_strdup_printf("%s/%s", result->dir, result->sample_name);
+#ifdef USE_OPENGL
+		gl_spectrogram_set_file((GlSpectrogram*)app.spectrogram, path);
+#else
+		spectrogram_widget_set_file ((SpectrogramWidget*)app.spectrogram, path);
+#endif
+		g_free(path);
+	}
+#endif
 }
 
 

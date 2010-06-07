@@ -34,7 +34,7 @@ console__show_result(SamplecatResult* result)
 
 	#define SNAME_MAX 20
 	char name[SNAME_MAX];
-	snprintf(name, SNAME_MAX-1, result->sample_name);
+	strncpy(name, result->sample_name, SNAME_MAX-1);
 	name[SNAME_MAX-1] = '\0';
 
 	printf("  %-20s %-35s %7i %i %5i %s\n", name, dir, result->length, result->channels, result->sample_rate, result->mimetype);
