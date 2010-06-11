@@ -120,7 +120,7 @@ static void gl_spectrogram_load_texture (GlSpectrogram* self) {
 		_tmp0_ = GL_RGB;
 	}
 	format = _tmp0_;
-	if (!((gboolean) gluBuild2DMipmaps (GL_TEXTURE_2D, n_colour_components, (GLsizei) gdk_pixbuf_get_width (scaled), (GLsizei) gdk_pixbuf_get_height (scaled), format, GL_UNSIGNED_BYTE, gdk_pixbuf_get_pixels (scaled)))) {
+	if (((gboolean) gluBuild2DMipmaps (GL_TEXTURE_2D, n_colour_components, (GLsizei) gdk_pixbuf_get_width (scaled), (GLsizei) gdk_pixbuf_get_height (scaled), format, GL_UNSIGNED_BYTE, gdk_pixbuf_get_pixels (scaled)))) {
 		fprintf (stdout, "mipmap generation failed!\n");
 	}
 	g_object_unref ((GObject*) scaled);
@@ -146,7 +146,7 @@ static gboolean gl_spectrogram_real_configure_event (GtkWidget* base, GdkEventCo
 	}
 	glViewport ((GLint) 0, (GLint) 0, (GLsizei) ((GtkWidget*) self)->allocation.width, (GLsizei) ((GtkWidget*) self)->allocation.height);
 	if (!self->priv->gl_init_done) {
-		fprintf (stdout, "GlSpectrogram: texture init...\n");
+		//fprintf (stdout, "GlSpectrogram: texture init...\n");
 		glGenTextures ((GLsizei) 1, self->priv->Textures);
 		glEnable (GL_TEXTURE_2D);
 		glBindTexture (GL_TEXTURE_2D, self->priv->Textures[0]);
@@ -234,13 +234,15 @@ static gboolean gl_spectrogram_real_motion_notify_event (GtkWidget* base, GdkEve
 
 void gl_spectrogram_image_ready (GlSpectrogram* self, GdkPixbuf* _pixbuf) {
 	g_return_if_fail (self != NULL);
-	fprintf (stdout, "image_ready\n");
-	if (self->priv->pixbuf != NULL) {
-		g_object_unref ((GObject*) self->priv->pixbuf);
+	if (_pixbuf != NULL) {
+		//fprintf (stdout, "image_ready\n");
+		if (self->priv->pixbuf != NULL) {
+			g_object_unref ((GObject*) self->priv->pixbuf);
+		}
+		self->priv->pixbuf = _pixbuf;
+		gl_spectrogram_load_texture (self);
+		gtk_widget_queue_draw ((GtkWidget*) self);
 	}
-	self->priv->pixbuf = _pixbuf;
-	gl_spectrogram_load_texture (self);
-	gtk_widget_queue_draw ((GtkWidget*) self);
 }
 
 
@@ -250,6 +252,7 @@ static void _gl_spectrogram_image_ready_print_int_func (GdkPixbuf* a, void* user
 
 
 void gl_spectrogram_set_file (GlSpectrogram* self, gchar* filename) {
+	//printf("gl_spectrogram_set_file...\n");
 	char* _tmp0_;
 	g_return_if_fail (self != NULL);
 	self->priv->_filename = (_tmp0_ = g_strdup ((const char*) filename), _g_free0 (self->priv->_filename), _tmp0_);

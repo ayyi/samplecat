@@ -11,19 +11,23 @@ extern "C" {
 
 #define CORE_MU_PER_SUB 11025
 #define CORE_SUBS_PER_BEAT 3840
+#define TICKS_PER_SUBBEAT 384     // there seems to be confusion over whether this is 960 or 384!
+#define BBST_FORMAT "%03i:%02i:%02i:%03i"
 
-void           cpos2bbst        (song_pos*, char* bbst);
-long long      cpos2mu          (song_pos*);
-void           cpos_add_mu      (song_pos*, unsigned long long mu);
-gboolean       song_pos_is_valid(song_pos*);
-void           samples2cpos     (uint32_t samples, song_pos*);
-long long      samples2mu       (unsigned long long samples);
-long long      mu2samples       (long long mu);
-void           mu2cpos          (uint64_t len, song_pos*);
-void           corepos_set      (song_pos*, int beat, uint16_t sub, uint16_t mu);
-long long      beats2mu         (double beats);
-long long      beats2samples_float(float beats);
-gboolean       pos_cmp          (const song_pos*, const song_pos*);
+void           cpos2bbst           (SongPos*, char* bbst);
+long long      cpos2mu             (SongPos*);
+void           cpos_add_mu         (SongPos*, unsigned long long mu);
+gboolean       song_pos_is_valid   (SongPos*);
+void           samples2cpos        (uint32_t samples, SongPos*);
+long long      samples2mu          (unsigned long long samples);
+long long      mu2samples          (long long mu);
+void           mu2cpos             (uint64_t len, SongPos*);
+void           corepos_set         (SongPos*, int beat, uint16_t sub, uint16_t mu);
+long long      beats2mu            (double beats);
+long long      beats2samples       (int beats);
+long long      beats2samples_float (float beats);
+gboolean       pos_cmp             (const SongPos*, const SongPos*);
+void           samples2bbst        (uint64_t samples, char* str);
 
 #ifdef __cplusplus
 }

@@ -47,8 +47,8 @@ gboolean in_list(const guchar *item, const guchar *list);
 GPtrArray *split_path(const guchar *path);
 guchar *get_relative_path(const guchar *from, const guchar *to);
 int text_to_boolean(const char *text, int defvalue);
-char *readlink_dup(const char *path);
 #endif
+char *readlink_dup(const char *path);
 gchar* to_utf8(const gchar *src);
 #if 0
 gchar *from_utf8(const gchar *src);

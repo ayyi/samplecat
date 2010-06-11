@@ -1,5 +1,5 @@
 AC_PREREQ(2.59)
-AC_INIT([Samplecat],[0.0.9],[tim@orford.org])
+AC_INIT([Samplecat],[0.1.0],[tim@orford.org])
 AC_CONFIG_SRCDIR([src/main.c])
 AC_CONFIG_HEADER([config.h])
 AM_INIT_AUTOMAKE
@@ -319,6 +319,7 @@ AC_CONFIG_FILES([src/Makefile])
 AC_CONFIG_FILES([src/file_manager/Makefile])
 AC_CONFIG_FILES([src/gimp/Makefile])
 AC_CONFIG_FILES([src/xdgmime/Makefile])
+dnl AC_CONFIG_FILES([src/vala/Makefile])
 AC_CONFIG_FILES([ayyi/Makefile])
 AC_OUTPUT
 

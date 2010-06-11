@@ -30,6 +30,7 @@ enum {
   MYSQL_ONLINE,
   MYSQL_LAST_CHECKED,
   MYSQL_MIMETYPE,
+  MYSQL_PEAKLEVEL,
 };
 #define MYSQL_NOTES 11
 #define MYSQL_COLOUR 12
@@ -65,6 +66,7 @@ static void clear_result    ();
 	  `mimetype` tinytext,
 	  `notes` mediumtext,
 	  `colour` tinyint(4) default NULL,
+	  `peaklevel` float(24) default NULL,
 	  PRIMARY KEY  (`id`)
 	)
 
@@ -275,7 +277,16 @@ mysql__update_online(int id, gboolean online)
 gboolean
 mysql__update_peaklevel(int id, float level)
 {
-	return false;
+	printf("mysql__update_peaklevel\n");
+	gboolean ok = true;
+	gchar* sql = g_strdup_printf("UPDATE samples SET peaklevel=%f WHERE id=%i", level, id);
+	dbg(2, "row: sql=%s", sql);
+	if(mysql_query(&mysql, sql)){
+		perr("update failed! sql=%s\n", sql);
+		ok = false;
+	}
+	g_free(sql);
+	return ok;
 }
 
 
@@ -327,8 +338,7 @@ mysql__search_iter_next(unsigned long** lengths)
 {
 	if(!search_result) return NULL;
 
-	MYSQL_ROW row;
-	row = mysql_fetch_row(search_result);
+	MYSQL_ROW row = mysql_fetch_row(search_result);
 	if(!row) return NULL;
 	*lengths = mysql_fetch_lengths(search_result); //free? 
 	return row;
@@ -362,6 +372,11 @@ mysql__search_iter_next_(unsigned long** lengths)
 		return row[i] ? atoi(row[i]) : 0;
 	}
 
+	float get_float(MYSQL_ROW row, int i)
+	{
+		return row[i] ? atof(row[i]) : 0.0;
+	}
+
 	result.idx         = atoi(row[MYSQL_ID]);
 	result.sample_name = row[MYSQL_NAME];
 	result.dir         = row[MYSQL_DIR];
@@ -369,6 +384,7 @@ mysql__search_iter_next_(unsigned long** lengths)
 	result.length      = get_int(row, MYSQL_LENGTH);
 	result.sample_rate = get_int(row, MYSQL_SAMPLERATE);
 	result.channels    = get_int(row, MYSQL_CHANNELS);
+	result.peak_level  = get_float(row, MYSQL_PEAKLEVEL);
 	result.overview    = pixbuf;
 	result.notes       = row[MYSQL_NOTES];
 	result.colour      = get_int(row, MYSQL_COLOUR);

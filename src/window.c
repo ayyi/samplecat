@@ -149,7 +149,8 @@ GtkWindow
 		GtkWidget* scroll2 = scrolled_window_new();
 		gtk_paned_add2(GTK_PANED(r_vpaned), scroll2);
 
-		GtkWidget* file_view = app.fm_view = file_manager__new_window(app.config.browse_dir ? app.config.browse_dir : g_get_home_dir());
+		const char* dir = (app.config.browse_dir && app.config.browse_dir[0] && g_file_test(app.config.browse_dir, G_FILE_TEST_IS_DIR)) ? app.config.browse_dir : g_get_home_dir();
+		GtkWidget* file_view = app.fm_view = file_manager__new_window(dir);
 		gtk_container_add(GTK_CONTAINER(scroll2), file_view);
 		g_signal_connect(G_OBJECT(file_view), "cursor-changed", G_CALLBACK(window_on_fileview_row_selected), NULL);
 
@@ -738,7 +739,7 @@ show_spectrogram(gboolean enable)
 		gtk_box_pack_start(GTK_BOX(app.vbox), app.spectrogram, EXPAND_TRUE, FILL_TRUE, 0);
 
 		gchar* filename = listview__get_first_selected_filepath();
-		dbg(0, "file=%s", filename);
+		dbg(1, "file=%s", filename);
 #ifdef USE_OPENGL
 		gl_spectrogram_set_file((GlSpectrogram*)app.spectrogram, filename);
 #else

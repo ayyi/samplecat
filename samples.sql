@@ -7,8 +7,8 @@
 --
 -- Table structure for table `samples`
 --
-	CREATE database samples;
-	USE samples;
+	CREATE database samplecat;
+	USE samplecat;
 
 	CREATE TABLE `samples` (
 	  id int(11) NOT NULL auto_increment,
@@ -24,5 +24,6 @@
 	  `mimetype` tinytext,
 	  `notes` mediumtext,
 	  `colour` tinyint(4) default NULL,
+	  `peaklevel` float default NULL,
 	  PRIMARY KEY  (`id`)
 	)

@@ -1,16 +1,20 @@
-#ifndef __AYYI_TYPES_H__
-#define __AYYI_TYPES_H__
-typedef struct _container          AyyiContainer;
-typedef struct _ayyi_list          AyyiList;
-typedef struct _midi_region_shared midi_region_shared;
+#ifndef __ayyi_types_h__
+#define __ayyi_types_h__
+#include <stdint.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
 
+typedef struct _ayyi_list          AyyiList;
+
+//media types
 typedef enum {
 	AYYI_AUDIO = 1,
 	AYYI_MIDI
 } MediaType;
 
 //op types
-typedef enum {
+typedef enum _ayyi_op_type {
 	AYYI_NEW = 1,
 	AYYI_DEL,
 	AYYI_GET,
@@ -18,6 +22,7 @@ typedef enum {
 	AYYI_UNDO
 } AyyiOp;
 
+//object types
 enum {
 	AYYI_OBJECT_EMPTY = 0,
 	AYYI_OBJECT_TRACK,
@@ -43,7 +48,7 @@ enum {
 };
 
 //properties
-enum {
+enum _ayyi_prop_type {
 	AYYI_NO_PROP,
 	AYYI_NAME,
 	AYYI_STIME,
@@ -59,6 +64,7 @@ enum {
 	AYYI_INSET,
 	AYYI_FADEIN,
 	AYYI_FADEOUT,
+	AYYI_INPUT,
 	AYYI_OUTPUT,
 	AYYI_AUX1_OUTPUT,
 	AYYI_AUX2_OUTPUT,
@@ -115,6 +121,19 @@ struct _ayyi_obj_idx
 };
 
 
+struct _ident
+{
+	AyyiObjType type;
+	AyyiIdx     idx;
+};
+
+
+struct _launch_info
+{
+	char* name;
+	char* exec;
+};
+
 enum {
 	VOL = 0,
 	PAN,
@@ -130,4 +149,7 @@ enum // channel/track/aux flags
 	deleted= 1 << 4,
 } ChanFlags;
 
+#ifdef __cplusplus
+}
+#endif
 #endif

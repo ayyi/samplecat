@@ -1,12 +1,16 @@
 #define __ayyi_utils_c__
 #include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
 #include <stdarg.h>
 #include <sys/ioctl.h>
 #include <glib.h>
 
+#include "ayyi_typedefs.h"
+#include "ayyi_types.h"
+#include "ayyi_shm.h"
+#include "ayyi_client.h"
 #include "ayyi_utils.h"
-
-extern int debug;
 
 
 void
@@ -15,7 +19,7 @@ debug_printf(const char* func, int level, const char* format, ...)
     va_list args;
 
     va_start(args, format);
-    if (level <= debug) {
+    if (level <= ayyi.debug) {
         fprintf(stderr, "%s(): ", func);
         vfprintf(stderr, format, args);
         fprintf(stderr, "\n");
@@ -66,7 +70,7 @@ errprintf3(const char* func, char *format, ...)
   vsprintf(str, format, argp);
   va_end(argp);           //clean up
 
-  g_critical(str);
+  g_critical("%s", str);
 }
 
 
@@ -75,7 +79,7 @@ warnprintf2(const char* func, char *format, ...)
 {
   //fn prints a warning string, then passes arguments on to vprintf.
 
-  printf("%s %s(): ", smwarn, func);
+  printf("%s %s(): ", ayyi_warn, func);
 
   va_list argp;
   va_start(argp, format);
@@ -89,7 +93,7 @@ warn_gerror(const char* msg, GError** error)
 {
 	//print and free the GEerror
 	if(*error){
-		printf("%s %s: %s\n", smwarn, msg, (*error)->message);
+		printf("%s %s: %s\n", ayyi_warn, msg, (*error)->message);
 		g_error_free(*error);
 		*error = NULL;
 	}
@@ -165,6 +169,33 @@ get_dirlist(const char* path)
 }
 
 
+void
+string_increment_suffix(char* new, const char* orig, int new_max)
+{
+  //change, eg, "name-2" to "name-3"
+  //FIXME length of "new" musn't exceed new_max.
+  //this increases the length of a string of unknown length so is slightly dangerous.
+
+  char delimiter[] = "-";
+
+  //split the string by delimiter:
+  char* suffix = g_strrstr(orig, delimiter);
+  if(!suffix){ dbg (2, "delimiter not found"); sprintf(new, "%s%s1", orig, delimiter); return; } //delimiter not found.
+  if(suffix == orig + strlen(orig)){ dbg (0, "delimiter at end: %s", orig); sprintf(new, "%s1", orig); return; } //delimiter is at the end.
+  suffix++; 
+  unsigned pos = suffix - orig;
+  dbg (2, "pos=%i suffix=%s", pos, suffix);
+ 
+  int number = atoi(suffix);
+
+  char stem[256];
+  strncpy(stem, orig, pos-1);
+  stem[pos-1] = 0; //strncpy doesnt terminate the string
+  dbg (2, "stem=%s num=%i->%i", stem, number, number+1);
+  sprintf(new, "%s%s%i", stem, delimiter, number+1);
+}
+
+
 int
 get_terminal_width()
 {
@@ -175,6 +206,32 @@ get_terminal_width()
 	//printf("terminal width = %d\n", ws.ws_col);
 
 	return ws.ws_col;
+}
+
+
+gboolean
+audio_path_get_leaf(const char* path, char* leaf)
+{
+  //gives the leafname contained in the given path.
+  //-if the path is a directory, leaf should be empty, but without checking we have no way of knowing...
+  //-relative paths are assumed to be relative to song->audiodir.
+
+  //TODO just use g_path_get_basename() instead.
+
+  g_return_val_if_fail(strlen(path), FALSE);
+
+  //look for slashes and chop off anything before:
+  char* pos;
+  if((pos = g_strrstr(path, "/"))){
+    pos += 1; //move to the rhs of the slash.
+  }else pos = (char*)path;
+
+  //make leaf contain the last segment:
+  g_strlcpy(leaf, pos, 128);
+  dbg (3, "pos=%s leaf=%s", pos, leaf);
+
+  dbg (2, "path=%s --> %s", path, leaf);
+  return true;
 }
 
 

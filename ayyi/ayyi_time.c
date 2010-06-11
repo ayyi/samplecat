@@ -15,9 +15,11 @@ typedef void             action;
 
 extern struct _ayyi_client ayyi;
 
+static const uint32_t ticks_per_beat = 4 * TICKS_PER_SUBBEAT;
+
 
 void
-cpos2bbst(song_pos* pos, char* str)
+cpos2bbst(SongPos* pos, char* str)
 {
   //converts a *songcore* song position to a display string in bars, beats, subbeats, ticks.
 
@@ -33,14 +35,14 @@ cpos2bbst(song_pos* pos, char* str)
 
 
 long long
-cpos2mu(song_pos* pos)
+cpos2mu(SongPos* pos)
 {
   return pos->mu + (pos->sub * CORE_MU_PER_SUB) + (pos->beat * CORE_MU_PER_SUB*CORE_SUBS_PER_BEAT);
 }
 
 
 void
-cpos_add_mu(song_pos* pos, unsigned long long mu)
+cpos_add_mu(SongPos* pos, unsigned long long mu)
 {
   //based on the core function recorder/time.c/song_pos_add_dur().
 
@@ -61,14 +63,14 @@ cpos_add_mu(song_pos* pos, unsigned long long mu)
 
 
 gboolean
-song_pos_is_valid(struct _song_pos* core_pos)
+song_pos_is_valid(SongPos* core_pos)
 {
   return TRUE;
 }
 
 
 void
-samples2cpos(uint32_t samples, song_pos* pos)
+samples2cpos(uint32_t samples, SongPos* pos)
 {
   long long mu = samples2mu(samples);
   mu2cpos(mu, pos);
@@ -84,13 +86,13 @@ samples2mu(unsigned long long samples)
 
   long long mu;
 
-  int sample_rate = ayyi.song->sample_rate;
+  int sample_rate = ayyi.service->song->sample_rate;
   if(!sample_rate){ gerr ("samplerate zero!"); sample_rate=44100; }
   //printf("samples2mu(): samplerate=%i.\n", sample_rate);
  
   float secs = (float)samples / (float)sample_rate; //length in seconds.
 
-  float bpm = ayyi.song->bpm;
+  float bpm = ayyi.service->song->bpm;
   float length_of_1_beat_in_secs = 60.0/bpm;
 
   float beats = secs / length_of_1_beat_in_secs;
@@ -119,7 +121,7 @@ mu2samples(long long mu)
 
 
 void
-mu2cpos(uint64_t mu, struct _song_pos* pos)
+mu2cpos(uint64_t mu, SongPos* pos)
 {
   ASSERT_POINTER(pos, "pos");
 
@@ -136,7 +138,7 @@ mu2cpos(uint64_t mu, struct _song_pos* pos)
 
 
 void
-corepos_set(struct _song_pos* pos, int beat, uint16_t sub, uint16_t mu)
+corepos_set(SongPos* pos, int beat, uint16_t sub, uint16_t mu)
 {
   ASSERT_POINTER(pos, "gpos");
 
@@ -156,26 +158,76 @@ beats2mu(double beats)
 
 
 long long
+beats2samples(int beats)
+{
+	//returns the number of audio samples equivalent to the given number of beats.
+
+	float bpm = ayyi.service->song->bpm;
+
+	float length_of_1_beat_in_secs = 60.0/bpm;
+	float samples = length_of_1_beat_in_secs * ayyi.service->song->sample_rate * beats;
+
+	//printf("beats2samples(): %ibeats = %.2fsamples. length_of_1_beat_in_secs=%.2f\n", beats, samples, length_of_1_beat_in_secs);
+
+	return (int)samples;
+}
+
+
+long long
 beats2samples_float(float beats)
 {
-  //returns the number of audio samples equivalent to the given number of beats.
+	//returns the number of audio samples equivalent to the given number of beats.
 
-  float bpm = ayyi.song->bpm;
+	float bpm = ayyi.service->song->bpm;
 
-  float length_of_1_beat_in_secs = 60.0 / bpm;
-  float samples = length_of_1_beat_in_secs * ayyi.song->sample_rate * beats;
+	float length_of_1_beat_in_secs = 60.0 / bpm;
+	float samples = length_of_1_beat_in_secs * ayyi.service->song->sample_rate * beats;
 
-  dbg (3, "%.4fbeats = %.4fsamples. length_of_1_beat_in_secs=%.4f", beats, samples, length_of_1_beat_in_secs);
+	dbg (3, "%.4fbeats = %.4fsamples. length_of_1_beat_in_secs=%.4f", beats, samples, length_of_1_beat_in_secs);
 
-  return (int)(samples + 0.5);
+	return (int)(samples + 0.5);
 }
 
 
 gboolean
-pos_cmp(const struct _song_pos* a, const struct _song_pos* b)
+pos_cmp(const SongPos* a, const SongPos* b)
 {
-  //return TRUE if the two positions are different.
-  return (a->beat != b->beat) || (a->sub != b->sub) || (a->mu != b->mu);
+	//return TRUE if the two positions are different.
+	return (a->beat != b->beat) || (a->sub != b->sub) || (a->mu != b->mu);
+}
+
+
+void
+samples2bbst(uint64_t samples, char* str)
+{
+	if(ayyi.debug>-1) if(samples > beats2samples(6400)){ gwarn ("samples too high? %Lu", samples); str[0]='\0'; return; }
+
+	struct _shm_song* song = ayyi.service->song;
+
+	float beats_per_second = song->bpm / 60.0;
+
+	float secs = (float)samples / (float)ayyi.service->song->sample_rate;
+	int ticks = secs * beats_per_second * ticks_per_beat;
+
+	float beats2bar = 4.0;
+	int bar = ticks / (ticks_per_beat * (int)beats2bar);
+	int ticks_remaining = ticks % (ticks_per_beat * (int)beats2bar);
+
+	int beat = 0;
+	if     (ticks_remaining < 1*ticks_per_beat) beat = 0;
+	else if(ticks_remaining < 2*ticks_per_beat) beat = 1;
+	else if(ticks_remaining < 3*ticks_per_beat) beat = 2;
+	else if(ticks_remaining < 4*ticks_per_beat) beat = 3;
+	ticks_remaining = ticks_remaining - beat * ticks_per_beat;
+
+	int subbeat = ticks_remaining / TICKS_PER_SUBBEAT;
+	ticks_remaining = ticks_remaining % TICKS_PER_SUBBEAT;
+
+	//float seconds_remaining = secs - (subbeat2 * beats_per_second / 4);
+	//int tick = seconds_remaining * 3840 / beats_per_second;
+
+	sprintf(str, BBST_FORMAT, bar, beat+1, subbeat+1, ticks_remaining);
+	//printf("samples2bbst(): FIXME samples=%Lu %.3fs ticks=%i sub=%i %s %i/4\n", samples, secs, ticks, subbeat, str, (int)beats2bar); 
 }
 
 

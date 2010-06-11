@@ -1,3 +1,5 @@
+#ifndef __ayyi_log_h__
+#define __ayyi_log_h__
 #include <gtk/gtk.h>
 
 enum {
@@ -17,8 +19,8 @@ struct _log
 };
 
 void        ayyi_log_init ();
-void        log_append    (const char* str, int type);
-void        log_print     (int type, char* format, ...);
+void        log_print     (int type, const char* format, ...);
 void        log_print_ok  ();
 void        log_print_fail();
 void        log_print_warn();
+#endif

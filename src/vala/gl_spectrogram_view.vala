@@ -50,7 +50,7 @@ public class GlSpectrogram : Gtk.DrawingArea {
 
 		GL.GLint n_colour_components = (GL.GLint)scaled->get_n_channels();
 		GL.GLenum format = scaled->get_n_channels() == 4 ? GL_RGBA : GL_RGB;
-		if(!(bool)gluBuild2DMipmaps(GL_TEXTURE_2D, n_colour_components, (GL.GLsizei)scaled->get_width(), (GL.GLsizei)scaled->get_height(), format, GL_UNSIGNED_BYTE, scaled->get_pixels()))
+		if((bool)gluBuild2DMipmaps(GL_TEXTURE_2D, n_colour_components, (GL.GLsizei)scaled->get_width(), (GL.GLsizei)scaled->get_height(), format, GL_UNSIGNED_BYTE, scaled->get_pixels()))
 			stdout.printf("mipmap generation failed!\n");
 
 		scaled->unref();
@@ -244,10 +244,12 @@ public class GlSpectrogram : Gtk.DrawingArea {
 	public void image_ready(Gdk.Pixbuf* _pixbuf)
 	{
 		stdout.printf("image_ready\n");
-		if(pixbuf != null) pixbuf->unref();
-		pixbuf = _pixbuf;
-		load_texture();
-		this.queue_draw();
+		if(pixbuf != null){
+			pixbuf->unref();
+			pixbuf = _pixbuf;
+			load_texture();
+			this.queue_draw();
+		}
 	}
 
 	public void set_file(char* filename)

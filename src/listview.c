@@ -39,6 +39,7 @@ static void     cell_data_bg                     (GtkTreeViewColumn*, GtkCellRen
 static gboolean listview__get_first_selected_iter(GtkTreeIter*);
 static GtkTreePath* listview__get_first_selected_path();
 static int      listview__path_get_id            (GtkTreePath*);
+static gboolean treeview_get_tags_cell  (GtkTreeView*, guint x, guint y, GtkCellRenderer**);
 
 
 void
@@ -927,6 +928,59 @@ cell_data_bg(GtkTreeViewColumn *tree_column, GtkCellRenderer *cell, GtkTreeModel
 
 	if(colour_index) g_object_set(cell, "cell-background-set", true, "cell-background", colour, NULL);
 	else             g_object_set(cell, "cell-background-set", false, NULL);
+}
+
+
+static gboolean
+treeview_get_tags_cell(GtkTreeView *view, guint x, guint y, GtkCellRenderer **cell)
+{
+	GtkTreeViewColumn *colm = NULL;
+	guint              colm_x = 0/*, colm_y = 0*/;
+
+	GList* columns = gtk_tree_view_get_columns(view);
+
+	GList* node;
+	for (node = columns;  node != NULL && colm == NULL;  node = node->next){
+		GtkTreeViewColumn *checkcolm = (GtkTreeViewColumn*) node->data;
+
+		if (x >= colm_x  &&  x < (colm_x + checkcolm->width))
+			colm = checkcolm;
+		else
+			colm_x += checkcolm->width;
+	}
+
+	g_list_free(columns);
+
+	if(colm == NULL) return false; // not found
+	if(colm != app.col_tags) return false;
+
+	// (2) find the cell renderer within the column 
+
+	GList* cells = gtk_tree_view_column_get_cell_renderers(colm);
+	GdkRectangle cell_rect;
+
+	for (node = cells;  node != NULL;  node = node->next){
+		GtkCellRenderer *checkcell = (GtkCellRenderer*) node->data;
+		guint            width = 0, height = 0;
+
+		// Will this work for all packing modes? doesn't that return a random width depending on the last content rendered?
+		gtk_cell_renderer_get_size(checkcell, GTK_WIDGET(view), &cell_rect, NULL, NULL, (int*)&width, (int*)&height);
+		printf("y=%i height=%i\n", cell_rect.y, cell_rect.height);
+
+		//if(x >= colm_x && x < (colm_x + width)){
+		//if(y >= colm_y && y < (colm_y + height)){
+		if(y >= cell_rect.y && y < (cell_rect.y + cell_rect.height)){
+			*cell = checkcell;
+			g_list_free(cells);
+			return true;
+		}
+
+		//colm_y += height;
+	}
+
+	g_list_free(cells);
+	printf("not found in column. cell_height=%i\n", cell_rect.height);
+	return false; // not found
 }
 
 

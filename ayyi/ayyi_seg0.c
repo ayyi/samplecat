@@ -21,6 +21,6 @@ extern struct _ayyi_client ayyi;
 uint32_t
 ayyi_transport__get_frame()
 {
-	return ayyi.song->transport_frame;
+	return ayyi.service->song->transport_frame;
 }
 

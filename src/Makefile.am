@@ -1,5 +1,6 @@
 ## Process this file with automake to produce Makefile.in
 
+#SUBDIRS = file_manager gimp xdgmime vala
 SUBDIRS = file_manager gimp xdgmime
 
 AM_CFLAGS = \
@@ -65,7 +66,6 @@ samplecat_SOURCES = \
 	audio.c audio.h \
 	overview.c overview.h \
 	pixmaps.c pixmaps.h \
-	diritem.c diritem.h \
 	dh-link.c dh-link.h \
 	dh_tree.c dh_tree.h \
 	cellrenderer_hypertext.c cellrenderer_hypertext.h \

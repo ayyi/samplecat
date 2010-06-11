@@ -29,6 +29,9 @@
 **      - Add option to do log frequency scale.
 */
 
+#define _ISOC99_SOURCE
+#define _XOPEN_SOURCE
+
 #include "config.h"
 #include <stdlib.h>
 #include <string.h>
@@ -49,6 +52,8 @@
 #include "sndfile_window.h"
 
 #include "main.h"
+
+extern unsigned debug;
 
 #ifdef USE_OPENGL
 typedef struct _GLSpectrogram GLSpectrogram;
@@ -731,7 +736,7 @@ render_cairo_surface (const RENDER * render, SNDFILE *infile, int samplerate, sf
 static GdkPixbuf*
 render_pixbuf (const RENDER * render, SNDFILE *infile, int samplerate, sf_count_t filelen)
 {
-	dbg(0, "...");
+	PF;
 
 	/*
 	**	CAIRO_FORMAT_RGB24 	 each pixel is a 32-bit quantity, with the upper 8 bits
@@ -761,7 +766,7 @@ render_sndfile (const RENDER* render)
 
 	SNDFILE* infile = sf_open (render->sndfilepath, SFM_READ, &info);
 	if (infile == NULL) {
-		printf ("Error : failed to open file '%s' : \n%s\n", render->sndfilepath, sf_strerror (NULL));
+		if(debug) printf ("Error : failed to open file '%s' : \n%s\n", render->sndfilepath, sf_strerror (NULL));
 		return NULL;
 	};
 
@@ -858,7 +863,7 @@ render_spectrogram(const char* path, SpectrogramWidget* w, SpectrogramReady call
 	gpointer
 	fft_thread(gpointer data)
 	{
-		dbg(0, "...");
+		PF;
 		g_async_queue_ref(msg_queue);
 
 		GList* msg_list = NULL;
@@ -866,7 +871,7 @@ render_spectrogram(const char* path, SpectrogramWidget* w, SpectrogramReady call
 			//any new work ?
 			while(g_async_queue_length(msg_queue)){
 				gpointer message = g_async_queue_pop(msg_queue);
-				dbg(0, "new message");
+				dbg(1, "new message");
 				msg_list = g_list_append(msg_list, message);
 			}
 
@@ -874,9 +879,8 @@ render_spectrogram(const char* path, SpectrogramWidget* w, SpectrogramReady call
 				gboolean do_callback(gpointer _render)
 				{
 					RENDER* render = _render;
-					if(!render->pixbuf) gwarn("no pixbuf.");
+					if(debug && !render->pixbuf) gwarn("no pixbuf.");
 
-					//render->callback(render->filename, render->pixbuf, render->user_data);
 					render->callback(render->sndfilepath, render->pixbuf, render->user_data);
 
 					//temporary!
@@ -891,7 +895,7 @@ render_spectrogram(const char* path, SpectrogramWidget* w, SpectrogramReady call
 				}
 
 				RENDER* render = g_list_first(msg_list)->data;
-				dbg(2, "filename=%s.", render->filename);
+				dbg(1, "filename=%s.", render->filename);
 				render->pixbuf = render_sndfile(render);
 				g_idle_add(do_callback, render);
 				msg_list = g_list_remove(msg_list, render);
@@ -921,7 +925,7 @@ render_spectrogram(const char* path, SpectrogramWidget* w, SpectrogramReady call
 	render->filename = strrchr (render->sndfilepath, '/'); 
 	render->filename = (render->filename != NULL) ? render->filename + 1 : render->sndfilepath;
 
-	dbg(0, "%s", render->filename);
+	dbg(1, "%s", render->filename);
 	g_async_queue_push(msg_queue, render);
 }
 
@@ -948,16 +952,16 @@ get_spectrogram(const char* path, SpectrogramWidget* w, SpectrogramReady callbac
 
 	gchar* cache_path = make_cache_name(path);
 	if(g_file_test(cache_path, G_FILE_TEST_IS_REGULAR)){
-		dbg(2, "cache: hit");
+		dbg(1, "cache: hit");
 		GError** error = NULL;
 		GdkPixbuf* pixbuf = gdk_pixbuf_new_from_file(cache_path, error);
 		//TODO unref?
 		if(pixbuf){
-			dbg(2, "cache: pixbuf loaded");
+			dbg(1, "cache: pixbuf loaded");
 			callback(pixbuf, path, w);
 		}
 	}else{
-		dbg(2, "cache: not found: %s", cache_path);
+		dbg(1, "cache: not found: %s", cache_path);
 		typedef struct __closure
 		{
 			SpectrogramReady callback;
@@ -1014,19 +1018,21 @@ get_spectrogram(const char* path, SpectrogramWidget* w, SpectrogramReady callbac
 				else dbg(2, "cache_size=%i", n);
 			}
 
-			gchar* cache_dir = g_build_filename(app.cache_dir, "spectrogram", NULL);
+			if(pixbuf){
+				gchar* cache_dir = g_build_filename(app.cache_dir, "spectrogram", NULL);
 
-			maintain_cache(cache_dir);
+				maintain_cache(cache_dir);
 
-			gchar* filepath = make_cache_name(filename);
-			dbg(0, "saving: %s", filepath);
-			GError* error = NULL;
-			if(!gdk_pixbuf_save(pixbuf, filepath, "png", &error, NULL)){
-				P_GERR;
+				gchar* filepath = make_cache_name(filename);
+				dbg(2, "saving: %s", filepath);
+				GError* error = NULL;
+				if(!gdk_pixbuf_save(pixbuf, filepath, "png", &error, NULL)){
+					P_GERR;
+				}
+				g_free(filepath);
+
+				g_free(cache_dir);
 			}
-			g_free(filepath);
-
-			g_free(cache_dir);
 
 			_closure* closure = user_data;
 

@@ -1,5 +1,12 @@
 #ifndef __ayyi_interface_h__
 #define __ayyi_interface_h__
+#ifdef __cplusplus
+namespace Ayi {
+using namespace Ayi;
+#endif //__cplusplus
+
+#include "stdint.h"
+#include <jack/jack.h>
 
 #define AYYI_SHM_VERSION 1
 #define CONTAINER_SIZE 128
@@ -66,7 +73,7 @@ struct _shm_song
 	int         play_loop;         //boolean
 	int         rec_enabled;       //boolean
 
-	struct _container regions;
+	struct _container audio_regions;
 	struct _container midi_regions;
 	struct _container filesources;
 	struct _container connections;
@@ -76,7 +83,6 @@ struct _shm_song
 	struct block ports;
 	struct _container vst_plugin_info;
 };
-typedef struct _shm_song Shm_song;
 
 enum {
 	ARDOUR_TYPE_MASK  = 0xf0000000,
@@ -86,40 +92,49 @@ enum {
 	ARDOUR_TYPE_SONG  = 0x40000000,
 };
 
+struct _ayyi_base_item {
+	int            shm_idx; // slot_num | (block_num / BLOCK_SIZE)
+	char           name[64];
+	AyyiId         id;
+	void*          server_object;
+	int            flags;
+};
+
 struct _region_base_shared {
 	int            shm_idx; // slot_num | (block_num / BLOCK_SIZE)
 	char           name[64];
-	uint64_t       id;
-	void*          ardour_object;
+	AyyiId         id;
+	void*          server_object;
+	int            flags;
 	char           playlist_name[64];
 	jack_nframes_t position;
 	jack_nframes_t length;
 };
 
-struct _region_shared {
+struct _ayyi_audio_region {
 	int            shm_idx;
 	char           name[64];
-	uint64_t       id;
-	void*          ardour_object;
+	AyyiId         id;
+	void*          server_object;
+	int            flags;
 	char           playlist_name[64];
 	jack_nframes_t position;
 	jack_nframes_t length;
 	// end base.
 	jack_nframes_t start;
-	int            flags;
 	uint64_t       source0;
 	char           channels;
 	uint32_t       fade_in_length;
 	uint32_t       fade_out_length;
 	float          level;
 };
-typedef struct _region_shared region_shared;
 
 struct _midi_region_shared {
 	int            shm_idx;
 	char           name[64];
-	uint64_t       id;
-	void*          ardour_object;
+	AyyiId         id;
+	void*          server_object;
+	int            flags;
 	char           playlist_name[64];
 	jack_nframes_t position;
 	jack_nframes_t length;
@@ -155,20 +170,15 @@ struct _route_shared {
 	int            input_maximum;
 	int            output_minimum;
 	int            output_maximum;
-
-	//routing:
-	char           output_name[128];
+	struct _ayyi_list* input_routing;
 	struct _ayyi_list* output_routing;
-
 	uint32_t       gui_colour;
 	int/*ChanFlags*/ flags;
 	char           muted;  //deprecated - use flags
-	char           solod;  //deprecated - use flags
 	char           armed;  //deprecated - use flags
 	int            nchans;
 	float          visible_peak_power[2];
 };
-typedef struct _route_shared route_shared;
 
 struct _midi_track_shared {
 	int            shm_idx;
@@ -208,9 +218,9 @@ struct _ayyi_channel {
 	struct _container automation[2];
 	struct _ayyi_list* automation_list;
 };
-typedef struct _ayyi_channel AyyiChannel;
 
 struct _plugin_shared {
+	int            shm_idx;
 	char           name[AYYI_FILENAME_MAX];
 	char           category[64];
 	uint32_t       n_inputs;
@@ -218,7 +228,6 @@ struct _plugin_shared {
 	uint32_t       latency;
 	struct _container controls;
 };
-typedef struct _plugin_shared plugin_shared;
 
 struct _ayyi_control {
 	char           name[32];
@@ -245,8 +254,7 @@ struct _midi_note {
 	jack_nframes_t length;
 };
 
-struct _ayyi_aux
-{
+struct _ayyi_aux {
 	int           idx;
 	float         level;
 	float         pan;
@@ -254,8 +262,7 @@ struct _ayyi_aux
 	int           bus_num;
 };
 
-struct _shm_seg_mixer
-{
+struct _shm_seg_mixer {
 	char          service_name[16];
 	char          service_type[16];
 	int           version;
@@ -267,6 +274,8 @@ struct _shm_seg_mixer
 	struct _container tracks;
 	struct _container plugins;
 };
-typedef struct _shm_seg_mixer Shm_seg_mixer;
 
+#ifdef __cplusplus
+}      //namspace Ayi
+#endif //__cplusplus
 #endif //__ayyi_interface_h__

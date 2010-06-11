@@ -5,7 +5,7 @@
 #include <string.h>
 #include <gtk/gtk.h>
 #ifdef USE_AYYI
-#include <ayyi/ayyi.h>
+#include "ayyi/ayyi.h"
 #endif
 #include "dh-link.h"
 #include "file_manager/support.h"
@@ -81,6 +81,10 @@ listmodel__add_result(SamplecatResult* result)
 	char samplerate_s[32]; float samplerate = result->sample_rate; samplerate_format(samplerate_s, samplerate);
 	char* keywords = result->keywords ? result->keywords : "";
 	char length[64]; format_time_int(length, result->length);
+
+#ifdef USE_AYYI
+	GdkPixbuf* ayyi_icon = NULL;
+#endif
 
 #if 0
 //#ifdef USE_AYYI

@@ -47,14 +47,14 @@ static GList* msg_list = NULL;
 gpointer
 overview_thread(gpointer data)
 {
+	//TODO consider replacing the main loop with a blocking call on the async queue, waiting for messages.
+
 	dbg(1, "new thread!");
 
 	if(!app.msg_queue){ perr("no msg_queue!\n"); return NULL; }
 
 	g_async_queue_ref(app.msg_queue);
 
-	//GList* msg_list = NULL;
-	//while(1){
 	gboolean worker_timeout(gpointer data)
 	{
 
@@ -62,7 +62,7 @@ overview_thread(gpointer data)
 		while(g_async_queue_length(app.msg_queue)){
 			struct _message* message = g_async_queue_pop(app.msg_queue);
 			msg_list = g_list_append(msg_list, message);
-			dbg(0, "new message! %p", message);
+			dbg(2, "new message! %p", message);
 		}
 
 		while(msg_list != NULL){
@@ -71,9 +71,9 @@ overview_thread(gpointer data)
 
 			Sample* sample = message->sample;
 			if(message->type == MSG_TYPE_OVERVIEW){
-				dbg(0, "filename=%s.", sample->filename);
+				dbg(1, "queuing for overview: filename=%s.", sample->filename);
 				make_overview(sample);
-				g_idle_add(on_overview_done, sample); //notify();
+				g_idle_add(on_overview_done, sample);
 			}
 			else if(message->type == MSG_TYPE_PEAKLEVEL){
 				sample->peak_level = sndfile_calc_signal_max(message->sample);
@@ -82,11 +82,6 @@ overview_thread(gpointer data)
 
 			g_free(message);
 		}
-		/*
-		sleep(1); //FIXME
-		          //-maybe the thread should have its own GMainLoop
-		          //-or even better is to use a blocking call on the async queue, waiting for messages.
-		*/
 
 		return TIMER_CONTINUE;
 	}
@@ -243,8 +238,8 @@ make_overview_sndfile(Sample* sample)
     struct _ArtDRect pts = {x, OVERVIEW_HEIGHT/2 + min, x, OVERVIEW_HEIGHT/2 + max};
     pixbuf_draw_line(pixbuf, &pts, 1.0, &app.bg_colour);
 #else
-	//TODO libart overviews look better - why? antialiasing? colour is same?
-	rect pts = {x, OVERVIEW_HEIGHT/2 + min, x, OVERVIEW_HEIGHT/2 + max};
+    //TODO libart overviews look better - why? antialiasing? colour is same?
+    rect pts = {x, OVERVIEW_HEIGHT/2 + min, x, OVERVIEW_HEIGHT/2 + max};
     pixbuf_draw_line(cr, &pts, 1.0, &app.bg_colour);
 #endif
 

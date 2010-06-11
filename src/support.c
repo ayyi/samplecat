@@ -89,6 +89,7 @@ warnprintf(char *format, ...)
 }
 
 
+#ifndef USE_AYYI
 void 
 warnprintf2(const char* func, char *format, ...)
 {
@@ -103,7 +104,6 @@ warnprintf2(const char* func, char *format, ...)
 }
 
 
-#ifndef USE_AYYI
 void
 debug_printf(const char* func, int level, const char *format, ...)
 {

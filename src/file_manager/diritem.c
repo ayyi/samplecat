@@ -118,8 +118,7 @@ diritem_restat(const guchar *path, DirItem *item, struct stat *parent)
 
 		if (S_ISLNK(info.st_mode))
 		{
-		/*
-			if (mc_stat(path, &info))
+			if (stat((char*)path, &info))
 				item->base_type = TYPE_ERROR;
 			else
 				item->base_type =
@@ -128,7 +127,6 @@ diritem_restat(const guchar *path, DirItem *item, struct stat *parent)
 			item->flags |= ITEM_FLAG_SYMLINK;
 
 			target_path = readlink_dup(path);
-		*/
 		}
 		else
 		{
@@ -331,6 +329,7 @@ static void examine_dir(const guchar *path, DirItem *item,
 
 no_diricon:
 
+#if 0
 	/* Try to find AppRun... */
 	g_string_truncate(tmp, tmp->len - 8);
 	g_string_append(tmp, "AppRun");
@@ -354,6 +353,7 @@ no_diricon:
 	/* Note: since AppRun is valid we don't need to check AppIcon.xpm
 	 *	 so carefully.
 	 */
+#endif
 
 	if (stat(tmp->str, &info) != 0)
 		goto out;	/* Missing, or broken symlink */

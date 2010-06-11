@@ -2,7 +2,7 @@
 #include <ayyi/ayyi_dbus.h>
 
 //void            dbus_object_new     (AyyiAction*, char* name, gboolean from_source, uint32_t src_idx, guint32 parent_idx, struct _song_pos* stime, guint64 len, guint32 inset);
-void            dbus_object_new     (struct _ayyi_action*, char* name, gboolean from_source, uint32_t src_idx, guint32 parent_idx, struct _song_pos* stime, guint64 len, guint32 inset);
+void            ayyi_dbus_object_new     (struct _ayyi_action*, const char* name, gboolean from_source, uint32_t src_idx, guint32 parent_idx, struct _song_pos* stime, guint64 len, guint32 inset);
 void            dbus_object_del     (struct _ayyi_action*, int object_type, uint32_t object_idx);
 
 DBusGProxyCall* dbus_get_prop_string(struct _ayyi_action*, int object_type, int property_type);

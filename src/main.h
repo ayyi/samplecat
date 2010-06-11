@@ -15,7 +15,6 @@ char warn[32];
 
 #define POINTER_OK_NULL(A, B, C) if((unsigned)A < 1024){ errprintf("%s(): bad %s pointer (%p).\n", B, C, A); return NULL; }
 #ifndef USE_AYYI
-#define P_GERR if(error){ errprintf2(__func__, "%s\n", error->message); g_error_free(error); error = NULL; }
 #endif
 
 
@@ -207,9 +206,6 @@ gboolean    on_overview_done(gpointer sample);
 gboolean    on_peaklevel_done(gpointer sample);
 
 void        update_dir_node_list();
-
-gboolean    treeview_get_cell(GtkTreeView*, guint x, guint y, GtkCellRenderer**);
-gboolean    treeview_get_tags_cell(GtkTreeView*, guint x, guint y, GtkCellRenderer**);
 
 gint        get_mouseover_row();
 

@@ -166,6 +166,9 @@ main(int argc, char** argv)
 				printf("using debug level: %s\n", optarg);
 				int d = atoi(optarg);
 				if(d<0 || d>5) { gwarn ("bad arg. debug=%i", d); } else debug = d;
+				#ifdef USE_AYYI
+				ayyi.debug = debug;
+				#endif
 				break;
 			case 'b':
 				//if a particular backend is requested, and is available, reduce the backend list to just this one.
@@ -412,10 +415,6 @@ do_search(char *search, char *dir)
 	if(BACKEND_IS_NULL) return;
 	search_pending = false;
 
-#ifdef USE_AYYI
-	GdkPixbuf* ayyi_icon = NULL;
-#endif
-
 	int n_results = 0;
 	if(backend.search_iter_new(search, dir, app.search_category, &n_results)){
 
@@ -655,7 +654,7 @@ out:
 gboolean
 add_dir(char *uri)
 {
-	dbg(0, "dir=%s", uri);
+	dbg(1, "dir=%s", uri);
 
 	//GDir* dir = g_dir_open(const gchar *path, guint flags, GError **error);
 
@@ -889,7 +888,7 @@ make_context_menu()
 		{
 			PF;
 			gboolean on = gtk_check_menu_item_get_active(GTK_CHECK_MENU_ITEM(item));
-			dbg(0, "on=%i", on);
+			dbg(2, "on=%i", on);
 			struct _view_option* option = &app.view_options[SHOW_SPECTROGRAM];
 			option->value = on;
 
@@ -923,6 +922,8 @@ make_context_menu()
 	return menu;
 }
 
+
+#if 0
 gboolean
 treeview_get_cell(GtkTreeView *view, guint x, guint y, GtkCellRenderer **cell)
 {
@@ -972,59 +973,7 @@ treeview_get_cell(GtkTreeView *view, guint x, guint y, GtkCellRenderer **cell)
 	g_list_free(cells);
 	return false; // not found
 }
-
-
-gboolean
-treeview_get_tags_cell(GtkTreeView *view, guint x, guint y, GtkCellRenderer **cell)
-{
-	GtkTreeViewColumn *colm = NULL;
-	guint              colm_x = 0/*, colm_y = 0*/;
-
-	GList* columns = gtk_tree_view_get_columns(view);
-
-	GList* node;
-	for (node = columns;  node != NULL && colm == NULL;  node = node->next){
-		GtkTreeViewColumn *checkcolm = (GtkTreeViewColumn*) node->data;
-
-		if (x >= colm_x  &&  x < (colm_x + checkcolm->width))
-			colm = checkcolm;
-		else
-			colm_x += checkcolm->width;
-	}
-
-	g_list_free(columns);
-
-	if(colm == NULL) return false; // not found
-	if(colm != app.col_tags) return false;
-
-	// (2) find the cell renderer within the column 
-
-	GList* cells = gtk_tree_view_column_get_cell_renderers(colm);
-	GdkRectangle cell_rect;
-
-	for (node = cells;  node != NULL;  node = node->next){
-		GtkCellRenderer *checkcell = (GtkCellRenderer*) node->data;
-		guint            width = 0, height = 0;
-
-		// Will this work for all packing modes? doesn't that return a random width depending on the last content rendered?
-		gtk_cell_renderer_get_size(checkcell, GTK_WIDGET(view), &cell_rect, NULL, NULL, (int*)&width, (int*)&height);
-		printf("y=%i height=%i\n", cell_rect.y, cell_rect.height);
-
-		//if(x >= colm_x && x < (colm_x + width)){
-		//if(y >= colm_y && y < (colm_y + height)){
-		if(y >= cell_rect.y && y < (cell_rect.y + cell_rect.height)){
-			*cell = checkcell;
-			g_list_free(cells);
-			return true;
-		}
-
-		//colm_y += height;
-	}
-
-	g_list_free(cells);
-	printf("not found in column. cell_height=%i\n", cell_rect.height);
-	return false; // not found
-}
+#endif
 
 
 gboolean

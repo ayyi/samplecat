@@ -3,16 +3,17 @@
 #define dbg(A, B, ...) debug_printf(__func__, A, B, ##__VA_ARGS__)
 #define perr(A, ...) errprintf2(__func__, A, ##__VA_ARGS__)
 #define pwarn(A, ...) warnprintf2(__func__, A, ##__VA_ARGS__)
+#ifndef __ayyi_h__
 #define PF {if(debug) printf("%s()...\n", __func__);}
 #define PF_DONE printf("%s(): done.\n", __func__);
 #define ASSERT_POINTER(A, B) if((unsigned)A < 1024){ errprintf2(__func__, "bad %s pointer (%p).\n", B, A); return; }
-#define list_clear(L) g_list_free(L); L = NULL;
-#ifndef USE_AYYI
 #define gwarn(A, ...) g_warning("%s(): "A, __func__, ##__VA_ARGS__);
 #define ASSERT_POINTER_FALSE(A, B) if(GPOINTER_TO_UINT(A) < 1024){ errprintf2(__func__, "bad %s pointer (%p).\n", B, A); return FALSE; } 
 #define GERR_WARN if(error){ gwarn("%s", error->message); g_error_free(error); error = NULL; }
-#define g_error_clear(E) { if(E){ g_error_free(E); E = NULL; }}
+#define P_GERR if(error){ errprintf2(__func__, "%s\n", error->message); g_error_free(error); error = NULL; }
 #endif
+#define g_error_clear(E) { if(E){ g_error_free(E); E = NULL; }}
+#define list_clear(L) g_list_free(L); L = NULL;
 
 #define HAS_ALPHA_FALSE 0
 #define HAS_ALPHA_TRUE 1

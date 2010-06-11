@@ -15,6 +15,11 @@
 ** along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+//not sure this is the correct place to set these, however they are required for features.h to set defines for math.h
+#define _ISOC99_SOURCE
+#define _XOPEN_SOURCE
+
+#include "config.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>

@@ -838,6 +838,7 @@ int text_to_boolean(const char *text, int defvalue)
 
 	return defvalue;
 }
+#endif
 
 /* Return the pathname that this symlink points to.
  * NULL on error (not a symlink, path too long) and errno set.
@@ -854,7 +855,6 @@ char *readlink_dup(const char *source)
 
 	return g_strndup(path, got);
 }
-#endif
 
 /*
  * This code implements the MD5 message-digest algorithm.
