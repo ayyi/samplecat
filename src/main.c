@@ -68,7 +68,6 @@ This software is licensed under the GPL. See accompanying file COPYING.
 #undef DEBUG_NO_THREADS
 
 extern void       dir_init                  ();
-static void       delete_row                (GtkMenuItem*, gpointer);
 static void       update_row                (GtkWidget*, gpointer);
 static void       edit_row                  (GtkWidget*, gpointer);
 static GtkWidget* make_context_menu         ();
@@ -684,9 +683,8 @@ on_overview_done(gpointer _sample)
 gboolean
 on_peaklevel_done(gpointer _sample)
 {
-	PF;
 	Sample* sample = _sample;
-	dbg(0, "peaklevel=%.2f id=%i rowref=%p", sample->peak_level, sample->id, sample->row_ref);
+	dbg(1, "peaklevel=%.2f id=%i rowref=%p", sample->peak_level, sample->id, sample->row_ref);
 
 	backend.update_peaklevel(sample->id, sample->peak_level);
 
@@ -699,7 +697,7 @@ on_peaklevel_done(gpointer _sample)
 }
 
 
-static void
+void
 delete_row(GtkMenuItem* widget, gpointer user_data)
 {
 	GtkTreeModel* model = gtk_tree_view_get_model(GTK_TREE_VIEW(app.view));

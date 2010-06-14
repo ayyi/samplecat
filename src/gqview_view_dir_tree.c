@@ -1829,8 +1829,7 @@ ViewDirTree *vdtree_new(const gchar *path, gint expand)
 	vdtree_dnd_init(vdt);
 
 	g_signal_connect(G_OBJECT(vdt->treeview), "button_press_event", G_CALLBACK(vdtree_press_cb), vdt);
-	g_signal_connect(G_OBJECT(vdt->treeview), "button_release_event",
-			 G_CALLBACK(vdtree_release_cb), vdt);
+	g_signal_connect(G_OBJECT(vdt->treeview), "button_release_event", G_CALLBACK(vdtree_release_cb), vdt);
 
 	vdtree_set_path(vdt, path);
 

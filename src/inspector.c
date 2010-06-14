@@ -66,7 +66,6 @@ inspector_new()
 	gtk_misc_set_alignment(GTK_MISC(app.inspector->image), 0.0, 0.5);
 	gtk_misc_set_padding(GTK_MISC(app.inspector->image), margin_left, 2);
 	gtk_box_pack_start(GTK_BOX(vbox), app.inspector->image, EXPAND_FALSE, FILL_FALSE, 0);
-	gtk_widget_show(app.inspector->image);
 
 	//-----------
 
@@ -113,7 +112,6 @@ inspector_new()
 	//-----------
 
 	GtkWidget* align6 = gtk_alignment_new(0.0, 0.5, 0.0, 0.0);
-	gtk_widget_show(align6);
 	gtk_box_pack_start(GTK_BOX(vbox), align6, EXPAND_FALSE, FILL_FALSE, 0);
 
 	GtkWidget* label6 = app.inspector->channels = gtk_label_new("Channels");
@@ -168,10 +166,8 @@ inspector_new()
 	GtkWidget *edit = inspector->edit = gtk_entry_new();
 	gtk_entry_set_max_length(GTK_ENTRY(edit), 64);
 	gtk_entry_set_text(GTK_ENTRY(edit), "");
-	gtk_widget_show(edit);
 	gtk_widget_ref(edit);//stops gtk deleting the unparented widget.
 
-	gtk_widget_show_all(vbox);
 	return vbox;
 }
 

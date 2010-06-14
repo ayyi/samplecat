@@ -183,7 +183,7 @@ sqlite__update_string(int id, const char* value, const char* field)
 	g_return_val_if_fail(id, false);
 	gboolean ok = true;
 	gchar* sql = g_strdup_printf("UPDATE samples SET %s='%s' WHERE id=%u", field, value, id);
-	dbg(0, "sql=%s", sql);
+	dbg(2, "sql=%s", sql);
 	char* errMsg = 0;
 	int n = sqlite3_exec(db, sql, on_update, 0, &errMsg);
 	if (n != SQLITE_OK) {
@@ -233,7 +233,7 @@ sqlite__update_float(int id, float value, const char* field)
 
 	gboolean ok = true;
 	gchar* sql = g_strdup_printf("UPDATE samples SET %s=%f WHERE id=%i", field, value, id);
-	dbg(0, "sql=%s", sql);
+	dbg(2, "sql=%s", sql);
 	char* errMsg = 0;
 	int n = sqlite3_exec(db, sql, on_update, 0, &errMsg);
 	if (n != SQLITE_OK) {

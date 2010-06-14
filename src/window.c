@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <gtk/gtk.h>
+#include <gdk/gdkkeysyms.h>
 #include "file_manager.h"
 #include "gqview_view_dir_tree.h"
 #include <gimp/gimpaction.h>
@@ -13,7 +14,7 @@
 #include "dh-link.h"
 #include "main.h"
 #include "listview.h"
-#include "menu.h"
+#include "file_manager/menu.h"
 #include "dnd.h"
 #include "file_view.h"
 #include "inspector.h"
@@ -42,7 +43,8 @@ void              view_details_dnd_get            (GtkWidget*, GdkDragContext*, 
 
 static gboolean   window_on_destroy               (GtkWidget*, gpointer);
 static void       window_on_realise               (GtkWidget*, gpointer);
-static void       window_on_allocate              (GtkWidget*, gpointer);
+static void       window_on_size_request          (GtkWidget*, GtkRequisition*, gpointer);
+static void       window_on_allocate              (GtkWidget*, GtkAllocation*, gpointer);
 static gboolean   window_on_configure             (GtkWidget*, GdkEventConfigure*, gpointer);
 static gboolean   filter_new                      ();
 static GtkWidget* scrolled_window_new             ();
@@ -62,6 +64,7 @@ struct _accel menu_keys[] = {
 struct _accel window_keys[] = {
 	{"Quit",           NULL,        {{(char)'q',    GDK_CONTROL_MASK},  {0, 0}}, on_quit,         GINT_TO_POINTER(0)},
 	{"Close",          NULL,        {{(char)'w',    GDK_CONTROL_MASK},  {0, 0}}, on_quit,         GINT_TO_POINTER(0)},
+	{"Delete",         NULL,        {{GDK_Delete,   0               },  {0, 0}}, delete_row,      GINT_TO_POINTER(0)},
 };
 
 static GtkAccelGroup* accel_group = NULL;
@@ -193,6 +196,7 @@ GtkWindow
 	gtk_box_pack_start(GTK_BOX(hbox_statusbar), statusbar2, EXPAND_TRUE, FILL_TRUE, 0);
 
 	g_signal_connect(G_OBJECT(window), "realize", G_CALLBACK(window_on_realise), NULL);
+	g_signal_connect(G_OBJECT(window), "size-request", G_CALLBACK(window_on_size_request), NULL);
 	g_signal_connect(G_OBJECT(window), "size-allocate", G_CALLBACK(window_on_allocate), NULL);
 	g_signal_connect(G_OBJECT(window), "configure_event", G_CALLBACK(window_on_configure), NULL);
 
@@ -221,7 +225,14 @@ window_on_realise(GtkWidget *win, gpointer user_data)
 
 
 static void
-window_on_allocate(GtkWidget *win, gpointer user_data)
+window_on_size_request(GtkWidget* widget, GtkRequisition* req, gpointer user_data)
+{
+	req->height = atoi(app.config.window_height);
+}
+
+
+static void
+window_on_allocate(GtkWidget *win, GtkAllocation *allocation, gpointer user_data)
 {
 	GdkColor colour;
 	#define SCROLLBAR_WIDTH_HACK 32
@@ -229,7 +240,7 @@ window_on_allocate(GtkWidget *win, gpointer user_data)
 	if(!app.view->requisition.width) return;
 
 	if(!done){
-		//printf("window_on_allocate(): requisition: wid=%i height=%i\n", app.view->requisition.width, app.view->requisition.height);
+		dbg(2, "app.view->requisition: wid=%i height=%i\n", app.view->requisition.width, app.view->requisition.height);
 		//moved!
 		//gtk_widget_set_size_request(win, app.view->requisition.width + SCROLLBAR_WIDTH_HACK, MIN(app.view->requisition.height, 900));
 		done = TRUE;
@@ -304,7 +315,7 @@ window_on_configure(GtkWidget *widget, GdkEventConfigure *event, gpointer user_d
 		int height = atoi(app.config.window_height);
 		if(!height) height = MIN(app.view->requisition.height, 900);
 		if(width && height){
-			dbg(2, "width=%s height=%s", app.config.window_width, app.config.window_height);
+			dbg(2, "setting size: width=%i height=%i", width, height);
 			gtk_window_resize(GTK_WINDOW(app.window), width, height);
 			window_size_set = TRUE;
 
@@ -438,7 +449,6 @@ scrolled_window_new()
 {
 	GtkWidget* scroll = gtk_scrolled_window_new(NULL, NULL); //adjustments created automatically.
 	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
-	gtk_widget_show(scroll);
 	return scroll;
 }
 
@@ -511,12 +521,10 @@ tag_selector_new()
 	int i; for (i=0;i<G_N_ELEMENTS(categories);i++) {
 		gtk_combo_box_append_text(combo_, categories[i]);
 	}
-	gtk_widget_show(combo2);	
 	gtk_box_pack_start(GTK_BOX(app.toolbar2), combo2, EXPAND_FALSE, FALSE, 0);
 
 	//"set" button:
 	GtkWidget* set = gtk_button_new_with_label("Set Tag");
-	gtk_widget_show(set);	
 	gtk_box_pack_start(GTK_BOX(app.toolbar2), set, EXPAND_FALSE, FALSE, 0);
 	g_signal_connect(set, "clicked", G_CALLBACK(on_category_set_clicked), NULL);
 
@@ -538,7 +546,6 @@ tagshow_selector_new()
 		gtk_combo_box_append_text(combo_, categories[i]);
 	}
 	gtk_combo_box_set_active(combo_, 0);
-	gtk_widget_show(combo);	
 	gtk_box_pack_start(GTK_BOX(app.toolbar), combo, EXPAND_FALSE, FALSE, 0);
 
 	void

@@ -650,14 +650,31 @@ pixbuf_draw_line(GdkPixbuf *pixbuf, struct _ArtDRect *pts, double line_width, Gd
 }
 #else
 void
-pixbuf_draw_line(cairo_t* cr, rect *pts, double line_width, GdkColor *colour)
+draw_cairo_line(cairo_t* cr, drect *pts, double line_width, GdkColor *colour)
 {
-  if(pts->y1 == pts->y2) return;
-  //cairo_move_to (cr, pts->x1, pts->y1);
-  //cairo_line_to (cr, pts->x2, pts->y2);
-  cairo_rectangle(cr, pts->x1, pts->y1, pts->x2 - pts->x1 + 1, pts->y2 - pts->y1 + 1);
-  cairo_fill (cr);
-  cairo_stroke (cr);
+	if(pts->y1 == pts->y2) return;
+
+	//cairo_set_line_width(cr, 1);
+	float r, g, b;
+	colour_get_float(colour, &r, &g, &b, 0xff);
+	cairo_set_source_rgba (cr, b, g, r, 0.5);
+
+	cairo_move_to (cr, pts->x1 - 0.5, pts->y1 + 1);
+	cairo_line_to (cr, pts->x2 - 0.5, pts->y2 - 1);
+	cairo_stroke (cr);
+	cairo_move_to (cr, pts->x1 + 0.5, pts->y1);
+	cairo_line_to (cr, pts->x2 + 0.5, pts->y2);
+	cairo_stroke (cr);
+	cairo_move_to (cr, pts->x1 + 1.5, pts->y1 + 1);
+	cairo_line_to (cr, pts->x2 + 1.5, pts->y2 - 1);
+	cairo_stroke (cr);
+
+	//main line:
+	cairo_set_source_rgba (cr, b, g, r, 1.0);
+	cairo_move_to (cr, pts->x1 + 0.5, pts->y1 + 1);
+	cairo_line_to (cr, pts->x2 + 0.5, pts->y2 - 1);
+	cairo_stroke (cr);
+
 }
 #endif
 

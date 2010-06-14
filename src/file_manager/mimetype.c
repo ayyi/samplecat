@@ -1018,7 +1018,7 @@ _set_icon_theme()
 	//char *icon_home;
 
 	//if (!theme_name || !*theme_name) theme_name = "ROX";
-	if (!theme_name || !*theme_name) strcpy(theme_name, "ROX");
+	if (/*!theme_name ||*/ !*theme_name) strcpy(theme_name, "ROX");
 
 	g_hash_table_remove_all(type_hash);
 

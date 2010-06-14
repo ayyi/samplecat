@@ -90,7 +90,7 @@ overview_thread(gpointer data)
 	GSource* source = g_timeout_source_new(1000);
 	gpointer _data = NULL;
 	g_source_set_callback(source, worker_timeout, _data, NULL);
-	/*guint id = */g_source_attach(source, context);
+	g_source_attach(source, context);
 
 	g_main_loop_run (g_main_loop_new (context, 0));
 	return NULL;
@@ -201,7 +201,7 @@ make_overview_sndfile(Sample* sample)
   //-this will use up a lot of ram for a large file, 600M file will use 4MB.
   int frames_per_buf = sfinfo.frames / OVERVIEW_WIDTH;
   int buffer_len = frames_per_buf * sfinfo.channels; //may be a small remainder?
-  dbg (1, "buffer_len=%i", buffer_len);
+  dbg (2, "buffer_len=%i", buffer_len);
   short* data = malloc(sizeof(*data) * buffer_len);
 
   int x=0, frame, ch;
@@ -212,7 +212,6 @@ make_overview_sndfile(Sample* sample)
   short sample_val;
 
   while ((readcount = sf_read_short(sffile, data, buffer_len))){
-    //if(readcount < buffer_len) printf("EOF %i<%i\n", readcount, buffer_len);
 
     if(sf_error(sffile)) perr("read error.\n");
 
@@ -239,8 +238,8 @@ make_overview_sndfile(Sample* sample)
     pixbuf_draw_line(pixbuf, &pts, 1.0, &app.bg_colour);
 #else
     //TODO libart overviews look better - why? antialiasing? colour is same?
-    rect pts = {x, OVERVIEW_HEIGHT/2 + min, x, OVERVIEW_HEIGHT/2 + max};
-    pixbuf_draw_line(cr, &pts, 1.0, &app.bg_colour);
+    drect pts = {x, OVERVIEW_HEIGHT/2 + min, x, OVERVIEW_HEIGHT/2 + max};
+    draw_cairo_line(cr, &pts, 1.0, &app.bg_colour);
 #endif
 
     //printf(" %i max=%i\n", x,OVERVIEW_HEIGHT/2);

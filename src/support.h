@@ -37,7 +37,7 @@ typedef struct _rect {
   double y1;
   double x2;
   double y2;
-} rect;
+} drect;
 
 struct _accel {
 	char          name[16];
@@ -74,7 +74,7 @@ void         pixbuf_clear              (GdkPixbuf*, GdkColor*);
 #ifdef OLD
 void         pixbuf_draw_line          (GdkPixbuf*, struct _ArtDRect *pts, double line_width, GdkColor *colour);
 #else
-void         pixbuf_draw_line          (cairo_t*, rect*, double line_width, GdkColor *colour);
+void         draw_cairo_line           (cairo_t*, drect*, double line_width, GdkColor *colour);
 #endif
 //GdkPixbuf*   scale_pixbuf(GdkPixbuf *src, int max_w, int max_h);
 //GdkPixbuf*   scale_pixbuf_up(GdkPixbuf *src, int max_w, int max_h);

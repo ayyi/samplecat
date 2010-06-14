@@ -179,10 +179,6 @@ listview__new()
 
 	g_signal_connect((gpointer)app.view, "button-press-event", G_CALLBACK(listview__on_row_clicked), NULL);
 	g_signal_connect((gpointer)app.view, "cursor-changed", G_CALLBACK(listview__on_cursor_change), NULL);
-
-#if 0 //showing is now conditional on the database - TODO check panel is still visible.
-	gtk_widget_show(view);
-#endif
 }
 
 
@@ -481,7 +477,7 @@ listview__dnd_get(GtkWidget *widget, GdkDragContext *context, GtkSelectionData *
 		int id;
 		gtk_tree_model_get(model, &iter, COL_IDX, &id,  COL_NAME, &filename, COL_FNAME, &pathname, -1);
 
-		dbg(0, "filename=%s", filename);
+		dbg(1, "filename=%s", filename);
 	}
 
 	//free the selection list data:

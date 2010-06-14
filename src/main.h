@@ -204,6 +204,7 @@ gboolean    add_file(char* path);
 gboolean    add_dir(char* uri);
 gboolean    on_overview_done(gpointer sample);
 gboolean    on_peaklevel_done(gpointer sample);
+void        delete_row(GtkMenuItem*, gpointer);
 
 void        update_dir_node_list();
 
