@@ -30,17 +30,17 @@ This software is licensed under the GPL. See accompanying file COPYING.
 #ifdef USE_MYSQL
   #include "db/mysql.h"
 #endif
+#include "mimetype.h"
+#include "dh_link.h"
+#include "dh_tree.h"
 
 #include "types.h"
-#include "mimetype.h"
-#include "dh-link.h"
 #include "support.h"
 #include "main.h"
 #include "sample.h"
 #include "audio.h"
 #include "overview.h"
 #include "cellrenderer_hypertext.h"
-#include "dh_tree.h"
 #include "listview.h"
 #include "window.h"
 #include "inspector.h"
@@ -77,6 +77,8 @@ static gboolean   on_directory_list_changed ();
 #ifdef NEVER
 static void       on_file_moved             (GtkTreeIter);
 #endif
+static void      _set_search_dir            (char*);
+static gboolean   dir_tree_update           (gpointer);
 
 
 struct _app app;
@@ -305,14 +307,14 @@ main(int argc, char** argv)
 void
 update_search_dir(gchar* uri)
 {
-	set_search_dir(uri);
+	_set_search_dir(uri);
 
 	const gchar* text = app.search ? gtk_entry_get_text(GTK_ENTRY(app.search)) : "";
 	do_search((gchar*)text, uri);
 }
 
 
-gboolean
+static gboolean
 dir_tree_update(gpointer data)
 {
 	/*
@@ -329,8 +331,8 @@ dir_tree_update(gpointer data)
 }
 
 
-void
-set_search_dir(char* dir)
+static void
+_set_search_dir(char* dir)
 {
 	//this doesnt actually do the search. When calling, follow with do_search() if neccesary.
 
@@ -519,11 +521,65 @@ row_set_tags_from_id(int id, GtkTreeRowReference* row_ref, const char* tags_new)
 }
 
 
+static void
+create_nodes_for_path(gchar** path)
+{
+	gchar* make_uri(gchar** path, int n)
+	{
+		//result must be freed by caller
+
+		gchar* a = NULL;
+		int k; for(k=0;k<=n;k++){
+			gchar* b = g_strjoin("/", a, path[k], NULL);
+			if(a) g_free(a);
+			a = b;
+		}
+		dbg(2, "uri=%s", a);
+		return a;
+	}
+
+	GNode* node = app.dir_tree;
+	int i; for(i=0;path[i];i++){
+		if(strlen(path[i])){
+			//dbg(0, "  testing %s ...", path[i]);
+			gboolean found = false;
+			GNode* n = g_node_first_child(node);
+			if(n) do {
+				DhLink* link = n->data;
+				if(link){
+					//dbg(0, "  %s / %s", path[i], link->name);
+					if(!strcmp(link->name, path[i])){
+						//dbg(0, "    found. node=%p", n);
+						node = n;
+						found = true;
+						break;
+					}
+				}
+			} while ((n = g_node_next_sibling(n)));
+
+			if(!found){
+				dbg(2, "  not found. inserting... (%s)", path[i]);
+				gchar* uri = make_uri(path, i);
+				if(strcmp(uri, g_get_home_dir())){
+					DhLink* l = dh_link_new(DH_LINK_TYPE_PAGE, path[i], uri);
+					g_free(uri);
+					GNode* leaf = g_node_new(l);
+
+					gint position = -1; //end
+					g_node_insert(node, position, leaf);
+					node = leaf;
+				}
+			}
+		}
+	}
+}
+
+
 void
 update_dir_node_list()
 {
 	/*
-	builds a node list of directories listed in the database.
+	builds a node list of directories listed in the latest database result.
 	*/
 
 	if(BACKEND_IS_NULL) return;
@@ -533,20 +589,74 @@ update_dir_node_list()
 	if(app.dir_tree) g_node_destroy(app.dir_tree);
 	app.dir_tree = g_node_new(NULL);
 
-	if(1/*result*/){// there are rows
-		DhLink* link = dh_link_new(DH_LINK_TYPE_PAGE, "all directories", "");
-		GNode* leaf = g_node_new(link);
-		g_node_insert(app.dir_tree, -1, leaf);
+	DhLink* link = dh_link_new(DH_LINK_TYPE_PAGE, "all directories", "");
+	GNode* leaf = g_node_new(link);
+	g_node_insert(app.dir_tree, -1, leaf);
 
-		char* u;
-		while((u = backend.dir_iter_next())){
+	GNode* lookup_node_by_path(gchar** path)
+	{
+		//find a node containing the given path
 
-			link = dh_link_new(DH_LINK_TYPE_PAGE, u, u);
-			leaf = g_node_new(link);
+		//dbg(0, "path=%s", path[0]);
+		struct _closure {
+			gchar** path;
+			GNode*  insert_at;
+		};
+		gboolean traverse_func(GNode *node, gpointer data)
+		{
+			//test if the given node is a match for the closure path.
 
-			gint position = -1;//end
-			g_node_insert(app.dir_tree, position, leaf);
+			DhLink* link = node->data;
+			struct _closure* c = data;
+			gchar** path = c->path;
+			//dbg(0, "%s", link ? link->name : NULL);
+			if(link){
+				c->insert_at = node;
+				//dbg(0, "%s 0=%s", link->name, path[0]);
+				gchar** v = g_strsplit(link->name, "/", 64);
+				int i; for(i=0;v[i];i++){
+					if(strlen(v[i])){
+						if(!strcmp(v[i], path[i])){
+							//dbg(0, "found! %s at depth %i", v[i], i);
+							//dbg(0, " %s", v[i]);
+						}else{
+							//dbg(0, "no match. failed at %i: %s", i, path[i]);
+							c->insert_at = NULL;
+							break;
+						}
+					}
+				}
+				g_strfreev(v);
+			}
+			return false; //continue
 		}
+
+		struct _closure* c = g_new0(struct _closure, 1);
+		c->path = path;
+
+		g_node_traverse(app.dir_tree, G_IN_ORDER, G_TRAVERSE_ALL, 64, traverse_func, c);
+		GNode* ret = c->insert_at;
+		g_free(c);
+		return ret;
+	}
+
+	char* u;
+	while((u = backend.dir_iter_next())){
+
+		dbg(2, "%s", u);
+		gchar** v = g_strsplit(u, "/", 64);
+		int i = 0;
+		while(v[i]){
+			//dbg(0, "%s", v[i]);
+			i++;
+		}
+		GNode* node = lookup_node_by_path(v);
+		if(node){
+			dbg(3, "node found. not adding.");
+		}else{
+			create_nodes_for_path(v);
+		}
+		g_strfreev(v);
 	}
 
 	backend.dir_iter_free();
@@ -839,14 +949,14 @@ edit_row(GtkWidget *widget, gpointer user_data)
 
 
 static MenuDef _menu_def[] = {
-    {"Delete",         G_CALLBACK(delete_row), GTK_STOCK_DELETE,      true},
-    {"Update",         G_CALLBACK(update_row), GTK_STOCK_REFRESH,     true},
-    {"Edit tags",      G_CALLBACK(edit_row),   GTK_STOCK_EDIT,        true},
-    {"Open",           G_CALLBACK(edit_row),   GTK_STOCK_OPEN,       false},
-    {"Open Directory", G_CALLBACK(NULL),       GTK_STOCK_OPEN,        true},
-    {"",                                                                  },
-    {"View",           G_CALLBACK(NULL),       GTK_STOCK_PREFERENCES, true},
-    {"Prefs",          G_CALLBACK(NULL),       GTK_STOCK_PREFERENCES, true},
+	{"Delete",         G_CALLBACK(delete_row), GTK_STOCK_DELETE,      true},
+	{"Update",         G_CALLBACK(update_row), GTK_STOCK_REFRESH,     true},
+	{"Edit tags",      G_CALLBACK(edit_row),   GTK_STOCK_EDIT,        true},
+	{"Open",           G_CALLBACK(edit_row),   GTK_STOCK_OPEN,       false},
+	{"Open Directory", G_CALLBACK(NULL),       GTK_STOCK_OPEN,        true},
+	{"",                                                                  },
+	{"View",           G_CALLBACK(NULL),       GTK_STOCK_PREFERENCES, true},
+	{"Prefs",          G_CALLBACK(NULL),       GTK_STOCK_PREFERENCES, true},
 };
 
 static GtkWidget*
@@ -880,27 +990,45 @@ make_context_menu()
 				gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(item), option->value);
 				g_signal_handler_unblock(item, sig_id);
 			}
+			dbg(2, "value=%i", option->value);
 		}
 
-		gboolean toggle_view_spectrogram(GtkMenuItem* item, gpointer userdata)
+		void toggle_view_spectrogram(GtkMenuItem* item, gpointer userdata)
+		{
+			struct _view_option* option = &app.view_options[SHOW_SPECTROGRAM];
+			option->value = gtk_check_menu_item_get_active(GTK_CHECK_MENU_ITEM(item));
+			dbg(2, "on=%i", option->value);
+
+			show_spectrogram(option->value);
+		}
+
+		void toggle_view_filemanager(GtkMenuItem* item, gpointer userdata)
 		{
 			PF;
-			gboolean on = gtk_check_menu_item_get_active(GTK_CHECK_MENU_ITEM(item));
-			dbg(2, "on=%i", on);
 			struct _view_option* option = &app.view_options[SHOW_SPECTROGRAM];
-			option->value = on;
-
-			show_spectrogram(on);
-
-			return HANDLED;
+			option->value = gtk_check_menu_item_get_active(GTK_CHECK_MENU_ITEM(item));
+			show_widget_if(app.fm_view, option->value);
+			show_widget_if(app.dir_treeview2->widget, option->value);
 		}
-		GtkWidget* menu_item = gtk_check_menu_item_new_with_mnemonic("Spectrogram");
-		gtk_menu_shell_append(GTK_MENU_SHELL(sub), menu_item);
-		gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menu_item), app.add_recursive);
-		struct _view_option* option = &app.view_options[SHOW_SPECTROGRAM];
-		option->value = !option->value; //toggle before it gets toggled back.
-		set_view_toggle_state((GtkMenuItem*)menu_item, option);
-		g_signal_connect(G_OBJECT(menu_item), "activate", G_CALLBACK(toggle_view_spectrogram), NULL);
+
+		struct _view_option* option = &app.view_options[SHOW_FILEMANAGER];
+		option->name = "Filemanager";
+		option->value = true;
+		option->on_toggle = toggle_view_filemanager;
+
+		option = &app.view_options[SHOW_SPECTROGRAM];
+		option->name = "Spectrogram";
+		option->on_toggle = toggle_view_spectrogram;
+
+		int i; for(i=0;i<MAX_VIEW_OPTIONS;i++){
+			struct _view_option* option = &app.view_options[i];
+			GtkWidget* menu_item = gtk_check_menu_item_new_with_mnemonic(option->name);
+			gtk_menu_shell_append(GTK_MENU_SHELL(sub), menu_item);
+			gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menu_item), option->value);
+			option->value = !option->value; //toggle before it gets toggled back.
+			set_view_toggle_state((GtkMenuItem*)menu_item, option);
+			g_signal_connect(G_OBJECT(menu_item), "activate", G_CALLBACK(option->on_toggle), NULL);
+		}
 	}
 
 	GtkWidget* menu_item = gtk_check_menu_item_new_with_mnemonic("Add Recursively");
@@ -1098,7 +1226,7 @@ config_load()
 					strcpy(loc[k], "");
 				}
 			}
-			set_search_dir(app.config.show_dir);
+			_set_search_dir(app.config.show_dir);
 		}
 		else{ pwarn("cannot find Samplecat key group.\n"); return false; }
 		g_free(groupname);

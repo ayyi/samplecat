@@ -32,7 +32,7 @@ typedef struct _SpectrogramWidgetPrivate SpectrogramWidgetPrivate;
 #define _g_free0(var) (var = (g_free (var), NULL))
 #define _g_object_unref0(var) ((var == NULL) ? NULL : (var = (g_object_unref (var), NULL)))
 
-typedef void (*PrintIntFunc) (GdkPixbuf* a, void* user_data_, void* user_data);
+typedef void (*RenderDoneFunc) (gchar* filename, GdkPixbuf* a, void* user_data_, void* user_data);
 struct _SpectrogramWidget {
 	GtkWidget parent_instance;
 	SpectrogramWidgetPrivate * priv;
@@ -50,17 +50,16 @@ struct _SpectrogramWidgetPrivate {
 
 static gpointer spectrogram_widget_parent_class = NULL;
 
+void get_spectrogram_with_target (gchar* path, RenderDoneFunc on_ready, void* on_ready_target, void* user_data);
 GType spectrogram_widget_get_type (void);
-void render_spectrogram (gchar* path, SpectrogramWidget* w, PrintIntFunc callback, void* callback_target, void* user_data);
-void get_spectrogram (gchar* path, SpectrogramWidget* w, PrintIntFunc callback, void* callback_target);
 #define SPECTROGRAM_WIDGET_GET_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), TYPE_SPECTROGRAM_WIDGET, SpectrogramWidgetPrivate))
 enum  {
 	SPECTROGRAM_WIDGET_DUMMY_PROPERTY
 };
-void spectrogram_widget_image_ready (SpectrogramWidget* self, GdkPixbuf* _pixbuf);
-static void _lambda0_ (GdkPixbuf* a, void* b, SpectrogramWidget* self);
-static void __lambda0__print_int_func (GdkPixbuf* a, void* user_data_, gpointer self);
-static void _spectrogram_widget_image_ready_print_int_func (GdkPixbuf* a, void* user_data_, gpointer self);
+void spectrogram_widget_image_ready (SpectrogramWidget* self, gchar* filename, GdkPixbuf* _pixbuf, void* user_data);
+static void _lambda0_ (gchar* filename, GdkPixbuf* a, void* b, SpectrogramWidget* self);
+static void __lambda0__render_done_func (gchar* filename, GdkPixbuf* a, void* user_data_, gpointer self);
+static void _spectrogram_widget_image_ready_render_done_func (gchar* filename, GdkPixbuf* a, void* user_data_, gpointer self);
 void spectrogram_widget_set_file (SpectrogramWidget* self, gchar* filename);
 static void spectrogram_widget_real_realize (GtkWidget* base);
 static void spectrogram_widget_real_unrealize (GtkWidget* base);
@@ -74,9 +73,9 @@ static void spectrogram_widget_finalize (GObject* obj);
 
 
 
-void spectrogram_widget_image_ready (SpectrogramWidget* self, GdkPixbuf* _pixbuf) {
+void spectrogram_widget_image_ready (SpectrogramWidget* self, gchar* filename, GdkPixbuf* _pixbuf, void* user_data) {
 	g_return_if_fail (self != NULL);
-	if (self->priv->pixbuf != NULL) {
+	if ((gboolean) self->priv->pixbuf) {
 		g_object_unref ((GObject*) self->priv->pixbuf);
 	}
 	self->priv->pixbuf = _pixbuf;
@@ -84,33 +83,33 @@ void spectrogram_widget_image_ready (SpectrogramWidget* self, GdkPixbuf* _pixbuf
 }
 
 
-static void _lambda0_ (GdkPixbuf* a, void* b, SpectrogramWidget* self) {
+static void _lambda0_ (gchar* filename, GdkPixbuf* a, void* b, SpectrogramWidget* self) {
 	self->priv->pixbuf = a;
 	fprintf (stdout, "set_file: got callback!\n");
 	gtk_widget_queue_draw ((GtkWidget*) self);
 }
 
 
-static void __lambda0__print_int_func (GdkPixbuf* a, void* user_data_, gpointer self) {
-	_lambda0_ (a, user_data_, self);
+static void __lambda0__render_done_func (gchar* filename, GdkPixbuf* a, void* user_data_, gpointer self) {
+	_lambda0_ (filename, a, user_data_, self);
 }
 
 
-static void _spectrogram_widget_image_ready_print_int_func (GdkPixbuf* a, void* user_data_, gpointer self) {
-	spectrogram_widget_image_ready (self, a);
+static void _spectrogram_widget_image_ready_render_done_func (gchar* filename, GdkPixbuf* a, void* user_data_, gpointer self) {
+	spectrogram_widget_image_ready (self, filename, a, user_data_);
 }
 
 
 void spectrogram_widget_set_file (SpectrogramWidget* self, gchar* filename) {
 	char* _tmp0_;
-	PrintIntFunc _tmp1_;
+	RenderDoneFunc _tmp1_;
 	GDestroyNotify p1_target_destroy_notify = NULL;
 	void* p1_target = NULL;
-	PrintIntFunc p1;
+	RenderDoneFunc p1;
 	g_return_if_fail (self != NULL);
 	self->priv->_filename = (_tmp0_ = g_strdup ((const char*) filename), _g_free0 (self->priv->_filename), _tmp0_);
-	p1 = (_tmp1_ = __lambda0__print_int_func, p1_target = g_object_ref (self), p1_target_destroy_notify = g_object_unref, _tmp1_);
-	get_spectrogram (filename, self, _spectrogram_widget_image_ready_print_int_func, self);
+	p1 = (_tmp1_ = __lambda0__render_done_func, p1_target = g_object_ref (self), p1_target_destroy_notify = g_object_unref, _tmp1_);
+	get_spectrogram_with_target (filename, _spectrogram_widget_image_ready_render_done_func, self, NULL);
 	(p1_target_destroy_notify == NULL) ? NULL : p1_target_destroy_notify (p1_target);
 	p1 = NULL;
 	p1_target = NULL;

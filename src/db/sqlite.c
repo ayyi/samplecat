@@ -429,13 +429,18 @@ sqlite__search_iter_new(char* search, char* dir, const char* category, int* n_re
 		where = where2;
 	}
 	if(dir && strlen(dir)){
+#ifdef DONT_SHOW_SUBDIRS //TODO
 		gchar* where2 = g_strdup_printf("%s AND filedir='%s' ", where, dir);
+#else
+		//match the beginning of the dir path
+		gchar* where2 = g_strdup_printf("%s AND filedir LIKE '%s%%' ", where, dir);
+#endif
 		g_free(where);
 		where = where2;
 	}
 
 	char* sql = g_strdup_printf("SELECT * FROM samples WHERE 1 %s", where);
-	dbg(1, "sql=%s", sql);
+	dbg(2, "sql=%s", sql);
 
 	if(ppStmt) gwarn("ppStmt not reset from previous query?");
 	int n = sqlite3_prepare_v2(db, sql, -1, &ppStmt, NULL);

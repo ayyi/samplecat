@@ -55,15 +55,8 @@
 
 extern unsigned debug;
 
-#ifdef USE_OPENGL
-typedef struct _GLSpectrogram GLSpectrogram;
-extern void gl_spectrogram_image_ready (GLSpectrogram* self, GdkPixbuf* _pixbuf);
-#else
-typedef struct _SpectrogramWidget SpectrogramWidget;
-extern void spectrogram_widget_image_ready (SpectrogramWidget* self, GdkPixbuf* _pixbuf);
-#endif
-
 typedef void (*SpectrogramReady)(const char* filename, GdkPixbuf*, gpointer);
+typedef void (*SpectrogramReadyTarget)(const char* filename, GdkPixbuf*, gpointer, void* target);
 
 
 #define TIMER_STOP FALSE
@@ -89,17 +82,13 @@ typedef void (*SpectrogramReady)(const char* filename, GdkPixbuf*, gpointer);
 
 
 typedef struct
-{	const char*        sndfilepath;
+{
+	const char*        sndfilepath;
 	const char*        filename;
 	int                width, height;
 	bool               border, log_freq;
 	double             spec_floor_db;
 	GdkPixbuf*         pixbuf;
-#ifdef USE_OPENGL
-	GLSpectrogram*     w; //hopefully temp
-#else
-	SpectrogramWidget* w; //hopefully temp
-#endif
 	SpectrogramReady   callback;
 	gpointer           user_data;
 } RENDER;
@@ -837,20 +826,16 @@ render_free(RENDER* render)
 
 
 void
-#ifdef USE_OPENGL
-render_spectrogram(const char* path, GLSpectrogram* w, SpectrogramReady callback, gpointer user_data)
-#else
-render_spectrogram(const char* path, SpectrogramWidget* w, SpectrogramReady callback, gpointer user_data)
-#endif
+render_spectrogram(const char* path, SpectrogramReady callback, gpointer user_data)
 {
 	g_return_if_fail(path);
 	g_return_if_fail(callback);
+	PF;
 
 	#define no_border false
 
 	RENDER* render = render_new();
 	render->sndfilepath = g_strdup(path);
-	render->w = w;
 	render->callback = callback;
 	render->user_data = user_data;
 
@@ -882,13 +867,6 @@ render_spectrogram(const char* path, SpectrogramWidget* w, SpectrogramReady call
 					if(debug && !render->pixbuf) gwarn("no pixbuf.");
 
 					render->callback(render->sndfilepath, render->pixbuf, render->user_data);
-
-					//temporary!
-#ifdef USE_OPENGL
-					gl_spectrogram_image_ready(render->w, render->pixbuf);
-#else
-					spectrogram_widget_image_ready(render->w, render->pixbuf);
-#endif
 
 					render_free(render);
 					return TIMER_STOP;
@@ -931,11 +909,7 @@ render_spectrogram(const char* path, SpectrogramWidget* w, SpectrogramReady call
 
 
 void
-#ifdef USE_OPENGL
-get_spectrogram(const char* path, GLSpectrogram* w, SpectrogramReady callback)
-#else
-get_spectrogram(const char* path, SpectrogramWidget* w, SpectrogramReady callback)
-#endif
+get_spectrogram(const char* path, SpectrogramReady callback, gpointer user_data)
 {
 	gchar* cache_dir = g_build_filename(app.cache_dir, "spectrogram", NULL);
 	g_mkdir_with_parents(cache_dir, S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP);
@@ -958,17 +932,18 @@ get_spectrogram(const char* path, SpectrogramWidget* w, SpectrogramReady callbac
 		//TODO unref?
 		if(pixbuf){
 			dbg(1, "cache: pixbuf loaded");
-			callback(pixbuf, path, w);
+			callback(path, pixbuf, user_data);
 		}
 	}else{
 		dbg(1, "cache: not found: %s", cache_path);
 		typedef struct __closure
 		{
 			SpectrogramReady callback;
-
+			void*            user_data;
 		} _closure;
 		_closure* closure = g_new0(_closure, 1);
 		closure->callback = callback;
+		closure->user_data = user_data;
 
 		void spectrogram_ready(const char* filename, GdkPixbuf* pixbuf, gpointer user_data)
 		{
@@ -1036,15 +1011,41 @@ get_spectrogram(const char* path, SpectrogramWidget* w, SpectrogramReady callbac
 
 			_closure* closure = user_data;
 
-			if(false && closure && closure->callback) closure->callback(filename, pixbuf, NULL);
+			if(closure) call(closure->callback, filename, pixbuf, closure->user_data);
 
 			g_free(closure);
 		}
 
-		render_spectrogram(path, w, spectrogram_ready, closure);
+		render_spectrogram(path, spectrogram_ready, closure);
 	}
 	g_free(cache_dir);
 	g_free(cache_path);
+}
+
+
+void
+get_spectrogram_with_target(const char* path, SpectrogramReady callback, void* target, gpointer user_data)
+{
+	typedef struct _closure
+	{
+		SpectrogramReadyTarget callback;
+		gpointer               user_data;
+		void*                  target;
+	} TargetClosure;
+	struct _closure* closure = g_new0(struct _closure, 1);
+	closure->callback = (SpectrogramReadyTarget)callback;
+	closure->user_data = user_data;
+	closure->target = target;
+
+	void
+	ready(const char* filename, GdkPixbuf* pixbuf, gpointer __closure)
+	{
+		struct _closure* closure = (struct _closure*)__closure;
+		closure->callback(filename, pixbuf, closure->user_data, closure->target);
+		g_free(closure);
+	}
+
+	get_spectrogram(path, ready, closure);
 }
 
 

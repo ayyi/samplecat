@@ -4,7 +4,6 @@
 #include "gqview_view_dir_tree.h"
 #include "typedefs.h"
 #include "listview.h"
-#include "dh-link.h"
 #include "support.h"
 #include "main.h"
 

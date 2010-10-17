@@ -18,34 +18,10 @@
 #include "gqview.h"
 #include "pixbuf_util.h"
 
-#include "icons/icons_inline.h"
+//#include "icons/icons_inline.h"
 
-
-/*
- *-----------------------------------------------------------------------------
- * png save
- *-----------------------------------------------------------------------------
- */
 
 #if 0
-gboolean pixbuf_to_file_as_png (GdkPixbuf *pixbuf, const char *filename)
-{
-	GError *error = NULL;
-	gint ret;
-
-	if (!pixbuf || !filename) return FALSE;
-
-	ret = gdk_pixbuf_save(pixbuf, filename, "png", &error,
-			      "tEXt::Software", "GQview "VERSION, NULL);
-
-	if (error)
-		{
-		printf("Error saving png file: %s\n", error->message);
-		g_error_free(error);
-		}
-
-	return ret;
-}
 
 /*
  *-----------------------------------------------------------------------------
@@ -95,6 +71,7 @@ struct _PixbufInline
 	const guint8 *data;
 };
 
+/*
 static PixbufInline inline_pixbuf_data[] = {
 	{ PIXBUF_INLINE_FOLDER_CLOSED,	folder_closed },
 	{ PIXBUF_INLINE_FOLDER_LOCKED,	folder_locked },
@@ -126,6 +103,7 @@ GdkPixbuf *pixbuf_inline(const gchar *key)
 
 	return NULL;
 }
+*/
 
 /*
  *-----------------------------------------------------------------------------
@@ -134,35 +112,6 @@ GdkPixbuf *pixbuf_inline(const gchar *key)
  */
 
 #if 0
-static void pixbuf_copy_block_rotate(guchar *src, gint src_row_stride, gint x, gint y,
-				     guchar *dest, gint dest_row_stride, gint w, gint h,
-				     gint bytes_per_pixel, gint counter_clockwise)
-{
-	gint i, j;
-	guchar *sp;
-	guchar *dp;
-
-	for (i = 0; i < h; i++)
-		{
-		sp = src + ((i + y) * src_row_stride) + (x * bytes_per_pixel);
-		for (j = 0; j < w; j++)
-			{
-			if (counter_clockwise)
-				{
-				dp = dest + ((w - j - 1) * dest_row_stride) + (i * bytes_per_pixel);
-				}
-			else
-				{
-				dp = dest + (j * dest_row_stride) + ((h - i - 1) * bytes_per_pixel);
-				}
-			*(dp++) = *(sp++);	/* r */
-			*(dp++) = *(sp++);	/* g */
-			*(dp++) = *(sp++);	/* b */
-			if (bytes_per_pixel == 4) *(dp) = *(sp++);	/* a */
-			}
-		}
-	
-}
 
 static void pixbuf_copy_block(guchar *src, gint src_row_stride, gint w, gint h,
 			      guchar *dest, gint dest_row_stride, gint x, gint y, gint bytes_per_pixel)

@@ -7,21 +7,12 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <sys/wait.h>
-//#include <netdb.h>
-//#include <ctype.h>
-//#include <pwd.h>
-//#include <grp.h>
-//#include <fcntl.h>
 #include <dirent.h>
 #include <sys/param.h>
 #include <errno.h>
 
 #include <gtk/gtk.h>
-#ifdef OLD
-  #include <libart_lgpl/libart.h>
-#endif
 
-#include "dh-link.h"
 #include "file_manager/file_manager.h"
 #include "file_manager/support.h"
 #include <gqview2/typedefs.h>
@@ -46,31 +37,31 @@ extern unsigned debug;
 void
 errprintf(char *format, ...)
 {
-  //fn prints an error string, then passes arguments on to vprintf.
+	//fn prints an error string, then passes arguments on to vprintf.
 
-  va_list argp; //points to each unnamed arg in turn
+	va_list argp; //points to each unnamed arg in turn
 
-  printf("%s ", err);
+	printf("%s ", err);
 
-  va_start(argp, format); //make ap (arg pointer) point to 1st unnamed arg
+	va_start(argp, format); //make ap (arg pointer) point to 1st unnamed arg
 
-  vprintf(format, argp);
+	vprintf(format, argp);
 
-  va_end(argp); //clean up
+	va_end(argp); //clean up
 }
 
 
 void
 errprintf2(const char* func, char *format, ...)
 {
-  //fn prints an error string, then passes arguments on to vprintf.
+	//fn prints an error string, then passes arguments on to vprintf.
 
-  printf("%s %s(): ", err, func);
+	printf("%s %s(): ", err, func);
 
-  va_list argp;
-  va_start(argp, format);
-  vprintf(format, argp);
-  va_end(argp);
+	va_list argp;
+	va_start(argp, format);
+	vprintf(format, argp);
+	va_end(argp);
 }
 #endif
 
@@ -78,14 +69,14 @@ errprintf2(const char* func, char *format, ...)
 void
 warnprintf(char *format, ...)
 {
-  //fn prints a warning string, then passes arguments on to vprintf.
+	//fn prints a warning string, then passes arguments on to vprintf.
 
-  printf("%s ", warn);
+	printf("%s ", warn);
 
-  va_list argp;           //points to each unnamed arg in turn
-  va_start(argp, format); //make ap (arg pointer) point to 1st unnamed arg
-  vprintf(format, argp);
-  va_end(argp);           //clean up
+	va_list argp;           //points to each unnamed arg in turn
+	va_start(argp, format); //make ap (arg pointer) point to 1st unnamed arg
+	vprintf(format, argp);
+	va_end(argp);           //clean up
 }
 
 
@@ -93,14 +84,14 @@ warnprintf(char *format, ...)
 void 
 warnprintf2(const char* func, char *format, ...)
 {
-  //fn prints a warning string, then passes arguments on to vprintf.
+	//fn prints a warning string, then passes arguments on to vprintf.
 
-  printf("%s %s(): ", warn, func);
+	printf("%s %s(): ", warn, func);
 
-  va_list argp;
-  va_start(argp, format);
-  vprintf(format, argp);
-  va_end(argp);
+	va_list argp;
+	va_start(argp, format);
+	vprintf(format, argp);
+	va_end(argp);
 }
 
 
@@ -242,29 +233,28 @@ is_dir(const char *path)
 gboolean
 dir_is_empty(const char *path)
 {
-    DIR *dp;
 
-    if (strcmp(path, "/") == 0) return FALSE;
+	if (strcmp(path, "/") == 0) return FALSE;
 
-    dp = opendir (path);
+	DIR* dp = opendir (path);
 
-    int n = 0;
-    while(readdir(dp) != NULL){
-        n++;
-        if (n > 2) {
-            closedir(dp);
-            return FALSE;
-        }
-    }
-    closedir(dp);
-    return TRUE;
+	int n = 0;
+	while(readdir(dp) != NULL){
+		n++;
+		if (n > 2) {
+			closedir(dp);
+			return FALSE;
+		}
+	}
+	closedir(dp);
+	return TRUE;
 }
 
 void
 file_extension(const char* path, char* extn)
 {
-	ASSERT_POINTER(path, "path");
-	ASSERT_POINTER(extn, "extn");
+	g_return_if_fail(path);
+	g_return_if_fail(extn);
 
 	gchar** split = g_strsplit(path, ".", 0);
 	if(split[0]){
@@ -1652,6 +1642,14 @@ gain2dbstring(float gain)
 		return g_strdup_printf("-200 dB");
 
 	return g_strdup_printf("%.2f dB", gain2db(gain));
+}
+
+
+void
+show_widget_if(GtkWidget* widget, gboolean show)
+{
+	if(show) gtk_widget_show(widget);
+	else gtk_widget_hide(widget);
 }
 
 

@@ -16,7 +16,6 @@
   #include <cairo.h>
 #endif
 
-#include "dh-link.h"
 #include "file_manager.h"
 #include "typedefs.h"
 #include "support.h"
@@ -100,6 +99,8 @@ overview_thread(gpointer data)
 void
 request_overview(Sample* sample)
 {
+	if(!app.msg_queue) return;
+
 	struct _message* message = g_new0(struct _message, 1);
 	message->type = MSG_TYPE_OVERVIEW;
 	message->sample = sample;
@@ -113,6 +114,8 @@ request_overview(Sample* sample)
 void
 request_peaklevel(Sample* sample)
 {
+	if(!app.msg_queue) return;
+
 	struct _message* message = g_new0(struct _message, 1);
 	message->type = MSG_TYPE_PEAKLEVEL;
 	message->sample = sample;

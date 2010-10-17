@@ -29,7 +29,6 @@
 #ifdef OLD
   #include <libart_lgpl/libart.h>
 #endif
-#include "dh-link.h"
 #include "typedefs.h"
 #include "support.h"
 #include "main.h"

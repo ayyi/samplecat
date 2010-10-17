@@ -15,11 +15,11 @@ using Cairo;
    cheader_filename = "spectrogram.h",
    lower_case_cprefix = "", cprefix = "")]
 
-public delegate void PrintIntFunc(Gdk.Pixbuf* a, void* user_data_);
+public delegate void RenderDoneFunc(char* filename, Gdk.Pixbuf* a, void* user_data_);
 
-public extern void render_spectrogram(char* path, SpectrogramWidget* w, PrintIntFunc callback, void* user_data);
-[CCode (has_target = false)]
-public extern void get_spectrogram(char* path, SpectrogramWidget* w, PrintIntFunc callback);
+public extern void get_spectrogram_with_target(char* path, RenderDoneFunc on_ready, void* user_data);
+//[CCode (has_target = false)]
+//public extern void get_spectrogram(char* path, RenderDoneFunc callback, void* user_data);
  
 public class SpectrogramWidget : Gtk.Widget {
 	private string _filename;
@@ -28,9 +28,9 @@ public class SpectrogramWidget : Gtk.Widget {
 	construct {
 	}
 
-	public void image_ready(Gdk.Pixbuf* _pixbuf)
+	public void image_ready(char* filename, Gdk.Pixbuf* _pixbuf, void* user_data)
 	{
-		if(pixbuf != null) pixbuf->unref();
+		if((bool)pixbuf) pixbuf->unref();
 		pixbuf = _pixbuf;
 		this.queue_draw();
 	}
@@ -40,15 +40,13 @@ public class SpectrogramWidget : Gtk.Widget {
 		_filename = ((string*)filename)->dup();
 
 		//TODO currently not using this as self is not set properly when called?
-		PrintIntFunc p1 = (a, b) => {
+		RenderDoneFunc p1 = (filename, a, b) => {
 			pixbuf = a;
 			stdout.printf("set_file: got callback!\n");
 			this.queue_draw();
 		};
 
-		//render_spectrogram(filename, p1);
-		//render_spectrogram(filename, this, image_ready);
-		get_spectrogram(filename, this, image_ready);
+		get_spectrogram_with_target(filename, image_ready, null);
 		//stdout.printf("set_file: pixbuf=%p\n", pixbuf);
 
 		//_filename = new string(filename);

@@ -10,17 +10,19 @@ using Cairo;
    cheader_filename = "spectrogram.h",
    lower_case_cprefix = "", cprefix = "")]
 
-public delegate void PrintIntFunc(Gdk.Pixbuf* a, void* user_data_);
+public delegate void SpectrogramReady(char* filename, Gdk.Pixbuf* a, void* user_data_);
 
-public extern void render_spectrogram(char* path, GlSpectrogram* w, PrintIntFunc callback, void* user_data);
-[CCode (has_target = false)]
-public extern void get_spectrogram(char* path, GlSpectrogram* w, PrintIntFunc callback);
+//public extern void render_spectrogram(char* path, GlSpectrogram* w, SpectrogramReadyFunc callback, void* user_data);
+public extern void get_spectrogram_with_target(char* path, SpectrogramReady on_ready, void* user_data);
+//[CCode (has_target = false)]
+//public extern void get_spectrogram(char* path, SpectrogramReady on_ready, void* user_data);
  
 public class GlSpectrogram : Gtk.DrawingArea {
 	private string _filename;
 	private Gdk.Pixbuf* pixbuf = null;
 	private bool gl_init_done = false;
 	private GL.GLuint Textures[2];
+	public static GlSpectrogram instance;
 
 	public GlSpectrogram ()
 	{
@@ -31,13 +33,17 @@ public class GlSpectrogram : Gtk.DrawingArea {
 
 		var glconfig = new GLConfig.by_mode (GLConfigMode.RGB | GLConfigMode.DOUBLE);
 		WidgetGL.set_gl_capability (this, glconfig, null, true, GLRenderType.RGBA_TYPE);
+
+		instance = this;
 	}
 
 	private void load_texture()
 	{
+		//stdout.printf("load_texture...\n");
 		GLContext glcontext = WidgetGL.get_gl_context(this);
 		GLDrawable gldrawable = WidgetGL.get_gl_drawable(this);
 
+		if (!gldrawable.gl_begin(glcontext)) stdout.printf("gl context error!\n");
 		if (!gldrawable.gl_begin(glcontext)) return;
 
 		glBindTexture(GL_TEXTURE_2D, Textures[0]);
@@ -100,26 +106,9 @@ public class GlSpectrogram : Gtk.DrawingArea {
 		glClearColor (0.0f, 0.0f, 0.0f, 1.0f);
 		glClear (GL_COLOR_BUFFER_BIT);
 
-		/*
-		glBegin (GL_TRIANGLES);
-			glIndexi (0);
-			glColor3f (1.0f, 0.0f, 0.0f);
-			glVertex2i (0, 1);
-
-			glIndexi (0);
-			glColor3f (0.0f, 1.0f, 0.0f);
-			glVertex2i (-1, -1);
-
-			glIndexi (0);
-			glColor3f (0.0f, 0.0f, 1.0f);
-			glVertex2i (1, -1);
-		glEnd ();
-		*/
-
 		int x = -1;
 		int top = 1;
 		int botm = -1;
-		//glEnable(GL_TEXTURE_2D);
 		glBegin(GL_QUADS);
 		glTexCoord2d(0.0, 0.0); glVertex2d(x+0.0, top);
 		glTexCoord2d(1.0, 0.0); glVertex2d(x+2.0, top);
@@ -149,83 +138,6 @@ public class GlSpectrogram : Gtk.DrawingArea {
 	}
 
 	/*
-	private bool update () {
-		//stdout.printf("update...\n");
-		// update the time
-		this.time = Time.local (time_t ());
-		redraw_canvas ();
-		return true;        // keep running this event
-	}
-	
-
-	private void draw (Context cr) {
-            var x = this.allocation.x + this.allocation.width / 2;
-            var y = this.allocation.y + this.allocation.height / 2;
-            var radius = double.min (this.allocation.width / 2, this.allocation.height / 2) - 5;
-
-				cr.rectangle(1.0, 1.0, 90.0, 90.0);
-            cr.stroke ();
-
-            // clock back
-            cr.arc (x, y, radius, 0, 2 * Math.PI);
-            cr.set_source_rgb (1, 1, 1);
-            cr.fill_preserve ();
-            cr.set_source_rgb (0, 0, 0);
-            cr.stroke ();
-
-            // clock hands
-
-            var hours = this.time.hour;
-            var minutes = this.time.minute + this.minute_offset;
-            var seconds = this.time.second;
-                        
-            // hour hand:
-            // the hour hand is rotated 30 degrees (pi/6 r) per hour +
-            // 1/2 a degree (pi/360 r) per minute
-            cr.save ();
-            cr.set_line_width (2.5 * cr.get_line_width ());
-            cr.move_to (x, y);
-            cr.line_to (x + radius / 2 * Math.sin (Math.PI / 6 * hours
-                                                 + Math.PI / 360 * minutes),
-                        y + radius / 2 * -Math.cos (Math.PI / 6 * hours
-                                                  + Math.PI / 360 * minutes));
-            cr.stroke ();
-            cr.restore ();
-
-            // minute hand:
-            // the minute hand is rotated 6 degrees (pi/30 r) per minute
-            cr.move_to (x, y);
-            cr.line_to (x + radius * 0.75 * Math.sin (Math.PI / 30 * minutes),
-                        y + radius * 0.75 * -Math.cos (Math.PI / 30 * minutes));
-            cr.stroke ();
-                        
-            // seconds hand:
-            // operates identically to the minute hand
-            cr.save ();
-            cr.set_source_rgb (1, 0, 0); // red
-            cr.move_to (x, y);
-            cr.line_to (x + radius * 0.7 * Math.sin (Math.PI / 30 * seconds),
-                        y + radius * 0.7 * -Math.cos (Math.PI / 30 * seconds));
-            cr.stroke ();
-            cr.restore ();
-	}
-
-	private void redraw_canvas () {
-		//stdout.printf("redraw\n");
-		if (this.window == null) {
-			stdout.printf("redraw - no window!!\n");
-			return;
-		}
-
-		unowned Gdk.Region region = this.window.get_clip_region ();
-		// redraw the cairo canvas completely by exposing it
-		this.window.invalidate_region (region, true);
-		this.window.process_updates (true);
-	}
-	*/
-
-
-	/*
 	private bool on_configure_event (Widget widget, EventConfigure event)
 	{
 		stdout.printf("on_configure_event");
@@ -241,31 +153,19 @@ public class GlSpectrogram : Gtk.DrawingArea {
 	}
 	*/
 
-	public void image_ready(Gdk.Pixbuf* _pixbuf)
-	{
-		stdout.printf("image_ready\n");
-		if(pixbuf != null){
-			pixbuf->unref();
-			pixbuf = _pixbuf;
-			load_texture();
-			this.queue_draw();
-		}
-	}
-
 	public void set_file(char* filename)
 	{
 		_filename = ((string*)filename)->dup();
 
-		//TODO currently not using this as self is not set properly when called?
-		/*
-		PrintIntFunc p1 = (a, b) => {
-			pixbuf = a;
-			stdout.printf("set_file: got callback!\n");
-			this.queue_draw();
-		};
-		*/
-
-		get_spectrogram(filename, this, image_ready);
+		get_spectrogram_with_target(filename, (filename, _pixbuf, b) => {
+			//stdout.printf("set_file: got callback!\n");
+			if((bool)_pixbuf){
+				if((bool)pixbuf) pixbuf->unref();
+				pixbuf = _pixbuf;
+				load_texture();
+				this.queue_draw();
+			}
+		}, null);
 	}
 
 	/*

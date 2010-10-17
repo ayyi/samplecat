@@ -10,11 +10,8 @@ This software is licensed under the GPL. See accompanying file COPYING.
 #include <string.h>
 #include <unistd.h>
 #include <gtk/gtk.h>
-#ifdef OLD
-  #include <libart_lgpl/libart.h>
-#endif
 
-#include "dh-link.h"
+//#include "dh-link.h"
 #include "typedefs.h"
 #include "support.h"
 #include "main.h"

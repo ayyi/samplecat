@@ -36,6 +36,7 @@ typedef struct _inspector
 	GtkWidget*     text;
 	GtkTextBuffer* notes;
 	GtkWidget*     edit;
+	int            min_height;
 } Inspector;
 
 
@@ -110,6 +111,7 @@ struct _app
 	}              args;
 
 	struct _view_option {
+		char*            name;
 		gboolean         value;
 		GtkWidget*       menu_item;
 		void             (*on_toggle)(GtkMenuItem*, gpointer);
@@ -156,7 +158,6 @@ struct _app
 	GtkWidget*           dir_treeview;
 	ViewDirTree*         dir_treeview2;
 	GtkWidget*           vpaned;        //vertical divider on lhs between the dir_tree and inspector
-	GtkWidget*           vpaned2;
 
 	GtkWidget*           fm_view;
 
@@ -211,8 +212,6 @@ void        update_dir_node_list();
 gint        get_mouseover_row();
 
 void        update_search_dir(gchar* uri);
-gboolean    dir_tree_update(gpointer);
-void        set_search_dir(char* dir);
 
 gboolean    keyword_is_dupe(char* new, char* existing);
 

@@ -210,21 +210,34 @@ fm_make_subdir_menu()
 		const char* leaf;
 		char escaped[256];
 		if (dir) {
+			GList* items = NULL;
 			while ((leaf = g_dir_read_name(dir))) {
 				if (leaf[0] == '.') continue;
-				strncpy(escaped, leaf, 255);
-				fm__escape_for_menu(escaped);
 				gchar* filename = g_build_filename(filer.real_path, leaf, NULL);
 				if (g_file_test(filename, G_FILE_TEST_IS_DIR)) {
-					GtkWidget* item = gtk_image_menu_item_new_with_label (leaf);
-					GtkWidget* ico = gtk_image_new_from_pixbuf(mime_type_get_pixbuf(inode_directory));
-					gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(item), ico);
-					gtk_container_add(GTK_CONTAINER(submenu), item);
-					g_signal_connect(G_OBJECT(item), "activate", G_CALLBACK(menu__go_down_dir), NULL);
+					strncpy(escaped, leaf, 255);
+					fm__escape_for_menu(escaped);
+
+					items = g_list_append(items, g_strdup(escaped));
 				}
 				g_free(filename);
 			}
+
 			g_dir_close(dir);
+
+			items = g_list_sort(items, (GCompareFunc)g_ascii_strcasecmp);
+
+			GList* l = items;
+			for(;l;l=l->next){
+				gchar* name = l->data;
+				GtkWidget* item = gtk_image_menu_item_new_with_mnemonic(name);
+				GtkWidget* ico = gtk_image_new_from_pixbuf(mime_type_get_pixbuf(inode_directory));
+				gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(item), ico);
+				gtk_container_add(GTK_CONTAINER(submenu), item);
+				g_signal_connect(G_OBJECT(item), "activate", G_CALLBACK(menu__go_down_dir), NULL);
+				g_free(name);
+			}
+			g_list_free(items);
 		}
 	}
 	return submenu;

@@ -88,9 +88,9 @@ mysql__connect()
 
 	if(!mysql_real_connect(&mysql, app.config.database_host, app.config.database_user, app.config.database_pass, app.config.database_name, 0, NULL, 0)){
 		if(mysql_errno(&mysql) == CR_CONNECTION_ERROR){
-			errprintf("cannot connect to database: MYSQL server not online.\n");
+			warnprintf("cannot connect to database: MYSQL server not online.\n");
 		}else{
-			errprintf("cannot connect to database: %s\n", mysql_error(&mysql));
+			warnprintf("cannot connect to database: %s\n", mysql_error(&mysql));
 			//currently this won't be displayed, as the window is not yet opened.
 			statusbar_print(1, "cannot connect to database: %s\n", mysql_error(&mysql));
 		}
@@ -304,7 +304,12 @@ mysql__search_iter_new(char* search, char* dir, const char* category, int* n_res
 
 	GString* q = g_string_new("SELECT * FROM samples WHERE 1 ");
 	if(strlen(search)) g_string_append_printf(q, "AND (filename LIKE '%%%s%%' OR filedir LIKE '%%%s%%' OR keywords LIKE '%%%s%%') ", search, search, search);
-	if(dir && strlen(dir)) g_string_append_printf(q, "AND filedir='%s' ", dir);
+	if(dir && strlen(dir))
+#ifdef DONT_SHOW_SUBDIRS //TODO
+		g_string_append_printf(q, "AND filedir='%s' ", dir);
+#else
+		g_string_append_printf(q, "AND filedir LIKE '%s%%' ", dir);
+#endif
 	if(app.search_category) g_string_append_printf(q, "AND keywords LIKE '%%%s%%' ", category);
 
 	dbg(1, "%s", q->str);

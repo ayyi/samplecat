@@ -42,19 +42,12 @@ struct _DhLink {
 	guint        ref_count;
 };
 
-DhLink * dh_link_new        (DhLinkType      type,
-			     const gchar    *name,
-			     const gchar    *uri);
-
-DhLink * dh_link_copy       (const DhLink   *link);
-
-void     dh_link_free       (DhLink         *link);
-
-gint     dh_link_compare    (gconstpointer   a,
-			     gconstpointer   b);
-
-DhLink * dh_link_ref        (DhLink         *link);
-void     dh_link_unref      (DhLink         *link);
+DhLink * dh_link_new        (DhLinkType    type, const gchar* name, const gchar* uri);
+DhLink * dh_link_copy       (const DhLink *link);
+void     dh_link_free       (DhLink       *link);
+gint     dh_link_compare    (gconstpointer a, gconstpointer);
+DhLink * dh_link_ref        (DhLink       *link);
+void     dh_link_unref      (DhLink       *link);
 
 #endif /* __DH_LINK_H__ */
 

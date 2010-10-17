@@ -12,8 +12,8 @@
 #include <gdk/gdk.h>
 #include <gtkglext-1.0/gdk/gdkgl.h>
 #include <gtkglext-1.0/gtk/gtkgl.h>
-#include <GL/glu.h>
 #include <stdio.h>
+#include <GL/glu.h>
 
 
 #define TYPE_GL_SPECTROGRAM (gl_spectrogram_get_type ())
@@ -29,7 +29,7 @@ typedef struct _GlSpectrogramPrivate GlSpectrogramPrivate;
 #define _g_free0(var) (var = (g_free (var), NULL))
 #define _g_object_unref0(var) ((var == NULL) ? NULL : (var = (g_object_unref (var), NULL)))
 
-typedef void (*PrintIntFunc) (GdkPixbuf* a, void* user_data_, void* user_data);
+typedef void (*SpectrogramReady) (gchar* filename, GdkPixbuf* a, void* user_data_, void* user_data);
 struct _GlSpectrogram {
 	GtkDrawingArea parent_instance;
 	GlSpectrogramPrivate * priv;
@@ -47,11 +47,12 @@ struct _GlSpectrogramPrivate {
 };
 
 
+extern GlSpectrogram* gl_spectrogram_instance;
+GlSpectrogram* gl_spectrogram_instance = NULL;
 static gpointer gl_spectrogram_parent_class = NULL;
 
+void get_spectrogram_with_target (gchar* path, SpectrogramReady on_ready, void* on_ready_target, void* user_data);
 GType gl_spectrogram_get_type (void);
-void render_spectrogram (gchar* path, GlSpectrogram* w, PrintIntFunc callback, void* callback_target, void* user_data);
-void get_spectrogram (gchar* path, GlSpectrogram* w, PrintIntFunc callback, void* callback_target);
 #define GL_SPECTROGRAM_GET_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), TYPE_GL_SPECTROGRAM, GlSpectrogramPrivate))
 enum  {
 	GL_SPECTROGRAM_DUMMY_PROPERTY
@@ -64,21 +65,28 @@ static gboolean gl_spectrogram_real_expose_event (GtkWidget* base, GdkEventExpos
 static gboolean gl_spectrogram_real_button_press_event (GtkWidget* base, GdkEventButton* event);
 static gboolean gl_spectrogram_real_button_release_event (GtkWidget* base, GdkEventButton* event);
 static gboolean gl_spectrogram_real_motion_notify_event (GtkWidget* base, GdkEventMotion* event);
-void gl_spectrogram_image_ready (GlSpectrogram* self, GdkPixbuf* _pixbuf);
-static void _gl_spectrogram_image_ready_print_int_func (GdkPixbuf* a, void* user_data_, gpointer self);
+static void _lambda0_ (gchar* filename, GdkPixbuf* _pixbuf, void* b, GlSpectrogram* self);
+static void __lambda0__spectrogram_ready (gchar* filename, GdkPixbuf* a, void* user_data_, gpointer self);
 void gl_spectrogram_set_file (GlSpectrogram* self, gchar* filename);
 static void gl_spectrogram_finalize (GObject* obj);
 
 
 
+static gpointer _g_object_ref0 (gpointer self) {
+	return self ? g_object_ref (self) : NULL;
+}
+
+
 GlSpectrogram* gl_spectrogram_construct (GType object_type) {
 	GlSpectrogram * self;
 	GdkGLConfig* glconfig;
+	GlSpectrogram* _tmp0_;
 	self = g_object_newv (object_type, 0, NULL);
 	gtk_widget_add_events ((GtkWidget*) self, (gint) ((GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK) | GDK_POINTER_MOTION_MASK));
 	gtk_widget_set_size_request ((GtkWidget*) self, 200, 100);
 	glconfig = gdk_gl_config_new_by_mode (GDK_GL_MODE_RGB | GDK_GL_MODE_DOUBLE);
 	gtk_widget_set_gl_capability ((GtkWidget*) self, glconfig, NULL, TRUE, (gint) GDK_GL_RGBA_TYPE);
+	gl_spectrogram_instance = (_tmp0_ = _g_object_ref0 (self), _g_object_unref0 (gl_spectrogram_instance), _tmp0_);
 	_g_object_unref0 (glconfig);
 	return self;
 }
@@ -86,11 +94,6 @@ GlSpectrogram* gl_spectrogram_construct (GType object_type) {
 
 GlSpectrogram* gl_spectrogram_new (void) {
 	return gl_spectrogram_construct (TYPE_GL_SPECTROGRAM);
-}
-
-
-static gpointer _g_object_ref0 (gpointer self) {
-	return self ? g_object_ref (self) : NULL;
 }
 
 
@@ -104,6 +107,9 @@ static void gl_spectrogram_load_texture (GlSpectrogram* self) {
 	g_return_if_fail (self != NULL);
 	glcontext = _g_object_ref0 (gtk_widget_get_gl_context ((GtkWidget*) self));
 	gldrawable = _g_object_ref0 (gtk_widget_get_gl_drawable ((GtkWidget*) self));
+	if (!gdk_gl_drawable_gl_begin (gldrawable, glcontext)) {
+		fprintf (stdout, "gl context error!\n");
+	}
 	if (!gdk_gl_drawable_gl_begin (gldrawable, glcontext)) {
 		_g_object_unref0 (glcontext);
 		_g_object_unref0 (gldrawable);
@@ -120,7 +126,7 @@ static void gl_spectrogram_load_texture (GlSpectrogram* self) {
 		_tmp0_ = GL_RGB;
 	}
 	format = _tmp0_;
-	if (((gboolean) gluBuild2DMipmaps (GL_TEXTURE_2D, n_colour_components, (GLsizei) gdk_pixbuf_get_width (scaled), (GLsizei) gdk_pixbuf_get_height (scaled), format, GL_UNSIGNED_BYTE, gdk_pixbuf_get_pixels (scaled)))) {
+	if ((gboolean) gluBuild2DMipmaps (GL_TEXTURE_2D, n_colour_components, (GLsizei) gdk_pixbuf_get_width (scaled), (GLsizei) gdk_pixbuf_get_height (scaled), format, GL_UNSIGNED_BYTE, gdk_pixbuf_get_pixels (scaled))) {
 		fprintf (stdout, "mipmap generation failed!\n");
 	}
 	g_object_unref ((GObject*) scaled);
@@ -146,7 +152,7 @@ static gboolean gl_spectrogram_real_configure_event (GtkWidget* base, GdkEventCo
 	}
 	glViewport ((GLint) 0, (GLint) 0, (GLsizei) ((GtkWidget*) self)->allocation.width, (GLsizei) ((GtkWidget*) self)->allocation.height);
 	if (!self->priv->gl_init_done) {
-		//fprintf (stdout, "GlSpectrogram: texture init...\n");
+		fprintf (stdout, "GlSpectrogram: texture init...\n");
 		glGenTextures ((GLsizei) 1, self->priv->Textures);
 		glEnable (GL_TEXTURE_2D);
 		glBindTexture (GL_TEXTURE_2D, self->priv->Textures[0]);
@@ -232,11 +238,9 @@ static gboolean gl_spectrogram_real_motion_notify_event (GtkWidget* base, GdkEve
 }
 
 
-void gl_spectrogram_image_ready (GlSpectrogram* self, GdkPixbuf* _pixbuf) {
-	g_return_if_fail (self != NULL);
-	if (_pixbuf != NULL) {
-		//fprintf (stdout, "image_ready\n");
-		if (self->priv->pixbuf != NULL) {
+static void _lambda0_ (gchar* filename, GdkPixbuf* _pixbuf, void* b, GlSpectrogram* self) {
+	if ((gboolean) _pixbuf) {
+		if ((gboolean) self->priv->pixbuf) {
 			g_object_unref ((GObject*) self->priv->pixbuf);
 		}
 		self->priv->pixbuf = _pixbuf;
@@ -246,17 +250,16 @@ void gl_spectrogram_image_ready (GlSpectrogram* self, GdkPixbuf* _pixbuf) {
 }
 
 
-static void _gl_spectrogram_image_ready_print_int_func (GdkPixbuf* a, void* user_data_, gpointer self) {
-	gl_spectrogram_image_ready (self, a);
+static void __lambda0__spectrogram_ready (gchar* filename, GdkPixbuf* a, void* user_data_, gpointer self) {
+	_lambda0_ (filename, a, user_data_, self);
 }
 
 
 void gl_spectrogram_set_file (GlSpectrogram* self, gchar* filename) {
-	//printf("gl_spectrogram_set_file...\n");
 	char* _tmp0_;
 	g_return_if_fail (self != NULL);
 	self->priv->_filename = (_tmp0_ = g_strdup ((const char*) filename), _g_free0 (self->priv->_filename), _tmp0_);
-	get_spectrogram (filename, self, _gl_spectrogram_image_ready_print_int_func, self);
+	get_spectrogram_with_target (filename, __lambda0__spectrogram_ready, self, NULL);
 }
 
 

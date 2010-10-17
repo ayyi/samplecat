@@ -28,7 +28,6 @@
 #include "typedefs.h"
 #include "support.h"
 #include "dh_tree.h"
-#include "dh-link.h"
 
 #define d(x)
 
@@ -105,7 +104,7 @@ dh_book_tree_get_type (void)
 static void
 book_tree_class_init (DhBookTreeClass *klass)
 {
-	GObjectClass   *object_class;
+	GObjectClass *object_class;
 	
 	object_class = (GObjectClass *) klass;
 	parent_class = g_type_class_peek_parent (klass);
@@ -206,13 +205,9 @@ book_tree_add_columns (DhBookTree *tree)
 static void
 book_tree_setup_selection (DhBookTree *tree)
 {
-	GtkTreeSelection *selection;
-	
-	selection = gtk_tree_view_get_selection (GTK_TREE_VIEW (tree));
+	GtkTreeSelection *selection = gtk_tree_view_get_selection (GTK_TREE_VIEW (tree));
 
-	g_signal_connect (selection, "changed",
-			  G_CALLBACK (book_tree_selection_changed_cb),
-			  tree);
+	g_signal_connect (selection, "changed", G_CALLBACK (book_tree_selection_changed_cb), tree);
 }
 
 static void
@@ -282,19 +277,10 @@ book_tree_remove_node (DhBookTree  *tree, GNode *node, GtkTreeIter *parent_iter)
 static void
 book_tree_create_pixbufs (DhBookTree *tree)
 {
- 	DhBookTreePixbufs *pixbufs;
-	
 	g_return_if_fail (DH_IS_BOOK_TREE (tree));
 	
-	pixbufs = g_new0 (DhBookTreePixbufs, 1);
+ 	DhBookTreePixbufs *pixbufs = g_new0 (DhBookTreePixbufs, 1);
 
-	/*
-    GdkPixbuf* iconbuf = NULL;
-    MIME_type* mime_type = mime_type_lookup("inode/directory");
-    type_to_icon(mime_type);
-    if ( mime_type->image == NULL ) dbg("no icon.");
-    iconbuf = mime_type->image->sm_pixbuf;
-	*/
 	GdkPixbuf* iconbuf = mime_type_get_pixbuf(inode_directory);
 
 	pixbufs->pixbuf_closed = iconbuf;//gdk_pixbuf_new_from_file (DATA_DIR "/devhelp/images/book_closed.png", NULL);
@@ -314,8 +300,7 @@ book_tree_selection_changed_cb (GtkTreeSelection *selection, DhBookTree *tree)
 	g_return_if_fail (DH_IS_BOOK_TREE (tree));
 
 	if (gtk_tree_selection_get_selected (selection, NULL, &iter)) {
-		gtk_tree_model_get (GTK_TREE_MODEL (tree->priv->store), 
-				    &iter, COL_LINK, &link, -1);
+		gtk_tree_model_get (GTK_TREE_MODEL (tree->priv->store), &iter, COL_LINK, &link, -1);
 
 		d(g_print ("emiting '%s'\n", link->uri));
 

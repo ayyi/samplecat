@@ -9,7 +9,6 @@
 #include "typedefs.h"
 #include "types.h"
 #include "support.h"
-#include "dh-link.h"
 #include "mimetype.h"
 #include "main.h"
 #include "mimetype.h"
@@ -39,13 +38,17 @@ inspector_new()
 {
 	//close up on a single sample. Bottom left of main window.
 
-	app.inspector = malloc(sizeof(*app.inspector));
-	app.inspector->row_ref = NULL;
-	Inspector* inspector = app.inspector;
+	Inspector* inspector = app.inspector = malloc(sizeof(*app.inspector));
+	inspector->row_ref = NULL;
+	inspector->min_height = 160; //this is actually more like preferred height, as the box can be smaller if there is no room for it.
 
 	int margin_left = 5;
 
-	GtkWidget *vbox = app.inspector->widget = gtk_vbox_new(FALSE, 0);
+	GtkWidget* scroll = app.inspector->widget = gtk_scrolled_window_new(NULL, NULL);
+	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll), GTK_POLICY_NEVER, GTK_POLICY_NEVER);
+
+	GtkWidget* vbox = gtk_vbox_new(FALSE, 0);
+	gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(scroll), vbox);
 
 	//left align the label:
 	GtkWidget* align1 = gtk_alignment_new(0.0, 0.5, 0.0, 0.0);
@@ -163,7 +166,7 @@ inspector_new()
 	gtk_text_view_set_pixels_below_lines(GTK_TEXT_VIEW(text1), 5);
 
 	//invisible edit widget:
-	GtkWidget *edit = inspector->edit = gtk_entry_new();
+	GtkWidget* edit = inspector->edit = gtk_entry_new();
 	gtk_entry_set_max_length(GTK_ENTRY(edit), 64);
 	gtk_entry_set_text(GTK_ENTRY(edit), "");
 	gtk_widget_ref(edit);//stops gtk deleting the unparented widget.
@@ -341,6 +344,7 @@ inspector_update_from_fileview(GtkTreeView* treeview)
 				gtk_label_set_text(GTK_LABEL(i->channels),   ch_str);
 				gtk_label_set_text(GTK_LABEL(i->samplerate), fs_str);
 				gtk_label_set_text(GTK_LABEL(i->mimetype),   mime_string);
+				gtk_label_set_text(GTK_LABEL(i->level),      "");
 				gtk_text_buffer_set_text(app.inspector->notes, "", -1);
 				gtk_image_clear(GTK_IMAGE(app.inspector->image));
 

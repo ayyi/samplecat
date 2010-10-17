@@ -6,7 +6,7 @@
 #ifdef USE_AYYI
 #include <ayyi/ayyi.h>
 #endif
-#include "dh-link.h"
+//#include "dh-link.h"
 #include "file_manager/support.h"
 
 #include "typedefs.h"
@@ -333,6 +333,7 @@ listview__item_set_colour(GtkTreePath* path, unsigned colour)
 void
 listview__add_item(Sample* sample)
 {
+	if(!app.store) return;
 	g_return_if_fail(sample->id);
 
 	gchar* filename = g_path_get_basename(sample->filename);

@@ -22,7 +22,7 @@ typedef struct _SpectrogramWidget SpectrogramWidget;
 typedef struct _SpectrogramWidgetClass SpectrogramWidgetClass;
 typedef struct _SpectrogramWidgetPrivate SpectrogramWidgetPrivate;
 
-typedef void (*PrintIntFunc) (GdkPixbuf* a, void* user_data_, void* user_data);
+typedef void (*RenderDoneFunc) (gchar* filename, GdkPixbuf* a, void* user_data_, void* user_data);
 struct _SpectrogramWidget {
 	GtkWidget parent_instance;
 	SpectrogramWidgetPrivate * priv;
@@ -33,10 +33,9 @@ struct _SpectrogramWidgetClass {
 };
 
 
+void get_spectrogram_with_target (gchar* path, RenderDoneFunc on_ready, void* on_ready_target, void* user_data);
 GType spectrogram_widget_get_type (void);
-void render_spectrogram (gchar* path, SpectrogramWidget* w, PrintIntFunc callback, void* callback_target, void* user_data);
-void get_spectrogram (gchar* path, SpectrogramWidget* w, PrintIntFunc callback, void* callback_target);
-void spectrogram_widget_image_ready (SpectrogramWidget* self, GdkPixbuf* _pixbuf);
+void spectrogram_widget_image_ready (SpectrogramWidget* self, gchar* filename, GdkPixbuf* _pixbuf, void* user_data);
 void spectrogram_widget_set_file (SpectrogramWidget* self, gchar* filename);
 SpectrogramWidget* spectrogram_widget_new (void);
 SpectrogramWidget* spectrogram_widget_construct (GType object_type);

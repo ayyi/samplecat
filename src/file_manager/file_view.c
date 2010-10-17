@@ -650,7 +650,13 @@ view_details_button_press(GtkWidget* widget, GdkEventButton* ev)
 		GtkTreeSelection* selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(widget));
 		GList* selectionlist = gtk_tree_selection_get_selected_rows(selection, NULL);
 		if(!selectionlist){
-			printf("!! no selection. TODO select the row.\n");
+			GtkTreePath* path;
+			if(gtk_tree_view_get_path_at_pos(GTK_TREE_VIEW(widget), (gint)ev->x, (gint)ev->y, &path, NULL, NULL, NULL)){
+				gtk_tree_selection_unselect_all(selection);
+				gtk_tree_selection_select_path(selection, path);
+				gtk_tree_path_free(path);
+			}
+			gtk_window_set_focus((GtkWindow*)gtk_widget_get_toplevel(widget), widget);
 		}
 		//return without calling parent so that selection is not changed.
 		return FALSE;

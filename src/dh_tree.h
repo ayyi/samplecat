@@ -26,7 +26,7 @@
 #include <gtk/gtkwidget.h>
 #include <gtk/gtktypeutils.h>
 
-#include "dh-link.h"
+#include "dh_link.h"
 
 #define DH_BOOK_TREE_OAFIID "OAFIID:GNOME_DevHelp_DhBookTree"
 

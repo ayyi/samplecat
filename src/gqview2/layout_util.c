@@ -1169,16 +1169,22 @@ void layout_util_sync(LayoutWindow *lw)
  *-----------------------------------------------------------------------------
  */
 
-PixmapFolders *folder_icons_new(void)
+//these are in file_manager/mimetype.h - probably ok to include this?
+GdkPixbuf* mime_type_get_pixbuf(MIME_type*);
+extern MIME_type *inode_directory; //tmp?
+
+PixmapFolders*
+folder_icons_new()
 {
-	PixmapFolders *pf;
+	PixmapFolders *pf = g_new0(PixmapFolders, 1);
 
-	pf = g_new0(PixmapFolders, 1);
-
-	pf->close = pixbuf_inline(PIXBUF_INLINE_FOLDER_CLOSED);
-	pf->open = pixbuf_inline(PIXBUF_INLINE_FOLDER_OPEN);
-	pf->deny = pixbuf_inline(PIXBUF_INLINE_FOLDER_LOCKED);
-	pf->parent = pixbuf_inline(PIXBUF_INLINE_FOLDER_UP);
+	pf->close = mime_type_get_pixbuf(inode_directory);
+	//gtk stock appears to have no icon for an open directory, so we use the closed dir again.
+	pf->open = mime_type_get_pixbuf(inode_directory);
+	//pf->open = pixbuf_inline(PIXBUF_INLINE_FOLDER_OPEN);
+	//FIXME
+	pf->deny = mime_type_get_pixbuf(inode_directory);//pixbuf_inline(PIXBUF_INLINE_FOLDER_LOCKED);
+	pf->parent = mime_type_get_pixbuf(inode_directory);//pixbuf_inline(PIXBUF_INLINE_FOLDER_UP);
 
 	return pf;
 }

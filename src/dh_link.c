@@ -1,4 +1,3 @@
-/* -*- Mode: C; tab-width: 8; indent-tabs-mode: t; c-basic-offset: 8 -*- */
 /*
  * Copyright (C) 2001-2002 CodeFactory AB
  * Copyright (C) 2001-2002 Mikael Hallendal <micke@imendio.com>
@@ -22,7 +21,7 @@
 //#include <config.h>
 #include <stdio.h>
 #include "string.h"
-#include "dh-link.h"
+#include "dh_link.h"
 
 static void link_free (DhLink *link);
 
@@ -35,33 +34,29 @@ link_free (DhLink *link)
 	g_free (link);
 }
 
-DhLink *
+DhLink*
 dh_link_new (DhLinkType type, const gchar *name, const gchar *uri)
 {
-	//printf("dh_link_new(): %s\n", name);
-	DhLink *link;
-
 	g_return_val_if_fail (name != NULL, NULL);
 	g_return_val_if_fail (uri != NULL, NULL);
 
-	link = g_new0 (DhLink, 1);
+	DhLink *link = g_new0 (DhLink, 1);
 
 	link->type = type;
-
 	link->name = g_strdup (name);
 	link->uri  = g_strdup (uri);
 	
 	return link;
 }
 
-DhLink *
+DhLink*
 dh_link_copy (const DhLink *link)
 {
 	return dh_link_new (link->type, link->name, link->uri);
 }
 
 gint
-dh_link_compare  (gconstpointer a, gconstpointer b)
+dh_link_compare (gconstpointer a, gconstpointer b)
 {
 	return strcmp (((DhLink *)a)->name, ((DhLink *)b)->name);
 }

@@ -66,7 +66,7 @@ samplecat_SOURCES = \
 	audio.c audio.h \
 	overview.c overview.h \
 	pixmaps.c pixmaps.h \
-	dh-link.c dh-link.h \
+	dh_link.c dh_link.h \
 	dh_tree.c dh_tree.h \
 	cellrenderer_hypertext.c cellrenderer_hypertext.h \
 	colour_box.c colour_box.h \

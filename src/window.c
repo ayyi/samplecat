@@ -11,14 +11,18 @@
 #include <gimp/gimpactiongroup.h>
 #include "typedefs.h"
 #include "support.h"
-#include "dh-link.h"
 #include "main.h"
 #include "listview.h"
 #include "file_manager/menu.h"
 #include "dnd.h"
 #include "file_view.h"
 #include "inspector.h"
+#ifndef NO_USE_DEVHELP_DIRTREE
+#include "dh_link.h"
 #include "dh_tree.h"
+#else
+#include "dir_tree.h"
+#endif
 #ifdef HAVE_FFTW3
 #ifdef USE_OPENGL
 #include "gl_spectrogram_view.h"
@@ -41,6 +45,8 @@ char* categories[] = {"drums", "perc", "bass", "keys", "synth", "strings", "bras
 GtkWidget*        view_details_new                ();
 void              view_details_dnd_get            (GtkWidget*, GdkDragContext*, GtkSelectionData*, guint info, guint time, gpointer data);
 
+static GtkWidget* _dir_tree_new                   ();
+
 static gboolean   window_on_destroy               (GtkWidget*, gpointer);
 static void       window_on_realise               (GtkWidget*, gpointer);
 static void       window_on_size_request          (GtkWidget*, GtkRequisition*, gpointer);
@@ -53,8 +59,10 @@ static void       on_category_set_clicked         (GtkComboBox*, gpointer);
 static gboolean   row_clear_tags                  (GtkTreeIter*, int id);
 static void       menu__add_to_db                 (GtkMenuItem*, gpointer);
 static void       make_fm_menu_actions();
-static gboolean   dir_tree_on_link_selected       (GObject*, DhLink*, gpointer);
+static gboolean   on_dir_tree_link_selected       (GObject*, DhLink*, gpointer);
 static GtkWidget* message_panel__new              ();
+static GtkWidget* left_pane                       ();
+static void       on_layout_changed               ();
 
 
 struct _accel menu_keys[] = {
@@ -83,20 +91,25 @@ GtkWindow
    +--edit metadata hbox
    |
    +--GtkAlignment                align1
-   |  +-GtkHPaned
-   |    +--vpaned (main left pane)
-   |    |  +--directory tree
-   |    |  +--inspector
-   |    | 
-   |    +--vpaned (main right pane)
-   |       +--GtkVBox
-   |          +--GtkLabel
-   |          +--GtkVPaned
-   |             +--scrollwin
-   |             |  +--treeview file manager
-   |             |
-   |             +--scrollwin (right pane)
-   |                +--treeview
+   |  +--GtkVPaned
+   |     +--GtkHPaned
+   |     |  +--file manager tree
+   |     |  +--scrollwin
+   |     |     +--treeview file manager
+   |     +--GtkHPaned
+   |        +--vpaned (main left pane)
+   |        |  +--directory tree
+   |        |  +--inspector
+   |        | 
+   |        +--vpaned (main right pane)
+   |           +--GtkVBox
+   |              +--GtkLabel
+   |              +--GtkVPaned
+   |                 +--scrollwin
+   |                 |  +--treeview file manager
+   |                 |
+   |                 +--scrollwin (right pane)
+   |                    +--treeview
    |
    +--statusbar hbox
       +--statusbar
@@ -107,7 +120,7 @@ GtkWindow
 	g_signal_connect (G_OBJECT(window), "delete_event", G_CALLBACK(on_quit), NULL);
 	g_signal_connect(window, "destroy", G_CALLBACK(window_on_destroy), NULL);
 
-	GtkWidget *vbox = app.vbox = gtk_vbox_new(FALSE, 0);
+	GtkWidget* vbox = app.vbox = gtk_vbox_new(FALSE, 0);
 	gtk_container_add(GTK_CONTAINER(window), vbox);
 
 	filter_new();
@@ -119,9 +132,15 @@ GtkWindow
 	gtk_alignment_set_padding(GTK_ALIGNMENT(align1), 2, 1, 0, 0); //top, bottom, left, right.
 	gtk_box_pack_start(GTK_BOX(vbox), align1, EXPAND_TRUE, TRUE, 0);
 
-	GtkWidget *hpaned = app.hpaned = gtk_hpaned_new();
+	//---------
+	GtkWidget* main_vpaned = gtk_vpaned_new();
+	//gtk_paned_set_position(GTK_PANED(r_vpaned), 300);
+	gtk_container_add(GTK_CONTAINER(align1), main_vpaned);
+
+	GtkWidget* hpaned = app.hpaned = gtk_hpaned_new();
 	gtk_paned_set_position(GTK_PANED(hpaned), 160);
-	gtk_container_add(GTK_CONTAINER(align1), hpaned);
+	//gtk_container_add(GTK_CONTAINER(align1), hpaned);
+	gtk_paned_add1(GTK_PANED(main_vpaned), hpaned);
 
 	GtkWidget* left = left_pane();
 	gtk_paned_add1(GTK_PANED(hpaned), left);
@@ -136,40 +155,57 @@ GtkWindow
 	gtk_paned_set_position(GTK_PANED(r_vpaned), 300);
 	gtk_box_pack_start(GTK_BOX(rhs_vbox), r_vpaned, EXPAND_TRUE, TRUE, 0);
 
-	GtkWidget* scroll = app.scroll = scrolled_window_new();
-	gtk_paned_add1(GTK_PANED(r_vpaned), scroll);
+	app.scroll = scrolled_window_new();
+	gtk_paned_add1(GTK_PANED(r_vpaned), app.scroll);
 
 	listview__new();
 	if(0 && BACKEND_IS_NULL) gtk_widget_set_no_show_all(app.view, true); //dont show main view if no database.
 	gtk_container_add(GTK_CONTAINER(app.scroll), app.view);
 
-	//--------
-
 	dbg(2, "making fileview pane...");
 	void
 	make_fileview_pane()
 	{
-		GtkWidget* scroll2 = scrolled_window_new();
-		gtk_paned_add2(GTK_PANED(r_vpaned), scroll2);
+		GtkWidget* fman_hpaned = gtk_hpaned_new();
+		gtk_paned_set_position(GTK_PANED(fman_hpaned), 160);
+		gtk_paned_add2(GTK_PANED(main_vpaned), fman_hpaned);
 
-		const char* dir = (app.config.browse_dir && app.config.browse_dir[0] && g_file_test(app.config.browse_dir, G_FILE_TEST_IS_DIR)) ? app.config.browse_dir : g_get_home_dir();
-		GtkWidget* file_view = app.fm_view = file_manager__new_window(dir);
-		gtk_container_add(GTK_CONTAINER(scroll2), file_view);
-		g_signal_connect(G_OBJECT(file_view), "cursor-changed", G_CALLBACK(window_on_fileview_row_selected), NULL);
-
-		void window_on_dir_changed(GtkWidget* widget, gpointer data)
+		void fman_left()
 		{
-			PF;
+			gint expand = TRUE;
+			ViewDirTree* dir_list = app.dir_treeview2 = vdtree_new(g_get_home_dir(), expand);
+			vdtree_set_select_func(dir_list, dir_on_select, NULL); //callback
+			GtkWidget* fs_tree = dir_list->widget;
+			gtk_paned_add1(GTK_PANED(fman_hpaned), fs_tree);
 		}
-		g_signal_connect(G_OBJECT(file_manager__get_signaller()), "dir_changed", G_CALLBACK(window_on_dir_changed), NULL);
 
-		make_fm_menu_actions();
+		void fman_right()
+		{
+			GtkWidget* scroll2 = scrolled_window_new();
+			gtk_paned_add2(GTK_PANED(fman_hpaned), scroll2);
 
-		//set up fileview as dnd source:
-		gtk_drag_source_set(file_view, GDK_BUTTON1_MASK | GDK_BUTTON2_MASK,
-				dnd_file_drag_types, dnd_file_drag_types_count,
-				GDK_ACTION_COPY | GDK_ACTION_MOVE | GDK_ACTION_ASK);
-		g_signal_connect(G_OBJECT(file_view), "drag_data_get", G_CALLBACK(view_details_dnd_get), NULL);
+			const char* dir = (app.config.browse_dir && app.config.browse_dir[0] && g_file_test(app.config.browse_dir, G_FILE_TEST_IS_DIR)) ? app.config.browse_dir : g_get_home_dir();
+			GtkWidget* file_view = app.fm_view = file_manager__new_window(dir);
+			gtk_container_add(GTK_CONTAINER(scroll2), file_view);
+			g_signal_connect(G_OBJECT(file_view), "cursor-changed", G_CALLBACK(window_on_fileview_row_selected), NULL);
+
+			void window_on_dir_changed(GtkWidget* widget, gpointer data)
+			{
+				PF;
+			}
+			g_signal_connect(G_OBJECT(file_manager__get_signaller()), "dir_changed", G_CALLBACK(window_on_dir_changed), NULL);
+
+			make_fm_menu_actions();
+
+			//set up fileview as dnd source:
+			gtk_drag_source_set(file_view, GDK_BUTTON1_MASK | GDK_BUTTON2_MASK,
+					dnd_file_drag_types, dnd_file_drag_types_count,
+					GDK_ACTION_COPY | GDK_ACTION_MOVE | GDK_ACTION_ASK);
+			g_signal_connect(G_OBJECT(file_view), "drag_data_get", G_CALLBACK(view_details_dnd_get), NULL);
+		}
+
+		fman_left();
+		fman_right();
 	}
 	make_fileview_pane();
 
@@ -210,6 +246,8 @@ GtkWindow
 	gtk_widget_show_all(window);
 
 	dnd_setup();
+
+	on_layout_changed();
 
 	return TRUE;
 }
@@ -312,22 +350,22 @@ window_on_configure(GtkWidget *widget, GdkEventConfigure *event, gpointer user_d
 		//take the window size from the config file, or failing that, from the treeview requisition.
 		int width = atoi(app.config.window_width);
 		if(!width) width = app.view->requisition.width + SCROLLBAR_WIDTH_HACK;
-		int height = atoi(app.config.window_height);
-		if(!height) height = MIN(app.view->requisition.height, 900);
-		if(width && height){
-			dbg(2, "setting size: width=%i height=%i", width, height);
-			gtk_window_resize(GTK_WINDOW(app.window), width, height);
+		int window_height = atoi(app.config.window_height);
+		if(!window_height) window_height = MIN(app.view->requisition.height, 900);
+		if(width && window_height){
+			dbg(2, "setting size: width=%i height=%i", width, window_height);
+			gtk_window_resize(GTK_WINDOW(app.window), width, window_height);
 			window_size_set = TRUE;
 
 			//set the position of the left pane elements.
 			//As the allocation is somehow bigger than its container, we just do it v approximately.
+/*
 			if(app.vpaned && GTK_WIDGET_REALIZED(app.vpaned)){
 				//dbg(0, "height=%i %i %i", app.hpaned->allocation.height, app.statusbar->allocation.y, app.inspector->widget->allocation.height);
 				guint inspector_y = height - app.hpaned->allocation.y - 210;
 				gtk_paned_set_position(GTK_PANED(app.vpaned), inspector_y);
-
-				gtk_paned_set_position(GTK_PANED(app.vpaned2), inspector_y / 2);
 			}
+*/
 		}
 	}
 	return FALSE;
@@ -341,30 +379,25 @@ window_on_destroy(GtkWidget* widget, gpointer user_data)
 }
 
 
-GtkWidget*
+static GtkWidget*
 left_pane()
 {
 	app.vpaned = gtk_vpaned_new();
 
-	//make another vpane sitting inside the 1st:
-	GtkWidget* vpaned2 = app.vpaned2 = gtk_vpaned_new();
-	gtk_paned_add1(GTK_PANED(app.vpaned), vpaned2);
-
 	if(!BACKEND_IS_NULL){
 #ifndef NO_USE_DEVHELP_DIRTREE
-		GtkWidget* tree = dir_tree_new();
+		GtkWidget* tree = _dir_tree_new();
 		GtkWidget* scroll = scrolled_window_new();
 		gtk_container_add((GtkContainer*)scroll, tree);
-		gtk_paned_add1(GTK_PANED(vpaned2), scroll);
-		g_signal_connect(tree, "link_selected", G_CALLBACK(dir_tree_on_link_selected), NULL);
+		gtk_paned_add1(GTK_PANED(app.vpaned), scroll);
+		g_signal_connect(tree, "link-selected", G_CALLBACK(on_dir_tree_link_selected), NULL);
+#else
+		GtkWidget* tree = _dir_tree_new();
+		GtkWidget* scroll = scrolled_window_new();
+		gtk_container_add((GtkContainer*)scroll, tree);
+		gtk_paned_add1(GTK_PANED(app.vpaned), scroll);
 #endif
 	}
-
-	gint expand = TRUE;
-	ViewDirTree* dir_list = app.dir_treeview2 = vdtree_new(g_get_home_dir(), expand);
-	vdtree_set_select_func(dir_list, dir_on_select, NULL); //callback
-	GtkWidget* fs_tree = dir_list->widget;
-	gtk_paned_add2(GTK_PANED(vpaned2), fs_tree);
 
 	//alternative dir tree:
 #ifdef USE_NICE_GQVIEW_CLIST_TREE
@@ -497,14 +530,18 @@ message_panel__new()
 }
 
 
-GtkWidget*
-dir_tree_new()
+static GtkWidget*
+_dir_tree_new()
 {
 	//data:
 	update_dir_node_list();
 
 	//view:
+#ifndef NO_USE_DEVHELP_DIRTREE
 	app.dir_treeview = dh_book_tree_new(&app.dir_tree);
+#else
+	app.dir_treeview = dir_tree_new(&app.dir_tree);
+#endif
 
 	return app.dir_treeview;
 }
@@ -633,18 +670,12 @@ make_fm_menu_actions()
 
 
 static gboolean
-dir_tree_on_link_selected(GObject *ignored, DhLink *link, gpointer data)
+on_dir_tree_link_selected(GObject *ignored, DhLink *link, gpointer data)
 {
-	/*
-	what does it mean if link->uri is empty?
-	*/
 	g_return_val_if_fail(link, false);
 
-	dbg(1, "uri=%s", link->uri);
-	//FIXME segfault if we use this if()
-	//if(strlen(link->uri)){
-		update_search_dir(link->uri);
-	//}
+	dbg(2, "uri=%s", link->uri);
+	update_search_dir(link->uri);
 	return FALSE;
 }
 
@@ -759,7 +790,31 @@ show_spectrogram(gboolean enable)
 		if(enable) gtk_widget_show(app.spectrogram);
 		else gtk_widget_hide(app.spectrogram);
 	}
+
+	on_layout_changed();
 }
 #endif
+
+
+static void
+on_layout_changed()
+{
+	//what is the height of the inspector?
+
+	if(app.inspector){
+		GtkWidget* widget;
+		if((widget = app.inspector->widget)){
+			int tot_height = app.vpaned->allocation.height;
+			int max_auto_height = tot_height / 2;
+			dbg(0, "inspector_height=%i tot=%i", widget->allocation.height, tot_height);
+			if(widget->allocation.height < app.inspector->min_height
+					&& widget->allocation.height < max_auto_height){
+				int inspector_height = MIN(max_auto_height, app.inspector->min_height);
+				dbg(0, "setting height : %i/%i", tot_height - inspector_height, inspector_height);
+				gtk_paned_set_position(GTK_PANED(app.vpaned), tot_height - inspector_height);
+			}
+		}
+	}
+}
 
 

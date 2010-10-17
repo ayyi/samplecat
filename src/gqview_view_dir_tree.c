@@ -1279,7 +1279,7 @@ static FileData *vdtree_populate_path(ViewDirTree *vdt, const gchar *path, gint 
 			    !vdtree_populate_path_by_iter(vdt, &parent_iter, force, path) ||
 			    (nd = vdtree_find_iter_by_name(vdt, &parent_iter, pd->name, &iter)) == NULL)
 				{
-				printf("vdtree warning, aborted at %s\n", parent_pd->name);
+				if(debug) printf("vdtree warning, aborted at %s\n", parent_pd->name);
 				parts_list_free(list);
 				vdtree_busy_pop(vdt);
 				return NULL;

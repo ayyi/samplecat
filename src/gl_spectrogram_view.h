@@ -22,7 +22,7 @@ typedef struct _GlSpectrogram GlSpectrogram;
 typedef struct _GlSpectrogramClass GlSpectrogramClass;
 typedef struct _GlSpectrogramPrivate GlSpectrogramPrivate;
 
-typedef void (*PrintIntFunc) (GdkPixbuf* a, void* user_data_, void* user_data);
+typedef void (*SpectrogramReady) (gchar* filename, GdkPixbuf* a, void* user_data_, void* user_data);
 struct _GlSpectrogram {
 	GtkDrawingArea parent_instance;
 	GlSpectrogramPrivate * priv;
@@ -33,12 +33,11 @@ struct _GlSpectrogramClass {
 };
 
 
+void get_spectrogram_with_target (gchar* path, SpectrogramReady on_ready, void* on_ready_target, void* user_data);
 GType gl_spectrogram_get_type (void);
-void render_spectrogram (gchar* path, GlSpectrogram* w, PrintIntFunc callback, void* callback_target, void* user_data);
-void get_spectrogram (gchar* path, GlSpectrogram* w, PrintIntFunc callback, void* callback_target);
+extern GlSpectrogram* gl_spectrogram_instance;
 GlSpectrogram* gl_spectrogram_new (void);
 GlSpectrogram* gl_spectrogram_construct (GType object_type);
-void gl_spectrogram_image_ready (GlSpectrogram* self, GdkPixbuf* _pixbuf);
 void gl_spectrogram_set_file (GlSpectrogram* self, gchar* filename);
 
 

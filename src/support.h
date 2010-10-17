@@ -14,6 +14,7 @@
 #endif
 #define g_error_clear(E) { if(E){ g_error_free(E); E = NULL; }}
 #define list_clear(L) g_list_free(L); L = NULL;
+#define call(FN, A, ...) if(FN) (FN)(A, ##__VA_ARGS__)
 
 #define HAS_ALPHA_FALSE 0
 #define HAS_ALPHA_TRUE 1
@@ -125,4 +126,6 @@ char*        vfs_unescape_string       (const gchar *escaped_string, const gchar
 
 float        gain2db                   (float);
 char*        gain2dbstring             (float);
+
+void         show_widget_if            (GtkWidget*, gboolean);
 
