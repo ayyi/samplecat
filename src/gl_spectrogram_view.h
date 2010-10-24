@@ -34,6 +34,7 @@ struct _GlSpectrogramClass {
 
 
 void get_spectrogram_with_target (gchar* path, SpectrogramReady on_ready, void* on_ready_target, void* user_data);
+void cancel_spectrogram (gchar* path);
 GType gl_spectrogram_get_type (void);
 extern GlSpectrogram* gl_spectrogram_instance;
 GlSpectrogram* gl_spectrogram_new (void);

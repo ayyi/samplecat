@@ -1,4 +1,4 @@
-//#include "config.h"
+#include "config.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -8,13 +8,8 @@
 #include <sndfile.h>
 #include <jack/jack.h>
 #include <gtk/gtk.h>
-
 #include <gdk-pixbuf/gdk-pixdata.h>
-#ifdef OLD
-  #include <libart_lgpl/libart.h>
-#else
-  #include <cairo.h>
-#endif
+#include <cairo.h>
 
 #include "file_manager.h"
 #include "typedefs.h"
@@ -46,9 +41,10 @@ static GList* msg_list = NULL;
 gpointer
 overview_thread(gpointer data)
 {
-	//TODO consider replacing the main loop with a blocking call on the async queue, waiting for messages.
+	//TODO consider replacing the main loop with a blocking call on the async queue,
+	//(g_async_queue_pop) waiting for messages.
 
-	dbg(1, "new thread!");
+	dbg(1, "new overview thread.");
 
 	if(!app.msg_queue){ perr("no msg_queue!\n"); return NULL; }
 
@@ -59,7 +55,7 @@ overview_thread(gpointer data)
 
 		//check for new work
 		while(g_async_queue_length(app.msg_queue)){
-			struct _message* message = g_async_queue_pop(app.msg_queue);
+			struct _message* message = g_async_queue_pop(app.msg_queue); // blocks
 			msg_list = g_list_append(msg_list, message);
 			dbg(2, "new message! %p", message);
 		}
@@ -236,14 +232,8 @@ make_overview_sndfile(Sample* sample)
     min = (min * OVERVIEW_HEIGHT) / (256*128*2);
     max = (max * OVERVIEW_HEIGHT) / (256*128*2);
 
-#ifdef OLD
-    struct _ArtDRect pts = {x, OVERVIEW_HEIGHT/2 + min, x, OVERVIEW_HEIGHT/2 + max};
-    pixbuf_draw_line(pixbuf, &pts, 1.0, &app.bg_colour);
-#else
-    //TODO libart overviews look better - why? antialiasing? colour is same?
     drect pts = {x, OVERVIEW_HEIGHT/2 + min, x, OVERVIEW_HEIGHT/2 + max};
     draw_cairo_line(cr, &pts, 1.0, &app.bg_colour);
-#endif
 
     //printf(" %i max=%i\n", x,OVERVIEW_HEIGHT/2);
     x++;

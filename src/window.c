@@ -402,7 +402,7 @@ left_pane()
 	//alternative dir tree:
 #ifdef USE_NICE_GQVIEW_CLIST_TREE
 	if(false){
-		ViewDirList *dir_list = vdlist_new(app.home_dir);
+		ViewDirList* dir_list = vdlist_new(app.home_dir);
 		GtkWidget* tree = dir_list->widget;
 	}
 	gint expand = TRUE;
@@ -411,7 +411,23 @@ left_pane()
 	gtk_paned_add1(GTK_PANED(app.vpaned), tree);
 #endif
 
+	void on_inspector_allocate(GtkWidget* widget, GtkAllocation* allocation, gpointer user_data)
+	{
+		dbg(0, "req=%i allocation=%i", widget->requisition.height, allocation->height);
+		int tot_height = app.vpaned->allocation.height;
+		if(allocation->height > widget->requisition.height){
+			gtk_paned_set_position(GTK_PANED(app.vpaned), tot_height - widget->requisition.height);
+		}
+		//increase size:
+		if(allocation->height < widget->requisition.height){
+			if(allocation->height < tot_height / 2){
+				gtk_paned_set_position(GTK_PANED(app.vpaned), MAX(tot_height / 2, tot_height - widget->requisition.height));
+			}
+		}
+	}
+
 	inspector_new();
+	g_signal_connect(app.inspector->widget, "size-allocate", (gpointer)on_inspector_allocate, NULL);
 	gtk_paned_add2(GTK_PANED(app.vpaned), app.inspector->widget);
 
 	return app.vpaned;

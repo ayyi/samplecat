@@ -52,6 +52,7 @@ GlSpectrogram* gl_spectrogram_instance = NULL;
 static gpointer gl_spectrogram_parent_class = NULL;
 
 void get_spectrogram_with_target (gchar* path, SpectrogramReady on_ready, void* on_ready_target, void* user_data);
+void cancel_spectrogram (gchar* path);
 GType gl_spectrogram_get_type (void);
 #define GL_SPECTROGRAM_GET_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), TYPE_GL_SPECTROGRAM, GlSpectrogramPrivate))
 enum  {
@@ -259,6 +260,7 @@ void gl_spectrogram_set_file (GlSpectrogram* self, gchar* filename) {
 	char* _tmp0_;
 	g_return_if_fail (self != NULL);
 	self->priv->_filename = (_tmp0_ = g_strdup ((const char*) filename), _g_free0 (self->priv->_filename), _tmp0_);
+	cancel_spectrogram (NULL);
 	get_spectrogram_with_target (filename, __lambda0__spectrogram_ready, self, NULL);
 }
 

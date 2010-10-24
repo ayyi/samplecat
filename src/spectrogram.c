@@ -824,6 +824,141 @@ render_free(RENDER* render)
 	g_free(render);
 }
 
+typedef enum
+{
+	QUEUE = 1,
+	CANCEL,
+} MsgType;
+
+typedef struct _msg
+{
+	MsgType type;
+	RENDER* render;
+} Message;
+
+static GAsyncQueue* msg_queue = NULL;
+
+static Message*
+message_new(MsgType type)
+{
+	Message* m = g_new0(Message, 1);
+	m->type = type;
+	return m;
+}
+
+
+static void
+message_free(Message* message)
+{
+	g_free(message);
+}
+
+
+static gpointer
+fft_thread(gpointer data)
+{
+	PF;
+	g_async_queue_ref(msg_queue);
+
+	GList* msg_list = NULL;
+	while(1){
+		//any new work ?
+		void process_messages(gboolean* got_cancel)
+		{
+			*got_cancel = false;
+			while(g_async_queue_length(msg_queue)){
+				Message* message = g_async_queue_pop(msg_queue);
+				dbg(1, "new message");
+				switch(message->type){
+					case QUEUE:
+						msg_list = g_list_append(msg_list, message->render);
+						break;
+					case CANCEL:
+						g_list_free(msg_list);
+						msg_list = NULL;
+						dbg(1, "queue cleared");
+						*got_cancel = true;
+						break;
+					default:
+						perr("bad message type");
+						break;
+				}
+				message_free(message);
+			}
+		}
+		gboolean got_cancel = false;
+		process_messages(&got_cancel);
+
+		while(msg_list){
+			gboolean do_callback(gpointer _render)
+			{
+				RENDER* render = _render;
+				if(debug && !render->pixbuf) gwarn("no pixbuf.");
+
+				render->callback(render->sndfilepath, render->pixbuf, render->user_data);
+
+				render_free(render);
+				return TIMER_STOP;
+			}
+
+			RENDER* render = g_list_first(msg_list)->data;
+
+			//check for cancels
+			/*
+			const char* path = render->sndfilepath;
+			gboolean is_cancelled(const char* path)
+			{
+				GList* l = cancel_list;
+				for(;l;l=l->next){
+					if(!strcmp(path, l->data)){
+						dbg(0, "is queued for cancel! %s", path);
+						return true;
+					}
+				}
+				return false;
+			}
+			if(is_cancelled(path)){
+			}
+			*/
+
+			dbg(1, "filename=%s.", render->filename);
+			render->pixbuf = render_sndfile(render);
+
+			//check the completed render wasnt cancelled in the meantime
+			gboolean got_cancel = false;
+			process_messages(&got_cancel);
+
+			if(!got_cancel){
+				g_idle_add(do_callback, render);
+			}else{
+				render_free(render);
+			}
+			msg_list = g_list_remove(msg_list, render);
+		}
+
+		sleep(1); //FIXME this is a bit primitive - maybe the thread should have its own GMainLoop
+					 //-even better is to use a blocking call on the async queue, waiting for messages.
+	}
+}
+
+
+static void
+send_message(Message* msg)
+{
+
+	if(!msg_queue){
+		dbg(2, "creating fft thread...");
+		GError* error = NULL;
+		msg_queue = g_async_queue_new();
+		if(!g_thread_create(fft_thread, NULL, false, &error)){
+			perr("error creating thread: %s\n", error->message);
+			g_error_free(error);
+		}
+	}
+
+	g_async_queue_push(msg_queue, msg);
+}
+
 
 void
 render_spectrogram(const char* path, SpectrogramReady callback, gpointer user_data)
@@ -843,57 +978,6 @@ render_spectrogram(const char* path, SpectrogramReady callback, gpointer user_da
 	//render->spec_floor_db = -1.0 * fabs (fval); //dynamic range
 	//render->log_freq = true;                    //log freq
 
-	static GAsyncQueue* msg_queue = NULL;
-
-	gpointer
-	fft_thread(gpointer data)
-	{
-		PF;
-		g_async_queue_ref(msg_queue);
-
-		GList* msg_list = NULL;
-		while(1){
-			//any new work ?
-			while(g_async_queue_length(msg_queue)){
-				gpointer message = g_async_queue_pop(msg_queue);
-				dbg(1, "new message");
-				msg_list = g_list_append(msg_list, message);
-			}
-
-			while(msg_list){
-				gboolean do_callback(gpointer _render)
-				{
-					RENDER* render = _render;
-					if(debug && !render->pixbuf) gwarn("no pixbuf.");
-
-					render->callback(render->sndfilepath, render->pixbuf, render->user_data);
-
-					render_free(render);
-					return TIMER_STOP;
-				}
-
-				RENDER* render = g_list_first(msg_list)->data;
-				dbg(1, "filename=%s.", render->filename);
-				render->pixbuf = render_sndfile(render);
-				g_idle_add(do_callback, render);
-				msg_list = g_list_remove(msg_list, render);
-			}
-
-			sleep(1); //FIXME this is a bit primitive - maybe the thread should have its own GMainLoop
-						 //-even better is to use a blocking call on the async queue, waiting for messages.
-		}
-	}
-
-	if(!msg_queue){
-		dbg(2, "creating fft thread...");
-		GError* error = NULL;
-		msg_queue = g_async_queue_new();
-		if(!g_thread_create(fft_thread, NULL, false, &error)){
-			perr("error creating thread: %s\n", error->message);
-			g_error_free(error);
-		}
-	}
-
 	render->width = 640;
 	render->height = 640;
 
@@ -903,8 +987,22 @@ render_spectrogram(const char* path, SpectrogramReady callback, gpointer user_da
 	render->filename = strrchr (render->sndfilepath, '/'); 
 	render->filename = (render->filename != NULL) ? render->filename + 1 : render->sndfilepath;
 
+	Message* m = message_new(QUEUE);
+	m->render = render;
+
 	dbg(1, "%s", render->filename);
-	g_async_queue_push(msg_queue, render);
+	send_message(m);
+}
+
+
+void
+cancel_spectrogram(const char* path)
+{
+	// if path is NULL, cancel all pending spectrograms.
+	// -actually we currently always cancel ALL preceding renders.
+
+	Message* msg = message_new(CANCEL);
+	send_message(msg);
 }
 
 
@@ -981,7 +1079,7 @@ get_spectrogram(const char* path, SpectrogramReady callback, gpointer user_data)
 				dbg(2, "...");
 				GError** error = NULL;
 				GDir* dir = g_dir_open(cache_dir, 0, error);
-				#define MAX_CACHE_ITEMS 20
+				#define MAX_CACHE_ITEMS 100
 				int n = 0;
 				while(g_dir_read_name(dir)) n++;
 				g_dir_close(dir);

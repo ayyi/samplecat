@@ -12,10 +12,8 @@ using Cairo;
 
 public delegate void SpectrogramReady(char* filename, Gdk.Pixbuf* a, void* user_data_);
 
-//public extern void render_spectrogram(char* path, GlSpectrogram* w, SpectrogramReadyFunc callback, void* user_data);
-public extern void get_spectrogram_with_target(char* path, SpectrogramReady on_ready, void* user_data);
-//[CCode (has_target = false)]
-//public extern void get_spectrogram(char* path, SpectrogramReady on_ready, void* user_data);
+public extern void get_spectrogram_with_target (char* path, SpectrogramReady on_ready, void* user_data);
+public extern void cancel_spectrogram          (char* path);
  
 public class GlSpectrogram : Gtk.DrawingArea {
 	private string _filename;
@@ -156,6 +154,8 @@ public class GlSpectrogram : Gtk.DrawingArea {
 	public void set_file(char* filename)
 	{
 		_filename = ((string*)filename)->dup();
+
+		cancel_spectrogram(null);
 
 		get_spectrogram_with_target(filename, (filename, _pixbuf, b) => {
 			//stdout.printf("set_file: got callback!\n");
