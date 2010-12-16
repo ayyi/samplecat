@@ -1,4 +1,5 @@
 todo:
+	-look at spek (vala spectrogram)
 	-insert: dupe-checking not working.
 	-can only dnd one file from filemanager onto database window.
 	-appears to freeze when importing from cdrom. move to idle function?
@@ -99,7 +100,7 @@ file system trees:
 	-Netmix - http://www.netmixpro.com/
 
 -auditioning
-	-perhaps use the dssi sampleplayer plugin like sonikvisualiser does?
+	-perhaps use the dssi sampleplayer plugin like sonicvisualiser does?
 
 -portability
 	-like all systems using a central database, the data is confined to one machine. If you scp or take disk to another machine, all your data is effectively lost.

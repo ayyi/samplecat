@@ -1,3 +1,8 @@
+20100612
+-changed overview image to have softer edges
+-added keyboard shortcut for Delete
+-set correct window height before making visible.
+
 20100605
 -add spectrgram
 -added peak_level property to sqlite, listview, and inspector

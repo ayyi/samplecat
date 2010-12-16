@@ -277,7 +277,6 @@ mysql__update_online(int id, gboolean online)
 gboolean
 mysql__update_peaklevel(int id, float level)
 {
-	printf("mysql__update_peaklevel\n");
 	gboolean ok = true;
 	gchar* sql = g_strdup_printf("UPDATE samples SET peaklevel=%f WHERE id=%i", level, id);
 	dbg(2, "row: sql=%s", sql);
@@ -321,7 +320,7 @@ mysql__search_iter_new(char* search, char* dir, const char* category, int* n_res
 			dbg(0, "mysql connection timed out. Reconnecting... (not tested!)");
 			mysql__connect();
 		}else{
-			dbg(0, "Failed to find any records: %s", mysql_error(&mysql));
+			dbg(0, "2: Failed to find any records: %i: %s", e, mysql_error(&mysql));
 		}
 		ok = false;
 	} else {

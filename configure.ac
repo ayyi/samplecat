@@ -1,5 +1,5 @@
 AC_PREREQ(2.59)
-AC_INIT([Samplecat],[0.1.0],[tim@orford.org])
+AC_INIT([Samplecat],[0.1.1],[tim@orford.org])
 AC_CONFIG_SRCDIR([src/main.c])
 AC_CONFIG_HEADER([config.h])
 AM_INIT_AUTOMAKE
@@ -75,34 +75,48 @@ AC_ARG_ENABLE(mysql,
 if test x$enable_mysql = xno ; then
 	:
 else
-    AC_MSG_CHECKING(for mysql)
-    AC_ARG_WITH(mysql,
-      [  --with-mysql=PFX        base of MySQL installation],
-      [AC_MSG_RESULT("$with_mysql")
-       if test "$with_mysql" != "no"
-       then
-        if test "$with_mysql" != "yes"
-        then
-          LDFLAGS="-L$with_mysql/lib -L$with_mysql/lib/mysql $LDFLAGS $ZLIBS"
-          CPPFLAGS="-I$with_mysql/include $CPPFLAGS"
-        fi
-        AC_CHECK_HEADERS(mysql/mysql.h,
-         AC_CHECK_LIB(mysqlclient, mysql_init,
-          MYSQL_LDFLAGS=`/usr/bin/mysql_config --libs`
-          MYSQL_CFLAGS="-I$with_mysql/include"
+	AC_MSG_CHECKING(for mysql)
+	AC_ARG_WITH(
+		[mysql],
+		[  --with-mysql=PFX        base of MySQL installation],
+		[AC_MSG_RESULT("$with_mysql")
+			if test "$with_mysql" != "no"
+			then
+				if test "$with_mysql" != "yes"
+				then
+					LDFLAGS="-L$with_mysql/lib -L$with_mysql/lib/mysql $LDFLAGS $ZLIBS"
+					CPPFLAGS="-I$with_mysql/include $CPPFLAGS"
+				fi
+			fi
+			AC_CHECK_HEADERS(
+				[mysql/mysql.h],
+				[
+					AC_CHECK_LIB(
+						[mysqlclient],
+						[mysql_init],
+						[MYSQL_LDFLAGS=`/usr/bin/mysql_config --libs`
+						MYSQL_CFLAGS="-I$with_mysql/include"
+						enable_mysql=yes]
+					)
+				]
+			)
 
-          enable_mysql=yes), [], [$CYGWIN_MYSQL_MAGIC])
-       fi
-      ],
-      [AC_MSG_RESULT([--with-mysql not specified])
-       LDFLAGS="-L/usr/lib/mysql $LDFLAGS $ZLIBS"
-       AC_CHECK_LIB(mysqlclient, mysql_init,
-        [AC_CHECK_HEADERS(mysql/mysql.h,
-          MYSQL_LDFLAGS=`/usr/bin/mysql_config --libs`
-          enable_mysql=yes
-
-         , [], [$CYGWIN_MYSQL_MAGIC])])
-      ])
+		],
+		[
+			AC_MSG_RESULT([--with-mysql not specified])
+			LDFLAGS="-L/usr/lib/mysql $LDFLAGS $ZLIBS"
+			AC_CHECK_LIB([mysqlclient],
+				[mysql_init],
+				[
+					AC_CHECK_HEADERS(
+						[mysql/mysql.h],
+						[MYSQL_LDFLAGS=`/usr/bin/mysql_config --libs`
+						enable_mysql=yes]
+					)
+				]
+			)
+		]
+	)
 fi
 
 # SAVE_LDFLAGS=$LDFLAGS
@@ -180,7 +194,7 @@ AM_CONDITIONAL(ENABLE_DNOTIFY, test x$have_dnotify = xyes)
 dnl -----------------------------------------------------------------------------
 
 dbus="yes"
-AC_ARG_ENABLE(dbus,
+AC_ARG_ENABLE([dbus],
 [  --disable-dbus          disable use of dbus],[
   case "$enableval" in
     "yes")
@@ -196,17 +210,17 @@ AC_ARG_ENABLE(dbus,
   esac
 ])
 if `test "$dbus" = "yes"`; then
-    AC_CHECK_LIB(dbus-glib-1, dbus_g_bus_get, [DBUS_FOUND=yes], [echo "*** dbus not found!"])
+	AC_CHECK_LIB([dbus-glib-1], [dbus_g_bus_get], [DBUS_FOUND=yes], [echo "*** dbus not found!"])
 	if test "$DBUS_FOUND" = "yes"; then
 		AM_CONDITIONAL(ENABLE_DBUS, test "yes" = "yes")
-		AC_DEFINE(USE_DBUS, 1, Dbus is used for messaging.)
+		AC_DEFINE(USE_DBUS, 1, [Dbus is used for messaging.])
 	else
 		AC_MSG_ERROR([Dbus was configured as the comms system but was not found on your machine.])
 	fi;
 	DBUS_CFLAGS=`pkg-config --cflags-only-I dbus-glib-1`
 	DBUS_LDFLAGS=`pkg-config --libs-only-l dbus-glib-1`
 else
-	AM_CONDITIONAL(ENABLE_DBUS, test "yes" = "no")
+	AM_CONDITIONAL(ENABLE_DBUS, [test "yes" = "no"])
 	DBUS_CFLAGS=
 	DBUS_LDFLAGS=
 fi;

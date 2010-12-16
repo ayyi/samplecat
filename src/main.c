@@ -179,7 +179,13 @@ main(int argc, char** argv)
 					ADD_BACKEND(optarg);
 					dbg(1, "n_backends=%i", g_list_length(app.backends));
 				}
-				else gwarn("requested backend not available: '%s'", optarg);
+				else{
+					warnprintf("requested backend not available: '%s'", optarg);
+					GList* l = app.backends;
+					for(;l;l=l->next){
+						printf("  %s", (char*)l->data);
+					}
+				}
 				break;
 			case 'g':
 				app.no_gui = true;

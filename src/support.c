@@ -1109,8 +1109,8 @@ make_accels(GtkAccelGroup* accel_group, GimpActionGroup* action_group, struct _a
 
   //@param action_group - if NULL, global group is used.
 
-  ASSERT_POINTER(accel_group, "accel_group");
-  ASSERT_POINTER(keys, "keys");
+  g_return_if_fail(accel_group);
+  g_return_if_fail(keys);
 
   int k;
   for(k=0;k<count;k++){
