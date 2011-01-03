@@ -25,3 +25,28 @@ struct _menu_def
 	char*                stock_id;
 	gboolean             sensitive;
 };
+
+typedef struct _inspector
+{
+	unsigned       row_id;
+	GtkTreeRowReference* row_ref;
+	GtkWidget*     widget;     //scrollwin
+	GtkWidget*     vbox;
+	GtkWidget*     name;
+	GtkWidget*     filename;
+	GtkWidget*     tags;
+	GtkWidget*     tags_ev;    //event box for mouse clicks
+	GtkWidget*     length;
+	GtkWidget*     samplerate;
+	GtkWidget*     channels;
+	GtkWidget*     mimetype;
+	GtkWidget*     level;
+	GtkWidget*     image;
+	GtkWidget*     text;
+	GtkTextBuffer* notes;
+	GtkWidget*     edit;
+	int            min_height;
+	int            user_height;
+} Inspector;
+
+

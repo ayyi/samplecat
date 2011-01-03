@@ -8,7 +8,6 @@
 #include <mysql/errmsg.h>
 #include "file_manager.h"
 #include "typedefs.h"
-#include "src/types.h"
 #include "support.h"
 #include "mimetype.h"
 #include "pixmaps.h"

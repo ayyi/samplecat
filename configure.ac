@@ -15,6 +15,8 @@ AC_TYPE_SIZE_T
 # Library building stuff
 AC_PROG_RANLIB
 
+AC_SYS_LARGEFILE
+
 # Check for debugging flag
 debug="yes"
 AC_ARG_ENABLE(debug,

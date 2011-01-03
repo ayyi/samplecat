@@ -7,9 +7,8 @@
 #include "file_manager/file_manager.h"
 #include "gqview_view_dir_tree.h"
 #include "typedefs.h"
-#include "types.h"
-#include "support.h"
 #include "mimetype.h"
+#include "support.h"
 #include "main.h"
 #include "mimetype.h"
 #include "sample.h"
@@ -38,16 +37,17 @@ inspector_new()
 {
 	//close up on a single sample. Bottom left of main window.
 
-	Inspector* inspector = app.inspector = malloc(sizeof(*app.inspector));
-	inspector->row_ref = NULL;
+	g_return_val_if_fail(!app.inspector, NULL);
+
+	Inspector* inspector = app.inspector = g_new0(Inspector, 1);
 	inspector->min_height = 160; //this is actually more like preferred height, as the box can be smaller if there is no room for it.
 
 	int margin_left = 5;
 
-	GtkWidget* scroll = app.inspector->widget = gtk_scrolled_window_new(NULL, NULL);
+	GtkWidget* scroll = inspector->widget = gtk_scrolled_window_new(NULL, NULL);
 	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll), GTK_POLICY_NEVER, GTK_POLICY_NEVER);
 
-	GtkWidget* vbox = gtk_vbox_new(FALSE, 0);
+	GtkWidget* vbox = inspector->vbox = gtk_vbox_new(FALSE, 0);
 	gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(scroll), vbox);
 
 	//left align the label:
@@ -55,7 +55,7 @@ inspector_new()
 	gtk_box_pack_start(GTK_BOX(vbox), align1, EXPAND_FALSE, FILL_FALSE, 0);
 
 	// sample name:
-	GtkWidget* label1 = app.inspector->name = gtk_label_new("");
+	GtkWidget* label1 = inspector->name = gtk_label_new("");
 	gtk_misc_set_padding(GTK_MISC(label1), margin_left, 5);
 	gtk_container_add(GTK_CONTAINER(align1), label1);	
 
@@ -169,9 +169,16 @@ inspector_new()
 	GtkWidget* edit = inspector->edit = gtk_entry_new();
 	gtk_entry_set_max_length(GTK_ENTRY(edit), 64);
 	gtk_entry_set_text(GTK_ENTRY(edit), "");
-	gtk_widget_ref(edit);//stops gtk deleting the unparented widget.
+	g_object_ref(edit); //stops gtk deleting the unparented widget.
 
 	return vbox;
+}
+
+
+void
+inspector_free(Inspector* inspector)
+{
+	g_free(inspector);
 }
 
 
@@ -206,16 +213,17 @@ inspector_update_from_result(Result* sample)
 
 	char* ch_str = channels_format(sample->channels);
 	char fs_str[64]; snprintf(fs_str, 63, "%i kHz",      sample->sample_rate);
-	char len   [32]; snprintf(len,    31, "%i",          sample->length);
+	char len   [32]; len_format(len, sample->length);
 	char* level = gain2dbstring(sample->peak_level);
+	char* keywords = (sample->keywords && strlen(sample->keywords)) ? sample->keywords : "<no tags>";
 
 	gtk_label_set_text(GTK_LABEL(i->name),       sample->sample_name);
-	gtk_label_set_text(GTK_LABEL(i->tags),       sample->keywords);
+	gtk_label_set_text(GTK_LABEL(i->tags),       keywords);
+	gtk_label_set_text(GTK_LABEL(i->length),     len);
 	gtk_label_set_text(GTK_LABEL(i->samplerate), fs_str);
 	gtk_label_set_text(GTK_LABEL(i->channels),   ch_str);
 	gtk_label_set_text(GTK_LABEL(i->filename),   sample->sample_name);
 	gtk_label_set_text(GTK_LABEL(i->mimetype),   sample->mimetype);
-	gtk_label_set_text(GTK_LABEL(i->length),     len);
 	gtk_label_set_text(GTK_LABEL(i->level),      level);
 	gtk_text_buffer_set_text(i->notes, sample->notes ? sample->notes : "", -1);
 	gtk_image_set_from_pixbuf(GTK_IMAGE(i->image), sample->overview);
@@ -232,8 +240,9 @@ inspector_update_from_result(Result* sample)
 }
 
 
+#if 0
 void
-inspector_update_from_listview(GtkTreePath *path)
+inspector_update_from_listview(GtkTreePath* path)
 {
 	PF;
 	Inspector* i = app.inspector;
@@ -244,13 +253,13 @@ inspector_update_from_listview(GtkTreePath *path)
 
 	GtkTreeIter iter;
 	gtk_tree_model_get_iter(GTK_TREE_MODEL(app.store), &iter, path);
-	gchar *tags;
-	gchar *fpath;
-	gchar *fname;
-	gchar *mimetype;
-	gchar *notes;
+	gchar* tags;
+	gchar* fpath;
+	gchar* fname;
+	gchar* mimetype;
+	gchar* notes;
 	GdkPixbuf* pixbuf = NULL;
-	gchar *length;
+	gchar* length;
 	int id;
 	gtk_tree_model_get(GTK_TREE_MODEL(app.store), &iter, COL_NAME, &fname, COL_FNAME, &fpath, COL_LENGTH, &length, COL_KEYWORDS, &tags, COL_MIMETYPE, &mimetype, COL_NOTES, &notes, COL_OVERVIEW, &pixbuf, COL_IDX, &id, -1);
 
@@ -302,6 +311,7 @@ inspector_update_from_listview(GtkTreePath *path)
 
 	free(sample);
 }
+#endif
 
 
 void
@@ -470,7 +480,7 @@ tag_edit_start(int tnum)
 
   //show the rename widget:
   gtk_entry_set_text(GTK_ENTRY(app.inspector->edit), gtk_label_get_text(GTK_LABEL(label)));
-  gtk_widget_ref(label);//stops gtk deleting the widget.
+  g_object_ref(label); //stops gtk deleting the widget.
   gtk_container_remove(GTK_CONTAINER(parent), label);
   gtk_container_add   (GTK_CONTAINER(parent), app.inspector->edit);
 
@@ -545,7 +555,7 @@ tag_edit_stop(GtkWidget *widget, GdkEventCrossing *event, gpointer user_data)
   //printf("track_label_edit_stop(): wrename unparented.\n");
   
   gtk_container_add(GTK_CONTAINER(parent), app.inspector->tags);
-  gtk_widget_unref(app.inspector->tags); //remove 'artificial' ref added in edit_start.
+  g_object_unref(app.inspector->tags); //remove 'artificial' ref added in edit_start.
   
   dbg(0, "finished.");
   //busy = false;

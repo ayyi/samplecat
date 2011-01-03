@@ -17,7 +17,7 @@
 #include "src/support.h"
 #include "rox_global.h"
 #include "dir.h"
-#include "rox/display.h"
+#include "display.h"
 #include "mimetype.h"
 #include "menu.h"
 

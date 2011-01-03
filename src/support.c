@@ -16,10 +16,9 @@
 #include "file_manager/file_manager.h"
 #include "file_manager/support.h"
 #include <gqview2/typedefs.h>
-#include "typedefs.h"
-#include "types.h"
 #include <gimp/gimpaction.h>
 #include <gimp/gimpactiongroup.h>
+#include "typedefs.h"
 #include "src/support.h"
 #include "main.h"
 #include "gqview2/ui_fileops.h"
@@ -161,6 +160,32 @@ channels_format(int n_ch)
 			break;
 	}
 	return g_strdup_printf("%i channels", n_ch);
+}
+
+
+void
+len_format(char* str, int milliseconds)
+{
+	//str should be allocated at least 32 bytes.
+
+	int secs = milliseconds / 1000;
+	int mins = secs / 60;
+
+	char min_str[16];
+	min_str[0] = '\0';
+	if(mins){
+		snprintf(min_str, 15, "%im", mins);
+	}
+
+	//show milliseconds if short sample
+	char ms_str[16];
+	ms_str[0] = '\0';
+	if(!mins){
+		snprintf(ms_str, 15, ".%i", milliseconds % 1000);
+	}
+
+	snprintf(str, 31, "%s%i%s%s", min_str, secs % 60, ms_str, mins ? "" : "s");
+	str[31] = '\0';
 }
 
 

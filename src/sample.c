@@ -8,7 +8,6 @@
 #include "file_manager/file_manager.h"
 #include "gqview_view_dir_tree.h"
 #include "typedefs.h"
-#include "types.h"
 #include "support.h"
 #include "main.h"
 #include "audio.h"
@@ -141,7 +140,7 @@ sample_get_file_sndfile_info(Sample* sample)
 	if(debug) printf("%iHz %s frames=%i\n", sfinfo.samplerate, chanwidstr, (int)sfinfo.frames);
 	sample->channels    = sfinfo.channels;
 	sample->sample_rate = sfinfo.samplerate;
-	sample->length      = (sfinfo.frames * 1000) / sfinfo.samplerate;
+	sample->length      = sfinfo.samplerate ? (sfinfo.frames * 1000) / sfinfo.samplerate : 0;
 
 	if(sample->channels<1 || sample->channels>100){ dbg(0, "bad channel count: %i", sample->channels); return false; }
 	if(sf_close(sffile)) perr("bad file close.\n");
@@ -210,24 +209,22 @@ result_new_from_model(GtkTreePath* path)
 	GtkTreeIter iter;
 	gtk_tree_model_get_iter(model, &iter, path);
 
-	gchar *fpath, *fname, *mimetype, *length, *notes; int id; unsigned colour_index;
+	Result* sample = g_new0(Result, 1);
+
+	gchar *mimetype, *length, *notes; int id; unsigned colour_index;
 	gchar *samplerate;
 	int channels;
 	float peak_level;
 	GdkPixbuf* overview;
-	gtk_tree_model_get(model, &iter, COL_FNAME, &fpath, COL_NAME, &fname, COL_IDX, &id, COL_LENGTH, &length, COL_SAMPLERATE, &samplerate, COL_CHANNELS, &channels, COL_MIMETYPE, &mimetype, COL_PEAKLEVEL, &peak_level, COL_COLOUR, &colour_index, COL_OVERVIEW, &overview, COL_NOTES, &notes, -1);
+	gtk_tree_model_get(model, &iter, COL_FNAME, &sample->dir, COL_NAME, &sample->sample_name, COL_IDX, &id, COL_LENGTH, &length, COL_SAMPLERATE, &samplerate, COL_CHANNELS, &channels, COL_KEYWORDS, &sample->keywords, COL_MIMETYPE, &mimetype, COL_PEAKLEVEL, &peak_level, COL_COLOUR, &colour_index, COL_OVERVIEW, &overview, COL_NOTES, &notes, -1);
 	g_return_val_if_fail(mimetype, NULL);
 
-	Result* sample = g_new0(Result, 1);
 	sample->idx    = id;
-	sample->length = atoi(length);
+	sample->length = atof(length) * 1000;
 	sample->sample_rate = atoi(samplerate);
 	sample->overview = NULL;
 	sample->channels = channels;
 	sample->row_ref = gtk_tree_row_reference_new(GTK_TREE_MODEL(app.store), path);
-	sample->sample_name = fname;
-	sample->dir = fpath;
-	//if(!strcmp(mimetype, "audio/x-flac")) sample->filetype = TYPE_FLAC; else sample->filetype = TYPE_SNDFILE; 
 	sample->mimetype = mimetype;
 	sample->peak_level = peak_level;
 	sample->overview = overview;

@@ -173,8 +173,6 @@ void g_fscache_insert(GFSCache *cache, const char *pathname, gpointer obj, gbool
 gpointer
 g_fscache_lookup_full(GFSCache *cache, const char *pathname, FSCacheLookup lookup_type, gboolean *found)
 {
-	dbg(2, "%s", pathname);
-
 	g_return_val_if_fail(lookup_type != FSCACHE_LOOKUP_INIT, NULL);
 	
 	GFSCacheData* data = lookup_internal(cache, pathname, lookup_type);

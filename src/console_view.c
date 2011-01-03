@@ -3,7 +3,6 @@
 #include <sys/ioctl.h>
 #include <gtk/gtk.h>
 #include "src/typedefs.h"
-#include "src/types.h"
 #include "support.h"
 #include "main.h"
 #include "console_view.h"

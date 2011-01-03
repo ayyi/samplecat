@@ -411,6 +411,7 @@ left_pane()
 	gtk_paned_add1(GTK_PANED(app.vpaned), tree);
 #endif
 
+	/*
 	void on_inspector_allocate(GtkWidget* widget, GtkAllocation* allocation, gpointer user_data)
 	{
 		dbg(0, "req=%i allocation=%i", widget->requisition.height, allocation->height);
@@ -426,10 +427,42 @@ left_pane()
 		}
 	}
 
+	*/
+
 	inspector_new();
-	g_signal_connect(app.inspector->widget, "size-allocate", (gpointer)on_inspector_allocate, NULL);
+	//g_signal_connect(app.inspector->widget, "size-allocate", (gpointer)on_inspector_allocate, NULL);
 	gtk_paned_add2(GTK_PANED(app.vpaned), app.inspector->widget);
 
+	void on_vpaned_allocate(GtkWidget* widget, GtkAllocation* vp_allocation, gpointer user_data)
+	{
+		static int previous_height = 0;
+		if(!app.inspector || vp_allocation->height == previous_height) return;
+
+		int inspector_requisition = 190;//app.inspector->vbox->requisition.height; //FIXME
+		//dbg(0, "req=%i", inspector_requisition);
+		if(!inspector_requisition) return;
+
+		if(!app.inspector->user_height){
+			//user has not specified a height so we have free reign
+
+			int tot_height = vp_allocation->height;
+			dbg(1, "req=%i tot_allocation=%i %i", inspector_requisition, tot_height, app.inspector->widget->allocation.height);
+
+			//small window - dont allow the inspector to take up more than half the space.
+			if(vp_allocation->height < inspector_requisition){
+				gtk_paned_set_position(GTK_PANED(app.vpaned), MAX(tot_height / 2, tot_height - inspector_requisition));
+			}
+
+			//large window - dont allow the inspector to be too big
+			int current_insp_height = tot_height - gtk_paned_get_position(GTK_PANED(app.vpaned));
+			if(current_insp_height > inspector_requisition){
+				gtk_paned_set_position(GTK_PANED(app.vpaned), tot_height - inspector_requisition);
+			}
+		}
+		previous_height = vp_allocation->height;
+	}
+
+	g_signal_connect(app.vpaned, "size-allocate", (gpointer)on_vpaned_allocate, NULL);
 	return app.vpaned;
 }
 

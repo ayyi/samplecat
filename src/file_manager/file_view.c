@@ -43,7 +43,7 @@
 #include "dir.h"
 #include "diritem.h"
 #include "mimetype.h"
-#include "rox/display.h"
+#include "display.h"
 #include "pixmaps.h"
 #include "dnd.h"
 #include "menu.h"

@@ -40,7 +40,7 @@
 #include "src/support.h"
 
 #include "rox_global.h"
-#include "rox/display.h"
+#include "display.h"
 #include "dir.h"
 #include "filer.h"
 #include "fscache.h"

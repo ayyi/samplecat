@@ -1,3 +1,8 @@
+20101230
+-improved length formatting in Inspector.
+-changes to Inspector size allocation.
+-compile with LARGEFILE suppport to make off_t the same size as in libsndfile.
+
 20100612
 -changed overview image to have softer edges
 -added keyboard shortcut for Delete

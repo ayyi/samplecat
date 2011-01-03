@@ -6,10 +6,9 @@
 #include <gtk/gtk.h>
 #include "file_manager.h"
 #include "gqview_view_dir_tree.h"
-#include "typedefs.h"
-#include "types.h"
 #include <gimp/gimpaction.h>
 #include <gimp/gimpactiongroup.h>
+#include "typedefs.h"
 #include "support.h"
 #include "main.h"
 #include "listview.h"

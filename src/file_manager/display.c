@@ -45,9 +45,9 @@
 #define display_dirs_first TRUE
 #define display_caps_first FALSE
 
-#include "rox_support.h"
+#include "rox/rox_support.h"
 #include "dir.h"
-#include "../filer.h"
+#include "filer.h"
 #if 0
 #include "display.h"
 #include "gui_support.h"
@@ -64,7 +64,7 @@
 #endif
 #include "mimetype.h"
 #include "diritem.h"
-#include "view_iface.h"
+#include "rox/view_iface.h"
 #if 0
 #include "fscache.h"
 #include "xtypes.h"

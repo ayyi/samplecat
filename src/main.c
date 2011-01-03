@@ -7,9 +7,9 @@ This software is licensed under the GPL. See accompanying file COPYING.
 */
 #define __main_c__
 #include "config.h"
-#include <stdio.h>
-#include <stdlib.h>
 #define __USE_GNU
+#include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include <unistd.h>
 #include <getopt.h>
@@ -34,7 +34,6 @@ This software is licensed under the GPL. See accompanying file COPYING.
 #include "dh_link.h"
 #include "dh_tree.h"
 
-#include "types.h"
 #include "support.h"
 #include "main.h"
 #include "sample.h"
@@ -180,10 +179,10 @@ main(int argc, char** argv)
 					dbg(1, "n_backends=%i", g_list_length(app.backends));
 				}
 				else{
-					warnprintf("requested backend not available: '%s'", optarg);
+					warnprintf("requested backend not available: '%s'\navailable backends:\n", optarg);
 					GList* l = app.backends;
 					for(;l;l=l->next){
-						printf("  %s", (char*)l->data);
+						printf("  %s\n", (char*)l->data);
 					}
 				}
 				break;

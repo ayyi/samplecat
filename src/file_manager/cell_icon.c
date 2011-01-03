@@ -37,7 +37,7 @@
 #include "cell_icon.h"
 #include "dir.h"
 #include "filer.h"
-#include "rox/display.h"
+#include "display.h"
 #include "diritem.h"
 #include "pixmaps.h"
 #include "mimetype.h"

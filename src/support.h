@@ -61,6 +61,7 @@ void         log_handler               (const gchar* log_domain, GLogLevelFlags,
 void         samplerate_format         (char*, int samplerate);
 gchar*       dir_format                (char*);
 gchar*       channels_format           (int);
+void         len_format                (char*, int);
 //gint         strcmp2(gconstpointer a, gconstpointer b);
 //GPtrArray*   list_dir(const guchar *path);
 gboolean     file_exists               (const char*);

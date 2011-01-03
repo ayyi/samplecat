@@ -25,7 +25,7 @@
  */
 #define MAX_ICON_SIZE (400 * 1024)
 
-//#include "config.h"
+#include "config.h"
 
 #include <gtk/gtk.h>
 #include <errno.h>
@@ -126,7 +126,7 @@ diritem_restat(const guchar *path, DirItem *item, struct stat *parent)
 
 			item->flags |= ITEM_FLAG_SYMLINK;
 
-			target_path = readlink_dup(path);
+			target_path = (guchar*)readlink_dup((char*)path);
 		}
 		else
 		{
@@ -366,11 +366,14 @@ no_diricon:
 	item->_image = NULL;
 
 out:
+	;
 
+#if 0
 	if ((item->flags & ITEM_FLAG_APPDIR) && !item->_image)
 	{
 		/* This is an application without an icon */
 		item->_image = im_appdir;
 		g_object_ref(item->_image);
 	}
+#endif
 }

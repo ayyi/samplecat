@@ -1,3 +1,4 @@
+#include "types.h"
 char err [32];
 char warn[32];
 
@@ -16,28 +17,6 @@ char warn[32];
 #define POINTER_OK_NULL(A, B, C) if((unsigned)A < 1024){ errprintf("%s(): bad %s pointer (%p).\n", B, C, A); return NULL; }
 #ifndef USE_AYYI
 #endif
-
-
-typedef struct _inspector
-{
-	unsigned       row_id;
-	GtkTreeRowReference* row_ref;
-	GtkWidget*     widget;
-	GtkWidget*     name;
-	GtkWidget*     filename;
-	GtkWidget*     tags;
-	GtkWidget*     tags_ev;    //event box for mouse clicks
-	GtkWidget*     length;
-	GtkWidget*     samplerate;
-	GtkWidget*     channels;
-	GtkWidget*     mimetype;
-	GtkWidget*     level;
-	GtkWidget*     image;
-	GtkWidget*     text;
-	GtkTextBuffer* notes;
-	GtkWidget*     edit;
-	int            min_height;
-} Inspector;
 
 
 struct _config
