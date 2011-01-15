@@ -1,3 +1,6 @@
+20110210
+-added support for the Ayyi Auditioner service and deprecated local audio playback.
+
 20101230
 -improved length formatting in Inspector.
 -changes to Inspector size allocation.

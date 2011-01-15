@@ -8,12 +8,13 @@ DESCRIPTION="SampleCat is a program for cataloguing and auditioning audio sample
 HOMEPAGE="http://orford.org/portfolio/samplecat/"
 SRC_URI="http://orford.org/assets/${P}.tar.gz"
 
-LICENSE="GPL-2"
+LICENSE="GPL-3"
 KEYWORDS="x86"
 SLOT="0"
 
 DEPEND=">=media-sound/jack-audio-connection-kit-0.99
 	>=media-libs/libsndfile-1.0.10
+	dev-libs/dbus-glib
 	mysql? ( >=dev-db/mysql-3.23.0 )
 	sqlite? ( >=dev-db/sqlite-3 )
 	tracker? ( >=app-misc/tracker-0.6 )

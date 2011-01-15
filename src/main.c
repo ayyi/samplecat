@@ -37,13 +37,18 @@ This software is licensed under the GPL. See accompanying file COPYING.
 #include "support.h"
 #include "main.h"
 #include "sample.h"
+#ifndef USE_DBUS
 #include "audio.h"
+#endif
 #include "overview.h"
 #include "cellrenderer_hypertext.h"
 #include "listview.h"
 #include "window.h"
 #include "inspector.h"
 #include "dnd.h"
+#ifdef USE_DBUS
+  #include "auditioner.h"
+#endif
 #include "console_view.h"
 #ifdef USE_GQVIEW_1_DIRTREE
   #include "filelist.h"
@@ -65,6 +70,7 @@ This software is licensed under the GPL. See accompanying file COPYING.
 #endif
 
 #undef DEBUG_NO_THREADS
+
 
 extern void       dir_init                  ();
 static void       update_row                (GtkWidget*, gpointer);
@@ -288,6 +294,10 @@ main(int argc, char** argv)
 	}
 
 	if(app.no_gui) exit(EXIT_SUCCESS);
+
+#ifdef USE_DBUS
+	auditioner_connect();
+#endif
 
 #ifdef USE_AYYI
 	ayyi_client_init();
@@ -1350,7 +1360,9 @@ on_quit(GtkMenuItem *menuitem, gpointer user_data)
 	int exit_code = GPOINTER_TO_INT(user_data);
 	if(exit_code > 1) exit_code = 0; //ignore invalid exit code.
 
+#ifndef USE_DBUS
 	jack_close();
+#endif
 
 	if(app.loaded) config_save();
 

@@ -1,4 +1,7 @@
 
+Samplecat
+=========
+
 http://samplecat.orford.org/
 
 SampleCat is a program for cataloguing and auditioning audio samples.
@@ -14,4 +17,17 @@ and whistles to make it a serious tool.
 known issues:
 -------------
 -samplecat will crash when trying to read a directory containing broken links.
+
+usage
+-----
+
+  * import files or directories using drag and drop.
+  * if a file is currently mounted, an icon will be shown in the main table. Select Update on the context menu to refresh its status.
+  * set tags by 1) selecting Edit Tags on the context menu, 2) double clicking the tag area, 3) enter text in the Edit box at the top
+    of the window and hit the "Set Category" button.
+  * to move a file in the filesystem, drag it from the main list to a directory in the directory tree on the left.
+  * to rename a file in the filesystem, select it, then click on the name.
+  * auditioning is started by clicking in the waveform view. Jack ports are not created until auditioning is started for the first time.
+  * import files into your audio editor using dragndrop.
+  * apply colour coding by dragging from the colour bar. Right click on the colour bar to change the colour palette.
 

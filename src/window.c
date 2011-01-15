@@ -116,7 +116,7 @@ GtkWindow
       +--statusbar2
 
 */
-	GtkWidget *window = app.window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+	GtkWidget* window = app.window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	g_signal_connect (G_OBJECT(window), "delete_event", G_CALLBACK(on_quit), NULL);
 	g_signal_connect(window, "destroy", G_CALLBACK(window_on_destroy), NULL);
 

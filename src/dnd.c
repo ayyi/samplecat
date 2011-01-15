@@ -1,17 +1,18 @@
 /*
 
+Copyright (C) Tim Orford 2007-2010
+
 This software is licensed under the GPL. See accompanying file COPYING.
 
 */
-#define IS_DND_C
-
+#define __dnd_c__
+#include "config.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <gtk/gtk.h>
 
-//#include "dh-link.h"
 #include "typedefs.h"
 #include "support.h"
 #include "main.h"
@@ -23,7 +24,8 @@ extern unsigned debug;
 
 
 void
-dnd_setup(){
+dnd_setup()
+{
   gtk_drag_dest_set(app.window, GTK_DEST_DEFAULT_ALL,
                         dnd_file_drag_types,       //const GtkTargetEntry *targets,
                         dnd_file_drag_types_count,    //gint n_targets,

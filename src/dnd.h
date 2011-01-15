@@ -5,7 +5,7 @@ enum {
   TARGET_TEXT_PLAIN
 };
 
-#ifdef IS_DND_C
+#ifdef __dnd_c__
 GtkTargetEntry dnd_file_drag_types[] = {
       { "text/uri-list", 0, TARGET_URI_LIST },
       { "text/plain", 0, TARGET_TEXT_PLAIN }

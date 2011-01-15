@@ -102,6 +102,10 @@ struct _app
 
 	int            playing_id; //database index of the file that is currently playing, or zero if none playing.
 
+#ifdef USE_DBUS
+	Auditioner*    auditioner;
+#endif
+
 	GtkListStore*  store;
 	Inspector*     inspector;
 	

@@ -55,6 +55,10 @@ if ENABLE_OPENGL
 OPENGL_SRC = gl_spectrogram_view.c gl_spectrogram_view.h
 endif
 
+if ENABLE_DBUS
+DBUS_SRC = auditioner.c audtioner.h
+endif
+
 samplecat_SOURCES = \
 	typedefs.h types.h \
 	main.c main.h \
@@ -84,6 +88,7 @@ samplecat_SOURCES = \
 	$(FFT_SRC) \
 	$(OPENGL_SRC) \
 	$(AYYI_SRC) \
+	$(DBUS_SRC) \
 	$(GQVIEW1_SRC)
 
 samplecat_LDADD = \

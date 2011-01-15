@@ -36,7 +36,6 @@
 #include "typedefs.h"
 #include "sample.h"
 #include "support.h"
-//#include <gqview2/typedefs.h>
 #include "main.h"
 #include "audio.h"
 extern struct _app app;
@@ -59,6 +58,7 @@ the flac code here works with version 1.1.2 and earlier.
 */
 
 
+#ifndef USE_DBUS
 static int
 jack_process(jack_nframes_t nframes, void* arg)
 {
@@ -426,6 +426,7 @@ playback_stop()
 	memset(buffer, 0, MAX_JACK_BUFFER_SIZE * sizeof(jack_default_audio_sample_t));
 	PF_DONE;
 }
+#endif
 
 
 void

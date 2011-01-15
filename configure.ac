@@ -144,8 +144,8 @@ LIBART_LIBS=`pkg-config libart-2.0 --libs`
 AC_SUBST(LIBART_CFLAGS)
 AC_SUBST(LIBART_LIBS)
 
-XML_CFLAGS=`pkg-config libxml --cflags`
-AC_SUBST(XML_CFLAGS)
+dnl XML_CFLAGS=`pkg-config libxml --cflags`
+dnl AC_SUBST(XML_CFLAGS)
 
 JACK_LIBS=`pkg-config jack --cflags --libs`
 AC_SUBST(JACK_LIBS)

@@ -9,7 +9,6 @@
 #include "file_manager/support.h"
 
 #include "typedefs.h"
-//#include "src/types.h"
 #include "mimetype.h"
 #include "support.h"
 #include "main.h"
@@ -18,11 +17,16 @@
 #include "cellrenderer_hypertext.h"
 #include "pixmaps.h"
 #include "overview.h"
+#ifdef USE_DBUS
+#include "auditioner.h"
+#endif
 #include "listview.h"
 
 extern struct _app app;
-int             playback_init                    (Sample*);
-void            playback_stop                    ();
+#ifndef USE_DBUS
+extern int      playback_init                    (Sample*);
+extern void     playback_stop                    ();
+#endif
 extern int      debug;
 
 static gboolean listview__on_row_clicked         (GtkWidget*, GdkEventButton*, gpointer);
@@ -234,9 +238,17 @@ listview__on_row_clicked(GtkWidget *widget, GdkEventButton *event, gpointer user
 				Sample* sample = sample_new_from_model(path);
 
 				if(sample->id != app.playing_id){
+#ifdef USE_DBUS
+					toggle_playback(sample); //TODO ownership of sample
+#else
 					if(!playback_init(sample)) sample_free(sample);
+#endif
 				}
+#ifdef USE_DBUS
+				else toggle_playback(sample);
+#else
 				else playback_stop();
+#endif
 			}else{
 				gtk_tree_view_get_cell_area(treeview, path, app.col_tags, &rect);
 				if(((gint)event->x > rect.x) && ((gint)event->x < (rect.x + rect.width))){
