@@ -1,6 +1,8 @@
 /*
 
-Copyright (C) Tim Orford 2007-2010
+Samplecat
+
+Copyright (C) Tim Orford 2007-2011
 
 This software is licensed under the GPL. See accompanying file COPYING.
 
@@ -422,7 +424,7 @@ scan_dir(const char* path, int* added_count)
 }
 
 void
-do_search(char *search, char *dir)
+do_search(char* search, char* dir)
 {
 	//fill the display with the results for the given search phrase.
 
@@ -925,7 +927,15 @@ update_row(GtkWidget *widget, gpointer user_data)
 
 
 static void
-edit_row(GtkWidget *widget, gpointer user_data)
+menu_play_all(GtkWidget* widget, gpointer user_data)
+{
+	dbg(0, "...");
+	auditioner_play_all();
+}
+
+
+static void
+edit_row(GtkWidget* widget, gpointer user_data)
 {
 	//currently this only works for the The tags cell.	
 	PF;
@@ -937,7 +947,7 @@ edit_row(GtkWidget *widget, gpointer user_data)
 	GList* selectionlist = gtk_tree_selection_get_selected_rows(selection, &(model));
 	if(!selectionlist){ perr("no files selected?\n"); return; }
 
-	GtkTreePath *treepath;
+	GtkTreePath* treepath;
 	if((treepath = g_list_nth_data(selectionlist, 0))){
 		GtkTreeIter iter;
 		if(gtk_tree_model_get_iter(GTK_TREE_MODEL(app.store), &iter, treepath)){
@@ -964,8 +974,9 @@ edit_row(GtkWidget *widget, gpointer user_data)
 
 
 static MenuDef _menu_def[] = {
-	{"Delete",         G_CALLBACK(delete_row), GTK_STOCK_DELETE,      true},
-	{"Update",         G_CALLBACK(update_row), GTK_STOCK_REFRESH,     true},
+	{"Delete",         G_CALLBACK(delete_row),    GTK_STOCK_DELETE,     true},
+	{"Update",         G_CALLBACK(update_row),    GTK_STOCK_REFRESH,    true},
+	{"Play All",       G_CALLBACK(menu_play_all), GTK_STOCK_MEDIA_PLAY, true},
 	{"Edit tags",      G_CALLBACK(edit_row),   GTK_STOCK_EDIT,        true},
 	{"Open",           G_CALLBACK(edit_row),   GTK_STOCK_OPEN,       false},
 	{"Open Directory", G_CALLBACK(NULL),       GTK_STOCK_OPEN,        true},
@@ -1354,7 +1365,7 @@ config_new()
 
 
 void
-on_quit(GtkMenuItem *menuitem, gpointer user_data)
+on_quit(GtkMenuItem* menuitem, gpointer user_data)
 {
 	//if(user_data) dbg(0, "exitcode=%i", GPOINTER_TO_INT(user_data));
 	int exit_code = GPOINTER_TO_INT(user_data);

@@ -1,5 +1,8 @@
 20110210
 -added support for the Ayyi Auditioner service and deprecated local audio playback.
+-added 'Play All' menu item.
+-auditioning of filemanager items is now possible.
+-version changed to 0.1.1
 
 20101230
 -improved length formatting in Inspector.

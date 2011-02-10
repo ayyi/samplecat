@@ -5,6 +5,7 @@ struct _samplecat_result
 	int                  idx;
 	GtkTreeRowReference* row_ref;
 	char*                sample_name;
+	char*                full_path;
 	char*                dir;
 	char*                keywords;
 	GdkPixbuf*           overview;

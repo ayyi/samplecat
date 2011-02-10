@@ -3,7 +3,7 @@
 # $Header: $
 
 RESTRICT="nomirror"
-IUSE="mysql sqlite tracker"
+IUSE="mysql sqlite tracker auditioner"
 DESCRIPTION="SampleCat is a program for cataloguing and auditioning audio samples."
 HOMEPAGE="http://orford.org/portfolio/samplecat/"
 SRC_URI="http://orford.org/assets/${P}.tar.gz"
@@ -18,6 +18,7 @@ DEPEND=">=media-sound/jack-audio-connection-kit-0.99
 	mysql? ( >=dev-db/mysql-3.23.0 )
 	sqlite? ( >=dev-db/sqlite-3 )
 	tracker? ( >=app-misc/tracker-0.6 )
+	auditioner? ( >=media-sound/ayyi_auditioner-0.1 )
 	>=x11-libs/gtk+-2.6"
 	
 src_compile() {

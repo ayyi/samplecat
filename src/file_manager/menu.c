@@ -150,7 +150,7 @@ fm__make_context_menu()
 	menu_separator_new(menu);
 	*/
 
-	int i; for(i=0;i<A_SIZE(fm_menu_def);i++){
+	int i; for(i=0;i<G_N_ELEMENTS(fm_menu_def);i++){
 		dbg(2, "i=%i", i);
 		menu_def* item = &fm_menu_def[i];
 		GtkWidget* menu_item = gtk_image_menu_item_new_with_label (item->label);

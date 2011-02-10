@@ -31,8 +31,6 @@
   #define true TRUE
 #endif
 
-#define A_SIZE(A) sizeof(A)/sizeof(A[0])
-
 typedef struct _rect {
   double x1;
   double y1;

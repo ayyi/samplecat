@@ -1,7 +1,5 @@
 #include "stdint.h"
 
-#define A_SIZE(A) sizeof(A)/sizeof(A[0])
-
 #if 0
 #define HAS_ALPHA_FALSE 0
 

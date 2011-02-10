@@ -10,7 +10,6 @@
 #include "file_manager/support.h"
 
 #include "typedefs.h"
-//#include "src/types.h"
 #include "mimetype.h"
 #include "support.h"
 #include "main.h"

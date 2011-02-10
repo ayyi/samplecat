@@ -66,16 +66,15 @@ jack_process(jack_nframes_t nframes, void* arg)
 
 	if(audition.type == TYPE_FLAC) return jack_process_flac(nframes, arg); //or maybe set this function directly as the jack callback?
 
-	int readcount, src_offset;
+	int src_offset;
 	int channels = audition.sfinfo.channels;
 
 	jack_default_audio_sample_t *out1 = (jack_default_audio_sample_t *)jack_port_get_buffer(output_port1, nframes);
 	jack_default_audio_sample_t *out2 = (jack_default_audio_sample_t *)jack_port_get_buffer(output_port2, nframes);
 
-	//while ((readcount = sf_read_float(audition.sffile, buffer, buffer_len))){
 	if(audition.sffile){
 		//printf("1 sff=%p n=%i\n", audition.sffile, nframes); fflush(stdout);
-		readcount = sf_read_float(audition.sffile, buffer, channels * nframes);
+		int readcount = sf_read_float(audition.sffile, buffer, channels * nframes);
 		if(readcount < channels * nframes){
 			printf("EOF %i<%i\n", readcount, channels * nframes);
 			playback_stop();

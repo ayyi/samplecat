@@ -147,7 +147,7 @@ void filer_target_mode(FilerWindow	*filer_window,
 			gpointer	data,
 			const char	*reason);
 #endif
-GList *filer_selected_items(Filer *filer_window);
+GList* fm_selected_items(Filer *filer_window);
 void filer_create_thumb(Filer* filer_window, const gchar *pathname);
 void filer_cancel_thumbnails(Filer* filer_window);
 #if 0

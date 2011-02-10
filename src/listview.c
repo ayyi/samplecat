@@ -234,21 +234,33 @@ listview__on_row_clicked(GtkWidget *widget, GdkEventButton *event, gpointer user
 				//overview column:
 				dbg(2, "overview. column rect: %i %i %i %i", rect.x, rect.y, rect.width, rect.height);
 
-				//TODO re-use the Result created above
+				//TODO re-use the Result created in the cursor-changed handler?                ...too messy...
+				//     -does clicking change the selected row? how about multiple selections?
 				Sample* sample = sample_new_from_model(path);
 
 				if(sample->id != app.playing_id){
 #ifdef USE_DBUS
-					toggle_playback(sample); //TODO ownership of sample
+					if(app.playing_id){
+						//a sample was previously played, and it wasnt this one
+						auditioner_play(sample);
+					}else{
+						auditioner_toggle(sample);
+					}
+					app.playing_id = sample->id;
 #else
+#if 0
 					if(!playback_init(sample)) sample_free(sample);
+#endif
 #endif
 				}
 #ifdef USE_DBUS
-				else toggle_playback(sample);
+				else auditioner_toggle(sample);
 #else
+#if 0
 				else playback_stop();
 #endif
+#endif
+				sample_unref(sample);
 			}else{
 				gtk_tree_view_get_cell_area(treeview, path, app.col_tags, &rect);
 				if(((gint)event->x > rect.x) && ((gint)event->x < (rect.x + rect.width))){

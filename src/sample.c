@@ -211,12 +211,12 @@ result_new_from_model(GtkTreePath* path)
 
 	Result* sample = g_new0(Result, 1);
 
-	gchar *mimetype, *length, *notes; int id; unsigned colour_index;
-	gchar *samplerate;
+	gchar* mimetype, *length, *notes, *dir_path; int id; unsigned colour_index;
+	gchar* samplerate;
 	int channels;
 	float peak_level;
 	GdkPixbuf* overview;
-	gtk_tree_model_get(model, &iter, COL_FNAME, &sample->dir, COL_NAME, &sample->sample_name, COL_IDX, &id, COL_LENGTH, &length, COL_SAMPLERATE, &samplerate, COL_CHANNELS, &channels, COL_KEYWORDS, &sample->keywords, COL_MIMETYPE, &mimetype, COL_PEAKLEVEL, &peak_level, COL_COLOUR, &colour_index, COL_OVERVIEW, &overview, COL_NOTES, &notes, -1);
+	gtk_tree_model_get(model, &iter, COL_FNAME, &sample->dir, COL_NAME, &sample->sample_name, COL_FNAME, &dir_path, COL_IDX, &id, COL_LENGTH, &length, COL_SAMPLERATE, &samplerate, COL_CHANNELS, &channels, COL_KEYWORDS, &sample->keywords, COL_MIMETYPE, &mimetype, COL_PEAKLEVEL, &peak_level, COL_COLOUR, &colour_index, COL_OVERVIEW, &overview, COL_NOTES, &notes, -1);
 	g_return_val_if_fail(mimetype, NULL);
 
 	sample->idx    = id;
@@ -229,6 +229,7 @@ result_new_from_model(GtkTreePath* path)
 	sample->peak_level = peak_level;
 	sample->overview = overview;
 	sample->notes = notes;
+	sample->full_path = g_strdup_printf("%s/%s", dir_path, sample->sample_name);
 	return sample;
 }
 
@@ -239,6 +240,7 @@ result_free(Result* result)
 	if(result->row_ref) gtk_tree_row_reference_free(result->row_ref);
 
 	if(result->sample_name) g_free(result->sample_name);
+	if(result->full_path) g_free(result->full_path);
 	g_free(result);
 }
 

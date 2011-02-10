@@ -34,6 +34,7 @@
 #include "db/mysql.h"
 #endif
 #include "colour_box.h"
+#include "auditioner.h"
 #include "window.h"
 
 extern struct _app app;
@@ -58,6 +59,7 @@ static void       window_on_fileview_row_selected (GtkTreeView*, gpointer);
 static void       on_category_set_clicked         (GtkComboBox*, gpointer);
 static gboolean   row_clear_tags                  (GtkTreeIter*, int id);
 static void       menu__add_to_db                 (GtkMenuItem*, gpointer);
+static void       menu__play                      (GtkMenuItem*, gpointer);
 static void       make_fm_menu_actions();
 static gboolean   on_dir_tree_link_selected       (GObject*, DhLink*, gpointer);
 static GtkWidget* message_panel__new              ();
@@ -67,6 +69,7 @@ static void       on_layout_changed               ();
 
 struct _accel menu_keys[] = {
 	{"Add to database",NULL,        {{(char)'a',    0               },  {0, 0}}, menu__add_to_db, GINT_TO_POINTER(0)},
+	{"Play"           ,NULL,        {{(char)'p',    0               },  {0, 0}}, menu__play,      NULL              },
 };
 
 struct _accel window_keys[] = {
@@ -628,7 +631,7 @@ tagshow_selector_new()
 	GtkWidget* combo = app.view_category = gtk_combo_box_new_text();
 	GtkComboBox* combo_ = GTK_COMBO_BOX(combo);
 	gtk_combo_box_append_text(combo_, ALL_CATEGORIES);
-	int i; for(i=0;i<A_SIZE(categories);i++){
+	int i; for(i=0;i<G_N_ELEMENTS(categories);i++){
 		gtk_combo_box_append_text(combo_, categories[i]);
 	}
 	gtk_combo_box_set_active(combo_, 0);
@@ -672,9 +675,9 @@ menu__add_to_db(GtkMenuItem* menuitem, gpointer user_data)
 
 	GtkTreeModel* model = gtk_tree_view_get_model(GTK_TREE_VIEW(filer.view));
 	GtkTreeSelection* selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(filer.view));
-	GList* list = gtk_tree_selection_get_selected_rows(selection, NULL);
-	for (; list; list = list->next) {
-		GtkTreePath* path = list->data;
+	GList* l = gtk_tree_selection_get_selected_rows(selection, NULL);
+	for (;l;l=l->next) {
+		GtkTreePath* path = l->data;
 		GtkTreeIter iter;
 		if (gtk_tree_model_get_iter(model, &iter, path)) {
 			gchar* leaf;
@@ -689,13 +692,29 @@ menu__add_to_db(GtkMenuItem* menuitem, gpointer user_data)
 }
 
 
+void
+menu__play(GtkMenuItem* menuitem, gpointer user_data)
+{
+	PF;
+	GList* selected = fm_selected_items(&filer);
+	GList* l = selected;
+	for(;l;l=l->next){
+		char* item = l->data;
+		dbg(0, "%s", item);
+		auditioner_play_path(item);
+		g_free(item);
+	}
+	g_list_free(selected);
+}
+
+
 static void
 make_fm_menu_actions()
 {
 	GtkActionGroup* group = gtk_action_group_new("File Manager");
 	accel_group = gtk_accel_group_new();
 
-	int count = A_SIZE(menu_keys);
+	int count = G_N_ELEMENTS(menu_keys);
 	int k;
 	for(k=0;k<count;k++){
 		struct _accel* key = &menu_keys[k];
@@ -855,11 +874,11 @@ on_layout_changed()
 		if((widget = app.inspector->widget)){
 			int tot_height = app.vpaned->allocation.height;
 			int max_auto_height = tot_height / 2;
-			dbg(0, "inspector_height=%i tot=%i", widget->allocation.height, tot_height);
+			dbg(1, "inspector_height=%i tot=%i", widget->allocation.height, tot_height);
 			if(widget->allocation.height < app.inspector->min_height
 					&& widget->allocation.height < max_auto_height){
 				int inspector_height = MIN(max_auto_height, app.inspector->min_height);
-				dbg(0, "setting height : %i/%i", tot_height - inspector_height, inspector_height);
+				dbg(1, "setting height : %i/%i", tot_height - inspector_height, inspector_height);
 				gtk_paned_set_position(GTK_PANED(app.vpaned), tot_height - inspector_height);
 			}
 		}
