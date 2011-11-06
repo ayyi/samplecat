@@ -17,6 +17,7 @@ struct _samplecat_result
 	char*                notes;
 	int                  colour;
 	gboolean             online;
+	char*                updated; //TODO char* ? int? date?
 };
 
 struct _menu_def

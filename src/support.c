@@ -130,6 +130,8 @@ log_handler(const gchar* log_domain, GLogLevelFlags log_level, const gchar* mess
 void
 samplerate_format(char* str, int samplerate)
 {
+	// format a samplerate given in Hz to be output in kHz
+
 	if(!samplerate){ str[0] = '\0'; return; }
 
 	snprintf(str, 32, "%f", ((float)samplerate) / 1000);
@@ -1664,7 +1666,8 @@ gain2dbstring(float gain)
 	float dB = gain2db(gain);
 
 	if(dB < -200)
-		return g_strdup_printf("-200 dB");
+		//return g_strdup_printf("-200 dB");
+		return g_strdup_printf("");
 
 	return g_strdup_printf("%.2f dB", gain2db(gain));
 }

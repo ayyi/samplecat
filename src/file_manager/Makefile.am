@@ -1,3 +1,6 @@
+
+SUBDIRS = filetypes
+
 AM_CFLAGS = \
 	-g -Wall \
 	-DPACKAGE_DATA_DIR=\""$(datadir)"\" \

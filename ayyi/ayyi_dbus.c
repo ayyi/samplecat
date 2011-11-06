@@ -1,6 +1,6 @@
 /*
   This file is part of the Ayyi Project. http://ayyi.org
-  copyright (C) 2004-2010 Tim Orford <tim@orford.org>
+  copyright (C) 2004-2011 Tim Orford <tim@orford.org>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License version 3
@@ -16,19 +16,16 @@
   Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 */
 #define __ayyi_dbus_c__
+#include "config.h"
 #include <stdio.h>
 #include <stdint.h>
 #include <stdarg.h>
 #include <glib.h>
 #include <dbus/dbus-glib-bindings.h>
 #include <ayyi/dbus_marshallers.h>
-#include <ayyi/ayyi_typedefs.h>
-#include <ayyi/ayyi_types.h>
-#include <ayyi/ayyi_seg0.h>
-#include <ayyi/ayyi_shm.h>
 #include <ayyi/ayyi_utils.h>
+#include <ayyi/ayyi_shm.h>
 #include <ayyi/ayyi_time.h>
-#include <ayyi/ayyi_client.h>
 #include <ayyi/ayyi_server.h>
 #include <ayyi/engine_proxy.h>
 #include <ayyi/ayyi_dbus.h>
@@ -44,12 +41,12 @@ extern DBusGProxy *proxy;
 static void     dbus_shm_notify            (DBusGProxy*, DBusGProxyCall*, gpointer data);
 static char*    dbus_introspect            (DBusGConnection*);
 static GQuark   ayyi_dbus_error_quark      ();
-       void     ayyi_dbus__register_signals();
-static void     dbus_rx_deleted            (DBusGProxy*, int object_type, int object_idx, gpointer user_data);
-static void     dbus_rx_obj_new            (DBusGProxy*, int object_type, int object_idx, gpointer data);
-static void     dbus_rx_changed            (DBusGProxy*, int object_type, int object_idx, gpointer user_data);
+static void     ayyi_dbus__rx_deleted      (DBusGProxy*, int object_type, int object_idx, gpointer);
+//static void     ayyi_dbus__rx_changed      (DBusGProxy*, int object_type, int object_idx, gpointer);
+static void     ayyi_dbus__rx_property     (DBusGProxy*, int object_type, int object_idx, int property, gpointer);
+static void     ayyi_handle                (AyyiIdent obj, AyyiPropType, const GList* _handlers);
 
-Service known_services[] = {{ARDOURD_DBUS_SERVICE, ARDOURD_DBUS_PATH, ARDOURD_DBUS_INTERFACE, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL}};
+Service known_services[] = {{ARDOURD_DBUS_SERVICE, ARDOURD_DBUS_PATH, ARDOURD_DBUS_INTERFACE, NULL, NULL, NULL, NULL, NULL}};
 
 
 static gboolean
@@ -134,6 +131,7 @@ ayyi_client__dbus_connect(Service* server, GError** error)
 
 		}
 	} else { //this just means that the fn is being run for the second time. FIXME we should be able to move this back into the above block
+		g_return_val_if_fail(server->priv, false);
 		if((server->priv->proxy = dbus_g_proxy_new_for_name (connection[i], server->service, server->path, server->interface))){
 			//we always get a proxy, even if the requested service isnt running.
 			if(dbus_service_test(server, NULL)){
@@ -193,7 +191,7 @@ ayyi_client__dbus_get_shm(Service* server)
 
 			return FALSE;
 		}
-		dbg (1, "fd=%i\n", seg->id);
+		dbg (2, "fd=%i", seg->id);
 		//for (strs_p = strs; *strs_p; strs_p++) printf ("got string: \"%s\"", *strs_p);
 		//g_strfreev (strs);
 
@@ -261,6 +259,15 @@ dbus_shm_notify(DBusGProxy* proxy, DBusGProxyCall* call, gpointer _seg)
 {
 	//our request for shm address has returned.
 
+	typedef void (*ShmCallback)(shm_seg*);
+	ShmCallback user_callback = known_services[0].on_shm;
+
+	void do_callback(ShmCallback callback, shm_seg* shm_seg)
+	{
+		if (callback) callback(shm_seg);
+		else gwarn("no on_shm callback set.");
+	}
+
 	if (call) {
 		guint id;
 		GError* error = NULL;
@@ -274,10 +281,30 @@ dbus_shm_notify(DBusGProxy* proxy, DBusGProxyCall* call, gpointer _seg)
 	}
 
 	if (ayyi_shm_import()) {
-		if (known_services[0].on_shm) known_services[0].on_shm();
-		else gwarn("no on_shm callback set.");
+		do_callback(user_callback, (shm_seg*)_seg);
 	}
-	else gwarn("shm import failed. Do something!");
+	else {
+		if(ayyi.debug) gwarn("shm import failed. Calling callback with NULL arg");
+		do_callback(user_callback, NULL);
+	}
+}
+
+
+void
+ayyi_dbus_ping(Service* server, void (*pong)(const char*))
+{
+	void ping_done(DBusGProxy* proxy, DBusGProxyCall* call, gpointer _user_data)
+	{
+		void (*pong)(const char*) = _user_data;
+
+		gchar* message;
+		GError* error = NULL;
+		if (!dbus_g_proxy_end_call (proxy, call, &error, G_TYPE_INVALID, G_TYPE_STRING, &message, G_TYPE_INVALID)){
+			return;
+		}
+		call(pong, message);
+	}
+	dbus_g_proxy_begin_call(proxy, "Ping", ping_done, pong, NULL, G_TYPE_INVALID);
 }
 
 
@@ -312,88 +339,167 @@ ayyi_dbus_error_quark()
 }
 
 
-       void
-ayyi_dbus__register_signals()
-{
-	dbus_g_proxy_add_signal     (proxy, "ObjnewSignal", G_TYPE_INT, G_TYPE_INT, G_TYPE_INVALID);
-	dbus_g_proxy_connect_signal (proxy, "ObjnewSignal", G_CALLBACK(dbus_rx_obj_new), NULL, NULL);
-
-	dbus_g_proxy_add_signal     (proxy, "DeletedSignal", G_TYPE_INT, G_TYPE_INT, G_TYPE_INVALID);
-	dbus_g_proxy_connect_signal (proxy, "DeletedSignal", G_CALLBACK (dbus_rx_deleted), NULL, NULL);
-
-	dbus_g_proxy_add_signal     (proxy, "ObjchangedSignal", G_TYPE_INT, G_TYPE_INT, G_TYPE_INVALID);
-	dbus_g_proxy_connect_signal (proxy, "ObjchangedSignal", G_CALLBACK (dbus_rx_changed), NULL, NULL);
-}
-
-
-static void
-dbus_rx_obj_new(DBusGProxy *proxy, int object_type, int object_idx, gpointer data)
-{
-	SIG_IN;
-
-	GList* handlers = (GList*)ayyi_client_get_responders(object_type, AYYI_NEW, -1);
-	dbg(2, "n_handlers=%i", g_list_length(handlers));
-	if(handlers){
-		for(;handlers;handlers=handlers->next){
-			Responder* responder = handlers->data;
-			(responder->callback)(object_type, (AyyiIdx)object_idx, responder->user_data);
-		}
-	}else{
-		Service* engine = &known_services[AYYI_SERVICE_AYYID1];
-		if(engine->on_new) engine->on_new(object_type, object_idx);
-	}
-}
-
-
-static void
-dbus_rx_deleted(DBusGProxy *proxy, int object_type, int object_idx, gpointer user_data)
-{
-	SIG_IN;
-	Service* engine = ayyi.service;
-
-	//instance-generic handlers:
-	GList* handlers = (GList*)ayyi_client_get_responders(object_type, AYYI_DEL, -1);
-	dbg(2, "%s %i n_generic_handlers=%i", ayyi_print_object_type(object_type), object_idx, g_list_length(handlers));
-	if(handlers){
-		for(;handlers;handlers=handlers->next){
-			Responder* responder = handlers->data;
-			(responder->callback)(object_type, (AyyiIdx)object_idx, responder->user_data);
-		}
-	}
-	else if(engine->on_delete) engine->on_delete(object_type, object_idx);
-	else gwarn("no generic delete handler!");
-
-	//instance specific handlers:
-	handlers = (GList*)ayyi_client_get_responders(object_type, AYYI_DEL, object_idx);
-	dbg(2, "%s n_specific_handlers=%i", ayyi_print_object_type(object_type), g_list_length(handlers));
-	if(handlers){
-		for(;handlers;handlers=handlers->next){
-			Responder* responder = handlers->data;
-			(responder->callback)(object_type, (AyyiIdx)object_idx, responder->user_data);
-		}
-	}
-}
-
-
-static void
-dbus_rx_changed(DBusGProxy *proxy, int object_type, int object_idx, gpointer user_data)
+void
+ayyi_dbus__register_signals(int signals)
 {
 	PF;
-	SIG_IN;
+	void
+	ayyi_dbus_rx_obj_new(DBusGProxy* proxy, int object_type, int object_idx, gpointer data)
+	{
+		SIG_IN1;
+if(object_type == AYYI_OBJECT_SONG) dbg(0, "SONG load");
+		ayyi_handle((AyyiIdent){object_type, object_idx}, AYYI_NO_PROP, ayyi_client_get_responders(object_type, AYYI_NEW, -1));
+	}
 
-	Service* engine = &known_services[AYYI_SERVICE_AYYID1];
-	if(engine->on_change) engine->on_change(object_type, object_idx);
+	void ayyi_dbus_rx_transport(DBusGProxy *proxy, int type, gpointer user_data)
+	{
+		SIG_IN1;
+		ayyi_handle(AYYI_NULL_IDENT, AYYI_NO_PROP, ayyi_client_get_responders(AYYI_OBJECT_TRANSPORT, AYYI_SET, -1));
+	}
 
-	//instance specific handlers:
-	GList* handlers = (GList*)ayyi_client_get_responders(object_type, AYYI_SET, object_idx);
-	dbg(2, "n_handlers=%i", g_list_length(handlers));
-	if(handlers){
-		for(;handlers;handlers=handlers->next){
-			Responder* responder = handlers->data;
-			dbg(2, "user_data=%p", responder->user_data);
-			(responder->callback)(object_type, (AyyiIdx)object_idx, responder->user_data);
+	void am_dbus_rx_locators(DBusGProxy *proxy, int type, gpointer user_data)
+	{
+		SIG_IN1;
+		ayyi_handle(AYYI_NULL_IDENT, AYYI_NO_PROP, ayyi_client_get_responders(AYYI_OBJECT_LOCATORS, AYYI_SET, -1));
+	}
+
+	static int registered = 0;
+
+	if(signals & NEW){
+		dbus_g_proxy_add_signal     (proxy, "ObjnewSignal", G_TYPE_INT, G_TYPE_INT, G_TYPE_INVALID);
+		dbus_g_proxy_connect_signal (proxy, "ObjnewSignal", G_CALLBACK(ayyi_dbus_rx_obj_new), NULL, NULL);
+		registered |= NEW;
+	}else{
+		if(registered & NEW){
+			gwarn("already registered: NEW");
+			/*
+			dbg(0, "NEW: TODO need to unregister signal");
+			registered &= ~NEW;
+			*/
 		}
 	}
+
+	if(signals & DELETED){
+		dbus_g_proxy_add_signal     (proxy, "DeletedSignal", G_TYPE_INT, G_TYPE_INT, G_TYPE_INVALID);
+		dbus_g_proxy_connect_signal (proxy, "DeletedSignal", G_CALLBACK (ayyi_dbus__rx_deleted), NULL, NULL);
+		registered |= DELETED;
+	}else{
+		if(registered & DELETED){
+			dbg(0, "DELETED: TODO need to unregister signal");
+			registered &= ~DELETED;
+		}
+	}
+
+	/* this signal no longer exists
+	if(signals & CHANGED){
+		dbus_g_proxy_add_signal     (proxy, "ObjchangedSignal", G_TYPE_INT, G_TYPE_INT, G_TYPE_INVALID);
+		dbus_g_proxy_connect_signal (proxy, "ObjchangedSignal", G_CALLBACK (ayyi_dbus__rx_changed), NULL, NULL);
+		registered |= CHANGED;
+	}else{
+		if(registered & CHANGED){
+			dbg(0, "CHANGED: TODO need to unregister signal");
+			registered &= ~CHANGED;
+		}
+	}
+	*/
+
+	if(signals & PROPERTY){
+		dbus_g_proxy_add_signal     (proxy, "PropertySignal", G_TYPE_INT, G_TYPE_INT, G_TYPE_INT, G_TYPE_INVALID);
+		dbus_g_proxy_connect_signal (proxy, "PropertySignal", G_CALLBACK (ayyi_dbus__rx_property), NULL, NULL);
+		registered |= PROPERTY;
+	}else{
+		if(registered & PROPERTY){
+			dbg(0, "PROPERTY: TODO need to unregister signal");
+			registered &= ~PROPERTY;
+		}
+	}
+
+	if(signals & TRANSPORT){
+		dbus_g_proxy_add_signal     (proxy, "TransportSignal", G_TYPE_STRING, G_TYPE_INVALID);
+		dbus_g_proxy_connect_signal (proxy, "TransportSignal", G_CALLBACK (ayyi_dbus_rx_transport), NULL, NULL);
+		registered |= TRANSPORT;
+	}else{
+		if(registered & TRANSPORT){
+			dbg(0, "PROPERTY: TODO need to unregister signal");
+			registered &= ~TRANSPORT;
+		}
+	}
+
+	if(signals & LOCATORS){
+		dbus_g_proxy_add_signal     (proxy, "LocatorsSignal", G_TYPE_STRING, G_TYPE_INVALID);
+		dbus_g_proxy_connect_signal (proxy, "LocatorsSignal", G_CALLBACK (am_dbus_rx_locators), NULL, NULL);
+		registered |= LOCATORS;
+	}else{
+		if(registered & LOCATORS){
+			dbg(0, "LOCATOR: TODO need to unregister signal");
+			registered &= ~LOCATORS;
+		}
+	}
+}
+
+
+static void 
+ayyi_handle(AyyiIdent obj, AyyiPropType prop, const GList* _handlers)
+{
+	GList* handlers = g_list_copy((GList*)_handlers); //the list can be modified while iterating, so copy it first
+	dbg(2, "%s n_handlers=%i", ayyi_print_object_type(obj.type), g_list_length(handlers));
+	if(handlers){
+		GList* h = handlers;
+		for(;h;h=h->next){
+			Responder* responder = h->data;
+			dbg(2, "handler=%p", responder);
+			dbg(2, "user_data=%p", responder->user_data);
+			if(prop == AYYI_NO_PROP)
+				(responder->callback)(obj, NULL, responder->user_data);
+			else
+				((AyyiPropHandler)responder->callback)(obj, NULL, prop, responder->user_data);
+		}
+		g_list_free(handlers);
+	}
+}
+
+
+static void 
+handle_all(AyyiIdent obj, AyyiPropType prop, AyyiOp op_type)
+{
+	//instance specific handlers:
+	ayyi_handle(obj, prop, ayyi_client_get_responders(obj.type, op_type, obj.idx));
+
+	//object-type handlers:
+	ayyi_handle(obj, prop, ayyi_client_get_responders(obj.type, op_type, -1));
+
+	//generic fallback handlers:
+	ayyi_handle(obj, prop, ayyi_client_get_responders(-1, op_type, -1));
+}
+
+
+static void
+ayyi_dbus__rx_deleted(DBusGProxy* proxy, int object_type, int object_idx, gpointer user_data)
+{
+	SIG_IN1;
+	handle_all((AyyiIdent){object_type, object_idx}, AYYI_NO_PROP, AYYI_DEL);
+}
+
+
+#if 0
+static void
+ayyi_dbus__rx_changed(DBusGProxy* proxy, int object_type, int object_idx, gpointer user_data)
+{
+	if(ayyi.debug > 1) printf("%s--->%s changed: %s.%i\n", bold, white, ayyi_print_object_type(object_type), object_idx);
+	AyyiIdent obj = {object_type, object_idx};
+
+	handle_all(obj, AYYI_NO_PROP, AYYI_SET);
+}
+#endif
+
+
+static void
+ayyi_dbus__rx_property(DBusGProxy* proxy, int object_type, int object_idx, int property_type, gpointer user_data)
+{
+	if(ayyi.debug > 1) printf("%s--->%s changed: %s.%i %s\n", bold, white, ayyi_print_object_type(object_type), object_idx, ayyi_print_prop_type(property_type));
+	AyyiIdent obj = {object_type, object_idx};
+
+	handle_all(obj, property_type, AYYI_SET);
 }
 
 

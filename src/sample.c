@@ -219,9 +219,11 @@ result_new_from_model(GtkTreePath* path)
 	gtk_tree_model_get(model, &iter, COL_FNAME, &sample->dir, COL_NAME, &sample->sample_name, COL_FNAME, &dir_path, COL_IDX, &id, COL_LENGTH, &length, COL_SAMPLERATE, &samplerate, COL_CHANNELS, &channels, COL_KEYWORDS, &sample->keywords, COL_MIMETYPE, &mimetype, COL_PEAKLEVEL, &peak_level, COL_COLOUR, &colour_index, COL_OVERVIEW, &overview, COL_NOTES, &notes, -1);
 	g_return_val_if_fail(mimetype, NULL);
 
+	float sample_rate = atof(samplerate) * 1000;
+
 	sample->idx    = id;
 	sample->length = atof(length) * 1000;
-	sample->sample_rate = atoi(samplerate);
+	sample->sample_rate = sample_rate;
 	sample->overview = NULL;
 	sample->channels = channels;
 	sample->row_ref = gtk_tree_row_reference_new(GTK_TREE_MODEL(app.store), path);

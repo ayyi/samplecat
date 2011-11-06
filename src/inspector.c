@@ -212,7 +212,10 @@ inspector_update_from_result(Result* sample)
 	#endif
 
 	char* ch_str = channels_format(sample->channels);
-	char fs_str[64]; snprintf(fs_str, 63, "%i kHz",      sample->sample_rate);
+
+	char fs_str[32]; samplerate_format(fs_str, sample->sample_rate);
+	strcpy(fs_str + strlen(fs_str), " kHz");
+
 	char len   [32]; len_format(len, sample->length);
 	char* level = gain2dbstring(sample->peak_level);
 	char* keywords = (sample->keywords && strlen(sample->keywords)) ? sample->keywords : "<no tags>";
@@ -235,7 +238,8 @@ inspector_update_from_result(Result* sample)
 	//store a reference to the row id in the inspector widget:
 	//g_object_set_data(G_OBJECT(app.inspector->name), "id", GUINT_TO_POINTER(id));
 	i->row_id = sample->idx;
-	i->row_ref = sample->row_ref;
+	if(i->row_ref) gtk_tree_row_reference_free(i->row_ref);
+	i->row_ref = gtk_tree_row_reference_copy(sample->row_ref);
 	if(!i->row_ref) perr("setting row_ref failed!\n");
 }
 
@@ -344,7 +348,7 @@ inspector_update_from_fileview(GtkTreeView* treeview)
 			}
 			else if(sample_get_file_info(sample)){
 				char ch_str[64]; snprintf(ch_str, 64, "%u channels", sample->channels);
-				char fs_str[64]; snprintf(fs_str, 64, "%u kHz",      sample->sample_rate);
+				char fs_str[32]; samplerate_format(fs_str, sample->sample_rate); strcpy(fs_str + strlen(fs_str), " kHz");
 				char length[64]; snprintf(length, 64, "%u",          sample->length);
 
 				gtk_label_set_text(GTK_LABEL(i->name),       basename(sample->filename));
@@ -423,7 +427,7 @@ inspector_on_notes_insert(GtkTextView *textview, gchar *arg1, gpointer user_data
 static gboolean
 on_notes_focus_out(GtkWidget *widget, gpointer userdata)
 {
-	if(!backend.update_notes) return FALSE;
+	if(!backend.update_notes) return false;
 
 	GtkTextBuffer* textbuf = gtk_text_view_get_buffer(GTK_TEXT_VIEW(widget));
 	g_return_val_if_fail(textbuf, false);
@@ -431,12 +435,13 @@ on_notes_focus_out(GtkWidget *widget, gpointer userdata)
 	GtkTextIter start_iter, end_iter;
 	gtk_text_buffer_get_start_iter(textbuf,  &start_iter);
 	gtk_text_buffer_get_end_iter  (textbuf,  &end_iter);
-	gchar* notes = gtk_text_buffer_get_text(textbuf, &start_iter, &end_iter, TRUE);
+	gchar* notes = gtk_text_buffer_get_text(textbuf, &start_iter, &end_iter, true);
 	dbg(2, "start=%i end=%i", gtk_text_iter_get_offset(&start_iter), gtk_text_iter_get_offset(&end_iter));
 
 	unsigned id = app.inspector->row_id;
 	if(backend.update_notes(id, notes)){
 		statusbar_print(1, "notes updated");
+		g_return_val_if_fail(app.inspector->row_ref && gtk_tree_row_reference_valid(app.inspector->row_ref), false);
 		GtkTreePath *path;
 		if((path = gtk_tree_row_reference_get_path(app.inspector->row_ref))){
 			GtkTreeIter iter;
@@ -542,7 +547,7 @@ tag_edit_stop(GtkWidget *widget, GdkEventCrossing *event, gpointer user_data)
 	   
   //change the text in the label:
   gtk_label_set_text(GTK_LABEL(app.inspector->tags), gtk_entry_get_text(GTK_ENTRY(edit)));
-  //printf("track_label_edit_stop(): text set.\n");
+  dbg(0, "text set.");
 
   //update the data:
   //update the string for the channel that the current track is using:

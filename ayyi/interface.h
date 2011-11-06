@@ -8,9 +8,8 @@ using namespace Ayi;
 #include "stdint.h"
 #include <jack/jack.h>
 
-#define AYYI_SHM_VERSION 1
+#define AYYI_SHM_VERSION 4
 #define CONTAINER_SIZE 128
-#define BLOCK_SIZE 128
 #define AYYI_BLOCK_SIZE 128
 #define MAX_LOC 10
 #define AYYI_FILENAME_MAX 256
@@ -18,19 +17,20 @@ using namespace Ayi;
 #define AYYI_PLUGINS_PER_CHANNEL 3
 #define AYYI_AUX_PER_CHANNEL 3
 
-struct _container {
-	struct block* block[CONTAINER_SIZE];
-	int           last;
-	int           full;
-	char          signature[16];
-};
-
-struct block
+struct _block
 {
-	void*       slot[BLOCK_SIZE];
+	void*       slot[AYYI_BLOCK_SIZE];
 	int         last;
 	int         full;
 	void*       next;
+};
+
+struct _container {
+	struct _block* block[CONTAINER_SIZE];
+	int           last;
+	int           full;
+	char          signature[16];
+	AyyiObjType   obj_type;
 };
 
 struct _ayyi_list
@@ -63,6 +63,7 @@ struct _shm_song
 
 	char        path[256];
 	char        snapshot[256];
+	char        peaks_dir[128];
 	uint32_t    sample_rate;       //TODO move to global segment
 	struct _song_pos start;
 	struct _song_pos end;
@@ -80,44 +81,36 @@ struct _shm_song
 	struct _container audio_tracks;
 	struct _container midi_tracks;
 	struct _container playlists;
-	struct block ports;
+	struct _block ports;
 	struct _container vst_plugin_info;
 };
 
-enum {
-	ARDOUR_TYPE_MASK  = 0xf0000000,
-	ARDOUR_TYPE_TRACK = 0x10000000,
-	ARDOUR_TYPE_PART  = 0x20000000,
-	ARDOUR_TYPE_FILE  = 0x30000000,
-	ARDOUR_TYPE_SONG  = 0x40000000,
-};
-
 struct _ayyi_base_item {
-	int            shm_idx; // slot_num | (block_num / BLOCK_SIZE)
-	char           name[64];
+	int            shm_idx; // slot_num | (block_num / AYYI_BLOCK_SIZE)
+	char           name[AYYI_NAME_MAX];
 	AyyiId         id;
 	void*          server_object;
 	int            flags;
 };
 
 struct _region_base_shared {
-	int            shm_idx; // slot_num | (block_num / BLOCK_SIZE)
-	char           name[64];
+	int            shm_idx; // slot_num | (block_num / AYYI_BLOCK_SIZE)
+	char           name[AYYI_NAME_MAX];
 	AyyiId         id;
 	void*          server_object;
 	int            flags;
-	char           playlist_name[64];
+	int            playlist;
 	jack_nframes_t position;
 	jack_nframes_t length;
 };
 
 struct _ayyi_audio_region {
 	int            shm_idx;
-	char           name[64];
+	char           name[AYYI_NAME_MAX];
 	AyyiId         id;
 	void*          server_object;
 	int            flags;
-	char           playlist_name[64];
+	int            playlist;
 	jack_nframes_t position;
 	jack_nframes_t length;
 	// end base.
@@ -131,11 +124,11 @@ struct _ayyi_audio_region {
 
 struct _midi_region_shared {
 	int            shm_idx;
-	char           name[64];
+	char           name[AYYI_NAME_MAX];
 	AyyiId         id;
 	void*          server_object;
 	int            flags;
-	char           playlist_name[64];
+	int            playlist;
 	jack_nframes_t position;
 	jack_nframes_t length;
 	// end base.
@@ -144,7 +137,8 @@ struct _midi_region_shared {
 
 struct _filesource_shared {
 	int            shm_idx;
-	char           name[AYYI_FILENAME_MAX];
+	char           name[AYYI_FILENAME_MAX]; //can be either absolute path, or relative to current song path.
+	char           original_name[AYYI_NAME_MAX];
 	uint64_t       id;
 	void*          object;
 	uint32_t       length;
@@ -152,54 +146,51 @@ struct _filesource_shared {
 
 struct _ayyi_connection {
 	int            shm_idx;
-	char           device[32];
-	char           name[256];
+	char           name[AYYI_NAME_MAX];
+	uint64_t       id;
 	void*          object;
+	int            flags;
+	char           device[32];
 	uint32_t       nports;
 	char           io;     // 0=output 1=input
 };
 
 struct _route_shared {
 	int            shm_idx;
-	char           name[256];
+	char           name[AYYI_NAME_MAX];
 	uint64_t       id;
 	void*          object;
+	uint32_t/*ChanFlags*/ flags;
+	int            colour;
 	char           input_name[128];
 	int            input_idx;
-	int            input_minimum;
-	int            input_maximum;
-	int            output_minimum;
-	int            output_maximum;
 	struct _ayyi_list* input_routing;
 	struct _ayyi_list* output_routing;
-	uint32_t       gui_colour;
-	int/*ChanFlags*/ flags;
-	char           muted;  //deprecated - use flags
-	char           armed;  //deprecated - use flags
 	int            nchans;
 	float          visible_peak_power[2];
 };
 
 struct _midi_track_shared {
 	int            shm_idx;
-	char           name[256];
+	char           name[AYYI_NAME_MAX];
 	uint64_t       id;
 	void*          object;
-	char           muted;
-	char           solod;
-	char           armed;
+	int            flags;
+	uint32_t       colour;
 };
 typedef struct _midi_track_shared midi_track_shared;
 
 struct _playlist_shared {
-	int            pod_idx;
-	char           name[256];
+	int            shm_idx;
+	char           name[AYYI_NAME_MAX];
 	uint64_t       id;
 	void*          object;
+	int            flags;
+	int            track;
 };
 
 struct _port_shared {
-	char           name[256];
+	char           name[AYYI_NAME_MAX];
 	void*          object;
 };
 

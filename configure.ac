@@ -1,5 +1,5 @@
 AC_PREREQ(2.59)
-AC_INIT([Samplecat],[0.1.1],[tim@orford.org])
+AC_INIT([Samplecat],[0.1.2],[tim@orford.org])
 AC_CONFIG_SRCDIR([src/main.c])
 AC_CONFIG_HEADER([config.h])
 AM_INIT_AUTOMAKE
@@ -12,8 +12,10 @@ AC_C_INLINE
 AC_HEADER_STDBOOL
 AC_TYPE_SIZE_T
 
-# Library building stuff
 AC_PROG_RANLIB
+
+AC_LIBTOOL_DLOPEN                                                                                                                                                             
+AC_PROG_LIBTOOL
 
 AC_SYS_LARGEFILE
 
@@ -232,6 +234,51 @@ AC_SUBST(DBUS_LDFLAGS)
 
 dnl -----------------------------------------------------------------------------
 
+AC_ARG_ENABLE(nks, AS_HELP_STRING([--enable-nks],[build with nks support]),enable_nks=$enableval,enable_nks=auto)
+if `test "$enable_nks" = "yes"`; then
+	AC_CHECK_LIB(nks, nks_open, [nks_found=yes])
+	if `test "$nks_found" = "yes"`; then
+		AC_DEFINE(USE_NKS, 1, Use nks library)
+		enable_nks="yes"
+		NKS_CFLAGS=""
+		NKS_LDFLAGS="-lnks"
+	else
+		enable_nks="no"
+	fi;
+else
+	enable_nks="no"
+fi;
+AM_CONDITIONAL(ENABLE_TRACKER, test "$nks_found" = "yes")
+AC_SUBST(NKS_CFLAGS)
+AC_SUBST(NKS_LDFLAGS)
+
+
+dnl -----------------------------------------------------------------------------
+
+AC_ARG_ENABLE(
+	[sf2],
+	[  --enable-sf2            build with sf2 support (default=no). Currently this option doesnt do anything useful.],
+	[
+		enable_sf2="$enableval"
+		if test "$enableval" == "yes" && `pkg-config fluidsynth`; then
+			SF2_CFLAGS=`pkg-config --cflags-only-I fluidsynth`
+			SF2_LDFLAGS=`pkg-config --libs fluidsynth`
+			AC_DEFINE(USE_SF2, 1, [enable support for SF2 plugins])
+		else 
+			SF2_CFLAGS=
+			enable_sf2="no"
+		fi;
+	],
+	[
+		enable_sf2="no"
+	]
+)
+AM_CONDITIONAL(ENABLE_SF2, test "$enable_sf2" != "no")
+AC_SUBST(SF2_LDFLAGS)
+AC_SUBST(SF2_CFLAGS)
+
+dnl -----------------------------------------------------------------------------
+
 AC_ARG_ENABLE(tracker, AS_HELP_STRING([--enable-tracker],[build with tracker support]),enable_tracker=$enableval,enable_tracker=auto)
 if `test "$enable_tracker" = "yes"`; then
 	dnl AC_CHECK_LIB(tracker-client-0.7, tracker_client_new, [tracker_found=yes])
@@ -335,6 +382,7 @@ CFLAGS="$CFLAGS -pipe  -fmessage-length=139 -fdiagnostics-show-location=every-li
 AC_CONFIG_FILES([Makefile])
 AC_CONFIG_FILES([src/Makefile])
 AC_CONFIG_FILES([src/file_manager/Makefile])
+AC_CONFIG_FILES([src/file_manager/filetypes/Makefile])
 AC_CONFIG_FILES([src/gimp/Makefile])
 AC_CONFIG_FILES([src/xdgmime/Makefile])
 dnl AC_CONFIG_FILES([src/vala/Makefile])
@@ -349,4 +397,6 @@ AC_MSG_RESULT([Building direct flac support:     $enable_flac])
 AC_MSG_RESULT([Building dnotify support:         $have_dnotify])
 AC_MSG_RESULT([Building ayyi support:            $enable_ayyi])
 AC_MSG_RESULT([Building opengl support:          $enable_opengl])
+AC_MSG_RESULT([Building soundfont support:       $enable_sf2])
+AC_MSG_RESULT([Building nks support:             $enable_nks])
 AC_MSG_RESULT([])

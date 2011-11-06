@@ -16,6 +16,7 @@ todo:
 	-add date to database so we can sort by date and show f-spot style bar chart for years.
 	-make samplecat an embeddable widget?
 	-player: look at sndfile-jackplay (in sndfile-tools)
+	-consider using libavformat from ffmpeg to get info for mp3/mp4 etc. see `ffprobe` for example-code.
 
 dependencies:
 	-glib/gtk2 - v2.6 is needed for g_key_file

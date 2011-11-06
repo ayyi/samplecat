@@ -1,10 +1,15 @@
 #ifndef __ayyi_client_h__
 #define __ayyi_client_h__
 
-#include "ayyi_log.h"
+#include "ayyi/ayyi_log.h"
+#include "ayyi/ayyi_types.h"
 
 #define ASSERT_SONG_SHM  if(!ayyi.got_shm){ errprintf2(__func__, "no song shm.\n"); return; }
 #define ASSERT_SONG_SHM_RET_FALSE  if(!ayyi.got_shm){ errprintf2(__func__, "no song shm.\n"); return FALSE; }
+#define UNEXPECTED_PROPERTY(T) gwarn("unexpected property: obj_type=%s prop=%s", ayyi_print_object_type(T), ayyi_print_prop_type(prop));
+#define UNEXPECTED_OBJECT_TYPE(T) gwarn("unexpected object type: %i %s", T, ayyi_print_object_type(T));
+
+#define AYYI_NULL_IDENT ((AyyiIdent){-1, -1})
 
 #if (defined __ayyi_client_c__ || defined __ayyi_action_c__ || defined __ayyi_shm_c__ || defined __am_message_c__ )
 struct _AyyiClientPrivate
@@ -38,6 +43,8 @@ struct _ayyi_client
 	int                     got_shm;    // TRUE when we must have _all_ required shm pointers.
 	gboolean                offline;    // TRUE if we are not connected and should not attempt to connect to remote service.
 
+	int                     signal_mask;// defines which signals we wish to receive.
+
 	int                     debug;      // debug level. 0=off.
 	struct _log             log;
 
@@ -53,11 +60,10 @@ struct _service
 	char*                   interface;
 
 	void                    (*on_shm)    (); // application level callback
-	void                    (*on_new)    (AyyiObjType, AyyiIdx);
-	void                    (*on_delete) (AyyiObjType, AyyiIdx);
-	void                    (*on_change) (AyyiObjType, AyyiIdx);
 
 	//instance values (service is singleton, so class and instance are the same):
+
+	void                    (*ping)      (void (*)(const char*));
 
 	GList*                  segs;
 	struct _shm_seg_mixer*  amixer;
@@ -66,10 +72,14 @@ struct _service
 	AyyiServicePrivate*     priv;
 };
 
+typedef enum {
+	AYYI_SERVICE_AYYID1 = 0,
+} AyyiServiceType;
+
 typedef struct plugin {
 	guint       api_version;
 	gchar*      name;
-	guint       type;          // plugin type (e.g. renderer, parser or feed list provider)
+	guint       type;          // plugin type (currently only PLUGIN_TYPE_1)
 
 	gchar*      service_name;
 	gchar*      app_path;
@@ -88,16 +98,19 @@ typedef struct _responder
 
 
 AyyiClient*  ayyi_client_init                 ();
+gboolean     ayyi_client_connect              (Service*, GError** error);
 void         ayyi_client_load_plugins         ();
 AyyiPluginPtr ayyi_client_get_plugin          (const char*);
+void         ayyi_client_set_signal_reg       (int);
 
 void         ayyi_object_set_bool             (AyyiObjType, AyyiIdx, int prop, gboolean val, AyyiAction*);
 gboolean     ayyi_object_is_deleted           (AyyiRegionBase*);
 
-void         ayyi_client_add_responder        (AyyiObjType, AyyiOpType, AyyiIdx, AyyiHandler, gpointer);
+void         ayyi_client_add_responder        (AyyiIdent, AyyiOpType, AyyiHandler, gpointer);
 void         ayyi_client_add_onetime_responder(AyyiIdent, AyyiOpType, AyyiHandler, gpointer);
 const GList* ayyi_client_get_responders       (AyyiObjType, AyyiOpType, AyyiIdx);
 gboolean     ayyi_client_remove_responder     (AyyiObjType, AyyiOpType, AyyiIdx, AyyiHandler);
+void         ayyi_client_print_responders     ();
 
 void         ayyi_discover_clients            ();
 
@@ -105,11 +118,14 @@ AyyiIdx      ayyi_ident_get_idx               (AyyiIdent);
 AyyiObjType  ayyi_ident_get_type              (AyyiIdent);
 
 void         ayyi_launch                      (AyyiLaunchInfo*, gchar** argv);
+void         ayyi_launch_by_name              (const char*, gchar** argv);
+
+gboolean     ayyi_verify_playlists            ();
 
 const char*  ayyi_print_object_type           (AyyiObjType);
 const char*  ayyi_print_optype                (AyyiOpType);
 const char*  ayyi_print_prop_type             (AyyiPropType);
-const char*  ayyi_print_media_type            (MediaType);
+const char*  ayyi_print_media_type            (AyyiMediaType);
 
 #ifdef __ayyi_client_c__
 struct _ayyi_client ayyi;

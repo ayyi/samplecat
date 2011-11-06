@@ -20,7 +20,7 @@ AM_CFLAGS = \
 
 bin_PROGRAMS = samplecat
 
-GQVIEW1_SRC = gqview_view_dir_tree.c gqview_view_dir_tree.h gqview2/gqview.h gqview2/typedefs.h gqview2/icons/icons_inline.h gqview2/ui_fileops.c gqview2/ui_fileops.h gqview2/ui_tree_edit.c gqview2/ui_tree_edit.h gqview2/layout_util.c gqview2/layout_util.h gqview2/filelist.c gqview2/filelist.h gqview2/pixbuf_util.c gqview2/pixbuf_util.h \
+GQVIEW1_SRC = gqview_view_dir_tree.c gqview_view_dir_tree.h gqview2/gqview.h gqview2/typedefs.h gqview2/ui_fileops.c gqview2/ui_fileops.h gqview2/ui_tree_edit.c gqview2/ui_tree_edit.h gqview2/layout_util.c gqview2/layout_util.h gqview2/filelist.c gqview2/filelist.h gqview2/pixbuf_util.c gqview2/pixbuf_util.h \
 	gqview2/ui_menu.c gqview2/ui_menu.h \
 	gqview2/utilops.c gqview2/utilops.h
 GQVIEW2_SRC = 
@@ -56,7 +56,7 @@ OPENGL_SRC = gl_spectrogram_view.c gl_spectrogram_view.h
 endif
 
 if ENABLE_DBUS
-DBUS_SRC = auditioner.c audtioner.h
+DBUS_SRC = auditioner.c auditioner.h
 endif
 
 samplecat_SOURCES = \

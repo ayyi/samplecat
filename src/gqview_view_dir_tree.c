@@ -70,6 +70,7 @@ struct _NodeData
 static gint vdtree_populate_path_by_iter(ViewDirTree *vdt, GtkTreeIter *iter, gint force, const gchar *target_path);
 static FileData *vdtree_populate_path(ViewDirTree *vdt, const gchar *path, gint expand, gint force);
 
+static GList* menu_items = NULL;
 
 /*
  *----------------------------------------------------------------------------
@@ -331,13 +332,13 @@ static GtkWidget *vdtree_drop_menu(ViewDirTree *vdt, gint active)
 	return menu;
 }
 
-#ifdef LATER
 /*
  *-----------------------------------------------------------------------------
  * pop-up menu
  *-----------------------------------------------------------------------------
  */
 
+#ifdef LATER
 static void
 vdtree_pop_menu_up_cb(GtkWidget *widget, gpointer data)
 {
@@ -354,7 +355,9 @@ vdtree_pop_menu_up_cb(GtkWidget *widget, gpointer data)
 
 	g_free(path);
 }
+#endif
 
+#ifdef LATER
 static void vdtree_pop_menu_slide_cb(GtkWidget *widget, gpointer data)
 {
 	ViewDirTree *vdt = data;
@@ -463,14 +466,18 @@ static void vdtree_pop_menu_new_cb(GtkWidget *widget, gpointer data)
 
 	g_free(new_path);
 }
+#endif
 
 static void vdtree_pop_menu_rename_cb(GtkWidget *widget, gpointer data)
 {
+#ifdef LATER
 	ViewDirTree *vdt = data;
 
 	vdtree_rename_by_data(vdt, vdt->click_fd);
+#endif
 }
 
+#ifdef LATER
 static void vdtree_pop_menu_tree_cb(GtkWidget *widget, gpointer data)
 {
 	ViewDirTree *vdt = data;
@@ -485,55 +492,58 @@ vdtree_pop_menu_refresh_cb(GtkWidget *widget, gpointer data)
 
 	if (vdt->layout) layout_refresh(vdt->layout);
 }
+#endif
 
 static GtkWidget*
 vdtree_pop_menu(ViewDirTree *vdt, FileData *fd)
 {
-	GtkWidget *menu;
 	gint active;
 
 	active = (fd != NULL);
 
-	menu = popup_menu_short_lived();
+	GtkWidget* menu = popup_menu_short_lived();
 	g_signal_connect(G_OBJECT(menu), "destroy",
 			 G_CALLBACK(vdtree_popup_destroy_cb), vdt);
 
-	menu_item_add_stock_sensitive(menu, _("_Up to parent"), GTK_STOCK_GO_UP,
+/*
+	menu_item_add_stock_sensitive(menu, "_Up to parent", GTK_STOCK_GO_UP,
 		       		      (vdt->path && strcmp(vdt->path, "/") != 0),
 				      G_CALLBACK(vdtree_pop_menu_up_cb), vdt);
 
+	menu_item_add_divider(menu);
+	menu_item_add_sensitive(menu, _("_Slideshow"), active, G_CALLBACK(vdtree_pop_menu_slide_cb), vdt);
+	menu_item_add_sensitive(menu, _("Slideshow recursive"), active, G_CALLBACK(vdtree_pop_menu_slide_rec_cb), vdt);
+
+	menu_item_add_divider(menu);
+	menu_item_add_stock_sensitive(menu, _("Find _duplicates..."), GTK_STOCK_FIND, active, G_CALLBACK(vdtree_pop_menu_dupe_cb), vdt);
+	menu_item_add_stock_sensitive(menu, _("Find duplicates recursive..."), GTK_STOCK_FIND, active, G_CALLBACK(vdtree_pop_menu_dupe_rec_cb), vdt);
+
+	menu_item_add_divider(menu);
+
+	active = (fd && access_file(fd->path, W_OK | X_OK));
+	menu_item_add_sensitive(menu, _("_New folder..."), active, G_CALLBACK(vdtree_pop_menu_new_cb), vdt);
+*/
+
+/*
+	menu_item_add_sensitive(menu, "_Rename...", active, G_CALLBACK(vdtree_pop_menu_rename_cb), vdt);
+*/
+
 /*
 	menu_item_add_divider(menu);
-	menu_item_add_sensitive(menu, _("_Slideshow"), active,
-				G_CALLBACK(vdtree_pop_menu_slide_cb), vdt);
-	menu_item_add_sensitive(menu, _("Slideshow recursive"), active,
-				G_CALLBACK(vdtree_pop_menu_slide_rec_cb), vdt);
-
-	menu_item_add_divider(menu);
-	menu_item_add_stock_sensitive(menu, _("Find _duplicates..."), GTK_STOCK_FIND, active,
-				      G_CALLBACK(vdtree_pop_menu_dupe_cb), vdt);
-	menu_item_add_stock_sensitive(menu, _("Find duplicates recursive..."), GTK_STOCK_FIND, active,
-				      G_CALLBACK(vdtree_pop_menu_dupe_rec_cb), vdt);
-
-	menu_item_add_divider(menu);
-
-	active = (fd &&
-		  access_file(fd->path, W_OK | X_OK));
-	menu_item_add_sensitive(menu, _("_New folder..."), active,
-				G_CALLBACK(vdtree_pop_menu_new_cb), vdt);
-
-	menu_item_add_sensitive(menu, _("_Rename..."), active,
-				G_CALLBACK(vdtree_pop_menu_rename_cb), vdt);
-
-	menu_item_add_divider(menu);
-	menu_item_add_check(menu, _("View as _tree"), TRUE,
-			    G_CALLBACK(vdtree_pop_menu_tree_cb), vdt);
-	menu_item_add_stock(menu, _("Re_fresh"), GTK_STOCK_REFRESH,
-			    G_CALLBACK(vdtree_pop_menu_refresh_cb), vdt);
+	menu_item_add_check(menu, _("View as _tree"), TRUE, G_CALLBACK(vdtree_pop_menu_tree_cb), vdt);
+	menu_item_add_stock(menu, _("Re_fresh"), GTK_STOCK_REFRESH, G_CALLBACK(vdtree_pop_menu_refresh_cb), vdt);
 */
+	GList* l = menu_items;
+	for(;l;l=l->next){
+		GtkAction* action = l->data;
+
+		GtkWidget* menu_item = gtk_action_create_menu_item(action);
+		gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_item);
+		gtk_widget_show(menu_item);
+	}
+
 	return menu;
 }
-#endif
 
 /*
  *----------------------------------------------------------------------------
@@ -1341,7 +1351,6 @@ static gboolean vdtree_select_cb(GtkTreeSelection *selection, GtkTreeModel *stor
 static void
 vdtree_select_row(ViewDirTree *vdt, FileData *fd)
 {
-	dbg(2, "FileData=%p", fd);
 	GtkTreeIter iter;
                                                                                                                                
 	if (!vdtree_find_row(vdt, fd, &iter, NULL)) return;
@@ -1420,7 +1429,6 @@ const gchar *vdtree_row_get_path(ViewDirTree *vdt, gint row)
  *----------------------------------------------------------------------------
  */
 
-#ifdef LATER
 static void vdtree_menu_position_cb(GtkMenu *menu, gint *x, gint *y, gboolean *push_in, gpointer data)
 {
 	ViewDirTree *vdt = data;
@@ -1438,7 +1446,6 @@ static void vdtree_menu_position_cb(GtkMenu *menu, gint *x, gint *y, gboolean *p
 
 	popup_menu_position_clamp(menu, x, y, 0);
 }
-#endif
 
 static gint vdtree_press_key_cb(GtkWidget *widget, GdkEventKey *event, gpointer data)
 {
@@ -1468,10 +1475,8 @@ static gint vdtree_press_key_cb(GtkWidget *widget, GdkEventKey *event, gpointer 
 			vdt->click_fd = fd;
 			vdtree_color_set(vdt, vdt->click_fd, TRUE);
 
-#ifdef LATER
 			vdt->popup = vdtree_pop_menu(vdt, vdt->click_fd);
 			gtk_menu_popup(GTK_MENU(vdt->popup), NULL, NULL, vdtree_menu_position_cb, vdt, 0, GDK_CURRENT_TIME);
-#endif
 
 			return TRUE;
 			break;
@@ -1490,8 +1495,7 @@ static gint vdtree_press_key_cb(GtkWidget *widget, GdkEventKey *event, gpointer 
 }
 
 static gint
-vdtree_clicked_on_expander(GtkTreeView *treeview, GtkTreePath *tpath,
-				       GtkTreeViewColumn *column, gint x, gint y, gint *left_of_expander)
+vdtree_clicked_on_expander(GtkTreeView *treeview, GtkTreePath *tpath, GtkTreeViewColumn *column, gint x, gint y, gint *left_of_expander)
 {
 	gint depth;
 	gint size;
@@ -1561,11 +1565,8 @@ vdtree_press_cb(GtkWidget *widget, GdkEventButton *bevent, gpointer data)
 
 	if (bevent->button == 3)
 		{
-#ifdef LATER
 		vdt->popup = vdtree_pop_menu(vdt, vdt->click_fd);
-		gtk_menu_popup(GTK_MENU(vdt->popup), NULL, NULL, NULL, NULL,
-			       bevent->button, bevent->time);
-#endif
+		gtk_menu_popup(GTK_MENU(vdt->popup), NULL, NULL, NULL, NULL, bevent->button, bevent->time);
 		}
 
 	return (bevent->button != 1);
@@ -1870,6 +1871,29 @@ icon_foreach(GtkTreeModel *model, GtkTreePath  *path, GtkTreeIter *iter, gpointe
 }
 
 
+const char*
+vdtree_get_selected(ViewDirTree* vdt)
+{
+	GtkTreeSelection* selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(vdt->treeview));
+	if(selection){
+		GList* rows = gtk_tree_selection_get_selected_rows(selection, NULL);
+		if(rows){
+			GtkTreePath* path = rows->data;
+			GtkTreeModel* store = gtk_tree_view_get_model(GTK_TREE_VIEW(vdt->treeview));
+			GtkTreeIter iter;
+			gtk_tree_model_get_iter(store, &iter, path);
+			NodeData* nd = NULL;
+			gtk_tree_model_get(store, &iter, DIR_COLUMN_POINTER, &nd, -1);
+			if(nd){
+				FileData* fd = nd->fd;
+				return fd ? fd->path : NULL;
+			}
+		}
+	}
+	return NULL;
+}
+
+
 void
 vdtree_on_icon_theme_changed(ViewDirTree *vdt)
 {
@@ -1900,15 +1924,12 @@ vdtree_on_icon_theme_changed(ViewDirTree *vdt)
 }
 
 
-//typedef struct _Filer Filer;
-extern Filer filer; //tmp - use a callback for fn below, or something
-void filer_change_to(Filer *filer_window, const char *path, const char *from);
-
 void
-dir_on_select(ViewDirTree *vdt, const gchar *path, gpointer data)
+vdtree_add_menu_item(GtkAction* action)
 {
-	PF;
-	filer_change_to(&filer, path, NULL);
+	g_return_if_fail(action);
+
+	menu_items = g_list_append(menu_items, action);
 }
 
 

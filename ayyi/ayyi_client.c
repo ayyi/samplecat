@@ -1,6 +1,6 @@
 /*
   This file is part of the Ayyi Project. http://ayyi.org
-  copyright (C) 2004-2010 Tim Orford <tim@orford.org>
+  copyright (C) 2004-2011 Tim Orford <tim@orford.org>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License version 3
@@ -16,6 +16,8 @@
   Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 */
 #define __ayyi_client_c__
+#include "config.h"
+#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
@@ -27,21 +29,27 @@ typedef void action;
 #include <ayyi/ayyi_typedefs.h>
 #include <ayyi/ayyi_types.h>
 #include <ayyi/interface.h> //good to remove?
-#include <ayyi/ayyi_shm.h>
 #include <ayyi/ayyi_utils.h>
+#include <ayyi/ayyi_shm.h>
 #include <ayyi/ayyi_msg.h>
 #include <ayyi/ayyi_dbus.h>
-#include <ayyi/ayyi_log.h>
+#include <ayyi/engine_proxy.h>
+//#include <ayyi/ayyi_log.h>
+#include <ayyi/ayyi_dbus.h>
 
 #include <ayyi/ayyi_client.h>
 
 extern struct _ayyi_client ayyi;
 #define plugin_path "/usr/lib/ayyi/:/usr/local/lib/ayyi/"
 
+//FIXME doesnt belong here
+extern AyyiItem*       ayyi_song_container_next_item        (AyyiContainer*, void* prev);
+
 typedef	AyyiPluginPtr (*infoFunc)();
 
-static AyyiPluginPtr plugin_load(const gchar* filename);
-static void          ayyi_client_get_launch_info();
+static void          ayyi_client_ping                 (void (*pong)(const char* s));
+static AyyiPluginPtr ayyi_plugin_load                 (const gchar* filename);
+static void          ayyi_client_discover_launch_info ();
 
 enum {
     PLUGIN_TYPE_1 = 1,
@@ -68,10 +76,25 @@ ayyi_client_init()
 
  	ayyi.service = &known_services[AYYI_SERVICE_AYYID1];
 	ayyi.service->priv = g_new0(AyyiServicePrivate, 1);
+	ayyi.service->ping = ayyi_client_ping;
 
-	ayyi_client_get_launch_info();
+	ayyi_client_discover_launch_info();
 
 	return &ayyi;
+}
+
+
+gboolean
+ayyi_client_connect(Service* server, GError** error)
+{
+	return ayyi_client__dbus_connect(server, error);
+}
+
+
+static void
+ayyi_client_ping(void (*pong)(const char* s))
+{
+	ayyi_dbus_ping(ayyi.service, pong);
 }
 
 
@@ -94,24 +117,25 @@ ayyi_client_load_plugins()
 		dbg(2, "scanning for plugins (%s) ...", path);
 		GDir* dir = g_dir_open(path, 0, &error);
 		if (!error) {
-			gchar* filename = (gchar*)g_dir_read_name(dir);
+			const gchar* filename = g_dir_read_name(dir);
 			while (filename) {
-				dbg(0, "testing %s...", filename);
+				dbg(1, "testing %s...", filename);
+				gchar* filepath = g_build_filename(path, filename, NULL);
 				// filter files with correct library suffix
 				if(!strncmp(G_MODULE_SUFFIX, filename + strlen(filename) - strlen(G_MODULE_SUFFIX), strlen(G_MODULE_SUFFIX))) {
 					// If we find one, try to load plugin info and if this was successful try to invoke the specific plugin
 					// type loader. If the second loading went well add the plugin to the plugin list.
-					if (!(plugin = plugin_load(filename))) {
-						dbg(0, "-> %s not valid plugin! (plugin_load() failed.)", filename);
+					if (!(plugin = ayyi_plugin_load(filepath))) {
+						dbg(1, "'%s' failed to load.", filename);
 					} else {
-						//dbg(0, "-> %s (%s, type=%d)", plugin->name, filename, plugin->type);
 						found++;
 						ayyi.priv->plugins = g_slist_append(ayyi.priv->plugins, plugin);
 					}
 				} else {
 					dbg(2, "-> no library suffix");
 				}
-				filename = (gchar*)g_dir_read_name(dir);
+				g_free(filepath);
+				filename = g_dir_read_name(dir);
 			}
 			g_dir_close(dir);
 		} else {
@@ -145,23 +169,19 @@ ayyi_client_get_plugin(const char* name)
 
 
 static AyyiPluginPtr
-plugin_load(const gchar* filename)
+ayyi_plugin_load(const gchar* filepath)
 {
 	AyyiPluginPtr plugin = NULL;
 	gboolean success = FALSE;
 
-	gchar* path = g_strdup_printf(plugin_path G_DIR_SEPARATOR_S "%s", filename);
-
 #if GLIB_CHECK_VERSION(2,3,3)
-	GModule* handle = g_module_open(path, G_MODULE_BIND_LOCAL);
+	GModule* handle = g_module_open(filepath, G_MODULE_BIND_LOCAL);
 #else
-	GModule* handle = g_module_open(path, 0);
+	GModule* handle = g_module_open(filepath, 0);
 #endif
 
-	g_free(path);
-
 	if(!handle) {
-		gwarn("Cannot open %s%s (%s)!", plugin_path G_DIR_SEPARATOR_S, filename, g_module_error());
+		gwarn("cannot open %s (%s)!", filepath, g_module_error());
 		return NULL;
 	}
 
@@ -171,21 +191,19 @@ plugin_load(const gchar* filename)
 		if(NULL != (plugin = (*plugin_get_info)())) {
 			// check plugin version
 			if(PLUGIN_API_VERSION != plugin->api_version){
-				dbg(0, "API version mismatch: \"%s\" (%s, type=%d) has version %d should be %d", plugin->name, filename, plugin->type, plugin->api_version, PLUGIN_API_VERSION);
+				dbg(0, "API version mismatch: \"%s\" (%s, type=%d) has version %d should be %d", plugin->name, filepath, plugin->type, plugin->api_version, PLUGIN_API_VERSION);
 			}
 
 			// try to load specific plugin type symbols
 			switch(plugin->type) {
-				//case PLUGIN_TYPE_1:
-				//	success = htmlview_plugin_register (plugin, handle);
-				//	break;
 				default:
 					if(plugin->type >= PLUGIN_TYPE_MAX) {
-						dbg(0, "Unknown or unsupported plugin type: %s (%s, type=%d)", plugin->name, filename, plugin->type);
+						dbg(0, "Unknown or unsupported plugin type: %s (%s, type=%d)", plugin->name, filepath, plugin->type);
 					} else {
 						dbg(0, "name='%s' %s", plugin->name, plugin->service_name);
 
 						Service pservice = {plugin->service_name, plugin->app_path, plugin->interface, NULL};
+						pservice.priv = g_new0(AyyiServicePrivate, 1);
 						GError* error = NULL;
 						if((ayyi_client__dbus_connect(&pservice, &error))){
 							dbg(0, "plugin dbus connection ok.");
@@ -203,7 +221,7 @@ plugin_load(const gchar* filename)
 							if(dbus_g_proxy_call(pservice.priv->proxy, "GetShmSingle", &error, G_TYPE_STRING, "", G_TYPE_INVALID, G_TYPE_UINT, &seg->id, G_TYPE_INVALID)){
 								ayyi_shm_import();
 								plugin->client_data = seg->address; //TODO does it need to be translated? no, dont think so.
-								dbg(2, "client_data=%p offset=%i", plugin->client_data, (unsigned)plugin->client_data - (unsigned)plugin->client_data);
+								dbg(2, "client_data=%p offset=%i", plugin->client_data, (uintptr_t)plugin->client_data - (uintptr_t)plugin->client_data);
 							} else {
 								if(error){
 									dbg (0, "GetShm: %s\n", error->message);
@@ -213,21 +231,23 @@ plugin_load(const gchar* filename)
 							}
 						}
 						else{
-                    switch(error->code){
-                      case 98742:
-                        log_print(0, "plugin service not available: %s", plugin->service_name);
-                        break;
-                      default:
-                        warn_gerror("plugin dbus connection failed", &error);
-                        break;
-                    }
+                    if(error){
+                      switch(error->code){
+                        case 98742:
+                          log_print(0, "plugin service not available: %s", plugin->service_name);
+                          break;
+                        default:
+                          warn_gerror("plugin dbus connection failed", &error);
+                          break;
+                      }
+                    } else log_print(0, "plugin connect failed, but no error set: %s", plugin->service_name);
                   }
 					}
 					break;
 			}
 		}
 	} else {
-		gwarn("File '%s' is not a valid Ayyi plugin!", filename);
+		gwarn("File '%s' is not a valid Ayyi plugin!", filepath);
 	}
 	
 	if(!success) {
@@ -240,7 +260,7 @@ plugin_load(const gchar* filename)
 
 
 static void
-ayyi_client_get_launch_info()
+ayyi_client_discover_launch_info()
 {
 	#define ayyi_application_path "/usr/bin/ayyi/clients/:/usr/local/bin/ayyi/clients/"
 	gchar** paths = g_strsplit(ayyi_application_path, ":", 0);
@@ -296,11 +316,19 @@ ayyi_client_get_launch_info()
 
 
 void
+ayyi_client_set_signal_reg(int signals)
+{
+#ifdef USE_DBUS
+	ayyi_dbus__register_signals(signals);
+#endif
+}
+
+
+void
 ayyi_object_set_bool(AyyiObjType object_type, AyyiIdx obj_idx, int prop, gboolean val, AyyiAction* action)
 {
 #ifdef USE_DBUS
 	dbus_set_prop_bool(action, object_type, prop, obj_idx, val);
-	return 0;
 #endif
 }
 
@@ -317,9 +345,9 @@ ayyi_object_is_deleted(AyyiRegionBase* object)
 
 
 void
-ayyi_client_add_responder(AyyiObjType object_type, AyyiOpType op_type, AyyiIdx object_index, AyyiHandler callback, gpointer user_data)
+ayyi_client_add_responder(AyyiIdent object, AyyiOpType op_type, AyyiHandler callback, gpointer user_data)
 {
-	char* key = MAKE_RESPONDER_KEY(object_type, op_type, object_index);
+	char* key = MAKE_RESPONDER_KEY(object.type, op_type, object.idx);
 	dbg(2, "key=%s", key);
 	Responder* responder = g_new0(Responder, 1);
 	responder->callback = callback;
@@ -330,15 +358,15 @@ ayyi_client_add_responder(AyyiObjType object_type, AyyiOpType op_type, AyyiIdx o
 
 #if 0
 	{
-		GList* handlers = (GList*)ayyi_client_get_responders(object_type, op_type, object_index);
-		dbg(0, "%s n_handlers=%i", ayyi_print_object_type(object_type), g_list_length(handlers));
+		GList* handlers = (GList*)ayyi_client_get_responders(object.type, op_type, object.idx);
+		dbg(0, "%s n_handlers=%i", ayyi_print_object_type(object.type), g_list_length(handlers));
 	}
 #endif
 }
 
 
 void
-ayyi_client_add_onetime_responder(AyyiIdent id, AyyiOpType op_type, AyyiHandler handler, gpointer user_data)
+ayyi_client_add_onetime_responder(AyyiIdent id, AyyiOpType op_type, AyyiHandler user_handler, gpointer user_data)
 {
 	//deletes the handler after first response.
 	//TODO does it need a timeout?
@@ -346,18 +374,18 @@ ayyi_client_add_onetime_responder(AyyiIdent id, AyyiOpType op_type, AyyiHandler 
 	struct _data
 	{
 		AyyiHandler handler;
-		void*       user_data;
-		AyyiOpType  op_type;
+		AyyiHandler user_handler;
+		void*        user_data;
+		AyyiOpType   op_type;
 	};
 
-	void onetime_responder_callback(AyyiObjType o, AyyiIdx i, gpointer _data)
+	void onetime_responder_callback(AyyiIdent obj, GError** error, gpointer _data)
 	{
 		struct _data* data = (struct _data*)_data;
 
-		AyyiHandler handler = data->handler;
-		if(handler) handler(o, i, data->user_data);
+		call(data->user_handler, obj, error, data->user_data);
 
-		if(!ayyi_client_remove_responder(o, data->op_type, i, handler)){
+		if(!ayyi_client_remove_responder(obj.type, data->op_type, obj.idx, data->handler)){
 			gwarn("responder not removed.");
 		}
 
@@ -366,16 +394,19 @@ ayyi_client_add_onetime_responder(AyyiIdent id, AyyiOpType op_type, AyyiHandler 
 
 	struct _data* data = g_new0(struct _data, 1);
 	data->handler = onetime_responder_callback;
+	data->user_handler = user_handler;
 	data->user_data = user_data;
 	data->op_type = op_type;
 
-	ayyi_client_add_responder(id.type, op_type, id.idx, handler, data);
+	ayyi_client_add_responder(id, op_type, onetime_responder_callback, data);
 }
 
 
 const GList*
 ayyi_client_get_responders(AyyiObjType object_type, AyyiOpType op_type, AyyiIdx object_index)
 {
+	//the returned list shoulds NOT be freed.
+
 #if 0
 	{
 		GHashTableIter iter;
@@ -400,7 +431,10 @@ ayyi_client_remove_responder(AyyiObjType object_type, AyyiOpType op_type, AyyiId
 
 	char* key = MAKE_RESPONDER_KEY(object_type, op_type, object_idx);
 	GList* responders = g_hash_table_lookup(ayyi.priv->responders, key);
-	if(!responders) return FALSE;
+	if(!responders){
+		gwarn("not found: %i %i %i", object_type, op_type, object_idx);
+		return FALSE;
+	}
 
 	gboolean found = FALSE;
 	int length = g_list_length(responders);
@@ -411,19 +445,51 @@ ayyi_client_remove_responder(AyyiObjType object_type, AyyiOpType op_type, AyyiId
 		if(responder->callback == callback){
 			g_free(responder);
 			responders = g_list_remove(responders, responder);
+			g_hash_table_replace(ayyi.priv->responders, key, responders);
 			found = TRUE;
 			break;
 		}
 	}
-	dbg(0, "key=%s found=%i n_handlers=%i", key, found, g_list_length(responders));
+	dbg(2, "key=%s found=%i n_handlers=%i", key, found, g_list_length(responders));
 	if(g_list_length(responders) != length - 1) gwarn("handler not removed?");
 
 	if(!g_list_length(responders)){
-		dbg(0, "no more handlers - removing responder... %s", ayyi_print_object_type(object_type), ayyi_print_optype(op_type));
+		dbg(2, "no more handlers - removing responder... %s", ayyi_print_object_type(object_type), ayyi_print_optype(op_type));
 		g_list_free(responders); //not needed?
 		g_hash_table_remove(ayyi.priv->responders, key);
 	}
 	return TRUE;
+}
+
+
+void
+ayyi_client_print_responders()
+{
+	char* find_first(char* key, char** pos)
+	{
+		char* s = key + 1;
+		char* e = strstr(s, "-");
+		*pos = e + 1;
+		char* a = g_strndup(key, e - key);
+		return a;
+	}
+
+	GHashTableIter iter;
+	gpointer _key, value;
+	g_hash_table_iter_init (&iter, ayyi.priv->responders);
+	while (g_hash_table_iter_next (&iter, &_key, &value)){
+		char* key = _key;
+		char* pos;
+		char* a = find_first(key, &pos);
+		int object_type = atoi(a);
+		dbg(0, "  %s %s", (char*)key, object_type > -1 ? ayyi_print_object_type(object_type) : "ALL");
+
+		char* b = find_first(pos, &pos);
+		//AyyiOp op_type = atoi(b);
+
+		g_free(a);
+		g_free(b);
+	}
 }
 
 
@@ -456,28 +522,104 @@ ayyi_launch(AyyiLaunchInfo* info, gchar** argv)
 	g_return_if_fail(info);
 	dbg(0, "launching application: %s", info->name);
 
-	if(!argv){
-		gchar args[2][256] = {"", ""};
-		argv = (char**)args;
-		argv[0] = info->exec;
-		argv[1] = NULL;
+	int len = argv ? g_strv_length(argv) : 0;
+	gchar** v = g_new0(gchar*, len + 2);
+	v[0] = info->exec;
+
+	if(argv){
+		int i; for(i=0;i<len;i++){
+			v[i+1] = argv[i];
+		}
+		dbg(0, "'%s'", g_strjoinv(" ", v));
+	}else{
+		//gchar args[2][256] = {"", ""};
+		//argv = (char**)args;
+		//argv[0] = info->exec;
+		//v[1] = NULL;
 	}
 
-    GError* error = NULL;
-    if(!g_spawn_async(NULL, argv, NULL, G_SPAWN_SEARCH_PATH, NULL, NULL, NULL, &error)){
-      log_print(LOG_FAIL, "launch %s", info->name);
-      GERR_WARN;
-    }
-	else log_print(0, "launched: %s", argv[0]);
+	GError* error = NULL;
+	if(!g_spawn_async(NULL, v, NULL, G_SPAWN_SEARCH_PATH, NULL, NULL, NULL, &error)){
+		log_print(LOG_FAIL, "launch %s", info->name);
+		GERR_WARN;
+	}
+	else log_print(0, "launched: %s", v[0]);
+
+	g_free(v);
+}
+
+
+void
+ayyi_launch_by_name(const char* name, gchar** argv)
+{
+	GList* l = ayyi.launch_info;
+	for(;l;l=l->next){
+		AyyiLaunchInfo* info = l->data;
+		if(!strcmp(info->name, name)){
+			ayyi_launch(info, argv);
+			return;
+		}
+	}
+	gwarn("not found");
+}
+
+
+gboolean
+ayyi_verify_playlists()
+{
+	//TODO shm specific stuff not supposed to be here
+	#define ayyi_song__playlist_next(A) (AyyiPlaylist*)ayyi_song_container_next_item(&ayyi.service->song->playlists, A)
+	#define ayyi_song__audio_track_next(A) (AyyiTrack*)ayyi_song_container_next_item(&ayyi.service->song->audio_tracks, A)
+	#define ayyi_song__midi_track_next(A) (AyyiMidiTrack*)ayyi_song_container_next_item(&ayyi.service->song->midi_tracks, A)
+	extern AyyiTrack* ayyi_song__get_track_by_playlist (AyyiPlaylist*);
+
+	AyyiPlaylist* playlist = NULL;
+	while((playlist = ayyi_song__playlist_next(playlist))){
+		AyyiTrack* track = ayyi_song__get_track_by_playlist(playlist);
+		if(!track){
+			return false;
+			dbg(0, "failed for playlist: %s", playlist->name);
+		}
+	}
+	return true;
 }
 
 
 const char*
 ayyi_print_object_type (AyyiObjType object_type)
 {
-	static char* types[] = {"AYYI_OBJECT_EMPTY", "AYYI_OBJECT_TRACK", "AYYI_OBJECT_AUDIO_TRACK", "AYYI_OBJECT_MIDI_TRACK", "AYYI_OBJECT_CHAN", "AYYI_OBJECT_AUX", "AYYI_OBJECT_PART", "AYYI_OBJECT_AUDIO_PART", "AYYI_OBJECT_MIDI_PART", "AYYI_OBJECT_EVENT", "AYYI_OBJECT_RAW", "AYYI_OBJECT_STRING", "AYYI_OBJECT_ROUTE", "AYYI_OBJECT_FILE", "AYYI_OBJECT_LIST", "AYYI_OBJECT_MIDI_NOTE", "AYYI_OBJECT_SONG", "AYYI_OBJECT_TRANSPORT", "AYYI_OBJECT_AUTO", "AYYI_OBJECT_UNSUPPORTED", "AYYI_OBJECT_ALL"};
-	if(G_N_ELEMENTS(types) != AYYI_OBJECT_ALL + 1) gerr("!!");
-	return types[object_type];
+
+	static char unk[32];
+  
+	switch (object_type){
+#define CASE(x) case AYYI_OBJECT_##x: return "AYYI_OBJECT_"#x
+		CASE (EMPTY);
+		CASE (TRACK);
+		CASE (AUDIO_TRACK);
+		CASE (MIDI_TRACK);
+		CASE (CHAN);
+		CASE (AUX);
+		CASE (PART);
+		CASE (AUDIO_PART);
+		CASE (MIDI_PART);
+		CASE (EVENT);
+		CASE (RAW);
+		CASE (STRING);
+		CASE (ROUTE);
+		CASE (FILE);
+		CASE (LIST);
+		CASE (MIDI_NOTE);
+		CASE (SONG);
+		CASE (TRANSPORT);
+		CASE (AUTO);
+		CASE (UNSUPPORTED);
+		CASE (ALL);
+#undef CASE
+		default:
+			snprintf (unk, 31, "UNKNOWN OBJECT TYPE (%d)", object_type);
+			return unk;
+	}
+	return NULL;
 }
 
 
@@ -492,21 +634,61 @@ ayyi_print_optype (AyyiOp op)
 const char*
 ayyi_print_prop_type (uint32_t prop_type)
 {
-	static char* types[] = {"AYYI_NO_PROP", "AYYI_NAME", "AYYI_STIME", "AYYI_LENGTH", "AYYI_HEIGHT", "AYYI_COLOUR", "AYYI_END", "AYYI_TRACK", "AYYI_MUTE", "AYYI_ARM", "AYYI_SOLO", 
-	                        "AYYI_SDEF", "AYYI_INSET", "AYYI_FADEIN", "AYYI_FADEOUT", "AYYI_INPUT", "AYYI_OUTPUT",
-	                        "AYYI_AUX1_OUTPUT", "AYYI_AUX2_OUTPUT", "AYYI_AUX3_OUTPUT", "AYYI_AUX4_OUTPUT",
-	                        "AYYI_PREPOST", "AYYI_SPLIT",
-	                        "AYYI_PB_LEVEL", "AYYI_PB_PAN", "AYYI_PB_DELAY_MU", "AYYI_PLUGIN_SEL", "AYYI_PLUGIN_BYPASS",
-	                        "AYYI_CHAN_LEVEL", "AYYI_CHAN_PAN",
-	                        "AYYI_TRANSPORT_PLAY", "AYYI_TRANSPORT_STOP", "AYYI_TRANSPORT_REW", "AYYI_TRANSPORT_FF",
-	                        "AYYI_TRANSPORT_REC", "AYYI_TRANSPORT_LOCATE", "AYYI_TRANSPORT_CYCLE", "AYYI_TRANSPORT_LOCATOR",
-	                        "AYYI_AUTO_PT",
-	                        "AYYI_ADD_POINT", "AYYI_DEL_POINT",
-	                        "AYYI_TEMPO", "AYYI_HISTORY",
-	                        "AYYI_LOAD_SONG", "AYYI_SAVE", "AYYI_NEW_SONG"
-	                       };
-	if(G_N_ELEMENTS(types) != AYYI_NEW_SONG + 1) gerr("size mismatch!!");
-	return types[prop_type];
+	static char unk[32];
+
+	switch (prop_type){
+#define CASE(x) case AYYI_##x: return "AYYI_"#x
+		CASE (NO_PROP);
+		CASE (NAME);
+		CASE (STIME);
+		CASE (LENGTH);
+		CASE (HEIGHT);
+		CASE (COLOUR);
+		CASE (END);
+		CASE (TRACK);
+		CASE (MUTE);
+		CASE (ARM);
+		CASE (SOLO);
+		CASE (SDEF);
+		CASE (INSET);
+		CASE (FADEIN);
+		CASE (FADEOUT);
+		CASE (INPUT);
+		CASE (OUTPUT);
+		CASE (AUX1_OUTPUT);
+		CASE (AUX2_OUTPUT);
+		CASE (AUX3_OUTPUT);
+		CASE (AUX4_OUTPUT);
+		CASE (PREPOST);
+		CASE (SPLIT);
+		CASE (PB_LEVEL);
+		CASE (PB_PAN);
+		CASE (PB_DELAY_MU);
+		CASE (PLUGIN_SEL);
+		CASE (PLUGIN_BYPASS);
+		CASE (CHAN_LEVEL);
+		CASE (CHAN_PAN);
+		CASE (TRANSPORT_PLAY);
+		CASE (TRANSPORT_STOP);
+		CASE (TRANSPORT_REW);
+		CASE (TRANSPORT_FF);
+		CASE (TRANSPORT_REC);
+		CASE (TRANSPORT_LOCATE);
+		CASE (TRANSPORT_CYCLE);
+		CASE (TRANSPORT_LOCATOR);
+		CASE (AUTO_PT);
+		CASE (ADD_POINT);
+		CASE (DEL_POINT);
+		CASE (TEMPO);
+		CASE (HISTORY);
+		CASE (LOAD_SONG);
+		CASE (SAVE);
+		CASE (NEW_SONG);
+#undef CASE
+		default:
+			snprintf (unk, 31, "UNKNOWN PROPERTY (%d)", prop_type);
+	}
+	return unk;
 }
 
 

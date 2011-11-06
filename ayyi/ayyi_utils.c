@@ -161,7 +161,7 @@ get_dirlist(const char* path)
 		}
 		g_dir_close(dir);
 	}else{
-		gwarn ("cannot open directory. %s", error->message);
+		if(ayyi.debug > 1) gwarn ("cannot open directory. %s", error->message);
 		g_error_free(error);
 		error = NULL;
 	}
@@ -212,26 +212,92 @@ get_terminal_width()
 gboolean
 audio_path_get_leaf(const char* path, char* leaf)
 {
-  //gives the leafname contained in the given path.
-  //-if the path is a directory, leaf should be empty, but without checking we have no way of knowing...
-  //-relative paths are assumed to be relative to song->audiodir.
+	//gives the leafname contained in the given path.
+	//-if the path is a directory, leaf should be empty, but without checking we have no way of knowing...
 
-  //TODO just use g_path_get_basename() instead.
+	//TODO just use g_path_get_basename() instead.
 
-  g_return_val_if_fail(strlen(path), FALSE);
+	g_return_val_if_fail(strlen(path), FALSE);
 
-  //look for slashes and chop off anything before:
-  char* pos;
-  if((pos = g_strrstr(path, "/"))){
-    pos += 1; //move to the rhs of the slash.
-  }else pos = (char*)path;
+	//look for slashes and chop off anything before:
+	char* pos;
+	if((pos = g_strrstr(path, "/"))){
+		pos += 1; //move to the rhs of the slash.
+	}else pos = (char*)path;
 
-  //make leaf contain the last segment:
-  g_strlcpy(leaf, pos, 128);
-  dbg (3, "pos=%s leaf=%s", pos, leaf);
+	//make leaf contain the last segment:
+	g_strlcpy(leaf, pos, 128);
 
-  dbg (2, "path=%s --> %s", path, leaf);
-  return true;
+	return true;
+}
+
+
+gchar*
+audio_path_get_base(const char* path)
+{
+	//strips off directory information, file extension, L/R flags, trailing underscores.
+
+	gchar* basename = g_path_get_basename(path);
+
+	char* pos;
+	if((pos = g_strrstr(basename, "."))){
+		*pos = '\0';
+	}
+
+	if((pos = g_strrstr(basename, "-L")) == basename + strlen(basename) - 2){
+		*pos = '\0';
+	}
+	if((pos = g_strrstr(basename, "-R")) == basename + strlen(basename) - 2){
+		*pos = '\0';
+	}
+
+	void remove_trailing(char* s)
+	{
+		while(s[strlen(s) -1] == '_') s[strlen(s) -1] = '\0';
+	}
+
+	remove_trailing(basename);
+
+	return basename;
+}
+
+
+gboolean
+audio_path_get_wav_leaf(char* leaf, const char* path, int len)
+{
+	//gives the leafname contained in the given path but substitutes a '.wav' extension.
+	//-if the path is a directory, leaf should be empty, but without checking we have no way of knowing...
+
+	g_return_val_if_fail(strlen(path), FALSE);
+
+	//look for slashes and chop off anything before:
+	char* pos;
+	if((pos = g_strrstr(path, "/"))){
+		pos += 1; //move to the rhs of the slash.
+	}else pos = (char*)path;
+
+	//make leaf contain the last segment:
+	g_strlcpy(leaf, pos, len);
+
+	dbg (2, "path=%s --> %s", path, leaf);
+
+	if((pos = g_strrstr(leaf, "."))){
+		strcpy(pos + 1, "wav");
+	}
+
+	return true;
+}
+
+
+char*
+audio_path_truncate(char* path, char chr)
+{
+	//remove any instances of @chr from the end of the path string.
+
+	while(path[strlen(path) - 1] == chr){
+		path[strlen(path) - 1] = '\0';
+	}
+	return path;
 }
 
 

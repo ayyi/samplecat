@@ -937,8 +937,9 @@ fft_thread(gpointer data)
 		}
 
 		sleep(1); //FIXME this is a bit primitive - maybe the thread should have its own GMainLoop
-					 //-even better is to use a blocking call on the async queue, waiting for messages.
+		          //-even better is to use a blocking call on the async queue, waiting for messages.
 	}
+	return NULL;
 }
 
 

@@ -24,7 +24,7 @@ public class GlSpectrogram : Gtk.DrawingArea {
 
 	public GlSpectrogram ()
 	{
-		//stdout.printf("GlSpectrogram\n");
+		//print("GlSpectrogram\n");
 		add_events (Gdk.EventMask.BUTTON_PRESS_MASK | Gdk.EventMask.BUTTON_RELEASE_MASK | Gdk.EventMask.POINTER_MOTION_MASK);
 
 		set_size_request (200, 100);
@@ -37,17 +37,17 @@ public class GlSpectrogram : Gtk.DrawingArea {
 
 	private void load_texture()
 	{
-		//stdout.printf("load_texture...\n");
+		//print("load_texture...\n");
 		GLContext glcontext = WidgetGL.get_gl_context(this);
 		GLDrawable gldrawable = WidgetGL.get_gl_drawable(this);
 
-		if (!gldrawable.gl_begin(glcontext)) stdout.printf("gl context error!\n");
+		if (!gldrawable.gl_begin(glcontext)) print("gl context error!\n");
 		if (!gldrawable.gl_begin(glcontext)) return;
 
 		glBindTexture(GL_TEXTURE_2D, Textures[0]);
 
 		Gdk.Pixbuf* scaled = pixbuf->scale_simple(256, 256, Gdk.InterpType.BILINEAR);
-		//stdout.printf("load_texture: %ix%ix%i\n", scaled->get_width(), scaled->get_height(), scaled->get_n_channels());
+		//print("load_texture: %ix%ix%i\n", scaled->get_width(), scaled->get_height(), scaled->get_n_channels());
 
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -55,7 +55,7 @@ public class GlSpectrogram : Gtk.DrawingArea {
 		GL.GLint n_colour_components = (GL.GLint)scaled->get_n_channels();
 		GL.GLenum format = scaled->get_n_channels() == 4 ? GL_RGBA : GL_RGB;
 		if((bool)gluBuild2DMipmaps(GL_TEXTURE_2D, n_colour_components, (GL.GLsizei)scaled->get_width(), (GL.GLsizei)scaled->get_height(), format, GL_UNSIGNED_BYTE, scaled->get_pixels()))
-			stdout.printf("mipmap generation failed!\n");
+			print("mipmap generation failed!\n");
 
 		scaled->unref();
 
@@ -72,7 +72,7 @@ public class GlSpectrogram : Gtk.DrawingArea {
 		glViewport(0, 0, (GLsizei)allocation.width, (GLsizei)allocation.height);
 
 		if(!gl_init_done){
-			stdout.printf("GlSpectrogram: texture init...\n");
+			//print("GlSpectrogram: texture init...\n");
 			glGenTextures(1, Textures);
 			glEnable(GL_TEXTURE_2D);
 			glBindTexture(GL_TEXTURE_2D, Textures[0]);

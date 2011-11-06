@@ -179,16 +179,14 @@ void        do_search(char* search, char* dir);
 
 gboolean    new_search(GtkWidget*, gpointer userdata);
 
-void        scan_dir(const char* path, int* added_count);
+gboolean    add_file(char* path);
+void        add_dir(const char* path, int* added_count);
+void        delete_selected_rows();
+gboolean    on_overview_done(gpointer sample);
+gboolean    on_peaklevel_done(gpointer sample);
 
 gboolean    mimestring_is_unsupported(char*);
 gboolean    mimetype_is_unsupported(MIME_type*, char* mime_string);
-
-gboolean    add_file(char* path);
-gboolean    add_dir(char* uri);
-gboolean    on_overview_done(gpointer sample);
-gboolean    on_peaklevel_done(gpointer sample);
-void        delete_row(GtkMenuItem*, gpointer);
 
 void        update_dir_node_list();
 
@@ -198,9 +196,6 @@ void        update_search_dir(gchar* uri);
 
 gboolean    keyword_is_dupe(char* new, char* existing);
 
-gboolean    config_load();
-void        config_new();
-gboolean    config_save();
 void        on_quit(GtkMenuItem*, gpointer user_data);
 
 void        set_backend(BackendType);

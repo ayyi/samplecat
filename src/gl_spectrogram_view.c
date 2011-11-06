@@ -153,7 +153,7 @@ static gboolean gl_spectrogram_real_configure_event (GtkWidget* base, GdkEventCo
 	}
 	glViewport ((GLint) 0, (GLint) 0, (GLsizei) ((GtkWidget*) self)->allocation.width, (GLsizei) ((GtkWidget*) self)->allocation.height);
 	if (!self->priv->gl_init_done) {
-		fprintf (stdout, "GlSpectrogram: texture init...\n");
+		//fprintf (stdout, "GlSpectrogram: texture init...\n");
 		glGenTextures ((GLsizei) 1, self->priv->Textures);
 		glEnable (GL_TEXTURE_2D);
 		glBindTexture (GL_TEXTURE_2D, self->priv->Textures[0]);

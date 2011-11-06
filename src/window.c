@@ -59,12 +59,15 @@ static void       window_on_fileview_row_selected (GtkTreeView*, gpointer);
 static void       on_category_set_clicked         (GtkComboBox*, gpointer);
 static gboolean   row_clear_tags                  (GtkTreeIter*, int id);
 static void       menu__add_to_db                 (GtkMenuItem*, gpointer);
+static void       menu__add_dir_to_db             (GtkMenuItem*, gpointer);
 static void       menu__play                      (GtkMenuItem*, gpointer);
-static void       make_fm_menu_actions();
+static void       make_menu_actions               (struct _accel[], int, void (*add_to_menu)(GtkAction*));
 static gboolean   on_dir_tree_link_selected       (GObject*, DhLink*, gpointer);
 static GtkWidget* message_panel__new              ();
 static GtkWidget* left_pane                       ();
 static void       on_layout_changed               ();
+
+static void       k_delete_row                    (GtkAccelGroup*, gpointer);
 
 
 struct _accel menu_keys[] = {
@@ -75,7 +78,11 @@ struct _accel menu_keys[] = {
 struct _accel window_keys[] = {
 	{"Quit",           NULL,        {{(char)'q',    GDK_CONTROL_MASK},  {0, 0}}, on_quit,         GINT_TO_POINTER(0)},
 	{"Close",          NULL,        {{(char)'w',    GDK_CONTROL_MASK},  {0, 0}}, on_quit,         GINT_TO_POINTER(0)},
-	{"Delete",         NULL,        {{GDK_Delete,   0               },  {0, 0}}, delete_row,      GINT_TO_POINTER(0)},
+	{"Delete",         NULL,        {{GDK_Delete,   0               },  {0, 0}}, k_delete_row,    GINT_TO_POINTER(0)},
+};
+
+struct _accel fm_tree_keys[] = {
+    {"Add to database",NULL,        {{(char)'y',    0               },  {0, 0}}, menu__add_dir_to_db,           NULL},
 };
 
 static GtkAccelGroup* accel_group = NULL;
@@ -175,11 +182,19 @@ GtkWindow
 
 		void fman_left()
 		{
+			void dir_on_select(ViewDirTree *vdt, const gchar *path, gpointer data)
+			{
+				PF;
+				filer_change_to(&filer, path, NULL);
+			}
+
 			gint expand = TRUE;
 			ViewDirTree* dir_list = app.dir_treeview2 = vdtree_new(g_get_home_dir(), expand);
 			vdtree_set_select_func(dir_list, dir_on_select, NULL); //callback
 			GtkWidget* fs_tree = dir_list->widget;
 			gtk_paned_add1(GTK_PANED(fman_hpaned), fs_tree);
+
+			make_menu_actions(fm_tree_keys, G_N_ELEMENTS(fm_tree_keys), vdtree_add_menu_item);
 		}
 
 		void fman_right()
@@ -198,7 +213,7 @@ GtkWindow
 			}
 			g_signal_connect(G_OBJECT(file_manager__get_signaller()), "dir_changed", G_CALLBACK(window_on_dir_changed), NULL);
 
-			make_fm_menu_actions();
+			make_menu_actions(menu_keys, G_N_ELEMENTS(menu_keys), fm__add_menu_item);
 
 			//set up fileview as dnd source:
 			gtk_drag_source_set(file_view, GDK_BUTTON1_MASK | GDK_BUTTON2_MASK,
@@ -668,7 +683,7 @@ window_on_fileview_row_selected(GtkTreeView* treeview, gpointer user_data)
 
 
 #define COL_LEAF 0 //api leakage - does the filemanager really have no get_selected_files() function?
-void
+static void
 menu__add_to_db(GtkMenuItem* menuitem, gpointer user_data)
 {
 	PF;
@@ -692,6 +707,19 @@ menu__add_to_db(GtkMenuItem* menuitem, gpointer user_data)
 }
 
 
+static void
+menu__add_dir_to_db(GtkMenuItem* menuitem, gpointer user_data)
+{
+	PF;
+	const char* path = vdtree_get_selected(app.dir_treeview2);
+	dbg(1, "path=%s", path);
+	if(path){
+		int n_added = 0;
+		add_dir(path, &n_added);
+	}
+}
+
+
 void
 menu__play(GtkMenuItem* menuitem, gpointer user_data)
 {
@@ -700,7 +728,7 @@ menu__play(GtkMenuItem* menuitem, gpointer user_data)
 	GList* l = selected;
 	for(;l;l=l->next){
 		char* item = l->data;
-		dbg(0, "%s", item);
+		dbg(1, "%s", item);
 		auditioner_play_path(item);
 		g_free(item);
 	}
@@ -709,15 +737,16 @@ menu__play(GtkMenuItem* menuitem, gpointer user_data)
 
 
 static void
-make_fm_menu_actions()
+make_menu_actions(struct _accel keys[], int count, void (*add_to_menu)(GtkAction*))
 {
+	//takes the raw definitions and creates actions and optionally menu items for them.
+
 	GtkActionGroup* group = gtk_action_group_new("File Manager");
 	accel_group = gtk_accel_group_new();
 
-	int count = G_N_ELEMENTS(menu_keys);
 	int k;
 	for(k=0;k<count;k++){
-		struct _accel* key = &menu_keys[k];
+		struct _accel* key = &keys[k];
 
     	GtkAction* action = gtk_action_new(key->name, key->name, "Tooltip", key->stock_item? key->stock_item->stock_id : "gtk-file");
   		gtk_action_group_add_action(GTK_ACTION_GROUP(group), action);
@@ -732,7 +761,7 @@ make_fm_menu_actions()
 		gtk_action_set_accel_path(action, path);
 		gtk_action_set_accel_group(action, accel_group);
 
-		fm__add_menu_item(action);
+		if(add_to_menu) add_to_menu(action);
 	}
 }
 
@@ -886,3 +915,8 @@ on_layout_changed()
 }
 
 
+static void
+k_delete_row(GtkAccelGroup* _, gpointer user_data)
+{
+	delete_selected_rows();
+}

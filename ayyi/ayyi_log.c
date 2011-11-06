@@ -15,6 +15,7 @@
   along with this program; if not, write to the Free Software
   Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 */
+#include "config.h"
 #include <sys/stat.h>
 #include <unistd.h>
 #include <stdio.h>
@@ -65,22 +66,24 @@ log_append(const char* str, int type)
 
 	//output to gui statusbar:
 	if(ayyi.log.print_to_ui){
-		char status[128];
-		snprintf(status, 127, "%s%s", str, type==LOG_OK ? " ok" : /*type==LOG_FAIL ? " fail!" :*/ "");
+		char* status = g_strdup_printf("%s%s", str, type==LOG_OK ? " ok" : /*type==LOG_FAIL ? " fail!" :*/ "");
 		ayyi.log.print_to_ui(status, type);
+		g_free(status);
 	}
 
 	//output to stdout:
-	char goto_rhs[32];
-	sprintf(goto_rhs, "\x1b[A\x1b[%iC", MIN(get_terminal_width() - 12, 80)); //go up one line, then goto rhs
+	if(ayyi.log.to_stdout){
+		char goto_rhs[32];
+		sprintf(goto_rhs, "\x1b[A\x1b[%iC", MIN(get_terminal_width() - 12, 80)); //go up one line, then goto rhs
 
-	if(type==LOG_WARN) printf("%s ", ayyi_warn);
-	if(!type) printf("%s", bold);
-	printf("%s", str);
-	if(!type) printf("%s", white);
-	if(type==LOG_OK)   printf("\n%s%s", goto_rhs, ok);
-	if(type==LOG_FAIL) printf("\n%s%s", goto_rhs, fail);
-	printf("\n");
+		if(type==LOG_WARN) printf("%s ", ayyi_warn);
+		if(!type) printf("%s", bold);
+		printf("%s", str);
+		if(!type) printf("%s", white);
+		if(type==LOG_OK)   printf("\n%s%s", goto_rhs, ok);
+		if(type==LOG_FAIL) printf("\n%s%s", goto_rhs, fail);
+		printf("\n");
+	}
 }
 
 

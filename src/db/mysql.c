@@ -393,6 +393,7 @@ mysql__search_iter_next_(unsigned long** lengths)
 	result.colour      = get_int(row, MYSQL_COLOUR);
 	result.mimetype    = row[MYSQL_MIMETYPE];
 	result.online      = get_int(row, MYSQL_ONLINE);
+	result.updated     = row[MYSQL_LAST_CHECKED];
 	return &result;
 }
 

@@ -23,14 +23,12 @@ cpos2bbst(SongPos* pos, char* str)
 {
   //converts a *songcore* song position to a display string in bars, beats, subbeats, ticks.
 
-  gerr("FIXME shouldnt be using gui fns.");
-#if 0
+  gerr("FIXME");
   sprintf(str, "%03i:%02i:%02i:%03i",
-						pos_bar ((struct _gsong_pos*)pos),
-						pos_beat((struct _gsong_pos*)pos) +1,
-						pos->sub / 960 + 1, //0-3
-						pos->sub % 960);
-#endif
+						pos->beat / 4,
+						pos->beat % 4,
+						0,
+						0);
 }
 
 
@@ -103,7 +101,7 @@ samples2mu(unsigned long long samples)
   //printf("samples2mu(): float=%.3fsecs 1beat=%.3fsecs beats=%.3f mu=%Li\n", secs, length_of_1_beat_in_secs, beats, mu);
 
   //FIXME this check below indicates there are some largish rounding errors:
-  dbg (1, "samples=%Li mu=%Li check=%Li.", samples, mu, mu2samples(mu));
+  dbg (2, "samples=%Li mu=%Li check=%Li.", samples, mu, mu2samples(mu));
   return mu;
 }
 
@@ -116,7 +114,7 @@ mu2samples(long long mu)
 
   dbg(3, "mu=%Li (%.4f) beats=%.4f", mu, mu_f, beats);
 
-  return beats2samples_float(beats);
+  return ayyi_beats2samples_float(beats);
 }
 
 
@@ -158,7 +156,7 @@ beats2mu(double beats)
 
 
 long long
-beats2samples(int beats)
+ayyi_beats2samples(int beats)
 {
 	//returns the number of audio samples equivalent to the given number of beats.
 
@@ -167,14 +165,14 @@ beats2samples(int beats)
 	float length_of_1_beat_in_secs = 60.0/bpm;
 	float samples = length_of_1_beat_in_secs * ayyi.service->song->sample_rate * beats;
 
-	//printf("beats2samples(): %ibeats = %.2fsamples. length_of_1_beat_in_secs=%.2f\n", beats, samples, length_of_1_beat_in_secs);
+	//dbg(0, "%ibeats = %.2fsamples. length_of_1_beat_in_secs=%.2f", beats, samples, length_of_1_beat_in_secs);
 
 	return (int)samples;
 }
 
 
 long long
-beats2samples_float(float beats)
+ayyi_beats2samples_float(float beats)
 {
 	//returns the number of audio samples equivalent to the given number of beats.
 
@@ -200,7 +198,7 @@ pos_cmp(const SongPos* a, const SongPos* b)
 void
 samples2bbst(uint64_t samples, char* str)
 {
-	if(ayyi.debug>-1) if(samples > beats2samples(6400)){ gwarn ("samples too high? %Lu", samples); str[0]='\0'; return; }
+	if(ayyi.debug>-1) if(samples > ayyi_beats2samples(6400)){ gwarn ("samples too high? %Lu", samples); str[0]='\0'; return; }
 
 	struct _shm_song* song = ayyi.service->song;
 

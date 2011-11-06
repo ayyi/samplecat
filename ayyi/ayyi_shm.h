@@ -59,6 +59,8 @@ void     ayyi_container_print           (AyyiContainer*);
 void     ayyi_shm_init                  ();
 shm_seg* ayyi_shm_seg_new               (int id, int type);
 gboolean ayyi_shm_import                ();
+void     ayyi_shm_unattach              ();
+void     ayyi_client__reattach_shm      (Service*, AyyiHandler2, gpointer);
 
 gboolean shm_seg__attach                (AyyiShmSeg*);
 gboolean shm_seg__validate              ();

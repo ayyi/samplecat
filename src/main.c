@@ -86,6 +86,10 @@ static void       on_file_moved             (GtkTreeIter);
 #endif
 static void      _set_search_dir            (char*);
 static gboolean   dir_tree_update           (gpointer);
+static bool       config_load               ();
+static void       config_new                ();
+static bool       config_save               ();
+static void       menu_delete_row           (GtkMenuItem*, gpointer);
 
 
 struct _app app;
@@ -389,7 +393,7 @@ file_selector()
 
 
 void
-scan_dir(const char* path, int* added_count)
+add_dir(const char* path, int* added_count)
 {
 	/*
 	scan the directory and try and add any files we find.
@@ -399,8 +403,8 @@ scan_dir(const char* path, int* added_count)
 
 	char filepath[256];
 	G_CONST_RETURN gchar *file;
-	GError *error = NULL;
-	GDir *dir;
+	GError* error = NULL;
+	GDir* dir;
 	if((dir = g_dir_open(path, 0, &error))){
 		while((file = g_dir_read_name(dir))){
 			if(file[0]=='.') continue;
@@ -412,7 +416,7 @@ scan_dir(const char* path, int* added_count)
 			}
 			// IS_DIR
 			else if(app.add_recursive){
-				scan_dir(filepath, added_count);
+				add_dir(filepath, added_count);
 			}
 		}
 		g_dir_close(dir);
@@ -737,7 +741,7 @@ add_file(char* path)
 	gboolean ok = true;
 
 	Sample* sample = sample_new(); //free'd after db and store are updated.
-	strncpy(sample->filename, path, 255);
+	g_strlcpy(sample->filename, path, 256);
 
 	gchar* filedir = g_path_get_dirname(path);
 	gchar* filename = g_path_get_basename(path);
@@ -778,17 +782,6 @@ out:
 
 
 gboolean
-add_dir(char *uri)
-{
-	dbg(1, "dir=%s", uri);
-
-	//GDir* dir = g_dir_open(const gchar *path, guint flags, GError **error);
-
-	return false;
-}
-
-
-gboolean
 on_overview_done(gpointer _sample)
 {
 	PF;
@@ -825,7 +818,7 @@ on_peaklevel_done(gpointer _sample)
 
 
 void
-delete_row(GtkMenuItem* widget, gpointer user_data)
+delete_selected_rows()
 {
 	GtkTreeModel* model = gtk_tree_view_get_model(GTK_TREE_VIEW(app.view));
 
@@ -876,6 +869,13 @@ delete_row(GtkMenuItem* widget, gpointer user_data)
 
 
 static void
+menu_delete_row(GtkMenuItem* widget, gpointer user_data)
+{
+	delete_selected_rows();
+}
+
+
+static void
 update_row(GtkWidget *widget, gpointer user_data)
 {
 	//sync the catalogue row with the filesystem.
@@ -892,16 +892,18 @@ update_row(GtkWidget *widget, gpointer user_data)
 	//GDate* date = g_date_new();
 	//g_get_current_time(date);
 
-	int i, id; gchar *fname; gchar *fdir; gchar *mimetype; gchar path[256];
+	int i, id; gchar *fname; gchar *fdir; gchar *mimetype; float peak_level;
 	GdkPixbuf* iconbuf;
 	gboolean online;
 	for(i=0;i<g_list_length(selectionlist);i++){
-		GtkTreePath *treepath_selection = g_list_nth_data(selectionlist, i);
+		GtkTreePath *treepath = g_list_nth_data(selectionlist, i);
 
-		gtk_tree_model_get_iter(model, &iter, treepath_selection);
-		gtk_tree_model_get(model, &iter, COL_NAME, &fname, COL_FNAME, &fdir, COL_MIMETYPE, &mimetype, COL_IDX, &id, -1);
+		gtk_tree_model_get_iter(model, &iter, treepath);
+		gtk_tree_model_get(model, &iter, COL_NAME, &fname, COL_FNAME, &fdir, COL_MIMETYPE, &mimetype, COL_IDX, &id, COL_PEAKLEVEL, &peak_level, -1);
 
-		snprintf(path, 256, "%s/%s", fdir, fname);
+		//gchar path[256];
+		//snprintf(path, 256, "%s/%s", fdir, fname);
+		gchar* path = g_strdup_printf("%s/%s", fdir, fname);
 		if(file_exists(path)){
 			online = 1;
 
@@ -910,6 +912,14 @@ update_row(GtkWidget *widget, gpointer user_data)
 			if (!mime_type->image) dbg(0, "no icon.");
 			iconbuf = mime_type->image->sm_pixbuf;
 
+			dbg(0, "peak_level=%.2f", peak_level);
+			if(peak_level < 0.00001){
+				//TODO check dates first?
+				dbg(0, "no peak level. regenerating...");
+				Sample* sample = sample_new_from_model(treepath);
+				//TODO need to update inspector once finished
+				request_peaklevel(sample);
+			}
 		}else{
 			online = 0;
 			iconbuf = NULL;
@@ -920,6 +930,8 @@ update_row(GtkWidget *widget, gpointer user_data)
 			statusbar_print(1, "online status updated (%s)", online ? "online" : "not online");
 		}else
 			statusbar_print(1, "error! online status not updated");
+
+		g_free(path);
 	}
 	g_list_free(selectionlist);
 	//g_date_free(date);
@@ -974,9 +986,9 @@ edit_row(GtkWidget* widget, gpointer user_data)
 
 
 static MenuDef _menu_def[] = {
-	{"Delete",         G_CALLBACK(delete_row),    GTK_STOCK_DELETE,     true},
-	{"Update",         G_CALLBACK(update_row),    GTK_STOCK_REFRESH,    true},
-	{"Play All",       G_CALLBACK(menu_play_all), GTK_STOCK_MEDIA_PLAY, true},
+	{"Delete",         G_CALLBACK(menu_delete_row), GTK_STOCK_DELETE,     true},
+	{"Update",         G_CALLBACK(update_row),      GTK_STOCK_REFRESH,    true},
+	{"Play All",       G_CALLBACK(menu_play_all),   GTK_STOCK_MEDIA_PLAY, true},
 	{"Edit tags",      G_CALLBACK(edit_row),   GTK_STOCK_EDIT,        true},
 	{"Open",           G_CALLBACK(edit_row),   GTK_STOCK_OPEN,       false},
 	{"Open Directory", G_CALLBACK(NULL),       GTK_STOCK_OPEN,        true},
@@ -1202,7 +1214,7 @@ on_file_moved(GtkTreeIter iter)
 
 extern char theme_name[];
 
-gboolean
+static bool
 config_load()
 {
 	snprintf(app.config.database_name, 64, "samplelib");
@@ -1269,7 +1281,7 @@ config_load()
 }
 
 
-gboolean
+static bool
 config_save()
 {
 	if(app.loaded){
@@ -1337,7 +1349,7 @@ config_save()
 }
 
 
-void
+static void
 config_new()
 {
 	//g_key_file_has_group(GKeyFile *key_file, const gchar *group_name);

@@ -14,21 +14,17 @@
 
 #include <gqview2/typedefs.h>
 
-ViewDirTree *vdtree_new(const gchar *path, gint expand);
+ViewDirTree* vdtree_new                  (const gchar* path, gint expand);
+void         vdtree_set_select_func      (ViewDirTree*, void (*func)(ViewDirTree*, const gchar* path, gpointer data), gpointer data);
+void         vdtree_set_layout           (ViewDirTree*, LayoutWindow*);
+gint         vdtree_set_path             (ViewDirTree*, const gchar *path);
+void         vdtree_refresh              (ViewDirTree*);
+const gchar* vdtree_row_get_path         (ViewDirTree*, gint row);
 
-void vdtree_set_select_func(ViewDirTree *vdt,
-			    void (*func)(ViewDirTree *vdt, const gchar *path, gpointer data), gpointer data);
+const char*  vdtree_get_selected         (ViewDirTree*);
 
-void vdtree_set_layout(ViewDirTree *vdt, LayoutWindow *layout);
-
-gint vdtree_set_path(ViewDirTree *vdt, const gchar *path);
-void vdtree_refresh(ViewDirTree *vdt);
-
-const gchar *vdtree_row_get_path(ViewDirTree *vdt, gint row);
-
-void vdtree_on_icon_theme_changed(ViewDirTree *vdt);
-
-void dir_on_select(ViewDirTree *vdt, const gchar *path, gpointer data);
+void         vdtree_on_icon_theme_changed(ViewDirTree*);
+void         vdtree_add_menu_item        (GtkAction*);
 
 #endif
 

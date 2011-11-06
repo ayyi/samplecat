@@ -10,12 +10,14 @@ enum {
 
 struct _log
 {
+  void           (*print_to_ui)(const char*, int);
+  gboolean       to_stdout;
+
   GtkTextBuffer* txtbuf;
   GtkTextTag*    tag_green;
   GtkTextTag*    tag_red;
   GtkTextTag*    tag_orange;
   GtkTextTag*    tag_yellow;
-  void           (*print_to_ui)(const char*, int);
 };
 
 void        ayyi_log_init ();

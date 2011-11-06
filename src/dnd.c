@@ -109,7 +109,7 @@ drag_received(GtkWidget *widget, GdkDragContext *drag_context, gint x, gint y,
 
         char* uri = (strstr(uri_unescaped, "///") == uri_unescaped) ? uri_unescaped + 2 : uri_unescaped;
 
-        if(is_dir(uri)) scan_dir(uri, &added_count);
+        if(is_dir(uri)) add_dir(uri, &added_count);
         else if(add_file(uri)) added_count++;
 
         g_free(uri_unescaped);

@@ -40,3 +40,7 @@ typedef struct _ViewDirTree ViewDirTree;
 #ifndef true
   #define true TRUE
 #endif
+
+#ifndef bool
+  #define bool gboolean
+#endif

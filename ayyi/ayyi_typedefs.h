@@ -24,7 +24,7 @@ typedef struct _shm_seg             shm_seg;
 typedef enum   _seg_type            SegType;
 typedef struct _song_pos            SongPos;
 typedef struct _container           AyyiContainer;
-typedef struct block                block;
+typedef struct _block               block;
 typedef struct _ayyi_base_item      AyyiItem;
 typedef struct _route_shared        AyyiTrack;
 typedef struct _ayyi_channel        AyyiChannel;
@@ -36,18 +36,24 @@ typedef struct _filesource_shared   AyyiFilesource;
 typedef struct _playlist_shared     AyyiPlaylist;
 typedef struct _ayyi_connection     AyyiConnection;
 typedef struct _midi_track_shared   AyyiMidiTrack;
-typedef struct _ayyi_control        ayyi_control;
+typedef struct _ayyi_aux            AyyiAux;
 typedef struct _ayyi_control        AyyiControl;
 typedef struct _plugin_shared       AyyiPlugin;
+typedef struct _midi_note           MidiNote;
 typedef struct _launch_info         AyyiLaunchInfo;
+typedef struct _handler_data        HandlerData;
 
 typedef int                         AyyiIdx;
 typedef uint32_t                    AyyiObjType;
 typedef uint64_t                    AyyiId;
 
 typedef void   (*AyyiCallback)      ();
-typedef void   (*AyyiHandler)       (AyyiObjType, AyyiIdx, gpointer);
-typedef void   (*AyyiHandler3)      (AyyiIdent, GError*, gpointer);
+typedef void   (*AyyiCallback22)    (gpointer user_data); //tmp!
+typedef void   (*AyyiFinish)        (AyyiIdent, gpointer);
+typedef void   (*AyyiHandler2)      (GError*, gpointer);
+typedef void   (*AyyiHandler)       (AyyiIdent, GError**, gpointer);
+typedef void   (*AyyiPropHandler)   (AyyiIdent, GError**, AyyiPropType, gpointer);
+//typedef void   (*AyyiHandler6)      (AyyiIdent, gpointer, GError**);
 typedef void   (*AyyiActionCallback)(AyyiAction*);
 
 #ifndef true

@@ -3,6 +3,7 @@
 
 #include <sys/time.h>
 
+#if 0
 struct _ayyi_action
 {
 	unsigned       trid;
@@ -26,9 +27,10 @@ struct _ayyi_action
 	struct _r {
 		int         gid;          // the object id number returned by the engine following the request.
 		AyyiIdx     idx;          // the object idx returned by the engine.
-		char        err;          // zero if no errors reported.
+		GError*     error;        // 
 		void*       ptr_1;
 	} ret;
 };
+#endif
 
 #endif //__ayyi_msg_h__

@@ -5,9 +5,6 @@
 #include <sys/types.h>
 #include <glib.h>
 #include <jack/jack.h>
-#ifdef USE_VST
-#include "fst.h"
-#endif
 
 #include <ayyi/ayyi_typedefs.h>
 #include <ayyi/ayyi_types.h>
@@ -16,16 +13,21 @@
 #include <ayyi/ayyi_client.h>
 #include <ayyi/ayyi_shm.h>
 #include <ayyi/interface.h>
-#include <ayyi/ayyi_mixer.h>
+#include <ayyi/ayyi_song.h>
 #include <ayyi/ayyi_dbus.h>
+#include <ayyi/ayyi_mixer.h>
 #include <ayyi/engine_proxy.h>
 
 extern struct _ayyi_client ayyi;
 
-static int           ayyi_mixer__container_find(AyyiContainer*, void* content);
-static struct block* ayyi_plugin_get_block(int block_num);
-static struct block* ayyi_automation_get_block(AyyiChannel*, int block_num, int auto_type);
-/*static*/ gboolean is_mixer_shm_local(void*);
+static int    ayyi_mixer__container_find  (AyyiContainer*, void* content);
+static block* ayyi_plugin_get_block       (int block_num);
+static block* ayyi_automation_get_block   (AyyiChannel*, int block_num, int auto_type);
+/*static*/ gboolean is_mixer_shm_local    (void*);
+#ifdef NOT_USED
+static void   ayyi_mixer__block_print     (AyyiContainer*, int s1);
+#endif
+
 
 
 static int
@@ -39,10 +41,10 @@ ayyi_mixer__container_find(AyyiContainer* container, void* content)
 	if(container->last < 0) return -1;
 
 	int b; for(b=0;b<=container->last;b++){
-		struct block* block = translate_mixer_address(container->block[b]);
+		block* block = translate_mixer_address(container->block[b]);
 		//if(block->full){
 		//	dbg (0, "block %i full.", b);
-		//	count += BLOCK_SIZE;
+		//	count += AYYI_BLOCK_SIZE;
 		//}else{
 			if(block->last < 0) break;
 
@@ -50,7 +52,7 @@ ayyi_mixer__container_find(AyyiContainer* container, void* content)
 			int i; for(i=0;i<=block->last;i++){
 				if(!table[i]) continue;
 				void* item = translate_mixer_address(table[i]);
-				if(item == content) return b * BLOCK_SIZE + i;
+				if(item == content) return b * AYYI_BLOCK_SIZE + i;
 			}
 		//}
 	}
@@ -78,14 +80,14 @@ ayyi_mixer__verify()
 
 
 AyyiChannel*
-ayyi_mixer_track_get(AyyiIdx slot)
+ayyi_mixer__channel_at_quiet(AyyiIdx slot)
 {
 	return ayyi_mixer_container_get_quiet(&ayyi.service->amixer->tracks, slot);
 }
 
 
 int
-ayyi_mixer_track_count_plugins(AyyiChannel* ch)
+ayyi_channel__count_plugins(AyyiChannel* ch)
 {
 	int count = 0;
 	int i; for(i=0;i<AYYI_PLUGINS_PER_CHANNEL;i++){
@@ -96,12 +98,13 @@ ayyi_mixer_track_count_plugins(AyyiChannel* ch)
 
 
 AyyiPlugin*
-ayyi_plugin_get(int slot)
+ayyi_plugin_at(int slot)
 {
 	//returns the shm data for a plugin with the given slot number.
 
+#if 0
 	if(!ayyi_plugin_pod_index_ok(slot)){ gerr ("bad plugin index (%i)", slot); return NULL; }
-	struct block* block = ayyi_plugin_get_block(0);
+	block* block = ayyi_plugin_get_block(0);
 	if(block->last<0) dbg (0, "no plugins. last=%i", block->last);
 
 	//printf("%s(): block=%p 0=%p\n", __func__, shm_index->regions.block, shm_index->regions.block[0]);
@@ -113,6 +116,9 @@ ayyi_plugin_get(int slot)
 	if(!plugin) return NULL;
 	if(!is_mixer_shm_local(plugin)){ gerr ("failed to get shared plugin struct. plugin_index[%u]=%p\n", slot, plugin_index[slot]); return NULL; }
 	return plugin;
+#else
+	return ayyi_mixer_container_get_item(&ayyi.service->amixer->plugins, slot);
+#endif
 }
 
 
@@ -122,11 +128,11 @@ ayyi_plugin_pod_index_ok(int pod_index)
 	//check that the given plugin slot number is valid.
 	//-we use this to ensure pointer dereferencing is ok, so dont return TRUE for any magic index numbers.
 
-	if(pod_index >= BLOCK_SIZE) return FALSE;
+	if(pod_index >= AYYI_BLOCK_SIZE) return FALSE;
 
-	int block_num = pod_index / BLOCK_SIZE;
-	int slot_num = pod_index % BLOCK_SIZE;
-	struct block* block = ayyi_plugin_get_block(block_num);
+	int block_num = pod_index / AYYI_BLOCK_SIZE;
+	int slot_num = pod_index % AYYI_BLOCK_SIZE;
+	block* block = ayyi_plugin_get_block(block_num);
 
 	return (pod_index > -1 && slot_num <= block->last);
 }
@@ -135,7 +141,7 @@ ayyi_plugin_pod_index_ok(int pod_index)
 AyyiContainer*
 ayyi_plugin_get_controls(int plugin_slot)
 {
-	AyyiPlugin* plugin = ayyi_plugin_get(plugin_slot);
+	AyyiPlugin* plugin = ayyi_plugin_at(plugin_slot);
 	if(!plugin) return NULL;
 
 	return &plugin->controls;
@@ -166,7 +172,7 @@ ayyi_mixer__plugin_control_next(AyyiContainer* plugin_container, struct _ayyi_co
 #if 0
 	if(container->last < 0) return NULL;
 
-	if(prev && (ayyi_container_find(container, prev) >= BLOCK_SIZE)) P_WARN ("FIXME\n");
+	if(prev && (ayyi_container_find(container, prev) >= AYYI_BLOCK_SIZE)) P_WARN ("FIXME\n");
 
 	int not_first = 0;
 
@@ -195,7 +201,7 @@ ayyi_mixer__plugin_control_next(AyyiContainer* plugin_container, struct _ayyi_co
 }
 
 
-static struct block*
+static block*
 ayyi_plugin_get_block(int block_num)
 {
     return translate_mixer_address(ayyi.service->amixer->plugins.block[block_num]);
@@ -205,11 +211,11 @@ ayyi_plugin_get_block(int block_num)
 void*
 ayyi_mixer_container_get_item(AyyiContainer* container, int idx)
 {
-	if(idx >= CONTAINER_SIZE * BLOCK_SIZE){ gerr("shm_idx out of range: %i", idx); return NULL; }
+	if(idx >= CONTAINER_SIZE * AYYI_BLOCK_SIZE){ gerr("shm_idx out of range: %i", idx); return NULL; }
 
-	int b = idx / BLOCK_SIZE;
-	int i = idx % BLOCK_SIZE;
-	struct block* blk = translate_mixer_address(container->block[b]);
+	int b = idx / AYYI_BLOCK_SIZE;
+	int i = idx % AYYI_BLOCK_SIZE;
+	block* blk = translate_mixer_address(container->block[b]);
 	void** table = blk->slot;
 	void* item = translate_mixer_address(table[i]);
 	if(!item) gwarn("empty item. idx=0x%x", idx);
@@ -220,11 +226,11 @@ ayyi_mixer_container_get_item(AyyiContainer* container, int idx)
 void*
 ayyi_mixer_container_get_quiet(AyyiContainer* container, int idx)
 {
-	if(idx >= CONTAINER_SIZE * BLOCK_SIZE){ gerr("shm_idx out of range: %i", idx); return NULL; }
+	if(idx >= CONTAINER_SIZE * AYYI_BLOCK_SIZE){ gerr("shm_idx out of range: %i", idx); return NULL; }
 
-	int b = idx / BLOCK_SIZE;
-	int i = idx % BLOCK_SIZE;
-	struct block* blk = translate_mixer_address(container->block[b]);
+	int b = idx / AYYI_BLOCK_SIZE;
+	int i = idx % AYYI_BLOCK_SIZE;
+	block* blk = translate_mixer_address(container->block[b]);
 	void** table = blk->slot;
 	if(!table[i]) return NULL;
 	void* item = translate_mixer_address(table[i]);
@@ -241,13 +247,13 @@ ayyi_mixer__container_next_item(AyyiContainer* container, void* prev)
 	if(container->last < 0) return NULL;
 
 	int prev_idx = prev ? ayyi_mixer__container_find(container, prev) : -1;
-	if(prev && (prev_idx >= BLOCK_SIZE)) gwarn ("FIXME");
+	if(prev && (prev_idx >= AYYI_BLOCK_SIZE)) gwarn ("FIXME");
 
 	int not_first = 0;
 
 	int b; for(b=0;b<=container->last;b++){
 		dbg(3, "b=%i: =%p", b, container->block[b]);
-		struct block* blk = translate_mixer_address(container->block[b]);
+		block* blk = translate_mixer_address(container->block[b]);
 		void** table = blk->slot;
 
 		int i = (not_first++) ? 0 : prev_idx + 1;
@@ -274,11 +280,11 @@ ayyi_mixer_container_count_items(AyyiContainer* container)
 	if(container->last < 0) return count;
 
 	int b; for(b=0;b<=container->last;b++){
-		struct block* block = translate_mixer_address(container->block[b]);
+		block* block = translate_mixer_address(container->block[b]);
 		//struct block* block = translator(container->block[b]);
 		if(block->full){
 			gwarn ("block %i full.", b);
-			count += BLOCK_SIZE;
+			count += AYYI_BLOCK_SIZE;
 		}else{
 			if(block->last < 0) break;
 
@@ -306,7 +312,7 @@ ayyi_mixer_container_verify(AyyiContainer* container)
 struct _ayyi_aux*
 ayyi_mixer__aux_get(struct _ayyi_channel* chan, int idx)
 {
-	ASSERT_POINTER_FALSE(chan, "channel");
+	g_return_val_if_fail(chan, NULL);
 
 	if(idx >= AYYI_AUX_PER_CHANNEL) return NULL;
 	if(!chan->aux[idx]) return NULL;
@@ -317,18 +323,18 @@ ayyi_mixer__aux_get(struct _ayyi_channel* chan, int idx)
 
 
 struct _ayyi_aux*
-ayyi_mixer__aux_get_(int channel_idx, int idx)
+ayyi_mixer__aux_get_(AyyiIdx channel_idx, int idx)
 {
-	struct _ayyi_channel* chan = ayyi_mixer_track_get(channel_idx);
+	struct _ayyi_channel* chan = ayyi_mixer__channel_at_quiet(channel_idx);
 	if(!chan){ gwarn("no channel for channel_idx=%i", channel_idx); return NULL; }
 	return ayyi_mixer__aux_get(chan, idx);
 }
 
 
 int
-ayyi_mixer__aux_count(int channel_idx)
+ayyi_mixer__aux_count(AyyiIdx channel_idx)
 {
-	struct _ayyi_channel* chan = ayyi_mixer_track_get(channel_idx);
+	struct _ayyi_channel* chan = ayyi_mixer__channel_at_quiet(channel_idx);
 	if(!chan){ gwarn("no channel for channel_idx=%i", channel_idx); return -1; }
 	int count = 0;
 	int i; for(i=0;i<AYYI_AUX_PER_CHANNEL;i++){
@@ -352,25 +358,42 @@ ayyi_channel__set_float(int ch_prop, int chan, double val)
 void
 ayyi_channel__set_bool(int ch_prop, AyyiIdx chan, gboolean val)
 {
-	//sends a msg to the engine for the simple case where a strip has a property with a single float value.
+	//sends a msg to the engine for the simple case where a strip has a property with a single boolean value.
 #if USE_DBUS
 	dbus_set_prop_bool (NULL, AYYI_OBJECT_CHAN, ch_prop, chan, val);
 #endif
 }
 
 
-void
+struct _ayyi_list*
+ayyi_channel__get_routing(AyyiChannel* channel)
+{
+	g_return_val_if_fail(channel, NULL);
+
+	//AyyiTrack* track = ayyi_song__audio_track_get(channel->shm_idx);
+	AyyiTrack* track = (AyyiTrack*)ayyi_song_container_get_item(&ayyi.service->song->audio_tracks, channel->shm_idx);
+	if(track){
+		struct _ayyi_list* routing = track->output_routing;
+		return routing;
+	}
+	return NULL;
+}
+
+
+#ifdef NOT_USED
+static void
 ayyi_mixer__block_print(AyyiContainer* container, int s1)
 {
-	ASSERT_POINTER(container, "container");
+	g_return_if_fail(container);
 
-	struct block* block = translate_mixer_address(container->block[s1]);
+	block* block = translate_mixer_address(container->block[s1]);
 	if (!is_mixer_shm_local(block)){ gerr ("bad block! not initialised?"); }
 
 	printf("%s():\n", __func__);
 	printf("  last=%i full=%i, next=%p\n", block->last, block->full, block->next);
 	int i; for(i=0;i<4;i++) printf("  %i: %p\n", i, block->slot[i]);
 }
+#endif
 
 
 /*static*/ gboolean
@@ -380,8 +403,8 @@ is_mixer_shm_local(void* p)
 	//returns false if the pointer is in a foreign shm segment.
 
 	//printf("%s(): size=%i\n", __func__, ayyi.service->amixer->num_pages);
-	unsigned segment_end = (unsigned)ayyi.service->amixer + ayyi.service->amixer->num_pages * AYYI_SHM_BLOCK_SIZE; //TODO should use seg_info->size here?
-	if(((unsigned)p>(unsigned)ayyi.service->amixer) && ((unsigned)p<segment_end)) return TRUE;
+	void* segment_end = (void*)ayyi.service->amixer + ayyi.service->amixer->num_pages * AYYI_SHM_BLOCK_SIZE; //TODO should use seg_info->size here?
+	if(((void*)p > (void*)ayyi.service->amixer) && ((void*)p<segment_end)) return TRUE;
 
 	gerr ("address is not in mixer shm: %p (expected %p - %p)\n", p, ayyi.service->amixer, (void*)segment_end);
 	if((unsigned)p > (unsigned)ayyi.service->amixer) gerr ("shm offset=%u seg_size=%u\n", (unsigned)p - (unsigned)ayyi.service->amixer, 512*AYYI_SHM_BLOCK_SIZE);
@@ -397,7 +420,7 @@ translate_mixer_address(void* address)
 
 	//unfortunately we cannot make this static as it is used by all mixer shm data types, eg ayyi_list.
 
-	ASSERT_POINTER_FALSE(address, "address");
+	g_return_val_if_fail(address, NULL);
 
 	//is there any danger of overflow here? both of these 2 versions _appear_ to work:
 
@@ -414,18 +437,18 @@ translate_mixer_address(void* address)
 }
 
 
-static struct block*
+static block*
 ayyi_automation_get_block(AyyiChannel* ch, int block_num, int auto_type)
 {
 	if(auto_type > 1){ gerr ("auto_type out of range: %i", auto_type); return NULL; }
 	if(block_num > ch->automation[auto_type].last) { gerr ("block_num out of range: %i (last=%i)", block_num, ch->automation[auto_type].last); return NULL; }
 
 	static char sigs[2][32] = {"vol automation", "pan automation"};
-	ASSERT_POINTER_FALSE(ch, "channel");
+	g_return_val_if_fail(ch, NULL);
 	if(strcmp(ch->automation[auto_type].signature, sigs[auto_type])){ gerr ("bad container signature: %s", ch->automation[auto_type].signature); return NULL; }
 
 	dbg (3, "route=%p b=%i block=%p block[0]=%p last=%i", ch, block_num, ch->automation[auto_type].block, ch->automation[auto_type].block[0], ch->automation[auto_type].last);
-    return translate_mixer_address(ch->automation[auto_type].block[block_num]);
+	return translate_mixer_address(ch->automation[auto_type].block[block_num]);
 }
 
 
@@ -445,10 +468,17 @@ ardour_automation_get_block(AyyiChannel* ch, int block_num, int auto_type)
 }
 */
 
-shm_event*
-ayyi_auto_get_event(AyyiChannel* ch, int i, int auto_type)
+AyyiTrack*
+ayyi_channel__get_track(AyyiChannel* ch)
 {
-	struct block* block = ayyi_automation_get_block(ch, 0, auto_type);
+	return ayyi_song__audio_track_at(ch->shm_idx);
+}
+
+
+shm_event*
+ayyi_channel__get_auto_event(AyyiChannel* ch, int i, int auto_type)
+{
+	block* block = ayyi_automation_get_block(ch, 0, auto_type);
 	if(block->last < 0) dbg (0, "no events. last=%i", block->last);
 
 	void** event_table = block->slot;
@@ -462,6 +492,28 @@ ayyi_auto_get_event(AyyiChannel* ch, int i, int auto_type)
 
 
 void
+ayyi_print_mixer()
+{
+	printf("%s\n", __func__);
+	printf("%2s %15s %6s %6s %s %s\n", "", "", "level", "pan", "m", "n");
+	AyyiChannel* ch = NULL;
+	while((ch = ayyi_mixer__channel_next(ch))){
+		AyyiTrack* track = ayyi_channel__get_track(ch);
+		printf("%2i %15s %2.4f %2.4f %i %i\n", ch->shm_idx, ch->name, ch->level, ch->pan, track->flags & muted, track->nchans);
+	}
+
+	/*
+	AMIter i;
+	channel_iter_init(&i);
+	Channel* channel = NULL;
+	while((channel = channel_next(&i))){
+		printf("%2i %15s\n", channel->core_index, am_channel__get_name(channel));
+	}
+	*/
+}
+
+
+void
 ayyi_automation_print(AyyiChannel* route)
 {
 	PF;
@@ -470,14 +522,14 @@ ayyi_automation_print(AyyiChannel* route)
 
 	int count = 0;
 	int b; for(b=0;b<CONTAINER_SIZE;b++){
-		struct block* block = ayyi_automation_get_block(route, b, VOL);
+		block* block = ayyi_automation_get_block(route, b, VOL);
 		if(!block){ dbg (2, "end found (empty block). stopping..."); break; }
 
 		void** auto_table = block->slot;
 		int i;
 		for(i=0;i<=block->last;i++){
 			if(!auto_table[i]) continue;
-			shm_event* shared = ayyi_auto_get_event(route, i, VOL);
+			shm_event* shared = ayyi_channel__get_auto_event(route, i, VOL);
 			if(shared){
 				printf("  %9.2f: %8.2f\n", shared->when, shared->value);
 				count++;

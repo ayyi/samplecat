@@ -7,6 +7,9 @@
 #include <sndfile.h>
 #include <gtk/gtk.h>
 #include "ayyi.h"
+#include "ayyi/engine_proxy.h"
+
+Service* engine = &known_services[AYYI_SERVICE_AYYID1];
 
 void
 ayyi_connect()
@@ -14,12 +17,12 @@ ayyi_connect()
 	Service* ardourd = &known_services[0];
 
 	ayyi_shm_init();
-	shm_seg_new(0, SEG_TYPE_SONG);
+	ayyi_shm_seg_new(0, SEG_TYPE_SONG);
 
 	GError* error = NULL;
-	if((dbus_server_connect (ardourd, &error))){
+	if((ayyi_client_connect (ardourd, &error))){
 		ardourd->on_shm = on_shm;
-		dbus_server_get_shm(ardourd);
+		ayyi_client__dbus_get_shm(ardourd);
 		//dbus_register_signals();
 	}else{
 		P_GERR;
@@ -32,7 +35,7 @@ void
 on_shm(struct _shm_seg* seg)
 {
 	PF;
-	if (ayyi.got_song) {
+	if (ayyi.got_shm) {
 		//synchronise local data cache.
 		//ayyi_song__load();
 	}

@@ -1,17 +1,17 @@
 #ifndef __ayyi_types_h__
 #define __ayyi_types_h__
 #include <stdint.h>
+
 #ifdef __cplusplus
-extern "C" {
-#endif
+namespace Ayi {
+#endif //__cplusplus
 
-typedef struct _ayyi_list          AyyiList;
+typedef struct _ayyi_list AyyiList;
 
-//media types
 typedef enum {
 	AYYI_AUDIO = 1,
 	AYYI_MIDI
-} MediaType;
+} AyyiMediaType;
 
 //op types
 typedef enum _ayyi_op_type {
@@ -42,7 +42,9 @@ enum {
 	AYYI_OBJECT_MIDI_NOTE,
 	AYYI_OBJECT_SONG,
 	AYYI_OBJECT_TRANSPORT,
+	AYYI_OBJECT_LOCATORS,
 	AYYI_OBJECT_AUTO,
+	AYYI_OBJECT_METRONOME,
 	AYYI_OBJECT_UNSUPPORTED,
 	AYYI_OBJECT_ALL
 };
@@ -134,6 +136,11 @@ struct _launch_info
 	char* exec;
 };
 
+struct _handler_data {
+	AyyiHandler callback;
+	gpointer    user_data;
+};
+
 enum {
 	VOL = 0,
 	PAN,
@@ -147,9 +154,22 @@ enum // channel/track/aux flags
 	armed  = 1 << 2,
 	master = 1 << 3,
 	deleted= 1 << 4,
+	FLAGS_MAX
 } ChanFlags;
 
+enum // channel/track/aux flags
+{
+	NEW       = 1 << 0,
+	DELETED   = 1 << 1,
+	CHANGED   = 1 << 2,
+	TRANSPORT = 1 << 3,
+	LOCATORS  = 1 << 4,
+	PROPERTY  = 1 << 5,
+	PROGRESS  = 1 << 6,
+	SIGNAL_MASK_MAX
+} SignalMask;
+
 #ifdef __cplusplus
-}
-#endif
-#endif
+}      // namspace Ayi
+#endif // __cplusplus
+#endif // __ayyi_types_h__
