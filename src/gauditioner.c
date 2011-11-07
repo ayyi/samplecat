@@ -14,7 +14,7 @@
 #include "main.h"
 #include "auditioner.h"
 
-static char ** get_preview_argv (char *uri) {
+static char ** get_preview_argv (char *path) {
 	char *command;
 	char **argv;
 	int i;
@@ -24,7 +24,7 @@ static char ** get_preview_argv (char *uri) {
 	if (command) {
 		argv = g_new (char *, 3);
 		argv[0] = command;
-		argv[1] = g_strdup (uri);
+		argv[1] = g_strdup (path);
 		argv[2] = NULL;
 
 		return argv;
@@ -32,6 +32,8 @@ static char ** get_preview_argv (char *uri) {
 
 	command = g_find_program_in_path ("gst-launch-0.10");
 	if (command) {
+		char *uri;
+		uri = g_filename_to_uri (path, NULL, NULL);
 		argv = g_new (char *, 10);
 		i = 0;
 		argv[i++] = command;
@@ -40,15 +42,19 @@ static char ** get_preview_argv (char *uri) {
 		/* do not display videos */
 		argv[i++] = g_strdup ("current-video=-1");
 		argv[i++] = NULL;
+		g_free (uri);
 		return argv;
 	}
 
 	command = g_find_program_in_path ("totem-audio-preview");
 	if (command) {
+		char *uri;
+		uri = g_filename_to_uri (path, NULL, NULL);
 		argv = g_new (char *, 3);
 		argv[0] = command;
 		argv[1] = g_strdup (uri);
 		argv[2] = NULL;
+		g_free (uri);
 
 		return argv;
 	}
@@ -75,6 +81,7 @@ static void play_next() {
 		Result* result = play_queue->data;
 		play_queue = g_list_remove(play_queue, result);
 		dbg(1, "%s", result->full_path);
+		/* TODO highlight current in app.store - see listview.c */
 		auditioner_play_result(result);
 		result_free(result);
 	}else{
@@ -95,12 +102,8 @@ static gboolean play_file (const char * path) {
 	GPid child_pid;
 	char **argv;
 	GError *error;
-	char *uri;
 
-	uri = g_filename_to_uri (path, NULL, NULL);
-
-	argv = get_preview_argv (uri);
-	g_free (uri);
+	argv = get_preview_argv (path);
 	if (argv == NULL) {
 		gwarn("audio preview is unavailable: install either of afplay, totem-audio-preview or gstreamer");
 		return FALSE;
@@ -110,14 +113,15 @@ static gboolean play_file (const char * path) {
 	if (!g_spawn_async_with_pipes (NULL,
 				       argv,
 				       NULL, 
-				       G_SPAWN_STDOUT_TO_DEV_NULL | G_SPAWN_STDERR_TO_DEV_NULL | G_SPAWN_DO_NOT_REAP_CHILD ,
+				       //G_SPAWN_STDOUT_TO_DEV_NULL | G_SPAWN_STDERR_TO_DEV_NULL | G_SPAWN_DO_NOT_REAP_CHILD ,
+				       G_SPAWN_DO_NOT_REAP_CHILD ,
 				       NULL,
 				       NULL /* user_data */,
 				       &child_pid,
 				       NULL, NULL, NULL,
 				       &error)) {
 		g_strfreev (argv);
-		g_warning ("Error spawning sound preview: %s\n", error->message);
+		g_warning("Error spawning sound preview: %s\n", error->message);
 		g_error_free (error);
 		return FALSE;
 	}
