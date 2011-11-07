@@ -14,6 +14,8 @@ AM_CFLAGS = \
 	-I./xdgmime \
 	$(FFTW3_CFLAGS) \
 	$(OPENGL_CFLAGS) \
+	$(JACK_CFLAGS) \
+	$(SNDFILE_CFLAGS) \
 	$(GTK_CFLAGS) $(DBUS_CFLAGS) $(MYSQL_CFLAGS) $(FLAC_CFLAGS) $(TRACKER_CFLAGS)
 
 #$(XML_CFLAGS)
@@ -101,7 +103,7 @@ samplecat_LDADD = \
 	$(SQLITE_LDFLAGS) \
 	$(GTK_LIBS) $(MYSQL_LDFLAGS) $(JACK_LIBS) $(SNDFILE_LIBS) $(FLAC_LIBS) $(GTHREAD_LIBS) \
 	$(FFTW3_LIBS) \
-	$(OPENGL_LDFLAGS)
+	$(OPENGL_LIBS)
 
 EXTRA_DIST = db/sqlite.c db/sqlite.h db/tracker.c db/tracker.h \
 	gl_spectrogram_view.c gl_spectrogram_view.h

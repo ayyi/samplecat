@@ -151,18 +151,19 @@ AC_SUBST(VFS_CFLAGS)
 AC_SUBST(VFS_LIBS)
 
 dnl AC_CHECK_LIB(art_lgpl_2, art_rgba_run_alpha, [libart_found=yes], AC_MSG_RESULT(**** Cannot find LIBART ****))
-LIBART_CFLAGS=`pkg-config libart-2.0 --cflags`
-LIBART_LIBS=`pkg-config libart-2.0 --libs`
+PKG_CHECK_MODULES(LIBART, libart-2.0)
 AC_SUBST(LIBART_CFLAGS)
 AC_SUBST(LIBART_LIBS)
 
 dnl XML_CFLAGS=`pkg-config libxml --cflags`
 dnl AC_SUBST(XML_CFLAGS)
 
-JACK_LIBS=`pkg-config jack --cflags --libs`
+PKG_CHECK_MODULES(JACK, jack,, [true])
+AC_SUBST(JACK_CFLAGS)
 AC_SUBST(JACK_LIBS)
 
-SNDFILE_LIBS=`pkg-config sndfile --cflags --libs`
+PKG_CHECK_MODULES(SNDFILE, sndfile,, [true])
+AC_SUBST(SNDFILE_CFLAGS)
 AC_SUBST(SNDFILE_LIBS)
 
 dnl -----------------------------------------------------------------------------
