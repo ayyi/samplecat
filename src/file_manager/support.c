@@ -16,7 +16,9 @@
 #include <sys/param.h>
 #include <errno.h>
 
+#ifdef USE_MYSQL
 #include "mysql/mysql.h"
+#endif
 #include <gtk/gtk.h>
 #ifdef OLD
   #include <libart_lgpl/libart.h>
