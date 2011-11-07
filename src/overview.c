@@ -232,7 +232,7 @@ make_overview_sndfile(Sample* sample)
     min = (min * OVERVIEW_HEIGHT) / (256*128*2);
     max = (max * OVERVIEW_HEIGHT) / (256*128*2);
 
-    drect pts = {x, OVERVIEW_HEIGHT/2 + min, x, OVERVIEW_HEIGHT/2 + max};
+    drect pts = {x, OVERVIEW_HEIGHT/2 + min, x, OVERVIEW_HEIGHT/2 + max+1};
     draw_cairo_line(cr, &pts, 1.0, &app.bg_colour);
 
     //printf(" %i max=%i\n", x,OVERVIEW_HEIGHT/2);

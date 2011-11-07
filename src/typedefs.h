@@ -1,4 +1,4 @@
-#define OVERVIEW_WIDTH 150
+#define OVERVIEW_WIDTH 200
 #define OVERVIEW_HEIGHT 20
 
 typedef enum {
