@@ -222,11 +222,15 @@ menu__open_selector(GtkMenuItem* menuitem, gpointer user_data)
 		dbg(0, "...");
 		gtk_widget_destroy(gtk_widget_get_toplevel((GtkWidget*)button));
 	}
-
 	GtkWidget* window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	GtkWidget* v = gtk_vbox_new(NON_HOMOGENOUS, 2);
 	gtk_container_add((GtkContainer*)window, v);
 	GtkWidget* sel = gtk_color_selection_new();
+#if 1
+	int box_idx = colour_box__lookup_idx(clicked_widget);
+	GtkStyle *curstyle = gtk_widget_get_style(app.colour_button[box_idx]);
+	gtk_color_selection_set_current_color(GTK_COLOR_SELECTION(sel), &curstyle->bg[GTK_STATE_NORMAL]);
+#endif
 	GtkWidget* b = gtk_button_new_with_label("Ok");
 	gtk_box_pack_start((GtkBox*)v, sel, EXPAND_FALSE, FILL_FALSE, 0);
 	gtk_box_pack_start((GtkBox*)v, b, EXPAND_FALSE, FILL_FALSE, 0);
