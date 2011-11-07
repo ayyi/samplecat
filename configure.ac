@@ -326,13 +326,17 @@ AM_CONDITIONAL(ENABLE_AYYI, test "$enable_ayyi" = "yes")
 
 dnl -----------------------------------------------------------------------------
 
-enable_opengl="yes"
-OPENGL_CFLAGS=`pkg-config --cflags-only-I gtkglext-1.0`
-OPENGL_LDFLAGS=`pkg-config --libs-only-l gtkglext-1.0`
+AC_ARG_ENABLE(opengl,
+	[AC_HELP_STRING([--disable-opengl], [disable use of OpenGL])],
+	[enable_opengl="$enableval"],
+	[enable_opengl="yes"]
+)
+AS_IF([test "$enable_opengl" = "yes"], [
+  PKG_CHECK_MODULES(OPENGL, gtkglext-1.0, [AC_DEFINE(USE_OPENGL, 1, Opengl features are enabled)])
+	])
 AC_SUBST(OPENGL_CFLAGS)
 AC_SUBST(OPENGL_LDFLAGS)
-AC_DEFINE(USE_OPENGL, 1, Opengl features are enabled)
-AM_CONDITIONAL(ENABLE_OPENGL, test "yes" = "yes")
+AM_CONDITIONAL(ENABLE_OPENGL, test "$enable_opengl" = "yes")
 
 dnl -----------------------------------------------------------------------------
 
