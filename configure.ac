@@ -2,6 +2,8 @@ AC_PREREQ(2.59)
 AC_INIT([Samplecat],[0.1.2],[tim@orford.org])
 AC_CONFIG_SRCDIR([src/main.c])
 AC_CONFIG_HEADER([config.h])
+AC_CANONICAL_HOST
+AC_CANONICAL_TARGET
 AM_INIT_AUTOMAKE
 
 # LT_REVISION=1
@@ -224,10 +226,11 @@ AC_ARG_ENABLE([dbus],
       ;;
   esac
 ])
+
+DBUS_FOUND=no
 if `test "$dbus" = "yes"`; then
 	AC_CHECK_LIB([dbus-glib-1], [dbus_g_bus_get], [DBUS_FOUND=yes], [echo "*** dbus not found!"])
 	if test "$DBUS_FOUND" = "yes"; then
-		AM_CONDITIONAL(ENABLE_DBUS, test "yes" = "yes")
 		AC_DEFINE(USE_DBUS, 1, [Dbus is used for messaging.])
 	else
 		AC_MSG_ERROR([Dbus was configured as the comms system but was not found on your machine.])
@@ -235,10 +238,10 @@ if `test "$dbus" = "yes"`; then
 	DBUS_CFLAGS=`pkg-config --cflags-only-I dbus-glib-1`
 	DBUS_LDFLAGS=`pkg-config --libs-only-l dbus-glib-1`
 else
-	AM_CONDITIONAL(ENABLE_DBUS, [test "yes" = "no"])
 	DBUS_CFLAGS=
 	DBUS_LDFLAGS=
 fi;
+AM_CONDITIONAL(ENABLE_DBUS, [test "$DBUS_FOUND" = "yes"])
 AC_SUBST(DBUS_CFLAGS)
 AC_SUBST(DBUS_LDFLAGS)
 
@@ -327,8 +330,13 @@ AC_SUBST(SQLITE_LDFLAGS)
 
 dnl -----------------------------------------------------------------------------
 
-AC_ARG_ENABLE(ayyi, AS_HELP_STRING([--enable-ayyi],[build with ayyi support]),enable_ayyi=$enableval,enable_ayyi=auto)
-AM_CONDITIONAL(ENABLE_AYYI, test "$enable_ayyi" = "yes")
+AC_ARG_ENABLE(ayyi, AS_HELP_STRING([--enable-ayyi],[build with ayyi support]),enable_ayyi=$enableval,enable_ayyi=no)
+
+AM_COND_IF(ENABLE_DBUS,, [
+	AC_MSG_WARN([*** AYYI requires DBUS ***])
+	enable_ayyi=no
+  ])
+
 if test "$enable_ayyi" = "yes"; then
    AC_DEFINE(USE_AYYI,1,[Use ayyi])
 fi
