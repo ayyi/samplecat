@@ -729,7 +729,7 @@ menu__play(GtkMenuItem* menuitem, gpointer user_data)
 	for(;l;l=l->next){
 		char* item = l->data;
 		dbg(1, "%s", item);
-#ifdef USE_DBUS
+#if (defined USE_DBUS || defined USE_GAUDITION)
 		auditioner_play_path(item);
 #endif
 		g_free(item);

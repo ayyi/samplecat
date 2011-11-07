@@ -39,7 +39,7 @@ This software is licensed under the GPL. See accompanying file COPYING.
 #include "support.h"
 #include "main.h"
 #include "sample.h"
-#ifndef USE_DBUS
+#if !(defined USE_DBUS || defined USE_GAUDITION)
 #include "audio.h"
 #endif
 #include "overview.h"
@@ -48,7 +48,7 @@ This software is licensed under the GPL. See accompanying file COPYING.
 #include "window.h"
 #include "inspector.h"
 #include "dnd.h"
-#ifdef USE_DBUS
+#if (defined USE_DBUS || defined USE_GAUDITION)
   #include "auditioner.h"
 #endif
 #include "console_view.h"
@@ -301,7 +301,7 @@ main(int argc, char** argv)
 
 	if(app.no_gui) exit(EXIT_SUCCESS);
 
-#ifdef USE_DBUS
+#if (defined USE_DBUS || defined USE_GAUDITION)
 	auditioner_connect();
 #endif
 
@@ -942,8 +942,18 @@ static void
 menu_play_all(GtkWidget* widget, gpointer user_data)
 {
 	dbg(0, "...");
-#ifdef USE_DBUS
+#if (defined USE_DBUS || defined USE_GAUDITION)
 	auditioner_play_all();
+#endif
+}
+
+
+static void
+menu_play_stop(GtkWidget* widget, gpointer user_data)
+{
+	dbg(0, "...");
+#if (defined USE_DBUS || defined USE_GAUDITION)
+	auditioner_stop(NULL);
 #endif
 }
 
@@ -991,6 +1001,7 @@ static MenuDef _menu_def[] = {
 	{"Delete",         G_CALLBACK(menu_delete_row), GTK_STOCK_DELETE,     true},
 	{"Update",         G_CALLBACK(update_row),      GTK_STOCK_REFRESH,    true},
 	{"Play All",       G_CALLBACK(menu_play_all),   GTK_STOCK_MEDIA_PLAY, true},
+	{"Stop Playback",  G_CALLBACK(menu_play_stop),  GTK_STOCK_MEDIA_STOP, true},
 	{"Edit tags",      G_CALLBACK(edit_row),   GTK_STOCK_EDIT,        true},
 	{"Open",           G_CALLBACK(edit_row),   GTK_STOCK_OPEN,       false},
 	{"Open Directory", G_CALLBACK(NULL),       GTK_STOCK_OPEN,        true},
@@ -1385,7 +1396,7 @@ on_quit(GtkMenuItem* menuitem, gpointer user_data)
 	int exit_code = GPOINTER_TO_INT(user_data);
 	if(exit_code > 1) exit_code = 0; //ignore invalid exit code.
 
-#ifndef USE_DBUS
+#if !(defined USE_DBUS || defined USE_GAUDITION)
 	jack_close();
 #endif
 

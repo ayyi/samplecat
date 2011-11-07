@@ -17,13 +17,13 @@
 #include "cellrenderer_hypertext.h"
 #include "pixmaps.h"
 #include "overview.h"
-#ifdef USE_DBUS
+#if (defined USE_DBUS || defined USE_GAUDITION)
 #include "auditioner.h"
 #endif
 #include "listview.h"
 
 extern struct _app app;
-#ifndef USE_DBUS
+#if !(defined USE_DBUS || defined USE_GAUDITION)
 extern int      playback_init                    (Sample*);
 extern void     playback_stop                    ();
 #endif
@@ -239,7 +239,7 @@ listview__on_row_clicked(GtkWidget *widget, GdkEventButton *event, gpointer user
 				Sample* sample = sample_new_from_model(path);
 
 				if(sample->id != app.playing_id){
-#ifdef USE_DBUS
+#if (defined USE_DBUS || defined USE_GAUDITION)
 					if(app.playing_id){
 						//a sample was previously played, and it wasnt this one
 						auditioner_play(sample);
@@ -253,7 +253,7 @@ listview__on_row_clicked(GtkWidget *widget, GdkEventButton *event, gpointer user
 #endif
 #endif
 				}
-#ifdef USE_DBUS
+#if (defined USE_DBUS || defined USE_GAUDITION)
 				else auditioner_toggle(sample);
 #else
 #if 0
