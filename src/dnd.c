@@ -46,8 +46,9 @@ drag_received(GtkWidget *widget, GdkDragContext *drag_context, gint x, gint y,
 
   if(g_str_has_prefix((char*)data->data, "colour:")){
 
-    if(get_mouseover_row() > -1){
-    //if(widget==app.view){
+    if(get_mouseover_row() > -1)
+    //if(widget==app.view)
+		{
       dbg(1, "treeview!");
     }
 
@@ -57,14 +58,14 @@ drag_received(GtkWidget *widget, GdkDragContext *drag_context, gint x, gint y,
     //which row are we on?
     GtkTreePath* path;
     GtkTreeIter iter;
-    gint x, treeview_top;
-    gdk_window_get_position(app.view->window, &x, &treeview_top);
+    gint tx, treeview_top;
+    gdk_window_get_position(app.view->window, &tx, &treeview_top);
     dbg(2, "treeview_top=%i", y);
 
 #ifdef HAVE_GTK_2_12
-    dbg(0, "warning: untested gtk2.12 fn.");
     gint bx, by;
-    gtk_tree_view_convert_widget_to_bin_window_coords(GTK_TREE_VIEW(app.view), x, y, &bx, &by);
+    gtk_tree_view_convert_widget_to_bin_window_coords(GTK_TREE_VIEW(app.view), x, y - treeview_top, &bx, &by);
+    dbg(2, "note: gtk2.12 coords: %dx%d => %dx%d", x,y,bx,by);
 #else
     gint by = y - treeview_top - 20;
 #endif
