@@ -343,6 +343,13 @@ fi
 AM_CONDITIONAL(ENABLE_AYYI, test "$enable_ayyi" = "yes")
 
 
+AC_ARG_ENABLE(gplayer, AS_HELP_STRING([--enable-gaudition],[build with external player]),enable_gplayer=$enableval,enable_gplayer=no)
+AM_COND_IF(ENABLE_AYYI,, [enable_gplayer=yes]) 
+AM_CONDITIONAL(ENABLE_GAUDITION, test "$enable_gplayer" = "yes")
+if test "$enable_gplayer" = "yes"; then
+   AC_DEFINE(USE_GAUDITION,1,[Use gtk/gnome auditioner])
+fi
+
 dnl -----------------------------------------------------------------------------
 
 AC_ARG_ENABLE(opengl,
@@ -419,6 +426,7 @@ AC_MSG_RESULT([Building tracker support:         $enable_tracker])
 AC_MSG_RESULT([Building direct flac support:     $enable_flac])
 AC_MSG_RESULT([Building dnotify support:         $have_dnotify])
 AC_MSG_RESULT([Building ayyi support:            $enable_ayyi])
+AC_MSG_RESULT([Building gplayer support:         $enable_gplayer])
 AC_MSG_RESULT([Building opengl support:          $enable_opengl])
 AC_MSG_RESULT([Building soundfont support:       $enable_sf2])
 AC_MSG_RESULT([Building nks support:             $enable_nks])

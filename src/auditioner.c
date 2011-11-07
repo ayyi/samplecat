@@ -23,6 +23,11 @@ This software is licensed under the GPL. See accompanying file COPYING.
 #include "main.h"
 #include "auditioner.h"
 
+struct _auditioner
+{
+	DBusGProxy*    proxy;
+};
+
 #define APPLICATION_SERVICE_NAME "org.ayyi.Auditioner.Daemon"
 #define DBUS_APP_PATH            "/org/ayyi/auditioner/daemon"
 #define DBUS_INTERFACE           "org.ayyi.auditioner.Daemon"

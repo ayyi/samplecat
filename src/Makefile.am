@@ -61,6 +61,10 @@ if ENABLE_DBUS
 DBUS_SRC = auditioner.c auditioner.h
 endif
 
+if ENABLE_GAUDITION
+DBUS_SRC = gauditioner.c auditioner.h
+endif
+
 samplecat_SOURCES = \
 	typedefs.h types.h \
 	main.c main.h \
