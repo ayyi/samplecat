@@ -833,7 +833,10 @@ colour_get_style_fg(GdkColor *color, int state)
   color->red   = style->fg[state].red;
   color->green = style->fg[state].green;
   color->blue  = style->fg[state].blue;
+
+#if 0
   g_free(style);
+#endif
 }
 
 void
@@ -850,7 +853,9 @@ colour_get_style_bg(GdkColor *color, int state)
   color->green = style->bg[state].green;
   color->blue  = style->bg[state].blue;
 
+#if 0
   g_free(style);
+#endif
 }
 
 
@@ -866,7 +871,9 @@ colour_get_style_base(GdkColor *color, int state)
   color->green = style->base[state].green;
   color->blue  = style->base[state].blue;
 
+#if 0
   g_free(style);
+#endif
 }
 
 
@@ -881,8 +888,9 @@ colour_get_style_text(GdkColor *color, int state)
   color->red   = style->text[state].red;
   color->green = style->text[state].green;
   color->blue  = style->text[state].blue;
-
+#if 0
   g_free(style);
+#endif
 }
 
 
