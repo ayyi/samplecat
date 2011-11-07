@@ -260,6 +260,16 @@ listview__on_row_clicked(GtkWidget *widget, GdkEventButton *event, gpointer user
 				else playback_stop();
 #endif
 #endif
+
+#if 1 /* highlight played item with 'colour:1' */
+# if 0 // persistent
+				listview__item_set_colour(path, 1); // persistent.
+# else // temporary
+				GtkTreeIter iter;
+				gtk_tree_model_get_iter(GTK_TREE_MODEL(app.store), &iter, path);
+				gtk_list_store_set(GTK_LIST_STORE(app.store), &iter, COL_COLOUR, /*colour*/ 1, -1);
+# endif
+#endif
 				sample_unref(sample);
 			}else{
 				gtk_tree_view_get_cell_area(treeview, path, app.col_tags, &rect);
