@@ -942,7 +942,9 @@ static void
 menu_play_all(GtkWidget* widget, gpointer user_data)
 {
 	dbg(0, "...");
+#ifdef USE_DBUS
 	auditioner_play_all();
+#endif
 }
 
 
