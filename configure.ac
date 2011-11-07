@@ -32,6 +32,16 @@ else
   CXXFLAGS="$CXXFLAGS -DNDEBUG"
 fi
 
+case $target_os in
+  *darwin*)
+		CFLAGS="$CFLAGS -fnested-functions"
+  	;;
+  *linux*)
+	  ;;
+  *)	
+    ;;
+esac
+
 # Check for strict flag
 strict="no"
 AC_ARG_ENABLE(strict,
