@@ -102,9 +102,9 @@ samplecat_LDADD = \
 	gimp/libgimpwidgets.a \
 	xdgmime/libxdgmime.a \
 	$(AYYI_LIBS) \
-	$(DBUS_LDFLAGS) \
+	$(DBUS_LIBS) \
 	$(TRACKER_LDFLAGS) \
-	$(SQLITE_LDFLAGS) \
+	$(SQLITE_LIBS) \
 	$(GTK_LIBS) $(MYSQL_LDFLAGS) $(JACK_LIBS) $(SNDFILE_LIBS) $(FLAC_LIBS) $(GTHREAD_LIBS) \
 	$(FFTW3_LIBS) \
 	$(OPENGL_LIBS)

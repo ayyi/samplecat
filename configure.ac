@@ -22,26 +22,42 @@ AC_PROG_LIBTOOL
 AC_SYS_LARGEFILE
 
 # Check for debugging flag
-debug="yes"
+debug="no"
 AC_ARG_ENABLE(debug,
 	[AS_HELP_STRING(--enable-debug, [Enable debugging (false)])],
 	[debug="$enableval"])
 if test "$debug" = "yes"; then
-  CFLAGS="-O0 -g -DDEBUG"
-  CXXFLAGS="$CFLAGS"
+	CFLAGS="-O0 -g -DDEBUG"
+	CXXFLAGS="$CFLAGS"
 else
-  CFLAGS="$CFLAGS -DNDEBUG"
-  CXXFLAGS="$CXXFLAGS -DNDEBUG"
+	CFLAGS="$CFLAGS -DNDEBUG"
+	CXXFLAGS="$CXXFLAGS -DNDEBUG"
 fi
 
+# default 'auto' configutaion
+enable_mysql="auto"
+enable_sqlite="no"
+enable_opengl="yes"
+enable_dbus="auto"
+enable_fftw="auto"
+enable_dnotify="no"
+enable_gplayer="no"
+enable_tracker="no" # not yet complete
+enable_ayyi="no"    # not yet complete
+
 case $target_os in
-  *darwin*)
+	*darwin*)
 		CFLAGS="$CFLAGS -fnested-functions"
-  	;;
-  *linux*)
-	  ;;
-  *)	
-    ;;
+		enable_dbus="no"
+		enable_sqlite="yes"
+		enable_gplayer="yes"
+		enable_opengl="no"
+		;;
+	*linux*)
+		enable_dnotify="yes"
+		;;
+	*)	
+		;;
 esac
 
 # Check for strict flag
@@ -50,8 +66,8 @@ AC_ARG_ENABLE(strict,
 	[AS_HELP_STRING(--enable-strict, [Enable strict compiler warnings and errors (false)])],
 	[strict="$enableval"])
 if test "$strict" = "yes"; then
-  CFLAGS="$CFLAGS -ansi -Wall -Wextra -Wno-unused-parameter -Wconversion -Winit-self"
-  CXXFLAGS="$CXXFLAGS -ansi -Wall -Wextra -Wno-unused-parameter -Wconversion -Winit-self -Woverloaded-virtual -Wsign-promo"
+	CFLAGS="$CFLAGS -ansi -Wall -Wextra -Wno-unused-parameter -Wconversion -Winit-self"
+	CXXFLAGS="$CXXFLAGS -ansi -Wall -Wextra -Wno-unused-parameter -Wconversion -Winit-self -Woverloaded-virtual -Wsign-promo"
 fi
 
 dnl -----------------------------------------------------------------------------
@@ -80,13 +96,7 @@ dnl ----------------------------------------------------------------------------
 
 dnl test for mysql
 
-mysqlfail=false
-
-AC_ARG_ENABLE(mysql,
-	[AC_HELP_STRING([--disable-mysql], [disable use of Mysql as backend])],
-	[enable_mysql="$enableval"],
-	[enable_mysql="auto"]
-)
+AC_ARG_ENABLE(mysql, [AC_HELP_STRING([--disable-mysql], [disable use of Mysql as backend])])
 
 if test x$enable_mysql = xno ; then
 	:
@@ -141,18 +151,18 @@ fi
 AC_SUBST(MYSQL_LDFLAGS)
 AC_SUBST(MYSQL_CFLAGS)
 if test x$enable_mysql = xyes; then
-   AC_DEFINE(USE_MYSQL,1,[Enable Mysql as backend])
+	AC_DEFINE(USE_MYSQL,1,[Enable Mysql as backend])
+else
+	enable_mysql="no"
 fi
 AM_CONDITIONAL(ENABLE_MYSQL, test "$enable_mysql" = "yes")
 
 dnl -----------------------------------------------------------------------------
 
-VFS_CFLAGS=`pkg-config gnome-vfs-2.0 --cflags`
-VFS_LIBS="-lgnomevfs-2"
+PKG_CHECK_MODULES(VFS, gnome-vfs-2.0,, [true])
 AC_SUBST(VFS_CFLAGS)
 AC_SUBST(VFS_LIBS)
 
-dnl AC_CHECK_LIB(art_lgpl_2, art_rgba_run_alpha, [libart_found=yes], AC_MSG_RESULT(**** Cannot find LIBART ****))
 PKG_CHECK_MODULES(LIBART, libart-2.0)
 AC_SUBST(LIBART_CFLAGS)
 AC_SUBST(LIBART_LIBS)
@@ -192,59 +202,36 @@ AC_SUBST(FLAC_LIBS)
 
 dnl -----------------------------------------------------------------------------
 
-AC_ARG_ENABLE(dnotify, AS_HELP_STRING([--enable-dnotify],[build with dnotify support]),enable_dnotify=$enableval,enable_dnotify=auto)
+AC_ARG_ENABLE(dnotify, AS_HELP_STRING([--enable-dnotify],[build with dnotify support]))
 
-if test x$enable_dnotify = xno ; then
-    have_dnotify=no;
-else
-    have_dnotify=yes;	
+if test "$enable_dnotify"= "yes"; then
+	AC_DEFINE(USE_DNOTIFY,1,[Use dnotify on Linux])
+	AC_DEFINE(USE_NOTIFY,1,[Use notification])
 fi
-
-if test x$have_dnotify = xyes; then
-   AC_DEFINE(USE_DNOTIFY,1,[Use dnotify on Linux])
-   AC_DEFINE(USE_NOTIFY,1,[Use notification])
-fi
-
-AM_CONDITIONAL(ENABLE_DNOTIFY, test x$have_dnotify = xyes)
+AM_CONDITIONAL(ENABLE_DNOTIFY, test "$enable_dnotify" = "yes")
 
 
 dnl -----------------------------------------------------------------------------
 
-dbus="yes"
-AC_ARG_ENABLE([dbus],
-[  --disable-dbus          disable use of dbus],[
-  case "$enableval" in
-    "yes")
-      echo "dbus YES"
-      ;;
-    "no")
-      echo "dbus NO"
-      dbus="no"
-      ;;
-    *)
-      AC_MSG_ERROR([must use --enable-dbus(=yes/no) or --disable-dbus])
-      ;;
-  esac
-])
-
-DBUS_FOUND=no
-if `test "$dbus" = "yes"`; then
-	AC_CHECK_LIB([dbus-glib-1], [dbus_g_bus_get], [DBUS_FOUND=yes], [echo "*** dbus not found!"])
-	if test "$DBUS_FOUND" = "yes"; then
-		AC_DEFINE(USE_DBUS, 1, [Dbus is used for messaging.])
-	else
-		AC_MSG_ERROR([Dbus was configured as the comms system but was not found on your machine.])
-	fi;
-	DBUS_CFLAGS=`pkg-config --cflags-only-I dbus-glib-1`
-	DBUS_LDFLAGS=`pkg-config --libs-only-l dbus-glib-1`
-else
-	DBUS_CFLAGS=
-	DBUS_LDFLAGS=
-fi;
-AM_CONDITIONAL(ENABLE_DBUS, [test "$DBUS_FOUND" = "yes"])
+AC_ARG_ENABLE(dbus, AS_HELP_STRING([--disable-dbus],[disable use of dbus]))
+AS_IF([test "$enable_dbus" != "no"], [
+       PKG_CHECK_MODULES(DBUS, dbus-glib-1, enable_dbus=yes, enable_dbus=no)
+       ])
 AC_SUBST(DBUS_CFLAGS)
-AC_SUBST(DBUS_LDFLAGS)
+AC_SUBST(DBUS_LIBS)
+if test "$enable_dbus" = "yes"; then
+	AC_DEFINE(USE_DBUS, 1, Use Dbus is for messaging.)
+fi
+AM_CONDITIONAL(ENABLE_DBUS, [test "$enable_dbus" = "yes"])
 
+dnl -----------------------------------------------------------------------------
+
+AC_ARG_ENABLE(ayyi, AS_HELP_STRING([--enable-ayyi],[build with ayyi support]))
+
+if test "$enable_ayyi" = "yes"; then
+	AC_DEFINE(USE_AYYI,1,[Use ayyi])
+fi
+AM_CONDITIONAL(ENABLE_AYYI, [test "$enable_ayyi" = "yes"])
 
 dnl -----------------------------------------------------------------------------
 
@@ -293,8 +280,8 @@ AC_SUBST(SF2_CFLAGS)
 
 dnl -----------------------------------------------------------------------------
 
-AC_ARG_ENABLE(tracker, AS_HELP_STRING([--enable-tracker],[build with tracker support]),enable_tracker=$enableval,enable_tracker=auto)
-if `test "$enable_tracker" = "yes"`; then
+AC_ARG_ENABLE(tracker, AS_HELP_STRING([--enable-tracker],[build with tracker support]))
+if test "$enable_tracker" = "yes"; then
 	dnl AC_CHECK_LIB(tracker-client-0.7, tracker_client_new, [tracker_found=yes])
 	AC_CHECK_LIB(tracker-client-0.9, tracker_client_new, [tracker_found=yes])
 	if `test "$tracker_found" = "yes"`; then
@@ -317,94 +304,54 @@ AC_SUBST(TRACKER_LDFLAGS)
 
 dnl -----------------------------------------------------------------------------
 
-AC_ARG_ENABLE(sqlite, AS_HELP_STRING([--enable-sqlite],[build with sqlite support]),enable_sqlite=$enableval,enable_sqlite=auto)
+AC_ARG_ENABLE(sqlite, AS_HELP_STRING([--enable-sqlite],[build with sqlite support]))
+AS_IF([test "$enable_sqlite" = "yes"],[
+       PKG_CHECK_MODULES(SQLITE, sqlite3, AC_DEFINE(USE_SQLITE, 1, Use sqlite backend), enable_sqlite=no)
+       ])
 AM_CONDITIONAL(ENABLE_SQLITE, test "$enable_sqlite" = "yes")
-if `test "$enable_sqlite" = "yes"`; then
-    AC_DEFINE(USE_SQLITE, 1, Use sqlite backend)
-fi;
-
-SQLITE_CFLAGS=`pkg-config sqlite3 --cflags`
-SQLITE_LDFLAGS=`pkg-config sqlite3 --libs`
 AC_SUBST(SQLITE_CFLAGS)
-AC_SUBST(SQLITE_LDFLAGS)
+AC_SUBST(SQLITE_LIBS)
 
 dnl -----------------------------------------------------------------------------
 
-AC_ARG_ENABLE(ayyi, AS_HELP_STRING([--enable-ayyi],[build with ayyi support]),enable_ayyi=$enableval,enable_ayyi=no)
-
-if test "$DBUS_FOUND" != "yes"; then
-	AC_MSG_WARN([*** AYYI requires DBUS ***])
-	enable_ayyi=no
-fi
-
-if test "$enable_ayyi" = "yes"; then
-   AC_DEFINE(USE_AYYI,1,[Use ayyi])
-fi
-AM_CONDITIONAL(ENABLE_AYYI, test "$enable_ayyi" = "yes")
-
-
-AC_ARG_ENABLE(gplayer, AS_HELP_STRING([--enable-gaudition],[build with external player]),enable_gplayer=$enableval,enable_gplayer=no)
+AC_ARG_ENABLE(gplayer, AS_HELP_STRING([--enable-gaudition],[build with external player]))
 if test "$enable_ayyi" = "yes"; then
 	AC_MSG_WARN([*** gplayer is exclusive with ayii ***])
 	enable_gplayer=no
 fi
 AM_CONDITIONAL(ENABLE_GAUDITION, test "$enable_gplayer" = "yes")
 if test "$enable_gplayer" = "yes"; then
-   AC_DEFINE(USE_GAUDITION,1,[Use gtk/gnome auditioner])
+	AC_DEFINE(USE_GAUDITION,1,[Use gtk/gnome auditioner])
 fi
 
 dnl -----------------------------------------------------------------------------
 
-AC_ARG_ENABLE(opengl,
-	[AC_HELP_STRING([--disable-opengl], [disable use of OpenGL])],
-	[enable_opengl="$enableval"],
-	[enable_opengl="yes"]
-)
+AC_ARG_ENABLE(opengl, [AC_HELP_STRING([--disable-opengl], [disable use of OpenGL])])
 AS_IF([test "$enable_opengl" = "yes"], [
-  PKG_CHECK_MODULES(OPENGL, gtkglext-1.0, [AC_DEFINE(USE_OPENGL, 1, Opengl features are enabled)])
-	])
+       PKG_CHECK_MODULES(OPENGL, gtkglext-1.0, [AC_DEFINE(USE_OPENGL, 1, Opengl features are enabled)])
+       ])
 AC_SUBST(OPENGL_CFLAGS)
-AC_SUBST(OPENGL_LDFLAGS)
+AC_SUBST(OPENGL_LDIBS)
 AM_CONDITIONAL(ENABLE_OPENGL, test "$enable_opengl" = "yes")
 
 dnl -----------------------------------------------------------------------------
 
-AC_ARG_ENABLE(fftw,
-	AC_HELP_STRING([--disable-fftw], [disable usage of FFTW ]),
-	ac_arg_fftw="N", ac_arg_fftw="Y")
-
-if test $ac_arg_fftw = "Y" ; then
-	PKG_CHECK_MODULES(FFTW3, fftw3 >= 0.15.0, ac_cv_fftw3=1, ac_cv_fftw3=0)
-	AC_DEFINE_UNQUOTED([HAVE_FFTW3],$ac_cv_fftw3,[Set to 1 if you have libfftw3.])
-
-	if test x$ac_cv_fftw3 = x1 ; then
-      ac_cv_fftw3=yes
-      HAVE_FFTW3=1
-      fi
-	fi
-
-if test x$ac_cv_fftw3 != xyes ; then
-	ac_cv_fftw3=no
-	HAVE_FFTW3=0
-	fi
-
-AC_SUBST(HAVE_FFTW3)
+AC_ARG_ENABLE(fftw, AC_HELP_STRING([--disable-fftw], [disable usage of FFTW ]))
+AS_IF([test "$enable_fftw" != "no"], [
+	PKG_CHECK_MODULES(FFTW3, fftw3 >= 0.15.0, [AC_DEFINE([HAVE_FFTW3], 1, [Set to 1 if you have libfftw3.]) enable_fftw=yes], enable_fftw=no)
+	])
 AC_SUBST(FFTW3_CFLAGS)
 AC_SUBST(FFTW3_LIBS)
-AM_CONDITIONAL(ENABLE_FFTW3, test "$ac_cv_fftw3" = "yes")
+AM_CONDITIONAL(ENABLE_FFTW3, test "$enable_fftw" = "yes")
 
 
 dnl -----------------------------------------------------------------------------
 
-SNDFILE_LIBS=`pkg-config --cflags --libs sndfile`
-AC_SUBST(SNDFILE_LIBS)
-
-GTHREAD_LIBS=`pkg-config --libs gthread-2.0`
+PKG_CHECK_MODULES(GTHREAD, gthread-2.0,, [true])
+AC_SUBST(GTHREAD_CFLAGS)
 AC_SUBST(GTHREAD_LIBS)
-#LIBART_CFLAGS=`pkg-config --cflags libart-2.0`
-#AC_SUBST(LIBART_CFLAGS)
-#LIBART_LIBS=`pkg-config --libs libart-2.0`
-#AC_SUBST(LIBART_LIBS)
+
+dnl -----------------------------------------------------------------------------
 
 #AC_DEFINE(NO_USE_DEVHELP_DIRTREE, 1, [Use the new directory tree])
 
@@ -427,7 +374,8 @@ AC_MSG_RESULT([Building mysql support:           $enable_mysql])
 AC_MSG_RESULT([Building sqlite support:          $enable_sqlite])
 AC_MSG_RESULT([Building tracker support:         $enable_tracker])
 AC_MSG_RESULT([Building direct flac support:     $enable_flac])
-AC_MSG_RESULT([Building dnotify support:         $have_dnotify])
+AC_MSG_RESULT([Building dnotify support:         $enable_dnotify])
+AC_MSG_RESULT([Building dbus support:            $enable_dbus])
 AC_MSG_RESULT([Building ayyi support:            $enable_ayyi])
 AC_MSG_RESULT([Building gplayer support:         $enable_gplayer])
 AC_MSG_RESULT([Building opengl support:          $enable_opengl])
