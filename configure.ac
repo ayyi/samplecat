@@ -332,10 +332,10 @@ dnl ----------------------------------------------------------------------------
 
 AC_ARG_ENABLE(ayyi, AS_HELP_STRING([--enable-ayyi],[build with ayyi support]),enable_ayyi=$enableval,enable_ayyi=no)
 
-AM_COND_IF(ENABLE_DBUS,, [
+if test "$DBUS_FOUND" != "yes"; then
 	AC_MSG_WARN([*** AYYI requires DBUS ***])
 	enable_ayyi=no
-  ])
+fi
 
 if test "$enable_ayyi" = "yes"; then
    AC_DEFINE(USE_AYYI,1,[Use ayyi])
@@ -344,7 +344,10 @@ AM_CONDITIONAL(ENABLE_AYYI, test "$enable_ayyi" = "yes")
 
 
 AC_ARG_ENABLE(gplayer, AS_HELP_STRING([--enable-gaudition],[build with external player]),enable_gplayer=$enableval,enable_gplayer=no)
-AM_COND_IF(ENABLE_AYYI,, [enable_gplayer=yes]) 
+if test "$enable_ayyi" = "yes"; then
+	AC_MSG_WARN([*** gplayer is exclusive with ayii ***])
+	enable_gplayer=no
+fi
 AM_CONDITIONAL(ENABLE_GAUDITION, test "$enable_gplayer" = "yes")
 if test "$enable_gplayer" = "yes"; then
    AC_DEFINE(USE_GAUDITION,1,[Use gtk/gnome auditioner])
