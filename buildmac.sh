@@ -1,6 +1,6 @@
 #!/bin/bash
 PRODUCT_NAME="samplecat"
-VERSION=0.1.1+rg
+VERSION=0.1.2+rg
 
 GTKDIR=${GTKDIR:-"$HOME/gtk/inst"}
 GTKLOADER=gtk-2.0/2.10.0/loaders
@@ -27,8 +27,8 @@ if test -z "$NOREBUILD"; then
   make || exit
 fi
 
-file src/samplecat
-test -f src/samplecat || exit
+file src/.libs/samplecat
+test -f src/.libs/samplecat || exit
 
 ##############################################################################
 follow_dependencies () {
@@ -140,7 +140,7 @@ cat > "${TARGET_BUILD_DIR}/${PRODUCT_NAME}.app/Contents/Info.plist" << EOF
 EOF
 
 # install binaries
-install -m 755 ${SRCDIR}/${PRODUCT_NAME} ${TARGET}
+install -m 755 ${SRCDIR}/.libs/${PRODUCT_NAME} ${TARGET}
 update_executable
 #file "$TARGET"
 
