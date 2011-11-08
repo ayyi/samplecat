@@ -196,6 +196,12 @@ make_overview_sndfile(Sample* sample)
   cairo_set_line_width (cr, 1.0);
   //dbg(0, "bg_colour=%.1f %.1f %.1f fg_colour=%s", b, g, r, gdkcolor_get_hexstring(&app.fg_colour));
 
+  if (1) {
+    drect pts = {0, OVERVIEW_HEIGHT/2, OVERVIEW_WIDTH, OVERVIEW_HEIGHT/2 +1};
+    GdkColor color; color.red=0x7fff; color.green=0x7fff; color.blue=0x7fff;
+    draw_cairo_line(cr, &pts, 1.0, &color);
+  }
+
   //how many samples should we load at a time? Lets make it a multiple of the image width.
   //-this will use up a lot of ram for a large file, 600M file will use 4MB.
   int frames_per_buf = sfinfo.frames / OVERVIEW_WIDTH;
@@ -232,7 +238,7 @@ make_overview_sndfile(Sample* sample)
     min = (min * OVERVIEW_HEIGHT) / (256*128*2);
     max = (max * OVERVIEW_HEIGHT) / (256*128*2);
 
-    drect pts = {x, OVERVIEW_HEIGHT/2 + min, x, OVERVIEW_HEIGHT/2 + max+1};
+    drect pts = {x, OVERVIEW_HEIGHT/2 + min, x, OVERVIEW_HEIGHT/2 + max};
     draw_cairo_line(cr, &pts, 1.0, &app.bg_colour);
 
     //printf(" %i max=%i\n", x,OVERVIEW_HEIGHT/2);
