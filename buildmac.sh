@@ -22,13 +22,16 @@ else
 fi
 
 if test -z "$NOREBUILD"; then
+	automake --add-missing
+	libtoolize || glibtoolize
+	autoreconf
   CFLAGS="-arch i386 -arch x86_64 -arch ppc" ./configure --disable-dependency-tracking
 	make clean
   make || exit
 fi
 
-file src/.libs/samplecat
-test -f src/.libs/samplecat || exit
+file src/samplecat
+test -f src/samplecat || exit
 
 ##############################################################################
 follow_dependencies () {
@@ -140,7 +143,7 @@ cat > "${TARGET_BUILD_DIR}/${PRODUCT_NAME}.app/Contents/Info.plist" << EOF
 EOF
 
 # install binaries
-install -m 755 ${SRCDIR}/.libs/${PRODUCT_NAME} ${TARGET}
+install -m 755 ${SRCDIR}/${PRODUCT_NAME} ${TARGET}
 update_executable
 #file "$TARGET"
 
