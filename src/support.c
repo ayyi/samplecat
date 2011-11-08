@@ -134,7 +134,7 @@ samplerate_format(char* str, int samplerate)
 
 	if(!samplerate){ str[0] = '\0'; return; }
 
-	snprintf(str, 32, "%f", ((float)samplerate) / 1000);
+	snprintf(str, 32, "%f", ((float)samplerate) / 1000.0);
 	while(str[strlen(str)-1]=='0'){
 		str[strlen(str)-1] = '\0';
 	}
