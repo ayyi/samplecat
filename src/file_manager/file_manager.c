@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2011, Tim Orford
+ * Copyright (C) 2007-2009, Tim Orford
  * Copyright (C) 2006, Thomas Leonard and others (see changelog for details).
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -46,16 +46,6 @@ static AyyiLibfilemanager* new_file_manager = NULL;
 static gboolean initialised = FALSE;
 extern char theme_name[];
 
-GSList* plugins = NULL;
-
-typedef	FileTypePluginPtr (*infoFunc)();
-enum {
-    PLUGIN_TYPE_1 = 1,
-    PLUGIN_TYPE_MAX
-};
-static void file_manager__load_plugins();
-
-
 Filer*
 file_manager__init()
 {
@@ -67,9 +57,6 @@ file_manager__init()
 	filer.sort_type            = SORT_NAME;
 
 	new_file_manager = ayyi_libfilemanager_new(&filer);
-
-	gboolean _load_plugins(gpointer user_data){ file_manager__load_plugins(); return IDLE_STOP; }
-	g_idle_add(_load_plugins, NULL);
 
 	return &filer;
 	//return &new_file_manager->file_window;
@@ -140,116 +127,6 @@ AyyiLibfilemanager*
 file_manager__get_signaller()
 {
 	return new_file_manager;
-}
-
-
-static FileTypePluginPtr
-file_manager__plugin_load(const gchar* filepath)
-{
-	FileTypePluginPtr plugin = NULL;
-	gboolean success = FALSE;
-
-#if GLIB_CHECK_VERSION(2,3,3)
-	GModule* handle = g_module_open(filepath, G_MODULE_BIND_LOCAL);
-#else
-	GModule* handle = g_module_open(filepath, 0);
-#endif
-
-	if(!handle) {
-		gwarn("cannot open %s (%s)!", filepath, g_module_error());
-		return NULL;
-	}
-
-	infoFunc plugin_get_info;
-	if(g_module_symbol(handle, "plugin_get_info", (void*)&plugin_get_info)) {
-		// load generic plugin info
-		if(NULL != (plugin = (*plugin_get_info)())) {
-			// check plugin version
-			if(FILETYPE_PLUGIN_API_VERSION != plugin->api_version){
-				dbg(0, "API version mismatch: \"%s\" (%s, type=%d) has version %d should be %d", plugin->name, filepath, plugin->type, plugin->api_version, FILETYPE_PLUGIN_API_VERSION);
-			}
-
-			/* check if all mandatory symbols are provided */
-			if (!(plugin->plugin_init &&
-				  plugin->plugin_deinit)) {
-				dbg(0, "'%s': mandatory symbols missing.", plugin->name);
-				return FALSE;
-			}
-			success = TRUE;
-
-			// try to load specific plugin type symbols
-			switch(plugin->type) {
-				default:
-					if(plugin->type >= PLUGIN_TYPE_MAX) {
-						dbg(0, "Unknown or unsupported plugin type: %s (%s, type=%d)", plugin->name, filepath, plugin->type);
-					} else {
-						dbg(0, "name='%s'", plugin->name);
-					}
-					break;
-			}
-		}
-	} else {
-		gwarn("File '%s' is not a valid Filtype plugin", filepath);
-	}
-	
-	if(!success) {
-		g_module_close(handle);
-		return NULL;
-	}
-		
-	return plugin;
-}
-
-
-#define plugin_path "/usr/lib/samplecat/:/usr/local/lib/samplecat/"
-static void file_manager__load_plugins()
-{
-	FileTypePluginPtr plugin = NULL;
-	GError* error = NULL;
-
-	if(!g_module_supported()) g_error("Modules not supported! (%s)", g_module_error());
-
-	int found = 0;
-
-	gchar** paths = g_strsplit(plugin_path, ":", 0);
-	char* path;
-	int i = 0;
-	while((path = paths[i++])){
-		if(!g_file_test(path, G_FILE_TEST_EXISTS)) continue;
-
-		dbg(1, "scanning for plugins (%s) ...", path);
-		GDir* dir = g_dir_open(path, 0, &error);
-		if (!error) {
-			const gchar* filename = g_dir_read_name(dir);
-			while (filename) {
-				dbg(1, "testing %s...", filename);
-				gchar* filepath = g_build_filename(path, filename, NULL);
-				// filter files with correct library suffix
-				if(!strncmp(G_MODULE_SUFFIX, filename + strlen(filename) - strlen(G_MODULE_SUFFIX), strlen(G_MODULE_SUFFIX))) {
-					// If we find one, try to load plugin info and if this was successful try to invoke the specific plugin
-					// type loader. If the second loading went well add the plugin to the plugin list.
-					if (!(plugin = file_manager__plugin_load(filepath))) {
-						dbg(0, "'%s' failed to load.", filename);
-					} else {
-						found++;
-						plugins = g_slist_append(plugins, plugin);
-					}
-				} else {
-					dbg(2, "-> no library suffix");
-				}
-				g_free(filepath);
-				filename = g_dir_read_name(dir);
-			}
-			g_dir_close(dir);
-		} else {
-			gwarn("dir='%s' failed. %s", path, error->message);
-			g_error_free(error);
-			error = NULL;
-		}
-	}
-	g_strfreev(paths);
-
-	dbg(1, "filetype plugins loaded: %i.", found);
 }
 
 

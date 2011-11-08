@@ -1,5 +1,5 @@
 
-SUBDIRS = filetypes
+#SUBDIRS = filetypes
 
 AM_CFLAGS = \
 	-g -Wall \
