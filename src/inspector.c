@@ -59,7 +59,7 @@ inspector_new()
 	gtk_misc_set_padding(GTK_MISC(label1), margin_left, 5);
 	gtk_container_add(GTK_CONTAINER(align1), label1);	
 
-	PangoFontDescription* pangofont = pango_font_description_from_string("San-Serif 18");
+	PangoFontDescription* pangofont = pango_font_description_from_string("Sans-Serif 18");
 	gtk_widget_modify_font(label1, pangofont);
 	pango_font_description_free(pangofont);
 
