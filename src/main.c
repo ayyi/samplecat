@@ -345,6 +345,10 @@ main(int argc, char** argv)
 	gtk_osxapplication_ready(osxApp);
 #endif
 	gtk_main();
+
+#if (defined USE_DBUS || defined USE_GAUDITION)
+	auditioner_stop(NULL);
+#endif
 	exit(EXIT_SUCCESS);
 }
 
