@@ -58,7 +58,7 @@ the flac code here works with version 1.1.2 and earlier.
 */
 
 
-#ifndef USE_DBUS
+#if !(defined USE_DBUS || defined USE_GAUDITION)
 static int
 jack_process(jack_nframes_t nframes, void* arg)
 {
