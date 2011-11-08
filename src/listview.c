@@ -248,7 +248,7 @@ listview__on_row_clicked(GtkWidget *widget, GdkEventButton *event, gpointer user
 					}
 					app.playing_id = sample->id;
 #else
-#if 0
+#if 1 // HAVE_JACK
 					if(!playback_init(sample)) sample_free(sample);
 #endif
 #endif
@@ -256,7 +256,7 @@ listview__on_row_clicked(GtkWidget *widget, GdkEventButton *event, gpointer user
 #if (defined USE_DBUS || defined USE_GAUDITION)
 				else auditioner_toggle(sample);
 #else
-#if 0
+#if 1 // HAVE_JACK
 				else playback_stop();
 #endif
 #endif
