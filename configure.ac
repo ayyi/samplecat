@@ -14,7 +14,7 @@ AC_C_INLINE
 AC_HEADER_STDBOOL
 AC_TYPE_SIZE_T
 
-AC_PROG_RANLIB
+LT_INIT
 
 AC_LIBTOOL_DLOPEN                                                                                                                                                             
 AC_PROG_LIBTOOL
@@ -35,15 +35,6 @@ else
 fi
 
 # default 'auto' configutaion
-enable_mysql="auto"
-enable_sqlite="no"
-enable_opengl="yes"
-enable_dbus="auto"
-enable_fftw="auto"
-enable_dnotify="no"
-enable_gplayer="no"
-enable_tracker="no" # not yet complete
-enable_ayyi="no"    # not yet complete
 
 case $target_os in
 	*darwin*)
@@ -96,7 +87,7 @@ dnl ----------------------------------------------------------------------------
 
 dnl test for mysql
 
-AC_ARG_ENABLE(mysql, [AC_HELP_STRING([--disable-mysql], [disable use of Mysql as backend])])
+AC_ARG_ENABLE(mysql, [AC_HELP_STRING([--disable-mysql], [disable use of Mysql as backend])],enable_mysql=$enableval, enable_mysql="auto")
 
 if test x$enable_mysql = xno ; then
 	:
@@ -202,7 +193,7 @@ AC_SUBST(FLAC_LIBS)
 
 dnl -----------------------------------------------------------------------------
 
-AC_ARG_ENABLE(dnotify, AS_HELP_STRING([--enable-dnotify],[build with dnotify support]))
+AC_ARG_ENABLE(dnotify, AS_HELP_STRING([--enable-dnotify],[build with dnotify support]),enable_dnotify=$enableval, enable_dnotify="no")
 
 if test "$enable_dnotify"= "yes"; then
 	AC_DEFINE(USE_DNOTIFY,1,[Use dnotify on Linux])
@@ -213,7 +204,7 @@ AM_CONDITIONAL(ENABLE_DNOTIFY, test "$enable_dnotify" = "yes")
 
 dnl -----------------------------------------------------------------------------
 
-AC_ARG_ENABLE(dbus, AS_HELP_STRING([--disable-dbus],[disable use of dbus]))
+AC_ARG_ENABLE(dbus, AS_HELP_STRING([--disable-dbus],[disable use of dbus]),enable_dbus=$enableval, enable_dbus="auto")
 AS_IF([test "$enable_dbus" != "no"], [
        PKG_CHECK_MODULES(DBUS, dbus-glib-1, enable_dbus=yes, enable_dbus=no)
        ])
@@ -226,7 +217,7 @@ AM_CONDITIONAL(ENABLE_DBUS, [test "$enable_dbus" = "yes"])
 
 dnl -----------------------------------------------------------------------------
 
-AC_ARG_ENABLE(ayyi, AS_HELP_STRING([--enable-ayyi],[build with ayyi support]))
+AC_ARG_ENABLE(ayyi, AS_HELP_STRING([--enable-ayyi],[build with ayyi support]),enable_ayyi=$enableval, enable_ayyi="no")
 
 if test "$enable_ayyi" = "yes"; then
 	AC_DEFINE(USE_AYYI,1,[Use ayyi])
@@ -280,7 +271,7 @@ AC_SUBST(SF2_CFLAGS)
 
 dnl -----------------------------------------------------------------------------
 
-AC_ARG_ENABLE(tracker, AS_HELP_STRING([--enable-tracker],[build with tracker support]))
+AC_ARG_ENABLE(tracker, AS_HELP_STRING([--enable-tracker],[build with tracker support]),enable_tracker=$enableval, enable_tracker="no")
 if test "$enable_tracker" = "yes"; then
 	dnl AC_CHECK_LIB(tracker-client-0.7, tracker_client_new, [tracker_found=yes])
 	AC_CHECK_LIB(tracker-client-0.9, tracker_client_new, [tracker_found=yes])
@@ -304,7 +295,7 @@ AC_SUBST(TRACKER_LDFLAGS)
 
 dnl -----------------------------------------------------------------------------
 
-AC_ARG_ENABLE(sqlite, AS_HELP_STRING([--enable-sqlite],[build with sqlite support]))
+AC_ARG_ENABLE(sqlite, AS_HELP_STRING([--enable-sqlite],[build with sqlite support]),enable_sqlite=$enableval, enable_sqlite="no")
 AS_IF([test "$enable_sqlite" = "yes"],[
        PKG_CHECK_MODULES(SQLITE, sqlite3, AC_DEFINE(USE_SQLITE, 1, Use sqlite backend), enable_sqlite=no)
        ])
@@ -314,9 +305,9 @@ AC_SUBST(SQLITE_LIBS)
 
 dnl -----------------------------------------------------------------------------
 
-AC_ARG_ENABLE(gplayer, AS_HELP_STRING([--enable-gaudition],[build with external player]))
-if test "$enable_ayyi" = "yes"; then
-	AC_MSG_WARN([*** gplayer is exclusive with ayii ***])
+AC_ARG_ENABLE(gplayer, AS_HELP_STRING([--enable-gplayer],[build with external player]),enable_gplayer=$enableval, enable_gplayer="no")
+if test "$enable_ayyi" = "yes" -o "$enable_dbus" = "yes"; then
+	AC_MSG_WARN([*** gplayer is exclusive with ayii and dbus support. ***])
 	enable_gplayer=no
 fi
 AM_CONDITIONAL(ENABLE_GAUDITION, test "$enable_gplayer" = "yes")
@@ -326,7 +317,7 @@ fi
 
 dnl -----------------------------------------------------------------------------
 
-AC_ARG_ENABLE(opengl, [AC_HELP_STRING([--disable-opengl], [disable use of OpenGL])])
+AC_ARG_ENABLE(opengl, [AC_HELP_STRING([--disable-opengl], [disable use of OpenGL])],enable_opengl=$enableval,enable_opengl="no")
 AS_IF([test "$enable_opengl" = "yes"], [
        PKG_CHECK_MODULES(OPENGL, gtkglext-1.0, [AC_DEFINE(USE_OPENGL, 1, Opengl features are enabled)])
        ])
@@ -336,7 +327,7 @@ AM_CONDITIONAL(ENABLE_OPENGL, test "$enable_opengl" = "yes")
 
 dnl -----------------------------------------------------------------------------
 
-AC_ARG_ENABLE(fftw, AC_HELP_STRING([--disable-fftw], [disable usage of FFTW ]))
+AC_ARG_ENABLE(fftw, AC_HELP_STRING([--disable-fftw], [disable usage of FFTW ]),enable_fftw=$enableval,enable_fftw="auto")
 AS_IF([test "$enable_fftw" != "no"], [
 	PKG_CHECK_MODULES(FFTW3, fftw3 >= 0.15.0, [AC_DEFINE([HAVE_FFTW3], 1, [Set to 1 if you have libfftw3.]) enable_fftw=yes], enable_fftw=no)
 	])
@@ -369,6 +360,11 @@ dnl AC_CONFIG_FILES([src/vala/Makefile])
 AC_CONFIG_FILES([ayyi/Makefile])
 AC_OUTPUT
 
+if test "$enable_ayyi" = "no" -a "$enable_dbus" = "no" -a "$enable_gplayer" = "no" ; then
+	enable_builtin_player=yes # IFF HAVE_JACK
+else
+	enable_builtin_player=no
+fi
 AC_MSG_RESULT([])
 AC_MSG_RESULT([Building mysql support:           $enable_mysql])
 AC_MSG_RESULT([Building sqlite support:          $enable_sqlite])
@@ -379,6 +375,7 @@ AC_MSG_RESULT([Building dbus support:            $enable_dbus])
 AC_MSG_RESULT([Building ayyi support:            $enable_ayyi])
 AC_MSG_RESULT([Building gplayer support:         $enable_gplayer])
 AC_MSG_RESULT([Building opengl support:          $enable_opengl])
+AC_MSG_RESULT([Building builtin JACK player:     $enable_builtin_player])
 AC_MSG_RESULT([Building soundfont support:       $enable_sf2])
 AC_MSG_RESULT([Building nks support:             $enable_nks])
 AC_MSG_RESULT([])
