@@ -162,7 +162,12 @@ AC_SUBST(LIBART_LIBS)
 dnl XML_CFLAGS=`pkg-config libxml --cflags`
 dnl AC_SUBST(XML_CFLAGS)
 
-PKG_CHECK_MODULES(JACK, jack,, [true])
+AS_IF([test "$enable_ayyi" = "no" -a "$enable_dbus" = "no" -a "$enable_gplayer" = "no"], [
+	    PKG_CHECK_MODULES(JACK, jack,enable_builtin_player=yes, enable_builtin_player=no)
+	], [
+	    enable_builtin_player=no
+	])
+
 AC_SUBST(JACK_CFLAGS)
 AC_SUBST(JACK_LIBS)
 
@@ -361,11 +366,6 @@ dnl AC_CONFIG_FILES([src/vala/Makefile])
 AC_CONFIG_FILES([ayyi/Makefile])
 AC_OUTPUT
 
-if test "$enable_ayyi" = "no" -a "$enable_dbus" = "no" -a "$enable_gplayer" = "no" ; then
-	enable_builtin_player=yes # IFF HAVE_JACK
-else
-	enable_builtin_player=no
-fi
 AC_MSG_RESULT([])
 AC_MSG_RESULT([Building mysql support:           $enable_mysql])
 AC_MSG_RESULT([Building sqlite support:          $enable_sqlite])
