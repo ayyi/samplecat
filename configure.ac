@@ -39,6 +39,7 @@ fi
 case $target_os in
 	*darwin*)
 		CFLAGS="$CFLAGS -fnested-functions"
+		LDFLAGS="-ligemacintegration"
 		enable_dbus="no"
 		enable_sqlite="yes"
 		enable_gplayer="yes"

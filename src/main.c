@@ -19,6 +19,11 @@ This software is licensed under the GPL. See accompanying file COPYING.
 #include <gtk/gtk.h>
 #include <gdk-pixbuf/gdk-pixdata.h>
 
+#ifdef __APPLE__
+#include <gdk/gdkkeysyms.h>
+#include <igemacintegration/gtkosxapplication.h>
+#endif
+
 #ifdef USE_AYYI
   #include "ayyi.h"
   #include "ayyi_model.h"
@@ -226,6 +231,11 @@ main(int argc, char** argv)
 	app.mutex = g_mutex_new();
 	gtk_init(&argc, &argv);
 
+#ifdef __APPLE__
+	GtkOSXApplication *osxApp = (GtkOSXApplication*) 
+	g_object_new(GTK_TYPE_OSX_APPLICATION, NULL);
+#endif
+
 	type_init();
 	pixmaps_init();
 	dir_init();
@@ -293,6 +303,17 @@ main(int argc, char** argv)
 	if(!app.no_gui) window_new(); 
 	if(!app.no_gui) app.context_menu = make_context_menu();
 
+#ifdef __APPLE__
+	gtk_window_set_title(GTK_WINDOW(app.window), "SampleCat");
+
+	GtkWidget *menu_bar;
+	menu_bar = gtk_menu_bar_new();
+	/* Note: the default OSX menu bar already includes a 'quit' entry 
+	 * connected to 'gtk_main_quit' by default. so we're fine.
+	 */
+	gtk_osxapplication_set_menu_bar(osxApp, GTK_MENU_SHELL(menu_bar));
+#endif
+
 	if(!backend.pending){ 
 		do_search(app.args.search ? app.args.search : app.search_phrase, app.search_dir);
 	}else{
@@ -320,6 +341,9 @@ main(int argc, char** argv)
 	dbg(1, "loaded");
 	message_panel__add_msg("hello", GTK_STOCK_INFO);
 
+#ifdef __APPLE__
+	gtk_osxapplication_ready(osxApp);
+#endif
 	gtk_main();
 	exit(EXIT_SUCCESS);
 }
