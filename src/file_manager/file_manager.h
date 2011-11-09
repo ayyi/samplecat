@@ -7,7 +7,7 @@
 #include "file_manager/support.h"
 #include "filer.h"
 #include "file_manager/vala/filemanager.h"
-//#include "file_manager/filetypes/filetype_plugin.h"
+#include "file_manager/filetypes/filetype_plugin.h"
 
 Filer*     file_manager__init           ();
 GtkWidget* file_manager__new_window     (const char* path);
