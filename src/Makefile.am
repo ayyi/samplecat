@@ -73,6 +73,10 @@ if ENABLE_GAUDITION
 DBUS_SRC = gauditioner.c auditioner.h
 endif
 
+AUDIOANALYSERS_SRC = \
+	audio_analysis/spectrogram/spectrogram.c audio_analysis/spectrogram/spectrogram.h \
+	audio_analysis/spectrogram/sndfile_window.c audio_analysis/spectrogram/sndfile_window.h
+
 samplecat_SOURCES = \
 	typedefs.h types.h \
 	main.c main.h \
@@ -93,9 +97,7 @@ samplecat_SOURCES = \
 	fscache.c fscache.h \
 	support.c support.h \
 	console_view.c console_view.h \
-	spectrogram.c spectrogram.h \
-	sndfile_common.c sndfile_common.h \
-	sndfile_window.c sndfile_window.h \
+	$(AUDIOANALYSERS_SRC) \
 	$(AD_SRC) \
 	$(MYSQL_SRC) \
 	$(TRACKER_SRC) \
