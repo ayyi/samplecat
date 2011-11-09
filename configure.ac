@@ -39,7 +39,7 @@ fi
 case $target_os in
 	*darwin*)
 		CFLAGS="$CFLAGS -fnested-functions"
-		LDFLAGS="-ligemacintegration"
+		SAMPLECAT_LIBS="-ligemacintegration"
 		enable_dbus="no"
 		enable_sqlite="yes"
 		enable_gplayer="yes"
@@ -51,6 +51,8 @@ case $target_os in
 	*)	
 		;;
 esac
+AC_SUBST(SAMPLECAT_LIBS)
+AC_SUBST(SAMPLECAT_CFLAGS)
 
 # Check for strict flag
 strict="no"

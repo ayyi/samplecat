@@ -12,6 +12,7 @@ AM_CFLAGS = \
 	-I./file_manager \
 	-I./gimp \
 	-I./xdgmime \
+	$(SAMPLECAT_CFLAGS) \
 	$(FFTW3_CFLAGS) \
 	$(OPENGL_CFLAGS) \
 	$(JACK_CFLAGS) \
@@ -114,6 +115,7 @@ samplecat_LDADD = \
 	file_manager/libfilemanager.a \
 	gimp/libgimpwidgets.a \
 	xdgmime/libxdgmime.a \
+	$(SAMPLECAT_LIBS) \
 	$(AYYI_LIBS) \
 	$(DBUS_LIBS) \
 	$(TRACKER_LDFLAGS) \
