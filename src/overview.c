@@ -23,6 +23,10 @@
 #include "mimetype.h"
 #include "pixmaps.h"
 
+#ifdef USE_AUDIODECODER
+#include "audio_decoder/ad.h"
+#endif
+
 extern struct _app app;
 extern unsigned debug;
 
@@ -135,7 +139,7 @@ make_overview(Sample* sample)
 	return pixbuf;
 }
 
-
+#ifndef USE_AUDIODECODER
 static GdkPixbuf*
 make_overview_sndfile(Sample* sample)
 {
@@ -254,6 +258,73 @@ make_overview_sndfile(Sample* sample)
   if(!GDK_IS_PIXBUF(sample->pixbuf)) perr("pixbuf is not a pixbuf.\n");
   return pixbuf;
 }
+#else
+static GdkPixbuf*
+make_overview_sndfile(Sample* sample)
+{
+	struct adinfo nfo;
+	void *sf = ad_open(sample->filename, &nfo);
+	if (!sf) return NULL;
+  dbg(0, "NEW OVERVIEW");
+
+	GdkPixbuf* pixbuf = gdk_pixbuf_new(GDK_COLORSPACE_RGB, HAS_ALPHA_TRUE, BITS_PER_CHAR_8, OVERVIEW_WIDTH, OVERVIEW_HEIGHT);
+	pixbuf_clear(pixbuf, &app.fg_colour);
+
+  cairo_format_t format;
+  if (gdk_pixbuf_get_n_channels(pixbuf) == 3) format = CAIRO_FORMAT_RGB24; else format = CAIRO_FORMAT_ARGB32;
+  cairo_surface_t* surface = cairo_image_surface_create_for_data (gdk_pixbuf_get_pixels(pixbuf), format, OVERVIEW_WIDTH, OVERVIEW_HEIGHT, gdk_pixbuf_get_rowstride(pixbuf));
+  cairo_t* cr = cairo_create(surface);
+  cairo_set_line_width (cr, 1.0);
+
+  if (1) {
+    drect pts = {0, OVERVIEW_HEIGHT/2, OVERVIEW_WIDTH, OVERVIEW_HEIGHT/2 +1};
+    GdkColor color; color.red=0x7fff; color.green=0x7fff; color.blue=0x7fff;
+    draw_cairo_line(cr, &pts, 1.0, &color);
+  }
+
+  int frames_per_buf = nfo.frames / OVERVIEW_WIDTH;
+  int buffer_len = frames_per_buf * nfo.channels;
+  double* data = malloc(sizeof(double) * buffer_len);
+
+  int x=0;
+  double min;                //negative peak value for each pixel.
+  double max;                //positive peak value for each pixel.
+	int readcount;
+  while ((readcount = ad_read(sf, data, buffer_len))>0){
+		int frame;
+    const int srcidx_start = 0;
+    const int srcidx_stop  = frames_per_buf;
+
+    min = 0; max = 0;
+    for(frame=srcidx_start;frame<srcidx_stop;frame++){ 
+			int ch;
+      for(ch=0;ch<nfo.channels;ch++){
+        if(frame * nfo.channels + ch > buffer_len){ perr("index error!\n"); break; }    
+        const double sample_val = data[frame * nfo.channels + ch];
+        max = MAX(max, sample_val);
+        min = MIN(min, sample_val);
+      }
+    }
+
+    //scale the values to the part height:
+    min = rint(min * OVERVIEW_HEIGHT/2.0);
+    max = rint(max * OVERVIEW_HEIGHT/2.0);
+
+    drect pts = {x, OVERVIEW_HEIGHT/2 + min, x, OVERVIEW_HEIGHT/2 + max};
+    draw_cairo_line(cr, &pts, 1.0, &app.bg_colour);
+
+    x++;
+  }  
+
+  if(ad_close(sf)) perr("bad file close.\n");
+  free(data);
+  cairo_destroy(cr);
+  cairo_surface_destroy(surface);
+  sample->pixbuf = pixbuf;
+  if(!GDK_IS_PIXBUF(sample->pixbuf)) perr("pixbuf is not a pixbuf.\n");
+  return pixbuf;
+}
+#endif
 
 
 #ifdef HAVE_FLAC_1_1_1
@@ -388,7 +459,7 @@ overview_pixbuf_new()
 }
 #endif
 
-
+#ifndef USE_AUDIODECODER
 static double
 sndfile_calc_signal_max (Sample* sample)
 {
@@ -448,4 +519,11 @@ sndfile_calc_signal_max (Sample* sample)
 
 	return max_val;
 }
+#else
+static double
+sndfile_calc_signal_max (Sample* sample)
+{
+	return ad_maxsignal(sample->filename);
+}
+#endif
 

@@ -70,6 +70,10 @@ This software is licensed under the GPL. See accompanying file COPYING.
 #endif
 #endif
 
+#ifdef USE_AUDIODECODER
+#include "audio_decoder/ad.h"
+#endif
+
 #include "pixmaps.h"
 
 #ifdef USE_SQLITE
@@ -166,6 +170,9 @@ main(int argc, char** argv)
 	app_init();
 
 	printf("%s"PACKAGE_NAME". Version "PACKAGE_VERSION"%s\n", yellow, white);
+#ifdef USE_AUDIODECODER
+	ad_init();
+#endif
 
 	#define ADD_BACKEND(A) app.backends = g_list_append(app.backends, A)
 	ADD_BACKEND("mysql");
@@ -735,18 +742,27 @@ mimestring_is_unsupported(char* mime_string)
 gboolean
 mimetype_is_unsupported(MIME_type* mime_type, char* mime_string)
 {
-	//TODO remove 2nd arg
-
 	g_return_val_if_fail(mime_type, true);
 
-	char types[][16] = {"application", "image", "text", "video"};
-	int i; for(i=0;i<G_N_ELEMENTS(types);i++){
-		if(!strcmp(mime_type->media_type, types[i])){
-			return true;
-		}
+	/* XXX - actually ffmpeg can read audio-tracks in video-files,
+	 * application/ogg, application/annodex, application/zip may contain audio
+	 * ...
+	 */
+	if(strcmp(mime_type->media_type, "audio")){
+		return true;
 	}
 
-	char unsupported[][64] = {"audio/mpeg", "audio/x-tta", "audio/x-speex", "audio/x-musepack"};
+	char unsupported[][64] = {
+		"audio/csound", 
+		"audio/midi", 
+		"audio/prs.sid",
+		"audio/telephone-event",
+		"audio/tone",
+		"audio/x-tta", 
+		"audio/x-speex",
+		"audio/x-musepack"
+	};
+	int i;
 	for(i=0;i<G_N_ELEMENTS(unsupported);i++){
 		if(!strcmp(mime_string, unsupported[i])){
 			return true;

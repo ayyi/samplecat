@@ -1,5 +1,5 @@
-#define OVERVIEW_WIDTH 200
-#define OVERVIEW_HEIGHT 20
+#define OVERVIEW_WIDTH (200)
+#define OVERVIEW_HEIGHT (20)
 
 typedef enum {
 	BACKEND_NONE = 0,

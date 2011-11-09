@@ -16,6 +16,7 @@ AM_CFLAGS = \
 	$(OPENGL_CFLAGS) \
 	$(JACK_CFLAGS) \
 	$(SNDFILE_CFLAGS) \
+	$(FFMPEG_CFLAGS) \
 	$(GTK_CFLAGS) $(DBUS_CFLAGS) $(MYSQL_CFLAGS) $(FLAC_CFLAGS) $(TRACKER_CFLAGS)
 
 #$(XML_CFLAGS)
@@ -33,6 +34,13 @@ AYYI_LIBS = ../ayyi/libayyi.a
 else
 AYYI_SRC =
 AYYI_LIBS =
+endif
+
+if ENABLE_AUDIODECODER
+AD_SRC = audio_decoder/ad.h audio_decoder/ad_plugin.h audio_decoder/ad_plugin.c audio_decoder/ad_soundfile.c
+if ENABLE_FFMPEG
+AD_SRC += audio_decoder/ad_ffmpeg.c
+endif
 endif
 
 if ENABLE_MYSQL
@@ -88,6 +96,7 @@ samplecat_SOURCES = \
 	spectrogram.c spectrogram.h \
 	sndfile_common.c sndfile_common.h \
 	sndfile_window.c sndfile_window.h \
+	$(AD_SRC) \
 	$(MYSQL_SRC) \
 	$(TRACKER_SRC) \
 	$(SQLITE_SRC) \
@@ -107,7 +116,8 @@ samplecat_LDADD = \
 	$(SQLITE_LIBS) \
 	$(GTK_LIBS) $(MYSQL_LDFLAGS) $(JACK_LIBS) $(SNDFILE_LIBS) $(FLAC_LIBS) $(GTHREAD_LIBS) \
 	$(FFTW3_LIBS) \
-	$(OPENGL_LIBS)
+	$(OPENGL_LIBS) \
+	$(FFMPEG_LIBS)
 
 EXTRA_DIST = db/sqlite.c db/sqlite.h db/tracker.c db/tracker.h \
 	gl_spectrogram_view.c gl_spectrogram_view.h

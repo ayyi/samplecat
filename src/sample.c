@@ -115,7 +115,7 @@ sample_free(Sample* sample)
 	g_free(sample);
 }
 
-
+#ifndef USE_AUDIODECODER
 gboolean
 sample_get_file_sndfile_info(Sample* sample)
 {
@@ -147,6 +147,21 @@ sample_get_file_sndfile_info(Sample* sample)
 
 	return true;
 }
+#else
+#include "audio_decoder/ad.h"
+gboolean
+sample_get_file_sndfile_info(Sample* sample)
+{
+	struct adinfo nfo;
+	if (!ad_info(sample->filename, &nfo)) {
+		return false;
+	}
+	sample->channels    = nfo.channels;
+	sample->sample_rate = nfo.sample_rate;
+	sample->length      = nfo.length;
+	return true;
+}
+#endif
 
 
 gboolean
@@ -160,7 +175,7 @@ sample_get_file_info(Sample* sample)
 	else                            return sample_get_file_sndfile_info(sample);
 }
 
-
+#ifndef USE_AUDIODECODER
 gboolean
 result_get_file_sndfile_info(Result* sample)
 {
@@ -192,6 +207,20 @@ result_get_file_sndfile_info(Result* sample)
 
 	return true;
 }
+#else
+gboolean
+result_get_file_sndfile_info(Result* sample)
+{
+	struct adinfo nfo;
+	if (!ad_info(sample->sample_name, &nfo)) {
+		return false;
+	}
+	sample->channels    = nfo.channels;
+	sample->sample_rate = nfo.sample_rate;
+	sample->length      = nfo.length;
+	return true;
+}
+#endif
 
 
 void

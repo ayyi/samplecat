@@ -177,6 +177,24 @@ AC_SUBST(SNDFILE_LIBS)
 
 dnl -----------------------------------------------------------------------------
 
+AC_ARG_ENABLE(ffmpeg, AC_HELP_STRING([--disable-ffmpeg], [disable use of FFMPEG]), enable_ffmpeg=$enableval, enable_ffmpeg="auto")
+
+AS_IF([test "$enable_ffmpeg" != "no"], [
+	PKG_CHECK_MODULES(FFMPEG, [libavformat libavcodec libavutil], enable_ffmpeg=yes, enable_ffmpeg=no)
+       ])
+
+if test "$enable_ffmpeg" = "yes"; then
+	AC_DEFINE(HAVE_FFMPEG,1,[Use ffmpeg audio decoder])
+fi
+AM_CONDITIONAL(ENABLE_FFMPEG, test "$enable_ffmpeg" = "yes")
+AC_SUBST(FFMPEG_CFLAGS)
+AC_SUBST(FFMPEG_LIBS)
+
+AM_CONDITIONAL(ENABLE_AUDIODECODER, test "yes" = "yes")
+AC_DEFINE(USE_AUDIODECODER,1,[Use new audio decoder API])
+
+dnl -----------------------------------------------------------------------------
+
 dnl flac doesnt use pkg-config it seems...
 
 AC_ARG_ENABLE(flac, AC_HELP_STRING([--disable-flac], [disable use of FLAC]))
@@ -371,6 +389,7 @@ AC_MSG_RESULT([Building mysql support:           $enable_mysql])
 AC_MSG_RESULT([Building sqlite support:          $enable_sqlite])
 AC_MSG_RESULT([Building tracker support:         $enable_tracker])
 AC_MSG_RESULT([Building direct flac support:     $enable_flac])
+AC_MSG_RESULT([Building ffmpeg decoder:          $enable_ffmpeg])
 AC_MSG_RESULT([Building dnotify support:         $enable_dnotify])
 AC_MSG_RESULT([Building dbus support:            $enable_dbus])
 AC_MSG_RESULT([Building ayyi support:            $enable_ayyi])
