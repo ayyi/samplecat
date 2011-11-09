@@ -168,11 +168,6 @@ struct _palette {
 	guint blu[8];
 };
 
-enum {
-	TYPE_SNDFILE = 1,
-	TYPE_FLAC,
-};
-
 gboolean    row_set_tags_from_id(int id, GtkTreeRowReference*, const char* tags_new);
 
 void        do_search(char* search, char* dir);

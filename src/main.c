@@ -15,7 +15,6 @@ This software is licensed under the GPL. See accompanying file COPYING.
 #include <string.h>
 #include <unistd.h>
 #include <getopt.h>
-#include <sndfile.h>
 #include <gtk/gtk.h>
 #include <gdk-pixbuf/gdk-pixdata.h>
 
@@ -70,9 +69,7 @@ This software is licensed under the GPL. See accompanying file COPYING.
 #endif
 #endif
 
-#ifdef USE_AUDIODECODER
 #include "audio_decoder/ad.h"
-#endif
 
 #include "pixmaps.h"
 
@@ -170,9 +167,7 @@ main(int argc, char** argv)
 	app_init();
 
 	printf("%s"PACKAGE_NAME". Version "PACKAGE_VERSION"%s\n", yellow, white);
-#ifdef USE_AUDIODECODER
 	ad_init();
-#endif
 
 	#define ADD_BACKEND(A) app.backends = g_list_append(app.backends, A)
 	ADD_BACKEND("mysql");
@@ -793,8 +788,6 @@ add_file(char* path)
 	MIME_type* mime_type = type_from_path(filename);
 	char mime_string[64];
 	snprintf(mime_string, 64, "%s/%s", mime_type->media_type, mime_type->subtype);
-
-	sample_set_type_from_mime_string(sample, mime_string);
 
 	if(mimetype_is_unsupported(mime_type, mime_string)){
 		printf("cannot add file: file type \"%s\" not supported.\n", mime_string);
@@ -1441,7 +1434,7 @@ on_quit(GtkMenuItem* menuitem, gpointer user_data)
 	if(exit_code > 1) exit_code = 0; //ignore invalid exit code.
 
 #if !(defined USE_DBUS || defined USE_GAUDITION)
-	jack_close();
+	playback_stop();
 #endif
 
 	if(app.loaded) config_save();

@@ -1,11 +1,13 @@
+#ifndef __HAVE_SAMPLE_H_
+#define __HAVE_SAMPLE_H_
 
+#include <gtk/gtk.h>
 struct _sample
 {
 	int          id;            //database index.
 	int          ref_count;
 	GtkTreeRowReference* row_ref;
 	char         filename[256]; //full path.
-	char         filetype;      //see enum.
 	unsigned int sample_rate;
 	unsigned int length;        //milliseconds
 	unsigned int frames;        //total number of frames (eg a frame for 16bit stereo is 4 bytes).
@@ -25,11 +27,10 @@ void        sample_ref               (Sample*);
 void        sample_unref             (Sample*);
 void        sample_free              (Sample*);
 
-gboolean    sample_get_file_info             (Sample*);
-gboolean    sample_get_file_sndfile_info     (Sample*);
-gboolean    result_get_file_sndfile_info     (Result*);
-void        sample_set_type_from_mime_string (Sample*, char*);
+gboolean    sample_get_file_info     (Sample*);
+gboolean    result_get_file_info     (Result*);
 
 Result*     result_new_from_model            (GtkTreePath*);
 void        result_free                      (Result*);
 
+#endif

@@ -4,7 +4,6 @@
 #include <string.h>
 #include <gtk/gtk.h>
 #include <jack/jack.h>
-#include <sndfile.h>
 #include "file_manager/file_manager.h"
 #include "gqview_view_dir_tree.h"
 #include "typedefs.h"
@@ -54,7 +53,6 @@ sample_new_from_model(GtkTreePath *path)
 	sample->channels = channels;
 	sample->row_ref = gtk_tree_row_reference_new(GTK_TREE_MODEL(app.store), path);
 	snprintf(sample->filename, 255, "%s/%s", fpath, fname);
-	if(!strcmp(mimetype, "audio/x-flac")) sample->filetype = TYPE_FLAC; else sample->filetype = TYPE_SNDFILE; 
 	return sample;
 }
 
@@ -81,7 +79,6 @@ sample_new_from_result(SamplecatResult* r)
 	s->id          = r->idx;
 	s->row_ref     = r->row_ref;
 	snprintf(s->filename, 255, "%s/%s", r->dir, r->sample_name);
-	s->filetype    = TYPE_SNDFILE;
 	s->sample_rate = r->sample_rate;
 	s->length      = r->length;
 	s->frames      = 0;
@@ -115,43 +112,10 @@ sample_free(Sample* sample)
 	g_free(sample);
 }
 
-#ifndef USE_AUDIODECODER
-gboolean
-sample_get_file_sndfile_info(Sample* sample)
-{
-	char *filename = sample->filename;
-
-	SF_INFO        sfinfo;   //the libsndfile struct pointer
-	SNDFILE        *sffile;
-	sfinfo.format  = 0;
-
-	if(!(sffile = sf_open(filename, SFM_READ, &sfinfo))){
-		dbg(0, "not able to open input file %s.", filename);
-		puts(sf_strerror(NULL));    // print the error message from libsndfile:
-		int e = sf_error(NULL);
-		dbg(0, "error=%i", e);
-		return false;
-	}
-
-	char chanwidstr[64];
-	if     (sfinfo.channels==1) snprintf(chanwidstr, 64, "mono");
-	else if(sfinfo.channels==2) snprintf(chanwidstr, 64, "stereo");
-	else                        snprintf(chanwidstr, 64, "channels=%i", sfinfo.channels);
-	if(debug) printf("%iHz %s frames=%i\n", sfinfo.samplerate, chanwidstr, (int)sfinfo.frames);
-	sample->channels    = sfinfo.channels;
-	sample->sample_rate = sfinfo.samplerate;
-	sample->length      = sfinfo.samplerate ? (sfinfo.frames * 1000) / sfinfo.samplerate : 0;
-
-	if(sample->channels<1 || sample->channels>100){ dbg(0, "bad channel count: %i", sample->channels); return false; }
-	if(sf_close(sffile)) perr("bad file close.\n");
-
-	return true;
-}
-#else
 #include "audio_decoder/ad.h"
 #include "audio_analysis/ebumeter/ebur128.h"
 gboolean
-sample_get_file_sndfile_info(Sample* sample)
+sample_get_file_info(Sample* sample)
 {
 	struct adinfo nfo;
 	if (!ad_finfo(sample->filename, &nfo)) {
@@ -163,55 +127,9 @@ sample_get_file_sndfile_info(Sample* sample)
 	ebur128analyse(sample->filename, NULL);
 	return true;
 }
-#endif
-
 
 gboolean
-sample_get_file_info(Sample* sample)
-{
-#ifdef HAVE_FLAC_1_1_1
-	if(sample->filetype==TYPE_FLAC) return get_file_info_flac(sample);
-#else
-	if(0){}
-#endif
-	else                            return sample_get_file_sndfile_info(sample);
-}
-
-#ifndef USE_AUDIODECODER
-gboolean
-result_get_file_sndfile_info(Result* sample)
-{
-	char *filename = sample->sample_name;
-
-	SF_INFO        sfinfo;   //the libsndfile struct pointer
-	SNDFILE        *sffile;
-	sfinfo.format  = 0;
-
-	if(!(sffile = sf_open(filename, SFM_READ, &sfinfo))){
-		dbg(0, "not able to open input file %s.", filename);
-		puts(sf_strerror(NULL));    // print the error message from libsndfile:
-		int e = sf_error(NULL);
-		dbg(0, "error=%i", e);
-		return false;
-	}
-
-	char chanwidstr[64];
-	if     (sfinfo.channels==1) snprintf(chanwidstr, 64, "mono");
-	else if(sfinfo.channels==2) snprintf(chanwidstr, 64, "stereo");
-	else                        snprintf(chanwidstr, 64, "channels=%i", sfinfo.channels);
-	if(debug) printf("%iHz %s frames=%i\n", sfinfo.samplerate, chanwidstr, (int)sfinfo.frames);
-	sample->channels    = sfinfo.channels;
-	sample->sample_rate = sfinfo.samplerate;
-	sample->length      = (sfinfo.frames * 1000) / sfinfo.samplerate;
-
-	if(sample->channels<1 || sample->channels>100){ dbg(0, "bad channel count: %i", sample->channels); return false; }
-	if(sf_close(sffile)) perr("bad file close.\n");
-
-	return true;
-}
-#else
-gboolean
-result_get_file_sndfile_info(Result* sample)
+result_get_file_info(Result* sample)
 {
 	struct adinfo nfo;
 	if (!ad_finfo(sample->sample_name, &nfo)) {
@@ -223,16 +141,6 @@ result_get_file_sndfile_info(Result* sample)
 	ebur128analyse(sample->sample_name, NULL);
 	return true;
 }
-#endif
-
-
-void
-sample_set_type_from_mime_string(Sample* sample, char* mime_string)
-{
-	if(!strcmp(mime_string, "audio/x-flac")) sample->filetype = TYPE_FLAC;
-	dbg(2, "mimetype: %s type=%i", mime_string, sample->filetype);
-}
-
 
 Result*
 result_new_from_model(GtkTreePath* path)

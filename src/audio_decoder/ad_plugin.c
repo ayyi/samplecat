@@ -46,6 +46,25 @@ ssize_t ad_read(void *sf, double* d, size_t len){
 	return backend->read_dbl(sf, d, len);
 }
 
+/* why default double* anyway -- legagy reasons are not good enough! 
+ * TODO change API: ad_read() uses float
+ */
+ssize_t ad_read_float(void *sf, float* d, size_t len){
+	int f;
+	static double *buf = NULL;
+	static size_t bufsiz = 0;
+	if (!buf || bufsiz != len) {
+		bufsiz=len;
+		buf = (double*) realloc((void*)buf, bufsiz * sizeof(double));
+	}
+	len = ad_read(sf, buf, bufsiz);
+	for (f=0;f<len;f++) {
+		const float val = (float) buf[f];
+		d[f] = val;
+	}
+	return len;
+}
+
 ssize_t ad_read_mono(void *sf, double* d, size_t len){
 	struct adinfo nfo;
 	ad_info(sf, &nfo);
@@ -79,6 +98,7 @@ gboolean ad_finfo (const char *fn, struct adinfo *nfo) {
 	return ad_close(sf)?false:true;
 }
 
+/* XXX this should be moved to audio_analyzers/peak/peak.c  */
 double ad_maxsignal(const char *fn) {
 	struct adinfo nfo;
 	void * sf = ad_open(fn, &nfo);

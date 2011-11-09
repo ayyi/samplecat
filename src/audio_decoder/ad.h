@@ -26,4 +26,5 @@ int     ad_info (void *sf, struct adinfo *nfo);
 gboolean ad_finfo (const char *, struct adinfo *);
 double ad_maxsignal(const char *);
 ssize_t ad_read_mono(void *, double*, size_t);
+ssize_t ad_read_float(void *sf, float* d, size_t len); // soon obsolete
 #endif

@@ -70,7 +70,7 @@ listmodel__add_result(SamplecatResult* result)
 	Sample* sample = NULL;
 	if(!result->sample_rate){
 		sample = sample_new_from_result(result);
-		sample_get_file_sndfile_info(sample);
+		sample_get_file_info(sample);
 		result->sample_rate = sample->sample_rate;
 		result->length = sample->length;
 		result->channels = sample->channels;

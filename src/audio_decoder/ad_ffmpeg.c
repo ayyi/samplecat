@@ -228,7 +228,7 @@ ssize_t ad_read_ffmpeg(void *sf, double* d, size_t len) {
   if (written!=frames) {
         dbg(2, "short-read");
   }
-  return written;
+  return written * priv->channels;
 }
 
 int64_t ad_seek_ffmpeg(void *sf, int64_t pos) {

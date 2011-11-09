@@ -16,6 +16,7 @@ AM_CFLAGS = \
 	$(FFTW3_CFLAGS) \
 	$(OPENGL_CFLAGS) \
 	$(JACK_CFLAGS) \
+	$(SAMPLERATE_CFLAGS) \
 	$(SNDFILE_CFLAGS) \
 	$(FFMPEG_CFLAGS) \
 	$(GTK_CFLAGS) $(DBUS_CFLAGS) $(MYSQL_CFLAGS) $(FLAC_CFLAGS) $(TRACKER_CFLAGS)
@@ -32,16 +33,14 @@ GQVIEW2_SRC =
 if ENABLE_AYYI
 AYYI_SRC = ayyi.c ayyi.h ayyi_model.c ayyi_model.h
 AYYI_LIBS = ../ayyi/libayyi.a
-else
-AYYI_SRC =
-AYYI_LIBS =
 endif
 
-if ENABLE_AUDIODECODER
-AD_SRC = audio_decoder/ad.h audio_decoder/ad_plugin.h audio_decoder/ad_plugin.c audio_decoder/ad_soundfile.c
+AD_SRC = audio_decoder/ad.h audio_decoder/ad_plugin.h audio_decoder/ad_plugin.c
+
+AD_SRC += audio_decoder/ad_soundfile.c
+
 if ENABLE_FFMPEG
 AD_SRC += audio_decoder/ad_ffmpeg.c
-endif
 endif
 
 if ENABLE_MYSQL
@@ -50,8 +49,6 @@ endif
 
 if ENABLE_SQLITE
 SQLITE_SRC = db/sqlite.c db/sqlite.h
-else
-SQLITE_SRC =
 endif
 
 if ENABLE_TRACKER
@@ -77,6 +74,7 @@ endif
 AUDIOANALYSERS_SRC = \
 	audio_analysis/spectrogram/spectrogram.c audio_analysis/spectrogram/spectrogram.h \
 	audio_analysis/spectrogram/sndfile_window.c audio_analysis/spectrogram/sndfile_window.h \
+	audio_analysis/waveform/waveform.c audio_analysis/waveform/waveform.h \
 	audio_analysis/ebumeter/ebur128.cc audio_analysis/ebumeter/ebur128.h \
 	audio_analysis/ebumeter/ebu_r128_proc.cc audio_analysis/ebumeter/ebu_r128_proc.h
 
@@ -120,7 +118,9 @@ samplecat_LDADD = \
 	$(DBUS_LIBS) \
 	$(TRACKER_LDFLAGS) \
 	$(SQLITE_LIBS) \
-	$(GTK_LIBS) $(MYSQL_LDFLAGS) $(JACK_LIBS) $(SNDFILE_LIBS) $(FLAC_LIBS) $(GTHREAD_LIBS) \
+	$(GTK_LIBS) $(MYSQL_LDFLAGS) \
+	$(JACK_LIBS) $(SNDFILE_LIBS) ${SAMPLERATE_LIBS} \
+	$(FLAC_LIBS) $(GTHREAD_LIBS) \
 	$(FFTW3_LIBS) \
 	$(OPENGL_LIBS) \
 	$(FFMPEG_LIBS)

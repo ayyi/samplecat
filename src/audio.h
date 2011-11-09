@@ -1,8 +1,6 @@
-#ifdef HAVE_FLAC_1_1_1
-#  include <FLAC/all.h>
-#endif
 #include <jack/jack.h>
 #include <jack/ringbuffer.h>
+#include "audio_decoder/ad.h"
 
 typedef struct __decoder_session _decoder_session;
 
@@ -10,10 +8,10 @@ typedef struct __audition
 {
 	char           type;     //either TYPE_SNDFILE or TYPE_FLAC
 
-	//sndfile stuff:
-	SF_INFO        sfinfo;   //the libsndfile struct pointer
-	SNDFILE*       sffile;
-	int            nframes;  
+	//audio decoder stuff:
+	void *sf; 
+	struct adinfo nfo;
+	int   nframes;  
 
 	//flac stuff:
 	jack_ringbuffer_t* rb1;  //probably move this to __decoder_session ...?
@@ -22,52 +20,16 @@ typedef struct __audition
 	
 } _audition;
 
-#ifdef HAVE_FLAC_1_1_1
-struct __decoder_session
-{
-	Sample*       sample;
-	unsigned      sample_num;          // not being used currently 
-	unsigned      frame_num;           // not being used currently 
-	uint64_t      total_samples;       // total_frames * channels
-	uint64_t      total_frames;
-	short         max[OVERVIEW_WIDTH];
-	short         min[OVERVIEW_WIDTH];
+int      jack_init();
+void     jack_close();
+void     jack_shutdown(void *arg);
+int      jack_process_flac(jack_nframes_t nframes, void *arg);
 
-	FLAC__FileDecoder* flacstream;     //not used when file is decoded all at once.
+int      playback_init(Sample*);
+void     playback_stop();
 
-	_audition*    audition;            //set only if we are playing rather than generating an overview. Used as a flag? Its a global afterall.....
+void     audition_init();
+void     audition_reset();
 
-	char          output_peakfile;     //boolean - true if we are making a pixbuf, false if we are outputting to jack.
-};
-#endif
-
-int                            jack_init();
-void                           jack_close();
-void                           jack_shutdown(void *arg);
-int                            jack_process_flac(jack_nframes_t nframes, void *arg);
-
-int                            playback_init(Sample*);
-void                           playback_stop();
-
-void                           audition_init();
-void                           audition_reset();
-#ifdef HAVE_FLAC_1_1_1
-_decoder_session*              flac_decoder_session_new();
-gboolean                       flac_decoder_sesssion_init(_decoder_session*, Sample*);
-void                           decoder_session_free(_decoder_session* session);
-
-gboolean                       get_file_info_flac(Sample*);
-FLAC__FileDecoder*             flac_open(_decoder_session* session);
-gboolean                       flac_close(FLAC__FileDecoder* flacstream);
-gboolean                       flac_read(FLAC__FileDecoder* flacstream);
-void                           flac_decode_file(char* filename);
-FLAC__StreamDecoderWriteStatus flac_write_cb(const FLAC__FileDecoder *dec, const FLAC__Frame *frame, const FLAC__int32 * const buf[], _decoder_session* session);
-FLAC__StreamDecoderReadStatus  flac_read_cb(const FLAC__StreamDecoder *decoder, FLAC__byte buffer[], unsigned *bytes, void *client_data);
-void                           flac_error_cb(const FLAC__FileDecoder *dec, FLAC__StreamDecoderErrorStatus status, void *data);
-void                           flac_metadata_cb(const FLAC__FileDecoder *dec, const FLAC__StreamMetadata *meta, void *data);
-gboolean                       flac_fill_ringbuffer(_decoder_session* session);
-#endif
-
-gboolean                       jack_process_finished(gpointer data);
-gboolean                       jack_process_stop_playback(gpointer data);
-
+gboolean jack_process_finished(gpointer data);
+gboolean jack_process_stop_playback(gpointer data);

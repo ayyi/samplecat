@@ -203,7 +203,7 @@ inspector_update_from_result(Result* sample)
 				gtk_label_set_text(GTK_LABEL(i->name), basename(sample->sample_name));
 				return;
 			}
-			if(!result_get_file_sndfile_info(sample)){
+			if(!result_get_file_info(sample)){
 				perr("cannot open file?\n");
 				return;
 			}
@@ -244,80 +244,6 @@ inspector_update_from_result(Result* sample)
 }
 
 
-#if 0
-void
-inspector_update_from_listview(GtkTreePath* path)
-{
-	PF;
-	Inspector* i = app.inspector;
-	if(!i) return;
-	g_return_if_fail(path);
-
-	if (i->row_ref){ gtk_tree_row_reference_free(i->row_ref); i->row_ref = NULL; }
-
-	GtkTreeIter iter;
-	gtk_tree_model_get_iter(GTK_TREE_MODEL(app.store), &iter, path);
-	gchar* tags;
-	gchar* fpath;
-	gchar* fname;
-	gchar* mimetype;
-	gchar* notes;
-	GdkPixbuf* pixbuf = NULL;
-	gchar* length;
-	int id;
-	gtk_tree_model_get(GTK_TREE_MODEL(app.store), &iter, COL_NAME, &fname, COL_FNAME, &fpath, COL_LENGTH, &length, COL_KEYWORDS, &tags, COL_MIMETYPE, &mimetype, COL_NOTES, &notes, COL_OVERVIEW, &pixbuf, COL_IDX, &id, -1);
-
-	Sample* sample = sample_new_from_model(path);
-	#ifdef USE_TRACKER
-	if(BACKEND_IS_TRACKER){
-		g_return_if_fail(length);
-		if(!strlen(length)){
-			//this sample hasnt been previously selected, and non-db info isnt available.
-			//-get the info directly from the file, and set it into the main treeview.
-			if(mimestring_is_unsupported(mimetype)){
-				inspector_clear();
-				gtk_label_set_text(GTK_LABEL(i->name), basename(sample->filename));
-				return;
-			}
-			if(!sample_get_file_sndfile_info(sample)){
-				perr("cannot open file?\n");
-				return;
-			}
-			char l[64]; format_time_int(l, sample->length);
-			char samplerate_s[32]; float samplerate = sample->sample_rate; samplerate_format(samplerate_s, samplerate);
-			gtk_list_store_set(app.store, &iter, COL_LENGTH, l, COL_SAMPLERATE, samplerate_s, COL_CHANNELS, sample->channels, -1);
-		}
-	}
-	#endif
-
-	char* ch_str = channels_format(sample->channels);
-	char fs_str[64]; snprintf(fs_str, 63, "%i kHz",      sample->sample_rate);
-	char len   [32]; snprintf(len,    31, "%i",          sample->length);
-
-	gtk_label_set_text(GTK_LABEL(i->name),       fname);
-	gtk_label_set_text(GTK_LABEL(i->tags),       tags);
-	gtk_label_set_text(GTK_LABEL(i->samplerate), fs_str);
-	gtk_label_set_text(GTK_LABEL(i->channels),   ch_str);
-	gtk_label_set_text(GTK_LABEL(i->filename),   sample->filename);
-	gtk_label_set_text(GTK_LABEL(i->mimetype),   mimetype);
-	gtk_label_set_text(GTK_LABEL(i->length),     len);
-	gtk_text_buffer_set_text(i->notes, notes ? notes : "", -1);
-	gtk_image_set_from_pixbuf(GTK_IMAGE(i->image), pixbuf);
-
-	show_fields();
-	g_free(ch_str);
-
-	//store a reference to the row id in the inspector widget:
-	//g_object_set_data(G_OBJECT(app.inspector->name), "id", GUINT_TO_POINTER(id));
-	i->row_id = id;
-	i->row_ref = gtk_tree_row_reference_new(GTK_TREE_MODEL(app.store), path);
-	if(!i->row_ref) perr("setting row_ref failed!\n");
-
-	free(sample);
-}
-#endif
-
-
 void
 inspector_update_from_fileview(GtkTreeView* treeview)
 {
@@ -340,7 +266,6 @@ inspector_update_from_fileview(GtkTreeView* treeview)
 			MIME_type* mime_type = type_from_path(sample->filename);
 			char mime_string[64];
 			snprintf(mime_string, 64, "%s/%s", mime_type->media_type, mime_type->subtype);
-			sample_set_type_from_mime_string(sample, mime_string);
 
 			if(mimestring_is_unsupported(mime_string)){
 				inspector_clear();

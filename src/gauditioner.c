@@ -14,7 +14,7 @@
 #include "main.h"
 #include "auditioner.h"
 
-static char ** get_preview_argv (char *path) {
+static char ** get_preview_argv (const char *path) {
 	char *command;
 	char **argv;
 	int i;

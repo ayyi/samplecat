@@ -23,7 +23,7 @@
 #include "listview.h"
 
 extern struct _app app;
-#if !(defined USE_DBUS || defined USE_GAUDITION)
+#if (defined HAVE_JACK && !(defined USE_DBUS || defined USE_GAUDITION))
 extern int      playback_init                    (Sample*);
 extern void     playback_stop                    ();
 #endif

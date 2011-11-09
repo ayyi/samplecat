@@ -4,7 +4,6 @@
 //#define __USE_GNU
 #include <string.h>
 #include <unistd.h>
-#include <sndfile.h>
 #include <gtk/gtk.h>
 #include "ayyi.h"
 #include "ayyi/engine_proxy.h"

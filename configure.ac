@@ -164,16 +164,8 @@ AC_SUBST(LIBART_LIBS)
 dnl XML_CFLAGS=`pkg-config libxml --cflags`
 dnl AC_SUBST(XML_CFLAGS)
 
-AS_IF([test "$enable_ayyi" = "no" -a "$enable_dbus" = "no" -a "$enable_gplayer" = "no"], [
-	    PKG_CHECK_MODULES(JACK, jack,enable_builtin_player=yes, enable_builtin_player=no)
-	], [
-	    enable_builtin_player=no
-	])
-
-AC_SUBST(JACK_CFLAGS)
-AC_SUBST(JACK_LIBS)
-
-PKG_CHECK_MODULES(SNDFILE, sndfile,, [true])
+dnl TODO: sndfile is optional if FFMPEG is avail
+PKG_CHECK_MODULES(SNDFILE, sndfile)
 AC_SUBST(SNDFILE_CFLAGS)
 AC_SUBST(SNDFILE_LIBS)
 
@@ -191,9 +183,6 @@ fi
 AM_CONDITIONAL(ENABLE_FFMPEG, test "$enable_ffmpeg" = "yes")
 AC_SUBST(FFMPEG_CFLAGS)
 AC_SUBST(FFMPEG_LIBS)
-
-AM_CONDITIONAL(ENABLE_AUDIODECODER, test "yes" = "yes")
-AC_DEFINE(USE_AUDIODECODER,1,[Use new audio decoder API])
 
 dnl -----------------------------------------------------------------------------
 
@@ -249,6 +238,28 @@ if test "$enable_ayyi" = "yes"; then
 	AC_DEFINE(USE_AYYI,1,[Use ayyi])
 fi
 AM_CONDITIONAL(ENABLE_AYYI, [test "$enable_ayyi" = "yes"])
+
+dnl -----------------------------------------------------------------------------
+
+AS_IF([test "$enable_ayyi" = "no" -a "$enable_dbus" = "no" -a "$enable_gplayer" = "no"], [
+	    PKG_CHECK_MODULES(JACK, jack,enable_builtin_player=yes, enable_builtin_player=no)
+	], [
+	    enable_builtin_player=no
+	])
+
+AC_SUBST(JACK_CFLAGS)
+AC_SUBST(JACK_LIBS)
+if test "$enable_builtin_player" = "yes"; then
+	AC_DEFINE(HAVE_JACK,1,[have JACK audio connection kit])
+fi
+
+#JACK player can re-sample:
+AS_IF([test "$enable_builtin_player" != "no"], [
+	PKG_CHECK_MODULES(SAMPLERATE, samplerate,
+	  [AC_DEFINE(ENABLE_RESAMPLING,1,[JACK player resampling])], [true])
+	])
+AC_SUBST(SAMPLERATE_CFLAGS)
+AC_SUBST(SAMPLERATE_LIBS)
 
 dnl -----------------------------------------------------------------------------
 
