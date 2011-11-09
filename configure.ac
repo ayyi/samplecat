@@ -219,7 +219,7 @@ dnl ----------------------------------------------------------------------------
 
 AC_ARG_ENABLE(dnotify, AS_HELP_STRING([--enable-dnotify],[build with dnotify support]),enable_dnotify=$enableval, enable_dnotify="no")
 
-if test "$enable_dnotify"= "yes"; then
+if test "$enable_dnotify" = "yes"; then
 	AC_DEFINE(USE_DNOTIFY,1,[Use dnotify on Linux])
 	AC_DEFINE(USE_NOTIFY,1,[Use notification])
 fi
