@@ -407,7 +407,7 @@ render_pixbuf (const RENDER * render, void *infile, int samplerate, int64_t file
 static GdkPixbuf*
 render_sndfile (const RENDER* render)
 {
-	struct adinfo nfo;;
+	struct adinfo nfo;
 
 	void* infile = ad_open (render->sndfilepath, &nfo);
 	if (!infile) {

@@ -149,6 +149,7 @@ sample_get_file_sndfile_info(Sample* sample)
 }
 #else
 #include "audio_decoder/ad.h"
+#include "audio_analysis/ebumeter/ebur128.h"
 gboolean
 sample_get_file_sndfile_info(Sample* sample)
 {
@@ -159,6 +160,7 @@ sample_get_file_sndfile_info(Sample* sample)
 	sample->channels    = nfo.channels;
 	sample->sample_rate = nfo.sample_rate;
 	sample->length      = nfo.length;
+	ebur128analyse(sample->filename, NULL);
 	return true;
 }
 #endif
@@ -218,6 +220,7 @@ result_get_file_sndfile_info(Result* sample)
 	sample->channels    = nfo.channels;
 	sample->sample_rate = nfo.sample_rate;
 	sample->length      = nfo.length;
+	ebur128analyse(sample->sample_name, NULL);
 	return true;
 }
 #endif

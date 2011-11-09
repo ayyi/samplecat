@@ -19,7 +19,7 @@ AM_CFLAGS = \
 	$(FFMPEG_CFLAGS) \
 	$(GTK_CFLAGS) $(DBUS_CFLAGS) $(MYSQL_CFLAGS) $(FLAC_CFLAGS) $(TRACKER_CFLAGS)
 
-#$(XML_CFLAGS)
+AM_CXXFLAGS = $(AM_CFLAGS)
 
 bin_PROGRAMS = samplecat
 
@@ -75,7 +75,9 @@ endif
 
 AUDIOANALYSERS_SRC = \
 	audio_analysis/spectrogram/spectrogram.c audio_analysis/spectrogram/spectrogram.h \
-	audio_analysis/spectrogram/sndfile_window.c audio_analysis/spectrogram/sndfile_window.h
+	audio_analysis/spectrogram/sndfile_window.c audio_analysis/spectrogram/sndfile_window.h \
+	audio_analysis/ebumeter/ebur128.cc audio_analysis/ebumeter/ebur128.h \
+	audio_analysis/ebumeter/ebu_r128_proc.cc audio_analysis/ebumeter/ebu_r128_proc.h
 
 samplecat_SOURCES = \
 	typedefs.h types.h \
