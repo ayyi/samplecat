@@ -21,31 +21,41 @@ typedef struct {
   AVCodec*         codec;
   AVPacket         packet;
   int              audioStream;
+  int              pkt_len;
+  uint8_t          pkt_ptr;
 
   int16_t          m_tmpBuffer[AVCODEC_MAX_AUDIO_FRAME_SIZE];
   int16_t*         m_tmpBufferStart;
   unsigned long    m_tmpBufferLen;
-  int64_t          m_pts;
-#ifdef CLKDEBUG
-  double           decoder_clock;
-  double           output_clock;
-  uint32_t         seek_frame;
-#endif
+
+  int64_t          decoder_clock;
+  int64_t          output_clock;
+  int64_t          seek_frame;
   unsigned int     samplerate;
   unsigned int     channels;
   int64_t          length;
 } ffmpeg_audio_decoder;
 
 
-/* internal abstraction */
+int ad_info_ffmpeg(void *sf, struct adinfo *nfo) {
+  ffmpeg_audio_decoder *priv = (ffmpeg_audio_decoder*) sf;
+  if (!priv) return -1;
+  if (nfo) {
+    nfo->sample_rate = priv->samplerate;
+    nfo->channels    = priv->channels;
+    nfo->frames      = priv->length;
+    nfo->length      = (nfo->frames * 1000) / nfo->sample_rate;
+  }
+  return 0;
+}
+
 void *ad_open_ffmpeg(const char *fn, struct adinfo *nfo) {
   ffmpeg_audio_decoder *priv = (ffmpeg_audio_decoder*) calloc(1, sizeof(ffmpeg_audio_decoder));
   
   priv->m_tmpBufferStart=NULL;
-  priv->m_tmpBufferLen=priv->m_pts=0;
-#ifdef CLKDEBUG
-  priv->decoder_clock=priv->output_clock=0.0; 
-#endif
+  priv->m_tmpBufferLen=0;
+  priv->decoder_clock=priv->output_clock=priv->seek_frame=0; 
+  priv->packet.size=0; priv->packet.data=NULL;
 
   if (avformat_open_input(&priv->formatContext, fn, NULL, NULL) <0) {
     dbg(0, "ffmpeg is unable to open file '%s'.", fn);
@@ -96,13 +106,10 @@ void *ad_open_ffmpeg(const char *fn, struct adinfo *nfo) {
   priv->channels   = priv->codecContext->channels ;
   priv->length     = (int64_t)( len * priv->samplerate / AV_TIME_BASE );
 
-  nfo->sample_rate = priv->samplerate;
-  nfo->channels    = priv->channels;
-  nfo->frames      = priv->length;
-  nfo->length      = (nfo->frames * 1000) / nfo->sample_rate;
+  ad_info_ffmpeg((void*)priv, nfo);
 
-  dbg(1, "ffmpeg - %s", fn);
-  dbg(1, "ffmpeg - sr:%i c:%i d:%lld f:%lld", nfo->sample_rate, nfo->channels, nfo->length, nfo->frames);
+  dbg(0, "ffmpeg - %s", fn);
+  dbg(0, "ffmpeg - sr:%i c:%i d:%lld f:%lld", nfo->sample_rate, nfo->channels, nfo->length, nfo->frames);
 
   return (void*) priv;
 }
@@ -132,61 +139,90 @@ ssize_t ad_read_ffmpeg(void *sf, double* d, size_t len) {
 
   int written = 0;
   int ret = 0;
-  while ( ret >= 0 && written < frames ) {
+  while (ret >= 0 && written < frames) {
     dbg(3,"loop: %i/%i (bl:%lu)",written, frames, priv->m_tmpBufferLen );
-    if ( priv->m_tmpBufferLen > 0 ) {
+    if (priv->seek_frame == 0 && priv->m_tmpBufferLen > 0 ) {
       int s = MIN(priv->m_tmpBufferLen / priv->channels, frames - written );
       int16_to_double(priv->m_tmpBufferStart, d, priv->channels, s , written);
       written += s;
-#ifdef CLKDEBUG
       priv->output_clock+=s;
-#endif
       s = s * priv->channels;
       priv->m_tmpBufferStart += s;
       priv->m_tmpBufferLen -= s;
       ret = 0;
     } else {
-      ret = av_read_frame(priv->formatContext, &priv->packet);
-      if (ret<1) { dbg(1, "reached end of file."); break; }
-
-      int len = priv->packet.size;
-      uint8_t *ptr = priv->packet.data;
-
       priv->m_tmpBufferStart = priv->m_tmpBuffer;
-      while (ptr != NULL && ret >= 0 && priv->packet.stream_index == priv->audioStream && len > 0) {
-        int data_size= AVCODEC_MAX_AUDIO_FRAME_SIZE - priv->m_tmpBufferLen - (priv->m_tmpBufferStart-priv->m_tmpBuffer);
-        if(data_size < FF_MIN_BUFFER_SIZE || data_size < priv->codecContext->channels * priv->codecContext->frame_size * sizeof(int16_t)){
-           dbg(0, "WARNING: audio buffer too small.");
-           break;
-        }
+      priv->m_tmpBufferLen = 0;
 
-        ret = avcodec_decode_audio3(priv->codecContext, priv->m_tmpBufferStart+priv->m_tmpBufferLen, &data_size, &priv->packet);
-
-        if ( ret < 0 ) {
-          ret = 0;
-          dbg(0, "audio decode error");
-          break;
-        }
-        len -= ret;
-        ptr += ret;
-#ifdef CLKDEBUG
-        if (priv->packet.pts != AV_NOPTS_VALUE) {
-          priv->decoder_clock = priv->codecContext->sample_rate * av_q2d(priv->formatContext->streams[priv->audioStream]->time_base)*priv->packet.pts;
-          dbg(2, "GOT PTS: %.1f. (want: %.1f)",priv->decoder_clock, priv->output_clock);
-        }
-
-        if (priv->packet.pts == AV_NOPTS_VALUE) {
-          dbg(2, "got no PTS");
-          priv->decoder_clock += (double) (data_size>>1) / priv->codecContext->channels;
-        }
-        dbg(3, "CLK: %.0f T:%.2f",priv->decoder_clock,priv->decoder_clock/priv->codecContext->sample_rate);
-#endif
-        if ( data_size > 0 ) {
-                priv->m_tmpBufferLen+= (data_size>>1); // 2 bytes per sample
-        }
-
+      if (!priv->pkt_ptr || priv->pkt_len <1 ) {
+        if (priv->packet.data) av_free_packet(&priv->packet);
+        ret = av_read_frame(priv->formatContext, &priv->packet);
+        if (ret<0) { dbg(0, "reached end of file."); break; }
+        priv->pkt_len = priv->packet.size;
+        priv->pkt_ptr = priv->packet.data;
       }
-      av_free_packet( &priv->packet );
+
+      if (priv->packet.stream_index != priv->audioStream) {
+        priv->pkt_ptr = NULL;
+        continue;
+      }
+
+      /* decode all chunks in packet */
+      int data_size= AVCODEC_MAX_AUDIO_FRAME_SIZE;
+
+      ret = avcodec_decode_audio3(priv->codecContext, 
+          priv->m_tmpBuffer, &data_size, &priv->packet);
+
+      if (ret < 0 || ret > priv->pkt_len) {
+        dbg(0, "audio decode error");
+        return -1;
+      }
+
+      priv->pkt_len -= ret; priv->pkt_ptr += ret;
+
+      /* sample exact alignment  */
+      if (priv->packet.pts != AV_NOPTS_VALUE) {
+        priv->decoder_clock = priv->samplerate * av_q2d(priv->formatContext->streams[priv->audioStream]->time_base) * priv->packet.pts;
+      } else {
+        dbg(0, "!!! NO PTS timestamp in file");
+        priv->decoder_clock += (double) (data_size>>1) / priv->channels;
+      }
+
+      if (data_size>0) {
+        priv->m_tmpBufferLen+= (data_size>>1); // 2 bytes per sample
+      }
+
+      /* align buffer after seek. */
+      if (priv->seek_frame > 0) { 
+        const int diff = priv->output_clock-priv->decoder_clock;
+        if (diff<0) { 
+          /* seek ended up past the wanted sample */
+          dbg(0, " !!! Audio seek failed.");
+          return -1;
+        } else if (priv->m_tmpBufferLen < (diff*priv->channels)) {
+          /* wanted sample not in current buffer - keep going */
+          dbg(2, " !!! seeked sample was not in decoded buffer. frames-to-go: %li", diff);
+          priv->m_tmpBufferLen = 0;
+        } else if (diff!=0 && data_size > 0) {
+          /* wanted sample is in current buffer but not at the beginnning */
+          dbg(2, " !!! sync buffer to seek. (diff:%i)", diff);
+          priv->m_tmpBufferStart+= diff*priv->codecContext->channels;
+          priv->m_tmpBufferLen  -= diff*priv->codecContext->channels;
+#if 1
+          memmove(priv->m_tmpBuffer, priv->m_tmpBufferStart, priv->m_tmpBufferLen);
+          priv->m_tmpBufferStart = priv->m_tmpBuffer;
+#endif
+          priv->seek_frame=0;
+          priv->decoder_clock += diff;
+        } else if (data_size > 0) {
+          dbg(2, "Audio exact sync-seek (%lld == %lld)", priv->decoder_clock, priv->seek_frame);
+          priv->seek_frame=0;
+        } else {
+          dbg(0, " XXX - no audio data in packet");
+        }
+      }
+      //dbg(0, "PTS: decoder:%lld. - want: %lld",priv->decoder_clock, priv->output_clock);
+      //dbg(0, "CLK: frame:  %lld  T:%.3fs",priv->decoder_clock, (float) priv->decoder_clock/priv->samplerate);
     }
   }
   if (written!=frames) {
@@ -194,16 +230,48 @@ ssize_t ad_read_ffmpeg(void *sf, double* d, size_t len) {
   }
   return written;
 }
+
+int64_t ad_seek_ffmpeg(void *sf, int64_t pos) {
+  ffmpeg_audio_decoder *priv = (ffmpeg_audio_decoder*) sf;
+  if (!sf) return -1;
+  if (pos == priv->output_clock) return;
+
+  /* flush internal buffer */
+  priv->m_tmpBufferLen = 0;
+  priv->seek_frame = pos;
+  priv->output_clock = pos;
+  priv->pkt_len = 0; priv->pkt_ptr = NULL;
+  priv->decoder_clock = 0;
+
+#if 0
+  /* TODO seek at least 1 packet before target.
+   * for mpeg compressed files, the
+   * output may depend on past frames! */
+  if (pos > 8192) pos -= 8192;
+  else pos = 0;
+#endif
+
+  const int64_t timestamp = pos / av_q2d(priv->formatContext->streams[priv->audioStream]->time_base) / priv->samplerate;
+  dbg(0, "seek frame:%lld - idx:%lld", pos, timestamp);
+  
+  av_seek_frame(priv->formatContext, priv->audioStream, timestamp, AVSEEK_FLAG_ANY | AVSEEK_FLAG_BACKWARD);
+  avcodec_flush_buffers(priv->codecContext);
+  return pos;
+}
 #endif
 
 const static ad_plugin ad_ffmpeg = {
 #ifdef HAVE_FFMPEG
   &ad_open_ffmpeg,
   &ad_close_ffmpeg,
+  &ad_info_ffmpeg,
+  &ad_seek_ffmpeg,
   &ad_read_ffmpeg
 #else
   &ad_open_null,
   &ad_close_null,
+  &ad_info_null,
+  &ad_seek_null,
   &ad_read_null
 #endif
 };

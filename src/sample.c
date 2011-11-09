@@ -153,7 +153,7 @@ gboolean
 sample_get_file_sndfile_info(Sample* sample)
 {
 	struct adinfo nfo;
-	if (!ad_info(sample->filename, &nfo)) {
+	if (!ad_finfo(sample->filename, &nfo)) {
 		return false;
 	}
 	sample->channels    = nfo.channels;
@@ -212,7 +212,7 @@ gboolean
 result_get_file_sndfile_info(Result* sample)
 {
 	struct adinfo nfo;
-	if (!ad_info(sample->sample_name, &nfo)) {
+	if (!ad_finfo(sample->sample_name, &nfo)) {
 		return false;
 	}
 	sample->channels    = nfo.channels;

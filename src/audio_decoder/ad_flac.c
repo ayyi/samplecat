@@ -88,10 +88,14 @@ const static ad_plugin ad_flac = {
 #ifdef HAVE_FLAC 
 	&ad_open_flac,
 	&ad_close_flac,
+	&ad_info_null,
+	&ad_seek_null,
 	&ad_read_flac
 #else
 	&ad_open_null,
 	&ad_close_null,
+	&ad_info_null,
+	&ad_seek_null,
 	&ad_read_null
 #endif
 };

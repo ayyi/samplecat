@@ -12,6 +12,8 @@
 
 void *ad_open_null(const char *f, struct adinfo *n) { return NULL; }
 int ad_close_null(void *x) { return -1; }
+int ad_info_null(void *x, struct adinfo *n) { return -1; }
+int64_t ad_seek_null(void *x, int64_t p) { return -1; }
 ssize_t ad_read_null(void *x, double*d, size_t s) { return -1;}
 
 /* samplecat api */
@@ -19,22 +21,60 @@ ssize_t ad_read_null(void *x, double*d, size_t s) { return -1;}
 static ad_plugin const * backend =NULL;
 
 void ad_init() {
-	// TODO: dynamically use backends depending on file.
+	// TODO: dynamically select backends depending on file on ad_open!
+	// store backend in opaque structure per decoder -> re-entrant code
+#ifdef HAVE_FFMPEG
 	backend = get_ffmpeg();
-	//backend = get_sndfile();
+#else
+	backend = get_sndfile();
+#endif
 }
 
 void *ad_open(const char *fn, struct adinfo *nfo) {
 	return backend->open(fn, nfo);
 }
+int ad_info(void *sf, struct adinfo *nfo) {
+	return backend->info(sf, nfo)?true:false;
+}
 int ad_close(void *sf) {
 	return backend->close(sf);
+}
+int64_t ad_seek(void *sf, int64_t pos) {
+	return backend->seek(sf, pos);
 }
 ssize_t ad_read(void *sf, double* d, size_t len){
 	return backend->read_dbl(sf, d, len);
 }
 
-gboolean ad_info (const char *fn, struct adinfo *nfo) {
+ssize_t ad_read_mono(void *sf, double* d, size_t len){
+	struct adinfo nfo;
+	ad_info(sf, &nfo);
+	int chn = nfo.channels;
+	if(chn == 1)
+		return backend->read_dbl(sf, d, len);
+
+	int c,f;
+
+	static double *buf = NULL;
+	static size_t bufsiz = 0;
+	if (!buf || bufsiz != len*chn) {
+		bufsiz=len*chn;
+		buf = (double*) realloc((void*)buf, bufsiz * sizeof(double));
+	}
+
+	len = ad_read(sf, buf, bufsiz);
+
+	for (f=0;f<len;f++) {
+		double val=0.0;
+		for (c=0;c<chn;c++) {
+			val+=buf[f*chn + c];
+		}
+		d[f] = val/chn;
+	}
+	return len;
+}
+
+gboolean ad_finfo (const char *fn, struct adinfo *nfo) {
 	void * sf = ad_open(fn, nfo);
 	return ad_close(sf)?false:true;
 }
