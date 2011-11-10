@@ -9,7 +9,9 @@
 #include "typedefs.h"
 #include "support.h"
 #include "main.h"
-#include "audio.h"
+#if (defined HAVE_JACK && !(defined USE_DBUS || defined USE_GAUDITION))
+#include "jack_player.h"
+#endif
 #include "overview.h"
 #include "listview.h"
 #include "sample.h"

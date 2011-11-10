@@ -1,7 +1,8 @@
-SUBDIRS = src
 
 if ENABLE_AYYI
-SUBDIRS += ayyi
+SUBDIRS = ayyi src
+else
+SUBDIRS = src
 endif
 
 pkgconfigdir = $(libdir)/pkgconfig

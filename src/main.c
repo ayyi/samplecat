@@ -43,8 +43,8 @@ This software is licensed under the GPL. See accompanying file COPYING.
 #include "support.h"
 #include "main.h"
 #include "sample.h"
-#if !(defined USE_DBUS || defined USE_GAUDITION)
-#include "audio.h"
+#if (defined HAVE_JACK && !(defined USE_DBUS || defined USE_GAUDITION))
+#include "jack_player.h"
 #endif
 #include "overview.h"
 #include "cellrenderer_hypertext.h"

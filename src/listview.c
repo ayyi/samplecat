@@ -22,7 +22,7 @@
 #if (defined USE_DBUS || defined USE_GAUDITION)
 #include "auditioner.h"
 #elif (defined HAVE_JACK)
-#include "audio.h"
+#include "jack_player.h"
 #endif
 
 extern int      debug;

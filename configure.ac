@@ -237,18 +237,18 @@ AM_CONDITIONAL(ENABLE_DBUS, [test "$enable_dbus" = "yes"])
 
 dnl -----------------------------------------------------------------------------
 
-AC_ARG_ENABLE(ayyi, AS_HELP_STRING([--enable-ayyi],[build with ayyi support]),enable_ayyi=$enableval, enable_ayyi="no")
+AC_ARG_ENABLE(ayyi, AS_HELP_STRING([--enable-ayyi],[build with ayyi support]),enable_ayyi=$enableval, enable_ayyi=$enable_dbus)
 
-if test "$enable_ayyi" = "yes"; then
-	AC_DEFINE(USE_AYYI,1,[Use ayyi])
-fi
+AS_IF([test "$enable_ayyi" = "yes"], [
+       PKG_CHECK_MODULES(DBUS, dbus-glib-1, AC_DEFINE(USE_AYYI,1,[Use ayyi]), enable_ayyi=no)
+       ])
 AM_CONDITIONAL(ENABLE_AYYI, [test "$enable_ayyi" = "yes"])
 
 dnl -----------------------------------------------------------------------------
 
 AC_ARG_ENABLE(gplayer, AS_HELP_STRING([--enable-gplayer],[build with external player]),enable_gplayer=$enableval, enable_gplayer="no")
-if test "$enable_ayyi" = "yes" -o "$enable_dbus" = "yes"; then
-	AC_MSG_WARN([*** gplayer is exclusive with ayii and dbus support. ***])
+if test "$enable_dbus" = "yes"; then
+	AC_MSG_WARN([*** gplayer is exclusive with dbus/ayyi support. ***])
 	enable_gplayer=no
 fi
 AM_CONDITIONAL(ENABLE_GAUDITION, test "$enable_gplayer" = "yes")
@@ -258,7 +258,7 @@ fi
 
 dnl -----------------------------------------------------------------------------
 
-AS_IF([test "$enable_ayyi" = "no" -a "$enable_dbus" = "no" -a "$enable_gplayer" = "no"], [
+AS_IF([test "$enable_dbus" = "no" -a "$enable_gplayer" = "no"], [
 	    PKG_CHECK_MODULES(JACK, jack,enable_builtin_player=yes, enable_builtin_player=no)
 	], [
 	    enable_builtin_player=no
@@ -402,6 +402,14 @@ dnl AC_CONFIG_FILES([src/vala/Makefile])
 AC_CONFIG_FILES([ayyi/Makefile])
 AC_OUTPUT
 
+if test "$enable_dbus" = "yes"; then
+	player="dbus/ayyi_auditioner"
+else if test "$enable_gplayer" = "yes"; then
+	player="CLI: gstreamer, totem-audio-preview, afplay (OSX)"
+else
+	player="built-in JACK"
+fi;fi
+
 AC_MSG_RESULT([])
 AC_MSG_RESULT([Building mysql support:           $enable_mysql])
 AC_MSG_RESULT([Building sqlite support:          $enable_sqlite])
@@ -409,11 +417,10 @@ AC_MSG_RESULT([Building tracker support:         $enable_tracker])
 AC_MSG_RESULT([Building direct flac support:     $enable_flac])
 AC_MSG_RESULT([Building ffmpeg decoder:          $enable_ffmpeg])
 AC_MSG_RESULT([Building dnotify support:         $enable_dnotify])
-AC_MSG_RESULT([Building dbus support:            $enable_dbus])
 AC_MSG_RESULT([Building ayyi support:            $enable_ayyi])
-AC_MSG_RESULT([Building gplayer support:         $enable_gplayer])
 AC_MSG_RESULT([Building opengl support:          $enable_opengl])
-AC_MSG_RESULT([Building builtin JACK player:     $enable_builtin_player])
 AC_MSG_RESULT([Building soundfont support:       $enable_sf2])
 AC_MSG_RESULT([Building nks support:             $enable_nks])
+AC_MSG_RESULT([])
+AC_MSG_RESULT([Audio player: $player])
 AC_MSG_RESULT([])

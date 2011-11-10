@@ -31,7 +31,7 @@
 #include "sample.h"
 #include "support.h"
 #include "main.h"
-#include "audio.h"
+#include "jack_player.h"
 
 extern struct _app app;
 
