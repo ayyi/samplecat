@@ -16,36 +16,51 @@ int ad_info_null(void *x, struct adinfo *n) { return -1; }
 int64_t ad_seek_null(void *x, int64_t p) { return -1; }
 ssize_t ad_read_null(void *x, double*d, size_t s) { return -1;}
 
+typedef struct {
+	ad_plugin const *b; ///< decoder back-end
+	void *d; ///< backend data
+} adecoder;
+
 /* samplecat api */
 
-static ad_plugin const * backend =NULL;
-
-void ad_init() {
-	// TODO: dynamically select backends depending on file on ad_open!
-	// store backend in opaque structure per decoder -> re-entrant code
-#ifdef HAVE_FFMPEG
-	backend = get_ffmpeg();
-#elif 0
-	backend = get_libflac();
-#else
-	backend = get_sndfile();
-#endif
-}
+void ad_init() { /* global init */ }
 
 void *ad_open(const char *fn, struct adinfo *nfo) {
-	return backend->open(fn, nfo);
+	adecoder *d = (adecoder*) calloc(1, sizeof(adecoder));
+
+	/* TODO find /best/ decoder backend for given file */
+#ifdef HAVE_FFMPEG
+	d->b = get_ffmpeg();
+#elif 0 // (defined HAVE_FLAC)
+	d->b = get_libflac();
+#else
+	d->b = get_sndfile();
+#endif
+
+	d->d = d->b->open(fn, nfo);
+	if (!d->d) {
+		free(d);
+		return NULL;
+	}
+	return (void*)d;
 }
 int ad_info(void *sf, struct adinfo *nfo) {
-	return backend->info(sf, nfo)?true:false;
+	adecoder *d = (adecoder*) sf;
+	return d->b->info(d->d, nfo)?true:false;
 }
 int ad_close(void *sf) {
-	return backend->close(sf);
+	adecoder *d = (adecoder*) sf;
+	int rv = d->b->close(d->d);
+	free(d);
+	return rv;
 }
 int64_t ad_seek(void *sf, int64_t pos) {
-	return backend->seek(sf, pos);
+	adecoder *d = (adecoder*) sf;
+	return d->b->seek(d->d, pos);
 }
-ssize_t ad_read(void *sf, double* d, size_t len){
-	return backend->read_dbl(sf, d, len);
+ssize_t ad_read(void *sf, double* out, size_t len){
+	adecoder *d = (adecoder*) sf;
+	return d->b->read_dbl(d->d, out, len);
 }
 
 /* why default double* anyway -- legagy reasons are not good enough! 
@@ -72,7 +87,7 @@ ssize_t ad_read_mono(void *sf, double* d, size_t len){
 	ad_info(sf, &nfo);
 	int chn = nfo.channels;
 	if(chn == 1)
-		return backend->read_dbl(sf, d, len);
+		return ad_read(sf, d, len);
 
 	int c,f;
 
