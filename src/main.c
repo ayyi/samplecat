@@ -738,11 +738,23 @@ gboolean
 mimetype_is_unsupported(MIME_type* mime_type, char* mime_string)
 {
 	g_return_val_if_fail(mime_type, true);
+	int i;
 
 	/* XXX - actually ffmpeg can read audio-tracks in video-files,
 	 * application/ogg, application/annodex, application/zip may contain audio
 	 * ...
 	 */
+	char supported[][64] = {
+		"application/ogg",
+		"video/x-theora+ogg"
+	};
+	for(i=0;i<G_N_ELEMENTS(supported);i++){
+		if(!strcmp(mime_string, supported[i])){
+			dbg(2, "mimetype ok: %s", mime_string);
+			return false;
+		}
+	}
+
 	if(strcmp(mime_type->media_type, "audio")){
 		return true;
 	}
@@ -757,7 +769,6 @@ mimetype_is_unsupported(MIME_type* mime_type, char* mime_string)
 		"audio/x-speex",
 		"audio/x-musepack"
 	};
-	int i;
 	for(i=0;i<G_N_ELEMENTS(unsupported);i++){
 		if(!strcmp(mime_string, unsupported[i])){
 			return true;
