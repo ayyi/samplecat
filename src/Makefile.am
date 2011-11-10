@@ -35,17 +35,10 @@ AYYI_SRC = ayyi.c ayyi.h ayyi_model.c ayyi_model.h
 AYYI_LIBS = ../ayyi/libayyi.a
 endif
 
-AD_SRC = audio_decoder/ad.h audio_decoder/ad_plugin.h audio_decoder/ad_plugin.c
-
-AD_SRC += audio_decoder/ad_soundfile.c
-
-if ENABLE_FLAC
-AD_SRC += audio_decoder/ad_flac.c
-endif
-
-if ENABLE_FFMPEG
-AD_SRC += audio_decoder/ad_ffmpeg.c
-endif
+AD_SRC = audio_decoder/ad.h audio_decoder/ad_plugin.h audio_decoder/ad_plugin.c \
+	audio_decoder/ad_soundfile.c \
+	audio_decoder/ad_flac.c \
+	audio_decoder/ad_ffmpeg.c
 
 if ENABLE_MYSQL
 MYSQL_SRC = db/mysql.c db/mysql.h

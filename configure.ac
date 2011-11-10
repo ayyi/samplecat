@@ -246,6 +246,18 @@ AM_CONDITIONAL(ENABLE_AYYI, [test "$enable_ayyi" = "yes"])
 
 dnl -----------------------------------------------------------------------------
 
+AC_ARG_ENABLE(gplayer, AS_HELP_STRING([--enable-gplayer],[build with external player]),enable_gplayer=$enableval, enable_gplayer="no")
+if test "$enable_ayyi" = "yes" -o "$enable_dbus" = "yes"; then
+	AC_MSG_WARN([*** gplayer is exclusive with ayii and dbus support. ***])
+	enable_gplayer=no
+fi
+AM_CONDITIONAL(ENABLE_GAUDITION, test "$enable_gplayer" = "yes")
+if test "$enable_gplayer" = "yes"; then
+	AC_DEFINE(USE_GAUDITION,1,[Use gtk/gnome auditioner])
+fi
+
+dnl -----------------------------------------------------------------------------
+
 AS_IF([test "$enable_ayyi" = "no" -a "$enable_dbus" = "no" -a "$enable_gplayer" = "no"], [
 	    PKG_CHECK_MODULES(JACK, jack,enable_builtin_player=yes, enable_builtin_player=no)
 	], [
@@ -344,18 +356,6 @@ AS_IF([test "$enable_sqlite" = "yes"],[
 AM_CONDITIONAL(ENABLE_SQLITE, test "$enable_sqlite" = "yes")
 AC_SUBST(SQLITE_CFLAGS)
 AC_SUBST(SQLITE_LIBS)
-
-dnl -----------------------------------------------------------------------------
-
-AC_ARG_ENABLE(gplayer, AS_HELP_STRING([--enable-gplayer],[build with external player]),enable_gplayer=$enableval, enable_gplayer="no")
-if test "$enable_ayyi" = "yes" -o "$enable_dbus" = "yes"; then
-	AC_MSG_WARN([*** gplayer is exclusive with ayii and dbus support. ***])
-	enable_gplayer=no
-fi
-AM_CONDITIONAL(ENABLE_GAUDITION, test "$enable_gplayer" = "yes")
-if test "$enable_gplayer" = "yes"; then
-	AC_DEFINE(USE_GAUDITION,1,[Use gtk/gnome auditioner])
-fi
 
 dnl -----------------------------------------------------------------------------
 

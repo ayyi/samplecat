@@ -1433,7 +1433,7 @@ on_quit(GtkMenuItem* menuitem, gpointer user_data)
 	int exit_code = GPOINTER_TO_INT(user_data);
 	if(exit_code > 1) exit_code = 0; //ignore invalid exit code.
 
-#if !(defined USE_DBUS || defined USE_GAUDITION)
+#if (defined HAVE_JACK && !(defined USE_DBUS || defined USE_GAUDITION))
 	playback_stop();
 #endif
 
