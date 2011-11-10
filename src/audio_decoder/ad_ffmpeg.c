@@ -22,7 +22,7 @@ typedef struct {
   AVPacket         packet;
   int              audioStream;
   int              pkt_len;
-  uint8_t          pkt_ptr;
+  uint8_t*         pkt_ptr;
 
   int16_t          m_tmpBuffer[AVCODEC_MAX_AUDIO_FRAME_SIZE];
   int16_t*         m_tmpBufferStart;
@@ -235,7 +235,7 @@ ssize_t ad_read_ffmpeg(void *sf, double* d, size_t len) {
 int64_t ad_seek_ffmpeg(void *sf, int64_t pos) {
   ffmpeg_audio_decoder *priv = (ffmpeg_audio_decoder*) sf;
   if (!sf) return -1;
-  if (pos == priv->output_clock) return;
+  if (pos == priv->output_clock) return pos;
 
   /* flush internal buffer */
   priv->m_tmpBufferLen = 0;
