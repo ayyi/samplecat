@@ -39,6 +39,10 @@ AD_SRC = audio_decoder/ad.h audio_decoder/ad_plugin.h audio_decoder/ad_plugin.c
 
 AD_SRC += audio_decoder/ad_soundfile.c
 
+if ENABLE_FLAC
+AD_SRC += audio_decoder/ad_flac.c
+endif
+
 if ENABLE_FFMPEG
 AD_SRC += audio_decoder/ad_ffmpeg.c
 endif

@@ -25,6 +25,8 @@ void ad_init() {
 	// store backend in opaque structure per decoder -> re-entrant code
 #ifdef HAVE_FFMPEG
 	backend = get_ffmpeg();
+#elif 0
+	backend = get_libflac();
 #else
 	backend = get_sndfile();
 #endif

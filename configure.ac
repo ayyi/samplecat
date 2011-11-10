@@ -188,22 +188,23 @@ dnl ----------------------------------------------------------------------------
 
 dnl flac doesnt use pkg-config it seems...
 
-AC_ARG_ENABLE(flac, AC_HELP_STRING([--disable-flac], [disable use of FLAC]))
-
-FLAC_LIBS=""
+AC_ARG_ENABLE(flac, AC_HELP_STRING([--disable-flac], [disable use of FLAC]), enable_flac=$enableval, enable_flac="auto")
 
 if test x$enable_flac != xno ; then
-    AC_CHECK_HEADERS(FLAC/all.h)
-    if test x$ac_cv_header_FLAC_all_h = xyes ; then
-        AC_CHECK_LIB(FLAC, FLAC__seekable_stream_encoder_set_tell_callback, HAVE_FLAC_1_1_1="yes")
-        if test "x$HAVE_FLAC_1_1_1" = xyes ; then
-            AC_DEFINE(HAVE_FLAC_1_1_1, [1], [Define to 1 if you have libflac 1.1.1])
-        fi
-        FLAC_LIBS="-lFLAC"
-    fi
-	enable_flac="yes"
+	AC_CHECK_HEADERS(FLAC/all.h)
+	if test x$ac_cv_header_FLAC_all_h = xyes ; then
+		AC_CHECK_LIB(FLAC, FLAC__metadata_get_streaminfo, HAVE_FLAC="yes")
+		if test "$HAVE_FLAC" = "yes" ; then
+			AC_DEFINE(HAVE_FLAC, [1], [Define to 1 if you have libflac])
+			FLAC_LIBS="-lFLAC"
+			enable_flac="yes"
+		else
+			enable_flac="no"
+		fi
+	fi
 fi
-
+AM_CONDITIONAL(ENABLE_FLAC, test "$enable_flac" = "yes")
+AC_SUBST(FLAC_CFLAGS)
 AC_SUBST(FLAC_LIBS)
 
 dnl -----------------------------------------------------------------------------
