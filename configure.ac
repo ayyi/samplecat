@@ -237,10 +237,10 @@ AM_CONDITIONAL(ENABLE_DBUS, [test "$enable_dbus" = "yes"])
 
 dnl -----------------------------------------------------------------------------
 
-AC_ARG_ENABLE(ayyi, AS_HELP_STRING([--enable-ayyi],[build with ayyi support]),enable_ayyi=$enableval, enable_ayyi=$enable_dbus)
+AC_ARG_ENABLE(ayyi, AS_HELP_STRING([--enable-ayyi],[build with ayyi support]),enable_ayyi=$enableval, enable_ayyi="no")
 
 AS_IF([test "$enable_ayyi" = "yes"], [
-       PKG_CHECK_MODULES(DBUS, dbus-glib-1, AC_DEFINE(USE_AYYI,1,[Use ayyi]), enable_ayyi=no)
+       PKG_CHECK_MODULES(DBUS, dbus-glib-1, AC_DEFINE(USE_AYYI,1,[Use ayyi]), enable_ayyi="no")
        ])
 AM_CONDITIONAL(ENABLE_AYYI, [test "$enable_ayyi" = "yes"])
 
@@ -294,7 +294,7 @@ if `test "$enable_nks" = "yes"`; then
 else
 	enable_nks="no"
 fi;
-AM_CONDITIONAL(ENABLE_TRACKER, test "$nks_found" = "yes")
+AM_CONDITIONAL(ENABLE_TRACKER, test "$nks_found" = "yes") dnl ENABLE_TRACKER typo ??
 AC_SUBST(NKS_CFLAGS)
 AC_SUBST(NKS_LDFLAGS)
 
@@ -325,26 +325,16 @@ AC_SUBST(SF2_CFLAGS)
 
 dnl -----------------------------------------------------------------------------
 
-AC_ARG_ENABLE(tracker, AS_HELP_STRING([--enable-tracker],[build with tracker support]),enable_tracker=$enableval, enable_tracker="no")
-if test "$enable_tracker" = "yes"; then
-	dnl AC_CHECK_LIB(tracker-client-0.7, tracker_client_new, [tracker_found=yes])
-	AC_CHECK_LIB(tracker-client-0.9, tracker_client_new, [tracker_found=yes])
-	if `test "$tracker_found" = "yes"`; then
-		AC_DEFINE(USE_TRACKER, 1, Use Tracker metadata daemon)
-		enable_tracker="yes"
-		dnl TRACKER_CFLAGS=`pkg-config --cflags-only-I tracker-client-0.7`
-		dnl TRACKER_LDFLAGS=`pkg-config --libs-only-l tracker-client-0.7`
-		TRACKER_CFLAGS=`pkg-config --cflags-only-I tracker-client-0.9`
-		TRACKER_LDFLAGS=`pkg-config --libs-only-l tracker-client-0.9`
-	else
-		enable_tracker="no"
-	fi;
-else
-	enable_tracker="no"
-fi;
-AM_CONDITIONAL(ENABLE_TRACKER, test "$tracker_found" = "yes")
+AC_ARG_ENABLE(tracker, AS_HELP_STRING([--enable-tracker],[build with tracker support]),enable_tracker=$enableval, enable_tracker="auto")
+AS_IF([test "$enable_tracker" != "no"], [
+	 PKG_CHECK_MODULES(TRACKER, tracker-client-0.10, [AC_DEFINE(USE_TRACKER, 1, Use Tracker metadata daemon) enable_tracker="yes"],[
+		 PKG_CHECK_MODULES(TRACKER, tracker-client-0.9, [AC_DEFINE(USE_TRACKER, 1, Use Tracker metadata daemon) enable_tracker="yes"],
+	   enable_tracker="no")]
+	 ) ])
+
+AM_CONDITIONAL(ENABLE_TRACKER, test "$enable_tracker" = "yes")
 AC_SUBST(TRACKER_CFLAGS)
-AC_SUBST(TRACKER_LDFLAGS)
+AC_SUBST(TRACKER_LIBS)
 
 
 dnl -----------------------------------------------------------------------------
