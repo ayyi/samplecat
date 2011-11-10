@@ -38,6 +38,7 @@ void *ad_open_sndfile(const char *fn, struct adinfo *nfo) {
 		puts(sf_strerror(NULL));
 		int e = sf_error(NULL);
 		dbg(0, "error=%i", e);
+		free(priv);
 		return NULL;
 	}
 	ad_info_sndfile(priv, nfo);

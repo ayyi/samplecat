@@ -109,7 +109,8 @@ void *ad_open_ffmpeg(const char *fn, struct adinfo *nfo) {
   ad_info_ffmpeg((void*)priv, nfo);
 
   dbg(0, "ffmpeg - %s", fn);
-  dbg(0, "ffmpeg - sr:%i c:%i d:%lld f:%lld", nfo->sample_rate, nfo->channels, nfo->length, nfo->frames);
+  if (nfo) 
+    dbg(0, "ffmpeg - sr:%i c:%i d:%lld f:%lld", nfo->sample_rate, nfo->channels, nfo->length, nfo->frames);
 
   return (void*) priv;
 }
