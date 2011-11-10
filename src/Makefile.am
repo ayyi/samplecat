@@ -78,6 +78,7 @@ endif
 AUDIOANALYSERS_SRC = \
 	audio_analysis/spectrogram/spectrogram.c audio_analysis/spectrogram/spectrogram.h \
 	audio_analysis/spectrogram/sndfile_window.c audio_analysis/spectrogram/sndfile_window.h \
+	audio_analysis/meter/peak.c audio_analysis/meter/peak.h \
 	audio_analysis/waveform/waveform.c audio_analysis/waveform/waveform.h \
 	audio_analysis/ebumeter/ebur128.cc audio_analysis/ebumeter/ebur128.h \
 	audio_analysis/ebumeter/ebu_r128_proc.cc audio_analysis/ebumeter/ebu_r128_proc.h

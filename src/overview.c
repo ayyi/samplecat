@@ -26,7 +26,7 @@ extern unsigned debug;
 
 static GList* msg_list = NULL;
 
-
+#include "audio_analysis/meter/peak.h"
 static double calc_signal_max (Sample* sample) {
 	return ad_maxsignal(sample->filename);
 }
