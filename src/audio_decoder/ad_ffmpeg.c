@@ -253,7 +253,7 @@ int64_t ad_seek_ffmpeg(void *sf, int64_t pos) {
 #endif
 
   const int64_t timestamp = pos / av_q2d(priv->formatContext->streams[priv->audioStream]->time_base) / priv->samplerate;
-  dbg(0, "seek frame:%lld - idx:%lld", pos, timestamp);
+  dbg(2, "seek frame:%lld - idx:%lld", pos, timestamp);
   
   av_seek_frame(priv->formatContext, priv->audioStream, timestamp, AVSEEK_FLAG_ANY | AVSEEK_FLAG_BACKWARD);
   avcodec_flush_buffers(priv->codecContext);
