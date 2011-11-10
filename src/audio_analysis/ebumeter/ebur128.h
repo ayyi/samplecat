@@ -2,6 +2,7 @@
 extern "C" {
 #endif 
 struct ebur128 {
+	int   lufs;
 	float integrated;
 	float integ_thr;
 	float range_thr;

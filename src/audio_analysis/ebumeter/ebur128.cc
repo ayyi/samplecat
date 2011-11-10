@@ -88,6 +88,7 @@ static int ebur128proc (const char *fn, struct ebur128 *ebr) {
 
 	if (ebr) {
 		if (lufs) {
+			ebr->lufs = 1;
 			ebr->integrated = Proc.integrated ();
 			ebr->range      = Proc.range_max () - Proc.range_min ();
 			ebr->integ_thr  = Proc.integ_thr ();
@@ -97,6 +98,7 @@ static int ebur128proc (const char *fn, struct ebur128 *ebr) {
 			ebr->maxloudn_M = Proc.maxloudn_M ();
 			ebr->maxloudn_S = Proc.maxloudn_S ();
 		} else {
+			ebr->lufs = 0;
 			ebr->integrated = Proc.integrated () + 23.0f;
 			ebr->range      = Proc.range_max () - Proc.range_min ();
 			ebr->integ_thr  = Proc.integ_thr () + 23.0f;
