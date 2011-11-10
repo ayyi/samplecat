@@ -4,6 +4,7 @@
 #include "audio_decoder/ad.h"
 
 typedef struct {
+	int     (*eval)(const char *);
 	void *  (*open)(const char *, struct adinfo *);
 	int     (*close)(void *);
 	int     (*info)(void *, struct adinfo *);
@@ -11,6 +12,7 @@ typedef struct {
 	ssize_t (*read_dbl)(void *, float *, size_t);
 } ad_plugin;
 
+int     ad_eval_null(const char *);
 void *  ad_open_null(const char *, struct adinfo *);
 int     ad_close_null(void *);
 int     ad_info_null(void *, struct adinfo *);

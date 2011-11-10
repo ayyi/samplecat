@@ -10,9 +10,10 @@
 #include "support.h"
 #include "audio_decoder/ad_plugin.h"
 
-void *ad_open_null(const char *f, struct adinfo *n) { return NULL; }
-int ad_close_null(void *x) { return -1; }
-int ad_info_null(void *x, struct adinfo *n) { return -1; }
+int     ad_eval_null(const char *f) { return -1; }
+void *  ad_open_null(const char *f, struct adinfo *n) { return NULL; }
+int     ad_close_null(void *x) { return -1; }
+int     ad_info_null(void *x, struct adinfo *n) { return -1; }
 int64_t ad_seek_null(void *x, int64_t p) { return -1; }
 ssize_t ad_read_null(void *x, float*d, size_t s) { return -1;}
 
@@ -25,18 +26,32 @@ typedef struct {
 
 void ad_init() { /* global init */ }
 
+ad_plugin const * choose_backend(const char *fn) {
+	int max, val;
+	ad_plugin const *b=NULL;
+	max=0;
+
+	val=get_sndfile()->eval(fn);
+	if (val>max) {max=val; b=get_sndfile();}
+
+	val=get_ffmpeg()->eval(fn);
+	if (val>max) {max=val; b=get_ffmpeg();}
+
+	val=get_libflac()->eval(fn);
+	if (val>max) {max=val; b=get_libflac();}
+
+	return b;
+}
+
 void *ad_open(const char *fn, struct adinfo *nfo) {
 	adecoder *d = (adecoder*) calloc(1, sizeof(adecoder));
 
-	/* TODO find /best/ decoder backend for given file */
-#ifdef HAVE_FFMPEG
-	d->b = get_ffmpeg();
-#elif 0 // (defined HAVE_FLAC)
-	d->b = get_libflac();
-#else
-	d->b = get_sndfile();
-#endif
-
+	d->b = choose_backend(fn);
+	if (!d->b) {
+		dbg(0, "fatal: no decoder backend available");
+		free(d);
+		return NULL;
+	}
 	d->d = d->b->open(fn, nfo);
 	if (!d->d) {
 		free(d);

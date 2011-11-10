@@ -259,16 +259,25 @@ int64_t ad_seek_ffmpeg(void *sf, int64_t pos) {
   avcodec_flush_buffers(priv->codecContext);
   return pos;
 }
+
+int ad_eval_ffmpeg(const char *f) { 
+	char *ext = strrchr(f, '.');
+	if (!ext) return 10;
+	// libavformat.. guess_format.. 
+	return 40;
+}
 #endif
 
 const static ad_plugin ad_ffmpeg = {
 #ifdef HAVE_FFMPEG
+  &ad_eval_ffmpeg,
   &ad_open_ffmpeg,
   &ad_close_ffmpeg,
   &ad_info_ffmpeg,
   &ad_seek_ffmpeg,
   &ad_read_ffmpeg
 #else
+  &ad_eval_null,
   &ad_open_null,
   &ad_close_null,
   &ad_info_null,

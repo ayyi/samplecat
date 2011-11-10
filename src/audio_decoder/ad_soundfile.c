@@ -68,14 +68,44 @@ ssize_t ad_read_sndfile(void *sf, float* d, size_t len) {
 	return sf_read_float (priv->sffile, d, len);
 }
 
+int ad_eval_sndfile(const char *f) { 
+	char *ext = strrchr(f, '.');
+	if (!ext) return 5;
+	/* see http://www.mega-nerd.com/libsndfile/ */
+	if (!strcasecmp(ext, ".wav")) return 100;
+	if (!strcasecmp(ext, ".aiff")) return 100;
+	if (!strcasecmp(ext, ".aifc")) return 100;
+	if (!strcasecmp(ext, ".snd")) return 100;
+	if (!strcasecmp(ext, ".au")) return 100;
+	if (!strcasecmp(ext, ".paf")) return 100;
+	if (!strcasecmp(ext, ".iff")) return 100;
+	if (!strcasecmp(ext, ".svx")) return 100;
+	if (!strcasecmp(ext, ".sf")) return 100;
+	if (!strcasecmp(ext, ".vcc")) return 100;
+	if (!strcasecmp(ext, ".w64")) return 100;
+	if (!strcasecmp(ext, ".mat4")) return 100;
+	if (!strcasecmp(ext, ".mat5")) return 100;
+	if (!strcasecmp(ext, ".pvf5")) return 100;
+	if (!strcasecmp(ext, ".xi")) return 100;
+	if (!strcasecmp(ext, ".htk")) return 100;
+	if (!strcasecmp(ext, ".pvf")) return 100;
+	if (!strcasecmp(ext, ".sd2")) return 100;
+// libsndfile >= 1.0.18
+	if (!strcasecmp(ext, ".flac")) return 80;
+	if (!strcasecmp(ext, ".ogg")) return 80;
+	return 0;
+}
+
 const static ad_plugin ad_sndfile = {
 #if 1
+  &ad_eval_sndfile,
 	&ad_open_sndfile,
 	&ad_close_sndfile,
 	&ad_info_sndfile,
 	&ad_seek_sndfile,
 	&ad_read_sndfile
 #else
+  &ad_eval_null,
 	&ad_open_null,
 	&ad_close_null,
 	&ad_info_null,

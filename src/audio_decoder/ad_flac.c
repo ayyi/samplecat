@@ -291,16 +291,27 @@ int64_t ad_seek_flac(void *sf, int64_t pos) {
 	// FLAC__stream_decoder_flush(priv->flac);
 	return (FLAC__stream_decoder_seek_absolute(priv->flac, pos))?0:-1;
 }
+
+int ad_eval_flac(const char *f) { 
+	char *ext = strrchr(f, '.');
+	if (!ext) return 0;
+	if (!strcasecmp(ext, ".flac")) return 100;
+	if (!strcasecmp(ext, ".ogg")) return 50;
+	return -1; 
+}
+
 #endif
 
 const static ad_plugin ad_flac = {
 #ifdef HAVE_FLAC 
+  &ad_eval_flac,
 	&ad_open_flac,
 	&ad_close_flac,
 	&ad_info_flac,
 	&ad_seek_flac,
 	&ad_read_flac
 #else
+  &ad_eval_null,
 	&ad_open_null,
 	&ad_close_null,
 	&ad_info_null,
