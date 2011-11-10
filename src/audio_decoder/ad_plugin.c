@@ -14,7 +14,7 @@ void *ad_open_null(const char *f, struct adinfo *n) { return NULL; }
 int ad_close_null(void *x) { return -1; }
 int ad_info_null(void *x, struct adinfo *n) { return -1; }
 int64_t ad_seek_null(void *x, int64_t p) { return -1; }
-ssize_t ad_read_null(void *x, double*d, size_t s) { return -1;}
+ssize_t ad_read_null(void *x, float*d, size_t s) { return -1;}
 
 typedef struct {
 	ad_plugin const *b; ///< decoder back-end
@@ -58,31 +58,12 @@ int64_t ad_seek(void *sf, int64_t pos) {
 	adecoder *d = (adecoder*) sf;
 	return d->b->seek(d->d, pos);
 }
-ssize_t ad_read(void *sf, double* out, size_t len){
+ssize_t ad_read(void *sf, float* out, size_t len){
 	adecoder *d = (adecoder*) sf;
 	return d->b->read_dbl(d->d, out, len);
 }
 
-/* why default double* anyway -- legagy reasons are not good enough! 
- * TODO change API: ad_read() uses float
- */
-ssize_t ad_read_float(void *sf, float* d, size_t len){
-	int f;
-	static double *buf = NULL;
-	static size_t bufsiz = 0;
-	if (!buf || bufsiz != len) {
-		bufsiz=len;
-		buf = (double*) realloc((void*)buf, bufsiz * sizeof(double));
-	}
-	len = ad_read(sf, buf, bufsiz);
-	for (f=0;f<len;f++) {
-		const float val = (float) buf[f];
-		d[f] = val;
-	}
-	return len;
-}
-
-ssize_t ad_read_mono(void *sf, double* d, size_t len){
+ssize_t ad_read_mono(void *sf, float* d, size_t len){
 	struct adinfo nfo;
 	ad_info(sf, &nfo);
 	int chn = nfo.channels;
@@ -91,23 +72,23 @@ ssize_t ad_read_mono(void *sf, double* d, size_t len){
 
 	int c,f;
 
-	static double *buf = NULL;
+	static float *buf = NULL;
 	static size_t bufsiz = 0;
 	if (!buf || bufsiz != len*chn) {
 		bufsiz=len*chn;
-		buf = (double*) realloc((void*)buf, bufsiz * sizeof(double));
+		buf = (float*) realloc((void*)buf, bufsiz * sizeof(float));
 	}
 
 	len = ad_read(sf, buf, bufsiz);
 
-	for (f=0;f<len;f++) {
-		double val=0.0;
+	for (f=0;f<len/chn;f++) {
+		float val=0.0;
 		for (c=0;c<chn;c++) {
 			val+=buf[f*chn + c];
 		}
-		d[f] = val/chn;
+		d[f]= val/chn;
 	}
-	return len;
+	return len/chn;
 }
 
 gboolean ad_finfo (const char *fn, struct adinfo *nfo) {

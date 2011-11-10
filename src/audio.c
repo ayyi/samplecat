@@ -130,7 +130,7 @@ void *jack_player_thread(void *unused){
 	pthread_mutex_lock(&player_thread_lock);
 
 	while(thread_run) {
-		int rv = ad_read_float(myplayer, tmpbuf, nframes * m_channels);
+		int rv = ad_read(myplayer, tmpbuf, nframes * m_channels);
 		if (rv != nframes * m_channels) {
 			dbg(0, "end of file.");
 			if (rv>0) {

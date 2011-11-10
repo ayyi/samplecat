@@ -124,16 +124,16 @@ int ad_close_ffmpeg(void *sf) {
   return 0;
 }
 
-void int16_to_double(int16_t *in, double *out, int num_channels, int num_samples, int out_offset) {
+void int16_to_float(int16_t *in, float *out, int num_channels, int num_samples, int out_offset) {
   int i,ii;
   for (i=0;i<num_samples;i++) {
     for (ii=0;ii<num_channels;ii++) {
-     out[(i+out_offset)*num_channels+ii]= (double) in[i*num_channels+ii]/ 32768.0;
+     out[(i+out_offset)*num_channels+ii]= (float) in[i*num_channels+ii]/ 32768.0;
     }
   }
 }
 
-ssize_t ad_read_ffmpeg(void *sf, double* d, size_t len) {
+ssize_t ad_read_ffmpeg(void *sf, float* d, size_t len) {
   ffmpeg_audio_decoder *priv = (ffmpeg_audio_decoder*) sf;
   if (!priv) return -1;
   size_t frames = len / priv->channels;
@@ -144,7 +144,7 @@ ssize_t ad_read_ffmpeg(void *sf, double* d, size_t len) {
     dbg(3,"loop: %i/%i (bl:%lu)",written, frames, priv->m_tmpBufferLen );
     if (priv->seek_frame == 0 && priv->m_tmpBufferLen > 0 ) {
       int s = MIN(priv->m_tmpBufferLen / priv->channels, frames - written );
-      int16_to_double(priv->m_tmpBufferStart, d, priv->channels, s , written);
+      int16_to_float(priv->m_tmpBufferStart, d, priv->channels, s , written);
       written += s;
       priv->output_clock+=s;
       s = s * priv->channels;
@@ -186,7 +186,7 @@ ssize_t ad_read_ffmpeg(void *sf, double* d, size_t len) {
         priv->decoder_clock = priv->samplerate * av_q2d(priv->formatContext->streams[priv->audioStream]->time_base) * priv->packet.pts;
       } else {
         dbg(0, "!!! NO PTS timestamp in file");
-        priv->decoder_clock += (double) (data_size>>1) / priv->channels;
+        priv->decoder_clock += (data_size>>1) / priv->channels;
       }
 
       if (data_size>0) {

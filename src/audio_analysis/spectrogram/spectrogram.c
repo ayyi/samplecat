@@ -167,8 +167,16 @@ read_mono_audio (void * file, int64_t filelen, double * data, int datalen, int i
 		data += start;
 		datalen -= start;
 	}
-	ad_read_mono(file, data, datalen);
-	return ;
+
+	int i;
+	float *tbuf = malloc(datalen*sizeof(float));
+	ad_read_mono(file, tbuf, datalen);
+	for (i=0;i<datalen;i++) {
+		const double val = tbuf[i];
+		data[i] = val;
+	}
+	free(tbuf);
+	return;
 } /* read_mono_audio */
 
 static void

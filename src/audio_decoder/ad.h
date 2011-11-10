@@ -18,12 +18,11 @@ void ad_init();
 void *  ad_open(const char *, struct adinfo *);
 int     ad_close(void *);
 int64_t ad_seek(void *, int64_t);
-ssize_t ad_read(void *, double*, size_t);
+ssize_t ad_read(void *, float*, size_t);
 int     ad_info (void *sf, struct adinfo *nfo);
 
 /* high level API */
 #include <gtk/gtk.h>
 gboolean ad_finfo (const char *, struct adinfo *);
-ssize_t ad_read_mono(void *, double*, size_t);
-ssize_t ad_read_float(void *sf, float* d, size_t len); // soon obsolete
+ssize_t ad_read_mono(void *, float*, size_t);
 #endif

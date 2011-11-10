@@ -40,7 +40,7 @@ static int ebur128proc (const char *fn, struct ebur128 *ebr) {
 	struct adinfo nfo;
 	Ebu_r128_proc  Proc;
 	float *data[2];
-	double *inpb;
+	float *inpb;
 
 	if (!(sf=ad_open(fn, &nfo))) {
 		fprintf (stderr, "Can't open input file '%s'.\n", fn);
@@ -56,7 +56,7 @@ static int ebur128proc (const char *fn, struct ebur128 *ebr) {
 	}
 
 	const int bsize = fsamp / 5;
-	inpb = new double [nchan * bsize];
+	inpb = new float [nchan * bsize];
 	data [0] = new float [bsize];
 	data [1] = new float [bsize];
 
@@ -66,13 +66,13 @@ static int ebur128proc (const char *fn, struct ebur128 *ebr) {
 		k = ad_read (sf, inpb, bsize);
 		if (k == 0) break;
 		if (nchan > 1) {
-	    double *p = inpb;
+	    float *p = inpb;
 	    for (i = 0; i < k; i++) {
 				data [0][i] = *p++;
 				data [1][i] = *p++;
 	    }
 		} else {
-	    double *p = inpb;
+	    float *p = inpb;
 	    for (i = 0; i < k; i++) {
 				data [0][i] = *p;
 				data [1][i] = *p++;

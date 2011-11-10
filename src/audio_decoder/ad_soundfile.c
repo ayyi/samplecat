@@ -62,10 +62,10 @@ int64_t ad_seek_sndfile(void *sf, int64_t pos) {
 	return sf_seek(priv->sffile, pos, SEEK_SET);
 }
 
-ssize_t ad_read_sndfile(void *sf, double* d, size_t len) {
+ssize_t ad_read_sndfile(void *sf, float* d, size_t len) {
 	sndfile_audio_decoder *priv = (sndfile_audio_decoder*) sf;
 	if (!priv) return -1;
-	return sf_read_double (priv->sffile, d, len);
+	return sf_read_float (priv->sffile, d, len);
 }
 
 const static ad_plugin ad_sndfile = {

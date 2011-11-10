@@ -243,7 +243,7 @@ int ad_close_flac(void *sf) {
 	return 0;
 }
 
-ssize_t ad_read_flac(void *sf, double* d, size_t len) {
+ssize_t ad_read_flac(void *sf, float* d, size_t len) {
 	flac_audio_decoder *priv = (flac_audio_decoder*) sf;
 	if (!priv) return -1;
 	int written=0;
@@ -260,9 +260,7 @@ ssize_t ad_read_flac(void *sf, double* d, size_t len) {
 	while (written < len) {
 #if 1
 		if(jack_ringbuffer_read_space(priv->rb) > sizeof(float)) {
-			float f;
-			jack_ringbuffer_read(priv->rb, (char*) &f, sizeof(float));
-			d[written++] = f;
+			jack_ringbuffer_read(priv->rb, (char*) &d[written++], sizeof(float));
 		} 
 #else // XXX float vs double
 		int nf = MIN(len-written , jack_ringbuffer_read_space(priv->rb)/sizeof(float));

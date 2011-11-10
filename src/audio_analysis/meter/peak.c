@@ -1,5 +1,6 @@
 #include "config.h"
 #include <stdlib.h>
+#include <math.h>
 #include "audio_decoder/ad.h"
 
 double ad_maxsignal(const char *fn) {
@@ -8,15 +9,15 @@ double ad_maxsignal(const char *fn) {
 	if (!sf) return 0.0;
 
 	int     read_len = 1024 * nfo.channels;
-	double* sf_data = malloc(sizeof(*sf_data) * read_len);
+	float* sf_data = malloc(sizeof(float) * read_len);
 
 	int readcount;
-	double max_val = 0.0;
+	float max_val = 0.0;
 	do {
 		readcount = ad_read(sf, sf_data, read_len);
 		int k;
 		for (k = 0; k < readcount; k++){
-			const double temp = fabs (sf_data [k]);
+			const float temp = fabs (sf_data [k]);
 			max_val = temp > max_val ? temp : max_val;
 		};
 	} while (readcount > 0);
