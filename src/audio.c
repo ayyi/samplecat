@@ -37,8 +37,6 @@ extern struct _app app;
 
 #if (defined HAVE_JACK && !(defined USE_DBUS || defined USE_GAUDITION))
 
-_audition audition;
-
 jack_client_t *j_client = NULL;
 jack_port_t **j_output_port = NULL;
 jack_default_audio_sample_t **j_out = NULL;

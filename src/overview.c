@@ -11,7 +11,6 @@
 #include "typedefs.h"
 #include "support.h"
 #include "main.h"
-#include "audio.h"
 #include "overview.h"
 #include "sample.h"
 #include "cellrenderer_hypertext.h"

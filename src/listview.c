@@ -17,17 +17,16 @@
 #include "cellrenderer_hypertext.h"
 #include "pixmaps.h"
 #include "overview.h"
-#if (defined USE_DBUS || defined USE_GAUDITION)
-#include "auditioner.h"
-#endif
 #include "listview.h"
 
-extern struct _app app;
-#if (defined HAVE_JACK && !(defined USE_DBUS || defined USE_GAUDITION))
-extern int      playback_init                    (Sample*);
-extern void     playback_stop                    ();
+#if (defined USE_DBUS || defined USE_GAUDITION)
+#include "auditioner.h"
+#elif (defined HAVE_JACK)
+#include "audio.h"
 #endif
+
 extern int      debug;
+extern struct _app app;
 
 static gboolean listview__on_row_clicked         (GtkWidget*, GdkEventButton*, gpointer);
 static void     listview__on_cursor_change       (GtkTreeView*, gpointer);
@@ -247,18 +246,14 @@ listview__on_row_clicked(GtkWidget *widget, GdkEventButton *event, gpointer user
 						auditioner_toggle(sample);
 					}
 					app.playing_id = sample->id;
-#else
-#if 1 // HAVE_JACK
+#elif (defined HAVE_JACK)
 					if(!playback_init(sample)) sample_free(sample);
-#endif
 #endif
 				}
 #if (defined USE_DBUS || defined USE_GAUDITION)
 				else auditioner_toggle(sample);
-#else
-#if 1 // HAVE_JACK
+#elif (defined HAVE_JACK)
 				else playback_stop();
-#endif
 #endif
 
 #if 1 /* highlight played item with 'colour:1' */
