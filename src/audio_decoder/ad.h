@@ -1,5 +1,6 @@
 #ifndef __AD_H__
 #define __AD_H__
+#include <unistd.h>
 struct adinfo {
 	unsigned int sample_rate;
 	int64_t length; //milliseconds

@@ -203,6 +203,10 @@ if test x$enable_flac != xno ; then
 		fi
 	fi
 fi
+# FLAC requires jack_ringbuffer
+AS_IF([test "$enable_flac" = "yes"], [
+	    PKG_CHECK_MODULES(JACK, jack,, enable_flac=no)
+			])
 AM_CONDITIONAL(ENABLE_FLAC, test "$enable_flac" = "yes")
 AC_SUBST(FLAC_CFLAGS)
 AC_SUBST(FLAC_LIBS)
