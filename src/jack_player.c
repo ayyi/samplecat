@@ -290,17 +290,13 @@ void JACKclose() {
 int
 playback_init(Sample* sample)
 {
-	if (!jack_client_open) {
-		dbg(0, "JACK is not available on this system");
-		return;
-	}
 	if(app.playing_id) playback_stop(); //stop any previous playback.
 	if(j_client) playback_stop();
 
 	struct adinfo nfo;
 
 	if(!sample->id){ perr("bad arg: id=0\n"); return 0; }
-	void *sf = ad_open(sample->filename, &nfo);
+	void *sf = ad_open(sample->full_path, &nfo);
 	if (!sf) return false;
 	JACKaudiooutputinit(sf, nfo.channels, nfo.sample_rate);
 	app.playing_id = sample->id;

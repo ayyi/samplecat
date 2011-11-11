@@ -11,40 +11,35 @@
 #include <gtk/gtk.h> // TODO get rid of GTK tpes in the struct
 struct _sample
 {
-	int          id;            //database index.
-	int          idx; // result id
+	int                  id;  // database index.
 
-	int          ref_count;
+	int                  ref_count;
 	GtkTreeRowReference* row_ref;
 
-	char*                sample_name;
+	char*                dir; // directory
+	char*                sample_name; // basename
 	char*                full_path; // filename
-	char         filename[PATH_MAX]; //full path.
 
-	char*                dir;
-	char*                keywords;
-
-	GdkPixbuf*           overview; // pixbuf
-	GdkPixbuf*   pixbuf;
+	GdkPixbuf*   overview; // pixbuf
 
 	unsigned int sample_rate;
-	int64_t length;        //milliseconds
-	int64_t frames;        //total number of frames (eg a frame for 16bit stereo is 4 bytes).
-
+	int64_t      length;        //milliseconds
+	int64_t      frames;        //total number of frames (eg a frame for 16bit stereo is 4 bytes).
 	unsigned int channels;
 	int          bitdepth;
+
 	short        minmax[OVERVIEW_WIDTH]; //peak data before it is copied onto the pixbuf.
-	float                peak_level;
-	GdkColor     bg_colour;
-	int                  colour;
+	float        peak_level;
 
-	gboolean             online;
+	int          colour_index;
 
-	char*                misc;
-	char*                notes;
+	gboolean     online;
+	char*        updated; //TODO char* ? int? date?
 
-	char*                mimetype;
-	char*                updated; //TODO char* ? int? date?
+	char*        keywords;
+	char*        misc;
+	char*        notes;
+	char*        mimetype;
 };
 
 Sample*     sample_new               ();

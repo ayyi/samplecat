@@ -28,7 +28,7 @@ static GList* msg_list = NULL;
 
 #include "audio_analysis/meter/peak.h"
 static double calc_signal_max (Sample* sample) {
-	return ad_maxsignal(sample->filename);
+	return ad_maxsignal(sample->full_path);
 }
 
 gpointer
@@ -59,7 +59,7 @@ overview_thread(gpointer data)
 
 			Sample* sample = message->sample;
 			if(message->type == MSG_TYPE_OVERVIEW){
-				dbg(1, "queuing for overview: filename=%s.", sample->filename);
+				dbg(1, "queuing for overview: filename=%s.", sample->full_path);
 				make_overview(sample);
 				g_idle_add(on_overview_done, sample);
 			}
@@ -94,7 +94,7 @@ request_overview(Sample* sample)
 	message->type = MSG_TYPE_OVERVIEW;
 	message->sample = sample;
 
-	dbg(2, "sending message: sample=%p filename=%s (%p)", sample, sample->filename, sample->filename);
+	dbg(2, "sending message: sample=%p filename=%s", sample, sample->full_path);
 	sample_ref(sample);
 	g_async_queue_push(app.msg_queue, message); //notify the overview thread.
 }
@@ -109,7 +109,7 @@ request_peaklevel(Sample* sample)
 	message->type = MSG_TYPE_PEAKLEVEL;
 	message->sample = sample;
 
-	dbg(2, "sending message: sample=%p filename=%s (%p)", sample, sample->filename, sample->filename);
+	dbg(2, "sending message: sample=%p filename=%s", sample, sample->full_path);
 	sample_ref(sample);
 	g_async_queue_push(app.msg_queue, message);
 }

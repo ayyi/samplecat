@@ -52,7 +52,7 @@ pixbuf_clear(GdkPixbuf *pixbuf, GdkColor *colour)
 
 GdkPixbuf* make_overview(Sample* sample) {
 	struct adinfo nfo;
-	void *sf = ad_open(sample->filename, &nfo);
+	void *sf = ad_open(sample->full_path, &nfo);
 	if (!sf) return NULL;
   dbg(0, "NEW OVERVIEW");
 
@@ -109,7 +109,7 @@ GdkPixbuf* make_overview(Sample* sample) {
   free(data);
   cairo_destroy(cr);
   cairo_surface_destroy(surface);
-  sample->pixbuf = pixbuf;
-  if(!GDK_IS_PIXBUF(sample->pixbuf)) perr("pixbuf is not a pixbuf.\n");
+  sample->overview = pixbuf;
+  if(!GDK_IS_PIXBUF(sample->overview)) perr("pixbuf is not a pixbuf.\n");
   return pixbuf;
 }

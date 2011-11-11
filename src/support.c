@@ -142,7 +142,7 @@ samplerate_format(char* str, int samplerate)
 }
 
 
-gchar*
+char*
 dir_format(char* dir)
 {
 	if(dir && (strstr(dir, g_get_home_dir()) == dir)) return dir + strlen(g_get_home_dir()) + 1;

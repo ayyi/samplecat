@@ -128,7 +128,7 @@ mysql__insert(Sample* sample, MIME_type *mime_type)
 	gchar* filedir = g_path_get_dirname(sample->filename);
 	gchar* filename = g_path_get_basename(sample->filename);
 
-	gchar* sql = g_strdup_printf("INSERT INTO samples SET filename='%s', filedir='%s', length=%i, sample_rate=%i, channels=%i, mimetype='%s/%s' ", filename, filedir, sample->length, sample->sample_rate, sample->channels, mime_type->media_type, mime_type->subtype);
+	gchar* sql = g_strdup_printf("INSERT INTO samples SET filename='%s', filedir='%s', length=%"PRIi64", sample_rate=%i, channels=%i, mimetype='%s/%s' ", filename, filedir, sample->length, sample->sample_rate, sample->channels, mime_type->media_type, mime_type->subtype);
 	dbg(1, "sql=%s", sql);
 
 	if(mysql__exec_sql(sql)==0){
@@ -232,7 +232,7 @@ mysql__update_notes(int id, const char* notes)
 gboolean
 mysql__update_pixbuf(Sample *sample)
 {
-	GdkPixbuf* pixbuf = sample->pixbuf;
+	GdkPixbuf* pixbuf = sample->overview;
 	if(pixbuf){
 		//serialise the pixbuf:
 		GdkPixdata pixdata;
@@ -380,7 +380,7 @@ mysql__search_iter_next_(unsigned long** lengths)
 		return row[i] ? atof(row[i]) : 0.0;
 	}
 
-	result.idx         = atoi(row[MYSQL_ID]);
+	result.id          = atoi(row[MYSQL_ID]);
 	result.sample_name = row[MYSQL_NAME];
 	result.dir         = row[MYSQL_DIR];
 	result.keywords    = row[MYSQL_KEYWORDS];
@@ -391,7 +391,7 @@ mysql__search_iter_next_(unsigned long** lengths)
 	result.overview    = pixbuf;
 	result.notes       = row[MYSQL_NOTES];
 	result.misc        = ""; // XXX TODO
-	result.colour      = get_int(row, MYSQL_COLOUR);
+	result.colour_index= get_int(row, MYSQL_COLOUR);
 	result.mimetype    = row[MYSQL_MIMETYPE];
 	result.online      = get_int(row, MYSQL_ONLINE);
 	result.updated     = row[MYSQL_LAST_CHECKED];

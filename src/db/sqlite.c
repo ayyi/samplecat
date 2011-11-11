@@ -142,13 +142,13 @@ sqlite__insert(Sample* sample, MIME_type *mime_type)
 
 	int ret = 0;
 
-	gchar* filedir = g_path_get_dirname(sample->filename);
-	gchar* filename = g_path_get_basename(sample->filename);
+	gchar* filedir = g_path_get_dirname(sample->full_path);
+	gchar* filename = g_path_get_basename(sample->full_path);
 	gchar* mime_str = g_strdup_printf("%s/%s", mime_type->media_type, mime_type->subtype);
 	int colour = 0;
 	gchar* sql = g_strdup_printf(
 		"INSERT INTO samples(filename,filedir,length,sample_rate,channels,online,mimetype,misc,peaklevel,colour) "
-		"VALUES ('%s','%s','%i','%i','%i','%i','%s', '%s', '%f', '%i')",
+		"VALUES ('%s','%s',%"PRIi64",'%i','%i','%i','%s', '%s', '%f', '%i')",
 		filename, filedir, sample->length, sample->sample_rate, sample->channels, 1, mime_str, "", sample->peak_level, colour
 	);
 	dbg(2, "sql=%s", sql);
@@ -310,7 +310,7 @@ sqlite__update_notes(int id, const char* notes)
 gboolean
 sqlite__update_pixbuf(Sample* sample)
 {
-	GdkPixbuf* pixbuf = sample->pixbuf;
+	GdkPixbuf* pixbuf = sample->overview;
 	g_return_val_if_fail(pixbuf, false);
 
 	gboolean ok = true;
@@ -527,7 +527,7 @@ sqlite__search_iter_next(unsigned long** lengths)
 			}
 		}
 #define XSDP(X) (X?strdup(X):"")
-		result.idx         = sqlite3_column_int(ppStmt, COLUMN_ID);
+		result.id          = sqlite3_column_int(ppStmt, COLUMN_ID);
 		result.sample_name = XSDP((char*)sqlite3_column_text(ppStmt, COLUMN_FILENAME));
 		result.dir         = XSDP((char*)sqlite3_column_text(ppStmt, COLUMN_DIR));
 		result.keywords    = XSDP((char*)sqlite3_column_text(ppStmt, COLUMN_KEYWORDS));
@@ -537,7 +537,7 @@ sqlite__search_iter_next(unsigned long** lengths)
 		result.overview    = (GdkPixbuf*)sqlite3_column_blob(ppStmt, COLUMN_PIXBUF);
 		result.notes       = XSDP((char*)sqlite3_column_text(ppStmt, COLUMN_NOTES));
 		result.misc        = XSDP((char*)sqlite3_column_text(ppStmt, COLUMN_MISC));
-		result.colour      = sqlite3_column_int(ppStmt, COLUMN_COLOUR);
+		result.colour_index= sqlite3_column_int(ppStmt, COLUMN_COLOUR);
 		result.mimetype    = XSDP((char*)sqlite3_column_text(ppStmt, COLUMN_MIMETYPE));
 		result.peak_level  = sqlite3_column_double(ppStmt, COLUMN_PEAKLEVEL);
 		result.online      = sqlite3_column_int(ppStmt, COLUMN_ONLINE);

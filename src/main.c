@@ -794,7 +794,7 @@ add_file(char* path)
 	gboolean ok = true;
 
 	Sample* sample = sample_new(); //free'd after db and store are updated.
-	g_strlcpy(sample->filename, path, 256);
+	sample->full_path = g_strdup(path);
 
 	gchar* filedir = g_path_get_dirname(path);
 	gchar* filename = g_path_get_basename(path);
@@ -838,12 +838,12 @@ on_overview_done(gpointer _sample)
 	PF;
 	Sample* sample = _sample;
 	g_return_val_if_fail(sample, false);
-	if(!sample->pixbuf){ dbg(1, "overview creation failed (no pixbuf).\n"); return false; }
+	if(!sample->overview){ dbg(1, "overview creation failed (no pixbuf).\n"); return false; }
 
 	backend.update_pixbuf(sample);
 
 	if(sample->row_ref){
-		listmodel__set_overview(sample->row_ref, sample->pixbuf);
+		listmodel__set_overview(sample->row_ref, sample->overview);
 	} else pwarn("rowref not set!\n");
 
 	sample_unref(sample);

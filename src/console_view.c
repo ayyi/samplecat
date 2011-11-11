@@ -2,6 +2,7 @@
 #include <string.h>
 
 #include "main.h"
+#include "support.h"
 #include "sample.h"
 #include "console_view.h"
 
@@ -19,12 +20,12 @@ console__show_result_header()
 void
 console__show_result(Sample* result)
 {
-	#define DIR_MAX 35
+	#define DIR_MAX (35)
 	char dir[DIR_MAX];
 	strncpy(dir, dir_format(result->dir), DIR_MAX-1);
 	dir[DIR_MAX-1] = '\0';
 
-	#define SNAME_MAX 20
+	#define SNAME_MAX (20)
 	char name[SNAME_MAX];
 	strncpy(name, result->sample_name, SNAME_MAX-1);
 	name[SNAME_MAX-1] = '\0';

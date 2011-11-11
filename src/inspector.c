@@ -246,7 +246,7 @@ inspector_update_from_result(Sample* sample)
 
 	//store a reference to the row id in the inspector widget:
 	//g_object_set_data(G_OBJECT(app.inspector->name), "id", GUINT_TO_POINTER(id));
-	i->row_id = sample->idx;
+	i->row_id = sample->id;
 	if(i->row_ref) gtk_tree_row_reference_free(i->row_ref);
 	i->row_ref = gtk_tree_row_reference_copy(sample->row_ref);
 	if(!i->row_ref) perr("setting row_ref failed!\n");
@@ -272,21 +272,23 @@ inspector_update_from_fileview(GtkTreeView* treeview)
 		Sample* sample = sample_new_from_fileview(model, &iter);
 
 		if(sample){
-			MIME_type* mime_type = type_from_path(sample->filename);
+			MIME_type* mime_type = type_from_path(sample->full_path);
 			char mime_string[64];
+			gchar *filebasename = g_path_get_basename(sample->full_path);
+
 			snprintf(mime_string, 64, "%s/%s", mime_type->media_type, mime_type->subtype);
 
 			if(mimestring_is_unsupported(mime_string)){
 				inspector_clear();
-				gtk_label_set_text(GTK_LABEL(i->name), basename(sample->filename));
+				gtk_label_set_text(GTK_LABEL(i->name), filebasename);
 			}
 			else if(sample_get_file_info(sample)){
 				char ch_str[64]; snprintf(ch_str, 64, "%u channels", sample->channels);
 				char fs_str[32]; samplerate_format(fs_str, sample->sample_rate); strcpy(fs_str + strlen(fs_str), " kHz");
 				char length[64]; snprintf(length, 64, "%lld",          sample->length);
 
-				gtk_label_set_text(GTK_LABEL(i->name),       basename(sample->filename));
-				gtk_label_set_text(GTK_LABEL(i->filename),   sample->filename);
+				gtk_label_set_text(GTK_LABEL(i->name),       filebasename);
+				gtk_label_set_text(GTK_LABEL(i->filename),   sample->full_path);
 				gtk_label_set_text(GTK_LABEL(i->tags),       "");
 				gtk_label_set_text(GTK_LABEL(i->length),     length);
 				gtk_label_set_text(GTK_LABEL(i->channels),   ch_str);
@@ -299,6 +301,7 @@ inspector_update_from_fileview(GtkTreeView* treeview)
 
 				show_fields();
 			}
+			g_free(filebasename);
 		}
 	}
 }

@@ -4,6 +4,21 @@
 #define OVERVIEW_WIDTH (200)
 #define OVERVIEW_HEIGHT (20)
 
+#ifndef __PRI64_PREFIX
+#if (defined __X86_64__ || defined __LP64__)
+# define __PRI64_PREFIX  "l"
+#else
+# define __PRI64_PREFIX  "ll"
+#endif
+#endif
+
+#ifndef PRIu64
+# define PRIu64   __PRI64_PREFIX "u"
+#endif
+#ifndef PRIi64
+# define PRIi64   __PRI64_PREFIX "i"
+#endif
+
 typedef enum {
 	BACKEND_NONE = 0,
 	BACKEND_MYSQL,

@@ -242,7 +242,7 @@ tracker__search_iter_next()
 
 		result.sample_name = file;
 		result.dir = dir;
-		result.idx = iter.idx;           //TODO this idx is pretty meaningless.
+		result.id = iter.idx;           //TODO this idx is pretty meaningless.
 		result.online = true;
 
 		if(strstr(result.dir, "file://") == result.dir){

@@ -26,12 +26,9 @@ Sample*
 sample_new()
 {
 	Sample* sample = g_new0(struct _sample, 1);
-
-	sample->bg_colour = app.bg_colour;
-
+	sample->colour_index = 0; // XXX colour_index of app.bg_colour // app.config.colour[colour_index]
 	return sample;
 }
-
 
 Sample*
 sample_new_from_model(GtkTreePath *path)
@@ -51,10 +48,10 @@ sample_new_from_model(GtkTreePath *path)
 	sample->id     = id;
 	sample->length = atoi(length);
 	sample->sample_rate = atoi(samplerate);
-	sample->pixbuf = NULL;
+	sample->overview = NULL; // XXX
 	sample->channels = channels;
 	sample->row_ref = gtk_tree_row_reference_new(GTK_TREE_MODEL(app.store), path);
-	snprintf(sample->filename, 255, "%s/%s", fpath, fname);
+	sample->full_path = g_strdup_printf("%s/%s", fpath, fname);
 	return sample;
 }
 
@@ -69,7 +66,7 @@ sample_new_from_fileview(GtkTreeModel* model, GtkTreeIter* iter)
 	gtk_tree_model_get(model, iter, FILE_VIEW_COL_LEAF, &fname, -1);
 
 	Sample* sample = g_new0(struct _sample, 1);
-	snprintf(sample->filename, 255, "%s/%s", filer.real_path, fname);
+	sample->full_path = g_strdup_printf("%s/%s", filer.real_path, fname);
 	return sample;
 }
 
@@ -77,27 +74,36 @@ sample_new_from_fileview(GtkTreeModel* model, GtkTreeIter* iter)
 Sample*
 sample_new_from_result(Sample* r)
 {
+	sample_ref(r);
+	return r;
+#if 0
 	Sample* s      = g_new0(struct _sample, 1);
-	s->id          = r->idx;
+	s->id          = r->id;
 	s->row_ref     = r->row_ref;
-	snprintf(s->filename, 255, "%s/%s", r->dir, r->sample_name);
+	s->full_path = g_strdup_printf("%s/%s", r->dir, r->sample_name);
 	s->sample_rate = r->sample_rate;
 	s->length      = r->length;
 	s->frames      = 0;
 	s->channels    = r->channels;
 	s->bitdepth    = 0;
 	s->pixbuf      = r->overview;
-	color_rgba_to_gdk(&s->bg_colour, r->colour);
+	//color_rgba_to_gdk(&s->bg_colour, r->colour);
 	return s;
+#endif
 }
 
+void
+sample_free(Sample* sample)
+{
+	if(sample->row_ref) gtk_tree_row_reference_free(sample->row_ref);
+	g_free(sample);
+}
 
 void
 sample_ref(Sample* sample)
 {
 	sample->ref_count++;
 }
-
 
 void
 sample_unref(Sample* sample)
@@ -107,20 +113,13 @@ sample_unref(Sample* sample)
 }
 
 
-void
-sample_free(Sample* sample)
-{
-	if(sample->row_ref) gtk_tree_row_reference_free(sample->row_ref);
-	g_free(sample);
-}
-
 #include "audio_decoder/ad.h"
 #include "audio_analysis/ebumeter/ebur128.h"
 gboolean
 sample_get_file_info(Sample* sample)
 {
 	struct adinfo nfo;
-	if (!ad_finfo(sample->filename, &nfo)) {
+	if (!ad_finfo(sample->full_path, &nfo)) {
 		return false;
 	}
 	sample->channels    = nfo.channels;
@@ -183,7 +182,7 @@ result_new_from_model(GtkTreePath* path)
 
 	float sample_rate = atof(samplerate) * 1000;
 
-	sample->idx    = id;
+	sample->id     = id;
 	sample->length = atof(length) * 1000;
 	sample->sample_rate = sample_rate;
 	sample->overview = NULL;
@@ -203,10 +202,7 @@ void
 result_free(Sample* result)
 {
 	if(result->row_ref) gtk_tree_row_reference_free(result->row_ref);
-
 	if(result->sample_name) g_free(result->sample_name);
 	if(result->full_path) g_free(result->full_path);
 	g_free(result);
 }
-
-

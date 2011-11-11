@@ -236,6 +236,7 @@ listview__on_row_clicked(GtkWidget *widget, GdkEventButton *event, gpointer user
 				//TODO re-use the Sample created in the cursor-changed handler?                ...too messy...
 				//     -does clicking change the selected row? how about multiple selections?
 				Sample* sample = sample_new_from_model(path);
+				// sample_ref(sample); TODO - free sample after playing
 
 				if(sample->id != app.playing_id){
 #if (defined USE_DBUS || defined USE_GAUDITION)
@@ -247,7 +248,7 @@ listview__on_row_clicked(GtkWidget *widget, GdkEventButton *event, gpointer user
 					}
 					app.playing_id = sample->id;
 #elif (defined HAVE_JACK)
-					if(!playback_init(sample)) sample_free(sample);
+					playback_init(sample);
 #endif
 				}
 #if (defined USE_DBUS || defined USE_GAUDITION)
@@ -255,6 +256,7 @@ listview__on_row_clicked(GtkWidget *widget, GdkEventButton *event, gpointer user
 #elif (defined HAVE_JACK)
 				else playback_stop();
 #endif
+				// TODO unref sample on playback end!
 
 #if 1 /* highlight played item with 'colour:1' */
 # if 0 // persistent
@@ -329,13 +331,13 @@ listview__on_cursor_change(GtkTreeView* widget, gpointer user_data)
 
 
 gboolean
-listview__item_set_colour(GtkTreePath* path, unsigned colour)
+listview__item_set_colour(GtkTreePath* path, unsigned colour_index)
 {
 	g_return_val_if_fail(path, false);
 
 	int id = listview__path_get_id(path);
 
-	if(!backend.update_colour(id, colour)){
+	if(!backend.update_colour(id, colour_index)){
 		statusbar_print(1, "error! colour not updated");
 		return false;
 	}
@@ -343,16 +345,19 @@ listview__item_set_colour(GtkTreePath* path, unsigned colour)
 
 	GtkTreeIter iter;
 	gtk_tree_model_get_iter(GTK_TREE_MODEL(app.store), &iter, path);
-	gtk_list_store_set(GTK_LIST_STORE(app.store), &iter, COL_COLOUR, colour, -1);
+	gtk_list_store_set(GTK_LIST_STORE(app.store), &iter, COL_COLOUR, colour_index, -1);
 
 	Sample* sample = sample_new_from_model(path);
-	if(sample && g_file_test(sample->filename, G_FILE_TEST_IS_REGULAR)){
+	if(sample && g_file_test(sample->full_path, G_FILE_TEST_IS_REGULAR)){
 		char colour_string[16];
-		snprintf(colour_string, 16, "#%s", app.config.colour[colour]);
-		if(!gdk_color_parse(colour_string, &sample->bg_colour)) gwarn("parsing of colour string failed.\n");
+		snprintf(colour_string, 16, "#%s", app.config.colour[colour_index]);
+
+		GdkColor bg_colour;
+		color_rgba_to_gdk(&bg_colour, sample->colour_index);
+		if(!gdk_color_parse(colour_string, &bg_colour)) gwarn("parsing of colour string failed.\n");
 		request_overview(sample);
 	}
-	else dbg(0, "cannot update overview for offline sample. id=%i %s", id, sample->filename);
+	else dbg(0, "cannot update overview for offline sample. id=%i %s", id, sample->full_path);
 
 	return true;
 }
@@ -364,8 +369,8 @@ listview__add_item(Sample* sample)
 	if(!app.store) return;
 	g_return_if_fail(sample->id);
 
-	gchar* filename = g_path_get_basename(sample->filename);
-	gchar* filedir = g_path_get_dirname(sample->filename);
+	gchar* filename = g_path_get_basename(sample->full_path);
+	gchar* filedir = g_path_get_dirname(sample->full_path);
 
 	//TODO better to get this from sample?
 	MIME_type* mime_type = type_from_path(filename);
@@ -829,7 +834,6 @@ tag_cell_data(GtkTreeViewColumn *tree_column, GtkCellRenderer *cell, GtkTreeMode
 			gchar** split = g_strsplit(str, " ", 100);
 			int char_index = 0;
 			int word_index = 0;
-			int mouse_word = 0;
 			gchar formatted[256] = "";
 			char word[256] = "";
 			while(split[word_index]){
@@ -837,7 +841,6 @@ tag_cell_data(GtkTreeViewColumn *tree_column, GtkCellRenderer *cell, GtkTreeMode
 
 				pango_layout_line_index_to_x(layout_line, char_index, trailing, &char_pos);
 				if(char_pos/PANGO_SCALE > mouse_cell_x){
-					mouse_word = word_index;
 					dbg(0, "word=%i\n", word_index);
 
 					snprintf(word, 256, "<u>%s</u> ", split[word_index]);
