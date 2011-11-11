@@ -323,14 +323,10 @@ colour_get_style_fg(GdkColor *color, int state)
 
   //GtkStyle *style = NULL;
   //style = gtk_widget_get_default_style();
-  GtkStyle *style = gtk_style_copy(gtk_widget_get_style(app.window));
+  GtkStyle *style = gtk_widget_get_style(app.window);
   color->red   = style->fg[state].red;
   color->green = style->fg[state].green;
   color->blue  = style->fg[state].blue;
-
-#if 0
-  g_free(style);
-#endif
 }
 
 void
@@ -340,16 +336,12 @@ colour_get_style_bg(GdkColor *color, int state)
 
   GtkWidget *widget = app.window;
 
-  GtkStyle *style = gtk_style_copy(gtk_widget_get_style(widget));
+  GtkStyle *style = gtk_widget_get_style(widget);
   //GtkStyle *style = NULL;
   //style = gtk_widget_get_default_style();
   color->red   = style->bg[state].red;
   color->green = style->bg[state].green;
   color->blue  = style->bg[state].blue;
-
-#if 0
-  g_free(style);
-#endif
 }
 
 
@@ -360,14 +352,10 @@ colour_get_style_base(GdkColor *color, int state)
 
   GtkWidget *widget = app.window;
 
-  GtkStyle *style = gtk_style_copy(gtk_widget_get_style(widget));
+  GtkStyle *style = gtk_widget_get_style(widget);
   color->red   = style->base[state].red;
   color->green = style->base[state].green;
   color->blue  = style->base[state].blue;
-
-#if 0
-  g_free(style);
-#endif
 }
 
 
@@ -378,13 +366,10 @@ colour_get_style_text(GdkColor *color, int state)
 
   GtkWidget *widget = app.window;
 
-  GtkStyle *style = gtk_style_copy(gtk_widget_get_style(widget));
+  GtkStyle *style = gtk_widget_get_style(widget);
   color->red   = style->text[state].red;
   color->green = style->text[state].green;
   color->blue  = style->text[state].blue;
-#if 0
-  g_free(style);
-#endif
 }
 
 
