@@ -169,13 +169,16 @@ main(int argc, char** argv)
 	printf("%s"PACKAGE_NAME". Version "PACKAGE_VERSION"%s\n", yellow, white);
 	ad_init();
 
-	#define ADD_BACKEND(A) app.backends = g_list_append(app.backends, A)
+#define ADD_BACKEND(A) app.backends = g_list_append(app.backends, A)
+
+#ifdef USE_MYSQL
 	ADD_BACKEND("mysql");
+#endif
 #ifdef USE_SQLITE
 	ADD_BACKEND("sqlite");
 #endif
 #ifdef USE_TRACKER
-	app.backends = g_list_append(app.backends, "tracker");
+	ADD_BACKEND("tracker");
 #endif
 
 	int opt;
