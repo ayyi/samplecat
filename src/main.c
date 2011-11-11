@@ -1002,6 +1002,8 @@ menu_play_stop(GtkWidget* widget, gpointer user_data)
 	dbg(0, "...");
 #if (defined USE_DBUS || defined USE_GAUDITION)
 	auditioner_stop(NULL);
+#elif (defined HAVE_JACK)
+	playback_stop();
 #endif
 }
 
