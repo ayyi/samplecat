@@ -211,7 +211,7 @@ inspector_update_from_result(Sample* sample)
 				gtk_label_set_text(GTK_LABEL(i->name), basename(sample->sample_name));
 				return;
 			}
-			if(!result_get_file_info(sample)){
+			if(!sample_get_file_info(sample)){
 				perr("cannot open file?\n");
 				return;
 			}
@@ -271,38 +271,37 @@ inspector_update_from_fileview(GtkTreeView* treeview)
 
 		Sample* sample = sample_new_from_fileview(model, &iter);
 
-		if(sample){
-			MIME_type* mime_type = type_from_path(sample->full_path);
-			char mime_string[64];
-			gchar *filebasename = g_path_get_basename(sample->full_path);
+		MIME_type* mime_type = type_from_path(sample->full_path);
+		char mime_string[64];
+		gchar *filebasename = g_path_get_basename(sample->full_path);
 
-			snprintf(mime_string, 64, "%s/%s", mime_type->media_type, mime_type->subtype);
+		snprintf(mime_string, 64, "%s/%s", mime_type->media_type, mime_type->subtype);
 
-			if(mimestring_is_unsupported(mime_string)){
-				inspector_clear();
-				gtk_label_set_text(GTK_LABEL(i->name), filebasename);
-			}
-			else if(sample_get_file_info(sample)){
-				char ch_str[64]; snprintf(ch_str, 64, "%u channels", sample->channels);
-				char fs_str[32]; samplerate_format(fs_str, sample->sample_rate); strcpy(fs_str + strlen(fs_str), " kHz");
-				char length[64]; snprintf(length, 64, "%lld",          sample->length);
-
-				gtk_label_set_text(GTK_LABEL(i->name),       filebasename);
-				gtk_label_set_text(GTK_LABEL(i->filename),   sample->full_path);
-				gtk_label_set_text(GTK_LABEL(i->tags),       "");
-				gtk_label_set_text(GTK_LABEL(i->length),     length);
-				gtk_label_set_text(GTK_LABEL(i->channels),   ch_str);
-				gtk_label_set_text(GTK_LABEL(i->samplerate), fs_str);
-				gtk_label_set_text(GTK_LABEL(i->mimetype),   mime_string);
-				gtk_label_set_text(GTK_LABEL(i->level),      "");
-				gtk_label_set_text(GTK_LABEL(i->misc),       ""); // XXX
-				gtk_text_buffer_set_text(app.inspector->notes, "", -1);
-				gtk_image_clear(GTK_IMAGE(app.inspector->image));
-
-				show_fields();
-			}
-			g_free(filebasename);
+		if(mimestring_is_unsupported(mime_string)){
+			inspector_clear();
+			gtk_label_set_text(GTK_LABEL(i->name), filebasename);
 		}
+		else if(sample_get_file_info(sample)){
+			char ch_str[64]; snprintf(ch_str, 64, "%u channels", sample->channels);
+			char fs_str[32]; samplerate_format(fs_str, sample->sample_rate); strcpy(fs_str + strlen(fs_str), " kHz");
+			char length[64]; snprintf(length, 64, "%lld",          sample->length);
+
+			gtk_label_set_text(GTK_LABEL(i->name),       filebasename);
+			gtk_label_set_text(GTK_LABEL(i->filename),   sample->full_path);
+			gtk_label_set_text(GTK_LABEL(i->tags),       "");
+			gtk_label_set_text(GTK_LABEL(i->length),     length);
+			gtk_label_set_text(GTK_LABEL(i->channels),   ch_str);
+			gtk_label_set_text(GTK_LABEL(i->samplerate), fs_str);
+			gtk_label_set_text(GTK_LABEL(i->mimetype),   mime_string);
+			gtk_label_set_text(GTK_LABEL(i->level),      "");
+			gtk_label_set_text(GTK_LABEL(i->misc),       sample->misc?sample->misc:""); // XXX
+			gtk_text_buffer_set_text(app.inspector->notes, "", -1);
+			gtk_image_clear(GTK_IMAGE(app.inspector->image));
+
+			show_fields();
+		}
+		g_free(filebasename);
+		sample_unref(sample);
 	}
 }
 

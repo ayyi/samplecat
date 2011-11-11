@@ -83,7 +83,7 @@ static void play_next() {
 		dbg(1, "%s", result->full_path);
 		/* TODO highlight current in app.store - see listview.c */
 		auditioner_play_result(result);
-		result_free(result);
+		sample_unref(result);
 	}else{
 		dbg(1, "play_all finished. disconnecting...");
 		stop_playback();
@@ -160,7 +160,7 @@ void auditioner_play_all() {
 
 	gboolean foreach_func(GtkTreeModel* model, GtkTreePath* path, GtkTreeIter* iter, gpointer user_data)
 	{
-		Sample* result = result_new_from_model(path);
+		Sample* result = sample_new_from_model(path);
 		play_queue = g_list_append(play_queue, result);
 		dbg(2, "%s", result->sample_name);
 		return FALSE; //continue
@@ -177,9 +177,13 @@ void auditioner_play_result(Sample* result) {
 	auditioner_play_path(result->full_path);
 }
 
-void auditioner_stop(Sample* sample) {
+void auditioner_stop() {
 	dbg(1, "stop audition..");
 	if (play_queue) {
+		do {
+			Sample* s = play_queue->data;
+			sample_unref(s);
+		} while (play_queue = g_list_remove(play_queue, result));
 		g_list_free(play_queue);
 		play_queue=NULL;
 	}

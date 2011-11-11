@@ -67,13 +67,8 @@ listmodel__add_result(Sample* result)
 {
 	g_return_if_fail(result);
 
-	Sample* sample = NULL;
 	if(!result->sample_rate){
-		sample = sample_new_from_result(result);
-		sample_get_file_info(sample);
-		result->sample_rate = sample->sample_rate;
-		result->length = sample->length;
-		result->channels = sample->channels;
+		sample_get_file_info(result);
 	}
 
 	char samplerate_s[32]; float samplerate = result->sample_rate; samplerate_format(samplerate_s, samplerate);
@@ -132,20 +127,18 @@ listmodel__add_result(Sample* result)
 		GtkTreeRowReference* row_ref = gtk_tree_row_reference_new(GTK_TREE_MODEL(app.store), treepath);
 		gtk_tree_path_free(treepath);
 		result->row_ref = row_ref;
-		if(sample) sample->row_ref = result->row_ref;
 	}
 
 	if(!result->overview){
 		if(result->row_ref){
 			if(!mimestring_is_unsupported(result->mimetype)){
-				if(!sample) sample = sample_new_from_result(result);
 				dbg(2, "no overview: sending request: filename=%s", result->sample_name);
-
-				request_overview(sample);
+				request_overview(result);
 			}
 		}
 		else pwarn("cannot request overview without row_ref.");
 	}
+	sample_unref(result); // XXX for now - later store a pointer to it in the datamodel.
 }
 
 

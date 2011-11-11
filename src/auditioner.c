@@ -85,10 +85,10 @@ auditioner_play_path(const char* path)
 
 
 void
-auditioner_stop(Sample* sample)
+auditioner_stop()
 {
 	dbg(1, "...");
-	dbus_g_proxy_call_no_reply(app.auditioner->proxy, "StopPlayback", G_TYPE_STRING, sample->filename, G_TYPE_INVALID);
+	dbus_g_proxy_call_no_reply(app.auditioner->proxy, "StopPlayback", G_TYPE_STRING, "", G_TYPE_INVALID);
 }
 
 
@@ -119,7 +119,7 @@ auditioner_play_all()
 			Sample* result = play_queue->data;
 			play_queue = g_list_remove(play_queue, result);
 			auditioner_play_result(result);
-			result_free(result);
+			sample_unref(result);
 		}else{
 			dbg(1, "play_all finished. disconnecting...");
 			dbus_g_proxy_disconnect_signal(app.auditioner->proxy, "PlaybackStopped", G_CALLBACK(stop), NULL);
@@ -136,7 +136,7 @@ auditioner_play_all()
 
 	gboolean foreach_func(GtkTreeModel* model, GtkTreePath* path, GtkTreeIter* iter, gpointer user_data)
 	{
-		Sample* result = result_new_from_model(path);
+		Sample* result = sample_new_from_model(path);
 		play_queue = g_list_append(play_queue, result);
 		dbg(2, "%s", result->sample_name);
 		return FALSE; //continue

@@ -352,7 +352,7 @@ main(int argc, char** argv)
 	gtk_main();
 
 #if (defined USE_DBUS || defined USE_GAUDITION)
-	auditioner_stop(NULL);
+	auditioner_stop();
 #endif
 	exit(EXIT_SUCCESS);
 }
@@ -502,7 +502,7 @@ do_search(char* search, char* dir)
 					if(!row_count) console__show_result_header();
 					console__show_result(result);
 				}else{
-					listmodel__add_result(result);
+					listmodel__add_result(sample_dup(result));
 				}
 				row_count++;
 			}
@@ -524,7 +524,7 @@ do_search(char* search, char* dir)
 			Sample* result;
 			while((result = tracker__search_iter_next()) && row_count < MAX_DISPLAY_ROWS){
 				if(app.no_gui && row_count > 20) continue;
-				listmodel__add_result(result);
+				listmodel__add_result(sample_dup(result));
 				if(app.no_gui){
 					if(!row_count) console__show_result_header();
 					console__show_result(result);
@@ -970,6 +970,7 @@ update_row(GtkWidget *widget, gpointer user_data)
 				Sample* sample = sample_new_from_model(treepath);
 				//TODO need to update inspector once finished
 				request_peaklevel(sample);
+				sample_unref(sample);
 			}
 		}else{
 			online = 0;
@@ -1004,7 +1005,7 @@ menu_play_stop(GtkWidget* widget, gpointer user_data)
 {
 	dbg(0, "...");
 #if (defined USE_DBUS || defined USE_GAUDITION)
-	auditioner_stop(NULL);
+	auditioner_stop();
 #elif (defined HAVE_JACK)
 	playback_stop();
 #endif

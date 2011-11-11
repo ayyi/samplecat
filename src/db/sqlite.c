@@ -149,7 +149,7 @@ sqlite__insert(Sample* sample, MIME_type *mime_type)
 	gchar* sql = g_strdup_printf(
 		"INSERT INTO samples(filename,filedir,length,sample_rate,channels,online,mimetype,misc,peaklevel,colour) "
 		"VALUES ('%s','%s',%"PRIi64",'%i','%i','%i','%s', '%s', '%f', '%i')",
-		filename, filedir, sample->length, sample->sample_rate, sample->channels, 1, mime_str, "", sample->peak_level, colour
+		filename, filedir, sample->length, sample->sample_rate, sample->channels, 1, mime_str, sample->misc, sample->peak_level, colour
 	);
 	dbg(2, "sql=%s", sql);
 

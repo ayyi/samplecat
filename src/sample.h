@@ -43,17 +43,14 @@ struct _sample
 };
 
 Sample*     sample_new               ();
+Sample*     sample_dup               (Sample*);
 Sample*     sample_new_from_model    (GtkTreePath*);
 Sample*     sample_new_from_fileview (GtkTreeModel*, GtkTreeIter*);
-Sample*     sample_new_from_result   (Sample*);
+
 void        sample_ref               (Sample*);
 void        sample_unref             (Sample*);
 void        sample_free              (Sample*);
 
 gboolean    sample_get_file_info     (Sample*);
-gboolean    result_get_file_info     (Sample*);
-
-Sample*     result_new_from_model            (GtkTreePath*);
-void        result_free                      (Sample*);
 
 #endif

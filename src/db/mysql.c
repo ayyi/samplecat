@@ -227,7 +227,6 @@ mysql__update_notes(int id, const char* notes)
 }
 
 
-
 #define SQL_LEN 66000
 gboolean
 mysql__update_pixbuf(Sample *sample)

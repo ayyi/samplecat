@@ -27,34 +27,9 @@ sample_new()
 {
 	Sample* sample = g_new0(struct _sample, 1);
 	sample->colour_index = 0; // XXX colour_index of app.bg_colour // app.config.colour[colour_index]
+	sample_ref(sample); // TODO: CHECK using functions!
 	return sample;
 }
-
-Sample*
-sample_new_from_model(GtkTreePath *path)
-{
-	GtkTreeModel *model = gtk_tree_view_get_model(GTK_TREE_VIEW(app.view));
-	GtkTreeIter iter;
-	gtk_tree_model_get_iter(model, &iter, path);
-
-	gchar *fpath, *fname, *mimetype; int id; unsigned colour_index;
-	gchar *length;
-	gchar *samplerate;
-	int channels;
-	gtk_tree_model_get(model, &iter, COL_FNAME, &fpath, COL_NAME, &fname, COL_IDX, &id, COL_LENGTH, &length, COL_SAMPLERATE, &samplerate, COL_CHANNELS, &channels, COL_MIMETYPE, &mimetype, COL_COLOUR, &colour_index, -1);
-	g_return_val_if_fail(mimetype, NULL);
-
-	Sample* sample = g_new0(struct _sample, 1);
-	sample->id     = id;
-	sample->length = atoi(length);
-	sample->sample_rate = atoi(samplerate);
-	sample->overview = NULL; // XXX
-	sample->channels = channels;
-	sample->row_ref = gtk_tree_row_reference_new(GTK_TREE_MODEL(app.store), path);
-	sample->full_path = g_strdup_printf("%s/%s", fpath, fname);
-	return sample;
-}
-
 
 //FIXME this is an internal detail of file_view. Use an accessor instead.
 #define FILE_VIEW_COL_LEAF 0
@@ -67,35 +42,31 @@ sample_new_from_fileview(GtkTreeModel* model, GtkTreeIter* iter)
 
 	Sample* sample = g_new0(struct _sample, 1);
 	sample->full_path = g_strdup_printf("%s/%s", filer.real_path, fname);
+	sample_ref(sample);
 	return sample;
 }
 
 
 Sample*
-sample_new_from_result(Sample* r)
+sample_dup(Sample* s)
 {
+	Sample* r = g_new0(struct _sample, 1);
+	memcpy(r,s, sizeof(Sample));
 	sample_ref(r);
 	return r;
-#if 0
-	Sample* s      = g_new0(struct _sample, 1);
-	s->id          = r->id;
-	s->row_ref     = r->row_ref;
-	s->full_path = g_strdup_printf("%s/%s", r->dir, r->sample_name);
-	s->sample_rate = r->sample_rate;
-	s->length      = r->length;
-	s->frames      = 0;
-	s->channels    = r->channels;
-	s->bitdepth    = 0;
-	s->pixbuf      = r->overview;
-	//color_rgba_to_gdk(&s->bg_colour, r->colour);
-	return s;
-#endif
 }
 
 void
 sample_free(Sample* sample)
 {
+	if(sample->ref_count >0) {
+		dbg(0, "WARNING: freeing sample w/ refcount:%d", sample->ref_count);
+	}
 	if(sample->row_ref) gtk_tree_row_reference_free(sample->row_ref);
+	if(sample->sample_name) g_free(sample->sample_name);
+	if(sample->full_path) g_free(sample->full_path);
+	if(sample->dir) g_free(sample->dir);
+	//if(sample->overview) g_free(sample->overview); // check how to free that!
 	g_free(sample);
 }
 
@@ -108,11 +79,13 @@ sample_ref(Sample* sample)
 void
 sample_unref(Sample* sample)
 {
+	if (!sample) return;
 	sample->ref_count--;
 	if(sample->ref_count < 1) sample_free(sample);
 }
 
 
+// TODO move to audio_analysis/analyzers.c ?!
 #include "audio_decoder/ad.h"
 #include "audio_analysis/ebumeter/ebur128.h"
 gboolean
@@ -125,22 +98,10 @@ sample_get_file_info(Sample* sample)
 	sample->channels    = nfo.channels;
 	sample->sample_rate = nfo.sample_rate;
 	sample->length      = nfo.length;
-	return true;
-}
 
-gboolean
-result_get_file_info(Sample* sample)
-{
-	struct adinfo nfo;
-	if (!ad_finfo(sample->sample_name, &nfo)) {
-		return false;
-	}
-	sample->channels    = nfo.channels;
-	sample->sample_rate = nfo.sample_rate;
-	sample->length      = nfo.length;
-
+	// TODO -- analyze in background when creating overview.
 	struct ebur128 ebur;
-	ebur128analyse(sample->sample_name, &ebur);
+	ebur128analyse(sample->full_path, &ebur);
 	free(sample->misc);
 	sample->misc      = g_strdup_printf(
 		"Integrated loudness:   %6.1lf LU%s\n"
@@ -164,12 +125,19 @@ result_get_file_info(Sample* sample)
 }
 
 Sample*
-result_new_from_model(GtkTreePath* path)
+sample_new_from_model(GtkTreePath* path)
 {
 	GtkTreeModel* model = gtk_tree_view_get_model(GTK_TREE_VIEW(app.view));
 	GtkTreeIter iter;
 	gtk_tree_model_get_iter(model, &iter, path);
-
+	// XXX TODO store pointer to sample in model!
+#if 0
+	Sample* sample;
+	gtk_tree_model_get(model, &iter, COL_SAMPLEPTR, &sample, -1);
+	//if (!sample->row_ref) sample->row_ref = gtk_tree_row_reference_new(GTK_TREE_MODEL(app.store), path);
+	sample_ref(sample);
+	return sample;
+#else
 	Sample* sample = g_new0(Sample, 1);
 
 	gchar* mimetype, *length, *notes, *misc, *dir_path; int id; unsigned colour_index;
@@ -194,15 +162,7 @@ result_new_from_model(GtkTreePath* path)
 	sample->overview = overview;
 	sample->notes = notes;
 	sample->full_path = g_strdup_printf("%s/%s", dir_path, sample->sample_name);
+	sample_ref(sample);
 	return sample;
-}
-
-
-void
-result_free(Sample* result)
-{
-	if(result->row_ref) gtk_tree_row_reference_free(result->row_ref);
-	if(result->sample_name) g_free(result->sample_name);
-	if(result->full_path) g_free(result->full_path);
-	g_free(result);
+#endif
 }

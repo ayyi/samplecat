@@ -236,7 +236,6 @@ listview__on_row_clicked(GtkWidget *widget, GdkEventButton *event, gpointer user
 				//TODO re-use the Sample created in the cursor-changed handler?                ...too messy...
 				//     -does clicking change the selected row? how about multiple selections?
 				Sample* sample = sample_new_from_model(path);
-				// sample_ref(sample); TODO - free sample after playing
 
 				if(sample->id != app.playing_id){
 #if (defined USE_DBUS || defined USE_GAUDITION)
@@ -252,11 +251,14 @@ listview__on_row_clicked(GtkWidget *widget, GdkEventButton *event, gpointer user
 #endif
 				}
 #if (defined USE_DBUS || defined USE_GAUDITION)
-				else auditioner_toggle(sample);
+				else {
+					auditioner_toggle(sample);
+				}
 #elif (defined HAVE_JACK)
-				else playback_stop();
+				else {
+					playback_stop();
+				}
 #endif
-				// TODO unref sample on playback end!
 
 #if 1 /* highlight played item with 'colour:1' */
 # if 0 // persistent
@@ -322,10 +324,10 @@ static void
 listview__on_cursor_change(GtkTreeView* widget, gpointer user_data)
 {
 	dbg(2, "...");
-	Sample* result;
-	if((result = listview__get_first_selected_result())){
-		observer__item_selected(result);
-		result_free(result);
+	Sample* s;
+	if((s = listview__get_first_selected_result())){
+		observer__item_selected(s);
+		sample_unref(s);
 	}
 }
 
@@ -358,7 +360,7 @@ listview__item_set_colour(GtkTreePath* path, unsigned colour_index)
 		request_overview(sample);
 	}
 	else dbg(0, "cannot update overview for offline sample. id=%i %s", id, sample->full_path);
-
+	sample_unref(sample);
 	return true;
 }
 
@@ -445,19 +447,18 @@ listview__get_first_selected_path()
 	return NULL;
 }
 
-
+/**
+ * @return: Sample* -- must be sample_unref() after use.
+ */
 Sample*
 listview__get_first_selected_result()
 {
-	// Sample must be freed after use.
-
 	GtkTreePath* path = listview__get_first_selected_path();
 	if(path){
-		Sample* result = result_new_from_model(path);
+		Sample* result = sample_new_from_model(path);
 		gtk_tree_path_free(path);
 		return result;
 	}
-
 	return NULL;
 }
 
