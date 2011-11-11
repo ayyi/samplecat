@@ -166,12 +166,12 @@ channels_format(int n_ch)
 
 
 void
-len_format(char* str, int milliseconds)
+len_format(char* str, int64_t t /*milliseconds*/)
 {
 #if 0
 	//str should be allocated at least 32 bytes.
 
-	int secs = milliseconds / 1000;
+	int secs = t / 1000;
 	int mins = secs / 60;
 
 	char min_str[16];
@@ -184,15 +184,14 @@ len_format(char* str, int milliseconds)
 	char ms_str[16];
 	ms_str[0] = '\0';
 	if(!mins){
-		snprintf(ms_str, 15, ".%i", milliseconds % 1000);
+		snprintf(ms_str, 15, ".%i", t % 1000);
 	}
 
 	snprintf(str, 31, "%s%i%s%s", min_str, secs % 60, ms_str, mins ? "" : "s");
 	str[31] = '\0';
 #else
-	const long t = milliseconds;
 	snprintf(str, 31, "%02d:%02d:%02d.%03d",
-			(t/3600000), (t/60000)%60, (t/1000)%60, t%1000);
+			(int)(t/3600000), (int)(t/60000)%60, (int)(t/1000)%60, (int)(t%1000));
 	str[31] = '\0';
 #endif
 }
@@ -519,9 +518,7 @@ format_time(char* length, const char* milliseconds)
 	
 	snprintf(length, 64, "%s%s.%03i", mins_str, secs_str, t % 1000);
 #else
-	const long t = atol(milliseconds);
-	snprintf(length, 64, "%02d:%02d:%02d.%02d",
-			(t/3600000), (t/60000)%60, (t/1000)%60, t%1000);
+	len_format(length, atol(milliseconds));
 #endif
 }
 

@@ -12,8 +12,6 @@ typedef enum {
 } BackendType;
 
 typedef struct _sample            Sample;
-typedef struct _sample            SamplecatResult;
-typedef struct _sample            Result;
 
 typedef struct _menu_def          MenuDef;
 typedef struct _auditioner        Auditioner;
