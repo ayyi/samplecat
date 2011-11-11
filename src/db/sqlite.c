@@ -36,6 +36,7 @@ enum {
 	COLUMN_PEAKLEVEL,
 	COLUMN_NOTES,
 	COLUMN_COLOUR,
+	COLUMN_MISC,
 };
 
 static gboolean sqlite__update_string(int id, const char*, const char*);
@@ -77,14 +78,37 @@ sqlite__connect()
 	}
 
 	int table_exists = FALSE;
+
+  int res=-1,rows,columns;
+  char **table;
+	char *errmsg= NULL;
+	int n = sqlite3_get_table(db, "SELECT name, sql FROM sqlite_master WHERE type='table' AND name='samples';",
+			&table,&rows,&columns,&errmsg);
+	if(rc==SQLITE_OK && (table != NULL) && (rows==1) && (columns==2)) {
+		if (!strcmp(table[2], "sample")) {
+			dbg(0, "found table");
+			table_exists=TRUE;
+			if (!strstr(table[3], "misc Text")) { 
+				dbg(0, "updating to new model");
+				sqlite3_exec(db, "ALTER TABLE samples add misc TEXT;", NULL, NULL, &errmsg);
+			}
+		}
+	} else {
+		dbg(0, "SQL: %s", errmsg?errmsg:"-");
+	}
+	if (errmsg) sqlite3_free(errmsg);
+
+
 	if (!table_exists) {
 		char* errMsg = 0;
 		//sqlite doesnt appear to have a date type so we use INTERGER instead. check the size.
 		//TODO check VARCHAR is appropriate for Notes column.
+		//DONE: no problem: SQLite does not enforce the length of a VARCHAR or any data.
+		//in fact all text colums are TEXT and SQLite is using dynamic (not strict) typing.
 		int n = sqlite3_exec(db, "CREATE TABLE samples ("
 			"id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, "
 			"filename VARCHAR(100), filedir VARCHAR(100), keywords VARCHAR(60), pixbuf BLOB, length int(22), sample_rate int(11), channels int(4), "
-			"online int(1), last_checked int(11), mimetype VARCHAR(32), peaklevel real, notes VARCHAR(256), colour INTEGER(5))",
+			"online int(1), last_checked int(11), mimetype VARCHAR(32), peaklevel real, notes VARCHAR(256), colour INTEGER(5), misc TEXT)",
 			on_create_table, 0, &errMsg);
 		if (n != SQLITE_OK) {
 			if (!strstr(errMsg, "already exists")) {
@@ -123,9 +147,9 @@ sqlite__insert(Sample* sample, MIME_type *mime_type)
 	gchar* mime_str = g_strdup_printf("%s/%s", mime_type->media_type, mime_type->subtype);
 	int colour = 0;
 	gchar* sql = g_strdup_printf(
-		"INSERT INTO samples(filename,filedir,length,sample_rate,channels,online,mimetype,peaklevel,colour) "
-		"VALUES ('%s','%s','%i','%i','%i','%i','%s', '%f', '%i')",
-		filename, filedir, sample->length, sample->sample_rate, sample->channels, 1, mime_str, sample->peak_level, colour
+		"INSERT INTO samples(filename,filedir,length,sample_rate,channels,online,mimetype,misc,peaklevel,colour) "
+		"VALUES ('%s','%s','%i','%i','%i','%i','%s', '%s', '%f', '%i')",
+		filename, filedir, sample->length, sample->sample_rate, sample->channels, 1, mime_str, "", sample->peak_level, colour
 	);
 	dbg(2, "sql=%s", sql);
 
@@ -502,18 +526,19 @@ sqlite__search_iter_next(unsigned long** lengths)
 				pixbuf = gdk_pixbuf_from_pixdata(&pixdata, TRUE, NULL);
 			}
 		}
-
+#define XSDP(X) (X?strdup(X):"")
 		result.idx         = sqlite3_column_int(ppStmt, COLUMN_ID);
-		result.sample_name = (char*)sqlite3_column_text(ppStmt, COLUMN_FILENAME);
-		result.dir         = (char*)sqlite3_column_text(ppStmt, COLUMN_DIR);
-		result.keywords    = (char*)sqlite3_column_text(ppStmt, COLUMN_KEYWORDS);
+		result.sample_name = XSDP((char*)sqlite3_column_text(ppStmt, COLUMN_FILENAME));
+		result.dir         = XSDP((char*)sqlite3_column_text(ppStmt, COLUMN_DIR));
+		result.keywords    = XSDP((char*)sqlite3_column_text(ppStmt, COLUMN_KEYWORDS));
 		result.length      = sqlite3_column_int(ppStmt, COLUMN_LENGTH);
 		result.sample_rate = sqlite3_column_int(ppStmt, COLUMN_SAMPLERATE);
 		result.channels    = sqlite3_column_int(ppStmt, COLUMN_CHANNELS);
 		result.overview    = (GdkPixbuf*)sqlite3_column_blob(ppStmt, COLUMN_PIXBUF);
-		result.notes       = (char*)sqlite3_column_text(ppStmt, COLUMN_NOTES);
+		result.notes       = XSDP((char*)sqlite3_column_text(ppStmt, COLUMN_NOTES));
+		result.misc        = XSDP((char*)sqlite3_column_text(ppStmt, COLUMN_MISC));
 		result.colour      = sqlite3_column_int(ppStmt, COLUMN_COLOUR);
-		result.mimetype    = (char*)sqlite3_column_text(ppStmt, COLUMN_MIMETYPE);
+		result.mimetype    = XSDP((char*)sqlite3_column_text(ppStmt, COLUMN_MIMETYPE));
 		result.peak_level  = sqlite3_column_double(ppStmt, COLUMN_PEAKLEVEL);
 		result.online      = sqlite3_column_int(ppStmt, COLUMN_ONLINE);
 		result.overview    = pixbuf;

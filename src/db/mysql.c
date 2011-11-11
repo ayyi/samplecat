@@ -390,6 +390,7 @@ mysql__search_iter_next_(unsigned long** lengths)
 	result.peak_level  = get_float(row, MYSQL_PEAKLEVEL);
 	result.overview    = pixbuf;
 	result.notes       = row[MYSQL_NOTES];
+	result.misc        = ""; // XXX TODO
 	result.colour      = get_int(row, MYSQL_COLOUR);
 	result.mimetype    = row[MYSQL_MIMETYPE];
 	result.online      = get_int(row, MYSQL_ONLINE);

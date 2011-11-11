@@ -40,7 +40,7 @@ inspector_new()
 	g_return_val_if_fail(!app.inspector, NULL);
 
 	Inspector* inspector = app.inspector = g_new0(Inspector, 1);
-	inspector->min_height = 160; //this is actually more like preferred height, as the box can be smaller if there is no room for it.
+	inspector->min_height = 200; //this is actually more like preferred height, as the box can be smaller if there is no room for it.
 
 	int margin_left = 5;
 
@@ -142,6 +142,14 @@ inspector_new()
 	
 	//-----------
 
+	GtkWidget* align8 = gtk_alignment_new(0.0, 0.5, 0.0, 0.0);
+	gtk_box_pack_start(GTK_BOX(vbox), align8, EXPAND_FALSE, FILL_FALSE, 0);
+
+	GtkWidget* label8 = app.inspector->misc = gtk_label_new("Misc");
+	gtk_misc_set_padding(GTK_MISC(label8), margin_left, 2);
+	gtk_container_add(GTK_CONTAINER(align8), label8);	
+	
+	//-----------
 	//notes:
 
 	GtkWidget *text1 = inspector->text = gtk_text_view_new();
@@ -228,6 +236,7 @@ inspector_update_from_result(Result* sample)
 	gtk_label_set_text(GTK_LABEL(i->filename),   sample->sample_name);
 	gtk_label_set_text(GTK_LABEL(i->mimetype),   sample->mimetype);
 	gtk_label_set_text(GTK_LABEL(i->level),      level);
+	gtk_label_set_text(GTK_LABEL(i->misc),       sample->misc ? sample->misc : "");
 	gtk_text_buffer_set_text(i->notes, sample->notes ? sample->notes : "", -1);
 	gtk_image_set_from_pixbuf(GTK_IMAGE(i->image), sample->overview);
 
@@ -284,6 +293,7 @@ inspector_update_from_fileview(GtkTreeView* treeview)
 				gtk_label_set_text(GTK_LABEL(i->samplerate), fs_str);
 				gtk_label_set_text(GTK_LABEL(i->mimetype),   mime_string);
 				gtk_label_set_text(GTK_LABEL(i->level),      "");
+				gtk_label_set_text(GTK_LABEL(i->misc),       ""); // XXX
 				gtk_text_buffer_set_text(app.inspector->notes, "", -1);
 				gtk_image_clear(GTK_IMAGE(app.inspector->image));
 

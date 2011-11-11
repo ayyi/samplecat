@@ -17,6 +17,7 @@ enum
   COL_PEAKLEVEL,
   COL_NOTES, //this is in the store but not the view.
   COL_COLOUR,
+  COL_MISC, //this is in the store but not the view.
   NUM_COLS
 };
 

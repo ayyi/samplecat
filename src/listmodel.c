@@ -30,7 +30,7 @@ listmodel__new()
 	                               #ifdef USE_AYYI
 	                               GDK_TYPE_PIXBUF,
 	                               #endif
-	                               G_TYPE_INT, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING, GDK_TYPE_PIXBUF, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_INT, G_TYPE_STRING, G_TYPE_FLOAT, G_TYPE_STRING, G_TYPE_INT);
+	                               G_TYPE_INT, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING, GDK_TYPE_PIXBUF, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_INT, G_TYPE_STRING, G_TYPE_FLOAT, G_TYPE_STRING, G_TYPE_INT, G_TYPE_STRING);
 }
 
 
@@ -121,6 +121,7 @@ listmodel__add_result(SamplecatResult* result)
 	                   COL_PEAKLEVEL, result->peak_level,
 	                   COL_OVERVIEW, result->overview, COL_LENGTH, length, COL_SAMPLERATE, samplerate_s, COL_CHANNELS, result->channels, 
 	                   COL_NOTES, result->notes, COL_COLOUR, result->colour,
+	                   COL_MISC, result->misc,
 #ifdef USE_AYYI
 	                   COL_AYYI_ICON, ayyi_icon,
 #endif
