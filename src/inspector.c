@@ -191,7 +191,7 @@ inspector_free(Inspector* inspector)
 
 
 void
-inspector_update_from_result(Result* sample)
+inspector_update_from_result(Sample* sample)
 {
 	PF;
 	Inspector* i = app.inspector;
@@ -283,7 +283,7 @@ inspector_update_from_fileview(GtkTreeView* treeview)
 			else if(sample_get_file_info(sample)){
 				char ch_str[64]; snprintf(ch_str, 64, "%u channels", sample->channels);
 				char fs_str[32]; samplerate_format(fs_str, sample->sample_rate); strcpy(fs_str + strlen(fs_str), " kHz");
-				char length[64]; snprintf(length, 64, "%u",          sample->length);
+				char length[64]; snprintf(length, 64, "%lld",          sample->length);
 
 				gtk_label_set_text(GTK_LABEL(i->name),       basename(sample->filename));
 				gtk_label_set_text(GTK_LABEL(i->filename),   sample->filename);

@@ -25,7 +25,6 @@
 #include <string.h>
 #include <math.h>
 #include <pthread.h>
-#include <jack/ringbuffer.h>
 
 #include "typedefs.h"
 #include "sample.h"
@@ -291,6 +290,10 @@ void JACKclose() {
 int
 playback_init(Sample* sample)
 {
+	if (!jack_client_open) {
+		dbg(0, "JACK is not available on this system");
+		return;
+	}
 	if(app.playing_id) playback_stop(); //stop any previous playback.
 	if(j_client) playback_stop();
 

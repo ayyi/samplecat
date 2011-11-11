@@ -1,5 +1,6 @@
 
 //TODO this is annoyingly similar to struct Sample - consider merging...
+#if 0 // merge in progress
 struct _samplecat_result
 {
 	int                  idx;
@@ -20,6 +21,7 @@ struct _samplecat_result
 	gboolean             online;
 	char*                updated; //TODO char* ? int? date?
 };
+#endif
 
 struct _menu_def
 {

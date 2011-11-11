@@ -233,7 +233,7 @@ listview__on_row_clicked(GtkWidget *widget, GdkEventButton *event, gpointer user
 				//overview column:
 				dbg(2, "overview. column rect: %i %i %i %i", rect.x, rect.y, rect.width, rect.height);
 
-				//TODO re-use the Result created in the cursor-changed handler?                ...too messy...
+				//TODO re-use the Sample created in the cursor-changed handler?                ...too messy...
 				//     -does clicking change the selected row? how about multiple selections?
 				Sample* sample = sample_new_from_model(path);
 
@@ -320,7 +320,7 @@ static void
 listview__on_cursor_change(GtkTreeView* widget, gpointer user_data)
 {
 	dbg(2, "...");
-	Result* result;
+	Sample* result;
 	if((result = listview__get_first_selected_result())){
 		observer__item_selected(result);
 		result_free(result);
@@ -441,14 +441,14 @@ listview__get_first_selected_path()
 }
 
 
-Result*
+Sample*
 listview__get_first_selected_result()
 {
-	// Result must be freed after use.
+	// Sample must be freed after use.
 
 	GtkTreePath* path = listview__get_first_selected_path();
 	if(path){
-		Result* result = result_new_from_model(path);
+		Sample* result = result_new_from_model(path);
 		gtk_tree_path_free(path);
 		return result;
 	}

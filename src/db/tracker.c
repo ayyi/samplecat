@@ -38,7 +38,7 @@ static GPtrArray* get_file_urns             (TrackerClient*, GStrv uris, const g
 static GPtrArray* get_tag_urns_for_label    (const char* label);
 
 static TrackerClient* tc = NULL;
-static SamplecatResult result;
+static Sample result;
 struct _iter
 {
 	int        idx;
@@ -218,7 +218,7 @@ tracker__search_iter_new(char* search, char* dir, const char* category, int* n_r
 }
 
 
-SamplecatResult*
+Sample*
 tracker__search_iter_next()
 {
 	if(iter.idx >= iter.results->len) return NULL;
@@ -272,7 +272,7 @@ tracker__search_iter_next()
 			void append_tag (gpointer value, gpointer _result)
 			{
 				gchar** data = value;
-				SamplecatResult* r = (SamplecatResult*)_result;
+				Sample* r = (Sample*)_result;
 
 				if (data[1] && *data[1]) {
 					if(r->keywords){
@@ -926,7 +926,7 @@ clear_result()
 {
 	if(result.keywords) g_free(result.keywords);
 	if(result.mimetype) g_free(result.mimetype);
-	memset(&result, 0, sizeof(SamplecatResult));
+	memset(&result, 0, sizeof(Sample));
 }
 
 

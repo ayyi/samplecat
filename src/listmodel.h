@@ -1,3 +1,6 @@
+#ifndef __LISTMODEL_H_
+#define __LISTMODEL_H_
+#include "typedefs.h"
 
 enum
 {
@@ -24,10 +27,10 @@ enum
 GtkListStore* listmodel__new                   ();
 void          listmodel__update                ();
 void          listmodel__clear                 ();
-void          listmodel__add_result            (SamplecatResult*);
+void          listmodel__add_result            (Sample*);
 
 char*         listmodel__get_filename_from_id  (int);
 
 void          listmodel__set_overview          (GtkTreeRowReference*, GdkPixbuf*);
 void          listmodel__set_peaklevel         (GtkTreeRowReference*, float);
-
+#endif

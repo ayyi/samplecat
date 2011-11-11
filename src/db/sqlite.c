@@ -17,7 +17,7 @@
 
 static sqlite3* db;
 sqlite3_stmt* ppStmt = NULL;
-static SamplecatResult result;
+static Sample result;
 extern int debug;
 #define MAX_LEN 256 //temp!
 
@@ -507,10 +507,10 @@ sqlite__search_iter_new(char* search, char* dir, const char* category, int* n_re
 }
 
 
-SamplecatResult*
+Sample*
 sqlite__search_iter_next(unsigned long** lengths)
 {
-	memset(&result, 0, sizeof(SamplecatResult));
+	memset(&result, 0, sizeof(Sample));
 
 	int n = sqlite3_step(ppStmt);
 	if(n == SQLITE_ROW){

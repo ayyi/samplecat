@@ -1,4 +1,8 @@
-#include "stdint.h"
+#ifndef __SUPPORT_H_
+#define __SUPPORT_H_
+
+#include <stdint.h>
+#include <gtk/gtk.h>
 
 #define dbg(A, B, ...) debug_printf(__func__, A, B, ##__VA_ARGS__)
 #define perr(A, ...) errprintf2(__func__, A, ##__VA_ARGS__)
@@ -127,4 +131,4 @@ float        gain2db                   (float);
 char*        gain2dbstring             (float);
 
 void         show_widget_if            (GtkWidget*, gboolean);
-
+#endif

@@ -42,7 +42,7 @@ extern unsigned debug;
 static gboolean is_connected = FALSE;
 static MYSQL_RES *dir_iter_result = NULL;
 static MYSQL_RES *search_result = NULL;
-static SamplecatResult result;
+static Sample result;
 
 static int  mysql__exec_sql (const char* sql);
 static void clear_result    ();
@@ -348,7 +348,7 @@ mysql__search_iter_next(unsigned long** lengths)
 }
 
 
-SamplecatResult*
+Sample*
 mysql__search_iter_next_(unsigned long** lengths)
 {
 	if(!search_result) return NULL;
@@ -447,9 +447,9 @@ mysql__dir_iter_free()
 
 
 void
-mysql__iter_to_result(SamplecatResult* result)
+mysql__iter_to_result(Sample* result)
 {
-	memset(result, 0, sizeof(SamplecatResult));
+	memset(result, 0, sizeof(Sample));
 }
 
 
@@ -541,7 +541,7 @@ static void
 clear_result()
 {
 	if(result.overview) g_object_unref(result.overview);
-	memset(&result, 0, sizeof(SamplecatResult));
+	memset(&result, 0, sizeof(Sample));
 }
 
 

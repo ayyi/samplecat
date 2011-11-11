@@ -75,7 +75,7 @@ sample_new_from_fileview(GtkTreeModel* model, GtkTreeIter* iter)
 
 
 Sample*
-sample_new_from_result(SamplecatResult* r)
+sample_new_from_result(Sample* r)
 {
 	Sample* s      = g_new0(struct _sample, 1);
 	s->id          = r->idx;
@@ -130,7 +130,7 @@ sample_get_file_info(Sample* sample)
 }
 
 gboolean
-result_get_file_info(Result* sample)
+result_get_file_info(Sample* sample)
 {
 	struct adinfo nfo;
 	if (!ad_finfo(sample->sample_name, &nfo)) {
@@ -164,14 +164,14 @@ result_get_file_info(Result* sample)
 	return true;
 }
 
-Result*
+Sample*
 result_new_from_model(GtkTreePath* path)
 {
 	GtkTreeModel* model = gtk_tree_view_get_model(GTK_TREE_VIEW(app.view));
 	GtkTreeIter iter;
 	gtk_tree_model_get_iter(model, &iter, path);
 
-	Result* sample = g_new0(Result, 1);
+	Sample* sample = g_new0(Sample, 1);
 
 	gchar* mimetype, *length, *notes, *misc, *dir_path; int id; unsigned colour_index;
 	gchar* samplerate;
@@ -200,7 +200,7 @@ result_new_from_model(GtkTreePath* path)
 
 
 void
-result_free(Result* result)
+result_free(Sample* result)
 {
 	if(result->row_ref) gtk_tree_row_reference_free(result->row_ref);
 

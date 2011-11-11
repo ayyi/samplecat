@@ -1,3 +1,6 @@
+#ifndef __SAMPLECAT_TYPEDEFS_H_
+#define __SAMPLECAT_TYPEDEFS_H_
+
 #define OVERVIEW_WIDTH (200)
 #define OVERVIEW_HEIGHT (20)
 
@@ -9,8 +12,9 @@ typedef enum {
 } BackendType;
 
 typedef struct _sample            Sample;
-typedef struct _samplecat_result  SamplecatResult;
-typedef struct _samplecat_result  Result;
+typedef struct _sample            SamplecatResult;
+typedef struct _sample            Result;
+
 typedef struct _menu_def          MenuDef;
 typedef struct _auditioner        Auditioner;
 
@@ -43,4 +47,6 @@ typedef struct _ViewDirTree ViewDirTree;
 
 #ifndef bool
   #define bool gboolean
+#endif
+
 #endif

@@ -1,4 +1,10 @@
+#ifndef __SAMPLECAT_MAIN_H_
+#define __SAMPLECAT_MAIN_H_
+
+#include <gtk/gtk.h>
 #include "types.h"
+#include "typedefs.h"
+
 char err [32];
 char warn[32];
 
@@ -40,7 +46,7 @@ struct _backend
 	gboolean         pending;
 
 	gboolean         (*search_iter_new)  (char* search, char* dir, const char* category, int* n_results);
-	SamplecatResult* (*search_iter_next) (unsigned long**);
+	Sample*          (*search_iter_next) (unsigned long**);
 	void             (*search_iter_free) ();
 
 	void             (*dir_iter_new)     ();
@@ -195,5 +201,5 @@ void        on_quit(GtkMenuItem*, gpointer user_data);
 
 void        set_backend(BackendType);
 
-void        observer__item_selected(Result*);
-
+void        observer__item_selected(Sample*);
+#endif

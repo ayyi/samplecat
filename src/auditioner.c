@@ -69,7 +69,7 @@ auditioner_play(Sample* sample)
 
 
 void
-auditioner_play_result(Result* result)
+auditioner_play_result(Sample* result)
 {
 	dbg(1, "%s", result->full_path);
 	dbus_g_proxy_call_no_reply(app.auditioner->proxy, "StartPlayback", G_TYPE_STRING, result->full_path, G_TYPE_INVALID);
@@ -116,7 +116,7 @@ auditioner_play_all()
 	void play_next()
 	{
 		if(play_queue){
-			Result* result = play_queue->data;
+			Sample* result = play_queue->data;
 			play_queue = g_list_remove(play_queue, result);
 			auditioner_play_result(result);
 			result_free(result);
@@ -136,7 +136,7 @@ auditioner_play_all()
 
 	gboolean foreach_func(GtkTreeModel* model, GtkTreePath* path, GtkTreeIter* iter, gpointer user_data)
 	{
-		Result* result = result_new_from_model(path);
+		Sample* result = result_new_from_model(path);
 		play_queue = g_list_append(play_queue, result);
 		dbg(2, "%s", result->sample_name);
 		return FALSE; //continue

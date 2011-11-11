@@ -496,7 +496,7 @@ do_search(char* search, char* dir)
 			){
 			int row_count = 0;
 			unsigned long* lengths;
-			SamplecatResult* result;
+			Sample* result;
 			while((result = backend.search_iter_next(&lengths)) && row_count < MAX_DISPLAY_ROWS){
 				if(app.no_gui){
 					if(!row_count) console__show_result_header();
@@ -521,7 +521,7 @@ do_search(char* search, char* dir)
 		#ifdef USE_TRACKER
 		else if(BACKEND_IS_TRACKER){
 			int row_count = 0;
-			SamplecatResult* result;
+			Sample* result;
 			while((result = tracker__search_iter_next()) && row_count < MAX_DISPLAY_ROWS){
 				if(app.no_gui && row_count > 20) continue;
 				listmodel__add_result(result);
@@ -1559,7 +1559,7 @@ can_use_backend(const char* backend)
 
 
 void
-observer__item_selected(Result* result)
+observer__item_selected(Sample* result)
 {
 	//TODO move these to idle functions
 

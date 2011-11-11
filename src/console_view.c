@@ -1,22 +1,15 @@
-#include <string.h>
 #include <stdio.h>
-#include <sys/ioctl.h>
-#include <gtk/gtk.h>
-#include "src/typedefs.h"
-#include "support.h"
+#include <string.h>
+
 #include "main.h"
+#include "sample.h"
 #include "console_view.h"
 
-extern struct _app app;
-
-static int get_terminal_width();
-
+//extern struct _app app; // defined in main.h
 
 void
 console__show_result_header()
 {
-	int terminal_width; terminal_width = get_terminal_width();
-
 	printf("filters: text='%s' dir=%s\n", app.search_phrase, strlen(app.search_dir) ? app.search_dir : "<all directories>");
 
 	printf("  name                 directory                            length ch rate mimetype\n");
@@ -24,7 +17,7 @@ console__show_result_header()
 
 
 void
-console__show_result(SamplecatResult* result)
+console__show_result(Sample* result)
 {
 	#define DIR_MAX 35
 	char dir[DIR_MAX];
@@ -36,7 +29,7 @@ console__show_result(SamplecatResult* result)
 	strncpy(name, result->sample_name, SNAME_MAX-1);
 	name[SNAME_MAX-1] = '\0';
 
-	printf("  %-20s %-35s %7i %i %5i %s\n", name, dir, result->length, result->channels, result->sample_rate, result->mimetype);
+	printf("  %-20s %-35s %7lld %d %5d %s\n", name, dir, result->length, result->channels, result->sample_rate, result->mimetype);
 }
 
 
@@ -46,7 +39,8 @@ console__show_result_footer(int row_count)
 	printf("total %i samples found.\n", row_count);
 }
 
-
+#ifdef NEVER
+#include <sys/ioctl.h>
 static int
 get_terminal_width()
 {
@@ -58,5 +52,4 @@ get_terminal_width()
 
 	return ws.ws_col;
 }
-
-
+#endif

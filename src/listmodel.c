@@ -63,7 +63,7 @@ listmodel__clear()
 
 
 void
-listmodel__add_result(SamplecatResult* result)
+listmodel__add_result(Sample* result)
 {
 	g_return_if_fail(result);
 
