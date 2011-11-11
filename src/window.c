@@ -148,7 +148,7 @@ GtkWindow
 	gtk_container_add(GTK_CONTAINER(align1), main_vpaned);
 
 	GtkWidget* hpaned = app.hpaned = gtk_hpaned_new();
-	gtk_paned_set_position(GTK_PANED(hpaned), 160);
+	gtk_paned_set_position(GTK_PANED(hpaned), 210);
 	//gtk_container_add(GTK_CONTAINER(align1), hpaned);
 	gtk_paned_add1(GTK_PANED(main_vpaned), hpaned);
 
@@ -177,7 +177,7 @@ GtkWindow
 	make_fileview_pane()
 	{
 		GtkWidget* fman_hpaned = gtk_hpaned_new();
-		gtk_paned_set_position(GTK_PANED(fman_hpaned), 160);
+		gtk_paned_set_position(GTK_PANED(fman_hpaned), 210);
 		gtk_paned_add2(GTK_PANED(main_vpaned), fman_hpaned);
 
 		void fman_left()
@@ -456,7 +456,7 @@ left_pane()
 		static int previous_height = 0;
 		if(!app.inspector || vp_allocation->height == previous_height) return;
 
-		int inspector_requisition = 190;//app.inspector->vbox->requisition.height; //FIXME
+		int inspector_requisition = 240;//app.inspector->vbox->requisition.height; //FIXME
 		//dbg(0, "req=%i", inspector_requisition);
 		if(!inspector_requisition) return;
 
