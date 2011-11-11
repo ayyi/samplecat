@@ -88,8 +88,21 @@ fi;
 
 dnl -----------------------------------------------------------------------------
 
-dnl test for mysql
+PKG_CHECK_MODULES(VFS, gnome-vfs-2.0,, [true])
+AC_SUBST(VFS_CFLAGS)
+AC_SUBST(VFS_LIBS)
 
+PKG_CHECK_MODULES(LIBART, libart-2.0)
+AC_SUBST(LIBART_CFLAGS)
+AC_SUBST(LIBART_LIBS)
+
+
+PKG_CHECK_MODULES(GTHREAD, gthread-2.0,, [true])
+AC_SUBST(GTHREAD_CFLAGS)
+AC_SUBST(GTHREAD_LIBS)
+
+dnl -----------------------------------------------------------------------------
+dnl XXX mysql detection requires some cleanup
 AC_ARG_ENABLE(mysql, [AC_HELP_STRING([--disable-mysql], [disable use of Mysql as backend])],enable_mysql=$enableval, enable_mysql="auto")
 
 if test x$enable_mysql = xno ; then
@@ -139,9 +152,6 @@ else
 	)
 fi
 
-# SAVE_LDFLAGS=$LDFLAGS
-# SAVE_CPPFLAGS=$CPPFLAGS
-
 AC_SUBST(MYSQL_LDFLAGS)
 AC_SUBST(MYSQL_CFLAGS)
 if test x$enable_mysql = xyes; then
@@ -152,17 +162,6 @@ fi
 AM_CONDITIONAL(ENABLE_MYSQL, test "$enable_mysql" = "yes")
 
 dnl -----------------------------------------------------------------------------
-
-PKG_CHECK_MODULES(VFS, gnome-vfs-2.0,, [true])
-AC_SUBST(VFS_CFLAGS)
-AC_SUBST(VFS_LIBS)
-
-PKG_CHECK_MODULES(LIBART, libart-2.0)
-AC_SUBST(LIBART_CFLAGS)
-AC_SUBST(LIBART_LIBS)
-
-dnl XML_CFLAGS=`pkg-config libxml --cflags`
-dnl AC_SUBST(XML_CFLAGS)
 
 dnl TODO: sndfile is optional if FFMPEG is avail
 PKG_CHECK_MODULES(SNDFILE, sndfile)
@@ -186,8 +185,7 @@ AC_SUBST(FFMPEG_LIBS)
 
 dnl -----------------------------------------------------------------------------
 
-dnl flac doesnt use pkg-config it seems...
-
+dnl flac doesnt provide pkg-config info
 AC_ARG_ENABLE(flac, AC_HELP_STRING([--disable-flac], [disable use of FLAC]), enable_flac=$enableval, enable_flac="auto")
 
 if test x$enable_flac != xno ; then
@@ -220,7 +218,6 @@ if test "$enable_dnotify" = "yes"; then
 	AC_DEFINE(USE_NOTIFY,1,[Use notification])
 fi
 AM_CONDITIONAL(ENABLE_DNOTIFY, test "$enable_dnotify" = "yes")
-
 
 dnl -----------------------------------------------------------------------------
 
@@ -298,7 +295,6 @@ AM_CONDITIONAL(ENABLE_TRACKER, test "$nks_found" = "yes") dnl ENABLE_TRACKER typ
 AC_SUBST(NKS_CFLAGS)
 AC_SUBST(NKS_LDFLAGS)
 
-
 dnl -----------------------------------------------------------------------------
 
 AC_ARG_ENABLE(
@@ -331,17 +327,15 @@ AS_IF([test "$enable_tracker" != "no"], [
 		 PKG_CHECK_MODULES(TRACKER, tracker-client-0.9, [AC_DEFINE(USE_TRACKER, 1, Use Tracker metadata daemon) enable_tracker="yes"],
 	   enable_tracker="no")]
 	 ) ])
-
 AM_CONDITIONAL(ENABLE_TRACKER, test "$enable_tracker" = "yes")
 AC_SUBST(TRACKER_CFLAGS)
 AC_SUBST(TRACKER_LIBS)
 
-
 dnl -----------------------------------------------------------------------------
 
-AC_ARG_ENABLE(sqlite, AS_HELP_STRING([--enable-sqlite],[build with sqlite support]),enable_sqlite=$enableval, enable_sqlite="no")
-AS_IF([test "$enable_sqlite" = "yes"],[
-       PKG_CHECK_MODULES(SQLITE, sqlite3, AC_DEFINE(USE_SQLITE, 1, Use sqlite backend), enable_sqlite=no)
+AC_ARG_ENABLE(sqlite, AS_HELP_STRING([--enable-sqlite],[build with sqlite support]),enable_sqlite=$enableval, enable_sqlite="auto")
+AS_IF([test "$enable_sqlite" != "no"],[
+       PKG_CHECK_MODULES(SQLITE, sqlite3, AC_DEFINE(USE_SQLITE, 1, Use sqlite backend) enable_sqlite="yes", enable_sqlite="no")
        ])
 AM_CONDITIONAL(ENABLE_SQLITE, test "$enable_sqlite" = "yes")
 AC_SUBST(SQLITE_CFLAGS)
@@ -366,13 +360,6 @@ AS_IF([test "$enable_fftw" != "no"], [
 AC_SUBST(FFTW3_CFLAGS)
 AC_SUBST(FFTW3_LIBS)
 AM_CONDITIONAL(ENABLE_FFTW3, test "$enable_fftw" = "yes")
-
-
-dnl -----------------------------------------------------------------------------
-
-PKG_CHECK_MODULES(GTHREAD, gthread-2.0,, [true])
-AC_SUBST(GTHREAD_CFLAGS)
-AC_SUBST(GTHREAD_LIBS)
 
 dnl -----------------------------------------------------------------------------
 
