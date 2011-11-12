@@ -96,10 +96,9 @@ sqlite__connect()
 		dbg(0, "SQL: %s", errmsg?errmsg:"-");
 	}
 	if (errmsg) sqlite3_free(errmsg);
-
+	errmsg=NULL;
 
 	if (!table_exists) {
-		char* errMsg = 0;
 		//sqlite doesnt appear to have a date type so we use INTERGER instead. check the size.
 		//TODO check VARCHAR is appropriate for Notes column.
 		//DONE: no problem: SQLite does not enforce the length of a VARCHAR or any data.
@@ -108,13 +107,14 @@ sqlite__connect()
 			"id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, "
 			"filename VARCHAR(100), filedir VARCHAR(100), keywords VARCHAR(60), pixbuf BLOB, length int(22), sample_rate int(11), channels int(4), "
 			"online int(1), last_checked int(11), mimetype VARCHAR(32), peaklevel real, notes VARCHAR(256), colour INTEGER(5), ebur TEXT)",
-			on_create_table, 0, &errMsg);
+			on_create_table, 0, &errmsg);
 		if (n != SQLITE_OK) {
-			if (!strstr(errMsg, "already exists")) {
-				perr("Sqlite error: %s\n", errMsg);
+			if (!strstr(errmsg, "already exists")) {
+				perr("Sqlite error: %s\n", errmsg);
 				return FALSE;
 			}
 		}
+		if (errmsg) sqlite3_free(errmsg);
 		else return TRUE;
 	}
 	return TRUE;
@@ -131,174 +131,82 @@ sqlite__disconnect()
 int
 sqlite__insert(Sample* sample)
 {
-	//TODO is supposed to return the new id?
-
-	int on_insert(void* NotUsed, int argc, char** argv, char** azColName)
-	{
-		PF;
-		return 0;
-	}
-
 	int ret = 0;
+	char* errMsg = 0;
 
-	// XXX - no longer needed: done by sample_new_from_filename();
-	gchar* filedir = g_path_get_dirname(sample->full_path);
-	gchar* filename = g_path_get_basename(sample->full_path);
-	int colour = 0;
-	gchar* sql = g_strdup_printf(
+	char* sql = sqlite3_mprintf(
 		"INSERT INTO samples(filename,filedir,length,sample_rate,channels,online,mimetype,ebur,peaklevel,colour) "
-		"VALUES ('%s','%s',%"PRIi64",'%i','%i','%i','%s', '%s', '%f', '%i')",
-		filename, filedir, 
+		"VALUES ('%q','%q',%"PRIi64",'%i','%i','%i','%s', '%q', '%f', '%i')",
+		sample->sample_name, sample->dir,
 		sample->length, sample->sample_rate, sample->channels,
 		sample->online, sample->mimetype, 
 		sample->ebur?sample->ebur:"", 
-		sample->peak_level, colour
+		sample->peak_level, sample->colour_index
 	);
-	dbg(2, "sql=%s", sql);
 
-	char* errMsg = 0;
-	int n = sqlite3_exec(db, sql, on_insert, 0, &errMsg);
-	if (n != SQLITE_OK) {
-		gwarn("sqlite error: %s", errMsg);
+	if(sqlite3_exec(db, sql, NULL, NULL, &errMsg) != SQLITE_OK){
 		ret = -1;
+		gwarn("sqlite error: %s", errMsg);
+		sqlite3_free(errMsg);
 	}
-
 	sqlite3_int64 idx = sqlite3_last_insert_rowid(db);
 
-	dbg(1, "n_changes=%i", sqlite3_changes(db));
-
-	g_free(sql);
-	g_free(filedir);
-	g_free(filename);
+	sqlite3_free(sql);
 	return (int)idx;
 }
 
+gboolean
+sqlite__execwrap(char *sql)
+{
+	gboolean ok = true;
+	char* errMsg = 0;
+	if(sqlite3_exec(db, sql, NULL, NULL, &errMsg) != SQLITE_OK){
+		ok = false;
+		gwarn("sqlite error: %s\n", errMsg);
+		gwarn("query: %s\n", sql);
+		sqlite3_free(errMsg);
+	}
+	sqlite3_free(sql);
+	return ok;
+}
 
 gboolean
 sqlite__delete_row(int id)
 {
-	int on_delete(void* NotUsed, int argc, char** argv, char** azColName)
-	{
-		PF;
-		return 0;
-	}
-
-	gboolean ok = true;
-	gchar* sql = g_strdup_printf("DELETE FROM samples WHERE id=%i", id);
-	dbg(1, "sql=%s", sql);
-	char* errMsg = 0;
-	int n;
-	if((n = sqlite3_exec(db, sql, on_delete, 0, &errMsg)) != SQLITE_OK){
-		perr("delete failed! sql=%s\n", errMsg);
-		ok = false;
-	}
-	g_free(sql);
-	return ok;
+	return sqlite__execwrap(sqlite3_mprintf("DELETE FROM samples WHERE id=%i", id));
 }
-
 
 static gboolean
 sqlite__update_string(int id, const char* value, const char* field)
 {
-	int on_update(void* NotUsed, int argc, char** argv, char** azColName)
-	{
-		PF;
-		return 0;
-	}
-
-	g_return_val_if_fail(id, false);
-	gboolean ok = true;
-	gchar* sql = g_strdup_printf("UPDATE samples SET %s='%s' WHERE id=%u", field, value, id);
-	dbg(2, "sql=%s", sql);
-	char* errMsg = 0;
-	int n = sqlite3_exec(db, sql, on_update, 0, &errMsg);
-	if (n != SQLITE_OK) {
-		gwarn("sqlite error: %s", errMsg);
-		ok = false;
-	}
-	g_free(sql);
-	return ok;
+	return sqlite__execwrap(sqlite3_mprintf("UPDATE samples SET %s='%q' WHERE id=%u", field, value, id));
 }
 
 
 static gboolean
 sqlite__update_int(int id, int value, const char* field)
 {
-	g_return_val_if_fail(id, false);
-
-	int on_update(void* NotUsed, int argc, char** argv, char** azColName)
-	{
-		PF;
-		return 0;
-	}
-
-	gboolean ok = true;
-	gchar* sql = g_strdup_printf("UPDATE samples SET %s=%i WHERE id=%i", field, value, id);
-	dbg(1, "sql=%s", sql);
-	char* errMsg = 0;
-	int n = sqlite3_exec(db, sql, on_update, 0, &errMsg);
-	if (n != SQLITE_OK) {
-		gwarn("sqlite error: %s", errMsg);
-		ok = false;
-	}
-	g_free(sql);
-	return ok;
+	return sqlite__execwrap(sqlite3_mprintf("UPDATE samples SET %s=%i WHERE id=%i", field, value, id));
 }
-
 
 static gboolean
 sqlite__update_float(int id, float value, const char* field)
 {
-	g_return_val_if_fail(id, false);
-
-	int on_update(void* NotUsed, int argc, char** argv, char** azColName)
-	{
-		PF;
-		return 0;
-	}
-
-	gboolean ok = true;
-	gchar* sql = g_strdup_printf("UPDATE samples SET %s=%f WHERE id=%i", field, value, id);
-	dbg(2, "sql=%s", sql);
-	char* errMsg = 0;
-	int n = sqlite3_exec(db, sql, on_update, 0, &errMsg);
-	if (n != SQLITE_OK) {
-		gwarn("sqlite error: %s", errMsg);
-		ok = false;
-	}
-	g_free(sql);
-	return ok;
+	return sqlite__execwrap(sqlite3_mprintf("UPDATE samples SET %s=%f WHERE id=%i", field, value, id));
 }
 
 
+/* high level API */
 gboolean
 sqlite__update_colour(int id, int colour)
 {
 	return sqlite__update_int(id, colour, "colour");
 }
 
-
 gboolean
 sqlite__update_keywords(int id, const char* keywords)
 {
-	int on_update(void* NotUsed, int argc, char** argv, char** azColName)
-	{
-		PF;
-		return 0;
-	}
-
-	g_return_val_if_fail(id, false);
-	gboolean ok = true;
-	gchar* sql = g_strdup_printf("UPDATE samples SET keywords='%s' WHERE id=%u", keywords, id);
-	dbg(1, "sql=%s", sql);
-	char* errMsg = 0;
-	int n = sqlite3_exec(db, sql, on_update, 0, &errMsg);
-	if (n != SQLITE_OK) {
-		gwarn("sqlite error: %s", errMsg);
-		ok = false;
-	}
-	g_free(sql);
-	return ok;
+	return sqlite__update_string(id, keywords, "keywords");
 }
 
 gboolean
@@ -313,7 +221,6 @@ sqlite__update_notes(int id, const char* notes)
 	return sqlite__update_string(id, notes, "notes");
 }
 
-
 gboolean
 sqlite__update_pixbuf(Sample* sample)
 {
@@ -322,7 +229,7 @@ sqlite__update_pixbuf(Sample* sample)
 
 	gboolean ok = true;
 	sqlite3_stmt* ppStmt = NULL;
-	gchar* sql = g_strdup_printf("UPDATE samples SET pixbuf=? WHERE id=%u", sample->id);
+	char* sql = sqlite3_mprintf("UPDATE samples SET pixbuf=? WHERE id=%u", sample->id);
 	int rc = sqlite3_prepare_v2(db, sql, -1, &ppStmt, 0);
 	if (rc == SQLITE_OK && ppStmt) {
 		GdkPixdata pixdata;
@@ -348,7 +255,7 @@ sqlite__update_pixbuf(Sample* sample)
 	}
 	else pwarn("prepare not ok! code=%i %s\n", rc, sqlite3_errmsg(db));
 	if(sqlite3_changes(db) != 1){ pwarn("n_changes=%i\n", sqlite3_changes(db)); ok = false; }
-	g_free(sql);
+	sqlite3_free(sql);
 
 	return ok;
 }
@@ -366,7 +273,7 @@ sqlite__update_online(int id, gboolean online)
 	}
 
 	gboolean ok = true;
-	gchar* sql = g_strdup_printf("UPDATE samples SET online=%i, last_checked=datetime('now') WHERE id=%i", online, id);
+	gchar* sql = sqlite3_mprintf("UPDATE samples SET online=%i, last_checked=datetime('now') WHERE id=%i", online, id);
 	dbg(1, "sql=%s", sql);
 	char* errMsg = 0;
 	int n = sqlite3_exec(db, sql, on_update, 0, &errMsg);
@@ -374,7 +281,7 @@ sqlite__update_online(int id, gboolean online)
 		gwarn("sqlite error: %s", errMsg);
 		ok = false;
 	}
-	g_free(sql);
+	sqlite3_free(sql);
 	return ok;
 }
 
@@ -395,36 +302,37 @@ sqlite__search_iter_new(char* search, char* dir, const char* category, int* n_re
 	{
 		int select_callback(void* NotUsed, int argc, char** argv, char** azColName){ count = atoi(argv[0]); return 0; }
 
-		char* sql = g_strdup_printf("SELECT COUNT(*) FROM samples WHERE 1 %s", where);
+		char* sql = sqlite3_mprintf("SELECT COUNT(*) FROM samples WHERE 1 %s", where);
 		char* errMsg = NULL;
 		sqlite3_exec(db, sql, select_callback, 0, &errMsg);
+		sqlite3_free(sql);
 	}
 
 	gboolean ok = true;
 
-	char* where = g_strdup_printf("%s", "");
+	char* where = sqlite3_mprintf("%s", "");
 	if(search && strlen(search)){
-		char* where2 = g_strdup_printf("%s AND (filename LIKE '%%%s%%' OR filedir LIKE '%%%s%%' OR keywords LIKE '%%%s%%') ", where, search, search, search);
-		g_free(where);
+		char* where2 = sqlite3_mprintf("%s AND (filename LIKE '%%%q%%' OR filedir LIKE '%%%q%%' OR keywords LIKE '%%%q%%') ", where, search, search, search);
+		sqlite3_free(where);
 		where = where2;
 	}
 	if(category){
-		gchar* where2 = g_strdup_printf("%s AND keywords LIKE '%%%s%%' ", where, category);
-		g_free(where);
+		gchar* where2 = sqlite3_mprintf("%s AND keywords LIKE '%%%q%%' ", where, category);
+		sqlite3_free(where);
 		where = where2;
 	}
 	if(dir && strlen(dir)){
 #ifdef DONT_SHOW_SUBDIRS //TODO
-		gchar* where2 = g_strdup_printf("%s AND filedir='%s' ", where, dir);
+		gchar* where2 = sqlite3_mprintf("%s AND filedir='%q' ", where, dir);
 #else
 		//match the beginning of the dir path
-		gchar* where2 = g_strdup_printf("%s AND filedir LIKE '%s%%' ", where, dir);
+		gchar* where2 = sqlite3_mprintf("%s AND filedir LIKE '%q%%' ", where, dir);
 #endif
-		g_free(where);
+		sqlite3_free(where);
 		where = where2;
 	}
 
-	char* sql = g_strdup_printf("SELECT * FROM samples WHERE 1 %s", where);
+	char* sql = sqlite3_mprintf("SELECT * FROM samples WHERE 1 %s", where);
 	dbg(2, "sql=%s", sql);
 
 	if(ppStmt) gwarn("ppStmt not reset from previous query?");
@@ -440,30 +348,8 @@ sqlite__search_iter_new(char* search, char* dir, const char* category, int* n_re
 		gwarn("failed to create prepared statement. sql=%s", sql);
 		ok = false;
 	}
-
-#if 0
-	int select_callback(void* NotUsed, int argc, char** argv, char** azColName)
-	{
-		//this is a per-row callback. If there are no selected rows, it will not be called.
-
-		dbg(0, "n_columns=%i", argc);
-		int i; for(i=0; i<argc; i++) printf("  %s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
-		printf ("\n");
-
-		return 0; //non zero values cause SQLITE_ABORT to occur.
-	}
-
-	char* errMsg = NULL;
-	n = sqlite3_exec(db, sql, select_callback, 0, &errMsg);
-	g_free(sql);
-	if(n != SQLITE_OK){
-		gwarn("sqlite error: %i: %s", n, errMsg);
-		sqlite3_free(errMsg);
-		return FALSE;
-	}
-#endif
-	g_free(sql);
-	g_free(where);
+	sqlite3_free(sql);
+	sqlite3_free(where);
 	return ok;
 }
 
@@ -563,5 +449,3 @@ sqlite__dir_iter_free()
 	sqlite3_finalize(ppStmt);
 	ppStmt = NULL;
 }
-
-
