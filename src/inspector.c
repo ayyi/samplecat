@@ -235,7 +235,7 @@ inspector_set_labels(Sample* sample)
 	if (sample->row_ref) {
 		i->row_ref = gtk_tree_row_reference_copy(sample->row_ref);
 	} else {
-		dbg(0, "setting row_ref failed!\n");
+		dbg(0, "setting row_ref failed!");
 		i->row_ref = NULL;
 		/* can not edit tags or notes w/o reference */
 		gtk_widget_hide(GTK_WIDGET(i->text));
@@ -299,9 +299,9 @@ inspector_update_from_fileview(GtkTreeView* treeview)
 	g_list_foreach (list, (GFunc)gtk_tree_path_free, NULL);
 	g_list_free (list);
 
-#define FILE_VIEW_COL_LEAF 0
+#define FILE_VIEW_COL_FILENAME 11 // see file_manager/file_view.c
 	gchar* fname;
-	gtk_tree_model_get(model, &iter, FILE_VIEW_COL_LEAF, &fname, -1);
+	gtk_tree_model_get(model, &iter, FILE_VIEW_COL_FILENAME, &fname, -1);
 	gchar * full_path = g_strdup_printf("%s/%s", filer.real_path, fname);
 
 	/* TODO: do nothing if directory selected 

@@ -602,7 +602,7 @@ uri_text_from_list(GList *list, gint *len, gint plain_text)
             gchar *escaped;
 
             escaped = uri_text_escape(name8);
-            g_string_append(string, "file:");
+            g_string_append(string, "file://");
             g_string_append(string, escaped);
             g_free(escaped);
 

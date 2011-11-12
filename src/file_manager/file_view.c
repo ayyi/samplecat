@@ -61,7 +61,8 @@
 #define COL_COLOUR 8
 #define COL_WEIGHT 9
 #define COL_VIEW_ITEM 10
-#define N_COLUMNS 11
+#define COL_FILENAME 11
+#define N_COLUMNS 12
 
 extern Filer filer;
 extern int debug;
@@ -284,6 +285,12 @@ details_get_value(GtkTreeModel* tree_model, GtkTreeIter* iter, gint column, GVal
 	{
 		g_value_init(value, G_TYPE_STRING);
 		g_value_set_string(value, view_item->utf8_name ? view_item->utf8_name : item->leafname);
+		return;
+	}
+	else if (column == COL_FILENAME)
+	{
+		g_value_init(value, G_TYPE_STRING);
+		g_value_set_string(value, item->leafname);
 		return;
 	}
 	else if (column == COL_VIEW_ITEM)
@@ -1985,7 +1992,7 @@ view_details_dnd_get(GtkWidget* widget, GdkDragContext* context, GtkSelectionDat
 		gtk_tree_model_get_iter(model, &iter, treepath_selection);
 
 		GValue leaf = {0};
-		details_get_value(model, &iter, COL_LEAF, &leaf);
+		details_get_value(model, &iter, COL_FILENAME, &leaf);
 
 		dbg(1, "leaf=%s", g_value_get_string(&leaf));
 		gchar* path = g_strconcat(view->filer_window->real_path, "/", g_value_get_string(&leaf), NULL);

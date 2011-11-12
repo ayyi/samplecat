@@ -58,7 +58,6 @@ static gboolean   filter_new                      ();
 static GtkWidget* scrolled_window_new             ();
 static void       window_on_fileview_row_selected (GtkTreeView*, gpointer);
 static void       on_category_set_clicked         (GtkComboBox*, gpointer);
-static gboolean   row_clear_tags                  (GtkTreeIter*, int id);
 static void       menu__add_to_db                 (GtkMenuItem*, gpointer);
 static void       menu__add_dir_to_db             (GtkMenuItem*, gpointer);
 static void       menu__play                      (GtkMenuItem*, gpointer);
@@ -683,7 +682,7 @@ window_on_fileview_row_selected(GtkTreeView* treeview, gpointer user_data)
 }
 
 
-#define COL_LEAF 0 //api leakage - does the filemanager really have no get_selected_files() function?
+#define FILE_VIEW_COL_FILENAME 11 // see file_manager/file_view.c
 static void
 menu__add_to_db(GtkMenuItem* menuitem, gpointer user_data)
 {
@@ -697,7 +696,7 @@ menu__add_to_db(GtkMenuItem* menuitem, gpointer user_data)
 		GtkTreeIter iter;
 		if (gtk_tree_model_get_iter(model, &iter, path)) {
 			gchar* leaf;
-			gtk_tree_model_get(model, &iter, COL_LEAF, &leaf, -1);
+			gtk_tree_model_get(model, &iter, FILE_VIEW_COL_FILENAME, &leaf, -1);
 			gchar* filepath = g_build_filename(filer.real_path, leaf, NULL);
 			dbg(2, "filepath=%s", filepath);
 
@@ -803,7 +802,8 @@ on_category_set_clicked(GtkComboBox *widget, gpointer user_data)
 			gtk_tree_model_get(GTK_TREE_MODEL(app.store), &iter, COL_NAME, &fname, COL_KEYWORDS, &tags, COL_IDX, &id, -1);
 			dbg(1, "id=%i name=%s", id, fname);
 
-			if(!strcmp(category, "no categories")) row_clear_tags(&iter, id);
+			if(!strcmp(category, "no categories"))
+				listmodel__update_by_ref(&iter, COL_KEYWORDS, "");
 			else{
 
 				if(!keyword_is_dupe(category, tags)){
@@ -825,15 +825,6 @@ on_category_set_clicked(GtkComboBox *widget, gpointer user_data)
 
 	g_free(category);
 }
-
-
-static gboolean
-row_clear_tags(GtkTreeIter* iter, int id)
-{
-	if(!id){ perr("bad arg: id\n"); return false; }
-	return listmodel__update_by_ref(iter, COL_KEYWORDS, "");
-}
-
 
 #ifdef HAVE_FFTW3
 void
