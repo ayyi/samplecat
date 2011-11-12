@@ -5,6 +5,7 @@
 #include <libgen.h>
 #include <gtk/gtk.h>
 #include "file_manager/file_manager.h"
+#include "file_manager/rox/rox_support.h" // to_utf8()
 #include "gqview_view_dir_tree.h"
 #include "typedefs.h"
 #include "mimetype.h"
@@ -207,7 +208,7 @@ inspector_set_labels(Sample* sample)
 	char* keywords = (sample->keywords && strlen(sample->keywords)) ? sample->keywords : "<no tags>";
 
 	gtk_label_set_text(GTK_LABEL(i->name),       sample->sample_name);
-	gtk_label_set_text(GTK_LABEL(i->filename),   sample->full_path);
+	gtk_label_set_text(GTK_LABEL(i->filename),   to_utf8(sample->full_path));
 	gtk_label_set_text(GTK_LABEL(i->tags),       keywords);
 	gtk_label_set_text(GTK_LABEL(i->length),     length);
 	gtk_label_set_text(GTK_LABEL(i->samplerate), fs_str);
@@ -302,7 +303,7 @@ inspector_update_from_fileview(GtkTreeView* treeview)
 #define FILE_VIEW_COL_FILENAME 11 // see file_manager/file_view.c
 	gchar* fname;
 	gtk_tree_model_get(model, &iter, FILE_VIEW_COL_FILENAME, &fname, -1);
-	gchar * full_path = g_strdup_printf("%s/%s", filer.real_path, fname);
+	gchar * full_path = g_strdup_printf("%s%c%s", filer.real_path, G_DIR_SEPARATOR, fname);
 
 	/* TODO: do nothing if directory selected 
 	 * 

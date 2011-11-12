@@ -5,6 +5,7 @@
 #include <gtk/gtk.h>
 #include <jack/jack.h>
 #include "file_manager/file_manager.h"
+#include "file_manager/rox/rox_support.h" // to_utf8()
 #include "gqview_view_dir_tree.h"
 #include "typedefs.h"
 #include "support.h"
@@ -75,10 +76,14 @@ sample_new_from_filename(char *path, gboolean path_alloced)
 	sample->mtime = file_mtime(path);
 
 	if(!sample->sample_name){
-		sample->sample_name= g_path_get_basename(sample->full_path);
+		gchar *bn =g_path_get_basename(sample->full_path);
+		sample->sample_name= to_utf8(bn);
+		g_free(bn);
 	}
 	if(!sample->dir){
-		sample->dir = g_path_get_dirname(sample->full_path);
+		gchar *dn = g_path_get_dirname(sample->full_path);
+		sample->dir = to_utf8(dn);
+		g_free(dn);
 	}
 	return sample;
 }
@@ -161,24 +166,10 @@ sample_get_file_info(Sample* sample)
 }
 
 Sample*
-sample_get_by_row_ref(GtkTreeRowReference* ref)
+sample_get_by_tree_iter(GtkTreeIter* iter)
 {
-	dbg(0,"...");
-	GtkTreePath *path;
-	if (!ref || !gtk_tree_row_reference_valid(ref)) return NULL;
-	if(!(path = gtk_tree_row_reference_get_path(ref))) return NULL;
-
-	Sample* sample = NULL;
-#if 0
-	GtkTreeModel* model = gtk_tree_view_get_model(GTK_TREE_VIEW(app.view));
-#else
-	GtkTreeModel* model = GTK_TREE_MODEL(app.store);
-#endif
-	GtkTreeIter iter;
-	gtk_tree_model_get_iter(model, &iter, path);
-	gtk_tree_model_get(model, &iter, COL_SAMPLEPTR, &sample, -1);
-	if (sample && !sample->row_ref) sample->row_ref = gtk_tree_row_reference_new(GTK_TREE_MODEL(app.store), path);
-	gtk_tree_path_free(path);
+	Sample *sample;
+	gtk_tree_model_get(GTK_TREE_MODEL(app.store), iter, COL_SAMPLEPTR, &sample, -1);
 	if(sample) sample_ref(sample);
 	return sample;
 }
@@ -193,9 +184,20 @@ sample_get_from_model(GtkTreePath* path)
 #endif
 	GtkTreeIter iter;
 	gtk_tree_model_get_iter(model, &iter, path);
-	Sample* sample;
-	gtk_tree_model_get(model, &iter, COL_SAMPLEPTR, &sample, -1);
+	Sample* sample = sample_get_by_tree_iter(&iter);
 	if (sample && !sample->row_ref) sample->row_ref = gtk_tree_row_reference_new(GTK_TREE_MODEL(app.store), path);
-	sample_ref(sample);
 	return sample;
 }
+
+Sample*
+sample_get_by_row_ref(GtkTreeRowReference* ref)
+{
+	dbg(0,"...");
+	GtkTreePath *path;
+	if (!ref || !gtk_tree_row_reference_valid(ref)) return NULL;
+	if(!(path = gtk_tree_row_reference_get_path(ref))) return NULL;
+	Sample* sample = sample_get_from_model(path);
+	gtk_tree_path_free(path);
+	return sample;
+}
+

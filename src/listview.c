@@ -440,17 +440,14 @@ listview__dnd_get(GtkWidget *widget, GdkDragContext *context, GtkSelectionData *
 	GList* selected_rows = gtk_tree_selection_get_selected_rows(selection, &(model));
 
 	GtkTreeIter iter;
-	gchar *filename;
-	gchar *pathname;
+	gchar *path;
 	GList* row = selected_rows;
 	for(; row; row=row->next){
 		GtkTreePath* treepath_selection = row->data;
-		gtk_tree_model_get_iter(model, &iter, treepath_selection);
-
-		int id;
-		gtk_tree_model_get(model, &iter, COL_IDX, &id,  COL_NAME, &filename, COL_FNAME, &pathname, -1);
-
-		dbg(1, "filename=%s", filename);
+		Sample *s = sample_get_from_model(treepath_selection);
+		path=g_strdup(s->full_path);
+		sample_unref(s);
+		dbg(1, "path=%s", path);
 	}
 
 	//free the selection list data:
@@ -461,8 +458,6 @@ listview__dnd_get(GtkWidget *widget, GdkDragContext *context, GtkSelectionData *
 	GList *list;
 	gchar *uri_text = NULL;
 	gint length = 0;
-
-	gchar* path = g_strconcat(pathname, "/", filename, NULL); // XXX TODO use proper path from sample
 
 	switch (info) {
 		case TARGET_URI_LIST:

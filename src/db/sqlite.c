@@ -36,6 +36,8 @@ enum {
 	COLUMN_NOTES,
 	COLUMN_COLOUR,
 	COLUMN_EBUR,
+	COLUMN_ABSPATH,
+	COLUMN_MTIME,
 };
 
 static gboolean sqlite__update_string(int id, const char*, const char*);
@@ -87,9 +89,17 @@ sqlite__connect()
 		if (!strcmp(table[2], "sample")) {
 			dbg(0, "found table");
 			table_exists=TRUE;
-			if (!strstr(table[3], "ebur Text")) { 
-				dbg(0, "updating to new model");
+			if (!strstr(table[3], "ebur TEXT")) { 
+				dbg(0, "updating to new model: ebur");
 				sqlite3_exec(db, "ALTER TABLE samples add ebur TEXT;", NULL, NULL, &errmsg);
+			}
+			if (!strstr(table[3], "abspath TEXT")) { 
+				dbg(0, "updating to new model: abspath");
+				sqlite3_exec(db, "ALTER TABLE samples add abspath TEXT;", NULL, NULL, &errmsg);
+			}
+			if (!strstr(table[3], "mtime INT")) { 
+				dbg(0, "updating to new model: mtime");
+				sqlite3_exec(db, "ALTER TABLE samples add mtime INT;", NULL, NULL, &errmsg);
 			}
 		}
 	} else {
@@ -105,8 +115,9 @@ sqlite__connect()
 		//in fact all text colums are TEXT and SQLite is using dynamic (not strict) typing.
 		int n = sqlite3_exec(db, "CREATE TABLE samples ("
 			"id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, "
-			"filename VARCHAR(100), filedir VARCHAR(100), keywords VARCHAR(60), pixbuf BLOB, length int(22), sample_rate int(11), channels int(4), "
-			"online int(1), last_checked int(11), mimetype VARCHAR(32), peaklevel real, notes VARCHAR(256), colour INTEGER(5), ebur TEXT)",
+			"filename TEXT, filedir TEXT, keywords TEXT, pixbuf BLOB, length INT, sample_rate INT, channels INT, "
+			"online INT, last_checked INT, mimetype TEXT, peaklevel REAL, notes TEXT, colour INT, "
+			"ebur TEXT, abspath TEXT, mtime INT)",
 			on_create_table, 0, &errmsg);
 		if (n != SQLITE_OK) {
 			if (!strstr(errmsg, "already exists")) {
@@ -135,13 +146,13 @@ sqlite__insert(Sample* sample)
 	char* errMsg = 0;
 
 	char* sql = sqlite3_mprintf(
-		"INSERT INTO samples(filename,filedir,length,sample_rate,channels,online,mimetype,ebur,peaklevel,colour) "
-		"VALUES ('%q','%q',%"PRIi64",'%i','%i','%i','%s', '%q', '%f', '%i')",
-		sample->sample_name, sample->dir,
+		"INSERT INTO samples(abspath,filename,filedir,length,sample_rate,channels,online,mimetype,ebur,peaklevel,colour) "
+		"VALUES ('%q','%q','%q',%"PRIi64",'%i','%i','%i','%s','%q','%f','%i','%i')",
+		sample->full_path, sample->sample_name, sample->dir,
 		sample->length, sample->sample_rate, sample->channels,
 		sample->online, sample->mimetype, 
 		sample->ebur?sample->ebur:"", 
-		sample->peak_level, sample->colour_index
+		sample->peak_level, sample->colour_index, sample->mtime
 	);
 
 	if(sqlite3_exec(db, sql, NULL, NULL, &errMsg) != SQLITE_OK){
@@ -262,7 +273,7 @@ sqlite__update_pixbuf(Sample* sample)
 
 
 gboolean
-sqlite__update_online(int id, gboolean online)
+sqlite__update_online(int id, gboolean online, time_t mtime)
 {
 	g_return_val_if_fail(id, false);
 
@@ -273,7 +284,7 @@ sqlite__update_online(int id, gboolean online)
 	}
 
 	gboolean ok = true;
-	gchar* sql = sqlite3_mprintf("UPDATE samples SET online=%i, last_checked=datetime('now') WHERE id=%i", online, id);
+	gchar* sql = sqlite3_mprintf("UPDATE samples SET online=%i, mtime=%i last_checked=datetime('now') WHERE id=%i", online, mtime, id);
 	dbg(1, "sql=%s", sql);
 	char* errMsg = 0;
 	int n = sqlite3_exec(db, sql, on_update, 0, &errMsg);
@@ -374,10 +385,10 @@ sqlite__search_iter_next(unsigned long** lengths)
 	}
 
 	static Sample result;
-	static char full_path[PATH_MAX];
 
 	memset(&result, 0, sizeof(Sample));
 	result.id          = sqlite3_column_int(ppStmt, COLUMN_ID);
+	result.full_path   = (char*)(char*)sqlite3_column_text(ppStmt, COLUMN_ABSPATH);
 	result.sample_name = (char*)sqlite3_column_text(ppStmt, COLUMN_FILENAME);
 	result.dir         = (char*)sqlite3_column_text(ppStmt, COLUMN_DIR);
 	result.keywords    = (char*)sqlite3_column_text(ppStmt, COLUMN_KEYWORDS);
@@ -391,10 +402,15 @@ sqlite__search_iter_next(unsigned long** lengths)
 	result.mimetype    = (char*)sqlite3_column_text(ppStmt, COLUMN_MIMETYPE);
 	result.peak_level  = sqlite3_column_double(ppStmt, COLUMN_PEAKLEVEL);
 	result.online      = sqlite3_column_int(ppStmt, COLUMN_ONLINE);
+	result.mtime       = sqlite3_column_int(ppStmt, COLUMN_MTIME);
 	result.overview    = pixbuf;
 
-	snprintf(full_path, PATH_MAX, "%s/%s", result.dir, result.sample_name); full_path[PATH_MAX-1]='\0';
-	result.full_path   = full_path;
+	/* backwards compat. */
+	if (!result.full_path) {
+		static char full_path[PATH_MAX];
+		snprintf(full_path, PATH_MAX, "%s/%s", result.dir, result.sample_name); full_path[PATH_MAX-1]='\0';
+		result.full_path  = full_path;
+	}
 
 	//sqlite3_result_blob(sqlite3_context*, const void*, int, void(*)(void*));
 

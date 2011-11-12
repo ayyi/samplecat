@@ -434,14 +434,15 @@ add_dir(const char* path, int* added_count)
 	*/
 	PF;
 
-	char filepath[256];
+	char filepath[PATH_MAX];
 	G_CONST_RETURN gchar *file;
 	GError* error = NULL;
 	GDir* dir;
 	if((dir = g_dir_open(path, 0, &error))){
 		while((file = g_dir_read_name(dir))){
 			if(file[0]=='.') continue;
-			snprintf(filepath, 128, "%s/%s", path, file);
+			snprintf(filepath, PATH_MAX, "%s%c%s", path, G_DIR_SEPARATOR, file);
+			filepath[PATH_MAX-1]='\0';
 
 			if(!g_file_test(filepath, G_FILE_TEST_IS_DIR)){
 				if(add_file(filepath)) (*added_count)++;
@@ -892,61 +893,50 @@ update_row(GtkWidget *widget, gpointer user_data)
 	//GDate* date = g_date_new();
 	//g_get_current_time(date);
 
-	int i, id; gchar *fname; gchar *fdir; gchar *mimetype; float peak_level;
+	int i, id;
 	GdkPixbuf* iconbuf;
 	gboolean online;
 	for(i=0;i<g_list_length(selectionlist);i++){
 		GtkTreePath *treepath = g_list_nth_data(selectionlist, i);
-
-		gtk_tree_model_get_iter(model, &iter, treepath);
-
-		/* XXX TODO - needs update to new model
-		 *   consolidate with sample_new() and listmodel__add_result()
-		 *
-		 * - request_overview()
-		 * - request_ebur128()
-		 */
-		gtk_tree_model_get(model, &iter, COL_NAME, &fname, COL_FNAME, &fdir, COL_MIMETYPE, &mimetype, COL_IDX, &id, COL_PEAKLEVEL, &peak_level, -1);
+		Sample *sample = sample_get_from_model(treepath);
 		 
-		//gchar path[256];
-		//snprintf(path, 256, "%s/%s", fdir, fname);
-		gchar* path = g_strdup_printf("%s/%s", fdir, fname);
-		time_t mtime = file_mtime(path);
+		// TODO: consolidate w/ consolidate with sample_new() and listmodel__add_result()
+		time_t mtime = file_mtime(sample->full_path);
 		if(mtime>0){
 			online = 1;
 
-			MIME_type* mime_type = mime_type_lookup(mimetype);
+			MIME_type* mime_type = mime_type_lookup(sample->mimetype);
 			type_to_icon(mime_type);
 			if (!mime_type->image) dbg(0, "no icon.");
 			iconbuf = mime_type->image->sm_pixbuf;
 
-			// TODO check filemtime - compare w/ last update.
-			if (1) { /* FULL UPDATE */
-				Sample* sample = sample_get_from_model(treepath);
-
+			if (sample->mtime < mtime) {
+				/* FULL UPDATE */
+				dbg(0, "file modified: full update.");
 				if (sample_get_file_info(sample)) {
+					sample->mtime = mtime;
 					request_peaklevel(sample);
 					request_overview(sample);
 					request_ebur128(sample);
 				} else {
 					dbg(0, "full update - reading file info failed.");
 				}
-				
-				sample_unref(sample);
 			}
 		}else{
 			/* file does not exist */
 			online = 0;
 			iconbuf = NULL;
 		}
-		gtk_list_store_set(app.store, &iter, COL_ICON, iconbuf, -1);
 
-		if(backend.update_online(id, online)){
+		// TODO: consolidate w/ listmodel__update_result()
+		gtk_list_store_set(app.store, &iter, COL_ICON, iconbuf, -1);
+		if(backend.update_online(id, online, mtime)){
 			statusbar_print(1, "online status updated (%s)", online ? "online" : "not online");
 		}else
 			statusbar_print(1, "error! online status not updated");
 
-		g_free(path);
+		gtk_tree_path_free(treepath);
+		sample_unref(sample);
 	}
 	g_list_free(selectionlist);
 	//g_date_free(date);
@@ -1514,21 +1504,19 @@ can_use_backend(const char* backend)
 
 
 void
-observer__item_selected(Sample* result)
+observer__item_selected(Sample* s)
 {
 	//TODO move these to idle functions
 
-	inspector_update_from_result(result);
+	inspector_update_from_result(s);
 
 #ifdef HAVE_FFTW3
 	if(app.spectrogram){
-		char* path = g_strdup_printf("%s/%s", result->dir, result->sample_name);
 #ifdef USE_OPENGL
-		gl_spectrogram_set_file((GlSpectrogram*)app.spectrogram, path);
+		gl_spectrogram_set_file((GlSpectrogram*)app.spectrogram, s->full_path);
 #else
-		spectrogram_widget_set_file ((SpectrogramWidget*)app.spectrogram, path);
+		spectrogram_widget_set_file ((SpectrogramWidget*)app.spectrogram, s->full_path);
 #endif
-		g_free(path);
 	}
 #endif
 }

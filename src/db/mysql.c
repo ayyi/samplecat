@@ -273,7 +273,7 @@ mysql__update_pixbuf(Sample *sample)
 
 
 gboolean
-mysql__update_online(int id, gboolean online)
+mysql__update_online(int id, gboolean online, time_t mtime)
 {
 	gchar* sql = g_strdup_printf("UPDATE samples SET online=%i, last_checked=NOW() WHERE id=%i", online, id);
 	dbg(2, "row: sql=%s", sql);
@@ -397,7 +397,7 @@ mysql__search_iter_next_(unsigned long** lengths)
 	full_path[PATH_MAX-1]='\0';
 
 	result.id          = atoi(row[MYSQL_ID]);
-	result.full_path   = full_path;
+	result.full_path   = full_path; // XXX TODO save in database!
 	result.sample_name = row[MYSQL_NAME];
 	result.dir         = row[MYSQL_DIR];
 	result.keywords    = row[MYSQL_KEYWORDS];
@@ -411,6 +411,7 @@ mysql__search_iter_next_(unsigned long** lengths)
 	result.colour_index= get_int(row, MYSQL_COLOUR);
 	result.mimetype    = row[MYSQL_MIMETYPE];
 	result.online      = get_int(row, MYSQL_ONLINE);
+	result.mtime       = 0; 
 	result.updated     = row[MYSQL_LAST_CHECKED];
 	return &result;
 }

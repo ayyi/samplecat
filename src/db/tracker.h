@@ -19,5 +19,5 @@ void     tracker__dir_iter_free    ();
 
 gboolean tracker__update_colour    (int id, int colour);
 gboolean tracker__update_keywords  (int id, const char*);
-gboolean tracker__update_online    (int id, gboolean);
+gboolean tracker__update_online    (int id, gboolean, time_t);
 gboolean tracker__update_peaklevel (int id, float);

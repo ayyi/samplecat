@@ -270,34 +270,6 @@ listmodel__update_by_rowref(GtkTreeRowReference *row_ref, int what, void *data)
 	return listmodel__update_by_ref(&iter, what, data);
 }
 
-#ifdef NEVER
-/*
- * @return: result must be free'd by caller.
- */
-char*
-listmodel__get_filename_from_id(int id)
-{
-	GtkTreeIter iter;
-	gtk_tree_model_get_iter_first(GTK_TREE_MODEL(app.store), &iter);
-	int i;
-	char* fname;
-	char* path;
-	int row = 0;
-	do {
-		gtk_tree_model_get(GTK_TREE_MODEL(app.store), &iter, COL_IDX, &i, COL_NAME, &fname, COL_FNAME, &path, -1);
-		if(i == id){
-			dbg(2, "found %s/%s", path, fname);
-			return g_strdup_printf("%s/%s", path, fname);
-		}
-		row++;
-	} while (gtk_tree_model_iter_next(GTK_TREE_MODEL(app.store), &iter));
-
-	gwarn("not found. %i\n", id);
-	return NULL;
-}
-#endif
-
-
 void
 listmodel__set_overview(GtkTreeRowReference* row_ref, GdkPixbuf* pixbuf)
 {

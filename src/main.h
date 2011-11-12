@@ -60,7 +60,7 @@ struct _backend
 	gboolean         (*update_notes)     (int, const char*);
 	gboolean         (*update_ebur)      (int, const char*);
 	gboolean         (*update_pixbuf)    (Sample*);
-	gboolean         (*update_online)    (int, gboolean);
+	gboolean         (*update_online)    (int, gboolean, time_t);
 	gboolean         (*update_peaklevel) (int, float);
 
 	void             (*disconnect)       ();

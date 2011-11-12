@@ -15,13 +15,9 @@ struct _sample
 	int                  ref_count;
 	GtkTreeRowReference* row_ref;
 
-	/* TODO: consolidate dir/name: use only 'full_path' 
-	 * and 'derive' others on demand
-	 * -> requires changing the database model
-	 */
-	char*        dir; // directory
-	char*        sample_name; // basename
-	char*        full_path; // filename
+	char*        dir;         ///< directory UTF8
+	char*        sample_name; ///< basename UTF8
+	char*        full_path;   ///< filename as native to system
 
 	unsigned int sample_rate;
 	int64_t      length;        //milliseconds
@@ -43,7 +39,7 @@ struct _sample
 };
 
 /** create new sample structures
- * all _new_ functions imply sample_ref() 
+ * all _new, _dup functions imply sample_ref() 
  *
  * @return needs to be sample_unref();
  */
@@ -51,18 +47,24 @@ Sample*     sample_new               ();
 Sample*     sample_new_from_filename (char *path, gboolean path_alloced);
 Sample*     sample_dup               (Sample*);
 
-/** "new" is misleading in sample_new_from_model()
- * it returns a reference to the existing sample  in the tree
+/** return a reference to the existing sample  in the tree
  * implies sample_ref() 
  * @return needs to be sample_unref();
  */
 Sample*     sample_get_from_model    (GtkTreePath*);
+
+/** sample_get_by_tree_iter returns a pointer to
+ * the sample struct in the data model or NULL if not found.
+ * @return needs to be sample_unref();
+ */
+Sample*     sample_get_by_tree_iter  (GtkTreeIter* iter);
 
 /** sample_get_by_row_ref returns a pointer to
  * the sample struct in the data model or NULL if not found.
  * @return needs to be sample_unref();
  */
 Sample*     sample_get_by_row_ref    (GtkTreeRowReference* ref); 
+
 
 void        sample_ref               (Sample*);
 void        sample_unref             (Sample*);

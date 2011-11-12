@@ -12,7 +12,7 @@ gboolean sqlite__update_keywords  (int id, const char*);
 gboolean sqlite__update_notes     (int id, const char*);
 gboolean sqlite__update_ebur      (int id, const char*);
 gboolean sqlite__update_pixbuf    (Sample*);
-gboolean sqlite__update_online    (int id, gboolean);
+gboolean sqlite__update_online    (int id, gboolean, time_t);
 gboolean sqlite__update_peaklevel (int id, float);
 
 gboolean sqlite__search_iter_new  (char* search, char* dir, const char* category, int* n_results);

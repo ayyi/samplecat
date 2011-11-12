@@ -245,6 +245,7 @@ tracker__search_iter_next()
 		result.dir = dir;
 		result.id = iter.idx;
 		result.online = true;
+		result.mtime = 0; // XXX
 
 		if(strstr(result.dir, "file://") == result.dir){
 			char* o = result.dir;
@@ -900,7 +901,7 @@ tracker__update_keywords(int id, const char* keywords)
 
 
 gboolean
-tracker__update_online(int id, gboolean online)
+tracker__update_online(int id, gboolean online, time_t mtime)
 {
 	return false;
 }
