@@ -893,7 +893,7 @@ update_row(GtkWidget *widget, gpointer user_data)
 	//GDate* date = g_date_new();
 	//g_get_current_time(date);
 
-	int i, id;
+	int i;
 	GdkPixbuf* iconbuf;
 	gboolean online;
 	for(i=0;i<g_list_length(selectionlist);i++){
@@ -930,7 +930,7 @@ update_row(GtkWidget *widget, gpointer user_data)
 
 		// TODO: consolidate w/ listmodel__update_result()
 		gtk_list_store_set(app.store, &iter, COL_ICON, iconbuf, -1);
-		if(backend.update_online(id, online, mtime)){
+		if(backend.update_online(sample->id, online, mtime)){
 			statusbar_print(1, "online status updated (%s)", online ? "online" : "not online");
 		}else
 			statusbar_print(1, "error! online status not updated");
@@ -938,7 +938,7 @@ update_row(GtkWidget *widget, gpointer user_data)
 		gtk_tree_path_free(treepath);
 		sample_unref(sample);
 	}
-	g_list_free(selectionlist);
+	//g_list_free(selectionlist);
 	//g_date_free(date);
 }
 
