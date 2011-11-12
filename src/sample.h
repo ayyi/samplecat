@@ -34,7 +34,7 @@ struct _sample
 	gboolean     online;
 
 	char*        keywords;
-	char*        misc;
+	char*        ebur;
 	char*        notes;
 	char*        mimetype;
 

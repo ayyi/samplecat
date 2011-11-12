@@ -145,7 +145,7 @@ inspector_new()
 	GtkWidget* align8 = gtk_alignment_new(0.0, 0.5, 0.0, 0.0);
 	gtk_box_pack_start(GTK_BOX(vbox), align8, EXPAND_FALSE, FILL_FALSE, 0);
 
-	GtkWidget* label8 = app.inspector->misc = gtk_label_new("Misc");
+	GtkWidget* label8 = app.inspector->ebur = gtk_label_new("EBUr128");
 	gtk_misc_set_padding(GTK_MISC(label8), margin_left, 2);
 	gtk_container_add(GTK_CONTAINER(align8), label8);	
 	
@@ -214,7 +214,7 @@ inspector_set_labels(Sample* sample)
 	gtk_label_set_text(GTK_LABEL(i->channels),   ch_str);
 	gtk_label_set_text(GTK_LABEL(i->mimetype),   sample->mimetype);
 	gtk_label_set_text(GTK_LABEL(i->level),      level);
-	gtk_label_set_markup(GTK_LABEL(i->misc),     sample->misc?sample->misc:"");
+	gtk_label_set_markup(GTK_LABEL(i->ebur),     sample->ebur?sample->ebur:"");
 	gtk_text_buffer_set_text(i->notes,           sample->notes?sample->notes:"", -1);
 
 	if (sample->overview) {
@@ -355,7 +355,7 @@ static void
 hide_fields()
 {
 	Inspector* i = app.inspector;
-	GtkWidget* fields[] = {i->filename, i->tags, i->length, i->samplerate, i->channels, i->mimetype, i->misc, i->level, i->text};
+	GtkWidget* fields[] = {i->filename, i->tags, i->length, i->samplerate, i->channels, i->mimetype, i->ebur, i->level, i->text};
 	int f = 0; for(;f<G_N_ELEMENTS(fields);f++){
 		gtk_widget_hide(GTK_WIDGET(fields[f]));
 	}
@@ -366,7 +366,7 @@ static void
 show_fields()
 {
 	Inspector* i = app.inspector;
-	GtkWidget* fields[] = {i->filename, i->tags, i->length, i->samplerate, i->channels, i->mimetype, i->misc, i->level, i->text};
+	GtkWidget* fields[] = {i->filename, i->tags, i->length, i->samplerate, i->channels, i->mimetype, i->ebur, i->level, i->text};
 	int f = 0; for(;f<G_N_ELEMENTS(fields);f++){
 		gtk_widget_show(GTK_WIDGET(fields[f]));
 	}

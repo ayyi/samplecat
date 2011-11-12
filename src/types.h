@@ -15,7 +15,7 @@ struct _samplecat_result
 	unsigned             sample_rate;
 	int                  channels;
 	float                peak_level;
-	char*                misc;
+	char*                ebur;
 	char*                notes;
 	int                  colour;
 	gboolean             online;
@@ -46,7 +46,7 @@ typedef struct _inspector
 	GtkWidget*     channels;
 	GtkWidget*     mimetype;
 	GtkWidget*     level;
-	GtkWidget*     misc;
+	GtkWidget*     ebur;
 	GtkWidget*     image;
 	GtkWidget*     text;
 	GtkTextBuffer* notes;

@@ -215,10 +215,11 @@ mysql__update_keywords(int id, const char* keywords)
 
 
 gboolean
-mysql__update_misc(int id, const char* misc)
+mysql__update_ebur(int id, const char* ebur)
 {
+	// XXX EBUR is not yet in datamodel
 	char sql[1024];
-	snprintf(sql, 1024, "UPDATE samples SET misc='%s' WHERE id=%u", notes, id);
+	snprintf(sql, 1024, "UPDATE samples SET ebur='%s' WHERE id=%u", notes, id);
 	if(mysql_query(&mysql, sql)){
 		perr("update failed! sql=%s\n", sql);
 		return false;
@@ -406,7 +407,7 @@ mysql__search_iter_next_(unsigned long** lengths)
 	result.peak_level  = get_float(row, MYSQL_PEAKLEVEL);
 	result.overview    = pixbuf;
 	result.notes       = row[MYSQL_NOTES];
-	result.misc        = ""; // XXX TODO
+	result.ebur        = ""; // row[MYSQL_EBUR] TODO
 	result.colour_index= get_int(row, MYSQL_COLOUR);
 	result.mimetype    = row[MYSQL_MIMETYPE];
 	result.online      = get_int(row, MYSQL_ONLINE);

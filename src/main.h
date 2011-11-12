@@ -58,7 +58,7 @@ struct _backend
 	gboolean         (*update_colour)    (int, int);
 	gboolean         (*update_keywords)  (int, const char*);
 	gboolean         (*update_notes)     (int, const char*);
-	gboolean         (*update_misc)      (int, const char*);
+	gboolean         (*update_ebur)      (int, const char*);
 	gboolean         (*update_pixbuf)    (Sample*);
 	gboolean         (*update_online)    (int, gboolean);
 	gboolean         (*update_peaklevel) (int, float);

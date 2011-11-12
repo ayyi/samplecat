@@ -88,7 +88,7 @@ sample_dup(Sample* s)
 	DUPSTR(sample_name)
 	DUPSTR(full_path)
 	DUPSTR(keywords)
-	DUPSTR(misc)
+	DUPSTR(ebur)
 	DUPSTR(notes)
 	DUPSTR(mimetype)
 
@@ -107,7 +107,7 @@ sample_free(Sample* sample)
 	if(sample->sample_name) g_free(sample->sample_name);
 	if(sample->full_path) g_free(sample->full_path);
 	if(sample->mimetype) g_free(sample->mimetype);
-	if(sample->misc) g_free(sample->misc);
+	if(sample->ebur) g_free(sample->ebur);
 	if(sample->notes) g_free(sample->notes);
 	if(sample->dir) g_free(sample->dir);
 	//if(sample->overview) g_free(sample->overview); // check how to free that!

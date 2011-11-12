@@ -42,7 +42,6 @@ listmodel__new()
 	 G_TYPE_STRING,    // COL_MIMETYPE
 	 G_TYPE_FLOAT,     // COL_PEAKLEVEL
 	 G_TYPE_INT,       // COL_COLOUR
-	 G_TYPE_STRING,    // COL_MISC
 	 G_TYPE_POINTER    // COL_SAMPLEPTR
 	 );
 }
@@ -141,7 +140,6 @@ listmodel__add_result(Sample* result)
 			COL_SAMPLERATE, samplerate_s,
 			COL_CHANNELS,   result->channels, 
 			COL_COLOUR,     result->colour_index,
-			COL_MISC,       NSTR(result->misc),
 #ifdef USE_AYYI
 			COL_AYYI_ICON,  ayyi_icon,
 #endif
@@ -162,7 +160,7 @@ listmodel__add_result(Sample* result)
 		dbg(0, "regenerate overview");
 		request_overview(result);
 	}
-	if(!result->misc && result->row_ref){
+	if((!result->ebur || !strlen(result->ebur)) && result->row_ref){
 		dbg(0, "regenerate ebur128");
 		request_ebur128(result);
 	}
@@ -170,8 +168,22 @@ listmodel__add_result(Sample* result)
 }
 
 void
-listmodel__update_result(Sample* sample)
+listmodel__update_result(Sample* sample, int what)
 {
+	switch (what) {
+		case COL_OVERVIEW:
+			backend.update_pixbuf(sample);
+			break;
+		case COL_PEAKLEVEL:
+			backend.update_peaklevel(sample->id, sample->peak_level);
+			break;
+		case COLX_EBUR:
+			backend.update_ebur(sample->id, sample->ebur);
+			break;
+		default:
+			dbg(0,"update for this type is not yet implemented"); 
+			break;
+	}
 	if(sample->row_ref){
 		listmodel__set_peaklevel(sample->row_ref, sample->peak_level);
 		listmodel__set_overview(sample->row_ref, sample->overview);

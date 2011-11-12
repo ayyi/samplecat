@@ -35,7 +35,7 @@ enum {
 	COLUMN_PEAKLEVEL,
 	COLUMN_NOTES,
 	COLUMN_COLOUR,
-	COLUMN_MISC,
+	COLUMN_EBUR,
 };
 
 static gboolean sqlite__update_string(int id, const char*, const char*);
@@ -87,9 +87,9 @@ sqlite__connect()
 		if (!strcmp(table[2], "sample")) {
 			dbg(0, "found table");
 			table_exists=TRUE;
-			if (!strstr(table[3], "misc Text")) { 
+			if (!strstr(table[3], "ebur Text")) { 
 				dbg(0, "updating to new model");
-				sqlite3_exec(db, "ALTER TABLE samples add misc TEXT;", NULL, NULL, &errmsg);
+				sqlite3_exec(db, "ALTER TABLE samples add ebur TEXT;", NULL, NULL, &errmsg);
 			}
 		}
 	} else {
@@ -107,7 +107,7 @@ sqlite__connect()
 		int n = sqlite3_exec(db, "CREATE TABLE samples ("
 			"id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, "
 			"filename VARCHAR(100), filedir VARCHAR(100), keywords VARCHAR(60), pixbuf BLOB, length int(22), sample_rate int(11), channels int(4), "
-			"online int(1), last_checked int(11), mimetype VARCHAR(32), peaklevel real, notes VARCHAR(256), colour INTEGER(5), misc TEXT)",
+			"online int(1), last_checked int(11), mimetype VARCHAR(32), peaklevel real, notes VARCHAR(256), colour INTEGER(5), ebur TEXT)",
 			on_create_table, 0, &errMsg);
 		if (n != SQLITE_OK) {
 			if (!strstr(errMsg, "already exists")) {
@@ -146,12 +146,12 @@ sqlite__insert(Sample* sample)
 	gchar* filename = g_path_get_basename(sample->full_path);
 	int colour = 0;
 	gchar* sql = g_strdup_printf(
-		"INSERT INTO samples(filename,filedir,length,sample_rate,channels,online,mimetype,misc,peaklevel,colour) "
+		"INSERT INTO samples(filename,filedir,length,sample_rate,channels,online,mimetype,ebur,peaklevel,colour) "
 		"VALUES ('%s','%s',%"PRIi64",'%i','%i','%i','%s', '%s', '%f', '%i')",
 		filename, filedir, 
 		sample->length, sample->sample_rate, sample->channels,
 		sample->online, sample->mimetype, 
-		sample->misc?sample->misc:"", 
+		sample->ebur?sample->ebur:"", 
 		sample->peak_level, colour
 	);
 	dbg(2, "sql=%s", sql);
@@ -302,9 +302,9 @@ sqlite__update_keywords(int id, const char* keywords)
 }
 
 gboolean
-sqlite__update_misc(int id, const char* misc)
+sqlite__update_ebur(int id, const char* ebur)
 {
-	return sqlite__update_string(id, misc, "misc");
+	return sqlite__update_string(id, ebur, "ebur");
 }
 
 gboolean
@@ -500,7 +500,7 @@ sqlite__search_iter_next(unsigned long** lengths)
 	result.channels    = sqlite3_column_int(ppStmt, COLUMN_CHANNELS);
 	result.overview    = (GdkPixbuf*)sqlite3_column_blob(ppStmt, COLUMN_PIXBUF);
 	result.notes       = (char*)sqlite3_column_text(ppStmt, COLUMN_NOTES);
-	result.misc        = (char*)sqlite3_column_text(ppStmt, COLUMN_MISC);
+	result.ebur        = (char*)sqlite3_column_text(ppStmt, COLUMN_EBUR);
 	result.colour_index= sqlite3_column_int(ppStmt, COLUMN_COLOUR);
 	result.mimetype    = (char*)sqlite3_column_text(ppStmt, COLUMN_MIMETYPE);
 	result.peak_level  = sqlite3_column_double(ppStmt, COLUMN_PEAKLEVEL);

@@ -39,8 +39,8 @@ calc_ebur128(Sample* sample)
 {
 	struct ebur128 ebur;
 	if (!ebur128analyse(sample->full_path, &ebur)){
-		if (sample->misc) free(sample->misc);
-		sample->misc      = g_strdup_printf(
+		if (sample->ebur) free(sample->ebur);
+		sample->ebur      = g_strdup_printf(
 			"<small><tt>"
 			"Integrated loudness:   %6.1lf LU%s\n"
 			"Loudness range:        %6.1lf LU\n"

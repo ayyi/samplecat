@@ -20,10 +20,10 @@ enum
   COL_PEAKLEVEL,
   //from here on items are the store but not the view.
   COL_COLOUR,
-  COL_MISC,
   COL_SAMPLEPTR,
   NUM_COLS,
   // these are NOT in the store but in the sample-struct (COL_SAMPLEPTR)
+  COLX_EBUR,
   COLX_NOTES
 };
 
@@ -32,7 +32,7 @@ void          listmodel__update                ();
 void          listmodel__clear                 ();
 void          listmodel__add_result            (Sample*);
 
-void          listmodel__update_result         (Sample*);
+void          listmodel__update_result         (Sample*, int what);
 gboolean      listmodel__update_by_ref         (GtkTreeIter *iter, int what, void *data);
 gboolean      listmodel__update_by_rowref      (GtkTreeRowReference *row_ref, int what, void *data);
 

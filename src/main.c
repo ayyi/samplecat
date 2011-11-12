@@ -764,6 +764,7 @@ add_file(char* path)
 	Sample* sample = sample_new_from_filename(path, false);
 	if (!sample) {
 		statusbar_print(1, "cannot add file: file-type is not supported");
+		return false;
 	}
 
 	if(!sample_get_file_info(sample)){
@@ -790,10 +791,7 @@ on_overview_done(gpointer _sample)
 	Sample* sample = _sample;
 	g_return_val_if_fail(sample, false);
 	if(!sample->overview){ dbg(1, "overview creation failed (no pixbuf).\n"); return false; }
-
-	backend.update_pixbuf(sample);
-	listmodel__update_result(sample);
-
+	listmodel__update_result(sample, COL_OVERVIEW);
 	sample_unref(sample);
 	return IDLE_STOP;
 }
@@ -804,9 +802,7 @@ on_peaklevel_done(gpointer _sample)
 {
 	Sample* sample = _sample;
 	dbg(1, "peaklevel=%.2f id=%i rowref=%p", sample->peak_level, sample->id, sample->row_ref);
-
-	backend.update_peaklevel(sample->id, sample->peak_level);
-	listmodel__update_result(sample);
+	listmodel__update_result(sample, COL_PEAKLEVEL);
 	sample_unref(sample);
 	return IDLE_STOP;
 }
@@ -815,10 +811,7 @@ gboolean
 on_ebur128_done(gpointer _sample)
 {
 	Sample* sample = _sample;
-
-	backend.update_misc(sample->id, sample->misc);
-	listmodel__update_result(sample);
-
+	listmodel__update_result(sample, COLX_EBUR);
 	sample_unref(sample);
 	return IDLE_STOP;
 }
@@ -1437,7 +1430,7 @@ set_backend(BackendType type)
 			backend.update_colour    = mysql__update_colour;
 			backend.update_keywords  = mysql__update_keywords;
 			backend.update_notes     = mysql__update_notes;
-			backend.update_misc      = mysql__update_misc;
+			backend.update_ebur      = mysql__update_ebur;
 			backend.update_pixbuf    = mysql__update_pixbuf;
 			backend.update_online    = mysql__update_online;
 			backend.update_peaklevel = mysql__update_peaklevel;
@@ -1458,7 +1451,7 @@ set_backend(BackendType type)
 			backend.update_colour    = sqlite__update_colour;
 			backend.update_keywords  = sqlite__update_keywords;
 			backend.update_notes     = sqlite__update_notes;
-			backend.update_misc      = sqlite__update_misc;
+			backend.update_ebur      = sqlite__update_ebur;
 			backend.update_pixbuf    = sqlite__update_pixbuf;
 			backend.update_online    = sqlite__update_online;
 			backend.update_peaklevel = sqlite__update_peaklevel;
@@ -1478,7 +1471,7 @@ set_backend(BackendType type)
 			backend.update_keywords  = tracker__update_keywords;
 			backend.update_pixbuf    = tracker__update_ignore;
 			backend.update_notes     = tracker__update_ignore;
-			backend.update_misc      = tracker__update_ignore;
+			backend.update_ebur      = tracker__update_ignore;
 			backend.update_online    = tracker__update_online;
 			backend.update_peaklevel = tracker__update_peaklevel;
 			backend.disconnect       = tracker__disconnect;
