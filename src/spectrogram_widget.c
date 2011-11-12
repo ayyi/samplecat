@@ -51,6 +51,7 @@ struct _SpectrogramWidgetPrivate {
 static gpointer spectrogram_widget_parent_class = NULL;
 
 void get_spectrogram_with_target (gchar* path, RenderDoneFunc on_ready, void* on_ready_target, void* user_data);
+void cancel_spectrogram (gchar* path);
 GType spectrogram_widget_get_type (void) G_GNUC_CONST;
 #define SPECTROGRAM_WIDGET_GET_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), TYPE_SPECTROGRAM_WIDGET, SpectrogramWidgetPrivate))
 enum  {
@@ -113,11 +114,14 @@ void spectrogram_widget_set_file (SpectrogramWidget* self, gchar* filename) {
 	p1 = __lambda0__render_done_func;
 	p1_target = g_object_ref (self);
 	p1_target_destroy_notify = g_object_unref;
+	if (self->priv->pixbuf) gdk_pixbuf_fill(self->priv->pixbuf, 0x0);
+	cancel_spectrogram (NULL);
 	get_spectrogram_with_target (filename, _spectrogram_widget_image_ready_render_done_func, self, NULL);
 	(p1_target_destroy_notify == NULL) ? NULL : (p1_target_destroy_notify (p1_target), NULL);
 	p1 = NULL;
 	p1_target = NULL;
 	p1_target_destroy_notify = NULL;
+	gtk_widget_queue_draw ((GtkWidget*) self);
 }
 
 
