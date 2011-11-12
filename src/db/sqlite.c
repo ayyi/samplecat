@@ -17,7 +17,6 @@
 
 static sqlite3* db;
 sqlite3_stmt* ppStmt = NULL;
-static Sample result;
 extern int debug;
 #define MAX_LEN 256 //temp!
 
@@ -178,7 +177,7 @@ sqlite__insert(Sample* sample)
 gboolean
 sqlite__delete_row(int id)
 {
-	int on_insert(void* NotUsed, int argc, char** argv, char** azColName)
+	int on_delete(void* NotUsed, int argc, char** argv, char** azColName)
 	{
 		PF;
 		return 0;
@@ -189,7 +188,7 @@ sqlite__delete_row(int id)
 	dbg(1, "sql=%s", sql);
 	char* errMsg = 0;
 	int n;
-	if((n = sqlite3_exec(db, sql, on_insert, 0, &errMsg)) != SQLITE_OK){
+	if((n = sqlite3_exec(db, sql, on_delete, 0, &errMsg)) != SQLITE_OK){
 		perr("delete failed! sql=%s\n", errMsg);
 		ok = false;
 	}
@@ -381,52 +380,6 @@ sqlite__update_peaklevel(int id, float level)
 	return sqlite__update_float(id, level, "peaklevel");
 }
 
-
-#ifdef NEVER
-static int
-delete_row (int argc, char *argv[])
-{
-	int on_delete(void* NotUsed, int argc, char** argv, char** azColName)
-	{
-		PF;
-		return 0;
-	}
-
-	int n = 0, ret = 0;
-	char* errMsg = 0;
-
-	/* Allocate memory */
-	char* domain = g_malloc (MAX_LEN);
-	char* query = g_malloc (MAX_LEN);
-
-	/* Request user input */
-	printf ("Enter domain, e.g. mail.yahoo.com: ");
-	fgets (domain, MAX_LEN, stdin);
-
-	/* remove trailing newline */
-	domain[strlen(domain) - 1] = '\0';
-
-	/* Execute to database */
-	sqlite3_snprintf (MAX_LEN, query, "DELETE FROM mypass WHERE domain='%q'", domain);
-	printf ("query = %s\n", query);
-
-	/* Check return result */
-	n = sqlite3_exec(db, query, on_delete, 0, &errMsg);
-	if (n != SQLITE_OK) {
-		fprintf(stderr, "SQL error: %s\n", errMsg);
-		ret = 1;
-	}
-	else
-		ret = 0;
-
-	/* Free allocated memory */
-	g_free(domain);
-	g_free(query);
-	return ret;
-}
-#endif
-
-
 gboolean
 sqlite__search_iter_new(char* search, char* dir, const char* category, int* n_results)
 {
@@ -513,45 +466,48 @@ sqlite__search_iter_new(char* search, char* dir, const char* category, int* n_re
 Sample*
 sqlite__search_iter_next(unsigned long** lengths)
 {
-	memset(&result, 0, sizeof(Sample));
 
 	int n = sqlite3_step(ppStmt);
-	if(n == SQLITE_ROW){
+	if(n != SQLITE_ROW) return NULL;
 
-		//deserialise the pixbuf field:
-		GdkPixdata pixdata;
-		GdkPixbuf* pixbuf = NULL;
-		const char* blob = sqlite3_column_blob(ppStmt, COLUMN_PIXBUF);
-		if(blob){
-			int length = sqlite3_column_bytes(ppStmt, COLUMN_PIXBUF);
-			dbg(2, "pixbuf_length=%i", length);
-			if(gdk_pixdata_deserialize(&pixdata, length, (guint8*)blob, NULL)){
-				pixbuf = gdk_pixbuf_from_pixdata(&pixdata, TRUE, NULL);
-			}
+	//deserialise the pixbuf field:
+	GdkPixdata pixdata;
+	GdkPixbuf* pixbuf = NULL;
+	const char* blob = sqlite3_column_blob(ppStmt, COLUMN_PIXBUF);
+	if(blob){
+		int length = sqlite3_column_bytes(ppStmt, COLUMN_PIXBUF);
+		dbg(2, "pixbuf_length=%i", length);
+		if(gdk_pixdata_deserialize(&pixdata, length, (guint8*)blob, NULL)){
+			pixbuf = gdk_pixbuf_from_pixdata(&pixdata, TRUE, NULL);
 		}
-#define XSDP(X) (X?strdup(X):"")
-		result.id          = sqlite3_column_int(ppStmt, COLUMN_ID);
-		result.sample_name = XSDP((char*)sqlite3_column_text(ppStmt, COLUMN_FILENAME));
-		result.dir         = XSDP((char*)sqlite3_column_text(ppStmt, COLUMN_DIR));
-		result.full_path   = g_strdup_printf("%s/%s", result.dir, result.sample_name);
-		result.keywords    = XSDP((char*)sqlite3_column_text(ppStmt, COLUMN_KEYWORDS));
-		result.length      = sqlite3_column_int(ppStmt, COLUMN_LENGTH);
-		result.sample_rate = sqlite3_column_int(ppStmt, COLUMN_SAMPLERATE);
-		result.channels    = sqlite3_column_int(ppStmt, COLUMN_CHANNELS);
-		result.overview    = (GdkPixbuf*)sqlite3_column_blob(ppStmt, COLUMN_PIXBUF);
-		result.notes       = XSDP((char*)sqlite3_column_text(ppStmt, COLUMN_NOTES));
-		result.misc        = XSDP((char*)sqlite3_column_text(ppStmt, COLUMN_MISC));
-		result.colour_index= sqlite3_column_int(ppStmt, COLUMN_COLOUR);
-		result.mimetype    = XSDP((char*)sqlite3_column_text(ppStmt, COLUMN_MIMETYPE));
-		result.peak_level  = sqlite3_column_double(ppStmt, COLUMN_PEAKLEVEL);
-		result.online      = sqlite3_column_int(ppStmt, COLUMN_ONLINE);
-		result.overview    = pixbuf;
-
-		//sqlite3_result_blob(sqlite3_context*, const void*, int, void(*)(void*));
-
-		return &result;
 	}
-	else return NULL;
+
+	static Sample result;
+	static char full_path[PATH_MAX];
+
+	memset(&result, 0, sizeof(Sample));
+	result.id          = sqlite3_column_int(ppStmt, COLUMN_ID);
+	result.sample_name = (char*)sqlite3_column_text(ppStmt, COLUMN_FILENAME);
+	result.dir         = (char*)sqlite3_column_text(ppStmt, COLUMN_DIR);
+	result.keywords    = (char*)sqlite3_column_text(ppStmt, COLUMN_KEYWORDS);
+	result.length      = sqlite3_column_int(ppStmt, COLUMN_LENGTH);
+	result.sample_rate = sqlite3_column_int(ppStmt, COLUMN_SAMPLERATE);
+	result.channels    = sqlite3_column_int(ppStmt, COLUMN_CHANNELS);
+	result.overview    = (GdkPixbuf*)sqlite3_column_blob(ppStmt, COLUMN_PIXBUF);
+	result.notes       = (char*)sqlite3_column_text(ppStmt, COLUMN_NOTES);
+	result.misc        = (char*)sqlite3_column_text(ppStmt, COLUMN_MISC);
+	result.colour_index= sqlite3_column_int(ppStmt, COLUMN_COLOUR);
+	result.mimetype    = (char*)sqlite3_column_text(ppStmt, COLUMN_MIMETYPE);
+	result.peak_level  = sqlite3_column_double(ppStmt, COLUMN_PEAKLEVEL);
+	result.online      = sqlite3_column_int(ppStmt, COLUMN_ONLINE);
+	result.overview    = pixbuf;
+
+	snprintf(full_path, PATH_MAX, "%s/%s", result.dir, result.sample_name); full_path[PATH_MAX-1]='\0';
+	result.full_path   = full_path;
+
+	//sqlite3_result_blob(sqlite3_context*, const void*, int, void(*)(void*));
+
+	return &result;
 }
 
 

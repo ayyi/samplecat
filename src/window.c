@@ -10,6 +10,7 @@
 #include <gimp/gimpaction.h>
 #include <gimp/gimpactiongroup.h>
 #include "typedefs.h"
+#include "sample.h"
 #include "support.h"
 #include "main.h"
 #include "listview.h"
@@ -786,11 +787,23 @@ on_category_set_clicked(GtkComboBox *widget, gpointer user_data)
 
 	PF;
 
+	// TODO: consolidate with row_set_tags_from_id() and row_clear_tags() 
 	gboolean row_set_tags(GtkTreeIter* iter, int id, const char* tags_new)
 	{
+		dbg(0, "row_set_tags");
 		if(backend.update_keywords(id, tags_new)){
 			//update the store:
 			gtk_list_store_set(app.store, iter, COL_KEYWORDS, tags_new, -1);
+			//update sample
+			Sample *s;
+			gtk_tree_model_get(GTK_TREE_MODEL(app.store), iter, COL_SAMPLEPTR, &s, -1);
+			if (s->keywords) free(s->keywords);
+			s->keywords=strdup(tags_new);
+			//update inspector IFF currently visible!
+			if (s->id == app.inspector->row_id) {
+				dbg(0, "row_set_tags inspector_set_labels");
+				inspector_set_labels(s);
+			}
 			return true;
 		}else{
 			return false;
@@ -858,6 +871,14 @@ row_clear_tags(GtkTreeIter* iter, int id)
 
 	//update the store:
 	gtk_list_store_set(app.store, iter, COL_KEYWORDS, "", -1);
+
+	Sample *s;
+	gtk_tree_model_get(GTK_TREE_MODEL(app.store), iter, COL_SAMPLEPTR, &s, -1);
+	if (s->keywords) free(s->keywords);
+	s->keywords=strdup("");
+	if (s->id == app.inspector->row_id) {
+		inspector_set_labels(s);
+	}
 	return true;
 }
 

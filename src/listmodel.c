@@ -25,11 +25,25 @@ extern unsigned debug;
 GtkListStore*
 listmodel__new()
 {
-	return gtk_list_store_new(NUM_COLS, GDK_TYPE_PIXBUF,
-	                               #ifdef USE_AYYI
-	                               GDK_TYPE_PIXBUF,
-	                               #endif
-	                               G_TYPE_INT, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING, GDK_TYPE_PIXBUF, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_INT, G_TYPE_STRING, G_TYPE_FLOAT, G_TYPE_STRING, G_TYPE_INT, G_TYPE_STRING);
+	return gtk_list_store_new(NUM_COLS, 
+	 GDK_TYPE_PIXBUF,  // COL_ICON
+ #ifdef USE_AYYI
+	 GDK_TYPE_PIXBUF,  // COL_AYYI_ICON
+ #endif
+	 G_TYPE_INT,       // COL_IDX
+	 G_TYPE_STRING,    // COL_NAME
+	 G_TYPE_STRING,    // COL_FNAME
+	 G_TYPE_STRING,    // COL_KEYWORDS
+	 GDK_TYPE_PIXBUF,  // COL_OVERVIEW
+	 G_TYPE_STRING,    // COL_LENGTH,
+	 G_TYPE_STRING,    // COL_SAMPLERATE
+	 G_TYPE_INT,       // COL_CHANNELS
+	 G_TYPE_STRING,    // COL_MIMETYPE
+	 G_TYPE_FLOAT,     // COL_PEAKLEVEL
+	 G_TYPE_INT,       // COL_COLOUR
+	 G_TYPE_STRING,    // COL_MISC
+	 G_TYPE_POINTER    // COL_SAMPLEPTR
+	 );
 }
 
 
@@ -44,28 +58,26 @@ void
 listmodel__clear()
 {
 	PF;
-
-	//gtk_list_store_clear(app.store);
-
+	dbg(0,"..");
 	GtkTreeIter iter;
-	GdkPixbuf* pixbuf = NULL;
-
 	while(gtk_tree_model_get_iter_first(GTK_TREE_MODEL(app.store), &iter)){
-
+		GdkPixbuf* pixbuf = NULL;
+		Sample* sample = NULL;
 		gtk_tree_model_get(GTK_TREE_MODEL(app.store), &iter, COL_OVERVIEW, &pixbuf, -1);
-
+		gtk_tree_model_get(GTK_TREE_MODEL(app.store), &iter, COL_SAMPLEPTR, &sample, -1);
 		gtk_list_store_remove(app.store, &iter);
-
 		if(pixbuf) g_object_unref(pixbuf);
+		if(sample) sample_unref(sample);
 	}
 }
-
 
 void
 listmodel__add_result(Sample* result)
 {
+	dbg(0,"..");
 	if(!app.store) return;
 	g_return_if_fail(result);
+	dbg(0,"OK");
 
 #if 1
 	/* this has actualy been checked _before_ here
@@ -95,7 +107,6 @@ listmodel__add_result(Sample* result)
 #endif
 
 	char samplerate_s[32]; samplerate_format(samplerate_s, result->sample_rate);
-	char* keywords = result->keywords ? result->keywords : "";
 	char length[64]; format_time_int(length, result->length);
 
 #ifdef USE_AYYI
@@ -124,21 +135,20 @@ listmodel__add_result(Sample* result)
 			COL_FNAME,      result->dir,
 			COL_IDX,        result->id,
 			COL_MIMETYPE,   result->mimetype,
-			COL_KEYWORDS,   NSTR(keywords), 
+			COL_KEYWORDS,   NSTR(result->keywords), 
 			COL_PEAKLEVEL,  result->peak_level,
 			COL_OVERVIEW,   result->overview,
 			COL_LENGTH,     length,
 			COL_SAMPLERATE, samplerate_s,
 			COL_CHANNELS,   result->channels, 
-			COL_NOTES,      NSTR(result->notes),
 			COL_COLOUR,     result->colour_index,
 			COL_MISC,       NSTR(result->misc),
 #ifdef USE_AYYI
 			COL_AYYI_ICON,  ayyi_icon,
 #endif
+			COL_SAMPLEPTR,  result,
 			-1);
 
-	// XXX only create a row_reference IFF !result->overview
 	GtkTreePath* treepath;
 	if((treepath = gtk_tree_model_get_path(GTK_TREE_MODEL(app.store), &iter))){
 		result->row_ref = gtk_tree_row_reference_new(GTK_TREE_MODEL(app.store), treepath);
@@ -153,9 +163,6 @@ listmodel__add_result(Sample* result)
 		dbg(0, "regenerate overview");
 		request_overview(result);
 	}
-	/* gtk_list_store_set will only "copy"  G_TYPE_STRING or G_TYPE_BOXED.
-	 * references to char* need to kept allocated!
-	 */
 	sample_ref(result);
 }
 
@@ -217,5 +224,3 @@ listmodel__set_peaklevel(GtkTreeRowReference* row_ref, float level)
 		gtk_tree_path_free(treepath);
 	} else dbg(2, "no path for rowref. row_ref=%p\n", row_ref); //this is not an error. The row may not be part of the current search.
 }
-
-

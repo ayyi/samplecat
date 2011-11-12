@@ -18,6 +18,7 @@
 #include "pixmaps.h"
 #include "overview.h"
 #include "listview.h"
+#include "inspector.h"
 
 #if (defined USE_DBUS || defined USE_GAUDITION)
 #include "auditioner.h"
@@ -283,6 +284,7 @@ listview__on_row_clicked(GtkWidget *widget, GdkEventButton *event, gpointer user
 
 					if(tags && strlen(tags)){
 						gtk_entry_set_text(GTK_ENTRY(app.search), tags);
+						strncpy(app.search_phrase, tags, 255);
 						do_search(tags, NULL);
 					}
 				}
@@ -672,6 +674,7 @@ listview__on_motion(GtkWidget *widget, GdkEventMotion *event, gpointer user_data
 }
 
 
+// TODO: consolidate with row_set_tags_from_id() and row_clear_tags() 
 static void
 listview__on_keywords_edited(GtkCellRendererText *cell, gchar *path_string, gchar *new_text, gpointer user_data)
 {
@@ -695,8 +698,19 @@ listview__on_keywords_edited(GtkCellRendererText *cell, gchar *path_string, gcha
 	if(backend.update_keywords && backend.update_keywords(idx, new_text)){
 
 		gtk_list_store_set(app.store, &iter, COL_KEYWORDS, new_text, -1);
-
 		statusbar_print(1, "keywords updated");
+
+		//update the store:
+		gtk_list_store_set(app.store, &iter, COL_KEYWORDS, new_text, -1);
+		//update sample
+		Sample *s;
+		gtk_tree_model_get(GTK_TREE_MODEL(app.store), &iter, COL_SAMPLEPTR, &s, -1);
+		if (s->keywords) free(s->keywords);
+		s->keywords=strdup(new_text);
+		//update inspector IFF currently visible!
+		if (s->id == app.inspector->row_id) {
+			inspector_set_labels(s);
+		}
 	}
 	else statusbar_print(1, "database error! keywords not updated");
 }

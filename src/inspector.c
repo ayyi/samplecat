@@ -196,6 +196,8 @@ inspector_set_labels(Sample* sample)
 	if(!i) return;
 	g_return_if_fail(sample);
 
+	/* TODO: skip IFF edit (notes, tags) is in progress */
+
 	char* ch_str = channels_format(sample->channels);
 	char* level  = gain2dbstring(sample->peak_level);
 
@@ -213,8 +215,7 @@ inspector_set_labels(Sample* sample)
 	gtk_label_set_text(GTK_LABEL(i->mimetype),   sample->mimetype);
 	gtk_label_set_text(GTK_LABEL(i->level),      level);
 	gtk_label_set_text(GTK_LABEL(i->misc),       sample->misc?sample->misc:""); // XXX
-	gtk_text_buffer_set_text(i->notes, sample->notes ? sample->notes : "", -1);
-	gtk_text_buffer_set_text(app.inspector->notes, "", -1);
+	gtk_text_buffer_set_text(i->notes,           sample->notes ? sample->notes : "", -1);
 
 	if (sample->overview) {
 		gtk_image_set_from_pixbuf(GTK_IMAGE(i->image), sample->overview);
@@ -236,6 +237,9 @@ inspector_set_labels(Sample* sample)
 	} else {
 		dbg(0, "setting row_ref failed!\n");
 		i->row_ref = NULL;
+		/* can not edit tags or notes w/o reference */
+		gtk_widget_hide(GTK_WIDGET(i->text));
+		gtk_widget_hide(GTK_WIDGET(i->tags));
 	}
 }
 
@@ -247,6 +251,7 @@ inspector_update_from_result(Sample* sample)
 	Inspector* i = app.inspector;
 	if(!i) return;
 	g_return_if_fail(sample);
+	/* TODO: skip IFF edit (notes, tags) is in progress */
 
 	#ifdef USE_TRACKER
 	if(BACKEND_IS_TRACKER){
@@ -287,6 +292,7 @@ inspector_update_from_fileview(GtkTreeView* treeview)
 		g_list_free (list);
 		return;
 	}
+	/* TODO: skip IFF edit (notes, tags) is in progress */
 
 	GtkTreeIter iter;
 	gtk_tree_model_get_iter(model, &iter, list->data);
@@ -326,7 +332,6 @@ inspector_update_from_fileview(GtkTreeView* treeview)
 
 	if(sample_get_file_info(sample)){
 		inspector_set_labels(sample);
-		show_fields();
 	} else {
 		inspector_clear();
 		gtk_label_set_text(GTK_LABEL(i->name),       sample->sample_name);
@@ -350,7 +355,7 @@ static void
 hide_fields()
 {
 	Inspector* i = app.inspector;
-	GtkWidget* fields[] = {i->filename, i->tags, i->length, i->samplerate, i->channels, i->mimetype, i->misc, i->level, i->edit};
+	GtkWidget* fields[] = {i->filename, i->tags, i->length, i->samplerate, i->channels, i->mimetype, i->misc, i->level, i->text};
 	int f = 0; for(;f<G_N_ELEMENTS(fields);f++){
 		gtk_widget_hide(GTK_WIDGET(fields[f]));
 	}
@@ -361,24 +366,19 @@ static void
 show_fields()
 {
 	Inspector* i = app.inspector;
-	GtkWidget* fields[] = {i->filename, i->tags, i->length, i->samplerate, i->channels, i->mimetype, i->misc, i->level, i->edit};
+	GtkWidget* fields[] = {i->filename, i->tags, i->length, i->samplerate, i->channels, i->mimetype, i->misc, i->level, i->text};
 	int f = 0; for(;f<G_N_ELEMENTS(fields);f++){
 		gtk_widget_show(GTK_WIDGET(fields[f]));
 	}
 }
 
 
+/** a single click on the Tags label puts us into edit mode.*/
 static gboolean
 inspector_on_tags_clicked(GtkWidget *widget, GdkEventButton *event, gpointer user_data)
 {
-	/*
-	a single click on the Tags label puts us into edit mode.
-	*/
-
 	if(event->button == 3) return FALSE;
-
 	tag_edit_start(0);
-
 	return TRUE;
 }
 
@@ -407,24 +407,51 @@ on_notes_focus_out(GtkWidget *widget, gpointer userdata)
 	unsigned id = app.inspector->row_id;
 	if (id>=0 && backend.update_notes(id, notes)){
 		statusbar_print(1, "notes updated");
-		dbg(0, "update notes for id: %d", id);
-#if 1
-		g_return_val_if_fail(app.inspector->row_ref && gtk_tree_row_reference_valid(app.inspector->row_ref), false);
-		GtkTreePath *path;
-		if((path = gtk_tree_row_reference_get_path(app.inspector->row_ref))){
-			GtkTreeIter iter;
-			gtk_tree_model_get_iter(GTK_TREE_MODEL(app.store), &iter, path);
-			gtk_list_store_set(app.store, &iter, COL_NOTES, notes, -1);
-			gtk_tree_path_free(path);
+		Sample *s = sample_get_by_row_ref(app.inspector->row_ref);
+		if (s) {
+			if (s->notes) free(s->notes);
+			s->notes = strdup(notes);
+		} else {
+			dbg(0, "failed to update sample-struct notes.");
 		}
-		// TODO update sample->notes as well.
-#endif
 	} else {
 		dbg(0, "failed to update notes for id:%d", id);
 	}
 	g_free(notes);
 	return FALSE;
 }
+
+// TODO: merge with window.c row_clear_tags() and row_set_tags()
+gboolean
+row_set_tags_from_id(int id, GtkTreeRowReference* row_ref, const char* tags_new)
+{
+	if(!id){ perr("bad arg: id (%i)\n", id); return false; }
+	g_return_val_if_fail(row_ref, false);
+	dbg(0, "id=%i", id);
+
+	if(!backend.update_keywords(id, tags_new)){
+		statusbar_print(1, "database error. keywords not updated");
+		return false;
+	}
+
+	//update the store:
+	GtkTreePath *path;
+	if((path = gtk_tree_row_reference_get_path(row_ref))){
+		GtkTreeIter iter;
+		gtk_tree_model_get_iter(GTK_TREE_MODEL(app.store), &iter, path);
+		gtk_tree_path_free(path);
+
+		gtk_list_store_set(app.store, &iter, COL_KEYWORDS, tags_new, -1);
+		Sample *s;
+		gtk_tree_model_get(GTK_TREE_MODEL(app.store), &iter, COL_SAMPLEPTR, &s, -1);
+		if (s->keywords) free(s->keywords);
+		s->keywords=strdup(tags_new);
+	}
+	else { perr("cannot get row path: id=%i.\n", id); return false; }
+
+	return true;
+}
+
 
 
 static void
@@ -454,11 +481,17 @@ tag_edit_start(int tnum)
   if(!GTK_IS_WIDGET(app.inspector->edit)){ perr("edit widget missing.\n"); return;}
   if(!GTK_IS_WIDGET(label))              { perr("label widget is missing.\n"); return;}
 
-  //show the rename widget:
-  gtk_entry_set_text(GTK_ENTRY(app.inspector->edit), gtk_label_get_text(GTK_LABEL(label)));
+	Sample *s = sample_get_by_row_ref(app.inspector->row_ref);
+	if (!s) {
+		dbg(0,"sample not found");
+	} else {
+		//show the rename widget:
+		gtk_entry_set_text(GTK_ENTRY(app.inspector->edit), s->keywords?s->keywords:"");
+	}
   g_object_ref(label); //stops gtk deleting the widget.
   gtk_container_remove(GTK_CONTAINER(parent), label);
   gtk_container_add   (GTK_CONTAINER(parent), app.inspector->edit);
+	gtk_widget_show(edit);
 
   //our focus-out could be improved by properly focussing other widgets when clicked on (widgets that dont catch events?).
 
@@ -517,13 +550,14 @@ tag_edit_stop(GtkWidget *widget, GdkEventCrossing *event, gpointer user_data)
   */
 	   
   //change the text in the label:
-  gtk_label_set_text(GTK_LABEL(app.inspector->tags), gtk_entry_get_text(GTK_ENTRY(edit)));
-  dbg(0, "text set.");
+	gchar * newtxt = gtk_entry_get_text(GTK_ENTRY(edit));
+	char* keywords = (newtxt && strlen(newtxt)) ? newtxt : "<no tags>";
+  gtk_label_set_text(GTK_LABEL(app.inspector->tags), keywords);
 
   //update the data:
   //update the string for the channel that the current track is using:
   //int ch = track_get_ch_idx(tnum);
-  row_set_tags_from_id(app.inspector->row_id, app.inspector->row_ref, gtk_entry_get_text(GTK_ENTRY(edit)));
+  row_set_tags_from_id(app.inspector->row_id, app.inspector->row_ref, newtxt);
 
   //swap back to the normal label:
   gtk_container_remove(GTK_CONTAINER(parent), edit);
@@ -532,7 +566,6 @@ tag_edit_stop(GtkWidget *widget, GdkEventCrossing *event, gpointer user_data)
   
   gtk_container_add(GTK_CONTAINER(parent), app.inspector->tags);
   g_object_unref(app.inspector->tags); //remove 'artificial' ref added in edit_start.
-  
   dbg(0, "finished.");
   //busy = false;
 }

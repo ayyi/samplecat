@@ -71,8 +71,29 @@ Sample*
 sample_dup(Sample* s)
 {
 	Sample* r = g_new0(struct _sample, 1);
-	memcpy(r,s, sizeof(Sample));
-	// XXX: duplicate all string texts !!! -> free static in db ..
+	memset(r,0, sizeof(Sample));
+
+  r->id        = s->id;
+  r->ref_count    =0;
+	r->sample_rate  = s->sample_rate;
+	r->length       = s->length;
+	r->frames       = s->frames;
+	r->channels     = s->channels;
+	r->bitdepth     = s->bitdepth;
+	r->peak_level   = s->peak_level;
+	r->colour_index = s->colour_index;
+	r->online       = s->online;
+#define DUPSTR(P) if (s->P) r->P=strdup(s->P);
+	DUPSTR(dir)
+	DUPSTR(sample_name)
+	DUPSTR(full_path)
+	DUPSTR(updated)
+	DUPSTR(keywords)
+	DUPSTR(misc)
+	DUPSTR(notes)
+	DUPSTR(mimetype)
+
+	if (s->overview)    r->overview=gdk_pixbuf_copy(s->overview);
 	sample_ref(r);
 	return r;
 }
@@ -153,16 +174,39 @@ sample_get_file_info(Sample* sample)
 }
 
 Sample*
-sample_new_from_model(GtkTreePath* path)
+sample_get_by_row_ref(GtkTreeRowReference* ref)
 {
+	dbg(0,"...");
+	GtkTreePath *path;
+	if (!ref || !gtk_tree_row_reference_valid(ref)) return NULL;
+	if(!(path = gtk_tree_row_reference_get_path(ref))) return NULL;
+
+	Sample* sample = NULL;
+#if 0
 	GtkTreeModel* model = gtk_tree_view_get_model(GTK_TREE_VIEW(app.view));
+#else
+	GtkTreeModel* model = GTK_TREE_MODEL(app.store);
+#endif
 	GtkTreeIter iter;
 	gtk_tree_model_get_iter(model, &iter, path);
-	// XXX TODO store pointer to sample in model!
-#if 0
+	gtk_tree_model_get(model, &iter, COL_SAMPLEPTR, &sample, -1);
+	if (sample && !sample->row_ref) sample->row_ref = gtk_tree_row_reference_new(GTK_TREE_MODEL(app.store), path);
+	gtk_tree_path_free(path);
+	return sample;
+}
+
+Sample*
+sample_new_from_model(GtkTreePath* path)
+{
+	dbg(0,"...");
+	GtkTreeModel* model = GTK_TREE_MODEL(app.store);
+	//GtkTreeModel* model = gtk_tree_view_get_model(GTK_TREE_VIEW(app.view));
+	GtkTreeIter iter;
+	gtk_tree_model_get_iter(model, &iter, path);
+#if 1
 	Sample* sample;
 	gtk_tree_model_get(model, &iter, COL_SAMPLEPTR, &sample, -1);
-	//if (!sample->row_ref) sample->row_ref = gtk_tree_row_reference_new(GTK_TREE_MODEL(app.store), path);
+	if (sample && !sample->row_ref) sample->row_ref = gtk_tree_row_reference_new(GTK_TREE_MODEL(app.store), path);
 	sample_ref(sample);
 	return sample;
 #else

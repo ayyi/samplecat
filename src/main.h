@@ -174,8 +174,6 @@ struct _palette {
 	guint blu[8];
 };
 
-gboolean    row_set_tags_from_id(int id, GtkTreeRowReference*, const char* tags_new);
-
 void        do_search(char* search, char* dir);
 
 gboolean    new_search(GtkWidget*, gpointer userdata);

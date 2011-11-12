@@ -379,8 +379,12 @@ mysql__search_iter_next_(unsigned long** lengths)
 		return row[i] ? atof(row[i]) : 0.0;
 	}
 
+	static char full_path[PATH_MAX];
+	snprintf(full_path, PATH_MAX, "%s/%s", row[MYSQL_DIR], row[MYSQL_NAME]);
+	full_path[PATH_MAX-1]='\0';
+
 	result.id          = atoi(row[MYSQL_ID]);
-	result.full_path   = g_strdup_printf("%s/%s", row[MYSQL_DIR], row[MYSQL_NAME]);
+	result.full_path   = full_path;
 	result.sample_name = row[MYSQL_NAME];
 	result.dir         = row[MYSQL_DIR];
 	result.keywords    = row[MYSQL_KEYWORDS];

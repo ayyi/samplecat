@@ -87,9 +87,6 @@ static GtkWidget* make_context_menu         ();
 static gboolean   can_use_backend           (const char*);
 static gboolean   toggle_recursive_add      (GtkWidget*, gpointer);
 static gboolean   on_directory_list_changed ();
-#ifdef NEVER
-static void       on_file_moved             (GtkTreeIter);
-#endif
 static void      _set_search_dir            (char*);
 static gboolean   dir_tree_update           (gpointer);
 static bool       config_load               ();
@@ -244,6 +241,10 @@ main(int argc, char** argv)
 	type_init();
 	pixmaps_init();
 	dir_init();
+	app.store = listmodel__new();
+	if (!app.store) {
+		dbg(0,"GOTCHA");
+	}
 
 #ifdef USE_MYSQL
 	if(can_use_backend("mysql")){
@@ -303,8 +304,6 @@ main(int argc, char** argv)
 	}
 #endif
 
-	app.store = listmodel__new();
-
 	if(!app.no_gui) window_new(); 
 	if(!app.no_gui) app.context_menu = make_context_menu();
 
@@ -361,6 +360,7 @@ main(int argc, char** argv)
 void
 update_search_dir(gchar* uri)
 {
+	dbg(0,"..");
 	_set_search_dir(uri);
 
 	const gchar* text = app.search ? gtk_entry_get_text(GTK_ENTRY(app.search)) : "";
@@ -554,33 +554,6 @@ do_search(char* search, char* dir)
 }
 
 
-gboolean
-row_set_tags_from_id(int id, GtkTreeRowReference* row_ref, const char* tags_new)
-{
-	if(!id){ perr("bad arg: id (%i)\n", id); return false; }
-	g_return_val_if_fail(row_ref, false);
-	dbg(0, "id=%i", id);
-
-	if(!backend.update_keywords(id, tags_new)){
-		statusbar_print(1, "database error. keywords not updated");
-		return false;
-	}
-
-	//update the store:
-	GtkTreePath *path;
-	if((path = gtk_tree_row_reference_get_path(row_ref))){
-		GtkTreeIter iter;
-		gtk_tree_model_get_iter(GTK_TREE_MODEL(app.store), &iter, path);
-		gtk_tree_path_free(path);
-
-		gtk_list_store_set(app.store, &iter, COL_KEYWORDS, tags_new, -1);
-	}
-	else { perr("cannot get row path: id=%i.\n", id); return false; }
-
-	return true;
-}
-
-
 static void
 create_nodes_for_path(gchar** path)
 {
@@ -723,16 +696,6 @@ update_dir_node_list()
 	dbg(2, "size=%i", g_node_n_children(app.dir_tree));
 }
 
-
-gboolean
-new_search(GtkWidget *widget, gpointer userdata)
-{
-	gwarn("deprecated function");
-	const gchar* text = gtk_entry_get_text(GTK_ENTRY(app.search));
-	
-	do_search((gchar*)text, app.search_dir);
-	return false;
-}
 
 
 gboolean
@@ -1250,27 +1213,6 @@ toggle_recursive_add(GtkWidget *widget, gpointer user_data)
 	if(app.add_recursive) app.add_recursive = false; else app.add_recursive = true;
 	return false;
 }
-
-
-#ifdef NEVER
-static void
-on_file_moved(GtkTreeIter iter)
-{
-	PF;
-
-	gchar *tags;
-	gchar *fpath;
-	gchar *fname;
-	gchar *length;
-	gchar *samplerate;
-	int channels;
-	gchar *mimetype;
-	gchar *notes;
-	int id;
-	gtk_tree_model_get(GTK_TREE_MODEL(app.store), &iter, COL_NAME, &fname, COL_FNAME, &fpath, COL_KEYWORDS, &tags, COL_LENGTH, &length, COL_SAMPLERATE, &samplerate, COL_CHANNELS, &channels, COL_MIMETYPE, &mimetype, COL_NOTES, &notes, COL_IDX, &id, -1);
-}
-#endif
-
 
 extern char theme_name[];
 

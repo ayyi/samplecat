@@ -241,7 +241,7 @@ tracker__search_iter_next()
 		g_free(_dir);
 
 		result.sample_name = file;
-		result.full_path   = g_strdup(data[0]);
+		result.full_path   = data[0];
 		result.dir = dir;
 		result.id = iter.idx;
 		result.online = true;

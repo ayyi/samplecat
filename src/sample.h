@@ -23,17 +23,12 @@ struct _sample
 	char*        sample_name; // basename
 	char*        full_path; // filename
 
-	GdkPixbuf*   overview; // pixbuf
-
 	unsigned int sample_rate;
 	int64_t      length;        //milliseconds
 	int64_t      frames;        //total number of frames (eg a frame for 16bit stereo is 4 bytes).
 	unsigned int channels;
 	int          bitdepth;
-
-	short        minmax[OVERVIEW_WIDTH]; //peak data before it is copied onto the pixbuf.
 	float        peak_level;
-
 	int          colour_index;
 
 	gboolean     online;
@@ -43,13 +38,21 @@ struct _sample
 	char*        misc;
 	char*        notes;
 	char*        mimetype;
+
+	GdkPixbuf*   overview; // pixbuf
 };
 
+/** create new sample structures
+ * all _new_ functions imply sample_ref() 
+ *
+ * @return needs to be sample_unref();
+ */
 Sample*     sample_new               ();
-Sample*     sample_dup               (Sample*);
 Sample*     sample_new_from_model    (GtkTreePath*);
 Sample*     sample_new_from_fileview (GtkTreeModel*, GtkTreeIter*);
 Sample*     sample_new_from_filename (char *path, gboolean path_alloced);
+Sample*     sample_dup               (Sample*);
+Sample*     sample_get_by_row_ref    (GtkTreeRowReference* ref); //< does not increase reference count ; may return NULL
 
 void        sample_ref               (Sample*);
 void        sample_unref             (Sample*);

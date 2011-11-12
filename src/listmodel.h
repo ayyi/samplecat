@@ -18,9 +18,10 @@ enum
   COL_CHANNELS,
   COL_MIMETYPE,
   COL_PEAKLEVEL,
-  COL_NOTES, //this is in the store but not the view.
+	//from here on items are the store but not the view.
   COL_COLOUR,
-  COL_MISC, //this is in the store but not the view.
+  COL_MISC,
+  COL_SAMPLEPTR,
   NUM_COLS
 };
 
