@@ -184,27 +184,28 @@ AC_SUBST(FFMPEG_CFLAGS)
 AC_SUBST(FFMPEG_LIBS)
 
 dnl -----------------------------------------------------------------------------
+dnl ** libflac usage is deprecated -> sndfile and ffmpeg can decode it **
 
 dnl flac doesnt provide pkg-config info
-AC_ARG_ENABLE(flac, AC_HELP_STRING([--disable-flac], [disable use of FLAC]), enable_flac=$enableval, enable_flac="auto")
-
-if test x$enable_flac != xno ; then
-	AC_CHECK_HEADERS(FLAC/all.h)
-	if test x$ac_cv_header_FLAC_all_h = xyes ; then
-		AC_CHECK_LIB(FLAC, FLAC__metadata_get_streaminfo, HAVE_FLAC="yes")
-		if test "$HAVE_FLAC" = "yes" ; then
-			AC_DEFINE(HAVE_FLAC, [1], [Define to 1 if you have libflac])
-			FLAC_LIBS="-lFLAC"
-			enable_flac="yes"
-		else
-			enable_flac="no"
-		fi
-	fi
-fi
-# FLAC requires jack_ringbuffer
-AS_IF([test "$enable_flac" = "yes"], [
-	    PKG_CHECK_MODULES(JACK, jack,, enable_flac=no)
-			])
+dnl AC_ARG_ENABLE(flac, AC_HELP_STRING([--disable-flac], [disable use of FLAC]), enable_flac=$enableval, enable_flac="auto")
+dnl 
+dnl if test x$enable_flac != xno ; then
+dnl 	AC_CHECK_HEADERS(FLAC/all.h)
+dnl 	if test x$ac_cv_header_FLAC_all_h = xyes ; then
+dnl 		AC_CHECK_LIB(FLAC, FLAC__metadata_get_streaminfo, HAVE_FLAC="yes")
+dnl 		if test "$HAVE_FLAC" = "yes" ; then
+dnl 			AC_DEFINE(HAVE_FLAC, [1], [Define to 1 if you have libflac])
+dnl 			FLAC_LIBS="-lFLAC"
+dnl 			enable_flac="yes"
+dnl 		else
+dnl 			enable_flac="no"
+dnl 		fi
+dnl 	fi
+dnl fi
+dnl # FLAC requires jack_ringbuffer
+dnl AS_IF([test "$enable_flac" = "yes"], [
+dnl 	    PKG_CHECK_MODULES(JACK, jack,, enable_flac=no)
+dnl 			])
 AM_CONDITIONAL(ENABLE_FLAC, test "$enable_flac" = "yes")
 AC_SUBST(FLAC_CFLAGS)
 AC_SUBST(FLAC_LIBS)
