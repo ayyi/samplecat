@@ -71,7 +71,7 @@ tracker__disconnect()
 
 
 int
-tracker__insert(Sample* sample, MIME_type* mimetype)
+tracker__insert(Sample* sample)
 {
 	return 0;
 }
@@ -241,8 +241,9 @@ tracker__search_iter_next()
 		g_free(_dir);
 
 		result.sample_name = file;
+		result.full_path   = g_strdup(data[0]);
 		result.dir = dir;
-		result.id = iter.idx;           //TODO this idx is pretty meaningless.
+		result.id = iter.idx;
 		result.online = true;
 
 		if(strstr(result.dir, "file://") == result.dir){

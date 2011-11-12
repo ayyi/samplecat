@@ -6,7 +6,7 @@ void     tracker__disconnect       ();
 
 gboolean tracker__update_pixbuf    (Sample*);
 
-int      tracker__insert           (Sample*, MIME_type*);
+int      tracker__insert           (Sample*);
 gboolean tracker__delete_row       (int id);
 
 gboolean tracker__search_iter_new  (char* search, char* dir, const char* category, int* n_results);

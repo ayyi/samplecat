@@ -12,13 +12,16 @@
 struct _sample
 {
 	int                  id;  // database index.
-
 	int                  ref_count;
 	GtkTreeRowReference* row_ref;
 
-	char*                dir; // directory
-	char*                sample_name; // basename
-	char*                full_path; // filename
+	/* TODO: consolidate dir/name: use only 'full_path' 
+	 * and 'derive' others on demand
+	 * -> requires changing the database model
+	 */
+	char*        dir; // directory
+	char*        sample_name; // basename
+	char*        full_path; // filename
 
 	GdkPixbuf*   overview; // pixbuf
 
@@ -46,6 +49,7 @@ Sample*     sample_new               ();
 Sample*     sample_dup               (Sample*);
 Sample*     sample_new_from_model    (GtkTreePath*);
 Sample*     sample_new_from_fileview (GtkTreeModel*, GtkTreeIter*);
+Sample*     sample_new_from_filename (char *path, gboolean path_alloced);
 
 void        sample_ref               (Sample*);
 void        sample_unref             (Sample*);

@@ -105,7 +105,7 @@ static gboolean play_file (const char * path) {
 
 	argv = get_preview_argv (path);
 	if (argv == NULL) {
-		gwarn("audio preview is unavailable: install either of afplay, totem-audio-preview or gstreamer");
+		gwarn("audio preview is unavailable: install either of afplay, totem-audio-preview or gstreamer\n");
 		return FALSE;
 	}
 

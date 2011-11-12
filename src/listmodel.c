@@ -1,16 +1,15 @@
-
 #include "config.h"
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
 #include <gtk/gtk.h>
+
 #ifdef USE_AYYI
 #include "ayyi/ayyi.h"
 #endif
-#include "file_manager/support.h"
 
 #include "typedefs.h"
-#include "mimetype.h"
+#include "file_manager/mimetype.h"
 #include "support.h"
 #include "main.h"
 #include "sample.h"
@@ -65,13 +64,37 @@ listmodel__clear()
 void
 listmodel__add_result(Sample* result)
 {
+	if(!app.store) return;
 	g_return_if_fail(result);
 
+#if 1
+	/* this has actualy been checked _before_ here
+	 * but backend may 'inject' mime types..
+	 */
+	if(!result->mimetype){
+		dbg(0,"no mimetype given -- this should NOT happen: fix backend");
+		return;
+	}
+	if(mimestring_is_unsupported(result->mimetype)){
+		dbg(0, "unsupported MIME type: %s", result->mimetype);
+		return;
+	}
+#endif
+
 	if(!result->sample_rate){
+		// needed w/ tracker backend.
 		sample_get_file_info(result);
 	}
+#if 0
+	if(!result->sample_name){
+		result->sample_name= g_path_get_basename(result->full_path);
+	}
+	if(!result->dir){
+		result->dir = g_path_get_dirname(result->full_path);
+	}
+#endif
 
-	char samplerate_s[32]; float samplerate = result->sample_rate; samplerate_format(samplerate_s, samplerate);
+	char samplerate_s[32]; samplerate_format(samplerate_s, result->sample_rate);
 	char* keywords = result->keywords ? result->keywords : "";
 	char length[64]; format_time_int(length, result->length);
 
@@ -89,64 +112,60 @@ listmodel__add_result(Sample* result)
 	}
 //#endif
 #endif
-
-	GdkPixbuf* get_iconbuf_from_mimetype(char* mimetype)
-	{
-		GdkPixbuf* iconbuf = NULL;
-		MIME_type* mime_type = mime_type_lookup(mimetype);
-		if(mime_type){
-			type_to_icon(mime_type);
-			if (!mime_type->image) dbg(0, "no icon.");
-			iconbuf = mime_type->image->sm_pixbuf;
-		}
-		return iconbuf;
-	}
-
+#define NSTR(X) (X?X:"")
 	//icon (only shown if the sound file is currently available):
 	GdkPixbuf* iconbuf = result->online ? get_iconbuf_from_mimetype(result->mimetype) : NULL;
 
 	GtkTreeIter iter;
 	gtk_list_store_append(app.store, &iter);
-	gtk_list_store_set(app.store, &iter, COL_ICON, iconbuf,
-	                   COL_NAME, result->sample_name,
-	                   COL_FNAME, result->dir,
-	                   COL_IDX, result->id,
-	                   COL_MIMETYPE, result->mimetype,
-	                   COL_KEYWORDS, keywords, 
-	                   COL_PEAKLEVEL, result->peak_level,
-	                   COL_OVERVIEW, result->overview, COL_LENGTH, length, COL_SAMPLERATE, samplerate_s, COL_CHANNELS, result->channels, 
-	                   COL_NOTES, result->notes, COL_COLOUR, result->colour_index,
-	                   COL_MISC, result->misc,
+	gtk_list_store_set(app.store, &iter,
+			COL_ICON,       iconbuf,
+			COL_NAME,       result->sample_name,
+			COL_FNAME,      result->dir,
+			COL_IDX,        result->id,
+			COL_MIMETYPE,   result->mimetype,
+			COL_KEYWORDS,   NSTR(keywords), 
+			COL_PEAKLEVEL,  result->peak_level,
+			COL_OVERVIEW,   result->overview,
+			COL_LENGTH,     length,
+			COL_SAMPLERATE, samplerate_s,
+			COL_CHANNELS,   result->channels, 
+			COL_NOTES,      NSTR(result->notes),
+			COL_COLOUR,     result->colour_index,
+			COL_MISC,       NSTR(result->misc),
 #ifdef USE_AYYI
-	                   COL_AYYI_ICON, ayyi_icon,
+			COL_AYYI_ICON,  ayyi_icon,
 #endif
-	                   -1);
+			-1);
 
+	// XXX only create a row_reference IFF !result->overview
 	GtkTreePath* treepath;
 	if((treepath = gtk_tree_model_get_path(GTK_TREE_MODEL(app.store), &iter))){
-		GtkTreeRowReference* row_ref = gtk_tree_row_reference_new(GTK_TREE_MODEL(app.store), treepath);
+		result->row_ref = gtk_tree_row_reference_new(GTK_TREE_MODEL(app.store), treepath);
 		gtk_tree_path_free(treepath);
-		result->row_ref = row_ref;
 	}
 
-	if(!result->overview){
-		if(result->row_ref){
-			if(!mimestring_is_unsupported(result->mimetype)){
-				dbg(2, "no overview: sending request: filename=%s", result->sample_name);
-				request_overview(result);
-			}
-		}
-		else pwarn("cannot request overview without row_ref.");
+	if(result->peak_level==0 && result->row_ref){
+		dbg(0, "recalucale peak");
+		request_peaklevel(result);
 	}
-	sample_unref(result); // XXX for now - later store a pointer to it in the datamodel.
+	if(!result->overview && result->row_ref){
+		dbg(0, "regenerate overview");
+		request_overview(result);
+	}
+	/* gtk_list_store_set will only "copy"  G_TYPE_STRING or G_TYPE_BOXED.
+	 * references to char* need to kept allocated!
+	 */
+	sample_ref(result);
 }
 
-
+#ifdef NEVER
+/*
+ * @return: result must be free'd by caller.
+ */
 char*
 listmodel__get_filename_from_id(int id)
 {
-	//result must be free'd by caller.
-
 	GtkTreeIter iter;
 	gtk_tree_model_get_iter_first(GTK_TREE_MODEL(app.store), &iter);
 	int i;
@@ -162,9 +181,10 @@ listmodel__get_filename_from_id(int id)
 		row++;
 	} while (gtk_tree_model_iter_next(GTK_TREE_MODEL(app.store), &iter));
 
-	gwarn("not found. %i", id);
+	gwarn("not found. %i\n", id);
 	return NULL;
 }
+#endif
 
 
 void

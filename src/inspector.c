@@ -189,7 +189,57 @@ inspector_free(Inspector* inspector)
 	g_free(inspector);
 }
 
+void
+inspector_set_labels(Sample* sample)
+{
+	Inspector* i = app.inspector;
+	if(!i) return;
+	g_return_if_fail(sample);
 
+	char* ch_str = channels_format(sample->channels);
+	char* level  = gain2dbstring(sample->peak_level);
+
+	char fs_str[32]; samplerate_format(fs_str, sample->sample_rate); strcpy(fs_str + strlen(fs_str), " kHz");
+	char length[32]; len_format(length, sample->length);
+
+	char* keywords = (sample->keywords && strlen(sample->keywords)) ? sample->keywords : "<no tags>";
+
+	gtk_label_set_text(GTK_LABEL(i->name),       sample->sample_name);
+	gtk_label_set_text(GTK_LABEL(i->filename),   sample->full_path);
+	gtk_label_set_text(GTK_LABEL(i->tags),       keywords);
+	gtk_label_set_text(GTK_LABEL(i->length),     length);
+	gtk_label_set_text(GTK_LABEL(i->samplerate), fs_str);
+	gtk_label_set_text(GTK_LABEL(i->channels),   ch_str);
+	gtk_label_set_text(GTK_LABEL(i->mimetype),   sample->mimetype);
+	gtk_label_set_text(GTK_LABEL(i->level),      level);
+	gtk_label_set_text(GTK_LABEL(i->misc),       sample->misc?sample->misc:""); // XXX
+	gtk_text_buffer_set_text(i->notes, sample->notes ? sample->notes : "", -1);
+	gtk_text_buffer_set_text(app.inspector->notes, "", -1);
+
+	if (sample->overview) {
+		gtk_image_set_from_pixbuf(GTK_IMAGE(i->image), sample->overview);
+	} else {
+		gtk_image_clear(GTK_IMAGE(i->image));
+	}
+
+	show_fields();
+	g_free(level);
+	g_free(ch_str);
+
+	//store a reference to the row id in the inspector widget:
+	// needed to later updated "notes" for that sample
+	// as well to check for updates when
+	i->row_id = sample->id;
+	if(i->row_ref) gtk_tree_row_reference_free(i->row_ref);
+	if (sample->row_ref) {
+		i->row_ref = gtk_tree_row_reference_copy(sample->row_ref);
+	} else {
+		dbg(0, "setting row_ref failed!\n");
+		i->row_ref = NULL;
+	}
+}
+
+/// this is somewhat redundant w/ inspector_update_from_fileview()
 void
 inspector_update_from_result(Sample* sample)
 {
@@ -218,91 +268,70 @@ inspector_update_from_result(Sample* sample)
 		}
 	}
 	#endif
-
-	char* ch_str = channels_format(sample->channels);
-
-	char fs_str[32]; samplerate_format(fs_str, sample->sample_rate);
-	strcpy(fs_str + strlen(fs_str), " kHz");
-
-	char len   [32]; len_format(len, sample->length);
-	char* level = gain2dbstring(sample->peak_level);
-	char* keywords = (sample->keywords && strlen(sample->keywords)) ? sample->keywords : "<no tags>";
-
-	gtk_label_set_text(GTK_LABEL(i->name),       sample->sample_name);
-	gtk_label_set_text(GTK_LABEL(i->tags),       keywords);
-	gtk_label_set_text(GTK_LABEL(i->length),     len);
-	gtk_label_set_text(GTK_LABEL(i->samplerate), fs_str);
-	gtk_label_set_text(GTK_LABEL(i->channels),   ch_str);
-	gtk_label_set_text(GTK_LABEL(i->filename),   sample->sample_name);
-	gtk_label_set_text(GTK_LABEL(i->mimetype),   sample->mimetype);
-	gtk_label_set_text(GTK_LABEL(i->level),      level);
-	gtk_label_set_text(GTK_LABEL(i->misc),       sample->misc ? sample->misc : "");
-	gtk_text_buffer_set_text(i->notes, sample->notes ? sample->notes : "", -1);
-	gtk_image_set_from_pixbuf(GTK_IMAGE(i->image), sample->overview);
-
-	show_fields();
-	g_free(level);
-	g_free(ch_str);
-
-	//store a reference to the row id in the inspector widget:
-	//g_object_set_data(G_OBJECT(app.inspector->name), "id", GUINT_TO_POINTER(id));
-	i->row_id = sample->id;
-	if(i->row_ref) gtk_tree_row_reference_free(i->row_ref);
-	i->row_ref = gtk_tree_row_reference_copy(sample->row_ref);
-	if(!i->row_ref) perr("setting row_ref failed!\n");
+	inspector_set_labels(sample);
 }
 
 
+extern Filer filer;
+/// this is somewhat redundant w/ inspector_update_from_result()
 void
 inspector_update_from_fileview(GtkTreeView* treeview)
 {
 	Inspector* i = app.inspector;
+	GtkTreeModel* model = gtk_tree_view_get_model(treeview);
 	GtkTreeSelection* selection = gtk_tree_view_get_selection(treeview);
 	GList* list                 = gtk_tree_selection_get_selected_rows(selection, NULL);
-	if(list){
-		GtkTreePath* path = list->data;
 
-		GtkTreeModel* model = gtk_tree_view_get_model(treeview);
-		GtkTreeIter iter;
-		gtk_tree_model_get_iter(model, &iter, path);
-
-		g_list_foreach (list, (GFunc)gtk_tree_path_free, NULL);
+	if(!list){ return;}
+	if(g_list_length(list)<1){
 		g_list_free (list);
-
-		Sample* sample = sample_new_from_fileview(model, &iter);
-
-		MIME_type* mime_type = type_from_path(sample->full_path);
-		char mime_string[64];
-		gchar *filebasename = g_path_get_basename(sample->full_path);
-
-		snprintf(mime_string, 64, "%s/%s", mime_type->media_type, mime_type->subtype);
-
-		if(mimestring_is_unsupported(mime_string)){
-			inspector_clear();
-			gtk_label_set_text(GTK_LABEL(i->name), filebasename);
-		}
-		else if(sample_get_file_info(sample)){
-			char ch_str[64]; snprintf(ch_str, 64, "%u channels", sample->channels);
-			char fs_str[32]; samplerate_format(fs_str, sample->sample_rate); strcpy(fs_str + strlen(fs_str), " kHz");
-			char length[64]; snprintf(length, 64, "%lld",          sample->length);
-
-			gtk_label_set_text(GTK_LABEL(i->name),       filebasename);
-			gtk_label_set_text(GTK_LABEL(i->filename),   sample->full_path);
-			gtk_label_set_text(GTK_LABEL(i->tags),       "");
-			gtk_label_set_text(GTK_LABEL(i->length),     length);
-			gtk_label_set_text(GTK_LABEL(i->channels),   ch_str);
-			gtk_label_set_text(GTK_LABEL(i->samplerate), fs_str);
-			gtk_label_set_text(GTK_LABEL(i->mimetype),   mime_string);
-			gtk_label_set_text(GTK_LABEL(i->level),      "");
-			gtk_label_set_text(GTK_LABEL(i->misc),       sample->misc?sample->misc:""); // XXX
-			gtk_text_buffer_set_text(app.inspector->notes, "", -1);
-			gtk_image_clear(GTK_IMAGE(app.inspector->image));
-
-			show_fields();
-		}
-		g_free(filebasename);
-		sample_unref(sample);
+		return;
 	}
+
+	GtkTreeIter iter;
+	gtk_tree_model_get_iter(model, &iter, list->data);
+	g_list_foreach (list, (GFunc)gtk_tree_path_free, NULL);
+	g_list_free (list);
+
+#define FILE_VIEW_COL_LEAF 0
+	gchar* fname;
+	gtk_tree_model_get(model, &iter, FILE_VIEW_COL_LEAF, &fname, -1);
+	gchar * full_path = g_strdup_printf("%s/%s", filer.real_path, fname);
+
+	/* TODO: do nothing if directory selected 
+	 * 
+	 * this happens when a dir is selected in the left tree-browser
+	 * while some file was previously selected in the right file-list
+	 * -> we get the new dir + old filename
+	 *
+	 * event-handling in window.c should use 
+	 *   gtk_tree_selection_set_select_function()
+	 */
+
+	/* forget previous inspector item */
+	if(i->row_ref) gtk_tree_row_reference_free(i->row_ref);
+	i->row_ref = NULL;
+	i->row_id = -1; /// XXX -1 or 0
+
+	Sample* sample = sample_new_from_filename(full_path, true);
+	if (!sample) {
+		inspector_clear();
+		gtk_label_set_text(GTK_LABEL(i->name), "");
+		return;
+	}
+
+	// - check if file is already in DB -> load sample-info
+	// - check if file is an audio-file -> read basic info directly from file
+	// - else just display the base-name in the inspector..
+
+	if(sample_get_file_info(sample)){
+		inspector_set_labels(sample);
+		show_fields();
+	} else {
+		inspector_clear();
+		gtk_label_set_text(GTK_LABEL(i->name),       sample->sample_name);
+	}
+	sample_unref(sample);
 }
 
 
@@ -321,9 +350,9 @@ static void
 hide_fields()
 {
 	Inspector* i = app.inspector;
-	GtkWidget* fields[] = {i->filename, i->tags, i->length, i->samplerate, i->channels, i->mimetype};
+	GtkWidget* fields[] = {i->filename, i->tags, i->length, i->samplerate, i->channels, i->mimetype, i->misc, i->level, i->edit};
 	int f = 0; for(;f<G_N_ELEMENTS(fields);f++){
-		gtk_widget_hide(fields[f]);
+		gtk_widget_hide(GTK_WIDGET(fields[f]));
 	}
 }
 
@@ -332,9 +361,9 @@ static void
 show_fields()
 {
 	Inspector* i = app.inspector;
-	GtkWidget* fields[] = {i->filename, i->tags, i->length, i->samplerate, i->channels, i->mimetype};
+	GtkWidget* fields[] = {i->filename, i->tags, i->length, i->samplerate, i->channels, i->mimetype, i->misc, i->level, i->edit};
 	int f = 0; for(;f<G_N_ELEMENTS(fields);f++){
-		gtk_widget_show(fields[f]);
+		gtk_widget_show(GTK_WIDGET(fields[f]));
 	}
 }
 
@@ -376,8 +405,10 @@ on_notes_focus_out(GtkWidget *widget, gpointer userdata)
 	dbg(2, "start=%i end=%i", gtk_text_iter_get_offset(&start_iter), gtk_text_iter_get_offset(&end_iter));
 
 	unsigned id = app.inspector->row_id;
-	if(backend.update_notes(id, notes)){
+	if (id>=0 && backend.update_notes(id, notes)){
 		statusbar_print(1, "notes updated");
+		dbg(0, "update notes for id: %d", id);
+#if 1
 		g_return_val_if_fail(app.inspector->row_ref && gtk_tree_row_reference_valid(app.inspector->row_ref), false);
 		GtkTreePath *path;
 		if((path = gtk_tree_row_reference_get_path(app.inspector->row_ref))){
@@ -386,8 +417,11 @@ on_notes_focus_out(GtkWidget *widget, gpointer userdata)
 			gtk_list_store_set(app.store, &iter, COL_NOTES, notes, -1);
 			gtk_tree_path_free(path);
 		}
+		// TODO update sample->notes as well.
+#endif
+	} else {
+		dbg(0, "failed to update notes for id:%d", id);
 	}
-
 	g_free(notes);
 	return FALSE;
 }
@@ -502,5 +536,3 @@ tag_edit_stop(GtkWidget *widget, GdkEventCrossing *event, gpointer user_data)
   dbg(0, "finished.");
   //busy = false;
 }
-
-

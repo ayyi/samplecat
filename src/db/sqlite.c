@@ -130,7 +130,7 @@ sqlite__disconnect()
 
 
 int
-sqlite__insert(Sample* sample, MIME_type *mime_type)
+sqlite__insert(Sample* sample)
 {
 	//TODO is supposed to return the new id?
 
@@ -142,14 +142,18 @@ sqlite__insert(Sample* sample, MIME_type *mime_type)
 
 	int ret = 0;
 
+	// XXX - no longer needed: done by sample_new_from_filename();
 	gchar* filedir = g_path_get_dirname(sample->full_path);
 	gchar* filename = g_path_get_basename(sample->full_path);
-	gchar* mime_str = g_strdup_printf("%s/%s", mime_type->media_type, mime_type->subtype);
 	int colour = 0;
 	gchar* sql = g_strdup_printf(
 		"INSERT INTO samples(filename,filedir,length,sample_rate,channels,online,mimetype,misc,peaklevel,colour) "
 		"VALUES ('%s','%s',%"PRIi64",'%i','%i','%i','%s', '%s', '%f', '%i')",
-		filename, filedir, sample->length, sample->sample_rate, sample->channels, 1, mime_str, sample->misc, sample->peak_level, colour
+		filename, filedir, 
+		sample->length, sample->sample_rate, sample->channels,
+		sample->online, sample->mimetype, 
+		sample->misc?sample->misc:"", 
+		sample->peak_level, colour
 	);
 	dbg(2, "sql=%s", sql);
 
@@ -167,7 +171,6 @@ sqlite__insert(Sample* sample, MIME_type *mime_type)
 	g_free(sql);
 	g_free(filedir);
 	g_free(filename);
-	g_free(mime_str);
 	return (int)idx;
 }
 
@@ -530,6 +533,7 @@ sqlite__search_iter_next(unsigned long** lengths)
 		result.id          = sqlite3_column_int(ppStmt, COLUMN_ID);
 		result.sample_name = XSDP((char*)sqlite3_column_text(ppStmt, COLUMN_FILENAME));
 		result.dir         = XSDP((char*)sqlite3_column_text(ppStmt, COLUMN_DIR));
+		result.full_path   = g_strdup_printf("%s/%s", result.dir, result.sample_name);
 		result.keywords    = XSDP((char*)sqlite3_column_text(ppStmt, COLUMN_KEYWORDS));
 		result.length      = sqlite3_column_int(ppStmt, COLUMN_LENGTH);
 		result.sample_rate = sqlite3_column_int(ppStmt, COLUMN_SAMPLERATE);

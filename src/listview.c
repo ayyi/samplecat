@@ -357,59 +357,12 @@ listview__item_set_colour(GtkTreePath* path, unsigned colour_index)
 		GdkColor bg_colour;
 		color_rgba_to_gdk(&bg_colour, sample->colour_index);
 		if(!gdk_color_parse(colour_string, &bg_colour)) gwarn("parsing of colour string failed.\n");
-		request_overview(sample);
+		// request_overview(sample); /// WHY ??
 	}
 	else dbg(0, "cannot update overview for offline sample. id=%i %s", id, sample->full_path);
 	sample_unref(sample);
 	return true;
 }
-
-
-void
-listview__add_item(Sample* sample)
-{
-	if(!app.store) return;
-	g_return_if_fail(sample->id);
-
-	gchar* filename = g_path_get_basename(sample->full_path);
-	gchar* filedir = g_path_get_dirname(sample->full_path);
-
-	//TODO better to get this from sample?
-	MIME_type* mime_type = type_from_path(filename);
-	char mime_string[64];
-	snprintf(mime_string, 64, "%s/%s", mime_type->media_type, mime_type->subtype);
-
-	char length_ms[64];
-	format_time_int(length_ms, sample->length);
-
-	char samplerate_s[32];
-	samplerate_format(samplerate_s, sample->sample_rate);
-
-	GtkTreeIter iter;
-	gtk_list_store_append(app.store, &iter);
-
-	//store a row reference:
-	GtkTreePath* treepath;
-	if((treepath = gtk_tree_model_get_path(GTK_TREE_MODEL(app.store), &iter))){
-		sample->row_ref = gtk_tree_row_reference_new(GTK_TREE_MODEL(app.store), treepath);
-		gtk_tree_path_free(treepath);
-	}else perr("failed to make treepath from inserted iter.\n");
-
-	dbg(2, "setting store... filename=%s mime=%s", filename, mime_string);
-	gtk_list_store_set(app.store, &iter,
-	                   COL_IDX, sample->id,
-	                   COL_NAME, filename,
-	                   COL_FNAME, filedir,
-	                   COL_LENGTH, length_ms,
-	                   COL_SAMPLERATE, samplerate_s,
-	                   COL_CHANNELS, sample->channels,
-	                   COL_PEAKLEVEL, sample->peak_level,
-	                   COL_MIMETYPE, mime_string,
-	                   -1);
-	g_free(filename);
-	g_free(filedir);
-}
-
 
 static gboolean
 listview__get_first_selected_iter(GtkTreeIter* iter)
@@ -634,9 +587,10 @@ listview__on_motion(GtkWidget *widget, GdkEventMotion *event, gpointer user_data
 				gtk_tree_model_get_iter(GTK_TREE_MODEL(app.store), &prev_iter, prev_path);
 				gchar* prev_path_str = gtk_tree_model_get_string_from_iter(GTK_TREE_MODEL(app.store), &prev_iter);
 
-				//if(row_ref != prev_row_ref){
-				//if(prev_path && (path != prev_path)){
-				if(prev_path && (atoi(path_str) != atoi(prev_path_str))){
+				//if(row_ref != prev_row_ref)
+				//if(prev_path && (path != prev_path))
+				if(prev_path && (atoi(path_str) != atoi(prev_path_str)))
+				{
 					dbg(0, "new row! path=%p (%s) prev_path=%p (%s)", path, path_str, prev_path, prev_path_str);
 
 					//restore text to previous row:
@@ -799,8 +753,9 @@ tag_cell_data(GtkTreeViewColumn *tree_column, GtkCellRenderer *cell, GtkTreeMode
 	gtk_tree_path_free(path);
 	//dbg(0, "%s mouse_y=%i cell_y=%i-%i.\n", path_str, app.mouse_y, cellrect.y, cellrect.y + cellrect.height);
 	//if(//(app.mouse_x > cellrect.x) && (app.mouse_x < (cellrect.x + cellrect.width)) &&
-	//			(app.mouse_y >= cellrect.y) && (app.mouse_y <= (cellrect.y + cellrect.height))){
-	if(cell_row_num == mouse_row_num){
+	//			(app.mouse_y >= cellrect.y) && (app.mouse_y <= (cellrect.y + cellrect.height)))
+	if(cell_row_num == mouse_row_num)
+	{
 	if((app.mouse_x > cellrect.x) && (app.mouse_x < (cellrect.x + cellrect.width))){
 		//printf("tag_cell_data(): mouseover! row_num=%i\n", mouse_row_num);
 		//printf("tag_cell_data():  inside: x=%i y=%i\n", cellrect.x, cellrect.y);
@@ -996,9 +951,10 @@ treeview_get_tags_cell(GtkTreeView *view, guint x, guint y, GtkCellRenderer **ce
 		gtk_cell_renderer_get_size(checkcell, GTK_WIDGET(view), &cell_rect, NULL, NULL, (int*)&width, (int*)&height);
 		printf("y=%i height=%i\n", cell_rect.y, cell_rect.height);
 
-		//if(x >= colm_x && x < (colm_x + width)){
-		//if(y >= colm_y && y < (colm_y + height)){
-		if(y >= cell_rect.y && y < (cell_rect.y + cell_rect.height)){
+		//if(x >= colm_x && x < (colm_x + width))
+		//if(y >= colm_y && y < (colm_y + height))
+		if(y >= cell_rect.y && y < (cell_rect.y + cell_rect.height))
+		{
 			*cell = checkcell;
 			g_list_free(cells);
 			return true;
@@ -1008,8 +964,6 @@ treeview_get_tags_cell(GtkTreeView *view, guint x, guint y, GtkCellRenderer **ce
 	}
 
 	g_list_free(cells);
-	printf("not found in column. cell_height=%i\n", cell_rect.height);
+	dbg(0, "not found in column. cell_height=%i\n", cell_rect.height);
 	return false; // not found
 }
-
-

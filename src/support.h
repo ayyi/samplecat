@@ -131,4 +131,6 @@ float        gain2db                   (float);
 char*        gain2dbstring             (float);
 
 void         show_widget_if            (GtkWidget*, gboolean);
+
+GdkPixbuf*   get_iconbuf_from_mimetype(char* mimetype);
 #endif

@@ -122,13 +122,13 @@ mysql__disconnect()
 
 
 int
-mysql__insert(Sample* sample, MIME_type *mime_type)
+mysql__insert(Sample* sample)
 {
 	int id = 0;
 	gchar* filedir = g_path_get_dirname(sample->filename);
 	gchar* filename = g_path_get_basename(sample->filename);
 
-	gchar* sql = g_strdup_printf("INSERT INTO samples SET filename='%s', filedir='%s', length=%"PRIi64", sample_rate=%i, channels=%i, mimetype='%s/%s' ", filename, filedir, sample->length, sample->sample_rate, sample->channels, mime_type->media_type, mime_type->subtype);
+	gchar* sql = g_strdup_printf("INSERT INTO samples SET filename='%s', filedir='%s', length=%"PRIi64", sample_rate=%i, channels=%i, mimetype='%s' ", filename, filedir, sample->length, sample->sample_rate, sample->channels, sample->mimetype);
 	dbg(1, "sql=%s", sql);
 
 	if(mysql__exec_sql(sql)==0){
@@ -380,6 +380,7 @@ mysql__search_iter_next_(unsigned long** lengths)
 	}
 
 	result.id          = atoi(row[MYSQL_ID]);
+	result.full_path   = g_strdup_printf("%s/%s", row[MYSQL_DIR], row[MYSQL_NAME]);
 	result.sample_name = row[MYSQL_NAME];
 	result.dir         = row[MYSQL_DIR];
 	result.keywords    = row[MYSQL_KEYWORDS];

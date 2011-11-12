@@ -5,7 +5,7 @@
 gboolean  mysql__connect          ();
 gboolean  mysql__is_connected     ();
 void      mysql__disconnect       ();
-int       mysql__insert           (Sample*, MIME_type*);
+int       mysql__insert           (Sample*);
 gboolean  mysql__delete_row       (int id);
 //void    mysql__delete_row_tags  ();
 int       mysql__update_path      (const char* old_path, const char* new_path);

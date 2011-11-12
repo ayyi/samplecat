@@ -460,91 +460,97 @@ add_dir(const char* path, int* added_count)
 	}
 }
 
+/**
+ * fill the display with the results for the given search phrase.
+ */
 void
 do_search(char* search, char* dir)
 {
-	//fill the display with the results for the given search phrase.
-
 	PF;
 
 	if(BACKEND_IS_NULL) return;
 	search_pending = false;
 
 	int n_results = 0;
-	if(backend.search_iter_new(search, dir, app.search_category, &n_results)){
-
-		treeview_block_motion_handler(); //dont know exactly why but this prevents a segfault.
-
-		listmodel__clear();
-
-		//detach the model from the view to speed up row inserts:
-		/*
-		model = gtk_tree_view_get_model(GTK_TREE_VIEW(view));
-		g_object_ref(model);
-		gtk_tree_view_set_model(GTK_TREE_VIEW(view), NULL);
-		*/ 
-
-		if(
-			#ifdef USE_MYSQL
-			BACKEND_IS_MYSQL
-			#else
-			false
-			#endif
-			#ifdef USE_SQLITE
-			|| BACKEND_IS_SQLITE
-			#endif
-			){
-			int row_count = 0;
-			unsigned long* lengths;
-			Sample* result;
-			while((result = backend.search_iter_next(&lengths)) && row_count < MAX_DISPLAY_ROWS){
-				if(app.no_gui){
-					if(!row_count) console__show_result_header();
-					console__show_result(result);
-				}else{
-					listmodel__add_result(sample_dup(result));
-				}
-				row_count++;
-			}
-			if(app.no_gui) console__show_result_footer(row_count);
-
-			backend.search_iter_free();
-
-			if(0 && row_count < MAX_DISPLAY_ROWS){
-				statusbar_print(1, "%i samples found.", row_count);
-			}else if(!row_count){
-				statusbar_print(1, "no samples found. filters: dir=%s", app.search_dir);
-			}else{
-				statusbar_print(1, "showing %i of %i samples", row_count, n_results);
-			}
-		}
-		#ifdef USE_TRACKER
-		else if(BACKEND_IS_TRACKER){
-			int row_count = 0;
-			Sample* result;
-			while((result = tracker__search_iter_next()) && row_count < MAX_DISPLAY_ROWS){
-				if(app.no_gui && row_count > 20) continue;
-				listmodel__add_result(sample_dup(result));
-				if(app.no_gui){
-					if(!row_count) console__show_result_header();
-					console__show_result(result);
-				}
-				row_count++;
-			}
-			backend.search_iter_free();
-
-			if(0 && row_count < MAX_DISPLAY_ROWS){
-				statusbar_print(1, "%i samples found.", row_count);
-			}else if(!row_count){
-				statusbar_print(1, "no samples found. filters: dir=%s", app.search_dir);
-			}else{
-				statusbar_print(1, "showing %i samples", row_count);
-			}
-		}
-		#endif
-
-		//treeview_unblock_motion_handler();  //causes a segfault even before it is run ??!!
+	if(!backend.search_iter_new(search, dir, app.search_category, &n_results)) {
+		return;
 	}
+
+	treeview_block_motion_handler(); //dont know exactly why but this prevents a segfault.
+
+	listmodel__clear();
+
+	//detach the model from the view to speed up row inserts:
+	/*
+	model = gtk_tree_view_get_model(GTK_TREE_VIEW(view));
+	g_object_ref(model);
+	gtk_tree_view_set_model(GTK_TREE_VIEW(view), NULL);
+	*/ 
+
+	if(
+		#ifdef USE_MYSQL
+		BACKEND_IS_MYSQL
+		#else
+		false
+		#endif
+		#ifdef USE_SQLITE
+		|| BACKEND_IS_SQLITE
+		#endif
+		){
+		int row_count = 0;
+		unsigned long* lengths;
+		Sample* result;
+		while((result = backend.search_iter_next(&lengths)) && row_count < MAX_DISPLAY_ROWS){
+			if(app.no_gui){
+				if(!row_count) console__show_result_header();
+				console__show_result(result);
+			}else{
+				Sample *s = sample_dup(result);
+				listmodel__add_result(s);
+				sample_unref(s);
+			}
+			row_count++;
+		}
+		if(app.no_gui) console__show_result_footer(row_count);
+
+		backend.search_iter_free();
+
+		if(0 && row_count < MAX_DISPLAY_ROWS){
+			statusbar_print(1, "%i samples found.", row_count);
+		}else if(!row_count){
+			statusbar_print(1, "no samples found. filters: dir=%s", app.search_dir);
+		}else{
+			statusbar_print(1, "showing %i of %i samples", row_count, n_results);
+		}
+	}
+	#ifdef USE_TRACKER
+	else if(BACKEND_IS_TRACKER){
+		int row_count = 0;
+		Sample* result;
+		while((result = tracker__search_iter_next()) && row_count < MAX_DISPLAY_ROWS){
+			if(app.no_gui && row_count > 20) continue;
+			Sample *s = sample_dup(result);
+			listmodel__add_result(s);
+			sample_unref(s);
+			if(app.no_gui){
+				if(!row_count) console__show_result_header();
+				console__show_result(result);
+			}
+			row_count++;
+		}
+		backend.search_iter_free();
+
+		if(0 && row_count < MAX_DISPLAY_ROWS){
+			statusbar_print(1, "%i samples found.", row_count);
+		}else if(!row_count){
+			statusbar_print(1, "no samples found. filters: dir=%s", app.search_dir);
+		}else{
+			statusbar_print(1, "showing %i samples", row_count);
+		}
+	}
+	#endif
+
+	//treeview_unblock_motion_handler();  //causes a segfault even before it is run ??!!
 }
 
 
@@ -791,46 +797,28 @@ add_file(char* path)
 
 	dbg(1, "%s", path);
 	if(BACKEND_IS_NULL) return false;
-	gboolean ok = true;
 
-	Sample* sample = sample_new(); //free'd after db and store are updated.
-	sample->full_path = g_strdup(path);
-
-	gchar* filedir = g_path_get_dirname(path);
-	gchar* filename = g_path_get_basename(path);
-
-	MIME_type* mime_type = type_from_path(filename);
-	char mime_string[64];
-	snprintf(mime_string, 64, "%s/%s", mime_type->media_type, mime_type->subtype);
-
-	if(mimetype_is_unsupported(mime_type, mime_string)){
-		printf("cannot add file: file type \"%s\" not supported.\n", mime_string);
-		statusbar_print(1, "cannot add file: %s files not supported", mime_string);
-		ok = false;
-		goto out;
+	Sample* sample = sample_new_from_filename(path, false);
+	if (!sample) {
+		statusbar_print(1, "cannot add file: file-type is not supported");
 	}
 
-	if(sample_get_file_info(sample)){
-
-		sample->id = backend.insert(sample, mime_type);
-
-		listview__add_item(sample);
-
-		request_overview(sample);
-		request_peaklevel(sample);
-
-		on_directory_list_changed();
-
-	}else{
-		ok = false;
+	if(!sample_get_file_info(sample)){
+		gwarn("cannot add file: reading file info failed\n");
+		statusbar_print(1, "cannot add file: reading file info failed\n");
+		sample_unref(sample);
+		return false;
 	}
 
-out:
-	g_free(filedir);
-	g_free(filename);
-	return ok;
+	sample->online=1;
+	sample->id = backend.insert(sample);
+
+	listmodel__add_result(sample);
+
+	on_directory_list_changed();
+	sample_unref(sample);
+	return true;
 }
-
 
 gboolean
 on_overview_done(gpointer _sample)
@@ -845,6 +833,11 @@ on_overview_done(gpointer _sample)
 	if(sample->row_ref){
 		listmodel__set_overview(sample->row_ref, sample->overview);
 	} else pwarn("rowref not set!\n");
+
+	// TODO: update inspector if current sample is selected
+	if (sample->id == app.inspector->row_id) {
+		inspector_set_labels(sample);
+	}
 
 	sample_unref(sample);
 	return IDLE_STOP;

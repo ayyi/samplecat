@@ -4,7 +4,7 @@
 int      sqlite__connect          ();
 void     sqlite__disconnect       ();
 
-int      sqlite__insert           (Sample*, MIME_type*);
+int      sqlite__insert           (Sample*);
 gboolean sqlite__delete_row       (int id);
 
 gboolean sqlite__update_colour    (int id, int colour);

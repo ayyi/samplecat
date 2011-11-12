@@ -9,40 +9,60 @@
 #include "typedefs.h"
 #include "support.h"
 #include "main.h"
-#if (defined HAVE_JACK && !(defined USE_DBUS || defined USE_GAUDITION))
-#include "jack_player.h"
-#endif
+//#if (defined HAVE_JACK && !(defined USE_DBUS || defined USE_GAUDITION))
+//#include "jack_player.h"
+//#endif
+
+#include "mimetype.h"
 #include "overview.h"
 #include "listview.h"
 #include "sample.h"
 
 
 extern struct _app app;
-extern Filer filer;
-extern unsigned debug;
 
 
 Sample*
 sample_new()
 {
 	Sample* sample = g_new0(struct _sample, 1);
+	sample->id = -1;
 	sample->colour_index = 0; // XXX colour_index of app.bg_colour // app.config.colour[colour_index]
 	sample_ref(sample); // TODO: CHECK using functions!
 	return sample;
 }
 
-//FIXME this is an internal detail of file_view. Use an accessor instead.
-#define FILE_VIEW_COL_LEAF 0
-
 Sample*
-sample_new_from_fileview(GtkTreeModel* model, GtkTreeIter* iter)
+sample_new_from_filename(char *path, gboolean path_alloced)
 {
-	gchar* fname;
-	gtk_tree_model_get(model, iter, FILE_VIEW_COL_LEAF, &fname, -1);
+	if (!file_exists(path)) {
+		if (path_alloced) free(path);
+		return NULL;
+	}
 
-	Sample* sample = g_new0(struct _sample, 1);
-	sample->full_path = g_strdup_printf("%s/%s", filer.real_path, fname);
-	sample_ref(sample);
+	Sample* sample = sample_new();
+	sample->full_path = path_alloced?path:g_strdup(path);
+
+	MIME_type* mime_type = type_from_path(path);
+	if (!mime_type) {
+		perr("can not resolve mime-type of file\n");
+		sample_unref(sample);
+		return NULL;
+	}
+	sample->mimetype=g_strdup_printf("%s/%s", mime_type->media_type, mime_type->subtype);
+
+	if(mimetype_is_unsupported(mime_type, sample->mimetype)){
+		dbg(0, "file type \"%s\" not supported.\n", sample->mimetype);
+		sample_unref(sample);
+		return NULL;
+	}
+
+	if(!sample->sample_name){
+		sample->sample_name= g_path_get_basename(sample->full_path);
+	}
+	if(!sample->dir){
+		sample->dir = g_path_get_dirname(sample->full_path);
+	}
 	return sample;
 }
 
@@ -52,6 +72,7 @@ sample_dup(Sample* s)
 {
 	Sample* r = g_new0(struct _sample, 1);
 	memcpy(r,s, sizeof(Sample));
+	// XXX: duplicate all string texts !!! -> free static in db ..
 	sample_ref(r);
 	return r;
 }
@@ -65,6 +86,10 @@ sample_free(Sample* sample)
 	if(sample->row_ref) gtk_tree_row_reference_free(sample->row_ref);
 	if(sample->sample_name) g_free(sample->sample_name);
 	if(sample->full_path) g_free(sample->full_path);
+	if(sample->mimetype) g_free(sample->mimetype);
+	if(sample->misc) g_free(sample->misc);
+	if(sample->notes) g_free(sample->notes);
+	if(sample->updated) g_free(sample->updated);
 	if(sample->dir) g_free(sample->dir);
 	//if(sample->overview) g_free(sample->overview); // check how to free that!
 	g_free(sample);
@@ -99,28 +124,31 @@ sample_get_file_info(Sample* sample)
 	sample->sample_rate = nfo.sample_rate;
 	sample->length      = nfo.length;
 
+#if 0
 	// TODO -- analyze in background when creating overview.
 	struct ebur128 ebur;
-	ebur128analyse(sample->full_path, &ebur);
-	free(sample->misc);
-	sample->misc      = g_strdup_printf(
-		"Integrated loudness:   %6.1lf LU%s\n"
-		"Loudness range:        %6.1lf LU\n"
-		"Integrated threshold:  %6.1lf LU%s\n"
-		"Range threshold:       %6.1lf LU%s\n"
-		"Range min:             %6.1lf LU%s\n"
-		"Range max:             %6.1lf LU%s\n"
-		"Momentary max:         %6.1lf LU%s\n"
-		"Short term max:        %6.1lf LU%s\n"
-		, ebur.integrated , ebur.lufs?"FS":""
-		, ebur.range
-		, ebur.integ_thr  , ebur.lufs?"FS":""
-		, ebur.range_thr  , ebur.lufs?"FS":""
-		, ebur.range_min  , ebur.lufs?"FS":""
-		, ebur.range_max  , ebur.lufs?"FS":""
-		, ebur.maxloudn_M , ebur.lufs?"FS":""
-		, ebur.maxloudn_S , ebur.lufs?"FS":""
-		);
+	if (!ebur128analyse(sample->full_path, &ebur)){
+		if (sample->misc) free(sample->misc);
+		sample->misc      = g_strdup_printf(
+			"Integrated loudness:   %6.1lf LU%s\n"
+			"Loudness range:        %6.1lf LU\n"
+			"Integrated threshold:  %6.1lf LU%s\n"
+			"Range threshold:       %6.1lf LU%s\n"
+			"Range min:             %6.1lf LU%s\n"
+			"Range max:             %6.1lf LU%s\n"
+			"Momentary max:         %6.1lf LU%s\n"
+			"Short term max:        %6.1lf LU%s\n"
+			, ebur.integrated , ebur.lufs?"FS":""
+			, ebur.range
+			, ebur.integ_thr  , ebur.lufs?"FS":""
+			, ebur.range_thr  , ebur.lufs?"FS":""
+			, ebur.range_min  , ebur.lufs?"FS":""
+			, ebur.range_max  , ebur.lufs?"FS":""
+			, ebur.maxloudn_M , ebur.lufs?"FS":""
+			, ebur.maxloudn_S , ebur.lufs?"FS":""
+			);
+	}
+#endif
 	return true;
 }
 

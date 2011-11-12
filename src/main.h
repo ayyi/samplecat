@@ -53,7 +53,7 @@ struct _backend
 	char*            (*dir_iter_next)    ();
 	void             (*dir_iter_free)    ();
 
-	int              (*insert)           (Sample*, MIME_type*);
+	int              (*insert)           (Sample*);
 	gboolean         (*delete)           (int);
 	gboolean         (*update_colour)    (int, int);
 	gboolean         (*update_keywords)  (int, const char*);

@@ -1170,4 +1170,20 @@ show_widget_if(GtkWidget* widget, gboolean show)
 }
 
 
+#include "file_manager/support.h"
+#include "file_manager/mimetype.h"
+#include "pixmaps.h"
+GdkPixbuf* 
+get_iconbuf_from_mimetype(char* mimetype)
+{
+	GdkPixbuf* iconbuf = NULL;
+	MIME_type* mime_type = mime_type_lookup(mimetype);
+	if(mime_type){
+		type_to_icon(mime_type);
+		if (!mime_type->image) dbg(0, "no icon.");
+		iconbuf = mime_type->image->sm_pixbuf;
+	}
+	return iconbuf;
+}
+
 
