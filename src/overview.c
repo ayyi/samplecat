@@ -26,9 +26,41 @@ extern unsigned debug;
 
 static GList* msg_list = NULL;
 
+// TODO move to audio_analysis/analyzers.c ?!
 #include "audio_analysis/meter/peak.h"
 static double calc_signal_max (Sample* sample) {
 	return ad_maxsignal(sample->full_path);
+}
+
+#include "audio_decoder/ad.h"
+#include "audio_analysis/ebumeter/ebur128.h"
+static void
+calc_ebur128(Sample* sample)
+{
+	struct ebur128 ebur;
+	if (!ebur128analyse(sample->full_path, &ebur)){
+		if (sample->misc) free(sample->misc);
+		sample->misc      = g_strdup_printf(
+			"<small><tt>"
+			"Integrated loudness:   %6.1lf LU%s\n"
+			"Loudness range:        %6.1lf LU\n"
+			"Integrated threshold:  %6.1lf LU%s\n"
+			"Range threshold:       %6.1lf LU%s\n"
+			"Range min:             %6.1lf LU%s\n"
+			"Range max:             %6.1lf LU%s\n"
+			"Momentary max:         %6.1lf LU%s\n"
+			"Short term max:        %6.1lf LU%s\n"
+			"</tt></small>"
+			, ebur.integrated , ebur.lufs?"FS":""
+			, ebur.range
+			, ebur.integ_thr  , ebur.lufs?"FS":""
+			, ebur.range_thr  , ebur.lufs?"FS":""
+			, ebur.range_min  , ebur.lufs?"FS":""
+			, ebur.range_max  , ebur.lufs?"FS":""
+			, ebur.maxloudn_M , ebur.lufs?"FS":""
+			, ebur.maxloudn_S , ebur.lufs?"FS":""
+			);
+	}
 }
 
 gpointer
@@ -67,6 +99,10 @@ overview_thread(gpointer data)
 				sample->peak_level = calc_signal_max(message->sample);
 				g_idle_add(on_peaklevel_done, sample);
 			}
+			else if(message->type == MSG_TYPE_EBUR128){
+				calc_ebur128(message->sample);
+				g_idle_add(on_ebur128_done, sample);
+			}
 
 			g_free(message);
 		}
@@ -99,7 +135,6 @@ request_overview(Sample* sample)
 	g_async_queue_push(app.msg_queue, message); //notify the overview thread.
 }
 
-
 void
 request_peaklevel(Sample* sample)
 {
@@ -107,6 +142,20 @@ request_peaklevel(Sample* sample)
 
 	struct _message* message = g_new0(struct _message, 1);
 	message->type = MSG_TYPE_PEAKLEVEL;
+	message->sample = sample;
+
+	dbg(2, "sending message: sample=%p filename=%s", sample, sample->full_path);
+	sample_ref(sample);
+	g_async_queue_push(app.msg_queue, message);
+}
+
+void
+request_ebur128(Sample* sample)
+{
+	if(!app.msg_queue) return;
+
+	struct _message* message = g_new0(struct _message, 1);
+	message->type = MSG_TYPE_EBUR128;
 	message->sample = sample;
 
 	dbg(2, "sending message: sample=%p filename=%s", sample, sample->full_path);

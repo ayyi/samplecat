@@ -214,8 +214,8 @@ inspector_set_labels(Sample* sample)
 	gtk_label_set_text(GTK_LABEL(i->channels),   ch_str);
 	gtk_label_set_text(GTK_LABEL(i->mimetype),   sample->mimetype);
 	gtk_label_set_text(GTK_LABEL(i->level),      level);
-	gtk_label_set_text(GTK_LABEL(i->misc),       sample->misc?sample->misc:""); // XXX
-	gtk_text_buffer_set_text(i->notes,           sample->notes ? sample->notes : "", -1);
+	gtk_label_set_markup(GTK_LABEL(i->misc),     sample->misc?sample->misc:"");
+	gtk_text_buffer_set_text(i->notes,           sample->notes?sample->notes:"", -1);
 
 	if (sample->overview) {
 		gtk_image_set_from_pixbuf(GTK_IMAGE(i->image), sample->overview);
@@ -393,8 +393,6 @@ inspector_on_notes_insert(GtkTextView *textview, gchar *arg1, gpointer user_data
 static gboolean
 on_notes_focus_out(GtkWidget *widget, gpointer userdata)
 {
-	if(!backend.update_notes) return false;
-
 	GtkTextBuffer* textbuf = gtk_text_view_get_buffer(GTK_TEXT_VIEW(widget));
 	g_return_val_if_fail(textbuf, false);
 
@@ -404,18 +402,10 @@ on_notes_focus_out(GtkWidget *widget, gpointer userdata)
 	gchar* notes = gtk_text_buffer_get_text(textbuf, &start_iter, &end_iter, true);
 	dbg(2, "start=%i end=%i", gtk_text_iter_get_offset(&start_iter), gtk_text_iter_get_offset(&end_iter));
 
-	unsigned id = app.inspector->row_id;
-	if (id>=0 && backend.update_notes(id, notes)){
+	if (listmodel__update_by_rowref(app.inspector->row_ref, COLX_NOTES, notes)) {
 		statusbar_print(1, "notes updated");
-		Sample *s = sample_get_by_row_ref(app.inspector->row_ref);
-		if (s) {
-			if (s->notes) free(s->notes);
-			s->notes = strdup(notes);
-		} else {
-			dbg(0, "failed to update sample-struct notes.");
-		}
 	} else {
-		dbg(0, "failed to update notes for id:%d", id);
+		dbg(0, "failed to update notes");
 	}
 	g_free(notes);
 	return FALSE;
@@ -429,30 +419,12 @@ row_set_tags_from_id(int id, GtkTreeRowReference* row_ref, const char* tags_new)
 	g_return_val_if_fail(row_ref, false);
 	dbg(0, "id=%i", id);
 
-	if(!backend.update_keywords(id, tags_new)){
+	if(!listmodel__update_by_rowref(row_ref, COL_KEYWORDS, (void*)tags_new)) {
 		statusbar_print(1, "database error. keywords not updated");
 		return false;
 	}
-
-	//update the store:
-	GtkTreePath *path;
-	if((path = gtk_tree_row_reference_get_path(row_ref))){
-		GtkTreeIter iter;
-		gtk_tree_model_get_iter(GTK_TREE_MODEL(app.store), &iter, path);
-		gtk_tree_path_free(path);
-
-		gtk_list_store_set(app.store, &iter, COL_KEYWORDS, tags_new, -1);
-		Sample *s;
-		gtk_tree_model_get(GTK_TREE_MODEL(app.store), &iter, COL_SAMPLEPTR, &s, -1);
-		if (s->keywords) free(s->keywords);
-		s->keywords=strdup(tags_new);
-	}
-	else { perr("cannot get row path: id=%i.\n", id); return false; }
-
 	return true;
 }
-
-
 
 static void
 tag_edit_start(int tnum)
@@ -487,6 +459,7 @@ tag_edit_start(int tnum)
 	} else {
 		//show the rename widget:
 		gtk_entry_set_text(GTK_ENTRY(app.inspector->edit), s->keywords?s->keywords:"");
+		sample_unref(s);
 	}
   g_object_ref(label); //stops gtk deleting the widget.
   gtk_container_remove(GTK_CONTAINER(parent), label);
@@ -550,14 +523,14 @@ tag_edit_stop(GtkWidget *widget, GdkEventCrossing *event, gpointer user_data)
   */
 	   
   //change the text in the label:
-	gchar * newtxt = gtk_entry_get_text(GTK_ENTRY(edit));
-	char* keywords = (newtxt && strlen(newtxt)) ? newtxt : "<no tags>";
+  const char * newtxt = gtk_entry_get_text(GTK_ENTRY(edit));
+  const char* keywords = (newtxt && strlen(newtxt)) ? newtxt : "<no tags>";
   gtk_label_set_text(GTK_LABEL(app.inspector->tags), keywords);
 
   //update the data:
   //update the string for the channel that the current track is using:
   //int ch = track_get_ch_idx(tnum);
-  row_set_tags_from_id(app.inspector->row_id, app.inspector->row_ref, newtxt);
+  row_set_tags_from_id(app.inspector->row_id, app.inspector->row_ref, (void*)newtxt);
 
   //swap back to the normal label:
   gtk_container_remove(GTK_CONTAINER(parent), edit);

@@ -215,6 +215,18 @@ mysql__update_keywords(int id, const char* keywords)
 
 
 gboolean
+mysql__update_misc(int id, const char* misc)
+{
+	char sql[1024];
+	snprintf(sql, 1024, "UPDATE samples SET misc='%s' WHERE id=%u", notes, id);
+	if(mysql_query(&mysql, sql)){
+		perr("update failed! sql=%s\n", sql);
+		return false;
+	}
+	else return true;
+}
+
+gboolean
 mysql__update_notes(int id, const char* notes)
 {
 	char sql[1024];

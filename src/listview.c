@@ -236,7 +236,7 @@ listview__on_row_clicked(GtkWidget *widget, GdkEventButton *event, gpointer user
 
 				//TODO re-use the Sample created in the cursor-changed handler?                ...too messy...
 				//     -does clicking change the selected row? how about multiple selections?
-				Sample* sample = sample_new_from_model(path);
+				Sample* sample = sample_get_from_model(path);
 
 				if(sample->id != app.playing_id){
 #if (defined USE_DBUS || defined USE_GAUDITION)
@@ -338,31 +338,14 @@ gboolean
 listview__item_set_colour(GtkTreePath* path, unsigned colour_index)
 {
 	g_return_val_if_fail(path, false);
+	GtkTreeIter iter;
+	gtk_tree_model_get_iter(GTK_TREE_MODEL(app.store), &iter, path);
 
-	int id = listview__path_get_id(path);
-
-	if(!backend.update_colour(id, colour_index)){
+	if(!listmodel__update_by_ref(&iter, COL_COLOUR, (void*)&colour_index)) {
 		statusbar_print(1, "error! colour not updated");
 		return false;
 	}
 	statusbar_print(1, "colour updated");
-
-	GtkTreeIter iter;
-	gtk_tree_model_get_iter(GTK_TREE_MODEL(app.store), &iter, path);
-	gtk_list_store_set(GTK_LIST_STORE(app.store), &iter, COL_COLOUR, colour_index, -1);
-
-	Sample* sample = sample_new_from_model(path);
-	if(sample && g_file_test(sample->full_path, G_FILE_TEST_IS_REGULAR)){
-		char colour_string[16];
-		snprintf(colour_string, 16, "#%s", app.config.colour[colour_index]);
-
-		GdkColor bg_colour;
-		color_rgba_to_gdk(&bg_colour, sample->colour_index);
-		if(!gdk_color_parse(colour_string, &bg_colour)) gwarn("parsing of colour string failed.\n");
-		// request_overview(sample); /// WHY ??
-	}
-	else dbg(0, "cannot update overview for offline sample. id=%i %s", id, sample->full_path);
-	sample_unref(sample);
 	return true;
 }
 
@@ -410,7 +393,7 @@ listview__get_first_selected_result()
 {
 	GtkTreePath* path = listview__get_first_selected_path();
 	if(path){
-		Sample* result = sample_new_from_model(path);
+		Sample* result = sample_get_from_model(path);
 		gtk_tree_path_free(path);
 		return result;
 	}
@@ -673,13 +656,10 @@ listview__on_motion(GtkWidget *widget, GdkEventMotion *event, gpointer user_data
 	return false;
 }
 
-
-// TODO: consolidate with row_set_tags_from_id() and row_clear_tags() 
+/**the keywords column has been edited. Update the database to reflect the new text.  */
 static void
 listview__on_keywords_edited(GtkCellRendererText *cell, gchar *path_string, gchar *new_text, gpointer user_data)
 {
-	//the keywords column has been edited. Update the database to reflect the new text.
-
 	PF;
 	GtkTreeIter iter;
 	int idx;
@@ -695,22 +675,8 @@ listview__on_keywords_edited(GtkCellRendererText *cell, gchar *path_string, gcha
 	//gchar* lower = g_ascii_strdown(new_text, -1);
 	//g_free(lower);
 
-	if(backend.update_keywords && backend.update_keywords(idx, new_text)){
-
-		gtk_list_store_set(app.store, &iter, COL_KEYWORDS, new_text, -1);
+	if(listmodel__update_by_ref(&iter, COL_KEYWORDS, (void*)new_text)) {
 		statusbar_print(1, "keywords updated");
-
-		//update the store:
-		gtk_list_store_set(app.store, &iter, COL_KEYWORDS, new_text, -1);
-		//update sample
-		Sample *s;
-		gtk_tree_model_get(GTK_TREE_MODEL(app.store), &iter, COL_SAMPLEPTR, &s, -1);
-		if (s->keywords) free(s->keywords);
-		s->keywords=strdup(new_text);
-		//update inspector IFF currently visible!
-		if (s->id == app.inspector->row_id) {
-			inspector_set_labels(s);
-		}
 	}
 	else statusbar_print(1, "database error! keywords not updated");
 }

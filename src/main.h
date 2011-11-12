@@ -58,6 +58,7 @@ struct _backend
 	gboolean         (*update_colour)    (int, int);
 	gboolean         (*update_keywords)  (int, const char*);
 	gboolean         (*update_notes)     (int, const char*);
+	gboolean         (*update_misc)      (int, const char*);
 	gboolean         (*update_pixbuf)    (Sample*);
 	gboolean         (*update_online)    (int, gboolean);
 	gboolean         (*update_peaklevel) (int, float);
@@ -181,8 +182,10 @@ gboolean    new_search(GtkWidget*, gpointer userdata);
 gboolean    add_file(char* path);
 void        add_dir(const char* path, int* added_count);
 void        delete_selected_rows();
+
 gboolean    on_overview_done(gpointer sample);
 gboolean    on_peaklevel_done(gpointer sample);
+gboolean    on_ebur128_done(gpointer _sample);
 
 gboolean    mimestring_is_unsupported(char*);
 gboolean    mimetype_is_unsupported(MIME_type*, char* mime_string);

@@ -85,7 +85,7 @@ tracker__delete_row(int id)
 
 
 gboolean
-tracker__update_pixbuf(Sample* sample)
+tracker__update_ignore(Sample* sample)
 {
 	return true;
 }

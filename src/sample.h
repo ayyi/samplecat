@@ -32,7 +32,6 @@ struct _sample
 	int          colour_index;
 
 	gboolean     online;
-	char*        updated; //TODO char* ? int? date?
 
 	char*        keywords;
 	char*        misc;
@@ -48,11 +47,21 @@ struct _sample
  * @return needs to be sample_unref();
  */
 Sample*     sample_new               ();
-Sample*     sample_new_from_model    (GtkTreePath*);
-Sample*     sample_new_from_fileview (GtkTreeModel*, GtkTreeIter*);
 Sample*     sample_new_from_filename (char *path, gboolean path_alloced);
 Sample*     sample_dup               (Sample*);
-Sample*     sample_get_by_row_ref    (GtkTreeRowReference* ref); //< does not increase reference count ; may return NULL
+
+/** "new" is misleading in sample_new_from_model()
+ * it returns a reference to the existing sample  in the tree
+ * implies sample_ref() 
+ * @return needs to be sample_unref();
+ */
+Sample*     sample_get_from_model    (GtkTreePath*);
+
+/** sample_get_by_row_ref returns a pointer to
+ * the sample struct in the data model or NULL if not found.
+ * @return needs to be sample_unref();
+ */
+Sample*     sample_get_by_row_ref    (GtkTreeRowReference* ref); 
 
 void        sample_ref               (Sample*);
 void        sample_unref             (Sample*);

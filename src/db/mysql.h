@@ -12,6 +12,7 @@ int       mysql__update_path      (const char* old_path, const char* new_path);
 gboolean  mysql__update_colour    (int id, int colour);
 gboolean  mysql__update_keywords  (int id, const char*);
 gboolean  mysql__update_notes     (int id, const char*);
+gboolean  mysql__update_misc      (int id, const char*);
 gboolean  mysql__update_pixbuf    (Sample*);
 gboolean  mysql__update_online    (int id, gboolean);
 gboolean  mysql__update_peaklevel (int id, float);

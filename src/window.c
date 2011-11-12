@@ -784,32 +784,7 @@ static void
 on_category_set_clicked(GtkComboBox *widget, gpointer user_data)
 {
 	//add selected category to selected samples.
-
 	PF;
-
-	// TODO: consolidate with row_set_tags_from_id() and row_clear_tags() 
-	gboolean row_set_tags(GtkTreeIter* iter, int id, const char* tags_new)
-	{
-		dbg(0, "row_set_tags");
-		if(backend.update_keywords(id, tags_new)){
-			//update the store:
-			gtk_list_store_set(app.store, iter, COL_KEYWORDS, tags_new, -1);
-			//update sample
-			Sample *s;
-			gtk_tree_model_get(GTK_TREE_MODEL(app.store), iter, COL_SAMPLEPTR, &s, -1);
-			if (s->keywords) free(s->keywords);
-			s->keywords=strdup(tags_new);
-			//update inspector IFF currently visible!
-			if (s->id == app.inspector->row_id) {
-				dbg(0, "row_set_tags inspector_set_labels");
-				inspector_set_labels(s);
-			}
-			return true;
-		}else{
-			return false;
-		}
-	}
-
 	//selected category?
 	gchar* category = gtk_combo_box_get_active_text(GTK_COMBO_BOX(app.category));
 
@@ -836,7 +811,7 @@ on_category_set_clicked(GtkComboBox *widget, gpointer user_data)
 					snprintf(tags_new, 1024, "%s %s", tags ? tags : "", category);
 					g_strstrip(tags_new);//trim
 
-					row_set_tags(&iter, id, tags_new);
+					listmodel__update_by_ref(&iter, COL_KEYWORDS, (void*)tags_new);
 				}else{
 					dbg(1, "keyword is a dupe - not applying.");
 					statusbar_print(1, "ignoring duplicate keyword.");
@@ -856,30 +831,7 @@ static gboolean
 row_clear_tags(GtkTreeIter* iter, int id)
 {
 	if(!id){ perr("bad arg: id\n"); return false; }
-
-	gwarn("test me! (refactored)");
-	backend.update_keywords(id, "");
-#if 0
-	char sql[1024];
-	snprintf(sql, 1024, "UPDATE samples SET keywords='' WHERE id=%i", id);
-	dbg(1, "sql=%s\n", sql);
-	if(mysql_query(&app.mysql, sql)){
-		perr("update failed! sql=%s\n", sql);
-		return false;
-	}
-#endif
-
-	//update the store:
-	gtk_list_store_set(app.store, iter, COL_KEYWORDS, "", -1);
-
-	Sample *s;
-	gtk_tree_model_get(GTK_TREE_MODEL(app.store), iter, COL_SAMPLEPTR, &s, -1);
-	if (s->keywords) free(s->keywords);
-	s->keywords=strdup("");
-	if (s->id == app.inspector->row_id) {
-		inspector_set_labels(s);
-	}
-	return true;
+	return listmodel__update_by_ref(iter, COL_KEYWORDS, "");
 }
 
 

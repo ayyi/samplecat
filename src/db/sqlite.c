@@ -301,6 +301,11 @@ sqlite__update_keywords(int id, const char* keywords)
 	return ok;
 }
 
+gboolean
+sqlite__update_misc(int id, const char* misc)
+{
+	return sqlite__update_string(id, misc, "misc");
+}
 
 gboolean
 sqlite__update_notes(int id, const char* notes)

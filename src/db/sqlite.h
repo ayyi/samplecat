@@ -10,6 +10,7 @@ gboolean sqlite__delete_row       (int id);
 gboolean sqlite__update_colour    (int id, int colour);
 gboolean sqlite__update_keywords  (int id, const char*);
 gboolean sqlite__update_notes     (int id, const char*);
+gboolean sqlite__update_misc      (int id, const char*);
 gboolean sqlite__update_pixbuf    (Sample*);
 gboolean sqlite__update_online    (int id, gboolean);
 gboolean sqlite__update_peaklevel (int id, float);

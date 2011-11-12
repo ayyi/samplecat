@@ -4,7 +4,7 @@
 gboolean tracker__init             ();
 void     tracker__disconnect       ();
 
-gboolean tracker__update_pixbuf    (Sample*);
+gboolean tracker__update_ignore    (Sample*);
 
 int      tracker__insert           (Sample*);
 gboolean tracker__delete_row       (int id);

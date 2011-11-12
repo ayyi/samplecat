@@ -792,15 +792,7 @@ on_overview_done(gpointer _sample)
 	if(!sample->overview){ dbg(1, "overview creation failed (no pixbuf).\n"); return false; }
 
 	backend.update_pixbuf(sample);
-
-	if(sample->row_ref){
-		listmodel__set_overview(sample->row_ref, sample->overview);
-	} else pwarn("rowref not set!\n");
-
-	// TODO: update inspector if current sample is selected
-	if (sample->id == app.inspector->row_id) {
-		inspector_set_labels(sample);
-	}
+	listmodel__update_result(sample);
 
 	sample_unref(sample);
 	return IDLE_STOP;
@@ -814,15 +806,22 @@ on_peaklevel_done(gpointer _sample)
 	dbg(1, "peaklevel=%.2f id=%i rowref=%p", sample->peak_level, sample->id, sample->row_ref);
 
 	backend.update_peaklevel(sample->id, sample->peak_level);
-
-	if(sample->row_ref){
-		listmodel__set_peaklevel(sample->row_ref, sample->peak_level);
-	} else pwarn("rowref not set!\n");
-
+	listmodel__update_result(sample);
 	sample_unref(sample);
 	return IDLE_STOP;
 }
 
+gboolean
+on_ebur128_done(gpointer _sample)
+{
+	Sample* sample = _sample;
+
+	backend.update_misc(sample->id, sample->misc);
+	listmodel__update_result(sample);
+
+	sample_unref(sample);
+	return IDLE_STOP;
+}
 
 void
 delete_selected_rows()
@@ -882,10 +881,10 @@ menu_delete_row(GtkMenuItem* widget, gpointer user_data)
 }
 
 
+/** sync the catalogue row with the filesystem. */
 static void
 update_row(GtkWidget *widget, gpointer user_data)
 {
-	//sync the catalogue row with the filesystem.
 
 	PF;
 	GtkTreeIter iter;
@@ -906,8 +905,15 @@ update_row(GtkWidget *widget, gpointer user_data)
 		GtkTreePath *treepath = g_list_nth_data(selectionlist, i);
 
 		gtk_tree_model_get_iter(model, &iter, treepath);
-		gtk_tree_model_get(model, &iter, COL_NAME, &fname, COL_FNAME, &fdir, COL_MIMETYPE, &mimetype, COL_IDX, &id, COL_PEAKLEVEL, &peak_level, -1);
 
+		/* XXX TODO - needs update to new model
+		 *   consolidate with sample_new() and listmodel__add_result()
+		 *
+		 * - request_overview()
+		 * - request_ebur128()
+		 */
+		gtk_tree_model_get(model, &iter, COL_NAME, &fname, COL_FNAME, &fdir, COL_MIMETYPE, &mimetype, COL_IDX, &id, COL_PEAKLEVEL, &peak_level, -1);
+		 
 		//gchar path[256];
 		//snprintf(path, 256, "%s/%s", fdir, fname);
 		gchar* path = g_strdup_printf("%s/%s", fdir, fname);
@@ -919,13 +925,18 @@ update_row(GtkWidget *widget, gpointer user_data)
 			if (!mime_type->image) dbg(0, "no icon.");
 			iconbuf = mime_type->image->sm_pixbuf;
 
-			dbg(0, "peak_level=%.2f", peak_level);
-			if(peak_level < 0.00001){
-				//TODO check dates first?
-				dbg(0, "no peak level. regenerating...");
-				Sample* sample = sample_new_from_model(treepath);
-				//TODO need to update inspector once finished
-				request_peaklevel(sample);
+			// TODO check filemtime - compare w/ last update.
+			if (1) { /* FULL UPDATE */
+				Sample* sample = sample_get_from_model(treepath);
+
+				if (sample_get_file_info(sample)) {
+					request_peaklevel(sample);
+					request_overview(sample);
+					request_ebur128(sample);
+				} else {
+					dbg(0, "full update - reading file info failed.");
+				}
+				
 				sample_unref(sample);
 			}
 		}else{
@@ -1426,6 +1437,7 @@ set_backend(BackendType type)
 			backend.update_colour    = mysql__update_colour;
 			backend.update_keywords  = mysql__update_keywords;
 			backend.update_notes     = mysql__update_notes;
+			backend.update_misc      = mysql__update_misc;
 			backend.update_pixbuf    = mysql__update_pixbuf;
 			backend.update_online    = mysql__update_online;
 			backend.update_peaklevel = mysql__update_peaklevel;
@@ -1446,6 +1458,7 @@ set_backend(BackendType type)
 			backend.update_colour    = sqlite__update_colour;
 			backend.update_keywords  = sqlite__update_keywords;
 			backend.update_notes     = sqlite__update_notes;
+			backend.update_misc      = sqlite__update_misc;
 			backend.update_pixbuf    = sqlite__update_pixbuf;
 			backend.update_online    = sqlite__update_online;
 			backend.update_peaklevel = sqlite__update_peaklevel;
@@ -1463,7 +1476,9 @@ set_backend(BackendType type)
 			backend.delete           = tracker__delete_row;
 			backend.update_colour    = tracker__update_colour;
 			backend.update_keywords  = tracker__update_keywords;
-			backend.update_pixbuf    = tracker__update_pixbuf;
+			backend.update_pixbuf    = tracker__update_ignore;
+			backend.update_notes     = tracker__update_ignore;
+			backend.update_misc      = tracker__update_ignore;
 			backend.update_online    = tracker__update_online;
 			backend.update_peaklevel = tracker__update_peaklevel;
 			backend.disconnect       = tracker__disconnect;
@@ -1471,6 +1486,14 @@ set_backend(BackendType type)
 
 			//hide unsupported inspector notes
 			GtkWidget* notes = app.inspector->text;
+#if 1 
+			// may not work -- it could re-appear ?! show_fields()??
+			if(notes) gtk_widget_hide(notes);
+#else // THIS NEEDS TESTING:
+			g_object_ref(notes); //stops gtk deleting the unparented widget.
+			gtk_container_remove(GTK_CONTAINER(notes->parent), notes);
+#endif
+
 			if(notes) gtk_widget_hide(notes);
 
 			#endif

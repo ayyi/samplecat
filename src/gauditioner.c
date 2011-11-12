@@ -160,7 +160,7 @@ void auditioner_play_all() {
 
 	gboolean foreach_func(GtkTreeModel* model, GtkTreePath* path, GtkTreeIter* iter, gpointer user_data)
 	{
-		Sample* result = sample_new_from_model(path);
+		Sample* result = sample_get_from_model(path);
 		play_queue = g_list_append(play_queue, result);
 		dbg(2, "%s", result->sample_name);
 		return FALSE; //continue

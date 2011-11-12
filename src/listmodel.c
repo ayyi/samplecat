@@ -17,6 +17,7 @@
 #include "pixmaps.h"
 #include "overview.h"
 #include "listmodel.h"
+#include "inspector.h"
 
 extern struct _app app;
 extern unsigned debug;
@@ -74,14 +75,12 @@ listmodel__clear()
 void
 listmodel__add_result(Sample* result)
 {
-	dbg(0,"..");
 	if(!app.store) return;
 	g_return_if_fail(result);
-	dbg(0,"OK");
 
 #if 1
-	/* this has actualy been checked _before_ here
-	 * but backend may 'inject' mime types..
+	/* these has actualy been checked _before_ here
+	 * but backend may 'inject' mime types. ?!
 	 */
 	if(!result->mimetype){
 		dbg(0,"no mimetype given -- this should NOT happen: fix backend");
@@ -163,7 +162,96 @@ listmodel__add_result(Sample* result)
 		dbg(0, "regenerate overview");
 		request_overview(result);
 	}
+	if(!result->misc && result->row_ref){
+		dbg(0, "regenerate ebur128");
+		request_ebur128(result);
+	}
 	sample_ref(result);
+}
+
+void
+listmodel__update_result(Sample* sample)
+{
+	if(sample->row_ref){
+		listmodel__set_peaklevel(sample->row_ref, sample->peak_level);
+		listmodel__set_overview(sample->row_ref, sample->overview);
+	} else dbg(0,"rowref not set");
+
+	if (sample->id == app.inspector->row_id) {
+		inspector_set_labels(sample);
+	}
+}
+
+gboolean
+listmodel__update_by_ref(GtkTreeIter *iter, int what, void *data)
+{
+	gboolean rv = true;
+	Sample *s=NULL;
+	gtk_tree_model_get(GTK_TREE_MODEL(app.store), iter, COL_SAMPLEPTR, &s, -1);
+	if (!s) dbg(0, "no sample data in list model!"); // THIS SHOULD NEVER HAPPEN!
+	sample_ref(s);
+
+	switch (what) {
+		case COL_KEYWORDS:
+			{
+				if(!backend.update_keywords(s->id, (char*)data)) rv=false;
+				else {
+					gtk_list_store_set(app.store, iter, COL_KEYWORDS, (char*)data, -1);
+					if (s->keywords) free(s->keywords);
+					s->keywords=strdup((char*)data);
+				}
+			}
+			break;
+		case COLX_NOTES:
+				if (!backend.update_notes(s->id, (char*)data)) rv=false;
+				else {
+					if (s->notes) free(s->notes);
+					s->notes = strdup((char*)data);
+				}
+			break;
+		case COL_COLOUR:
+			{
+				unsigned int colour_index = *((unsigned int*)data);
+				if(!backend.update_colour(s->id, colour_index)) rv=false;
+				else {
+					gtk_list_store_set(app.store, iter, COL_COLOUR, colour_index, -1);
+					s->colour_index=colour_index;
+#if 0
+					char colour_string[16];
+					snprintf(colour_string, 16, "#%s", app.config.colour[colour_index]);
+					GdkColor bg_colour;
+					color_rgba_to_gdk(&bg_colour, s->colour_index);
+					if(!gdk_color_parse(colour_string, &bg_colour)) gwarn("parsing of colour string failed.\n");
+					// request_overview(sample); /// WHY ??
+#endif
+				}
+			}
+			break;
+		default:
+			dbg(0,"update for this type is not yet implemented"); 
+			break;
+	}
+
+	if (s->id == app.inspector->row_id) {
+		inspector_set_labels(s);
+	}
+	sample_unref(s);
+	return rv;
+}
+
+gboolean
+listmodel__update_by_rowref(GtkTreeRowReference *row_ref, int what, void *data)
+{
+	GtkTreePath *path;
+	if(!(path = gtk_tree_row_reference_get_path(row_ref))) {
+		perr("cannot get row bt refernce\n");
+		return false;
+	}
+
+	GtkTreeIter iter;
+	gtk_tree_model_get_iter(GTK_TREE_MODEL(app.store), &iter, path);
+	gtk_tree_path_free(path);
+	return listmodel__update_by_ref(&iter, what, data);
 }
 
 #ifdef NEVER
