@@ -1981,7 +1981,7 @@ view_details_dnd_get(GtkWidget* widget, GdkDragContext* context, GtkSelectionDat
 	GtkTreeSelection* selection = view->selection;
 	GList* selected_rows = gtk_tree_selection_get_selected_rows(selection, &(model));
 
-	GList* drop_list;
+	GList* drop_list = NULL;
 	gchar *uri_text = NULL;
 	gint length = 0;
 
@@ -1997,8 +1997,8 @@ view_details_dnd_get(GtkWidget* widget, GdkDragContext* context, GtkSelectionDat
 		dbg(1, "leaf=%s", g_value_get_string(&leaf));
 		gchar* path = g_strconcat(view->filer_window->real_path, "/", g_value_get_string(&leaf), NULL);
 		g_value_unset(&leaf);
-
-		drop_list = g_list_prepend(NULL, path);
+		//append is slow, but g_list_prepend() is wrong order :(
+		drop_list = g_list_append(drop_list, path);
 	}
 
 	//free the selection list data:

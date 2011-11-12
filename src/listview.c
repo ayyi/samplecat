@@ -41,8 +41,10 @@ static void     cell_bg_lighter                  (GtkTreeViewColumn*, GtkCellRen
 static void     cell_data_bg                     (GtkTreeViewColumn*, GtkCellRenderer*, GtkTreeModel*, GtkTreeIter*, gpointer);
 static gboolean listview__get_first_selected_iter(GtkTreeIter*);
 static GtkTreePath* listview__get_first_selected_path();
+#if NEVER
 static int      listview__path_get_id            (GtkTreePath*);
 static gboolean treeview_get_tags_cell  (GtkTreeView*, guint x, guint y, GtkCellRenderer**);
+#endif
 
 
 void
@@ -185,6 +187,7 @@ listview__new()
 }
 
 
+#if NEVER
 static int
 listview__path_get_id(GtkTreePath* path)
 {
@@ -199,7 +202,7 @@ listview__path_get_id(GtkTreePath* path)
 	if(!id) pwarn("failed to get id! id must be non-zero.");
 	return id;
 }
-
+#endif
 
 void
 listview__show_db_missing()
@@ -439,32 +442,24 @@ listview__dnd_get(GtkWidget *widget, GdkDragContext *context, GtkSelectionData *
 	GtkTreeSelection* selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(app.view));
 	GList* selected_rows = gtk_tree_selection_get_selected_rows(selection, &(model));
 
-	GtkTreeIter iter;
-	gchar *path;
-	GList* row = selected_rows;
+	GList* list = NULL;
+	GList* row  = selected_rows;
+
 	for(; row; row=row->next){
 		GtkTreePath* treepath_selection = row->data;
 		Sample *s = sample_get_from_model(treepath_selection);
-		path=g_strdup(s->full_path);
+		//append is slow, but g_list_prepend() is wrong order :(
+		list = g_list_append(list, g_strdup(s->full_path));
 		sample_unref(s);
-		dbg(1, "path=%s", path);
+		gtk_tree_path_free(treepath_selection);
 	}
 
-	//free the selection list data:
-	GList* l = selected_rows;
-	for(;l;l=l->next) gtk_tree_path_free(l->data);
-	g_list_free(selected_rows);
-
-	GList *list;
 	gchar *uri_text = NULL;
 	gint length = 0;
-
 	switch (info) {
 		case TARGET_URI_LIST:
 		case TARGET_TEXT_PLAIN:
-			list = g_list_prepend(NULL, path);
 			uri_text = uri_text_from_list(list, &length, (info == TARGET_TEXT_PLAIN));
-			g_list_free(list);
 			break;
 	}
 
@@ -473,7 +468,10 @@ listview__dnd_get(GtkWidget *widget, GdkDragContext *context, GtkSelectionData *
 		g_free(uri_text);
 	}
 
-	g_free(path);
+	GList* l = list;
+	for(;l;l=l->next) g_free(l->data);
+	g_list_free(list);
+	g_list_free(selected_rows);
 }
 
 
@@ -889,7 +887,7 @@ cell_data_bg(GtkTreeViewColumn *tree_column, GtkCellRenderer *cell, GtkTreeModel
 	else             g_object_set(cell, "cell-background-set", false, NULL);
 }
 
-
+#if NEVER
 static gboolean
 treeview_get_tags_cell(GtkTreeView *view, guint x, guint y, GtkCellRenderer **cell)
 {
@@ -942,3 +940,4 @@ treeview_get_tags_cell(GtkTreeView *view, guint x, guint y, GtkCellRenderer **ce
 	dbg(0, "not found in column. cell_height=%i\n", cell_rect.height);
 	return false; // not found
 }
+#endif

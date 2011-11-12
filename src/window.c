@@ -704,6 +704,8 @@ menu__add_to_db(GtkMenuItem* menuitem, gpointer user_data)
 			g_free(filepath);
 		}
 	}
+	g_list_foreach(l, (GFunc)gtk_tree_path_free, NULL);
+	g_list_free(l);
 }
 
 
