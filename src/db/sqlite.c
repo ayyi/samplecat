@@ -86,8 +86,8 @@ sqlite__connect()
 	int n = sqlite3_get_table(db, "SELECT name, sql FROM sqlite_master WHERE type='table' AND name='samples';",
 			&table,&rows,&columns,&errmsg);
 	if(rc==SQLITE_OK && (table != NULL) && (rows==1) && (columns==2)) {
-		if (!strcmp(table[2], "sample")) {
-			dbg(0, "found table");
+		if (!strcmp(table[2], "samples")) {
+			dbg(2, "found table 'samples'");
 			table_exists=TRUE;
 			if (!strstr(table[3], "ebur TEXT")) { 
 				dbg(0, "updating to new model: ebur");
@@ -146,7 +146,7 @@ sqlite__insert(Sample* sample)
 	char* errMsg = 0;
 
 	char* sql = sqlite3_mprintf(
-		"INSERT INTO samples(abspath,filename,filedir,length,sample_rate,channels,online,mimetype,ebur,peaklevel,colour) "
+		"INSERT INTO samples(abspath,filename,filedir,length,sample_rate,channels,online,mimetype,ebur,peaklevel,colour,mtime) "
 		"VALUES ('%q','%q','%q',%"PRIi64",'%i','%i','%i','%s','%q','%f','%i','%i')",
 		sample->full_path, sample->sample_name, sample->dir,
 		sample->length, sample->sample_rate, sample->channels,
@@ -284,7 +284,7 @@ sqlite__update_online(int id, gboolean online, time_t mtime)
 	}
 
 	gboolean ok = true;
-	gchar* sql = sqlite3_mprintf("UPDATE samples SET online=%i, mtime=%i last_checked=datetime('now') WHERE id=%i", online, mtime, id);
+	gchar* sql = sqlite3_mprintf("UPDATE samples SET online=%i, mtime=%i, last_checked=datetime('now') WHERE id=%i", online, mtime, id);
 	dbg(1, "sql=%s", sql);
 	char* errMsg = 0;
 	int n = sqlite3_exec(db, sql, on_update, 0, &errMsg);
