@@ -57,8 +57,13 @@ static int ebur128proc (const char *fn, struct ebur128 *ebr) {
 
 	const int bsize = fsamp / 5;
 	inpb = new float [nchan * bsize];
-	data [0] = new float [bsize];
-	data [1] = new float [bsize];
+	if (nchan > 1) {
+		data [0] = new float [bsize];
+		data [1] = new float [bsize];
+	} else {
+		data [0] = inpb;
+		data [1] = inpb;
+	}
 
 	Proc.init (nchan, fsamp);
 	Proc.integr_start ();
@@ -69,12 +74,6 @@ static int ebur128proc (const char *fn, struct ebur128 *ebr) {
 	    float *p = inpb;
 	    for (i = 0; i < k; i++) {
 				data [0][i] = *p++;
-				data [1][i] = *p++;
-	    }
-		} else {
-	    float *p = inpb;
-	    for (i = 0; i < k; i++) {
-				data [0][i] = *p;
 				data [1][i] = *p++;
 	    }
 		}
