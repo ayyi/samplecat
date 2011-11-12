@@ -242,32 +242,32 @@ main(int argc, char** argv)
 	pixmaps_init();
 	dir_init();
 	app.store = listmodel__new();
-	if (!app.store) {
-		dbg(0,"GOTCHA");
-	}
 
+	gboolean db_connected = false;
 #ifdef USE_MYSQL
 	if(can_use_backend("mysql")){
 		if(mysql__connect()){
 			set_backend(BACKEND_MYSQL);
-		}else{
-			#ifdef QUIT_WITHOUT_DB
-			on_quit(NULL, GINT_TO_POINTER(1));
-			#endif
+			db_connected = true;
 		}
 	}
 #endif
 #ifdef USE_SQLITE
 	if(can_use_backend("sqlite")){
-		if(!sqlite__connect()){
-			#ifdef QUIT_WITHOUT_DB
-			on_quit(NULL, GINT_TO_POINTER(EXIT_FAILURE));
-			#endif
-		}else{
-			if(BACKEND_IS_NULL) set_backend(BACKEND_SQLITE);
+		if(sqlite__connect()){
+			set_backend(BACKEND_SQLITE);
+			db_connected = true;
 		}
 	}
 #endif
+
+	if (!db_connected) {
+		gwarn("can not connected to any database.\n");
+#ifdef QUIT_WITHOUT_DB
+		on_quit(NULL, GINT_TO_POINTER(EXIT_FAILURE));
+#endif
+	}
+
 #ifdef USE_TRACKER
 	if(BACKEND_IS_NULL && can_use_backend("tracker")){
 		void on_tracker_init()
@@ -292,7 +292,7 @@ main(int argc, char** argv)
 		add_file(app.args.add);
 	}
 
-	if(!app.no_gui) file_manager__init();
+	if(!app.no_gui) file_manager__init(); // set filer
 
 #ifndef DEBUG_NO_THREADS
 	dbg(3, "creating overview thread...");
@@ -763,6 +763,7 @@ add_file(char* path)
 
 	Sample* sample = sample_new_from_filename(path, false);
 	if (!sample) {
+		gwarn("cannot add file: file-type is not supported\n");
 		statusbar_print(1, "cannot add file: file-type is not supported");
 		return false;
 	}
@@ -910,7 +911,8 @@ update_row(GtkWidget *widget, gpointer user_data)
 		//gchar path[256];
 		//snprintf(path, 256, "%s/%s", fdir, fname);
 		gchar* path = g_strdup_printf("%s/%s", fdir, fname);
-		if(file_exists(path)){
+		time_t mtime = file_mtime(path);
+		if(mtime>0){
 			online = 1;
 
 			MIME_type* mime_type = mime_type_lookup(mimetype);
@@ -933,6 +935,7 @@ update_row(GtkWidget *widget, gpointer user_data)
 				sample_unref(sample);
 			}
 		}else{
+			/* file does not exist */
 			online = 0;
 			iconbuf = NULL;
 		}

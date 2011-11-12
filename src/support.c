@@ -251,16 +251,22 @@ gboolean
 file_exists(const char *path)
 {
 	struct stat info;
-
 	return !stat(path, &info);
+}
+
+time_t
+file_mtime(const char *path)
+{
+	struct stat info;
+	if (stat(path, &info)) return -1;
+	return info.st_mtime;
 }
 
 gboolean
 is_dir(const char *path)
 {
-	PF;
-	struct stat info2;
-	return lstat(path, &info2) == 0 && S_ISDIR(info2.st_mode);
+	struct stat info;
+	return lstat(path, &info) == 0 && S_ISDIR(info.st_mode);
 }
 
 gboolean

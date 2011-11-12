@@ -170,12 +170,20 @@ listmodel__add_result(Sample* result)
 void
 listmodel__update_result(Sample* sample, int what)
 {
+	if(!sample->row_ref){
+		dbg(0,"rowref not set");
+	}
+
 	switch (what) {
 		case COL_OVERVIEW:
 			backend.update_pixbuf(sample);
+			if (sample->row_ref)
+				listmodel__set_overview(sample->row_ref, sample->overview);
 			break;
 		case COL_PEAKLEVEL:
 			backend.update_peaklevel(sample->id, sample->peak_level);
+			if(sample->row_ref)
+				listmodel__set_peaklevel(sample->row_ref, sample->peak_level);
 			break;
 		case COLX_EBUR:
 			backend.update_ebur(sample->id, sample->ebur);
@@ -184,10 +192,6 @@ listmodel__update_result(Sample* sample, int what)
 			dbg(0,"update for this type is not yet implemented"); 
 			break;
 	}
-	if(sample->row_ref){
-		listmodel__set_peaklevel(sample->row_ref, sample->peak_level);
-		listmodel__set_overview(sample->row_ref, sample->overview);
-	} else dbg(0,"rowref not set");
 
 	if (sample->id == app.inspector->row_id) {
 		inspector_set_labels(sample);

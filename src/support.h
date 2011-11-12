@@ -67,6 +67,7 @@ void         len_format                (char*, int64_t);
 //gint         strcmp2(gconstpointer a, gconstpointer b);
 //GPtrArray*   list_dir(const guchar *path);
 gboolean     file_exists               (const char*);
+time_t       file_mtime                (const char *path);
 gboolean     is_dir                    (const char*);
 gboolean     dir_is_empty              (const char*);
 void         file_extension            (const char*, char* extn);

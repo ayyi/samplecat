@@ -32,6 +32,7 @@ struct _sample
 	int          colour_index;
 
 	gboolean     online;
+	time_t       mtime; // TODO: not yet in storage
 
 	char*        keywords;
 	char*        ebur;

@@ -35,7 +35,22 @@ sample_new()
 Sample*
 sample_new_from_filename(char *path, gboolean path_alloced)
 {
+#if 0 // circumvent file_manager -- to_utf8()
+	/* this is a bad hack - the file-manager should provide an unaltered file-name !!! */
+	/* actually WE need to do the same: GTK-Tree: utf8 -- dnd/file-access: orig */
+	char *npath = g_convert_with_fallback(path, -1, "iso-8859-1", "utf-8", "?", NULL, NULL, NULL);
+	if (!npath) {
+		npath = g_filename_from_utf8(path, -1, NULL, NULL, NULL);
+	}
+	if (!npath) {
+		npath = path;
+	}
+	if (path_alloced) free(path);
+	path=npath;
+	path_alloced=true;
+#endif
 	if (!file_exists(path)) {
+		perr("file not found: %s\n", path);
 		if (path_alloced) free(path);
 		return NULL;
 	}
@@ -56,6 +71,8 @@ sample_new_from_filename(char *path, gboolean path_alloced)
 		sample_unref(sample);
 		return NULL;
 	}
+
+	sample->mtime = file_mtime(path);
 
 	if(!sample->sample_name){
 		sample->sample_name= g_path_get_basename(sample->full_path);

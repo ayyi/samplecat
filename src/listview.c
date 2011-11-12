@@ -462,7 +462,7 @@ listview__dnd_get(GtkWidget *widget, GdkDragContext *context, GtkSelectionData *
 	gchar *uri_text = NULL;
 	gint length = 0;
 
-	gchar* path = g_strconcat(pathname, "/", filename, NULL);
+	gchar* path = g_strconcat(pathname, "/", filename, NULL); // XXX TODO use proper path from sample
 
 	switch (info) {
 		case TARGET_URI_LIST:
