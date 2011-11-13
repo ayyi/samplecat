@@ -1,7 +1,8 @@
 
-EXTRA_DIST = soundfont.c
+EXTRA_DIST = soundfont.c \
+	filetype_plugin.h
 
-#if WITH_WEBKIT
+#if ENABLE_SF2
 AM_CPPFLAGS = -I$(top_srcdir)/src -I$(top_srcdir)/libs $(GTK_CFLAGS) $(SF2_CFLAGS)
 
 pkglib_LTLIBRARIES = libsf2.la
