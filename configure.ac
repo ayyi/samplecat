@@ -206,6 +206,7 @@ dnl # FLAC requires jack_ringbuffer
 dnl AS_IF([test "$enable_flac" = "yes"], [
 dnl 	    PKG_CHECK_MODULES(JACK, jack,, enable_flac=no)
 dnl 			])
+enable_flac="deprecated"
 AM_CONDITIONAL(ENABLE_FLAC, test "$enable_flac" = "yes")
 AC_SUBST(FLAC_CFLAGS)
 AC_SUBST(FLAC_LIBS)
