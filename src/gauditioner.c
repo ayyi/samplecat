@@ -181,10 +181,7 @@ void auditioner_stop() {
 	dbg(1, "stop audition..");
 	if (play_queue) {
 		Sample *result;
-		do {
-			Sample* s = play_queue->data;
-			sample_unref(s);
-		} while (play_queue = g_list_remove(play_queue, result));
+		g_list_foreach(play_queue,(GFunc)sample_unref, NULL);
 		g_list_free(play_queue);
 		play_queue=NULL;
 	}
