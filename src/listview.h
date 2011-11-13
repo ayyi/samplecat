@@ -8,6 +8,7 @@ void        listview__add_item                   ();
 Sample*     listview__get_first_selected_result  ();
 gchar*      listview__get_first_selected_filename();
 gchar*      listview__get_first_selected_filepath();
+void        listview__reset_colours              ();
 
 void        treeview_block_motion_handler        ();
 void        treeview_unblock_motion_handler      ();

@@ -271,7 +271,7 @@ listview__on_row_clicked(GtkWidget *widget, GdkEventButton *event, gpointer user
 # else // temporary
 				GtkTreeIter iter;
 				gtk_tree_model_get_iter(GTK_TREE_MODEL(app.store), &iter, path);
-				gtk_list_store_set(GTK_LIST_STORE(app.store), &iter, COL_COLOUR, /*colour*/ 1, -1);
+				gtk_list_store_set(GTK_LIST_STORE(app.store), &iter, COL_COLOUR, /*colour*/ PALETTE_SIZE, -1);
 # endif
 #endif
 				sample_unref(sample);
@@ -372,6 +372,18 @@ listview__get_first_selected_iter(GtkTreeIter* iter)
 	return false;
 }
 
+gboolean reset_colours (GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *iter, gpointer data) {
+	Sample *s = sample_get_by_tree_iter(iter);
+	gtk_list_store_set(app.store, iter, COL_COLOUR, s->colour_index, -1);
+	return FALSE;
+}
+
+void
+listview__reset_colours()
+{
+	GtkTreeModel* model = GTK_TREE_MODEL(app.store);
+	gtk_tree_model_foreach(model, &reset_colours, NULL);
+}
 
 static GtkTreePath*
 listview__get_first_selected_path()
@@ -872,17 +884,15 @@ static void
 cell_data_bg(GtkTreeViewColumn *tree_column, GtkCellRenderer *cell, GtkTreeModel *tree_model, GtkTreeIter *iter, gpointer data)
 {
 	unsigned colour_index = 0;
+	char colour[16] = "#606060";
 	gtk_tree_model_get(GTK_TREE_MODEL(app.store), iter, COL_COLOUR, &colour_index, -1);
-	if(colour_index > PALETTE_SIZE){ gwarn("bad colour data. Index out of range (%u).\n", colour_index); return; }
-
-	char colour[16] = "";
-	if(strlen(app.config.colour[colour_index])){
-		snprintf(colour, 16, "#%s", app.config.colour[colour_index]);
-		//dbg(1, "colour=%i %s", colour_index, colour);
-
-		if(strlen(colour) != 7 ){ perr("bad colour string (%s) index=%u.\n", colour, colour_index); return; }
+	if(colour_index < PALETTE_SIZE) { 
+		if(strlen(app.config.colour[colour_index])){
+			snprintf(colour, 16, "#%s", app.config.colour[colour_index]);
+			if(strlen(colour) != 7 ){ perr("bad colour string (%s) index=%u.\n", colour, colour_index); return; }
+		}
+		else colour_index = 0;
 	}
-	else colour_index = 0;
 
 	if(colour_index) g_object_set(cell, "cell-background-set", true, "cell-background", colour, NULL);
 	else             g_object_set(cell, "cell-background-set", false, NULL);

@@ -1026,6 +1026,8 @@ static MenuDef _menu_def[] = {
 	{"Update",         G_CALLBACK(update_row),      GTK_STOCK_REFRESH,    true},
 	{"Play All",       G_CALLBACK(menu_play_all),   GTK_STOCK_MEDIA_PLAY, true},
 	{"Stop Playback",  G_CALLBACK(menu_play_stop),  GTK_STOCK_MEDIA_STOP, true},
+	{"Reset Colours",  G_CALLBACK(listview__reset_colours),
+		                                         GTK_STOCK_REVERT_TO_SAVED, true},
 	{"Edit tags",      G_CALLBACK(edit_row),   GTK_STOCK_EDIT,        true},
 	{"Open",           G_CALLBACK(edit_row),   GTK_STOCK_OPEN,       false},
 	{"Open Directory", G_CALLBACK(NULL),       GTK_STOCK_OPEN,        true},

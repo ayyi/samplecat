@@ -223,14 +223,6 @@ listmodel__update_by_ref(GtkTreeIter *iter, int what, void *data)
 				else {
 					gtk_list_store_set(app.store, iter, COL_COLOUR, colour_index, -1);
 					s->colour_index=colour_index;
-#if NEVER // old code - ?? verify colour ?
-					char colour_string[16];
-					snprintf(colour_string, 16, "#%s", app.config.colour[colour_index]);
-					GdkColor bg_colour;
-					color_rgba_to_gdk(&bg_colour, s->colour_index);
-					if(!gdk_color_parse(colour_string, &bg_colour)) gwarn("parsing of colour string failed.\n");
-					// request_overview(sample); /// WHY ??
-#endif
 				}
 			}
 			break;
