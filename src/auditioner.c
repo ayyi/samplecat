@@ -63,8 +63,8 @@ auditioner_connect()
 void
 auditioner_play(Sample* sample)
 {
-	dbg(1, "%s", sample->filename);
-	dbus_g_proxy_call_no_reply(app.auditioner->proxy, "StartPlayback", G_TYPE_STRING, sample->filename, G_TYPE_INVALID);
+	dbg(1, "%s", sample->full_path);
+	dbus_g_proxy_call_no_reply(app.auditioner->proxy, "StartPlayback", G_TYPE_STRING, sample->full_path, G_TYPE_INVALID);
 }
 
 
@@ -95,8 +95,8 @@ auditioner_stop()
 void
 auditioner_toggle(Sample* sample)
 {
-	dbg(1, "%s", sample->filename);
-	dbus_g_proxy_call_no_reply(app.auditioner->proxy, "TogglePlayback", G_TYPE_STRING, sample->filename, G_TYPE_INVALID);
+	dbg(1, "%s", sample->full_path);
+	dbus_g_proxy_call_no_reply(app.auditioner->proxy, "TogglePlayback", G_TYPE_STRING, sample->full_path, G_TYPE_INVALID);
 }
 
 

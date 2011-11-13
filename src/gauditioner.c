@@ -142,13 +142,13 @@ void auditioner_play_path(const char* path) {
 }
 
 void auditioner_toggle(Sample* sample) {
-	dbg(1, "%s", sample->filename);
-	auditioner_play_path(sample->filename);
+	dbg(1, "%s", sample->full_path);
+	auditioner_play_path(sample->full_path);
 }
 
 void auditioner_play(Sample* sample) {
-	dbg(1, "%s", sample->filename);
-	auditioner_play_path(sample->filename);
+	dbg(1, "%s", sample->full_path);
+	auditioner_play_path(sample->full_path);
 }
 
 void auditioner_play_all() {
@@ -180,6 +180,7 @@ void auditioner_play_result(Sample* result) {
 void auditioner_stop() {
 	dbg(1, "stop audition..");
 	if (play_queue) {
+		Sample *result;
 		do {
 			Sample* s = play_queue->data;
 			sample_unref(s);
