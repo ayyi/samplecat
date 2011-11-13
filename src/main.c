@@ -1268,7 +1268,7 @@ config_load()
 
 			int k;
 			gchar* keyval;
-			for(k=0;k<(num_keys+PALETTE_SIZE);k++){
+			for(k=0;k<(num_keys+PALETTE_SIZE-1);k++){
 				if((keyval = g_key_file_get_string(app.key_file, groupname, keys[k], &error))){
 					snprintf(loc[k], 64, "%s", keyval);
 					dbg(2, "%s=%s", keys[k], keyval);
