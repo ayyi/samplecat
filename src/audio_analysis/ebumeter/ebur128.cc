@@ -81,8 +81,10 @@ static int ebur128proc (const char *fn, struct ebur128 *ebr) {
 	}
 	ad_close(sf);
 
-	delete[] data [0];
-	delete[] data [1];
+	if (nchan > 1) {
+		delete[] data [0];
+		delete[] data [1];
+	}
 	delete[] inpb;
 
 	if (ebr) {
