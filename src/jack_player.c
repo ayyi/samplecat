@@ -41,6 +41,8 @@ extern struct _app app;
 
 #if (defined HAVE_JACK && !(defined USE_DBUS || defined USE_GAUDITION))
 
+#define VARISPEED 1
+
 #include <jack/jack.h> // TODO use weakjack.h
 #include <jack/ringbuffer.h>
 #include "audio_decoder/ad.h"
@@ -124,14 +126,21 @@ void jack_shutdown_callback(void *arg){
 static int64_t play_position =0;
 
 void *jack_player_thread(void *unused){
-	const int nframes = 4096;
+	int err=0;
+	const int nframes = 2048;
 	float *tmpbuf = (float*) calloc(nframes * m_channels, sizeof(float));
 	float *bufptr = tmpbuf;
+	size_t maxbufsiz = nframes;
 #ifdef ENABLE_RESAMPLING
 	SRC_STATE* src_state = src_new(SRC_QUALITY, m_channels, NULL);
 	SRC_DATA src_data;
 	int nframes_r = floorf((float) nframes*m_fResampleRatio); ///< # of frames after resampling
-	float *smpbuf = (float*) calloc((1+nframes_r) * m_channels, sizeof(float));
+#ifdef VARISPEED
+	maxbufsiz = (2+nframes_r) * 2;
+#else
+	maxbufsiz = (1+nframes_r);
+#endif
+	float *smpbuf = (float*) calloc(maxbufsiz * m_channels, sizeof(float));
 
 	src_data.input_frames  = nframes;
 	src_data.output_frames = nframes_r;
@@ -142,14 +151,14 @@ void *jack_player_thread(void *unused){
 	src_data.data_in       = tmpbuf;
 	src_data.data_out      = smpbuf;
 #else
-	int nframes_r = nframes;
+	int nframes_r = nframes; // no resampling
 #endif
 
 	int ladspaerr=0;
 	if (m_use_effect && app.enable_effect) {
 		int i;
 		for(i=0;i<m_channels;i++) {
-			ladspaerr|= ladspah_init(myplugin[i], m_use_effect, m_effectno, m_samplerate, nframes_r+1);
+			ladspaerr|= ladspah_init(myplugin[i], m_use_effect, m_effectno, m_samplerate, maxbufsiz);
 		}
 		if (ladspaerr) {
 			dbg(0, "error setting up LADSPA plugin - effect disabled.\n");
@@ -166,25 +175,44 @@ void *jack_player_thread(void *unused){
 	pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
 	pthread_mutex_lock(&player_thread_lock);
 
+	/** ALL SYSTEMS GO **/
 	while(thread_run) {
 		int rv = ad_read(myplayer, tmpbuf, nframes * m_channels);
 		decoder_position+=rv/m_channels;
+		const float pp[3] = {app.effect_param[0], app.effect_param[1], app.effect_param[2]};
+#if (defined ENABLE_RESAMPLING) && (defined VARISPEED)
+		const float varispeed = app.playback_speed;
+		//if ((err=src_set_ratio(src_state, varispeed))) dbg(0, "SRC ERROR: %s", src_strerror(err)); // instant change.
+		nframes_r = floorf((float) nframes*m_fResampleRatio*varispeed); ///< # of frames after resampling
+		src_data.output_frames = nframes_r;
+		src_data.src_ratio     = m_fResampleRatio * varispeed;
+#endif
+
 		if (rv != nframes * m_channels) {
 			dbg(1, "end of file.");
 			if (rv>0) {
 #ifdef ENABLE_RESAMPLING
-				if(m_fResampleRatio != 1.0) {
+# ifdef VARISPEED
+				if (1) 
+# else
+				if(m_fResampleRatio != 1.0)
+# endif
+				{
 					src_data.input_frames = rv / m_channels;
+#ifdef VARISPEED
+					src_data.output_frames = floorf((float)(rv / m_channels)*m_fResampleRatio*varispeed);
+#else
 					src_data.output_frames = floorf((float)(rv / m_channels)*m_fResampleRatio);
+#endif
 					src_data.end_of_input=1;
 					src_process(src_state, &src_data);
 					bufptr = smpbuf;
 					rv = src_data.output_frames_gen * m_channels;
 				}
 #endif
-				ladspah_set_param(myplugin, m_channels, 0 /*cents */, app.effect_param[0]); /* -100 .. 100 */
-				ladspah_set_param(myplugin, m_channels, 1 /*semitones */, app.effect_param[1]); /* -12 .. 12 */
-				ladspah_set_param(myplugin, m_channels, 2 /*octave */, app.effect_param[2]);    /*  -3 ..  3 */
+				ladspah_set_param(myplugin, m_channels, 0 /*cents */, pp[0]); /* -100 .. 100 */
+				ladspah_set_param(myplugin, m_channels, 1 /*semitones */, pp[1]); /* -12 .. 12 */
+				ladspah_set_param(myplugin, m_channels, 2 /*octave */, pp[2]);    /*  -3 ..  3 */
 				if (!ladspaerr) ladspah_process_nch(myplugin, m_channels, bufptr, rv);
 				jack_ringbuffer_write(rb, (char *) bufptr, rv *  sizeof(float));
 			}
@@ -192,37 +220,55 @@ void *jack_player_thread(void *unused){
 				ad_seek(myplayer, 0);
 				decoder_position=0;
 #ifdef ENABLE_RESAMPLING
-				if(m_fResampleRatio != 1.0) {
+				src_reset (src_state);
+				if(m_fResampleRatio != 1.0){
 					src_data.end_of_input=0;
 					src_data.input_frames  = nframes;
 					src_data.output_frames = nframes_r;
 				}
 #endif
-				while(thread_run && jack_ringbuffer_write_space(rb) <= rbchunk) {
+#if (defined ENABLE_RESAMPLING) && (defined VARISPEED)
+				while(thread_run && jack_ringbuffer_write_space(rb) <= maxbufsiz*m_channels*sizeof(float)) 
+#else
+				while(thread_run && jack_ringbuffer_write_space(rb) <= rbchunk)
+#endif
+				{
 					pthread_cond_wait(&buffer_ready, &player_thread_lock);
 				}
 				continue;
 			}
 			else
 				break;
-		}
+		} /* end EOF handling */
 
 #ifdef ENABLE_RESAMPLING
-		if(m_fResampleRatio != 1.0) {
-			src_process(src_state, &src_data);
+#ifdef VARISPEED
+		if(1) // m_fResampleRatio*varispeed != 1.0)
+#else
+		if(m_fResampleRatio != 1.0)
+#endif
+		{
+			if ((err=src_process(src_state, &src_data))) {
+				dbg(0, "SRC PROCESS ERROR: %s", src_strerror(err));
+			}
 			bufptr = smpbuf;
 			rbchunk = src_data.output_frames_gen * m_channels * sizeof(float);
 		}
 #endif
 		if (!ladspaerr) {
-			ladspah_set_param(myplugin, m_channels, 0 /*cent */, app.effect_param[0]); /* -100 .. 100 */
-			ladspah_set_param(myplugin, m_channels, 1 /*semitones */, app.effect_param[1]); /* -12 .. 12 */
-			ladspah_set_param(myplugin, m_channels, 2 /*octave */, app.effect_param[2]);    /*  -3 ..  3 */
+			ladspah_set_param(myplugin, m_channels, 0 /*cent */, pp[0]); /* -100 .. 100 */
+			ladspah_set_param(myplugin, m_channels, 1 /*semitones */, pp[1]); /* -12 .. 12 */
+			ladspah_set_param(myplugin, m_channels, 2 /*octave */, pp[2]);    /*  -3 ..  3 */
 			ladspah_process_nch(myplugin, m_channels, bufptr, rbchunk/ m_channels / sizeof(float));
 		}
 		jack_ringbuffer_write(rb, (char *) bufptr, rbchunk);
 
-		while(thread_run && jack_ringbuffer_write_space(rb) <= rbchunk) {
+#if (defined ENABLE_RESAMPLING) && (defined VARISPEED)
+		while(thread_run && jack_ringbuffer_write_space(rb) <= maxbufsiz*m_channels*sizeof(float)) 
+#else
+		while(thread_run && jack_ringbuffer_write_space(rb) <= rbchunk) 
+#endif
+		{
 			pthread_cond_wait(&buffer_ready, &player_thread_lock);
 		}
 
@@ -238,7 +284,11 @@ void *jack_player_thread(void *unused){
 		}
 
 		/* Update play position */
+#ifdef VARISPEED
+		int64_t latency = floor(jack_ringbuffer_read_space(rb)/m_channels/sizeof(float)/m_fResampleRatio/varispeed);
+#else
 		int64_t latency = floor(jack_ringbuffer_read_space(rb)/m_channels/sizeof(float)/m_fResampleRatio);
+#endif
 		if (decoder_position>latency) // workaround for loop/restart
 			play_position = decoder_position - latency;
 		else
@@ -323,10 +373,6 @@ void JACKaudiooutputinit(void *sf, int channels, int samplerate, int64_t frames)
 		dbg(0, "audio samplerate does not match JACK's samplerate.");
 #endif
 	}
-
-#ifdef ENABLE_RESAMPLING
-	m_fResampleRatio*=app.playback_speed; ///< fixed speed change. <1.0: speed-up, > 1.0: slow-down
-#endif
 
 	thread_run = 1;
 	pthread_create(&player_thread_id, NULL, jack_player_thread, NULL);
