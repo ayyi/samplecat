@@ -25,7 +25,9 @@ if test -z "$NOREBUILD"; then
 	automake --add-missing
 	libtoolize || glibtoolize
 	autoreconf
-  CFLAGS="-arch i386 -arch x86_64 -arch ppc" ./configure --disable-dependency-tracking
+  CFLAGS="-arch i386 -arch x86_64 -arch ppc" \
+  CXXFLAGS="-arch i386 -arch x86_64 -arch ppc" \
+		./configure --disable-dependency-tracking
 	make clean
   make || exit
 fi
@@ -146,6 +148,8 @@ EOF
 install -m 755 ${SRCDIR}/${PRODUCT_NAME} ${TARGET}
 update_executable
 #file "$TARGET"
+
+cp -v /Library/Audio/Plug-Ins/LADSPA/ladspa-rubberband.so $LIBS_PATH/
 
 echo "------------------------------------"
 echo "installing dependent libs..."
