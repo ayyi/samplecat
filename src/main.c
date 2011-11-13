@@ -763,7 +763,6 @@ add_file(char* path)
 	/* check if file already exists in the store
 	 * -> don't add it again
 	 */
-	int n_results = 0;
 	if(backend.file_exists(path)) {
 		statusbar_print(1, "duplicate: not re-adding a file already in db.");
 		gwarn("duplicate file: %s\n", path);
@@ -1498,8 +1497,8 @@ set_backend(BackendType type)
 			backend.update_colour    = tracker__update_colour;
 			backend.update_keywords  = tracker__update_keywords;
 			backend.update_pixbuf    = tracker__update_ignore;
-			backend.update_notes     = tracker__update_ignore;
-			backend.update_ebur      = tracker__update_ignore;
+			backend.update_notes     = tracker__update_ignore2;
+			backend.update_ebur      = tracker__update_ignore2;
 			backend.update_online    = tracker__update_online;
 			backend.update_peaklevel = tracker__update_peaklevel;
 			backend.file_exists      = tracker__file_exists;

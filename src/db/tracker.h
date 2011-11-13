@@ -5,6 +5,7 @@ gboolean tracker__init             ();
 void     tracker__disconnect       ();
 
 gboolean tracker__update_ignore    (Sample*);
+gboolean tracker__update_ignore2   (int, const char*);
 
 int      tracker__insert           (Sample*);
 gboolean tracker__delete_row       (int id);

@@ -91,6 +91,11 @@ tracker__update_ignore(Sample* sample)
 	return true;
 }
 
+gboolean
+tracker__update_ignore2(int a, const char*b)
+{
+	return true;
+}
 
 static gint
 str_in_array (const gchar *str, gchar **array)
