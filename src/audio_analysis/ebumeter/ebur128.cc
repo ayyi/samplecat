@@ -69,7 +69,7 @@ static int ebur128proc (const char *fn, struct ebur128 *ebr) {
 	Proc.integr_start ();
 	while (true) {
 		k = ad_read (sf, inpb, bsize);
-		if (k == 0) break;
+		if (k < 1) break;
 		if (nchan > 1) {
 	    float *p = inpb;
 	    for (i = 0; i < k; i++) {

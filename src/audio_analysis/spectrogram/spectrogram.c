@@ -153,9 +153,10 @@ get_colour_map_value (float value, double spec_floor_db, unsigned char colour [3
 	return ;
 } /* get_colour_map_value */
 
-static void
+static int
 read_mono_audio (void * file, int64_t filelen, double * data, int datalen, int indx, int total)
 {
+	int rv = 0;
 	int64_t start = (indx * filelen) / total - datalen / 2 ;
 	memset (data, 0, datalen * sizeof (data [0])) ;
 
@@ -169,14 +170,15 @@ read_mono_audio (void * file, int64_t filelen, double * data, int datalen, int i
 	}
 
 	int i;
+	// TODO: statically allocate this buffer - realloc on demand
 	float *tbuf = malloc(datalen*sizeof(float));
-	ad_read_mono(file, tbuf, datalen);
+	if (ad_read_mono(file, tbuf, datalen) <1) rv=-1;
 	for (i=0;i<datalen;i++) {
 		const double val = tbuf[i];
 		data[i] = val;
 	}
 	free(tbuf);
-	return;
+	return rv;
 } /* read_mono_audio */
 
 static void
@@ -378,7 +380,10 @@ render_to_pixbuf (const RENDER * render, void *infile, int samplerate, int64_t f
 	for (w = 0 ; w < width ; w++) {
 		double single_max;
 
-		read_mono_audio(infile, filelen, time_domain, 2 * speclen, w, width) ;
+		if (read_mono_audio(infile, filelen, time_domain, 2 * speclen, w, width)) {
+			dbg(1, "read failed before EOF");
+			break;
+		}
 
 		apply_window (time_domain, 2 * speclen) ;
 
