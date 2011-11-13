@@ -3,7 +3,7 @@
 	cheader_filename = "file_manager/filer.h",
 	cheader_filename = "file_manager/rox_global.h",
 	lower_case_cprefix = "", cprefix = "")]
-namespace Rox {
+namespace FM {
 	[CCode(cname = "struct _Filer",
 		cheader_filename = "file_manager/file_manager.h"
 	)]

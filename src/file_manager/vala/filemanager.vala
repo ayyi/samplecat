@@ -1,6 +1,6 @@
 using GLib;
 using Gtk;
-using Rox;
+using FM;
 
 public class Ayyi.Libfilemanager : GLib.Object
 {
@@ -8,7 +8,7 @@ public class Ayyi.Libfilemanager : GLib.Object
 
 	//removed as illconceived idea.
 	//public signal void theme_changed(string s);
-	public Rox.Filer* file_window;
+	public FM.Filer* file_window;
 
 	public signal void dir_changed(string s);
 
@@ -16,7 +16,7 @@ public class Ayyi.Libfilemanager : GLib.Object
 	{
 	}
 
-	public Libfilemanager(Rox.Filer* _file_window)
+	public Libfilemanager(FM.Filer* _file_window)
 	{
 		file_window = _file_window;
 	}
@@ -27,7 +27,7 @@ public class Ayyi.Libfilemanager : GLib.Object
 		stdout.printf("set_icon_theme(): theme=%s\n", theme);
 
 		//g_strlcpy(theme_name, theme, 63);
-		Memory.copy(theme_name, theme, theme.size() + 1);
+		Memory.copy(theme_name, theme, theme.length + 1);
 
 		_set_icon_theme();
 	}
