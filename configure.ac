@@ -269,13 +269,19 @@ if test "$enable_builtin_player" = "yes"; then
 	AC_DEFINE(HAVE_JACK,1,[have JACK audio connection kit])
 fi
 
-#JACK player can re-sample:
-AS_IF([test "$enable_builtin_player" != "no"], [
+#JACK player can re-sample and use LADSPA plugins
+enable_ladspa="no"
+AS_IF([test "$enable_builtin_player" = "yes"], [
 	PKG_CHECK_MODULES(SAMPLERATE, samplerate,
 	  [AC_DEFINE(ENABLE_RESAMPLING,1,[JACK player resampling])], [true])
+	AC_CHECK_HEADER(ladspa.h, enable_ladspa="yes", AC_MSG_ERROR([LADSPA is required  see http://www.ladspa.org/]))
 	])
 AC_SUBST(SAMPLERATE_CFLAGS)
 AC_SUBST(SAMPLERATE_LIBS)
+
+if test "$enable_ladspa" = "yes"; then
+	AC_DEFINE(ENABLE_LADSPA,1,[LADSPA plugin support])
+fi
 
 dnl -----------------------------------------------------------------------------
 
@@ -304,7 +310,7 @@ AC_ARG_ENABLE(
 	[  --enable-sf2            build with sf2 support (default=no). Currently this option doesnt do anything useful.],
 	[
 		enable_sf2="$enableval"
-		if test "$enableval" == "yes" && `pkg-config fluidsynth`; then
+		if test "$enableval" = "yes" && `pkg-config fluidsynth`; then
 			SF2_CFLAGS=`pkg-config --cflags-only-I fluidsynth`
 			SF2_LDFLAGS=`pkg-config --libs fluidsynth`
 			AC_DEFINE(USE_SF2, 1, [enable support for SF2 plugins])
@@ -387,6 +393,9 @@ else if test "$enable_gplayer" = "yes"; then
 	player="CLI: gstreamer, totem-audio-preview, afplay (OSX)"
 else
 	player="built-in JACK"
+	if test "$enable_ladspa" = "yes"; then
+		player="$player w/ LADSPA support"
+	fi
 fi;fi
 
 AC_MSG_RESULT([])

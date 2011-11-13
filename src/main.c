@@ -144,6 +144,14 @@ app_init()
 
 	app.config_filename = g_strdup_printf("%s/.config/" PACKAGE "/" PACKAGE, g_get_home_dir());
 	app.cache_dir = g_build_filename(g_get_home_dir(), ".config", PACKAGE, "cache", NULL);
+
+#if (defined HAVE_JACK)
+	app.enable_effect=false;
+	app.effect_param[0]=0.0; /* cent transpose [-100 .. 100] */
+	app.effect_param[1]=0.0; /* semitone transpose [-12 .. 12] */
+	app.effect_param[2]=0.0; /* octave [-3 .. 3] */
+	app.playback_speed=1.0;
+#endif
 }
 
 

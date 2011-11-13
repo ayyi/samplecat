@@ -67,7 +67,7 @@ else
 if ENABLE_GAUDITION
 AUDITIONER = gauditioner.c auditioner.h
 else 
-AUDITIONER = jack_player.c jack_player.h 
+AUDITIONER = jack_player.c jack_player.h ladspa_proc.c ladspa_proc.h
 endif
 endif
 

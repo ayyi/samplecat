@@ -1,7 +1,11 @@
 /*
+  JACK audio player
   This file is part of the Samplecat project.
+
   copyright (C) 2006-2007 Tim Orford <tim@orford.org>
   copyright (C) 2011 Robin Gareus <robin@gareus.org>
+
+  written by Robin Gareus
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -31,12 +35,13 @@
 #include "support.h"
 #include "main.h"
 #include "inspector.h"
+#include "ladspa_proc.h"
 
 extern struct _app app;
 
 #if (defined HAVE_JACK && !(defined USE_DBUS || defined USE_GAUDITION))
 
-#include <jack/jack.h> // TODO use weakjack.h 
+#include <jack/jack.h> // TODO use weakjack.h
 #include <jack/ringbuffer.h>
 #include "audio_decoder/ad.h"
 
@@ -45,12 +50,17 @@ jack_port_t **j_output_port = NULL;
 jack_default_audio_sample_t **j_out = NULL;
 jack_ringbuffer_t *rb = NULL;
 
-static void *myplayer;
-static int m_channels = 2;
+static void *  myplayer;
+static LadSpa**myplugin = NULL;
+static int     m_channels   = 2;
+static int     m_samplerate = 0;
 static int64_t m_frames = 0;
-static int thread_run = 0;
+static int     thread_run   = 0;
 static volatile int silent = 0;
 static volatile double seek_request = -1.0;
+
+static const char *  m_use_effect = "ladspa-rubberband.so";
+static const int     m_effectno   = 0;
 
 pthread_t player_thread_id;
 pthread_mutex_t player_thread_lock = PTHREAD_MUTEX_INITIALIZER;
@@ -135,6 +145,20 @@ void *jack_player_thread(void *unused){
 	int nframes_r = nframes;
 #endif
 
+	int ladspaerr=0;
+	if (m_use_effect && app.enable_effect) {
+		int i;
+		for(i=0;i<m_channels;i++) {
+			ladspaerr|= ladspah_init(myplugin[i], m_use_effect, m_effectno, m_samplerate, nframes_r+1);
+		}
+		if (ladspaerr) {
+			dbg(0, "error setting up LADSPA plugin - effect disabled.\n");
+		}
+	} else {
+		ladspaerr=1;
+	}
+	app.effect_enabled = ladspaerr?false:true; // read-only for GUI
+
 	size_t rbchunk = nframes_r * m_channels * sizeof(float);
 	play_position =0;
 	int64_t decoder_position = 0;
@@ -158,6 +182,10 @@ void *jack_player_thread(void *unused){
 					rv = src_data.output_frames_gen * m_channels;
 				}
 #endif
+				ladspah_set_param(myplugin, m_channels, 0 /*cents */, app.effect_param[0]); /* -100 .. 100 */
+				ladspah_set_param(myplugin, m_channels, 1 /*semitones */, app.effect_param[1]); /* -12 .. 12 */
+				ladspah_set_param(myplugin, m_channels, 2 /*octave */, app.effect_param[2]);    /*  -3 ..  3 */
+				if (!ladspaerr) ladspah_process_nch(myplugin, m_channels, bufptr, rv);
 				jack_ringbuffer_write(rb, (char *) bufptr, rv *  sizeof(float));
 			}
 			if (app.loop_playback) {
@@ -175,7 +203,7 @@ void *jack_player_thread(void *unused){
 				}
 				continue;
 			}
-			else 
+			else
 				break;
 		}
 
@@ -186,6 +214,12 @@ void *jack_player_thread(void *unused){
 			rbchunk = src_data.output_frames_gen * m_channels * sizeof(float);
 		}
 #endif
+		if (!ladspaerr) {
+			ladspah_set_param(myplugin, m_channels, 0 /*cent */, app.effect_param[0]); /* -100 .. 100 */
+			ladspah_set_param(myplugin, m_channels, 1 /*semitones */, app.effect_param[1]); /* -12 .. 12 */
+			ladspah_set_param(myplugin, m_channels, 2 /*octave */, app.effect_param[2]);    /*  -3 ..  3 */
+			ladspah_process_nch(myplugin, m_channels, bufptr, rbchunk/ m_channels / sizeof(float));
+		}
 		jack_ringbuffer_write(rb, (char *) bufptr, rbchunk);
 
 		while(thread_run && jack_ringbuffer_write_space(rb) <= rbchunk) {
@@ -197,7 +231,7 @@ void *jack_player_thread(void *unused){
 			decoder_position=floor(m_frames * seek_request);
 			ad_seek(myplayer, decoder_position);
 			seek_request=-1;
-#if 1 // flush_ringbuffer ! 
+#if 1 // flush_ringbuffer !
 			size_t rs=jack_ringbuffer_read_space(rb);
 			jack_ringbuffer_read_advance(rb,rs);
 #endif
@@ -207,7 +241,7 @@ void *jack_player_thread(void *unused){
 		int64_t latency = floor(jack_ringbuffer_read_space(rb)/m_channels/sizeof(float)/m_fResampleRatio);
 		if (decoder_position>latency) // workaround for loop/restart
 			play_position = decoder_position - latency;
-		else 
+		else
 			play_position = m_frames+decoder_position-latency;
 	}
 
@@ -217,6 +251,11 @@ void *jack_player_thread(void *unused){
 		// wait for ringbuffer to empty.
 		while (!silent) usleep(50);
 		thread_run=0;
+		app.effect_enabled = false;
+		int i;
+		for(i=0;i<m_channels;i++) {
+			ladspah_deinit(myplugin[i]);
+		}
 		JACKclose();
 	}
 	free(tmpbuf);
@@ -240,13 +279,14 @@ void JACKaudiooutputinit(void *sf, int channels, int samplerate, int64_t frames)
 	myplayer=sf;
 	m_channels = channels;
 	m_frames = frames;
+	m_samplerate = samplerate;
 
 	j_client = jack_client_open("samplecat", (jack_options_t) 0, NULL);
 
 	if(!j_client) {
 			dbg(0, "could not connect to JACK.");
 			return;
-	}        
+	}
 
 	jack_on_shutdown(j_client, jack_shutdown_callback, NULL);
 	jack_set_process_callback(j_client, jack_audio_callback, NULL);
@@ -264,6 +304,11 @@ void JACKaudiooutputinit(void *sf, int channels, int samplerate, int64_t frames)
 		}
 	}
 
+	myplugin = malloc(m_channels*sizeof(LadSpa*));
+	for(i=0;i<m_channels;i++) {
+		myplugin[i] = ladspah_alloc();
+	}
+
 	j_out = (jack_default_audio_sample_t**) calloc(m_channels, sizeof(jack_default_audio_sample_t*));
 	const size_t rbsize = DEFAULT_RB_SIZE * m_channels * sizeof(jack_default_audio_sample_t);
 	rb = jack_ringbuffer_create(rbsize);
@@ -278,6 +323,10 @@ void JACKaudiooutputinit(void *sf, int channels, int samplerate, int64_t frames)
 		dbg(0, "audio samplerate does not match JACK's samplerate.");
 #endif
 	}
+
+#ifdef ENABLE_RESAMPLING
+	m_fResampleRatio*=app.playback_speed; ///< fixed speed change. <1.0: speed-up, > 1.0: slow-down
+#endif
 
 	thread_run = 1;
 	pthread_create(&player_thread_id, NULL, jack_player_thread, NULL);
@@ -330,8 +379,14 @@ void JACKclose() {
 		jack_ringbuffer_free(rb);
 		rb=NULL;
 	}
+	if (myplugin) {
+		int i;
+		for(i=0;i<m_channels;i++) ladspah_free(myplugin[i]);
+		free(myplugin);
+	}
 	if (myplayer) ad_close(myplayer);
 	myplayer=NULL;
+	myplugin=NULL;
 	j_client=NULL;
 	app.playing_id = 0;
 };
@@ -358,7 +413,7 @@ jplay__play_path(const char* path)
 }
 
 void
-jplay__play(Sample* sample) 
+jplay__play(Sample* sample)
 {
 	if(!sample->id){ perr("bad arg: id=0\n"); return; }
 	if (jplay__play_path(sample->full_path)) return;
@@ -367,7 +422,7 @@ jplay__play(Sample* sample)
 }
 
 void
-jplay__toggle(Sample* sample) 
+jplay__toggle(Sample* sample)
 {
 	jplay__play(sample);
 }
@@ -383,7 +438,7 @@ jplay__stop()
 	JACKclose();
 }
 
-void 
+void
 jplay__play_next() {
 	if(play_queue){
 		Sample* result = play_queue->data;
@@ -397,7 +452,7 @@ jplay__play_next() {
 	}
 }
 
-void 
+void
 jplay__play_all() {
 	dbg(1, "...");
 	if(play_queue){

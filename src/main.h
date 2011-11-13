@@ -93,6 +93,12 @@ struct _app
 	gchar*         search_category;
 	gboolean       add_recursive;
 	gboolean       loop_playback;
+#if (defined HAVE_JACK)
+	gboolean       enable_effect;
+	gboolean       effect_enabled;
+	float          effect_param[3];
+	float          playback_speed;
+#endif
 	gboolean       no_gui;
 	struct _args {
 		char*      search;
