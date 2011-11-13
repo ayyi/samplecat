@@ -299,6 +299,11 @@ mysql__update_peaklevel(int id, float level)
 	return ok;
 }
 
+gboolean
+mysql__file_exists(const char* path)
+{
+	return false; // TODO - check if given file is already in DB.
+}
 
 //-------------------------------------------------------------
 

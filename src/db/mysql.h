@@ -16,6 +16,7 @@ gboolean  mysql__update_ebur      (int id, const char*);
 gboolean  mysql__update_pixbuf    (Sample*);
 gboolean  mysql__update_online    (int id, gboolean, time_t);
 gboolean  mysql__update_peaklevel (int id, float);
+gboolean  mysql__file_exists      (const char*);
 
 gboolean  mysql__search_iter_new   (char* search, char* dir, const char* category, int* n_results);
 MYSQL_ROW mysql__search_iter_next  (unsigned long** lengths);

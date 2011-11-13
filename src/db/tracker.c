@@ -914,6 +914,13 @@ tracker__update_peaklevel(int id, float level)
 }
 
 
+gboolean
+tracker__file_exists (const char*)
+{
+	return false;
+}
+
+
 #ifdef TRACKER_0_6
 static void
 tracker__on_dbus_timeout()

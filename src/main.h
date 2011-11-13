@@ -62,6 +62,7 @@ struct _backend
 	gboolean         (*update_pixbuf)    (Sample*);
 	gboolean         (*update_online)    (int, gboolean, time_t);
 	gboolean         (*update_peaklevel) (int, float);
+	gboolean         (*file_exists)      (const char*);
 
 	void             (*disconnect)       ();
 };

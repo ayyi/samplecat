@@ -80,12 +80,12 @@ sqlite__connect()
 
 	int table_exists = FALSE;
 
-  int res=-1,rows,columns;
-  char **table;
+  int rows,columns;
+  char **table= NULL;
 	char *errmsg= NULL;
 	int n = sqlite3_get_table(db, "SELECT name, sql FROM sqlite_master WHERE type='table' AND name='samples';",
 			&table,&rows,&columns,&errmsg);
-	if(rc==SQLITE_OK && (table != NULL) && (rows==1) && (columns==2)) {
+	if(n==SQLITE_OK && (table != NULL) && (rows==1) && (columns==2)) {
 		if (!strcmp(table[2], "samples")) {
 			dbg(2, "found table 'samples'");
 			table_exists=TRUE;
@@ -105,6 +105,7 @@ sqlite__connect()
 	} else {
 		dbg(0, "SQL: %s", errmsg?errmsg:"-");
 	}
+	if (table) sqlite3_free_table(table);
 	if (errmsg) sqlite3_free(errmsg);
 	errmsg=NULL;
 
@@ -142,8 +143,8 @@ sqlite__disconnect()
 int
 sqlite__insert(Sample* sample)
 {
-	int ret = 0;
 	char* errMsg = 0;
+	sqlite3_int64 idx = -1;
 
 	char* sql = sqlite3_mprintf(
 		"INSERT INTO samples(abspath,filename,filedir,length,sample_rate,channels,online,mimetype,ebur,peaklevel,colour,mtime) "
@@ -156,11 +157,11 @@ sqlite__insert(Sample* sample)
 	);
 
 	if(sqlite3_exec(db, sql, NULL, NULL, &errMsg) != SQLITE_OK){
-		ret = -1;
 		gwarn("sqlite error: %s", errMsg);
 		sqlite3_free(errMsg);
+	} else {
+		idx = sqlite3_last_insert_rowid(db);
 	}
-	sqlite3_int64 idx = sqlite3_last_insert_rowid(db);
 
 	sqlite3_free(sql);
 	return (int)idx;
@@ -301,6 +302,26 @@ gboolean
 sqlite__update_peaklevel(int id, float level)
 {
 	return sqlite__update_float(id, level, "peaklevel");
+}
+
+
+gboolean
+sqlite__file_exists(const char* path)
+{
+	PF;
+	gboolean ok =false;
+  int rows,columns;
+  char **table = NULL;
+	char *errmsg= NULL;
+	char* sql = sqlite3_mprintf("SELECT abspath FROM samples WHERE abspath='%s'", path);
+	int rc = sqlite3_get_table(db, sql, &table,&rows,&columns,&errmsg);
+	if(rc==SQLITE_OK && (table != NULL) && (rows>=1)) {
+		ok=true;
+	}
+	if (table) sqlite3_free_table(table);
+
+	sqlite3_free(sql);
+	return ok;
 }
 
 gboolean

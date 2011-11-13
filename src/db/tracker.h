@@ -21,3 +21,4 @@ gboolean tracker__update_colour    (int id, int colour);
 gboolean tracker__update_keywords  (int id, const char*);
 gboolean tracker__update_online    (int id, gboolean, time_t);
 gboolean tracker__update_peaklevel (int id, float);
+gboolean tracker__file_exists      (const char*);

@@ -759,6 +759,19 @@ add_file(char* path)
 	uri must be "unescaped" before calling this fn. Method string must be removed.
 	*/
 
+#if 1
+	/* check if file already exists in the store
+	 * -> don't add it again
+	 */
+	int n_results = 0;
+	if(backend.file_exists(path)) {
+		statusbar_print(1, "duplicate: not re-adding a file already in db.");
+		gwarn("duplicate file: %s\n", path);
+		//TODO: check mtime, call update..
+		return false;
+	}
+#endif
+
 	dbg(1, "%s", path);
 	if(BACKEND_IS_NULL) return false;
 
@@ -778,6 +791,10 @@ add_file(char* path)
 
 	sample->online=1;
 	sample->id = backend.insert(sample);
+	if (sample->id < 0) {
+		sample_unref(sample);
+		return false;
+	}
 
 	listmodel__add_result(sample);
 
@@ -1439,6 +1456,7 @@ set_backend(BackendType type)
 			backend.update_pixbuf    = mysql__update_pixbuf;
 			backend.update_online    = mysql__update_online;
 			backend.update_peaklevel = mysql__update_peaklevel;
+			backend.file_exists      = mysql__file_exists;
 			printf("backend is mysql.\n");
 			#endif
 			break;
@@ -1460,6 +1478,7 @@ set_backend(BackendType type)
 			backend.update_pixbuf    = sqlite__update_pixbuf;
 			backend.update_online    = sqlite__update_online;
 			backend.update_peaklevel = sqlite__update_peaklevel;
+			backend.file_exists      = sqlite__file_exists;
 			printf("backend is sqlite.\n");
 			#endif
 			break;
@@ -1479,6 +1498,7 @@ set_backend(BackendType type)
 			backend.update_ebur      = tracker__update_ignore;
 			backend.update_online    = tracker__update_online;
 			backend.update_peaklevel = tracker__update_peaklevel;
+			backend.file_exists      = tracker__file_exists;
 			backend.disconnect       = tracker__disconnect;
 			printf("backend is tracker.\n");
 
