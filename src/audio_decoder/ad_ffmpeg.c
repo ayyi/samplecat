@@ -44,6 +44,7 @@ int ad_info_ffmpeg(void *sf, struct adinfo *nfo) {
     nfo->sample_rate = priv->samplerate;
     nfo->channels    = priv->channels;
     nfo->frames      = priv->length;
+    if (nfo->sample_rate==0) return -1;
     nfo->length      = (nfo->frames * 1000) / nfo->sample_rate;
   }
   return 0;
@@ -106,7 +107,10 @@ void *ad_open_ffmpeg(const char *fn, struct adinfo *nfo) {
   priv->channels   = priv->codecContext->channels ;
   priv->length     = (int64_t)( len * priv->samplerate / AV_TIME_BASE );
 
-  ad_info_ffmpeg((void*)priv, nfo);
+  if (ad_info_ffmpeg((void*)priv, nfo)) {
+    dbg(0, "invalid file info (sample-rate==0)");
+    free(priv); return(NULL);
+  }
 
   dbg(0, "ffmpeg - %s", fn);
   if (nfo) 
