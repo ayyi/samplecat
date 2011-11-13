@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <math.h>
 #include <string.h>
 #include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
@@ -286,11 +287,79 @@ window_on_size_request(GtkWidget* widget, GtkRequisition* req, gpointer user_dat
 	req->height = atoi(app.config.window_height);
 }
 
+static void
+colourise_boxes()
+{
+	GdkColor colour;
+#if 0 // tim
+	//put the style colours into the palette:
+	if(colour_darker (&colour, &app.fg_colour)) colour_box_add(&colour);
+	colour_box_add(&app.fg_colour);
+	if(colour_lighter(&colour, &app.fg_colour)) colour_box_add(&colour);
+	colour_box_add(&app.bg_colour);
+	colour_box_add(&app.base_colour);
+	colour_box_add(&app.text_colour);
+
+	if(colour_darker (&colour, &app.base_colour)) colour_box_add(&colour);
+	if(colour_lighter(&colour, &app.base_colour)) colour_box_add(&colour);
+	if(colour_lighter(&colour, &colour)         ) colour_box_add(&colour);
+
+	colour_get_style_base(&colour, GTK_STATE_SELECTED);
+	if(colour_lighter(&colour, &colour)) colour_box_add(&colour);
+	if(colour_lighter(&colour, &colour)) colour_box_add(&colour);
+	if(colour_lighter(&colour, &colour)) colour_box_add(&colour);
+
+	//add greys:
+	gdk_color_parse("#555555", &colour);
+	colour_box_add(&colour);
+	if(colour_lighter(&colour, &colour)) colour_box_add(&colour);
+	if(colour_lighter(&colour, &colour)) colour_box_add(&colour);
+	if(colour_lighter(&colour, &colour)) colour_box_add(&colour);
+#else // tom
+	float hue (float m1, float m2, float h) {
+		if (h<0)   { h = h+1.0; }
+		if (h>1)   { h = h-1.0; }
+		if (h*6<1) { return m1+(m2-m1)*h*6.0; }
+		if (h*2<1) { return m2; }
+		if (h*3<2) { return m1+(m2-m1)*((2/3.0)-h)*6.0; }
+		return m1;
+	}
+
+	void hsl2rgb (float h, float s, float l, GdkColor *c) {
+		float mr, mg, mb, m1, m2;
+		if (s == 0.0) { mr = mg = mb = l; }
+		else {
+			if (l<=0.5) { m2 = l*(s+1.0); }
+			else        { m2 = l+s-(l*s); }
+			m1 = l*2.0 - m2;
+			mr = hue(m1, m2, (h+(1/3.0)));
+			mg = hue(m1, m2, h);
+			mb = hue(m1, m2, (h-(1/3.0)));
+		}
+		c->red   = rintf(65536.0*mr);
+		c->green = rintf(65536.0*mg);
+		c->blue  = rintf(65536.0*mb);
+	}
+
+#define LUMSHIFT (0)
+	colour_box_add(&app.bg_colour); // "transparent" - none
+	int i;
+  for (i=0;i<PALETTE_SIZE-1;i++) {
+		float h, s, l; 
+		l=1.0; h = (float)i / ((float)PALETTE_SIZE-1.0);
+		s=(i%2)?.6:.9; 
+		l=0.3 + ((i+LUMSHIFT)%4)/6.0; /* 0.3 .. 0.8 */
+		hsl2rgb(h, s, l, &colour);
+		if (!colour_box_add(&colour)) {
+			fprintf(stderr, "WTF %d\n", i);
+		}
+	}
+#endif
+}
 
 static void
 window_on_allocate(GtkWidget *win, GtkAllocation *allocation, gpointer user_data)
 {
-	GdkColor colour;
 	#define SCROLLBAR_WIDTH_HACK 32
 	static gboolean done = FALSE;
 	if(!app.view->requisition.width) return;
@@ -305,38 +374,29 @@ window_on_allocate(GtkWidget *win, GtkAllocation *allocation, gpointer user_data
 		gtk_widget_set_size_request(win, 100, 100);
 	}
 
+#if 0 
+	/* XXX do those really need to be repeated? - style changes ? */
 	colour_get_style_bg(&app.bg_colour, GTK_STATE_NORMAL);
 	colour_get_style_fg(&app.fg_colour, GTK_STATE_NORMAL);
 	colour_get_style_base(&app.base_colour, GTK_STATE_NORMAL);
 	colour_get_style_text(&app.text_colour, GTK_STATE_NORMAL);
-	//dbg(0, "app.text_colour=%02x%02x%02x", app.text_colour.red >> 8, app.text_colour.green >> 8, app.text_colour.blue >> 8);
+#endif
 
-	if(app.colourbox_dirty){
-		//put the style colours into the palette:
-		if(colour_darker (&colour, &app.fg_colour)) colour_box_add(&colour);
-		colour_box_add(&app.fg_colour);
-		if(colour_lighter(&colour, &app.fg_colour)) colour_box_add(&colour);
-		colour_box_add(&app.bg_colour);
-		colour_box_add(&app.base_colour);
-		colour_box_add(&app.text_colour);
+	static gboolean did_set_colours = FALSE;
+	if (!did_set_colours) {
+		did_set_colours=TRUE;
 
-		if(colour_darker (&colour, &app.base_colour)) colour_box_add(&colour);
-		if(colour_lighter(&colour, &app.base_colour)) colour_box_add(&colour);
-		if(colour_lighter(&colour, &colour)         ) colour_box_add(&colour);
+		colour_get_style_bg(&app.bg_colour, GTK_STATE_NORMAL);
+		colour_get_style_fg(&app.fg_colour, GTK_STATE_NORMAL);
+		colour_get_style_base(&app.base_colour, GTK_STATE_NORMAL);
+		colour_get_style_text(&app.text_colour, GTK_STATE_NORMAL);
 
-		colour_get_style_base(&colour, GTK_STATE_SELECTED);
-		if(colour_lighter(&colour, &colour)) colour_box_add(&colour);
-		if(colour_lighter(&colour, &colour)) colour_box_add(&colour);
-		if(colour_lighter(&colour, &colour)) colour_box_add(&colour);
+		hexstring_from_gdkcolor(app.config.colour[0], &app.bg_colour);
 
-		//add greys:
-		gdk_color_parse("#555555", &colour);
-		colour_box_add(&colour);
-		if(colour_lighter(&colour, &colour)) colour_box_add(&colour);
-		if(colour_lighter(&colour, &colour)) colour_box_add(&colour);
-		if(colour_lighter(&colour, &colour)) colour_box_add(&colour);
-
-		gdk_color_parse("#5f5eff", &colour); //temp!
+		if(app.colourbox_dirty){
+			colourise_boxes();
+			app.colourbox_dirty = FALSE;
+		}
 
 		//make modifier colours:
 		colour_get_style_bg(&app.bg_colour_mod1, GTK_STATE_NORMAL);
@@ -349,13 +409,13 @@ window_on_allocate(GtkWidget *win, GtkAllocation *allocation, gpointer user_data
 
 		g_object_set(app.cell1, "cell-background-gdk", &app.bg_colour_mod1, "cell-background-set", TRUE, NULL);
 		g_object_set(app.cell1, "foreground-gdk", &app.fg_colour, "foreground-set", TRUE, NULL);
-
+#if 0
 		if(is_similar(&app.bg_colour_mod1, &app.fg_colour, 0xFF)) perr("colours not set properly!");
+#endif
 		dbg(2, "%s %s", gdkcolor_get_hexstring(&app.bg_colour_mod1), gdkcolor_get_hexstring(&app.fg_colour));
 		if(app.fm_view) view_details_set_alt_colours(VIEW_DETAILS(app.fm_view), &app.bg_colour_mod1, &app.fg_colour);
 
 		colour_box_update();
-		app.colourbox_dirty = FALSE;
 	}
 }
 
@@ -539,7 +599,6 @@ filter_new()
 	gtk_size_group_add_widget(size_group, align1);
 	
 	colour_box_new(hbox_edit);
-
 	return TRUE;
 }
 

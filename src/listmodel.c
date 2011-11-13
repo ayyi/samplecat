@@ -58,7 +58,6 @@ void
 listmodel__clear()
 {
 	PF;
-	dbg(0,"..");
 	GtkTreeIter iter;
 	while(gtk_tree_model_get_iter_first(GTK_TREE_MODEL(app.store), &iter)){
 		GdkPixbuf* pixbuf = NULL;
@@ -95,14 +94,6 @@ listmodel__add_result(Sample* result)
 		// needed w/ tracker backend.
 		sample_get_file_info(result);
 	}
-#if 0
-	if(!result->sample_name){
-		result->sample_name= g_path_get_basename(result->full_path);
-	}
-	if(!result->dir){
-		result->dir = g_path_get_dirname(result->full_path);
-	}
-#endif
 
 	char samplerate_s[32]; samplerate_format(samplerate_s, result->sample_rate);
 	char length[64]; format_time_int(length, result->length);
@@ -232,7 +223,7 @@ listmodel__update_by_ref(GtkTreeIter *iter, int what, void *data)
 				else {
 					gtk_list_store_set(app.store, iter, COL_COLOUR, colour_index, -1);
 					s->colour_index=colour_index;
-#if 0
+#if NEVER // old code - ?? verify colour ?
 					char colour_string[16];
 					snprintf(colour_string, 16, "#%s", app.config.colour[colour_index]);
 					GdkColor bg_colour;

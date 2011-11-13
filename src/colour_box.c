@@ -20,7 +20,7 @@ extern Filer       filer;
 extern unsigned    debug;
 static GtkWidget*  clicked_widget = NULL;
 
-static gboolean    colour_box__exists              (GdkColor*);
+//static gboolean    colour_box__exists              (GdkColor*);
 static void        colour_box__set_colour          (int, GdkColor*);
 static gboolean    colour_box__on_event            (GtkWidget*, GdkEvent*, gpointer);
 static int         colour_box__drag_dataget        (GtkWidget*, GdkDragContext*, GtkSelectionData*, guint info, guint time, gpointer);
@@ -42,16 +42,19 @@ colour_box_new(GtkWidget* parent)
 	int i;
 	for(i=PALETTE_SIZE-1;i>=0;i--){
 		e = app.colour_button[i] = gtk_event_box_new();
+		gtk_container_set_border_width(GTK_CONTAINER(e),1);
 
 		gtk_drag_source_set(e, GDK_BUTTON1_MASK | GDK_BUTTON2_MASK, dnd_file_drag_types, dnd_file_drag_types_count, GDK_ACTION_COPY | GDK_ACTION_MOVE | GDK_ACTION_LINK);
 		g_signal_connect(G_OBJECT(e), "drag-data-get", G_CALLBACK(colour_box__drag_dataget), GUINT_TO_POINTER(i));
+#if 1 // do not allow to change 'neutral' colour.
+	if (i>0)
+#endif
 		g_signal_connect(G_OBJECT(e), "event", G_CALLBACK(colour_box__on_event), GUINT_TO_POINTER(i));
 
 		gtk_widget_set_no_show_all(e, true);
 
 		gtk_box_pack_end(GTK_BOX(parent), e, true, true, 0);
 	}
-
 	if(!self.menu) self.menu = colour_box__make_context_menu();
 
 	return e;
@@ -69,10 +72,13 @@ colour_box_update()
 		GtkWidget* widget = app.colour_button[i];
 		if(app.colour_button[i] && strlen(app.config.colour[i])){
 			snprintf(colour_string, 16, "#%s", app.config.colour[i]);
-			if(!gdk_color_parse(colour_string, &colour)){ warnprintf("%s(): %i: parsing of colour string failed. %s\n", __func__, i, colour_string); continue; }
+			if(!gdk_color_parse(colour_string, &colour)){
+				warnprintf("%s(): %i: parsing of colour string failed. %s\n", __func__, i, colour_string);
+				continue;
+			}
 			dbg(2, "%i colour: %x %x %x", i, colour.red, colour.green, colour.blue);
 
-			if(colour.red != app.colour_button[i]->style->bg[GTK_STATE_NORMAL].red) 
+			//if(colour.red != app.colour_button[i]->style->bg[GTK_STATE_NORMAL].red) 
 				gtk_widget_modify_bg(app.colour_button[i], GTK_STATE_NORMAL, &colour);
 
 			gtk_widget_show(widget);
@@ -81,7 +87,7 @@ colour_box_update()
 	}
 }
 
-
+#if NEVER
 static gboolean
 colour_box__exists(GdkColor* colour)
 {
@@ -100,6 +106,7 @@ colour_box__exists(GdkColor* colour)
 
 	return false;
 }
+#endif
 
 
 gboolean
@@ -110,10 +117,13 @@ colour_box_add(GdkColor* colour)
 	//char d[32]; hexstring_from_gdkcolor(d, colour); dbg(0, " %i: %s", slot, d);
 
 	if(slot >= PALETTE_SIZE){ if(debug) warnprintf("%s(): colour_box full.\n", __func__); return false; }
-
+#if 0 /* don't try to be smarter than the user -- 
+       * This can screw up the order or user-configured colours 
+			 * if they're too similar.
+			 */
 	//only add a colour if a similar colour isnt already there.
 	if(colour_box__exists(colour)){ dbg(2, "dup colour - not adding..."); return false; }
-
+#endif
 	hexstring_from_gdkcolor(app.config.colour[slot++], colour);
 	return true;
 }
@@ -206,7 +216,12 @@ colour_box__lookup_idx(GtkWidget* widget)
 static void
 menu__open_selector(GtkMenuItem* menuitem, gpointer user_data)
 {
-	dbg(0, "data=%p", user_data);
+	static gboolean colour_editing=false;
+	dbg(2, "data=%p", user_data);
+
+	if (colour_editing) return;
+	colour_editing=true;
+
 	void on_colour_change(GtkColorSelection* colorselection, gpointer user_data)
 	{
 		int box_idx = colour_box__lookup_idx(clicked_widget);
@@ -219,8 +234,14 @@ menu__open_selector(GtkMenuItem* menuitem, gpointer user_data)
 
 	void on_ok(GtkButton* button, gpointer user_data)
 	{
-		dbg(0, "...");
+		dbg(1, "...");
 		gtk_widget_destroy(gtk_widget_get_toplevel((GtkWidget*)button));
+	}
+
+	void on_destroy(GtkButton* button, gpointer user_data)
+	{
+		dbg(1, "...");
+		colour_editing=false;
 	}
 	GtkWidget* window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	GtkWidget* v = gtk_vbox_new(NON_HOMOGENOUS, 2);
@@ -236,6 +257,7 @@ menu__open_selector(GtkMenuItem* menuitem, gpointer user_data)
 	gtk_box_pack_start((GtkBox*)v, b, EXPAND_FALSE, FILL_FALSE, 0);
 	gtk_widget_show_all(window);
 	g_signal_connect (G_OBJECT(b), "clicked", G_CALLBACK(on_ok), user_data);
+	g_signal_connect (G_OBJECT(b), "destroy", G_CALLBACK(on_destroy), user_data);
 	g_signal_connect (G_OBJECT(sel), "color-changed", G_CALLBACK(on_colour_change), user_data);
 }
 

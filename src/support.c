@@ -463,7 +463,7 @@ is_dark(GdkColor* colour)
 	return (average < 0x7fff);
 }
 
-
+#if NEVER
 gboolean
 is_similar(GdkColor* colour1, GdkColor* colour2, int min_diff)
 {
@@ -503,6 +503,7 @@ is_similar_rgb(unsigned colour1, unsigned colour2)
 
 	return FALSE;
 }
+#endif
 
 
 void

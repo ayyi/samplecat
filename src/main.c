@@ -1219,19 +1219,11 @@ config_load()
 	snprintf(app.config.database_name, 64, "samplelib");
 	strcpy(app.config.show_dir, "");
 
-	//currently these are overridden anyway
-	snprintf(app.config.colour[0], 7, "%s", "000000");
-	snprintf(app.config.colour[1], 7, "%s", "000000");
-	snprintf(app.config.colour[2], 7, "%s", "000000");
-	snprintf(app.config.colour[3], 7, "%s", "000000");
-	snprintf(app.config.colour[4], 7, "%s", "000000");
-	snprintf(app.config.colour[5], 7, "%s", "000000");
-	snprintf(app.config.colour[6], 7, "%s", "000000");
-	snprintf(app.config.colour[7], 7, "%s", "000000");
-	snprintf(app.config.colour[8], 7, "%s", "000000");
-	snprintf(app.config.colour[9], 7, "%s", "000000");
-	snprintf(app.config.colour[10],7, "%s", "000000");
-	snprintf(app.config.colour[11],7, "%s", "000000");
+	int i;
+	for (i=0;i<PALETTE_SIZE;i++) {
+		//currently these are overridden anyway
+		snprintf(app.config.colour[i], 7, "%s", "000000");
+	}
 
 	GError *error = NULL;
 	app.key_file = g_key_file_new();
@@ -1245,14 +1237,21 @@ config_load()
 			gchar** keys = g_key_file_get_keys(app.key_file, "Samplecat", &length, &error);
 			*/
 
-			#define num_keys 11
+			#define num_keys (11)
 			//FIXME 64 is not long enough for directories
-			char keys[num_keys][64] = {"database_host",          "database_user",          "database_pass",          "database_name",          "show_dir",          "window_height",          "window_width",         "icon_theme", "col1_width",                "filter",          "browse_dir"};
-			char* loc[num_keys]     = {app.config.database_host, app.config.database_user, app.config.database_pass, app.config.database_name, app.config.show_dir, app.config.window_height, app.config.window_width, theme_name,  app.config.column_widths[0], app.search_phrase, app.config.browse_dir};
+			char keys[num_keys+(PALETTE_SIZE-1)][64] = 
+				{"database_host",          "database_user",          "database_pass",          "database_name",          "show_dir",          "window_height",          "window_width",         "icon_theme", "col1_width",                "filter",          "browse_dir"};
+			char* loc[num_keys+(PALETTE_SIZE-1)]     = 
+				{app.config.database_host, app.config.database_user, app.config.database_pass, app.config.database_name, app.config.show_dir, app.config.window_height, app.config.window_width, theme_name,  app.config.column_widths[0], app.search_phrase, app.config.browse_dir};
+
+			for (i=0;i<PALETTE_SIZE-1;i++) {
+				snprintf(keys[i+num_keys],64, "colorkey%02d", i+1);
+				loc[i+num_keys] = app.config.colour[i+1];
+			}
 
 			int k;
 			gchar* keyval;
-			for(k=0;k<num_keys;k++){
+			for(k=0;k<(num_keys+PALETTE_SIZE);k++){
 				if((keyval = g_key_file_get_string(app.key_file, groupname, keys[k], &error))){
 					snprintf(loc[k], 64, "%s", keyval);
 					dbg(2, "%s=%s", keys[k], keyval);
@@ -1260,7 +1259,7 @@ config_load()
 				}else{
 					if(error->code == 3) g_error_clear(error)
 					else { GERR_WARN; }
-					strcpy(loc[k], "");
+					if (!loc[k] || strlen(loc[k])==0) strcpy(loc[k], "");
 				}
 			}
 			_set_search_dir(app.config.show_dir);
@@ -1276,6 +1275,12 @@ config_load()
 		return false;
 	}
 
+	for (i=0;i<PALETTE_SIZE;i++) {
+		if (strcmp(app.config.colour[i], "000000")) {
+			app.colourbox_dirty = false;
+			break;
+		}
+	}
 	return true;
 }
 
@@ -1285,7 +1290,7 @@ config_save()
 {
 	if(app.loaded){
 		//update the search directory:
-		g_key_file_set_value(app.key_file, "Samplecat", "show_dir", app.search_dir);
+		g_key_file_set_value(app.key_file, "Samplecat", "show_dir", app.search_dir?app.search_dir:"");
 
 		//save window dimensions:
 		gint width, height;
@@ -1317,6 +1322,13 @@ config_save()
 		struct _Filer* f = fm->file_window;
 		if(f){
 			g_key_file_set_value(app.key_file, "Samplecat", "browse_dir", f->real_path);
+		}
+
+		int i;
+		for (i=1;i<PALETTE_SIZE;i++) {
+			char keyname[32];
+			snprintf(keyname,32, "colorkey%02d", i);
+			g_key_file_set_value(app.key_file, "Samplecat", keyname, app.config.colour[i]);
 		}
 	}
 

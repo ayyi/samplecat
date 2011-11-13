@@ -37,7 +37,7 @@ static gboolean listview__on_motion              (GtkWidget*, GdkEventMotion*, g
 static void     listview__on_keywords_edited     (GtkCellRendererText*, gchar *path_string, gchar *new_text, gpointer);
 static void     path_cell_data                   (GtkTreeViewColumn*, GtkCellRenderer*, GtkTreeModel*, GtkTreeIter*, gpointer);
 static void     tag_cell_data                    (GtkTreeViewColumn*, GtkCellRenderer*, GtkTreeModel*, GtkTreeIter*, gpointer);
-static void     cell_bg_lighter                  (GtkTreeViewColumn*, GtkCellRenderer*, GtkTreeModel*, GtkTreeIter*);
+//static void     cell_bg_lighter                  (GtkTreeViewColumn*, GtkCellRenderer*, GtkTreeModel*, GtkTreeIter*);
 static void     cell_data_bg                     (GtkTreeViewColumn*, GtkCellRenderer*, GtkTreeModel*, GtkTreeIter*, gpointer);
 static gboolean listview__get_first_selected_iter(GtkTreeIter*);
 static GtkTreePath* listview__get_first_selected_path();
@@ -88,7 +88,8 @@ listview__new()
 	gtk_tree_view_column_set_min_width(col1, 0);
 	//gtk_tree_view_column_set_spacing(col1, 10);
 	//g_object_set(cell1, "ypad", 0, NULL);
-	gtk_tree_view_column_set_cell_data_func(col1, cell1, (gpointer)cell_bg_lighter, NULL, NULL);
+	gtk_tree_view_column_set_cell_data_func(col1, cell1, (gpointer)cell_data_bg, NULL, NULL);
+	//gtk_tree_view_column_set_cell_data_func(col1, cell1, (gpointer)cell_bg_lighter, NULL, NULL);
 
 	gtk_tree_view_column_set_sizing(col1, GTK_TREE_VIEW_COLUMN_FIXED);
 	int width = atoi(app.config.column_widths[0]);
@@ -843,7 +844,7 @@ tag_cell_data(GtkTreeViewColumn *tree_column, GtkCellRenderer *cell, GtkTreeMode
 	*/
 }
 
-
+#if NEVER
 static void
 cell_bg_lighter(GtkTreeViewColumn *tree_column, GtkCellRenderer *cell, GtkTreeModel *tree_model, GtkTreeIter *iter)
 {
@@ -865,7 +866,7 @@ cell_bg_lighter(GtkTreeViewColumn *tree_column, GtkCellRenderer *cell, GtkTreeMo
 		g_object_set(cell, "cell-background-set", true, "cell-background-gdk", &colour2, NULL);
 	}
 }
-
+#endif
 
 static void
 cell_data_bg(GtkTreeViewColumn *tree_column, GtkCellRenderer *cell, GtkTreeModel *tree_model, GtkTreeIter *iter, gpointer data)
