@@ -81,7 +81,7 @@ static void play_next() {
 		Sample* result = play_queue->data;
 		play_queue = g_list_remove(play_queue, result);
 		dbg(1, "%s", result->full_path);
-		/* TODO highlight current in app.store - see listview.c */
+		highlight_playing_by_ref(result->row_ref);
 		auditioner_play_result(result);
 		sample_unref(result);
 	}else{
@@ -169,13 +169,7 @@ void auditioner_play_all() {
 	if(play_queue) play_next();
 }
 
-/* unused public API */
 void auditioner_connect() {;}
-
-void auditioner_play_result(Sample* result) {
-	dbg(1, "%s", result->full_path);
-	auditioner_play_path(result->full_path);
-}
 
 void auditioner_stop() {
 	dbg(1, "stop audition..");

@@ -26,15 +26,18 @@
 #include <math.h>
 #include <pthread.h>
 
-#include "typedefs.h"
-#include "sample.h"
+#include "jack_player.h"
+#include "listview.h"
 #include "support.h"
 #include "main.h"
-#include "jack_player.h"
 
 extern struct _app app;
 
 #if (defined HAVE_JACK && !(defined USE_DBUS || defined USE_GAUDITION))
+
+#include <jack/jack.h> // TODO use weakjack.h 
+#include <jack/ringbuffer.h>
+#include "audio_decoder/ad.h"
 
 jack_client_t *j_client = NULL;
 jack_port_t **j_output_port = NULL;
@@ -61,7 +64,10 @@ float m_fResampleRatio = 1.0;
 
 #define DEFAULT_RB_SIZE 16384
 
+static GList* play_queue = NULL;
+void jplay__play_next();
 void JACKclose();
+
 
 int jack_audio_callback(jack_nframes_t nframes, void *arg) {
 	int c,s;
@@ -131,7 +137,7 @@ void *jack_player_thread(void *unused){
 	while(thread_run) {
 		int rv = ad_read(myplayer, tmpbuf, nframes * m_channels);
 		if (rv != nframes * m_channels) {
-			dbg(0, "end of file.");
+			dbg(1, "end of file.");
 			if (rv>0) {
 #ifdef ENABLE_RESAMPLING
 				if(m_fResampleRatio != 1.0) {
@@ -175,6 +181,7 @@ void *jack_player_thread(void *unused){
 	src_delete(src_state);
 	free(smpbuf);
 #endif
+	if(play_queue) jplay__play_next();
 	return NULL;
 }
 
@@ -287,26 +294,78 @@ void JACKclose() {
 
 /* SampleCat API */
 
+void jplay__connect() {;}
+
 int
-playback_init(Sample* sample)
+jplay__play_path(const char* path)
 {
-	if(app.playing_id) playback_stop(); //stop any previous playback.
-	if(j_client) playback_stop();
+	if(app.playing_id) jplay__stop(); //stop any previous playback.
+	if(j_client) jplay__stop();
 
 	struct adinfo nfo;
-
-	if(!sample->id){ perr("bad arg: id=0\n"); return 0; }
-	void *sf = ad_open(sample->full_path, &nfo);
-	if (!sf) return false;
+	void *sf = ad_open(path, &nfo);
+	if (!sf) return -1;
 	JACKaudiooutputinit(sf, nfo.channels, nfo.sample_rate);
-	app.playing_id = sample->id;
-	return TRUE;
+	return 0;
 }
-
 
 void
-playback_stop()
+jplay__play(Sample* sample) 
 {
+	if(!sample->id){ perr("bad arg: id=0\n"); return; }
+	if (jplay__play_path(sample->full_path)) return;
+	app.playing_id = sample->id;
+}
+
+void
+jplay__toggle(Sample* sample) 
+{
+	jplay__play(sample);
+}
+
+void
+jplay__stop()
+{
+	if (play_queue) {
+		Sample *result;
+		g_list_foreach(play_queue,(GFunc)sample_unref, NULL);
+		g_list_free(play_queue);
+		play_queue=NULL;
+	}
 	JACKclose();
 }
+
+void 
+jplay__play_next() {
+	if(play_queue){
+		Sample* result = play_queue->data;
+		play_queue = g_list_remove(play_queue, result);
+		dbg(1, "%s", result->full_path);
+		highlight_playing_by_ref(result->row_ref);
+		jplay__play(result);
+		sample_unref(result);
+	}else{
+		dbg(1, "play_all finished. disconnecting...");
+	}
+}
+
+void 
+jplay__play_all() {
+	dbg(1, "...");
+	if(play_queue){
+		pwarn("already playing");
+		return;
+	}
+
+	gboolean foreach_func(GtkTreeModel* model, GtkTreePath* path, GtkTreeIter* iter, gpointer user_data)
+	{
+		Sample* result = sample_get_from_model(path);
+		play_queue = g_list_append(play_queue, result);
+		dbg(2, "%s", result->sample_name);
+		return FALSE; //continue
+	}
+	gtk_tree_model_foreach(GTK_TREE_MODEL(app.store), foreach_func, NULL);
+	if(play_queue) jplay__play_next();
+}
+
 #endif /* HAVE_JACK */

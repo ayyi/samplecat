@@ -36,8 +36,13 @@
 #include "db/mysql.h"
 #endif
 #include "colour_box.h"
-#include "auditioner.h"
 #include "window.h"
+
+#if (defined USE_DBUS || defined USE_GAUDITION)
+#include "auditioner.h"
+#elif (defined HAVE_JACK)
+#include "jack_player.h"
+#endif
 
 extern struct _app app;
 extern Filer filer;
@@ -792,6 +797,8 @@ menu__play(GtkMenuItem* menuitem, gpointer user_data)
 		dbg(1, "%s", item);
 #if (defined USE_DBUS || defined USE_GAUDITION)
 		auditioner_play_path(item);
+#elif (defined HAVE_JACK)
+		jplay__play_path(item);
 #endif
 		g_free(item);
 	}

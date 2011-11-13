@@ -252,7 +252,7 @@ listview__on_row_clicked(GtkWidget *widget, GdkEventButton *event, gpointer user
 					}
 					app.playing_id = sample->id;
 #elif (defined HAVE_JACK)
-					playback_init(sample);
+					jplay__play(sample);
 #endif
 				}
 #if (defined USE_DBUS || defined USE_GAUDITION)
@@ -261,18 +261,12 @@ listview__on_row_clicked(GtkWidget *widget, GdkEventButton *event, gpointer user
 				}
 #elif (defined HAVE_JACK)
 				else {
-					playback_stop();
+					jplay__stop();
 				}
 #endif
 
 #if 1 /* highlight played item with 'colour:1' */
-# if 0 // persistent
-				listview__item_set_colour(path, 1); // persistent.
-# else // temporary
-				GtkTreeIter iter;
-				gtk_tree_model_get_iter(GTK_TREE_MODEL(app.store), &iter, path);
-				gtk_list_store_set(GTK_LIST_STORE(app.store), &iter, COL_COLOUR, /*colour*/ PALETTE_SIZE, -1);
-# endif
+				highlight_playing_by_path(path);
 #endif
 				sample_unref(sample);
 			}else{
@@ -953,3 +947,19 @@ treeview_get_tags_cell(GtkTreeView *view, guint x, guint y, GtkCellRenderer **ce
 	return false; // not found
 }
 #endif
+
+void 
+highlight_playing_by_path (GtkTreePath *path) {
+	GtkTreeIter iter;
+	gtk_tree_model_get_iter(GTK_TREE_MODEL(app.store), &iter, path);
+	gtk_list_store_set(GTK_LIST_STORE(app.store), &iter, COL_COLOUR, /*colour*/ PALETTE_SIZE, -1);
+}
+
+void 
+highlight_playing_by_ref (GtkTreeRowReference *ref) {
+	GtkTreePath *path;
+	if (!ref || !gtk_tree_row_reference_valid(ref)) return;
+	if(!(path = gtk_tree_row_reference_get_path(ref))) return;
+	highlight_playing_by_path(path);
+	gtk_tree_path_free(path);
+}

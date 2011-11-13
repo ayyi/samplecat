@@ -966,6 +966,8 @@ menu_play_all(GtkWidget* widget, gpointer user_data)
 	dbg(0, "...");
 #if (defined USE_DBUS || defined USE_GAUDITION)
 	auditioner_play_all();
+#elif (defined HAVE_JACK)
+	jplay__play_all();
 #endif
 }
 
@@ -977,7 +979,7 @@ menu_play_stop(GtkWidget* widget, gpointer user_data)
 #if (defined USE_DBUS || defined USE_GAUDITION)
 	auditioner_stop();
 #elif (defined HAVE_JACK)
-	playback_stop();
+	jplay__stop();
 #endif
 }
 
@@ -1414,7 +1416,7 @@ on_quit(GtkMenuItem* menuitem, gpointer user_data)
 	if(exit_code > 1) exit_code = 0; //ignore invalid exit code.
 
 #if (defined HAVE_JACK && !(defined USE_DBUS || defined USE_GAUDITION))
-	playback_stop();
+	jplay__stop();
 #endif
 
 	if(app.loaded) config_save();

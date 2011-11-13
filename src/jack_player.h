@@ -1,7 +1,12 @@
-#include <jack/jack.h>
-// TODO use weakjack.h 
-#include <jack/ringbuffer.h>
-#include "audio_decoder/ad.h"
+#ifndef __SAMPLEJACK_H_
+#define __SAMPLEJACK_H_
+#include "typedefs.h"
+#include "sample.h"
 
-int      playback_init(Sample*);
-void     playback_stop();
+void     jplay__connect    ();
+void     jplay__play       (Sample*);
+void     jplay__toggle     (Sample*);
+int      jplay__play_path  (const char* path);
+void     jplay__stop       ();
+void     jplay__play_all   ();
+#endif

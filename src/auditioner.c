@@ -69,14 +69,6 @@ auditioner_play(Sample* sample)
 
 
 void
-auditioner_play_result(Sample* result)
-{
-	dbg(1, "%s", result->full_path);
-	dbus_g_proxy_call_no_reply(app.auditioner->proxy, "StartPlayback", G_TYPE_STRING, result->full_path, G_TYPE_INVALID);
-}
-
-
-void
 auditioner_play_path(const char* path)
 {
 	g_return_if_fail(path);
@@ -118,7 +110,8 @@ auditioner_play_all()
 		if(play_queue){
 			Sample* result = play_queue->data;
 			play_queue = g_list_remove(play_queue, result);
-			auditioner_play_result(result);
+			highlight_playing_by_ref(result->row_ref);
+			auditioner_play(result);
 			sample_unref(result);
 		}else{
 			dbg(1, "play_all finished. disconnecting...");
