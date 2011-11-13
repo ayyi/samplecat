@@ -114,7 +114,7 @@ void *ad_open_ffmpeg(const char *fn, struct adinfo *nfo) {
 
   dbg(0, "ffmpeg - %s", fn);
   if (nfo) 
-    dbg(0, "ffmpeg - sr:%i c:%i d:%lld f:%lld", nfo->sample_rate, nfo->channels, nfo->length, nfo->frames);
+    dbg(0, "ffmpeg - sr:%i c:%i d:%"PRIi64" f:%"PRIi64, nfo->sample_rate, nfo->channels, nfo->length, nfo->frames);
 
   return (void*) priv;
 }
@@ -220,14 +220,14 @@ ssize_t ad_read_ffmpeg(void *sf, float* d, size_t len) {
           priv->seek_frame=0;
           priv->decoder_clock += diff;
         } else if (data_size > 0) {
-          dbg(2, "Audio exact sync-seek (%lld == %lld)", priv->decoder_clock, priv->seek_frame);
+          dbg(2, "Audio exact sync-seek (%"PRIi64" == %"PRIi64")", priv->decoder_clock, priv->seek_frame);
           priv->seek_frame=0;
         } else {
           dbg(0, " XXX - no audio data in packet");
         }
       }
-      //dbg(0, "PTS: decoder:%lld. - want: %lld",priv->decoder_clock, priv->output_clock);
-      //dbg(0, "CLK: frame:  %lld  T:%.3fs",priv->decoder_clock, (float) priv->decoder_clock/priv->samplerate);
+      //dbg(0, "PTS: decoder:%"PRIi64". - want: %"PRIi64, priv->decoder_clock, priv->output_clock);
+      //dbg(0, "CLK: frame:  %"PRIi64"  T:%.3fs",priv->decoder_clock, (float) priv->decoder_clock/priv->samplerate);
     }
   }
   if (written!=frames) {
@@ -257,7 +257,7 @@ int64_t ad_seek_ffmpeg(void *sf, int64_t pos) {
 #endif
 
   const int64_t timestamp = pos / av_q2d(priv->formatContext->streams[priv->audioStream]->time_base) / priv->samplerate;
-  dbg(2, "seek frame:%lld - idx:%lld", pos, timestamp);
+  dbg(2, "seek frame:%"PRIi64" - idx:%"PRIi64, pos, timestamp);
   
   av_seek_frame(priv->formatContext, priv->audioStream, timestamp, AVSEEK_FLAG_ANY | AVSEEK_FLAG_BACKWARD);
   avcodec_flush_buffers(priv->codecContext);

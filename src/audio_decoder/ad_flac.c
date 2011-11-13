@@ -209,7 +209,7 @@ void *ad_open_flac(const char *fn, struct adinfo *nfo) {
   dbg(0, "flac - %s", fn);
 	ad_info_flac((void*)priv, nfo);
 	if (nfo) {
-		dbg(0, "flac - sr:%i c:%i d:%lld f:%lld", nfo->sample_rate, nfo->channels, nfo->length, nfo->frames);
+		dbg(0, "flac - sr:%i c:%i d:%"PRIi64" f:%"PRIi64, nfo->sample_rate, nfo->channels, nfo->length, nfo->frames);
 	}
 
 	//const size_t rbsize =FLAC__MAX_BLOCK_SIZE * FLAC__MAX_CHANNELS * sizeof(FLAC__int32);

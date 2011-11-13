@@ -30,7 +30,7 @@ console__show_result(Sample* result)
 	strncpy(name, result->sample_name, SNAME_MAX-1);
 	name[SNAME_MAX-1] = '\0';
 
-	printf("  %-20s %-35s %7lld %d %5d %s\n", name, dir, result->length, result->channels, result->sample_rate, result->mimetype);
+	printf("  %-20s %-35s %7"PRIi64" %d %5d %s\n", name, dir, result->length, result->channels, result->sample_rate, result->mimetype);
 }
 
 
