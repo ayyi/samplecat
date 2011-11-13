@@ -18,6 +18,7 @@ This software is licensed under the GPL. See accompanying file COPYING.
 #include <libtracker-client/tracker-client.h>
 
 #include "typedefs.h"
+#include "sample.h"
 #include "support.h"
 #include "mimetype.h"
 #include "listmodel.h"
@@ -915,7 +916,7 @@ tracker__update_peaklevel(int id, float level)
 
 
 gboolean
-tracker__file_exists (const char*)
+tracker__file_exists (const char* path)
 {
 	return false;
 }

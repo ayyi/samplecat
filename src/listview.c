@@ -372,15 +372,16 @@ listview__get_first_selected_iter(GtkTreeIter* iter)
 	return false;
 }
 
-gboolean reset_colours (GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *iter, gpointer data) {
-	Sample *s = sample_get_by_tree_iter(iter);
-	gtk_list_store_set(app.store, iter, COL_COLOUR, s->colour_index, -1);
-	return FALSE;
-}
-
 void
 listview__reset_colours()
 {
+	gboolean reset_colours (GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *iter, gpointer data) {
+		Sample *s = sample_get_by_tree_iter(iter);
+		gtk_list_store_set(app.store, iter, COL_COLOUR, s->colour_index, -1);
+		sample_unref(s);
+		return FALSE;
+	}
+
 	GtkTreeModel* model = GTK_TREE_MODEL(app.store);
 	gtk_tree_model_foreach(model, &reset_colours, NULL);
 }

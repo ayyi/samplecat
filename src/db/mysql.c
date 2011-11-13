@@ -125,8 +125,8 @@ int
 mysql__insert(Sample* sample)
 {
 	int id = 0;
-	gchar* filedir = g_path_get_dirname(sample->filename);
-	gchar* filename = g_path_get_basename(sample->filename);
+	gchar* filedir = g_path_get_dirname(sample->full_path);
+	gchar* filename = g_path_get_basename(sample->full_path);
 
 	gchar* sql = g_strdup_printf("INSERT INTO samples SET filename='%s', filedir='%s', length=%"PRIi64", sample_rate=%i, channels=%i, mimetype='%s' ", filename, filedir, sample->length, sample->sample_rate, sample->channels, sample->mimetype);
 	dbg(1, "sql=%s", sql);
@@ -219,7 +219,7 @@ mysql__update_ebur(int id, const char* ebur)
 {
 	// XXX EBUR is not yet in datamodel
 	char sql[1024];
-	snprintf(sql, 1024, "UPDATE samples SET ebur='%s' WHERE id=%u", notes, id);
+	snprintf(sql, 1024, "UPDATE samples SET ebur='%s' WHERE id=%u", ebur, id);
 	if(mysql_query(&mysql, sql)){
 		perr("update failed! sql=%s\n", sql);
 		return false;
@@ -417,7 +417,6 @@ mysql__search_iter_next_(unsigned long** lengths)
 	result.mimetype    = row[MYSQL_MIMETYPE];
 	result.online      = get_int(row, MYSQL_ONLINE);
 	result.mtime       = 0; 
-	result.updated     = row[MYSQL_LAST_CHECKED];
 	return &result;
 }
 
@@ -475,7 +474,7 @@ mysql__iter_to_result(Sample* result)
 	memset(result, 0, sizeof(Sample));
 }
 
-
+#if NEVER
 void
 mysql__add_row_to_model(MYSQL_ROW row, unsigned long* lengths)
 {
@@ -558,6 +557,7 @@ mysql__add_row_to_model(MYSQL_ROW row, unsigned long* lengths)
 	}
 #endif
 }
+#endif
 
 
 static void

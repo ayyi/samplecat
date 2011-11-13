@@ -283,3 +283,24 @@ listmodel__set_peaklevel(GtkTreeRowReference* row_ref, float level)
 		gtk_tree_path_free(treepath);
 	} else dbg(2, "no path for rowref. row_ref=%p\n", row_ref); //this is not an error. The row may not be part of the current search.
 }
+
+
+char*
+listmodel__get_filename_from_id(int id)
+{
+	char *rv = NULL;
+	gboolean find_id (GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *iter, gpointer data) {
+		Sample *s = sample_get_by_tree_iter(iter);
+		if (s->id == id) {
+			rv=strdup(s->full_path);
+			sample_unref(s);
+			return TRUE;
+		}
+		sample_unref(s);
+		return FALSE;
+	}
+	GtkTreeModel* model = GTK_TREE_MODEL(app.store);
+	gtk_tree_model_foreach(model, &find_id, NULL);
+
+	return rv;
+}
