@@ -79,7 +79,7 @@ int64_t ad_seek(void *sf, int64_t pos) {
 ssize_t ad_read(void *sf, float* out, size_t len){
 	adecoder *d = (adecoder*) sf;
 	if (!d) return -1;
-	return d->b->read_dbl(d->d, out, len);
+	return d->b->read(d->d, out, len);
 }
 
 

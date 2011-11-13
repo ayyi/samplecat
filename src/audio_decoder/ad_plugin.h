@@ -9,7 +9,7 @@ typedef struct {
 	int     (*close)(void *);
 	int     (*info)(void *, struct adinfo *);
 	int64_t (*seek)(void *, int64_t);
-	ssize_t (*read_dbl)(void *, float *, size_t);
+	ssize_t (*read)(void *, float *, size_t);
 } ad_plugin;
 
 int     ad_eval_null(const char *);
