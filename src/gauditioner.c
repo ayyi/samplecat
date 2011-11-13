@@ -82,7 +82,7 @@ static void play_next() {
 		play_queue = g_list_remove(play_queue, result);
 		dbg(1, "%s", result->full_path);
 		highlight_playing_by_ref(result->row_ref);
-		auditioner_play_result(result);
+		auditioner_play(result);
 		sample_unref(result);
 	}else{
 		dbg(1, "play_all finished. disconnecting...");
