@@ -144,15 +144,15 @@ listmodel__add_result(Sample* result)
 	}
 
 	if(result->peak_level==0 && result->row_ref){
-		dbg(0, "recalucale peak");
+		dbg(1, "recalucale peak");
 		request_peaklevel(result);
 	}
 	if(!result->overview && result->row_ref){
-		dbg(0, "regenerate overview");
+		dbg(1, "regenerate overview");
 		request_overview(result);
 	}
 	if((!result->ebur || !strlen(result->ebur)) && result->row_ref){
-		dbg(0, "regenerate ebur128");
+		dbg(1, "regenerate ebur128");
 		request_ebur128(result);
 	}
 	sample_ref(result);
