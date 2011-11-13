@@ -269,6 +269,10 @@ GtkWindow
 
 	gtk_widget_show_all(window);
 
+#if (defined HAVE_JACK)
+	gtk_widget_hide(app.inspector->slider);
+#endif
+
 	dnd_setup();
 
 	on_layout_changed();

@@ -86,6 +86,7 @@ static void       edit_row                  (GtkWidget*, gpointer);
 static GtkWidget* make_context_menu         ();
 static gboolean   can_use_backend           (const char*);
 static gboolean   toggle_recursive_add      (GtkWidget*, gpointer);
+static gboolean   toggle_loop_playback      (GtkWidget*, gpointer);
 static gboolean   on_directory_list_changed ();
 static void      _set_search_dir            (char*);
 static gboolean   dir_tree_update           (gpointer);
@@ -1114,6 +1115,13 @@ make_context_menu()
 	gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menu_item), app.add_recursive);
 	g_signal_connect(G_OBJECT(menu_item), "activate", G_CALLBACK(toggle_recursive_add), NULL);
 
+#if (defined HAVE_JACK)
+	menu_item = gtk_check_menu_item_new_with_mnemonic("Loop Playback");
+	gtk_menu_shell_append(GTK_MENU_SHELL(sub), menu_item);
+	gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menu_item), app.loop_playback);
+	g_signal_connect(G_OBJECT(menu_item), "activate", G_CALLBACK(toggle_loop_playback), NULL);
+#endif
+
 	if(themes){
 		GtkWidget* theme_menu = gtk_menu_item_new_with_label("Icon Themes");
 		gtk_container_add(GTK_CONTAINER(sub), theme_menu);
@@ -1219,6 +1227,15 @@ on_directory_list_changed()
 	*/
 
 	g_idle_add(dir_tree_update, NULL);
+	return false;
+}
+
+
+static gboolean
+toggle_loop_playback(GtkWidget *widget, gpointer user_data)
+{
+	PF;
+	if(app.loop_playback) app.loop_playback = false; else app.loop_playback = true;
 	return false;
 }
 

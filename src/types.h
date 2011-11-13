@@ -1,4 +1,5 @@
-
+#ifndef __SAMPLECAT_TYPES_H_
+#define __SAMPLECAT_TYPES_H_
 //TODO this is annoyingly similar to struct Sample - consider merging...
 #if 0 // merge in progress
 struct _samplecat_result
@@ -48,11 +49,11 @@ typedef struct _inspector
 	GtkWidget*     level;
 	GtkWidget*     ebur;
 	GtkWidget*     image;
+	GtkWidget*     slider;
 	GtkWidget*     text;
 	GtkTextBuffer* notes;
 	GtkWidget*     edit;
 	int            min_height;
 	int            user_height;
 } Inspector;
-
-
+#endif

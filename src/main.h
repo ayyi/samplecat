@@ -35,7 +35,8 @@ struct _config
 	char      window_width[64];
 	char      window_height[64];
 	char      colour[PALETTE_SIZE][8];
-	gboolean  add_recursive;
+	//gboolean  add_recursive; ///< TODO save w/ config ?
+	//gboolean  loop_playback; ///< TODO save w/ config ?
 	char      column_widths[4][64];
 	char      browse_dir[64];
 };
@@ -91,6 +92,7 @@ struct _app
 	char*          search_dir;
 	gchar*         search_category;
 	gboolean       add_recursive;
+	gboolean       loop_playback;
 	gboolean       no_gui;
 	struct _args {
 		char*      search;

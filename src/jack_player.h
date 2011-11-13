@@ -9,4 +9,7 @@ void     jplay__toggle     (Sample*);
 int      jplay__play_path  (const char* path);
 void     jplay__stop       ();
 void     jplay__play_all   ();
+
+void     jplay__seek       (double);
+double   jplay__getposition();
 #endif

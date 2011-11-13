@@ -30,6 +30,7 @@
 #include "listview.h"
 #include "support.h"
 #include "main.h"
+#include "inspector.h"
 
 extern struct _app app;
 
@@ -43,10 +44,13 @@ jack_client_t *j_client = NULL;
 jack_port_t **j_output_port = NULL;
 jack_default_audio_sample_t **j_out = NULL;
 jack_ringbuffer_t *rb = NULL;
-void *myplayer;
-int m_channels = 2;
-int thread_run = 0;
-volatile int silent = 0;
+
+static void *myplayer;
+static int m_channels = 2;
+static int64_t m_frames = 0;
+static int thread_run = 0;
+static volatile int silent = 0;
+static volatile double seek_request = -1.0;
 
 pthread_t player_thread_id;
 pthread_mutex_t player_thread_lock = PTHREAD_MUTEX_INITIALIZER;
@@ -107,6 +111,8 @@ void jack_shutdown_callback(void *arg){
 	JACKclose();
 }
 
+static int64_t play_position =0;
+
 void *jack_player_thread(void *unused){
 	const int nframes = 4096;
 	float *tmpbuf = (float*) calloc(nframes * m_channels, sizeof(float));
@@ -130,12 +136,15 @@ void *jack_player_thread(void *unused){
 #endif
 
 	size_t rbchunk = nframes_r * m_channels * sizeof(float);
+	play_position =0;
+	int64_t decoder_position = 0;
 
 	pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
 	pthread_mutex_lock(&player_thread_lock);
 
 	while(thread_run) {
 		int rv = ad_read(myplayer, tmpbuf, nframes * m_channels);
+		decoder_position+=rv/m_channels;
 		if (rv != nframes * m_channels) {
 			dbg(1, "end of file.");
 			if (rv>0) {
@@ -151,7 +160,23 @@ void *jack_player_thread(void *unused){
 #endif
 				jack_ringbuffer_write(rb, (char *) bufptr, rv *  sizeof(float));
 			}
-			break;
+			if (app.loop_playback) {
+				ad_seek(myplayer, 0);
+				decoder_position=0;
+#ifdef ENABLE_RESAMPLING
+				if(m_fResampleRatio != 1.0) {
+					src_data.end_of_input=0;
+					src_data.input_frames  = nframes;
+					src_data.output_frames = nframes_r;
+				}
+#endif
+				while(thread_run && jack_ringbuffer_write_space(rb) <= rbchunk) {
+					pthread_cond_wait(&buffer_ready, &player_thread_lock);
+				}
+				continue;
+			}
+			else 
+				break;
 		}
 
 #ifdef ENABLE_RESAMPLING
@@ -166,6 +191,24 @@ void *jack_player_thread(void *unused){
 		while(thread_run && jack_ringbuffer_write_space(rb) <= rbchunk) {
 			pthread_cond_wait(&buffer_ready, &player_thread_lock);
 		}
+
+		/* Handle SEEKs */
+		if (seek_request>=0 && seek_request<=1) {
+			decoder_position=floor(m_frames * seek_request);
+			ad_seek(myplayer, decoder_position);
+			seek_request=-1;
+#if 1 // flush_ringbuffer ! 
+			size_t rs=jack_ringbuffer_read_space(rb);
+			jack_ringbuffer_read_advance(rb,rs);
+#endif
+		}
+
+		/* Update play position */
+		int64_t latency = floor(jack_ringbuffer_read_space(rb)/m_channels/sizeof(float)/m_fResampleRatio);
+		if (decoder_position>latency) // workaround for loop/restart
+			play_position = decoder_position - latency;
+		else 
+			play_position = m_frames+decoder_position-latency;
 	}
 
 	pthread_mutex_unlock(&player_thread_lock);
@@ -186,7 +229,7 @@ void *jack_player_thread(void *unused){
 }
 
 /* JACK player control */
-void JACKaudiooutputinit(void *sf, int channels, int samplerate){
+void JACKaudiooutputinit(void *sf, int channels, int samplerate, int64_t frames){
 	int i;
 
 	if(j_client || thread_run || rb) {
@@ -196,6 +239,7 @@ void JACKaudiooutputinit(void *sf, int channels, int samplerate){
 
 	myplayer=sf;
 	m_channels = channels;
+	m_frames = frames;
 
 	j_client = jack_client_open("samplecat", (jack_options_t) 0, NULL);
 
@@ -223,6 +267,7 @@ void JACKaudiooutputinit(void *sf, int channels, int samplerate){
 	j_out = (jack_default_audio_sample_t**) calloc(m_channels, sizeof(jack_default_audio_sample_t*));
 	const size_t rbsize = DEFAULT_RB_SIZE * m_channels * sizeof(jack_default_audio_sample_t);
 	rb = jack_ringbuffer_create(rbsize);
+	jack_ringbuffer_mlock(rb);
 	memset(rb->buf, 0, rbsize);
 
 	jack_nframes_t jsr = jack_get_sample_rate(j_client);
@@ -305,7 +350,10 @@ jplay__play_path(const char* path)
 	struct adinfo nfo;
 	void *sf = ad_open(path, &nfo);
 	if (!sf) return -1;
-	JACKaudiooutputinit(sf, nfo.channels, nfo.sample_rate);
+	seek_request = -1.0;
+	JACKaudiooutputinit(sf, nfo.channels, nfo.sample_rate, nfo.frames);
+	app.playing_id = -1; // ID of filer-inspector (non imported sample)
+	show_player();
 	return 0;
 }
 
@@ -315,6 +363,7 @@ jplay__play(Sample* sample)
 	if(!sample->id){ perr("bad arg: id=0\n"); return; }
 	if (jplay__play_path(sample->full_path)) return;
 	app.playing_id = sample->id;
+	show_player();
 }
 
 void
@@ -327,7 +376,6 @@ void
 jplay__stop()
 {
 	if (play_queue) {
-		Sample *result;
 		g_list_foreach(play_queue,(GFunc)sample_unref, NULL);
 		g_list_free(play_queue);
 		play_queue=NULL;
@@ -366,6 +414,19 @@ jplay__play_all() {
 	}
 	gtk_tree_model_foreach(GTK_TREE_MODEL(app.store), foreach_func, NULL);
 	if(play_queue) jplay__play_next();
+}
+
+void jplay__seek (double pos) {
+	if(!app.playing_id) return;
+	if(!j_client) return;
+	seek_request = pos;
+}
+
+double jplay__getposition() {
+	if(!app.playing_id) return -1;
+	if(!j_client) return -1;
+	if(m_frames<1) return -1;
+	return (double)play_position / m_frames;
 }
 
 #endif /* HAVE_JACK */
