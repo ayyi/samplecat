@@ -95,9 +95,10 @@ struct _app
 	gboolean       loop_playback;
 #if (defined HAVE_JACK)
 	gboolean       enable_effect;
-	gboolean       effect_enabled;
+	gboolean       effect_enabled; // read-only set by jack_player.c
 	float          effect_param[3];
 	float          playback_speed;
+	gboolean       link_speed_pitch;
 #endif
 	gboolean       no_gui;
 	struct _args {
@@ -116,7 +117,7 @@ struct _app
 
 	GList*         backends;
 
-	int            playing_id; //database index of the file that is currently playing, or zero if none playing.
+	int            playing_id; ///< database index of the file that is currently playing, or zero if none playing, -1 if playing an external file.
 
 #ifdef USE_DBUS
 	Auditioner*    auditioner;

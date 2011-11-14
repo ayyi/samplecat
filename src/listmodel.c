@@ -158,22 +158,25 @@ listmodel__add_result(Sample* result)
 	sample_ref(result);
 }
 
+/* used to update information that was generated in
+ * a backgound analysis process */
 void
 listmodel__update_result(Sample* sample, int what)
 {
 	if(!sample->row_ref){
-		dbg(0,"rowref not set");
+		/* this should NEVER HAPPEN */
+		dbg(0,"FIXME: rowref not set");
 	}
 
 	switch (what) {
 		case COL_OVERVIEW:
 			backend.update_pixbuf(sample);
-			if (sample->row_ref)
+			if (sample->row_ref) // XXX
 				listmodel__set_overview(sample->row_ref, sample->overview);
 			break;
 		case COL_PEAKLEVEL:
 			backend.update_peaklevel(sample->id, sample->peak_level);
-			if(sample->row_ref)
+			if (sample->row_ref) // XXX
 				listmodel__set_peaklevel(sample->row_ref, sample->peak_level);
 			break;
 		case COLX_EBUR:
@@ -189,16 +192,38 @@ listmodel__update_result(Sample* sample, int what)
 	}
 }
 
+/* used when user interactively changes meta-data listview.c/window.c,
+ * or when modifying meta-data in the inspector.c (wrapped by
+ * listmodel__update_by_rowref() below.
+ * Also used  when user invokes an 'update' command - main.c */
 gboolean
 listmodel__update_by_ref(GtkTreeIter *iter, int what, void *data)
 {
 	gboolean rv = true;
 	Sample *s=NULL;
 	gtk_tree_model_get(GTK_TREE_MODEL(app.store), iter, COL_SAMPLEPTR, &s, -1);
-	if (!s) dbg(0, "no sample data in list model!"); // THIS SHOULD NEVER HAPPEN!
+	if (!s) {
+		// THIS SHOULD NEVER HAPPEN!
+		dbg(0, "FIXME: no sample data in list model!");
+		return false;
+	}
 	sample_ref(s);
 
 	switch (what) {
+		case COL_ICON: // online/offline, mtime
+			{
+				gboolean online = s->online;
+				backend.update_online(s->id, online, s->mtime);
+				GdkPixbuf* iconbuf = NULL;
+				if (online) {
+					MIME_type* mime_type = mime_type_lookup(s->mimetype);
+					type_to_icon(mime_type);
+					if (!mime_type->image) dbg(0, "no icon.");
+					iconbuf = mime_type->image->sm_pixbuf;
+				}
+				gtk_list_store_set(app.store, iter, COL_ICON, iconbuf, -1);
+			}
+			break;
 		case COL_KEYWORDS:
 			{
 				if(!backend.update_keywords(s->id, (char*)data)) rv=false;
@@ -241,9 +266,16 @@ listmodel__update_by_ref(GtkTreeIter *iter, int what, void *data)
 gboolean
 listmodel__update_by_rowref(GtkTreeRowReference *row_ref, int what, void *data)
 {
+	// used by the inspector..
 	GtkTreePath *path;
 	if(!(path = gtk_tree_row_reference_get_path(row_ref))) {
-		perr("cannot get row bt refernce\n");
+		/* this SHOULD never happen:
+		 * it was possible before the inspector hid 
+		 * internal meta-data for non sample, file-system files.
+		 * The latter do not have a Sample -> row_ref.
+		 * code may still buggy wrt that.
+		 */
+		perr("FIXME: cannot get row by refernce\n");
 		return false;
 	}
 
@@ -252,6 +284,8 @@ listmodel__update_by_rowref(GtkTreeRowReference *row_ref, int what, void *data)
 	gtk_tree_path_free(path);
 	return listmodel__update_by_ref(&iter, what, data);
 }
+
+
 
 void
 listmodel__set_overview(GtkTreeRowReference* row_ref, GdkPixbuf* pixbuf)

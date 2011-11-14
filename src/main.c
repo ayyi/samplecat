@@ -81,7 +81,7 @@ This software is licensed under the GPL. See accompanying file COPYING.
 
 
 extern void       dir_init                  ();
-static void       update_row                (GtkWidget*, gpointer);
+static void       update_rows               (GtkWidget*, gpointer);
 static void       edit_row                  (GtkWidget*, gpointer);
 static GtkWidget* make_context_menu         ();
 static gboolean   can_use_backend           (const char*);
@@ -146,7 +146,8 @@ app_init()
 	app.cache_dir = g_build_filename(g_get_home_dir(), ".config", PACKAGE, "cache", NULL);
 
 #if (defined HAVE_JACK)
-	app.enable_effect=false;
+	app.enable_effect=true;
+	app.link_speed_pitch=true;
 	app.effect_param[0]=0.0; /* cent transpose [-100 .. 100] */
 	app.effect_param[1]=0.0; /* semitone transpose [-12 .. 12] */
 	app.effect_param[2]=0.0; /* octave [-3 .. 3] */
@@ -903,68 +904,62 @@ menu_delete_row(GtkMenuItem* widget, gpointer user_data)
 
 /** sync the catalogue row with the filesystem. */
 static void
-update_row(GtkWidget *widget, gpointer user_data)
+update_rows(GtkWidget *widget, gpointer user_data)
 {
-
 	PF;
-	GtkTreeIter iter;
-	GtkTreeModel *model = gtk_tree_view_get_model(GTK_TREE_VIEW(app.view));
+	//GtkTreeModel *model = gtk_tree_view_get_model(GTK_TREE_VIEW(app.view));
+	GtkTreeModel *model = GTK_TREE_MODEL(app.store);
 
 	GtkTreeSelection* selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(app.view));
 	GList* selectionlist = gtk_tree_selection_get_selected_rows(selection, &(model));
 	if(!selectionlist){ perr("no files selected?\n"); return; }
 	dbg(2, "%i rows selected.", g_list_length(selectionlist));
 
-	//GDate* date = g_date_new();
-	//g_get_current_time(date);
-
 	int i;
-	GdkPixbuf* iconbuf;
-	gboolean online;
 	for(i=0;i<g_list_length(selectionlist);i++){
+		GtkTreeIter iter;
 		GtkTreePath *treepath = g_list_nth_data(selectionlist, i);
+		gtk_tree_model_get_iter(model, &iter, treepath);
 		Sample *sample = sample_get_from_model(treepath);
 		 
-		// TODO: consolidate w/ consolidate with sample_new() and listmodel__add_result()
 		time_t mtime = file_mtime(sample->full_path);
 		if(mtime>0){
-			online = 1;
-
-			MIME_type* mime_type = mime_type_lookup(sample->mimetype);
-			type_to_icon(mime_type);
-			if (!mime_type->image) dbg(0, "no icon.");
-			iconbuf = mime_type->image->sm_pixbuf;
-
 			if (sample->mtime < mtime) {
-				/* FULL UPDATE */
-				dbg(0, "file modified: full update.");
+				/* file may have changed - FULL UPDATE */
+				dbg(0, "file modified: full update: %s", sample->full_path);
+
+				// re-check mime-type
+				Sample* test = sample_new_from_filename(sample->full_path, false);
+				if (test) sample_unref(test);
+				else {
+					// TODO: remove file from storage its new 
+					// MIME-type is no longer supported.
+					gtk_tree_path_free(treepath);
+					sample_unref(sample);
+					continue;
+				}
+
 				if (sample_get_file_info(sample)) {
 					sample->mtime = mtime;
 					request_peaklevel(sample);
 					request_overview(sample);
 					request_ebur128(sample);
 				} else {
-					dbg(0, "full update - reading file info failed.");
+					dbg(0, "full update - reading file info failed!");
 				}
 			}
+			sample->mtime = mtime;
+			sample->online = 1;
 		}else{
 			/* file does not exist */
-			online = 0;
-			iconbuf = NULL;
+			sample->online = 0;
 		}
-
-		// TODO: consolidate w/ listmodel__update_result()
-		gtk_list_store_set(app.store, &iter, COL_ICON, iconbuf, -1);
-		if(backend.update_online(sample->id, online, mtime)){
-			statusbar_print(1, "online status updated (%s)", online ? "online" : "not online");
-		}else
-			statusbar_print(1, "error! online status not updated");
-
+		listmodel__update_by_ref(&iter, COL_ICON, NULL);
+		statusbar_print(1, "online status updated (%s)", sample->online ? "online" : "not online");
 		gtk_tree_path_free(treepath);
 		sample_unref(sample);
 	}
 	//g_list_free(selectionlist);
-	//g_date_free(date);
 }
 
 
@@ -980,7 +975,7 @@ menu_play_all(GtkWidget* widget, gpointer user_data)
 }
 
 
-static void
+void
 menu_play_stop(GtkWidget* widget, gpointer user_data)
 {
 	dbg(0, "...");
@@ -1033,7 +1028,7 @@ edit_row(GtkWidget* widget, gpointer user_data)
 
 static MenuDef _menu_def[] = {
 	{"Delete",         G_CALLBACK(menu_delete_row), GTK_STOCK_DELETE,     true},
-	{"Update",         G_CALLBACK(update_row),      GTK_STOCK_REFRESH,    true},
+	{"Update",         G_CALLBACK(update_rows),      GTK_STOCK_REFRESH,    true},
 	{"Play All",       G_CALLBACK(menu_play_all),   GTK_STOCK_MEDIA_PLAY, true},
 	{"Stop Playback",  G_CALLBACK(menu_play_stop),  GTK_STOCK_MEDIA_STOP, true},
 	{"Reset Colours",  G_CALLBACK(listview__reset_colours),
