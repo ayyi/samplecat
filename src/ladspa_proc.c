@@ -33,6 +33,7 @@ int     ladspah_init(LadSpa* x, const char* dll, const int plugin, const int s, 
 void    ladspah_deinit(LadSpa* x) { ; }
 void    ladspah_process(LadSpa* x, float *d, const unsigned long s) { ; }
 void    ladspah_process_nch(LadSpa** x, const int n, float *d, const unsigned long s) { ; }
+void    ladspah_set_param(LadSpa**px, int nch, int p, float val) { ; }
 #else
 
 /* simple LADSPA HOST */
@@ -75,7 +76,7 @@ LadSpa* ladspah_alloc() {
 };
 
 void ladspah_free(LadSpa* x) {
-	free(x);
+	if (x) free(x);
 }
 
 int ladspah_init(LadSpa* p, const char* dll, const int plugin, int samplerate, size_t max_nframes) {
@@ -298,7 +299,7 @@ void ladspah_deinit(LadSpa* p) {
 }
 
 void ladspah_process(LadSpa* p, float *d, const unsigned long s) {
-	if (!p->dl_handle || !p->l_desc) return;
+	if (!p || !p->dl_handle || !p->l_desc) return;
 	memcpy(p->inbuf, d, s * sizeof(float));
 	p->l_desc->run(p->l_handle, s);
 	int i;

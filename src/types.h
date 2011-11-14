@@ -49,7 +49,13 @@ typedef struct _inspector
 	GtkWidget*     level;
 	GtkWidget*     ebur;
 	GtkWidget*     image;
-	GtkWidget*     slider;
+	GtkWidget*     slider1; // player position
+	GtkWidget*     slider2; // player pitch
+	GtkWidget*     slider3; // player speed
+	GtkWidget*     cbfx;    // player enable FX
+	GtkWidget*     cblnk;   // link speed/pitch
+	GtkWidget*     pbctrl;  // playback control box (pause/stop)
+	GtkWidget*     pbpause; // playback pause button
 	GtkWidget*     text;
 	GtkTextBuffer* notes;
 	GtkWidget*     edit;

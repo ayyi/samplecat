@@ -41,25 +41,25 @@ extern struct _app app;
 
 #if (defined HAVE_JACK && !(defined USE_DBUS || defined USE_GAUDITION))
 
-#define VARISPEED 1
-
 #include <jack/jack.h> // TODO use weakjack.h
 #include <jack/ringbuffer.h>
 #include "audio_decoder/ad.h"
 
-jack_client_t *j_client = NULL;
-jack_port_t **j_output_port = NULL;
-jack_default_audio_sample_t **j_out = NULL;
-jack_ringbuffer_t *rb = NULL;
+static jack_client_t *j_client = NULL;
+static jack_port_t **j_output_port = NULL;
+static jack_default_audio_sample_t **j_out = NULL;
+static jack_ringbuffer_t *rb = NULL;
 
-static void *  myplayer;
-static LadSpa**myplugin = NULL;
-static int     m_channels   = 2;
-static int     m_samplerate = 0;
-static int64_t m_frames = 0;
-static int     thread_run   = 0;
+static void *   myplayer;
+static LadSpa** myplugin = NULL;
+static int      m_channels   = 2;
+static int      m_samplerate = 0;
+static int64_t  m_frames = 0;
+static int      thread_run   = 0;
 static volatile int silent = 0;
+static volatile int playpause  = 0;
 static volatile double seek_request = -1.0;
+static int64_t  play_position =0;
 
 static const char *  m_use_effect = "ladspa-rubberband.so";
 static const int     m_effectno   = 0;
@@ -78,7 +78,7 @@ float m_fResampleRatio = 1.0;
 
 #endif
 
-#define DEFAULT_RB_SIZE 16384
+#define DEFAULT_RB_SIZE 24575
 
 static GList* play_queue = NULL;
 void jplay__play_next();
@@ -92,7 +92,7 @@ int jack_audio_callback(jack_nframes_t nframes, void *arg) {
 		j_out[c] = (jack_default_audio_sample_t*) jack_port_get_buffer(j_output_port[c], nframes);
 	}
 
-	if(jack_ringbuffer_read_space(rb) < m_channels * nframes * sizeof(jack_default_audio_sample_t)) {
+	if(playpause || jack_ringbuffer_read_space(rb) < m_channels * nframes * sizeof(jack_default_audio_sample_t)) {
 		silent=1;
 		for(c=0; c< m_channels; c++) {
 			memset(j_out[c], 0, nframes * sizeof(jack_default_audio_sample_t));
@@ -123,11 +123,22 @@ void jack_shutdown_callback(void *arg){
 	JACKclose();
 }
 
-static int64_t play_position =0;
+inline void
+update_playposition (int64_t decoder_position, float varispeed) {
+#ifdef ENABLE_RESAMPLING
+	const int64_t latency = floor(jack_ringbuffer_read_space(rb)/m_channels/sizeof(float)/m_fResampleRatio/varispeed);
+#else
+	const int64_t latency = floor(jack_ringbuffer_read_space(rb)/m_channels);
+#endif
+	if (!app.loop_playback || decoder_position>latency)
+		play_position = decoder_position - latency;
+	else
+		play_position = m_frames+decoder_position-latency;
+}
 
 void *jack_player_thread(void *unused){
 	int err=0;
-	const int nframes = 2048;
+	const int nframes = 1024;
 	float *tmpbuf = (float*) calloc(nframes * m_channels, sizeof(float));
 	float *bufptr = tmpbuf;
 	size_t maxbufsiz = nframes;
@@ -182,7 +193,15 @@ void *jack_player_thread(void *unused){
 		const float pp[3] = {app.effect_param[0], app.effect_param[1], app.effect_param[2]};
 #if (defined ENABLE_RESAMPLING) && (defined VARISPEED)
 		const float varispeed = app.playback_speed;
-		//if ((err=src_set_ratio(src_state, varispeed))) dbg(0, "SRC ERROR: %s", src_strerror(err)); // instant change.
+#if 0
+		/* note: libsamplerate slowly approaches a new sample-rate slowly
+		 * src_set_ratio() allow for immediate updates at loss of quality */
+		static float oldspd = -1;
+		if (oldspd != varispeed) {
+			if ((err=src_set_ratio(src_state, varispeed))) dbg(0, "SRC ERROR: %s", src_strerror(err)); // instant change.
+			oldspd = varispeed;
+		}
+#endif
 		nframes_r = floorf((float) nframes*m_fResampleRatio*varispeed); ///< # of frames after resampling
 		src_data.output_frames = nframes_r;
 		src_data.src_ratio     = m_fResampleRatio * varispeed;
@@ -269,37 +288,46 @@ void *jack_player_thread(void *unused){
 		while(thread_run && jack_ringbuffer_write_space(rb) <= rbchunk) 
 #endif
 		{
+#if 1 // flush_ringbuffer on seek
+			if (playpause && seek_request != -1) break; 
+#endif
 			pthread_cond_wait(&buffer_ready, &player_thread_lock);
 		}
 
 		/* Handle SEEKs */
-		if (seek_request>=0 && seek_request<=1) {
+		while (seek_request>=0 && seek_request<=1) {
+			double csr = seek_request;
 			decoder_position=floor(m_frames * seek_request);
 			ad_seek(myplayer, decoder_position);
-			seek_request=-1;
+			if (csr == seek_request) {
+				seek_request=-1;
 #if 1 // flush_ringbuffer !
-			size_t rs=jack_ringbuffer_read_space(rb);
-			jack_ringbuffer_read_advance(rb,rs);
+				size_t rs=jack_ringbuffer_read_space(rb);
+				jack_ringbuffer_read_advance(rb,rs);
 #endif
+				break;
+			}
 		}
-
-		/* Update play position */
-#ifdef VARISPEED
-		int64_t latency = floor(jack_ringbuffer_read_space(rb)/m_channels/sizeof(float)/m_fResampleRatio/varispeed);
+#if (defined ENABLE_RESAMPLING) && (defined VARISPEED)
+		update_playposition (decoder_position, varispeed);
 #else
-		int64_t latency = floor(jack_ringbuffer_read_space(rb)/m_channels/sizeof(float)/m_fResampleRatio);
+		update_playposition (decoder_position, 1.0);
 #endif
-		if (decoder_position>latency) // workaround for loop/restart
-			play_position = decoder_position - latency;
-		else
-			play_position = m_frames+decoder_position-latency;
 	}
 
+#if (defined ENABLE_RESAMPLING) && (defined VARISPEED)
+	const float varispeed = app.playback_speed;
+#else
+	const float varispeed = 1.0;
+#endif
 	pthread_mutex_unlock(&player_thread_lock);
 
 	if (thread_run) {
 		// wait for ringbuffer to empty.
-		while (!silent) usleep(50);
+		while (!silent && !playpause) {
+			usleep(20);
+			update_playposition (decoder_position, varispeed);
+		}
 		thread_run=0;
 		app.effect_enabled = false;
 		int i;
@@ -330,6 +358,8 @@ void JACKaudiooutputinit(void *sf, int channels, int samplerate, int64_t frames)
 	m_channels = channels;
 	m_frames = frames;
 	m_samplerate = samplerate;
+	playpause = silent = 0;
+	play_position =0;
 
 	j_client = jack_client_open("samplecat", (jack_options_t) 0, NULL);
 
@@ -373,6 +403,10 @@ void JACKaudiooutputinit(void *sf, int channels, int samplerate, int64_t frames)
 		dbg(0, "audio samplerate does not match JACK's samplerate.");
 #endif
 	}
+
+#if (defined ENABLE_RESAMPLING) && !(defined VARISPEED)
+	m_fResampleRatio *= app.playback_speed; ///< fixed speed change. <1.0: speed-up, > 1.0: slow-down
+#endif
 
 	thread_run = 1;
 	pthread_create(&player_thread_id, NULL, jack_player_thread, NULL);
@@ -523,8 +557,18 @@ void jplay__seek (double pos) {
 	seek_request = pos;
 }
 
+
+int jplay__pause (int on) {
+	if(!j_client) return -1;
+	if (on==1) playpause=1;
+	else if (on==0) playpause=0;
+	else if (on==-1) playpause = !playpause;
+	return playpause;
+}
+
 double jplay__getposition() {
 	if(!app.playing_id) return -1;
+	if(seek_request != -1.0) return -2;
 	if(!j_client) return -1;
 	if(m_frames<1) return -1;
 	return (double)play_position / m_frames;
