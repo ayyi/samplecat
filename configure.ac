@@ -35,12 +35,25 @@ else
 fi
 
 # default 'auto' configutaion
+AC_ARG_ENABLE(mysql, AC_HELP_STRING([--disable-mysql], [disable use of Mysql as backend]),enable_mysql=$enableval, enable_mysql="auto")
+AC_ARG_ENABLE(ffmpeg, AC_HELP_STRING([--disable-ffmpeg], [disable use of FFMPEG]), enable_ffmpeg=$enableval, enable_ffmpeg="auto")
+AC_ARG_ENABLE(dnotify, AS_HELP_STRING([--enable-dnotify],[build with dnotify support]),enable_dnotify=$enableval, enable_dnotify="no")
+AC_ARG_ENABLE(dbus, AS_HELP_STRING([--disable-dbus],[disable use of dbus]),enable_dbus=$enableval, enable_dbus="no")
+AC_ARG_ENABLE(ayyi, AS_HELP_STRING([--enable-ayyi],[build with ayyi support]),enable_ayyi=$enableval, enable_ayyi="no")
+AC_ARG_ENABLE(jack, AS_HELP_STRING([--disable-jack],[build with JACK support]),enable_jack=$enableval, enable_jack="auto")
+AC_ARG_ENABLE(nks, AS_HELP_STRING([--enable-nks],[build with nks support]),enable_nks=$enableval,enable_nks=auto)
+AC_ARG_ENABLE( [sf2], AC_HELP_STRING([--enable-sf2], [build with sf2 support. Currently this option doesnt do anything useful.]),enable_sf2="$enableval", enable_sf2="no")
+AC_ARG_ENABLE(tracker, AS_HELP_STRING([--enable-tracker],[build with tracker support]),enable_tracker=$enableval, enable_tracker="auto")
+AC_ARG_ENABLE(sqlite, AS_HELP_STRING([--enable-sqlite],[build with sqlite support]),enable_sqlite=$enableval, enable_sqlite="auto")
+AC_ARG_ENABLE(opengl, [AC_HELP_STRING([--disable-opengl], [disable use of OpenGL])],enable_opengl=$enableval,enable_opengl="no")
+AC_ARG_ENABLE(fftw, AC_HELP_STRING([--disable-fftw], [disable usage of FFTW ]),enable_fftw=$enableval,enable_fftw="auto")
 
 case $target_os in
 	*darwin*)
 		CFLAGS="$CFLAGS -fnested-functions"
 		SAMPLECAT_LIBS="-ligemacintegration"
 		enable_dbus="no"
+		enable_jack="no"
 		enable_sqlite="yes"
 		enable_gplayer="yes"
 		enable_opengl="no"
@@ -103,7 +116,6 @@ AC_SUBST(GTHREAD_LIBS)
 
 dnl -----------------------------------------------------------------------------
 dnl XXX mysql detection requires some cleanup
-AC_ARG_ENABLE(mysql, [AC_HELP_STRING([--disable-mysql], [disable use of Mysql as backend])],enable_mysql=$enableval, enable_mysql="auto")
 
 if test x$enable_mysql = xno ; then
 	:
@@ -170,8 +182,6 @@ AC_SUBST(SNDFILE_LIBS)
 
 dnl -----------------------------------------------------------------------------
 
-AC_ARG_ENABLE(ffmpeg, AC_HELP_STRING([--disable-ffmpeg], [disable use of FFMPEG]), enable_ffmpeg=$enableval, enable_ffmpeg="auto")
-
 AS_IF([test "$enable_ffmpeg" != "no"], [
 	PKG_CHECK_MODULES(FFMPEG, [libavformat libavcodec libavutil], enable_ffmpeg=yes, enable_ffmpeg=no)
        ])
@@ -213,8 +223,6 @@ AC_SUBST(FLAC_LIBS)
 
 dnl -----------------------------------------------------------------------------
 
-AC_ARG_ENABLE(dnotify, AS_HELP_STRING([--enable-dnotify],[build with dnotify support]),enable_dnotify=$enableval, enable_dnotify="no")
-
 if test "$enable_dnotify" = "yes"; then
 	AC_DEFINE(USE_DNOTIFY,1,[Use dnotify on Linux])
 	AC_DEFINE(USE_NOTIFY,1,[Use notification])
@@ -223,9 +231,8 @@ AM_CONDITIONAL(ENABLE_DNOTIFY, test "$enable_dnotify" = "yes")
 
 dnl -----------------------------------------------------------------------------
 
-AC_ARG_ENABLE(dbus, AS_HELP_STRING([--disable-dbus],[disable use of dbus]),enable_dbus=$enableval, enable_dbus="auto")
 AS_IF([test "$enable_dbus" != "no"], [
-       PKG_CHECK_MODULES(DBUS, dbus-glib-1, enable_dbus=yes, enable_dbus=no)
+       PKG_CHECK_MODULES(DBUS, dbus-glib-1, enable_dbus="yes", enable_dbus="no")
        ])
 AC_SUBST(DBUS_CFLAGS)
 AC_SUBST(DBUS_LIBS)
@@ -236,8 +243,6 @@ AM_CONDITIONAL(ENABLE_DBUS, [test "$enable_dbus" = "yes"])
 
 dnl -----------------------------------------------------------------------------
 
-AC_ARG_ENABLE(ayyi, AS_HELP_STRING([--enable-ayyi],[build with ayyi support]),enable_ayyi=$enableval, enable_ayyi="no")
-
 AS_IF([test "$enable_ayyi" = "yes"], [
        PKG_CHECK_MODULES(DBUS, dbus-glib-1, AC_DEFINE(USE_AYYI,1,[Use ayyi]), enable_ayyi="no")
        ])
@@ -245,36 +250,30 @@ AM_CONDITIONAL(ENABLE_AYYI, [test "$enable_ayyi" = "yes"])
 
 dnl -----------------------------------------------------------------------------
 
-AC_ARG_ENABLE(gplayer, AS_HELP_STRING([--enable-gplayer],[build with external player]),enable_gplayer=$enableval, enable_gplayer="no")
-if test "$enable_dbus" = "yes"; then
-	AC_MSG_WARN([*** gplayer is exclusive with dbus/ayyi support. ***])
-	enable_gplayer=no
+if test "$enable_dbus" = "yes" -a "$enable_jack" != "no" ; then
+	AC_MSG_WARN([*** jack-player is exclusive with dbus/ayyi support. ***])
+	enable_jack=no
 fi
-AM_CONDITIONAL(ENABLE_GAUDITION, test "$enable_gplayer" = "yes")
-if test "$enable_gplayer" = "yes"; then
-	AC_DEFINE(USE_GAUDITION,1,[Use gtk/gnome auditioner])
-fi
-
-dnl -----------------------------------------------------------------------------
-
-AS_IF([test "$enable_dbus" = "no" -a "$enable_gplayer" = "no"], [
-	    PKG_CHECK_MODULES(JACK, jack,enable_builtin_player=yes, enable_builtin_player=no)
-	], [
-	    enable_builtin_player=no
-	])
+AS_IF([test "$enable_jack" != "no"], [
+	    PKG_CHECK_MODULES(JACK, jack,enable_jack=yes, enable_jack=no)
+	], [true])
 
 AC_SUBST(JACK_CFLAGS)
 AC_SUBST(JACK_LIBS)
-if test "$enable_builtin_player" = "yes"; then
+if test "$enable_jack" = "yes"; then
 	AC_DEFINE(HAVE_JACK,1,[have JACK audio connection kit])
 fi
 
 #JACK player can re-sample and use LADSPA plugins
 enable_ladspa="no"
-AS_IF([test "$enable_builtin_player" = "yes"], [
+enable_resampling="no"
+AS_IF([test "$enable_jack" = "yes"], [
 	PKG_CHECK_MODULES(SAMPLERATE, samplerate,
-	  [AC_DEFINE(ENABLE_RESAMPLING,1,[JACK player resampling])], [true])
-	AC_CHECK_HEADER(ladspa.h, enable_ladspa="yes", AC_MSG_ERROR([LADSPA is required  see http://www.ladspa.org/]))
+	  [AC_DEFINE(ENABLE_RESAMPLING,1,[JACK player resampling])
+		enable_resampling="yes"
+		 dnl only use LADSPA/rubberband if libsamplerate is also available.
+		 AC_CHECK_HEADER(ladspa.h, enable_ladspa="yes", AC_MSG_ERROR([LADSPA is required  see http://www.ladspa.org/]))
+		], [true])
 	])
 AC_SUBST(SAMPLERATE_CFLAGS)
 AC_SUBST(SAMPLERATE_LIBS)
@@ -285,7 +284,23 @@ fi
 
 dnl -----------------------------------------------------------------------------
 
-AC_ARG_ENABLE(nks, AS_HELP_STRING([--enable-nks],[build with nks support]),enable_nks=$enableval,enable_nks=auto)
+dnl AC_ARG_ENABLE(gplayer, AS_HELP_STRING([--disable-gplayer],[build with external player]),enable_gplayer=$enableval, enable_gplayer="auto")
+enable_gplayer="yes"
+if test "$enable_dbus" = "yes" -a "$enable_gplayer" != "no" ; then
+	AC_MSG_WARN([*** gplayer is exclusive with dbus/ayyi support. ***])
+	enable_gplayer=no
+fi
+if test "$enable_jack" = "yes" -a "$enable_gplayer" != "no" ; then
+	AC_MSG_WARN([*** gplayer is exclusive with jack support. ***])
+	enable_gplayer=no
+fi
+AM_CONDITIONAL(ENABLE_GAUDITION, test "$enable_gplayer" = "yes")
+if test "$enable_gplayer" = "yes"; then
+	AC_DEFINE(USE_GAUDITION,1,[Use gtk/gnome auditioner])
+fi
+
+dnl -----------------------------------------------------------------------------
+
 if `test "$enable_nks" = "yes"`; then
 	AC_CHECK_LIB(nks, nks_open, [nks_found=yes])
 	if `test "$nks_found" = "yes"`; then
@@ -305,31 +320,15 @@ AC_SUBST(NKS_LDFLAGS)
 
 dnl -----------------------------------------------------------------------------
 
-AC_ARG_ENABLE(
-	[sf2],
-	[  --enable-sf2            build with sf2 support (default=no). Currently this option doesnt do anything useful.],
-	[
-		enable_sf2="$enableval"
-		if test "$enableval" = "yes" && `pkg-config fluidsynth`; then
-			SF2_CFLAGS=`pkg-config --cflags-only-I fluidsynth`
-			SF2_LDFLAGS=`pkg-config --libs fluidsynth`
-			AC_DEFINE(USE_SF2, 1, [enable support for SF2 plugins])
-		else 
-			SF2_CFLAGS=
-			enable_sf2="no"
-		fi;
-	],
-	[
-		enable_sf2="no"
-	]
-)
-AM_CONDITIONAL(ENABLE_SF2, test "$enable_sf2" != "no")
+AS_IF([test "$enable_sf2" = "yes"], [
+	 PKG_CHECK_MODULES(SF2, fluidsynth, [AC_DEFINE(USE_SF2, 1,[enable support for SF2 plugins]) enable_sf2="yes"],[ enable_sf2="no"])
+	 ])
+AM_CONDITIONAL(ENABLE_SF2, test "$enable_sf2" = "yes")
 AC_SUBST(SF2_LDFLAGS)
 AC_SUBST(SF2_CFLAGS)
 
 dnl -----------------------------------------------------------------------------
 
-AC_ARG_ENABLE(tracker, AS_HELP_STRING([--enable-tracker],[build with tracker support]),enable_tracker=$enableval, enable_tracker="auto")
 AS_IF([test "$enable_tracker" != "no"], [
 	 PKG_CHECK_MODULES(TRACKER, tracker-client-0.10, [AC_DEFINE(USE_TRACKER, 1, Use Tracker metadata daemon) enable_tracker="yes"],[
 		 PKG_CHECK_MODULES(TRACKER, tracker-client-0.9, [AC_DEFINE(USE_TRACKER, 1, Use Tracker metadata daemon) enable_tracker="yes"],
@@ -341,7 +340,6 @@ AC_SUBST(TRACKER_LIBS)
 
 dnl -----------------------------------------------------------------------------
 
-AC_ARG_ENABLE(sqlite, AS_HELP_STRING([--enable-sqlite],[build with sqlite support]),enable_sqlite=$enableval, enable_sqlite="auto")
 AS_IF([test "$enable_sqlite" != "no"],[
        PKG_CHECK_MODULES(SQLITE, sqlite3, AC_DEFINE(USE_SQLITE, 1, Use sqlite backend) enable_sqlite="yes", enable_sqlite="no")
        ])
@@ -351,7 +349,6 @@ AC_SUBST(SQLITE_LIBS)
 
 dnl -----------------------------------------------------------------------------
 
-AC_ARG_ENABLE(opengl, [AC_HELP_STRING([--disable-opengl], [disable use of OpenGL])],enable_opengl=$enableval,enable_opengl="no")
 AS_IF([test "$enable_opengl" = "yes"], [
        PKG_CHECK_MODULES(OPENGL, gtkglext-1.0, [AC_DEFINE(USE_OPENGL, 1, Opengl features are enabled)])
        ])
@@ -361,7 +358,6 @@ AM_CONDITIONAL(ENABLE_OPENGL, test "$enable_opengl" = "yes")
 
 dnl -----------------------------------------------------------------------------
 
-AC_ARG_ENABLE(fftw, AC_HELP_STRING([--disable-fftw], [disable usage of FFTW ]),enable_fftw=$enableval,enable_fftw="auto")
 AS_IF([test "$enable_fftw" != "no"], [
 	PKG_CHECK_MODULES(FFTW3, fftw3 >= 0.15.0, [AC_DEFINE([HAVE_FFTW3], 1, [Set to 1 if you have libfftw3.]) enable_fftw=yes], enable_fftw=no)
 	])
@@ -391,12 +387,18 @@ if test "$enable_dbus" = "yes"; then
 	player="dbus/ayyi_auditioner"
 else if test "$enable_gplayer" = "yes"; then
 	player="CLI: gstreamer, totem-audio-preview, afplay (OSX)"
-else
+else if test "$enable_jack" = "yes"; then
 	player="built-in JACK"
-	if test "$enable_ladspa" = "yes"; then
+	if test "$enable_ladspa" = "yes" -a "$enable_resampling" = "yes"; then
+		player="$player w/ LADSPA support and resampling"
+	else if test "$enable_ladspa" = "yes"; then
 		player="$player w/ LADSPA support"
-	fi
-fi;fi
+	else if test "$enable_resampling" = "yes"; then
+		player="$player w/ resampling"
+	fi;fi;fi
+else
+	player="no playback support. - build will fail!"
+fi;fi;fi
 
 AC_MSG_RESULT([])
 AC_MSG_RESULT([Building mysql support:           $enable_mysql])
