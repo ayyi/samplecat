@@ -270,7 +270,8 @@ GtkWindow
 	gtk_widget_show_all(window);
 
 #if (defined HAVE_JACK)
-	gtk_widget_hide(app.inspector->slider);
+	/* initially hider player seek bar */
+	show_player();
 #endif
 
 	dnd_setup();

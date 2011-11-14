@@ -18,6 +18,10 @@
 #ifdef USE_TRACKER
   #include "src/db/tracker.h"
 #endif
+#if (defined HAVE_JACK)
+  #include "jack_player.h"
+  #include <math.h>
+#endif
 
 extern struct _app app;
 extern int debug;
@@ -31,9 +35,20 @@ static void       inspector_on_notes_insert (GtkTextView*, gchar *arg1, gpointer
 static void       tag_edit_start            (int tnum);
 static void       tag_edit_stop             (GtkWidget*, GdkEventCrossing*, gpointer);
 
+#undef ENABLE_LADSPA // EXPERIMENTAL -- should really be another window - not inspector.
+
 #if (defined HAVE_JACK)
-static guint slidersigid;
+static guint slider1sigid;
 static void slider_value_changed (GtkRange *range, gpointer  user_data);
+static void cb_playpause (GtkToggleButton *btn, gpointer user_data);
+void menu_play_stop(GtkWidget* widget, gpointer user_data); //defined in main.c
+#if (defined ENABLE_LADSPA)
+static guint slider2sigid, slider3sigid;
+static void speed_value_changed  (GtkRange *range, gpointer user_data);
+static void pitch_value_changed  (GtkRange *range, gpointer user_data);
+static void cb_pitch_toggled(GtkToggleButton *btn, gpointer user_data);
+static void cb_link_toggled (GtkToggleButton *btn, gpointer user_data);
+#endif
 #endif
 
 GtkWidget*
@@ -75,18 +90,77 @@ inspector_new()
 	gtk_box_pack_start(GTK_BOX(vbox), app.inspector->image, EXPAND_FALSE, FILL_FALSE, 0);
 
 #if (defined HAVE_JACK) // experimental seek-slider below the pixbuf
+
 #define BORDERMARGIN (2)
 	GtkWidget* align9 = gtk_alignment_new(0.0, 0.5, 0.0, 0.0);
 	gtk_alignment_set_padding(GTK_ALIGNMENT(align9), 0, 0, margin_left-BORDERMARGIN, 0);
 	gtk_box_pack_start(GTK_BOX(vbox), align9, EXPAND_FALSE, FILL_FALSE, 0);
 
-	GtkWidget *slider = app.inspector->slider = gtk_hscale_new_with_range(0.0,1.0,1.0/(float)OVERVIEW_WIDTH);
+	GtkWidget *slider = app.inspector->slider1 = gtk_hscale_new_with_range(0.0,1.0,1.0/(float)OVERVIEW_WIDTH);
 	gtk_widget_set_size_request(slider, OVERVIEW_WIDTH+BORDERMARGIN+BORDERMARGIN, -1);
 	gtk_scale_set_draw_value(GTK_SCALE(slider), false);
 	gtk_container_add(GTK_CONTAINER(align9), slider);	
 
-	slidersigid = g_signal_connect((gpointer)slider, "value-changed", G_CALLBACK(slider_value_changed), NULL);
+	slider1sigid = g_signal_connect((gpointer)slider, "value-changed", G_CALLBACK(slider_value_changed), NULL);
+
+	/* play ctrl buttons */
+	GtkWidget* hbox2 = app.inspector->pbctrl = gtk_hbox_new(FALSE, 10);
+	gtk_box_pack_start(GTK_BOX(vbox), hbox2, EXPAND_FALSE, FILL_FALSE, 0);
+
+	GtkWidget* pb0 = app.inspector->pbpause = gtk_toggle_button_new_with_label("pause");
+	gtk_box_pack_start(GTK_BOX(hbox2), pb0, EXPAND_FALSE, FILL_FALSE, 0);
+	g_signal_connect((gpointer)pb0, "toggled", G_CALLBACK(cb_playpause), NULL);
+
+	GtkWidget* pb1 = gtk_button_new_with_label("stop");
+	gtk_box_pack_start(GTK_BOX(hbox2), pb1, EXPAND_FALSE, FILL_FALSE, 0);
+	g_signal_connect((gpointer)pb1, "clicked", G_CALLBACK(menu_play_stop), NULL);
+
+#if (defined ENABLE_LADSPA) // experimental
+	/* note: we could do speed-changes w/o LADSPA, but it'd be EVEN MORE ifdefs */
+
+	/* pitch LADSPA/rubberband */
+	GtkWidget* align10 = gtk_alignment_new(0.0, 0.5, 0.0, 0.0);
+	gtk_alignment_set_padding(GTK_ALIGNMENT(align10), 0, 0, margin_left-BORDERMARGIN, 0);
+	gtk_box_pack_start(GTK_BOX(vbox), align10, EXPAND_FALSE, FILL_FALSE, 0);
+
+	GtkWidget *slider2 = app.inspector->slider2 =gtk_hscale_new_with_range(-1200,1200,1.0);
+	gtk_widget_set_size_request(slider2, OVERVIEW_WIDTH+BORDERMARGIN+BORDERMARGIN, -1);
+	gtk_range_set_value(GTK_RANGE(slider2), app.effect_param[0]);
+	//gtk_scale_set_draw_value(GTK_SCALE(slider2), false);
+	gtk_container_add(GTK_CONTAINER(align10), slider2);	
+
+	/* effect ctrl buttons */
+	GtkWidget* hbox = gtk_hbox_new(FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(vbox), hbox, EXPAND_FALSE, FILL_FALSE, 0);
+
+	GtkWidget* cb0 = app.inspector->cbfx = gtk_check_button_new_with_label("enable pitch-shift");
+	gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(cb0), true);
+	gtk_box_pack_start(GTK_BOX(hbox), cb0, EXPAND_FALSE, FILL_FALSE, 0);
+	g_signal_connect((gpointer)cb0, "toggled", G_CALLBACK(cb_pitch_toggled), NULL);
+#ifdef VARISPEED
+	GtkWidget* cb1 = app.inspector->cblnk = gtk_check_button_new_with_label("preserve pitch.");
+	gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(cb1), true);
+	gtk_box_pack_start(GTK_BOX(hbox), cb1, EXPAND_FALSE, FILL_FALSE, 0);
+	g_signal_connect((gpointer)cb1, "toggled", G_CALLBACK(cb_link_toggled), NULL);
 #endif
+
+	/* speed - samplerate */
+  GtkWidget* align11 = gtk_alignment_new(0.0, 0.5, 0.0, 0.0);
+	gtk_alignment_set_padding(GTK_ALIGNMENT(align11), 0, 0, margin_left-BORDERMARGIN, 0);
+	gtk_box_pack_start(GTK_BOX(vbox), align11, EXPAND_FALSE, FILL_FALSE, 0);
+
+	GtkWidget *slider3 = app.inspector->slider3 = gtk_hscale_new_with_range(0.5,2.0,.01);
+	gtk_widget_set_size_request(slider3, OVERVIEW_WIDTH+BORDERMARGIN+BORDERMARGIN, -1);
+	gtk_range_set_inverted(GTK_RANGE(slider3),true);
+	//gtk_scale_set_draw_value(GTK_SCALE(slider3), false);
+	gtk_range_set_value(GTK_RANGE(slider3), app.playback_speed);
+	gtk_container_add(GTK_CONTAINER(align11), slider3);	
+
+
+	slider2sigid = g_signal_connect((gpointer)slider2, "value-changed", G_CALLBACK(pitch_value_changed), slider3);
+	slider3sigid = g_signal_connect((gpointer)slider3, "value-changed", G_CALLBACK(speed_value_changed), slider2);
+#endif /* LADSPA-rubberband/VARISPEED */
+#endif /* JACK PLAYER */
 	//-----------
 
 	GtkWidget* align2 = gtk_alignment_new(0.0, 0.5, 0.0, 0.0);
@@ -244,13 +318,6 @@ inspector_set_labels(Sample* sample)
 	g_free(level);
 	g_free(ch_str);
 
-#if (defined HAVE_JACK)
-	if (app.playing_id == sample->id)
-		gtk_widget_show(app.inspector->slider);
-	else
-		gtk_widget_hide(app.inspector->slider);
-#endif
-
 	//store a reference to the row id in the inspector widget:
 	// needed to later updated "notes" for that sample
 	// as well to check for updates when
@@ -265,6 +332,12 @@ inspector_set_labels(Sample* sample)
 		gtk_widget_hide(GTK_WIDGET(i->text));
 		gtk_widget_hide(GTK_WIDGET(i->tags));
 	}
+
+#if (defined HAVE_JACK)
+	if (jplay__getposition() != -1.0)
+		show_player(); // show/hide player
+#endif
+
 }
 
 /// this is somewhat redundant w/ inspector_update_from_fileview()
@@ -567,20 +640,55 @@ tag_edit_stop(GtkWidget *widget, GdkEventCrossing *event, gpointer user_data)
   //busy = false;
 }
 
-#if (defined HAVE_JACK)
-#include "jack_player.h"
 
-gboolean update_slider (gpointer data) {
-	g_signal_handler_block(data, slidersigid);
-  double v = jplay__getposition();
-	if (v>=0 && v<=1)
-		gtk_range_set_value(GTK_RANGE(data), v);
-	g_signal_handler_unblock(data, slidersigid);
-	if (v<0) { 
-		gtk_widget_hide(app.inspector->slider);
-		return FALSE;
+#if (defined HAVE_JACK)
+
+#if (defined ENABLE_LADSPA)
+static void pitch_value_changed (GtkRange *range, gpointer  user_data) {
+	float v =  gtk_range_get_value(range);
+	app.effect_param[0] = (((int)v+1250)%100)-50;
+	app.effect_param[1] = floorf((v+50.0)/100.0);
+	//dbg(0," %f -> st:%.1f cent:%.1f", v, app.effect_param[1], app.effect_param[0]);
+#ifdef VARISPEED
+	if (app.link_speed_pitch) {
+		double spd = pow(exp2(1.0/12.0), v/100.0);
+		app.playback_speed = spd;
+		g_signal_handler_block(GTK_RANGE(user_data), slider3sigid);
+		gtk_range_set_value(GTK_RANGE(user_data), spd);
+		g_signal_handler_unblock(GTK_RANGE(user_data), slider3sigid);
 	}
-	return TRUE;
+#endif
+}
+
+static void speed_value_changed (GtkRange *range, gpointer  user_data) {
+	float v =  gtk_range_get_value(range);
+	app.playback_speed = v;
+#ifdef VARISPEED
+	if (app.link_speed_pitch) {
+		double semitones = log(v)/log(exp2(1.0/12.0));
+		g_signal_handler_block(GTK_RANGE(user_data), slider2sigid);
+		gtk_range_set_value(GTK_RANGE(user_data), semitones*100.0);
+		g_signal_handler_unblock(GTK_RANGE(user_data), slider2sigid);
+		app.effect_param[1] = rint(semitones);
+		app.effect_param[0] = rint(semitones)-semitones;
+	}
+#endif
+}
+
+static void cb_pitch_toggled(GtkToggleButton *btn, gpointer user_data) {
+	app.enable_effect = gtk_toggle_button_get_active (btn);
+	gtk_widget_set_sensitive(app.inspector->slider2, app.enable_effect);
+	gtk_widget_set_sensitive(app.inspector->cblnk, app.enable_effect);
+	if (!app.enable_effect) gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(app.inspector->cblnk), false);
+}
+
+static void cb_link_toggled(GtkToggleButton *btn, gpointer user_data) {
+	app.link_speed_pitch = gtk_toggle_button_get_active (btn);
+}
+#endif
+
+static void cb_playpause (GtkToggleButton *btn, gpointer user_data) {
+	jplay__pause(gtk_toggle_button_get_active (btn)?1:0);
 }
 
 static void slider_value_changed (GtkRange *range, gpointer  user_data) {
@@ -588,17 +696,62 @@ static void slider_value_changed (GtkRange *range, gpointer  user_data) {
 	jplay__seek(v);
 }
 
-void show_player() {
-	if (app.playing_id == app.inspector->row_id) 
-		gtk_widget_show(app.inspector->slider);
-	else
-		gtk_widget_hide(app.inspector->slider);
+gboolean update_slider (gpointer data) {
+	if (gtk_widget_has_grab(GTK_WIDGET(data))) return TRUE; // user is manipulating the slider
 
+  double v = jplay__getposition();
+	if (v>=0 && v<=1) {
+		g_signal_handler_block(data, slider1sigid);
+		gtk_range_set_value(GTK_RANGE(data), v);
+		g_signal_handler_unblock(data, slider1sigid);
+	}
+	else if (v == -2.0) return TRUE; // seek in progress
+	else { 
+		/* playback is done */
+		gtk_widget_hide(app.inspector->slider1);
+		gtk_widget_hide(app.inspector->pbctrl);
+#if (defined ENABLE_LADSPA)
+		gtk_widget_set_sensitive(app.inspector->cbfx, true); // TODO
+#ifndef VARISPEED
+		gtk_widget_set_sensitive(app.inspector->slider3, true);
+#endif
+		gtk_widget_set_sensitive(app.inspector->slider2, true);
+#endif
+		return FALSE;
+	}
+	return TRUE;
+}
+
+
+void show_player() {
 	static guint id = 0;
 	static GSource *source=NULL;
+	int updateinterval = 50; /* ms */
+	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(app.inspector->pbpause), (jplay__pause(-2)==1)?true:false);
+
+	if (app.playing_id == app.inspector->row_id) {
+		/* show player */
+		gtk_widget_show(app.inspector->slider1);
+		gtk_widget_show(app.inspector->pbctrl);
+#if (defined ENABLE_LADSPA)
+		gtk_widget_set_sensitive(app.inspector->cbfx, false);
+#ifndef VARISPEED
+		gtk_widget_set_sensitive(app.inspector->slider3, false);
+#endif
+		if (!app.enable_effect || !app.effect_enabled) {
+			gtk_widget_set_sensitive(app.inspector->slider2, false);
+		}
+#endif
+	} else {
+		/* hide player */
+		gtk_widget_hide(app.inspector->slider1);
+		updateinterval = 250; // we still need to catch EOF.
+	}
+
+	/* [re] launch background thread to update play slider play position */
 	if (id) g_source_destroy(source);
-	source = g_timeout_source_new (50 /*ms*/);
-	g_source_set_callback (source, update_slider, app.inspector->slider, NULL);
+	source = g_timeout_source_new (updateinterval);
+	g_source_set_callback (source, update_slider, app.inspector->slider1, NULL);
 	id = g_source_attach (source, NULL);
 }
 #endif
