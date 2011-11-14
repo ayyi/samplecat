@@ -148,7 +148,7 @@ sqlite__insert(Sample* sample)
 
 	char* sql = sqlite3_mprintf(
 		"INSERT INTO samples(abspath,filename,filedir,length,sample_rate,channels,online,mimetype,ebur,peaklevel,colour,mtime) "
-		"VALUES ('%q','%q','%q',%"PRIi64",'%i','%i','%i','%s','%q','%f','%i','%i')",
+		"VALUES ('%q','%q','%q',%"PRIi64",'%i','%i','%i','%q','%q','%f','%i','%i')",
 		sample->full_path, sample->sample_name, sample->dir,
 		sample->length, sample->sample_rate, sample->channels,
 		sample->online, sample->mimetype, 
@@ -313,7 +313,7 @@ sqlite__file_exists(const char* path)
   int rows,columns;
   char **table = NULL;
 	char *errmsg= NULL;
-	char* sql = sqlite3_mprintf("SELECT abspath FROM samples WHERE abspath='%s'", path);
+	char* sql = sqlite3_mprintf("SELECT abspath FROM samples WHERE abspath='%q'", path);
 	int rc = sqlite3_get_table(db, sql, &table,&rows,&columns,&errmsg);
 	if(rc==SQLITE_OK && (table != NULL) && (rows>=1)) {
 		ok=true;
