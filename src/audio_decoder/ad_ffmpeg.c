@@ -223,7 +223,7 @@ ssize_t ad_read_ffmpeg(void *sf, float* d, size_t len) {
           dbg(2, "Audio exact sync-seek (%"PRIi64" == %"PRIi64")", priv->decoder_clock, priv->seek_frame);
           priv->seek_frame=0;
         } else {
-          dbg(0, " XXX - no audio data in packet");
+          dbg(0, "Error: no audio data in packet");
         }
       }
       //dbg(0, "PTS: decoder:%"PRIi64". - want: %"PRIi64, priv->decoder_clock, priv->output_clock);

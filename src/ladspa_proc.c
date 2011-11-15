@@ -62,7 +62,7 @@ struct _ladspa {
 static LADSPA_Data plugin_desc_get_default_control_value(const LADSPA_PortRangeHint* , unsigned long, int, LADSPA_Data*, LADSPA_Data*);
 
 
-#ifdef DARWIN
+#ifdef __APPLE__
 extern char * program_name;
 #include <libgen.h> /* dirname */
 #else
@@ -89,8 +89,10 @@ int ladspah_init(LadSpa* p, const char* dll, const int plugin, int samplerate, s
 	p->l_handle = 0;
 	p->ctrls = 0;
 
-#ifdef DARWIN /* OSX APPLICATION BUNDLE */
-	char * bundledir = dirname(program_name); // XXX may modify program_name (!)
+#ifdef __APPLE__ /* OSX APPLICATION BUNDLE */
+	char* tmp= strdup(program_name);
+	char* bundledir = dirname(tmp);
+	free(tmp);
 	object_file = malloc(strlen(bundledir) + strlen(dll) + 20);
 	sprintf(object_file, "%s/../Frameworks/%s", bundledir, dll);
 #else

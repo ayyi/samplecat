@@ -18,7 +18,6 @@ void flac_error_cb(const FLAC__StreamDecoder *decoder, FLAC__StreamDecoderErrorS
 	dbg(0, "flac error: %s\n", FLAC__StreamDecoderStateString[FLAC__stream_decoder_get_state(decoder)]);
 }
 
-// XXX TODO use weak-linkage to JACK!
 #include <jack/ringbuffer.h> 
 
 FLAC__StreamDecoderWriteStatus 

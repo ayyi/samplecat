@@ -24,28 +24,14 @@ sample_new()
 {
 	Sample* sample = g_new0(struct _sample, 1);
 	sample->id = -1;
-	sample->colour_index = 0; // XXX colour_index of app.bg_colour // app.config.colour[colour_index]
-	sample_ref(sample); // TODO: CHECK using functions!
+	sample->colour_index = 0;
+	sample_ref(sample);
 	return sample;
 }
 
 Sample*
 sample_new_from_filename(char *path, gboolean path_alloced)
 {
-#if 0 // circumvent file_manager -- to_utf8()
-	/* this is a bad hack - the file-manager should provide an unaltered file-name !!! */
-	/* actually WE need to do the same: GTK-Tree: utf8 -- dnd/file-access: orig */
-	char *npath = g_convert_with_fallback(path, -1, "iso-8859-1", "utf-8", "?", NULL, NULL, NULL);
-	if (!npath) {
-		npath = g_filename_from_utf8(path, -1, NULL, NULL, NULL);
-	}
-	if (!npath) {
-		npath = path;
-	}
-	if (path_alloced) free(path);
-	path=npath;
-	path_alloced=true;
-#endif
 	if (!file_exists(path)) {
 		perr("file not found: %s\n", path);
 		if (path_alloced) free(path);
@@ -196,3 +182,19 @@ sample_get_by_row_ref(GtkTreeRowReference* ref)
 	return sample;
 }
 
+Sample*
+sample_get_by_filename(char *abspath) {
+	Sample *rv = NULL;
+	gboolean find_id (GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *iter, gpointer data) {
+		Sample *s = sample_get_by_tree_iter(iter);
+		if (!strcmp(s->full_path, abspath)) {
+			rv=s;
+			return TRUE;
+		}
+		sample_unref(s);
+		return FALSE;
+	}
+	GtkTreeModel* model = GTK_TREE_MODEL(app.store);
+	gtk_tree_model_foreach(model, &find_id, NULL);
+	return rv;
+}

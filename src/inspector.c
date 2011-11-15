@@ -289,8 +289,6 @@ inspector_set_labels(Sample* sample)
 	if(!i) return;
 	g_return_if_fail(sample);
 
-	/* TODO: skip IFF edit (notes, tags) is in progress */
-
 	char* ch_str = channels_format(sample->channels);
 	char* level  = gain2dbstring(sample->peak_level);
 
@@ -347,7 +345,6 @@ inspector_update_from_result(Sample* sample)
 	Inspector* i = app.inspector;
 	if(!i) return;
 	g_return_if_fail(sample);
-	/* TODO: skip IFF edit (notes, tags) is in progress */
 
 	#ifdef USE_TRACKER
 	if(BACKEND_IS_TRACKER){
@@ -374,7 +371,6 @@ inspector_update_from_result(Sample* sample)
 
 
 extern Filer filer;
-/// this is somewhat redundant w/ inspector_update_from_result()
 void
 inspector_update_from_fileview(GtkTreeView* treeview)
 {
@@ -388,7 +384,6 @@ inspector_update_from_fileview(GtkTreeView* treeview)
 		g_list_free (list);
 		return;
 	}
-	/* TODO: skip IFF edit (notes, tags) is in progress */
 
 	GtkTreeIter iter;
 	gtk_tree_model_get_iter(model, &iter, list->data);
@@ -408,12 +403,14 @@ inspector_update_from_fileview(GtkTreeView* treeview)
 	 *
 	 * event-handling in window.c should use 
 	 *   gtk_tree_selection_set_select_function()
+	 * or block file-list events during updates after the
+	 * dir-tree brower selection changed.
 	 */
 
 	/* forget previous inspector item */
 	if(i->row_ref) gtk_tree_row_reference_free(i->row_ref);
 	i->row_ref = NULL;
-	i->row_id = -1; /// XXX -1 or 0
+	i->row_id = 0;
 
 	Sample* sample = sample_new_from_filename(full_path, true);
 	if (!sample) {
@@ -507,7 +504,6 @@ on_notes_focus_out(GtkWidget *widget, gpointer userdata)
 	return FALSE;
 }
 
-// TODO: merge with window.c row_clear_tags() and row_set_tags()
 gboolean
 row_set_tags_from_id(int id, GtkTreeRowReference* row_ref, const char* tags_new)
 {
@@ -714,7 +710,7 @@ gboolean update_slider (gpointer data) {
 		gtk_widget_hide(app.inspector->slider1);
 		gtk_widget_hide(app.inspector->pbctrl);
 #if (defined ENABLE_LADSPA)
-		gtk_widget_set_sensitive(app.inspector->cbfx, true); // TODO
+		gtk_widget_set_sensitive(app.inspector->cbfx, true);
 #ifndef VARISPEED
 		gtk_widget_set_sensitive(app.inspector->slider3, true);
 #endif

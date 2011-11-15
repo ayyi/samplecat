@@ -29,14 +29,14 @@ struct _sample
 	int          colour_index;
 
 	gboolean     online;
-	time_t       mtime; // TODO: not yet in storage
+	time_t       mtime;
 
 	char*        keywords;
 	char*        ebur;
 	char*        notes;
 	char*        mimetype;
 
-	GdkPixbuf*   overview; // pixbuf
+	GdkPixbuf*   overview;
 };
 
 
@@ -67,6 +67,7 @@ Sample*     sample_get_by_tree_iter  (GtkTreeIter* iter);
  */
 Sample*     sample_get_by_row_ref    (GtkTreeRowReference* ref); 
 
+Sample*     sample_get_by_filename   (char *abspath);
 
 void        sample_ref               (Sample*);
 void        sample_unref             (Sample*);

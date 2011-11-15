@@ -110,10 +110,6 @@ sqlite__connect()
 	errmsg=NULL;
 
 	if (!table_exists) {
-		//sqlite doesnt appear to have a date type so we use INTERGER instead. check the size.
-		//TODO check VARCHAR is appropriate for Notes column.
-		//DONE: no problem: SQLite does not enforce the length of a VARCHAR or any data.
-		//in fact all text colums are TEXT and SQLite is using dynamic (not strict) typing.
 		int n = sqlite3_exec(db, "CREATE TABLE samples ("
 			"id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, "
 			"filename TEXT, filedir TEXT, keywords TEXT, pixbuf BLOB, length INT, sample_rate INT, channels INT, "

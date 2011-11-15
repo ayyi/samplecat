@@ -21,6 +21,7 @@ This software is licensed under the GPL. See accompanying file COPYING.
 #ifdef __APPLE__
 #include <gdk/gdkkeysyms.h>
 #include <igemacintegration/gtkosxapplication.h>
+char * program_name;
 #endif
 
 #ifdef USE_AYYI
@@ -98,6 +99,7 @@ static void       config_new                ();
 static bool       config_save               ();
 static void       menu_delete_row           (GtkMenuItem*, gpointer);
 void              menu_play_stop(           GtkWidget* widget, gpointer user_data);
+static void       update_sample             (Sample *sample);
 
 
 struct _app app;
@@ -165,6 +167,9 @@ app_init()
 int 
 main(int argc, char** argv)
 {
+#ifdef __APPLE__
+	program_name = argv[0];
+#endif
 	//init console escape commands:
 	sprintf(white,  "%c[0;39m", 0x1b);
 	sprintf(red,    "%c[1;31m", 0x1b);
@@ -810,7 +815,13 @@ add_file(char* path)
 	if(backend.file_exists(path)) {
 		statusbar_print(1, "duplicate: not re-adding a file already in db.");
 		gwarn("duplicate file: %s\n", path);
-		//TODO: check mtime, call update..
+		Sample *s = sample_get_by_filename(path);
+		if (s) {
+			update_sample(s);
+			sample_unref(s);
+		} else {
+			dbg(0, "Sample found in DB but not in model.");
+		}
 		return false;
 	}
 #endif
@@ -935,6 +946,36 @@ menu_delete_row(GtkMenuItem* widget, gpointer user_data)
 	delete_selected_rows();
 }
 
+static void
+update_sample(Sample *sample) {
+	time_t mtime = file_mtime(sample->full_path);
+	if(mtime>0){
+		if (sample->mtime < mtime) {
+			/* file may have changed - FULL UPDATE */
+			dbg(0, "file modified: full update: %s", sample->full_path);
+
+			// re-check mime-type
+			Sample* test = sample_new_from_filename(sample->full_path, false);
+			if (test) sample_unref(test);
+			else return;
+
+			if (sample_get_file_info(sample)) {
+				sample->mtime = mtime;
+				request_peaklevel(sample);
+				request_overview(sample);
+				request_ebur128(sample);
+			} else {
+				dbg(0, "full update - reading file info failed!");
+			}
+		}
+		sample->mtime = mtime;
+		sample->online = 1;
+	}else{
+		/* file does not exist */
+		sample->online = 0;
+	}
+	listmodel__update_by_rowref(sample->row_ref, COL_ICON, NULL);
+}
 
 /** sync the catalogue row with the filesystem. */
 static void
@@ -951,46 +992,10 @@ update_rows(GtkWidget *widget, gpointer user_data)
 
 	int i;
 	for(i=0;i<g_list_length(selectionlist);i++){
-		GtkTreeIter iter;
 		GtkTreePath *treepath = g_list_nth_data(selectionlist, i);
-		gtk_tree_model_get_iter(model, &iter, treepath);
 		Sample *sample = sample_get_from_model(treepath);
-		 
-		time_t mtime = file_mtime(sample->full_path);
-		if(mtime>0){
-			if (sample->mtime < mtime) {
-				/* file may have changed - FULL UPDATE */
-				dbg(0, "file modified: full update: %s", sample->full_path);
-
-				// re-check mime-type
-				Sample* test = sample_new_from_filename(sample->full_path, false);
-				if (test) sample_unref(test);
-				else {
-					// TODO: remove file from storage its new 
-					// MIME-type is no longer supported.
-					gtk_tree_path_free(treepath);
-					sample_unref(sample);
-					continue;
-				}
-
-				if (sample_get_file_info(sample)) {
-					sample->mtime = mtime;
-					request_peaklevel(sample);
-					request_overview(sample);
-					request_ebur128(sample);
-				} else {
-					dbg(0, "full update - reading file info failed!");
-				}
-			}
-			sample->mtime = mtime;
-			sample->online = 1;
-		}else{
-			/* file does not exist */
-			sample->online = 0;
-		}
-		listmodel__update_by_ref(&iter, COL_ICON, NULL);
+		update_sample(sample);
 		statusbar_print(1, "online status updated (%s)", sample->online ? "online" : "not online");
-		gtk_tree_path_free(treepath);
 		sample_unref(sample);
 	}
 	//g_list_free(selectionlist);

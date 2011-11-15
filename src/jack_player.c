@@ -563,8 +563,6 @@ void JACKclose() {
 };
 
 void JACKconnect() {
-//TODO: allow mult. instances.
-// try append -1, -2,.. if name already in use
 	j_client = jack_client_open("samplecat", (jack_options_t) 0, NULL);
 
 	if(!j_client) {
