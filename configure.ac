@@ -53,8 +53,10 @@ case $target_os in
 	*darwin*)
 		CFLAGS="$CFLAGS -fnested-functions"
 		SAMPLECAT_LIBS="-ligemacintegration"
+		SAMPLECAT_LIBS="$SAMPLECAT_LIBS -Wl,-flat_namespace,-undefined,dynamic_lookup -framework CoreAudio -framework CoreServices -framework AudioUnit -weak_framework Jackmp"
 		enable_ayyidbus="no"
 		enable_jack="no"
+		enable_jackosx="yes"
 		enable_sqlite="yes"
 		enable_gplayer="yes"
 		enable_opengl="no"
@@ -257,15 +259,15 @@ AS_IF([test "$enable_jack" != "no"], [
 
 AC_SUBST(JACK_CFLAGS)
 AC_SUBST(JACK_LIBS)
-if test "$enable_jack" = "yes"; then
+if test "$enable_jack" = "yes" -o "$enable_jackosx" = "yes"; then
 	AC_DEFINE(HAVE_JACK,1,[have JACK audio connection kit])
 fi
-AM_CONDITIONAL(ENABLE_JACK, [test "$enable_jack" = "yes"])
+AM_CONDITIONAL(ENABLE_JACK, [test "$enable_jack" = "yes" -o "$enable_jackosx" = "yes"])
 
 #JACK player can re-sample and use LADSPA plugins
 enable_ladspa="no"
 enable_resampling="no"
-AS_IF([test "$enable_jack" = "yes"], [
+AS_IF([test "$enable_jack" = "yes" -o "$enable_jackosx" = "yes"], [
 	PKG_CHECK_MODULES(SAMPLERATE, samplerate,
 	  [AC_DEFINE(ENABLE_RESAMPLING,1,[JACK player resampling])
 		enable_resampling="yes"
@@ -375,7 +377,7 @@ AC_CONFIG_FILES([ayyi/Makefile])
 AC_OUTPUT
 
 jplayer="no"
-if test "$enable_jack" = "yes"; then
+if test "$enable_jack" = "yes" -o "$enable_jackosx" = "yes"; then
 	jplayer="yes"
 	if test "$enable_ladspa" = "yes" -a "$enable_resampling" = "yes"; then
 		jplayer="${jplayer} w/ LADSPA support and resampling"

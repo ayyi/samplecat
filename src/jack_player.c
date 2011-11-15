@@ -37,22 +37,55 @@
 #include "inspector.h"
 #include "sample.h"
 #include "ladspa_proc.h"
+#include "audio_decoder/ad.h"
 
 extern struct _app app;
+#define JACK_MIDI 1 // use JACK midi to trigger samples.
+
 
 #ifdef HAVE_JACK
 
-#include <jack/jack.h> // TODO use weakjack.h
-#include <jack/ringbuffer.h>
+#ifdef __APPLE__  /* weak linking on OSX */
+#include <jack/weakjack.h>
+#endif
+#include <jack/jack.h>
 
-#include "audio_decoder/ad.h"
+#ifndef __APPLE__ 
+#include <jack/ringbuffer.h>
+#else /* weak linking on OSX - ringbuffer is not exported as weak */
+typedef struct {
+    char *buf;
+    size_t len;
+}
+jack_ringbuffer_data_t ;
+
+typedef struct {
+    char	*buf;
+    volatile size_t write_ptr;
+    volatile size_t read_ptr;
+    size_t	size;
+    size_t	size_mask;
+    int	mlocked;
+}
+jack_ringbuffer_t ;
+
+jack_ringbuffer_t *jack_ringbuffer_create(size_t sz) JACK_OPTIONAL_WEAK_EXPORT;
+void jack_ringbuffer_free(jack_ringbuffer_t *rb) JACK_OPTIONAL_WEAK_EXPORT;
+void jack_ringbuffer_read_advance(jack_ringbuffer_t *rb, size_t cnt) JACK_OPTIONAL_WEAK_EXPORT;
+size_t jack_ringbuffer_read_space(const jack_ringbuffer_t *rb) JACK_OPTIONAL_WEAK_EXPORT;
+int jack_ringbuffer_mlock(jack_ringbuffer_t *rb) JACK_OPTIONAL_WEAK_EXPORT;
+size_t jack_ringbuffer_write(jack_ringbuffer_t *rb, const char *src, size_t cnt) JACK_OPTIONAL_WEAK_EXPORT;
+size_t jack_ringbuffer_read(jack_ringbuffer_t *rb, char *dest, size_t cnt) JACK_OPTIONAL_WEAK_EXPORT;
+size_t jack_ringbuffer_write_space(const jack_ringbuffer_t *rb) JACK_OPTIONAL_WEAK_EXPORT;
+#endif
+
 
 static jack_client_t *j_client = NULL;
 static jack_port_t **j_output_port = NULL;
 static jack_default_audio_sample_t **j_out = NULL;
 static jack_ringbuffer_t *rb = NULL;
 
-#define JACK_MIDI 1
+
 #ifdef JACK_MIDI
 #warning COMPILING W/ JACK-MIDI PLAYER TRIGGER
 #include <jack/midiport.h>
@@ -749,4 +782,13 @@ double jplay__getposition() {
 	return (double)play_position / m_frames;
 }
 
+int jplay__check() {
+#ifdef __APPLE__
+	/* weak linking on OSX test */
+	if (!jack_client_open) return -1; /* FAIL */
+#endif
+	// TODO: check for getenv("JACK_NO_START_SERVER")
+	// try connect to jackd,..
+	return 0; /*OK*/
+}
 #endif /* HAVE_JACK */

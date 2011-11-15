@@ -37,6 +37,11 @@ extern struct _app app;
 
 static AyyiConnection *adbus;
 
+int auditioner_check() {
+	// TODO: check if service is available.
+	// start `ayyi_auditioner` if possible and re-check.
+	return 0; /*OK*/
+}
 void
 auditioner_connect()
 {

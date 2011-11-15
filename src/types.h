@@ -49,6 +49,7 @@ struct _playctrl
 };
 
 struct _auditioner {
+	int     (*check)();
 	void    (*connect)();
 	void    (*disconnect)();
 	void    (*play_path)(const char *);

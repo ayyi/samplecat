@@ -27,6 +27,8 @@
 
 #define VARISPEED 1 ///< allow to change speed while playing
 
+int jplay__check();
+
 /** stop playback - if active */
 void     jplay__stop       ();
 

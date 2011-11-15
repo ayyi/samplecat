@@ -1572,6 +1572,7 @@ set_backend(BackendType type)
 	}
 }
 
+int  auditioner_nullC() {return 0;}
 void auditioner_null() {;}
 void auditioner_nullP(const char *p) {;}
 void auditioner_nullS(Sample *s) {;}
@@ -1580,6 +1581,7 @@ void
 set_auditioner() /* tentative - WIP */
 {
   const static Auditioner a_null = {
+		&auditioner_nullC,
 		&auditioner_null,
 		&auditioner_null,
 		&auditioner_nullP,
@@ -1591,6 +1593,7 @@ set_auditioner() /* tentative - WIP */
 	};
 #ifdef HAVE_JACK
   const static Auditioner a_jack = {
+		&jplay__check,
 		&jplay__connect,
 		&jplay__disconnect,
 		&jplay__play_path,
@@ -1606,6 +1609,7 @@ set_auditioner() /* tentative - WIP */
 #endif
 #ifdef HAVE_AYYIDBUS
   const static Auditioner a_ayyidbus = {
+		&auditioner_check,
 		&auditioner_connect,
 		&auditioner_disconnect,
 		&auditioner_play_path,
@@ -1621,6 +1625,7 @@ set_auditioner() /* tentative - WIP */
 #endif
 #ifdef HAVE_GPLAYER
   const static Auditioner a_gplayer = {
+		&gplayer_check,
 		&gplayer_connect,
 		&gplayer_disconnect,
 		&gplayer_play_path,
@@ -1638,28 +1643,29 @@ set_auditioner() /* tentative - WIP */
 	gboolean connected = false;
 #ifdef HAVE_JACK
 	if(!connected && can_use(app.players, "jack")){
-		// TODO test weak-jack linking,
-		// check if connect to jack works.
 		app.auditioner = & a_jack;
-		connected = true;
-		printf("JACK playback.\n");
+		if (!app.auditioner->check()) {
+			connected = true;
+			printf("JACK playback.\n");
+		}
 	}
 #endif
 #ifdef HAVE_AYYIDBUS
 	if(!connected && can_use(app.players, "ayyi")){
 		app.auditioner = & a_ayyidbus;
-		// TODO: check if we get a dbus reply from ayyi_auditioner.
-		connected = true;
-		printf("ayyi_audition.\n");
+		if (!app.auditioner->check()) {
+			connected = true;
+			printf("ayyi_audition.\n");
+		}
 	}
 #endif
 #ifdef HAVE_GPLAYER
 	if(!connected && can_use(app.players, "cli")){
 		app.auditioner = & a_gplayer;
-		// TODO: check if either of afplay, gst-launch, totem-audio-preview
-		// is in PATH and executable 
-		connected = true;
-		printf("using CLI player.\n");
+		if (!app.auditioner->check()) {
+			connected = true;
+			printf("using CLI player.\n");
+		}
 	}
 #endif
 	if (!connected) {

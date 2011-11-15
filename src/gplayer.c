@@ -15,6 +15,13 @@
 #include "gplayer.h"
 #include "listview.h"
 
+int gplayer_check() {
+	if (g_find_program_in_path ("afplay")) return 0; /*OK*/
+	if (g_find_program_in_path ("gst-launch-0.10")) return 0; /*OK*/
+	if (g_find_program_in_path ("totem-audio-preview")) return 0; /*OK*/
+	return -1; /* FAIL */
+}
+
 static char ** get_preview_argv (const char *path) {
 	char *command;
 	char **argv;

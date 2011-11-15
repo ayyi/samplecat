@@ -3,6 +3,7 @@
 
 #include "typedefs.h"
 
+int  auditioner_check();
 void auditioner_connect();
 void auditioner_disconnect();
 void auditioner_play(Sample*);
