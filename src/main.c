@@ -1142,12 +1142,12 @@ make_context_menu()
 	gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menu_item), app.add_recursive);
 	g_signal_connect(G_OBJECT(menu_item), "activate", G_CALLBACK(toggle_recursive_add), NULL);
 
-#if (defined HAVE_JACK)
-	menu_item = gtk_check_menu_item_new_with_mnemonic("Loop Playback");
-	gtk_menu_shell_append(GTK_MENU_SHELL(sub), menu_item);
-	gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menu_item), app.loop_playback);
-	g_signal_connect(G_OBJECT(menu_item), "activate", G_CALLBACK(toggle_loop_playback), NULL);
-#endif
+  if (app.auditioner->seek) {
+		menu_item = gtk_check_menu_item_new_with_mnemonic("Loop Playback");
+		gtk_menu_shell_append(GTK_MENU_SHELL(sub), menu_item);
+		gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menu_item), app.loop_playback);
+		g_signal_connect(G_OBJECT(menu_item), "activate", G_CALLBACK(toggle_loop_playback), NULL);
+	}
 
 	if(themes){
 		GtkWidget* theme_menu = gtk_menu_item_new_with_label("Icon Themes");
