@@ -1750,7 +1750,7 @@ ViewDirTree *vdtree_new(const gchar *path, gint expand)
 	vdt = g_new0(ViewDirTree, 1);
 
 	vdt->path = NULL;
-	vdt->root_path = (gchar*)g_get_home_dir(); //TODO add menu item to change this dynamically
+	vdt->root_path = "/" ; //(gchar*)g_get_home_dir(); //TODO add menu item to change this dynamically
 	vdt->click_fd = NULL;
 
 	vdt->drop_fd = NULL;
