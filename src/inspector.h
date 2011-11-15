@@ -9,8 +9,6 @@ void       inspector_update_from_result(Sample*);
 void       inspector_set_labels(Sample* sample);
 void       inspector_update_from_fileview(GtkTreeView*);
 
-#if (defined HAVE_JACK)
-void show_player();
-#endif
+void       show_player();
 
 #endif

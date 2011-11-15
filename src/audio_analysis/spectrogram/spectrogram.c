@@ -301,7 +301,7 @@ calculate_ticks (double max, double distance, TICKS * ticks)
 	scale = scale_max / divisions ;
 
 	if (divisions > G_N_ELEMENTS (ticks->value) - 1)
-	{	printf ("Error : divisions (%d) > G_N_ELEMENTS (ticks->value) (%d)\n", divisions, G_N_ELEMENTS (ticks->value)) ;
+	{	printf ("Error : divisions (%d) > G_N_ELEMENTS (ticks->value) (%lu)\n", divisions, (long unsigned) G_N_ELEMENTS (ticks->value)) ;
 		exit (1) ;
 		} ;
 

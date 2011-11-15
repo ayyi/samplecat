@@ -184,7 +184,7 @@ colour_box__make_context_menu()
 {
 	GtkWidget *menu = gtk_menu_new();
 
-	int i; for(i=0;i<G_N_ELEMENTS(_menu_def);i++){
+	gint i; for(i=0;i<G_N_ELEMENTS(_menu_def);i++){
 		MenuDef* item = &_menu_def[i];
 		GtkWidget* menu_item = gtk_image_menu_item_new_with_label (item->label);
 		gtk_menu_shell_append (GTK_MENU_SHELL(menu), menu_item);

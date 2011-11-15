@@ -75,7 +75,7 @@ static void spectrogram_widget_finalize (GObject* obj);
 
 void spectrogram_widget_image_ready (SpectrogramWidget* self, gchar* filename, GdkPixbuf* _pixbuf, void* user_data) {
 	g_return_if_fail (self != NULL);
-	if ((gboolean) self->priv->pixbuf) {
+	if (self->priv->pixbuf) {
 		g_object_unref ((GObject*) self->priv->pixbuf);
 	}
 	self->priv->pixbuf = _pixbuf;

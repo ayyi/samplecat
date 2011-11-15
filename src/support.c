@@ -406,7 +406,7 @@ hexstring_from_gdkcolor(char* hexstring, GdkColor* c)
 	snprintf(hexstring, 7, "%02x%02x%02x", c->red >> 8, c->green >> 8, c->blue >> 8);
 }
 
-
+#if NEVER
 void
 color_rgba_to_gdk(GdkColor* colour, uint32_t rgba)
 {
@@ -416,6 +416,7 @@ color_rgba_to_gdk(GdkColor* colour, uint32_t rgba)
   colour->green = (rgba & 0x00ff0000) >> 8;
   colour->blue  = (rgba & 0x0000ff00);
 }
+#endif
 
 
 gboolean
@@ -608,7 +609,7 @@ statusbar_print(int n, char* fmt, ...)
   else if(n==2) statusbar = app.statusbar2;
   else { perr("bad statusbar index (%i)\n", n); n=1; }
 
-  if((unsigned)statusbar<1024) return; //window may not be open.
+  //if((unsigned)statusbar<1024) return; //window may not be open.
 
   gint cid = gtk_statusbar_get_context_id(GTK_STATUSBAR(statusbar), "dummy");
   gtk_statusbar_push(GTK_STATUSBAR(statusbar), cid, s);
@@ -1163,7 +1164,7 @@ gain2dbstring(float gain)
 
 	if(dB < -200)
 		//return g_strdup_printf("-200 dB");
-		return g_strdup_printf("");
+		return g_strdup("");
 
 	return g_strdup_printf("%.2f dB", gain2db(gain));
 }

@@ -123,7 +123,7 @@ static gint purge(gpointer data);
 static MaskedPixmap *image_from_file(const char *path);
 static MaskedPixmap *get_bad_image(void);
 static GdkPixbuf *scale_pixbuf_up(GdkPixbuf *src, int max_w, int max_h);
-static GdkPixbuf *get_thumbnail_for(const char *path);
+//static GdkPixbuf *get_thumbnail_for(const char *path);
 //static void thumbnail_child_done(ChildThumbnail *info);
 //static void child_create_thumbnail(const gchar *path);
 //static GdkPixbuf *create_spotlight_pixbuf(GdkPixbuf *src, guint32 color, guchar alpha);
@@ -588,6 +588,7 @@ static void thumbnail_child_done(ChildThumbnail *info)
 }
 */
 
+#if NEVER
 /* Check if we have an up-to-date thumbnail for this image.
  * If so, return it. Otherwise, returns NULL.
  */
@@ -637,6 +638,7 @@ out:
 	g_free(thumb_path);
 	return thumb;
 }
+#endif
 
 /* Load the image 'path' and return a pointer to the resulting
  * MaskedPixmap. NULL on failure.

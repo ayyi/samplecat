@@ -1455,7 +1455,7 @@ void
 on_quit(GtkMenuItem* menuitem, gpointer user_data)
 {
 	//if(user_data) dbg(0, "exitcode=%i", GPOINTER_TO_INT(user_data));
-	int exit_code = GPOINTER_TO_INT(user_data);
+	int exit_code = (int) GPOINTER_TO_INT(user_data);
 	if(exit_code > 1) exit_code = 0; //ignore invalid exit code.
 
 	if(app.loaded) config_save();
