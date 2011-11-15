@@ -331,7 +331,7 @@ void *jack_player_thread(void *unused){
 				ladspah_set_param(myplugin, m_channels, 0 /*cents */, pp[0]); /* -100 .. 100 */
 				ladspah_set_param(myplugin, m_channels, 1 /*semitones */, pp[1]); /* -12 .. 12 */
 				ladspah_set_param(myplugin, m_channels, 2 /*octave */, pp[2]);    /*  -3 ..  3 */
-				if (!ladspaerr) ladspah_process_nch(myplugin, m_channels, bufptr, rv);
+				if (!ladspaerr) ladspah_process_nch(myplugin, m_channels, bufptr, rv / m_channels);
 				jack_ringbuffer_write(rb, (char *) bufptr, rv *  sizeof(float));
 			}
 			if (app.loop_playback) {
