@@ -22,11 +22,12 @@ This software is licensed under the GPL. See accompanying file COPYING.
 #include "sample.h"
 #include "main.h"
 #include "auditioner.h"
+#include "listview.h"
 
-struct _auditioner
+typedef struct
 {
 	DBusGProxy*    proxy;
-};
+} AyyiConnection;
 
 #define APPLICATION_SERVICE_NAME "org.ayyi.Auditioner.Daemon"
 #define DBUS_APP_PATH            "/org/ayyi/auditioner/daemon"
@@ -34,10 +35,12 @@ struct _auditioner
 
 extern struct _app app;
 
+static AyyiConnection *adbus;
+
 void
 auditioner_connect()
 {
-	app.auditioner = g_new0(Auditioner, 1);
+	adbus = g_new0(AyyiConnection, 1);
 
 	gboolean _auditioner_connect(gpointer _)
 	{
@@ -47,16 +50,21 @@ auditioner_connect()
 			errprintf("failed to get dbus connection\n");
 			return FALSE;
 		}   
-		if(!(app.auditioner->proxy = dbus_g_proxy_new_for_name (auditioner, APPLICATION_SERVICE_NAME, DBUS_APP_PATH, DBUS_INTERFACE))){
+		if(!(adbus->proxy = dbus_g_proxy_new_for_name (auditioner, APPLICATION_SERVICE_NAME, DBUS_APP_PATH, DBUS_INTERFACE))){
 			errprintf("failed to get Auditioner\n");
 			return FALSE;
 		}
 
-		dbus_g_proxy_add_signal(app.auditioner->proxy, "PlaybackStopped", G_TYPE_INVALID);                                                             
+		dbus_g_proxy_add_signal(adbus->proxy, "PlaybackStopped", G_TYPE_INVALID);                                                             
 
 		return IDLE_STOP;
 	}
 	g_idle_add(_auditioner_connect, NULL);
+}
+
+void
+auditioner_disconnect() {
+	;
 }
 
 
@@ -64,7 +72,7 @@ void
 auditioner_play(Sample* sample)
 {
 	dbg(1, "%s", sample->full_path);
-	dbus_g_proxy_call_no_reply(app.auditioner->proxy, "StartPlayback", G_TYPE_STRING, sample->full_path, G_TYPE_INVALID);
+	dbus_g_proxy_call_no_reply(adbus->proxy, "StartPlayback", G_TYPE_STRING, sample->full_path, G_TYPE_INVALID);
 }
 
 
@@ -72,7 +80,7 @@ void
 auditioner_play_path(const char* path)
 {
 	g_return_if_fail(path);
-	dbus_g_proxy_call_no_reply(app.auditioner->proxy, "StartPlayback", G_TYPE_STRING, path, G_TYPE_INVALID);
+	dbus_g_proxy_call_no_reply(adbus->proxy, "StartPlayback", G_TYPE_STRING, path, G_TYPE_INVALID);
 }
 
 
@@ -80,7 +88,7 @@ void
 auditioner_stop()
 {
 	dbg(1, "...");
-	dbus_g_proxy_call_no_reply(app.auditioner->proxy, "StopPlayback", G_TYPE_STRING, "", G_TYPE_INVALID);
+	dbus_g_proxy_call_no_reply(adbus->proxy, "StopPlayback", G_TYPE_STRING, "", G_TYPE_INVALID);
 }
 
 
@@ -88,7 +96,7 @@ void
 auditioner_toggle(Sample* sample)
 {
 	dbg(1, "%s", sample->full_path);
-	dbus_g_proxy_call_no_reply(app.auditioner->proxy, "TogglePlayback", G_TYPE_STRING, sample->full_path, G_TYPE_INVALID);
+	dbus_g_proxy_call_no_reply(adbus->proxy, "TogglePlayback", G_TYPE_STRING, sample->full_path, G_TYPE_INVALID);
 }
 
 
@@ -115,7 +123,7 @@ auditioner_play_all()
 			sample_unref(result);
 		}else{
 			dbg(1, "play_all finished. disconnecting...");
-			dbus_g_proxy_disconnect_signal(app.auditioner->proxy, "PlaybackStopped", G_CALLBACK(stop), NULL);
+			dbus_g_proxy_disconnect_signal(adbus->proxy, "PlaybackStopped", G_CALLBACK(stop), NULL);
 		}
 	}
 
@@ -125,7 +133,7 @@ auditioner_play_all()
 	}
 	stop = playall__on_stopped;
 
-	dbus_g_proxy_connect_signal (app.auditioner->proxy, "PlaybackStopped", G_CALLBACK(playall__on_stopped), NULL, NULL);
+	dbus_g_proxy_connect_signal (adbus->proxy, "PlaybackStopped", G_CALLBACK(playall__on_stopped), NULL, NULL);
 
 	gboolean foreach_func(GtkTreeModel* model, GtkTreePath* path, GtkTreeIter* iter, gpointer user_data)
 	{

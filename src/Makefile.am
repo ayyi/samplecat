@@ -60,15 +60,16 @@ if ENABLE_OPENGL
 OPENGL_SRC = gl_spectrogram_view.c gl_spectrogram_view.h
 endif
 
-# ENABLE_DBUS and ENABLE_GAUDITION are exclusive "else if" is done in configure
-if ENABLE_DBUS
-AUDITIONER = auditioner.c auditioner.h
-else 
-if ENABLE_GAUDITION
-AUDITIONER = gauditioner.c auditioner.h
-else 
-AUDITIONER = jack_player.c jack_player.h ladspa_proc.c ladspa_proc.h
+if ENABLE_AYYIDBUS
+AUDITIONER_AYYI = auditioner.c auditioner.h
 endif
+
+if ENABLE_GPLAYER
+AUDITIONER_GPLAYER = gplayer.c gplayer.h
+endif
+
+if ENABLE_JACK
+AUDITIONER_JACK = jack_player.c jack_player.h ladspa_proc.c ladspa_proc.h
 endif
 
 AUDIOANALYSERS_SRC = \
@@ -106,7 +107,7 @@ samplecat_SOURCES = \
 	$(FFT_SRC) \
 	$(OPENGL_SRC) \
 	$(AYYI_SRC) \
-	$(AUDITIONER) \
+	$(AUDITIONER_AYYI) $(AUDITIONER_GPLAYER) $(AUDITIONER_JACK) \
 	$(GQVIEW1_SRC)
 
 samplecat_LDADD = \

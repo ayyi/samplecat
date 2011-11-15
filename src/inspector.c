@@ -15,12 +15,12 @@
 #include "sample.h"
 #include "listview.h"
 #include "inspector.h"
+#include <math.h>
 #ifdef USE_TRACKER
   #include "src/db/tracker.h"
 #endif
 #if (defined HAVE_JACK)
   #include "jack_player.h"
-  #include <math.h>
 #endif
 
 extern struct _app app;
@@ -35,9 +35,9 @@ static void       inspector_on_notes_insert (GtkTextView*, gchar *arg1, gpointer
 static void       tag_edit_start            (int tnum);
 static void       tag_edit_stop             (GtkWidget*, GdkEventCrossing*, gpointer);
 
-#undef ENABLE_LADSPA // EXPERIMENTAL -- should really be another window - not inspector.
+#undef ENABLE_LADSPA // EXPERIMENTAL GUI -- should really be another window - not inspector.
 
-#if (defined HAVE_JACK)
+/* JACK auditioner UI */
 static guint slider1sigid;
 static void slider_value_changed (GtkRange *range, gpointer  user_data);
 static void cb_playpause (GtkToggleButton *btn, gpointer user_data);
@@ -49,7 +49,7 @@ static void pitch_value_changed  (GtkRange *range, gpointer user_data);
 static void cb_pitch_toggled(GtkToggleButton *btn, gpointer user_data);
 static void cb_link_toggled (GtkToggleButton *btn, gpointer user_data);
 #endif
-#endif
+
 
 GtkWidget*
 inspector_new()
@@ -89,7 +89,7 @@ inspector_new()
 	gtk_misc_set_padding(GTK_MISC(app.inspector->image), margin_left, 2);
 	gtk_box_pack_start(GTK_BOX(vbox), app.inspector->image, EXPAND_FALSE, FILL_FALSE, 0);
 
-#if (defined HAVE_JACK) // experimental seek-slider below the pixbuf
+	if (app.auditioner->status && app.auditioner->seek) {  //JACK experimental seek-slider below the pixbuf
 
 #define BORDERMARGIN (2)
 	GtkWidget* align9 = gtk_alignment_new(0.0, 0.5, 0.0, 0.0);
@@ -160,7 +160,7 @@ inspector_new()
 	slider2sigid = g_signal_connect((gpointer)slider2, "value-changed", G_CALLBACK(pitch_value_changed), slider3);
 	slider3sigid = g_signal_connect((gpointer)slider3, "value-changed", G_CALLBACK(speed_value_changed), slider2);
 #endif /* LADSPA-rubberband/VARISPEED */
-#endif /* JACK PLAYER */
+  } /* end JACK auditioner */
 	//-----------
 
 	GtkWidget* align2 = gtk_alignment_new(0.0, 0.5, 0.0, 0.0);
@@ -195,9 +195,11 @@ inspector_new()
 	gtk_container_add(GTK_CONTAINER(align4), label4);	
 
 	//-----------
+	GtkWidget* hbox3 = gtk_hbox_new(FALSE, 10);
+	gtk_box_pack_start(GTK_BOX(vbox), hbox3, EXPAND_FALSE, FILL_FALSE, 0);
 	
 	GtkWidget* align5 = gtk_alignment_new(0.0, 0.5, 0.0, 0.0);
-	gtk_box_pack_start(GTK_BOX(vbox), align5, EXPAND_FALSE, FILL_FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(hbox3), align5, EXPAND_FALSE, FILL_FALSE, 0);
 
 	GtkWidget* label5 = app.inspector->samplerate = gtk_label_new("Samplerate");
 	gtk_misc_set_padding(GTK_MISC(label5), margin_left, 2);
@@ -206,7 +208,7 @@ inspector_new()
 	//-----------
 
 	GtkWidget* align6 = gtk_alignment_new(0.0, 0.5, 0.0, 0.0);
-	gtk_box_pack_start(GTK_BOX(vbox), align6, EXPAND_FALSE, FILL_FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(hbox3), align6, EXPAND_FALSE, FILL_FALSE, 0);
 
 	GtkWidget* label6 = app.inspector->channels = gtk_label_new("Channels");
 	gtk_misc_set_padding(GTK_MISC(label6), margin_left, 2);
@@ -215,7 +217,7 @@ inspector_new()
 	//-----------
 
 	GtkWidget* align7 = gtk_alignment_new(0.0, 0.5, 0.0, 0.0);
-	gtk_box_pack_start(GTK_BOX(vbox), align7, EXPAND_FALSE, FILL_FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(hbox3), align7, EXPAND_FALSE, FILL_FALSE, 0);
 
 	GtkWidget* label7 = app.inspector->mimetype = gtk_label_new("Mimetype");
 	gtk_misc_set_padding(GTK_MISC(label7), margin_left, 2);
@@ -333,11 +335,8 @@ inspector_set_labels(Sample* sample)
 		gtk_widget_hide(GTK_WIDGET(i->tags));
 	}
 
-#if (defined HAVE_JACK)
-	if (jplay__getposition() != -1.0)
+	if (app.auditioner->status &&  app.auditioner->status() != -1.0)
 		show_player(); // show/hide player
-#endif
-
 }
 
 /// this is somewhat redundant w/ inspector_update_from_fileview()
@@ -640,8 +639,7 @@ tag_edit_stop(GtkWidget *widget, GdkEventCrossing *event, gpointer user_data)
   //busy = false;
 }
 
-
-#if (defined HAVE_JACK)
+/* JACK auditioner - UI */
 
 #if (defined ENABLE_LADSPA)
 static void pitch_value_changed (GtkRange *range, gpointer  user_data) {
@@ -688,18 +686,23 @@ static void cb_link_toggled(GtkToggleButton *btn, gpointer user_data) {
 #endif
 
 static void cb_playpause (GtkToggleButton *btn, gpointer user_data) {
-	jplay__pause(gtk_toggle_button_get_active (btn)?1:0);
+	if (app.auditioner->playpause) {
+		app.auditioner->playpause(gtk_toggle_button_get_active (btn)?1:0);
+	}
 }
 
 static void slider_value_changed (GtkRange *range, gpointer  user_data) {
-	double v =  gtk_range_get_value(range);
-	jplay__seek(v);
+	if (app.auditioner->seek) {
+		double v =  gtk_range_get_value(range);
+		app.auditioner->seek(v);
+	}
 }
 
 gboolean update_slider (gpointer data) {
 	if (gtk_widget_has_grab(GTK_WIDGET(data))) return TRUE; // user is manipulating the slider
+	if (!app.auditioner->status) return FALSE;
 
-  double v = jplay__getposition();
+  double v = app.auditioner->status();
 	if (v>=0 && v<=1) {
 		g_signal_handler_block(data, slider1sigid);
 		gtk_range_set_value(GTK_RANGE(data), v);
@@ -727,7 +730,10 @@ void show_player() {
 	static guint id = 0;
 	static GSource *source=NULL;
 	int updateinterval = 50; /* ms */
-	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(app.inspector->pbpause), (jplay__pause(-2)==1)?true:false);
+	if (!app.auditioner->status) return;
+	if (!app.auditioner->playpause) return;
+
+	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(app.inspector->pbpause), (app.auditioner->playpause(-2)==1)?true:false);
 
 	if (app.playing_id == app.inspector->row_id) {
 		/* show player */
@@ -754,4 +760,3 @@ void show_player() {
 	g_source_set_callback (source, update_slider, app.inspector->slider1, NULL);
 	id = g_source_attach (source, NULL);
 }
-#endif

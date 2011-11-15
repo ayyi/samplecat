@@ -35,24 +35,25 @@ else
 fi
 
 # default 'auto' configutaion
-AC_ARG_ENABLE(mysql, AC_HELP_STRING([--disable-mysql], [disable use of Mysql as backend]),enable_mysql=$enableval, enable_mysql="auto")
-AC_ARG_ENABLE(ffmpeg, AC_HELP_STRING([--disable-ffmpeg], [disable use of FFMPEG]), enable_ffmpeg=$enableval, enable_ffmpeg="auto")
-AC_ARG_ENABLE(dnotify, AS_HELP_STRING([--enable-dnotify],[build with dnotify support]),enable_dnotify=$enableval, enable_dnotify="no")
-AC_ARG_ENABLE(dbus, AS_HELP_STRING([--disable-dbus],[disable use of dbus]),enable_dbus=$enableval, enable_dbus="no")
-AC_ARG_ENABLE(ayyi, AS_HELP_STRING([--enable-ayyi],[build with ayyi support]),enable_ayyi=$enableval, enable_ayyi="no")
-AC_ARG_ENABLE(jack, AS_HELP_STRING([--disable-jack],[build with JACK support]),enable_jack=$enableval, enable_jack="auto")
-AC_ARG_ENABLE(nks, AS_HELP_STRING([--enable-nks],[build with nks support]),enable_nks=$enableval,enable_nks=auto)
-AC_ARG_ENABLE( [sf2], AC_HELP_STRING([--enable-sf2], [build with sf2 support. Currently this option doesnt do anything useful.]),enable_sf2="$enableval", enable_sf2="no")
-AC_ARG_ENABLE(tracker, AS_HELP_STRING([--enable-tracker],[build with tracker support]),enable_tracker=$enableval, enable_tracker="auto")
-AC_ARG_ENABLE(sqlite, AS_HELP_STRING([--enable-sqlite],[build with sqlite support]),enable_sqlite=$enableval, enable_sqlite="auto")
-AC_ARG_ENABLE(opengl, [AC_HELP_STRING([--disable-opengl], [disable use of OpenGL])],enable_opengl=$enableval,enable_opengl="no")
-AC_ARG_ENABLE(fftw, AC_HELP_STRING([--disable-fftw], [disable usage of FFTW ]),enable_fftw=$enableval,enable_fftw="auto")
+AC_ARG_ENABLE(mysql,    AC_HELP_STRING([--disable-mysql], [disable use of Mysql as backend]),enable_mysql=$enableval, enable_mysql="auto")
+AC_ARG_ENABLE(ffmpeg,   AC_HELP_STRING([--disable-ffmpeg], [disable use of FFMPEG]), enable_ffmpeg=$enableval, enable_ffmpeg="auto")
+AC_ARG_ENABLE(dnotify,  AS_HELP_STRING([--enable-dnotify],[build with dnotify support]),enable_dnotify=$enableval, enable_dnotify="no")
+AC_ARG_ENABLE(ayyi,     AS_HELP_STRING([--enable-ayyi],[build with ayyi support]),enable_ayyi=$enableval, enable_ayyi="no")
+AC_ARG_ENABLE(ayyidbus, AS_HELP_STRING([--disable-ayyidbus],[disable use of dbus]),enable_ayyidbus=$enableval, enable_ayyidbus="auto")
+AC_ARG_ENABLE(jack,     AS_HELP_STRING([--disable-jack],[build with JACK support]),enable_jack=$enableval, enable_jack="auto")
+AC_ARG_ENABLE(gplayer,  AS_HELP_STRING([--disable-gplayer],[build with external player]),enable_gplayer=$enableval, enable_gplayer="auto")
+AC_ARG_ENABLE(nks,      AS_HELP_STRING([--enable-nks],[build with nks support]),enable_nks=$enableval,enable_nks=auto)
+AC_ARG_ENABLE(sf2,      AC_HELP_STRING([--enable-sf2], [build with sf2 support. Currently this option doesnt do anything useful.]),enable_sf2="$enableval", enable_sf2="no")
+AC_ARG_ENABLE(tracker,  AS_HELP_STRING([--enable-tracker],[build with tracker support]),enable_tracker=$enableval, enable_tracker="auto")
+AC_ARG_ENABLE(sqlite,   AS_HELP_STRING([--enable-sqlite],[build with sqlite support]),enable_sqlite=$enableval, enable_sqlite="auto")
+AC_ARG_ENABLE(opengl,   AC_HELP_STRING([--disable-opengl], [disable use of OpenGL]),enable_opengl=$enableval,enable_opengl="no")
+AC_ARG_ENABLE(fftw,     AC_HELP_STRING([--disable-fftw], [disable usage of FFTW ]),enable_fftw=$enableval,enable_fftw="auto")
 
 case $target_os in
 	*darwin*)
 		CFLAGS="$CFLAGS -fnested-functions"
 		SAMPLECAT_LIBS="-ligemacintegration"
-		enable_dbus="no"
+		enable_ayyidbus="no"
 		enable_jack="no"
 		enable_sqlite="yes"
 		enable_gplayer="yes"
@@ -231,15 +232,15 @@ AM_CONDITIONAL(ENABLE_DNOTIFY, test "$enable_dnotify" = "yes")
 
 dnl -----------------------------------------------------------------------------
 
-AS_IF([test "$enable_dbus" != "no"], [
-       PKG_CHECK_MODULES(DBUS, dbus-glib-1, enable_dbus="yes", enable_dbus="no")
+AS_IF([test "$enable_ayyidbus" != "no"], [
+       PKG_CHECK_MODULES(DBUS, dbus-glib-1, enable_ayyidbus="yes", enable_ayyidbus="no")
        ])
 AC_SUBST(DBUS_CFLAGS)
 AC_SUBST(DBUS_LIBS)
-if test "$enable_dbus" = "yes"; then
-	AC_DEFINE(USE_DBUS, 1, Use Dbus is for messaging.)
+if test "$enable_ayyidbus" = "yes"; then
+	AC_DEFINE(HAVE_AYYIDBUS, 1, Use AYYI/Dbus auditioner.)
 fi
-AM_CONDITIONAL(ENABLE_DBUS, [test "$enable_dbus" = "yes"])
+AM_CONDITIONAL(ENABLE_AYYIDBUS, [test "$enable_ayyidbus" = "yes"])
 
 dnl -----------------------------------------------------------------------------
 
@@ -250,10 +251,6 @@ AM_CONDITIONAL(ENABLE_AYYI, [test "$enable_ayyi" = "yes"])
 
 dnl -----------------------------------------------------------------------------
 
-if test "$enable_dbus" = "yes" -a "$enable_jack" != "no" ; then
-	AC_MSG_WARN([*** jack-player is exclusive with dbus/ayyi support. ***])
-	enable_jack=no
-fi
 AS_IF([test "$enable_jack" != "no"], [
 	    PKG_CHECK_MODULES(JACK, jack,enable_jack=yes, enable_jack=no)
 	], [true])
@@ -263,6 +260,7 @@ AC_SUBST(JACK_LIBS)
 if test "$enable_jack" = "yes"; then
 	AC_DEFINE(HAVE_JACK,1,[have JACK audio connection kit])
 fi
+AM_CONDITIONAL(ENABLE_JACK, [test "$enable_jack" = "yes"])
 
 #JACK player can re-sample and use LADSPA plugins
 enable_ladspa="no"
@@ -284,20 +282,13 @@ fi
 
 dnl -----------------------------------------------------------------------------
 
-dnl AC_ARG_ENABLE(gplayer, AS_HELP_STRING([--disable-gplayer],[build with external player]),enable_gplayer=$enableval, enable_gplayer="auto")
-enable_gplayer="yes"
-if test "$enable_dbus" = "yes" -a "$enable_gplayer" != "no" ; then
-	AC_MSG_WARN([*** gplayer is exclusive with dbus/ayyi support. ***])
-	enable_gplayer=no
+dnl TODO: check for executables: gst-launch | afplay | totem-audio-preview
+AM_CONDITIONAL(ENABLE_GPLAYER, test "$enable_gplayer" != "no")
+if test "$enable_gplayer" != "no"; then
+	enable_gplayer="yes"
+	AC_DEFINE(HAVE_GPLAYER,1,[Use gtk/gnome auditioner])
 fi
-if test "$enable_jack" = "yes" -a "$enable_gplayer" != "no" ; then
-	AC_MSG_WARN([*** gplayer is exclusive with jack support. ***])
-	enable_gplayer=no
-fi
-AM_CONDITIONAL(ENABLE_GAUDITION, test "$enable_gplayer" = "yes")
-if test "$enable_gplayer" = "yes"; then
-	AC_DEFINE(USE_GAUDITION,1,[Use gtk/gnome auditioner])
-fi
+AM_CONDITIONAL(ENABLE_GPLAYER, [test "$enable_gplayer" = "yes"])
 
 dnl -----------------------------------------------------------------------------
 
@@ -383,34 +374,34 @@ dnl AC_CONFIG_FILES([src/vala/Makefile])
 AC_CONFIG_FILES([ayyi/Makefile])
 AC_OUTPUT
 
-if test "$enable_dbus" = "yes"; then
-	player="dbus/ayyi_auditioner"
-else if test "$enable_gplayer" = "yes"; then
-	player="CLI: gstreamer, totem-audio-preview, afplay (OSX)"
-else if test "$enable_jack" = "yes"; then
-	player="built-in JACK"
+jplayer="no"
+if test "$enable_jack" = "yes"; then
+	jplayer="yes"
 	if test "$enable_ladspa" = "yes" -a "$enable_resampling" = "yes"; then
-		player="$player w/ LADSPA support and resampling"
-	else if test "$enable_ladspa" = "yes"; then
-		player="$player w/ LADSPA support"
+		jplayer="${jplayer} w/ LADSPA support and resampling"
 	else if test "$enable_resampling" = "yes"; then
-		player="$player w/ resampling"
+		jplayer="${jplayer} w/ resampling (no LADSPA)"
+	else if test "$enable_ladspa" = "yes"; then
+		jplayer="${jplayer} w/ LADSPA support (no resampling)"
 	fi;fi;fi
-else
-	player="no playback support. - build will fail!"
-fi;fi;fi
+fi
 
 AC_MSG_RESULT([])
-AC_MSG_RESULT([Building mysql support:           $enable_mysql])
-AC_MSG_RESULT([Building sqlite support:          $enable_sqlite])
-AC_MSG_RESULT([Building tracker support:         $enable_tracker])
-AC_MSG_RESULT([Building direct flac support:     $enable_flac])
-AC_MSG_RESULT([Building ffmpeg decoder:          $enable_ffmpeg])
-AC_MSG_RESULT([Building dnotify support:         $enable_dnotify])
-AC_MSG_RESULT([Building ayyi support:            $enable_ayyi])
-AC_MSG_RESULT([Building opengl support:          $enable_opengl])
-AC_MSG_RESULT([Building soundfont support:       $enable_sf2])
-AC_MSG_RESULT([Building nks support:             $enable_nks])
-AC_MSG_RESULT([])
-AC_MSG_RESULT([Audio player: $player])
+AC_MSG_RESULT([DB-backend:])
+AC_MSG_RESULT([  mysql support:              $enable_mysql])
+AC_MSG_RESULT([  sqlite support:             $enable_sqlite])
+AC_MSG_RESULT([  tracker support:            $enable_tracker])
+AC_MSG_RESULT([Audio decoders:])
+AC_MSG_RESULT([ soundfile:                   yes])
+AC_MSG_RESULT([  ffmpeg decoder:             $enable_ffmpeg])
+AC_MSG_RESULT([  direct flac support:        $enable_flac])
+AC_MSG_RESULT([Audio players:])
+AC_MSG_RESULT([  built-in JACK:              $jplayer])
+AC_MSG_RESULT([  AYYI/Dbus:                  $enable_ayyidbus])
+AC_MSG_RESULT([  CLI: gst,afplay,totem:      $enable_gplayer])
+AC_MSG_RESULT([Building soundfont support:   $enable_sf2])
+AC_MSG_RESULT([Building nks support:         $enable_nks])
+AC_MSG_RESULT([Building dnotify support:     $enable_dnotify])
+AC_MSG_RESULT([Building ayyi support:        $enable_ayyi])
+AC_MSG_RESULT([Building opengl support:      $enable_opengl])
 AC_MSG_RESULT([])

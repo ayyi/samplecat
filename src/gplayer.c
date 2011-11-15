@@ -12,7 +12,8 @@
 #include "support.h"
 #include "sample.h"
 #include "main.h"
-#include "auditioner.h"
+#include "gplayer.h"
+#include "listview.h"
 
 static char ** get_preview_argv (const char *path) {
 	char *command;
@@ -82,7 +83,7 @@ static void play_next() {
 		play_queue = g_list_remove(play_queue, result);
 		dbg(1, "%s", result->full_path);
 		highlight_playing_by_ref(result->row_ref);
-		auditioner_play(result);
+		gplayer_play(result);
 		sample_unref(result);
 	}else{
 		dbg(1, "play_all finished. disconnecting...");
@@ -135,23 +136,24 @@ static gboolean play_file (const char * path) {
 
 /* public API */
 
-void auditioner_play_path(const char* path) {
+void gplayer_play_path(const char* path) {
 	dbg(1, "%s", path);
 	stop_playback();
 	play_file(path);
 }
 
-void auditioner_toggle(Sample* sample) {
+void gplayer_toggle(Sample* sample) {
 	dbg(1, "%s", sample->full_path);
-	auditioner_play_path(sample->full_path);
+	if (audio_preview_child_pid) gplayer_stop();
+	else gplayer_play_path(sample->full_path);
 }
 
-void auditioner_play(Sample* sample) {
+void gplayer_play(Sample* sample) {
 	dbg(1, "%s", sample->full_path);
-	auditioner_play_path(sample->full_path);
+	gplayer_play_path(sample->full_path);
 }
 
-void auditioner_play_all() {
+void gplayer_play_all() {
 	dbg(1, "...");
 	if(play_queue){
 		pwarn("already playing");
@@ -169,12 +171,12 @@ void auditioner_play_all() {
 	if(play_queue) play_next();
 }
 
-void auditioner_connect() {;}
+void gplayer_connect() {;}
+void gplayer_disconnect() {;}
 
-void auditioner_stop() {
+void gplayer_stop() {
 	dbg(1, "stop audition..");
 	if (play_queue) {
-		Sample *result;
 		g_list_foreach(play_queue,(GFunc)sample_unref, NULL);
 		g_list_free(play_queue);
 		play_queue=NULL;

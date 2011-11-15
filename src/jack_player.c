@@ -35,11 +35,12 @@
 #include "support.h"
 #include "main.h"
 #include "inspector.h"
+#include "sample.h"
 #include "ladspa_proc.h"
 
 extern struct _app app;
 
-#if (defined HAVE_JACK && !(defined USE_DBUS || defined USE_GAUDITION))
+#ifdef HAVE_JACK
 
 #include <jack/jack.h> // TODO use weakjack.h
 #include <jack/ringbuffer.h>
@@ -173,6 +174,11 @@ int jack_audio_callback(jack_nframes_t nframes, void *arg) {
 };
 
 #ifdef JACK_MIDI
+gboolean idle_play(gpointer data) {
+	jplay__play_selected();
+	return false;
+}
+
 void *jack_midi_thread(void *unused){
 
 	pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
@@ -193,7 +199,8 @@ void *jack_midi_thread(void *unused){
 			 if (midi_octave<-3) { midi_octave=-3; midi_note=0;}
 			 if (midi_octave> 3) { midi_octave=3;  midi_note=11;}
 			 dbg (0, "NOTE On : %d -- %d %d", note, midi_octave, midi_note);
-			 jplay__play_selected();
+			 g_idle_add(idle_play, NULL);
+			 //jplay__play_selected();
 		 }
 		 queued_events_start = (queued_events_start +1 ) % JACK_MIDI_QUEUE_SIZE;
 		}
@@ -613,7 +620,7 @@ void jplay__disconnect() {
 }
 
 int
-jplay__play_path(const char* path, int reset_pitch)
+jplay__play_pathX(const char* path, int reset_pitch)
 {
 	if(app.playing_id) jplay__stop(); //stop any previous playback.
 	if(myplayer) jplay__stop();
@@ -636,10 +643,16 @@ jplay__play_path(const char* path, int reset_pitch)
 }
 
 void
+jplay__play_path(const char* path)
+{
+	jplay__play_pathX(path, 1);
+}
+
+void
 jplay__play(Sample* sample)
 {
 	if(!sample->id){ perr("bad arg: id=0\n"); return; }
-	if (jplay__play_path(sample->full_path, 1)) return;
+	if (jplay__play_pathX(sample->full_path, 1)) return;
 	app.playing_id = sample->id;
 	show_player();
 }
@@ -647,7 +660,8 @@ jplay__play(Sample* sample)
 void
 jplay__toggle(Sample* sample)
 {
-	jplay__play(sample);
+	if(app.playing_id || myplayer) jplay__stop();
+	else jplay__play(sample);
 }
 
 void
@@ -687,7 +701,7 @@ jplay__play_selected() {
 
 	/* jplay__play(s); - no reset midi pitch */
 	if(!sample->id){ perr("bad arg: id=0\n"); return; }
-	if (jplay__play_path(sample->full_path, 0)) return;
+	if (jplay__play_pathX(sample->full_path, 0)) return;
 	app.playing_id = sample->id;
 	show_player();
 	/* jplay__play(s); */

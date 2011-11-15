@@ -19,12 +19,7 @@
 #include "overview.h"
 #include "listview.h"
 #include "inspector.h"
-
-#if (defined USE_DBUS || defined USE_GAUDITION)
 #include "auditioner.h"
-#elif (defined HAVE_JACK)
-#include "jack_player.h"
-#endif
 
 extern int      debug;
 extern struct _app app;
@@ -243,28 +238,17 @@ listview__on_row_clicked(GtkWidget *widget, GdkEventButton *event, gpointer user
 				Sample* sample = sample_get_from_model(path);
 
 				if(sample->id != app.playing_id){
-#if (defined USE_DBUS || defined USE_GAUDITION)
 					if(app.playing_id){
 						//a sample was previously played, and it wasnt this one
-						auditioner_play(sample);
+						app.auditioner->play(sample);
 					}else{
-						auditioner_toggle(sample);
+						app.auditioner->toggle(sample);
 					}
 					app.playing_id = sample->id;
-#elif (defined HAVE_JACK)
-					jplay__play(sample);
-#endif
 				}
-#if (defined USE_DBUS || defined USE_GAUDITION)
 				else {
-					auditioner_toggle(sample);
+					app.auditioner->toggle(sample);
 				}
-#elif (defined HAVE_JACK)
-				else {
-					jplay__stop();
-				}
-#endif
-
 #if 1 /* highlight played item with 'colour:1' */
 				highlight_playing_by_path(path);
 #endif

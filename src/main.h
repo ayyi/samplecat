@@ -93,7 +93,7 @@ struct _app
 	gchar*         search_category;
 	gboolean       add_recursive;
 	gboolean       loop_playback;
-	Auditioner     auditioner;
+	Auditioner const* auditioner;
 #if (defined HAVE_JACK)
 	gboolean       enable_effect;
 	gboolean       effect_enabled; // read-only set by jack_player.c
@@ -117,6 +117,7 @@ struct _app
 	GKeyFile*      key_file;   //config file data.
 
 	GList*         backends;
+	GList*         players;
 
 	int            playing_id; ///< database index of the file that is currently playing, or zero if none playing, -1 if playing an external file.
 
@@ -208,6 +209,8 @@ gboolean    keyword_is_dupe(char* new, char* existing);
 void        on_quit(GtkMenuItem*, gpointer user_data);
 
 void        set_backend(BackendType);
+
+void        set_auditioner();
 
 void        observer__item_selected(Sample*);
 #endif

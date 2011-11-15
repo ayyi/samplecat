@@ -37,12 +37,7 @@
 #endif
 #include "colour_box.h"
 #include "window.h"
-
-#if (defined USE_DBUS || defined USE_GAUDITION)
 #include "auditioner.h"
-#elif (defined HAVE_JACK)
-#include "jack_player.h"
-#endif
 
 extern struct _app app;
 extern Filer filer;
@@ -800,11 +795,7 @@ menu__play(GtkMenuItem* menuitem, gpointer user_data)
 	for(;l;l=l->next){
 		char* item = l->data;
 		dbg(1, "%s", item);
-#if (defined USE_DBUS || defined USE_GAUDITION)
-		auditioner_play_path(item);
-#elif (defined HAVE_JACK)
-		jplay__play_path(item, 1);
-#endif
+		app.auditioner->play_path(item);
 		g_free(item);
 	}
 	g_list_free(selected);

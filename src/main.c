@@ -40,20 +40,23 @@ This software is licensed under the GPL. See accompanying file COPYING.
 #include "dh_link.h"
 #include "dh_tree.h"
 
-#include "support.h"
 #include "main.h"
+#include "support.h"
 #include "sample.h"
-#if (defined HAVE_JACK && !(defined USE_DBUS || defined USE_GAUDITION))
-#include "jack_player.h"
-#endif
 #include "overview.h"
 #include "cellrenderer_hypertext.h"
 #include "listview.h"
 #include "window.h"
 #include "inspector.h"
 #include "dnd.h"
-#if (defined USE_DBUS || defined USE_GAUDITION)
+#ifdef HAVE_AYYIDBUS
   #include "auditioner.h"
+#endif
+#ifdef HAVE_JACK
+  #include "jack_player.h"
+#endif
+#ifdef HAVE_GPLAYER
+  #include "gplayer.h"
 #endif
 #include "console_view.h"
 #ifdef USE_GQVIEW_1_DIRTREE
@@ -84,7 +87,7 @@ extern void       dir_init                  ();
 static void       update_rows               (GtkWidget*, gpointer);
 static void       edit_row                  (GtkWidget*, gpointer);
 static GtkWidget* make_context_menu         ();
-static gboolean   can_use_backend           (const char*);
+static gboolean   can_use                   (GList*, const char*);
 static gboolean   toggle_recursive_add      (GtkWidget*, gpointer);
 static gboolean   toggle_loop_playback      (GtkWidget*, gpointer);
 static gboolean   on_directory_list_changed ();
@@ -114,6 +117,7 @@ char bold  [16];
 
 static const struct option long_options[] = {
   { "backend",          1, NULL, 'b' },
+  { "player",           1, NULL, 'p' },
   { "no-gui",           0, NULL, 'g' },
   { "verbose",          1, NULL, 'v' },
   { "search",           1, NULL, 's' },
@@ -121,7 +125,7 @@ static const struct option long_options[] = {
   { "help",             0, NULL, 'h' },
 };
 
-static const char* const short_options = "b:gv:s:a:h";
+static const char* const short_options = "b:gv:s:a:p:h";
 
 static const char* const usage =
   "Usage: %s [ options ]\n"
@@ -130,6 +134,7 @@ static const char* const usage =
   " -g --no-gui    run as command line app.\n"
   " -s --search    search using this phrase.\n"
   " -a --add       add these files.\n"
+  " -p --player    select audio player.\n"
   " -h --help      show this usage information and quit.\n"
   "\n";
 
@@ -189,6 +194,20 @@ main(int argc, char** argv)
 	ADD_BACKEND("tracker");
 #endif
 
+#define ADD_PLAYER(A) app.players = g_list_append(app.players, A)
+
+#ifdef HAVE_JACK
+	ADD_PLAYER("jack");
+#endif
+#ifdef HAVE_AYYIDBUS
+	ADD_PLAYER("ayyi");
+#endif
+#ifdef HAVE_GPLAYER
+	ADD_PLAYER("cli");
+#endif
+	ADD_PLAYER("null");
+
+
 	int opt;
 	while((opt = getopt_long (argc, argv, short_options, long_options, NULL)) != -1) {
 		switch(opt) {
@@ -203,7 +222,7 @@ main(int argc, char** argv)
 			case 'b':
 				//if a particular backend is requested, and is available, reduce the backend list to just this one.
 				dbg(1, "backend '%s' requested.", optarg);
-				if(can_use_backend(optarg)){
+				if(can_use(app.backends, optarg)){
 					list_clear(app.backends);
 					ADD_BACKEND(optarg);
 					dbg(1, "n_backends=%i", g_list_length(app.backends));
@@ -214,6 +233,18 @@ main(int argc, char** argv)
 					for(;l;l=l->next){
 						printf("  %s\n", (char*)l->data);
 					}
+					exit(EXIT_FAILURE);
+				}
+				break;
+			case 'p':
+				if(can_use(app.players, optarg)){
+					list_clear(app.players);
+					ADD_PLAYER(optarg);
+				} else{
+					warnprintf("requested player is not available: '%s'\navailable backends:\n", optarg);
+					GList* l = app.players;
+					for(;l;l=l->next) printf("  %s\n", (char*)l->data);
+					exit(EXIT_FAILURE);
 				}
 				break;
 			case 'g':
@@ -232,7 +263,10 @@ main(int argc, char** argv)
 				app.args.add = g_strdup(optarg);
 				break;
 			case '?':
+			default:
 				printf("unknown option: %c\n", optopt);
+				printf(usage, argv[0]);
+				exit(EXIT_FAILURE);
 				break;
 		}
 	}
@@ -252,11 +286,12 @@ main(int argc, char** argv)
 	type_init();
 	pixmaps_init();
 	dir_init();
+	set_auditioner();
 	app.store = listmodel__new();
 
 	gboolean db_connected = false;
 #ifdef USE_MYSQL
-	if(can_use_backend("mysql")){
+	if(can_use(app.backends, "mysql")){
 		if(mysql__connect()){
 			set_backend(BACKEND_MYSQL);
 			db_connected = true;
@@ -264,7 +299,7 @@ main(int argc, char** argv)
 	}
 #endif
 #ifdef USE_SQLITE
-	if(can_use_backend("sqlite")){
+	if(!db_connected && can_use(app.backends, "sqlite")){
 		if(sqlite__connect()){
 			set_backend(BACKEND_SQLITE);
 			db_connected = true;
@@ -280,7 +315,7 @@ main(int argc, char** argv)
 	}
 
 #ifdef USE_TRACKER
-	if(BACKEND_IS_NULL && can_use_backend("tracker")){
+	if(BACKEND_IS_NULL && can_use(app.backends, "tracker")){
 		void on_tracker_init()
 		{
 			dbg(2, "...");
@@ -337,11 +372,7 @@ main(int argc, char** argv)
 
 	if(app.no_gui) exit(EXIT_SUCCESS);
 
-#if (defined USE_DBUS || defined USE_GAUDITION)
-	auditioner_connect();
-#elif (defined HAVE_JACK)
-	jplay__connect();
-#endif
+	app.auditioner->connect();
 
 #ifdef USE_AYYI
 	ayyi_client_init();
@@ -364,9 +395,7 @@ main(int argc, char** argv)
 	gtk_main();
 
 	menu_play_stop(NULL,NULL);
-#ifdef HAVE_JACK
-	jplay__disconnect();
-#endif
+	app.auditioner->disconnect();
 
 	exit(EXIT_SUCCESS);
 }
@@ -971,22 +1000,14 @@ update_rows(GtkWidget *widget, gpointer user_data)
 static void
 menu_play_all(GtkWidget* widget, gpointer user_data)
 {
-#if (defined USE_DBUS || defined USE_GAUDITION)
-	auditioner_play_all();
-#elif (defined HAVE_JACK)
-	jplay__play_all();
-#endif
+	app.auditioner->play_all();
 }
 
 
 void
 menu_play_stop(GtkWidget* widget, gpointer user_data)
 {
-#if (defined USE_DBUS || defined USE_GAUDITION)
-	auditioner_stop();
-#elif (defined HAVE_JACK)
-	jplay__stop();
-#endif
+	app.auditioner->stop();
 }
 
 
@@ -1440,9 +1461,7 @@ on_quit(GtkMenuItem* menuitem, gpointer user_data)
 	if(app.loaded) config_save();
 
 	menu_play_stop(NULL,NULL);
-#ifdef HAVE_JACK
-	jplay__disconnect();
-#endif
+	app.auditioner->disconnect();
 
 	backend.disconnect();
 
@@ -1548,13 +1567,107 @@ set_backend(BackendType type)
 	}
 }
 
+void auditioner_null() {;}
+void auditioner_nullP(const char *p) {;}
+void auditioner_nullS(Sample *s) {;}
+
+void
+set_auditioner() /* tentative - WIP */
+{
+  const static Auditioner a_null = {
+		&auditioner_null,
+		&auditioner_null,
+		&auditioner_nullP,
+		&auditioner_nullS,
+		&auditioner_nullS,
+		&auditioner_null,
+		&auditioner_null,
+		NULL, NULL, NULL, NULL
+	};
+#ifdef HAVE_JACK
+  const static Auditioner a_jack = {
+		&jplay__connect,
+		&jplay__disconnect,
+		&jplay__play_path,
+		&jplay__play,
+		&jplay__toggle,
+		&jplay__play_all,
+		&jplay__stop,
+		&jplay__play_selected,
+		&jplay__pause,
+		&jplay__seek,
+		&jplay__getposition
+	};
+#endif
+#ifdef HAVE_AYYIDBUS
+  const static Auditioner a_ayyidbus = {
+		&auditioner_connect,
+		&auditioner_disconnect,
+		&auditioner_play_path,
+		&auditioner_play,
+		&auditioner_toggle,
+		&auditioner_play_all,
+		&auditioner_stop,
+		NULL,
+		NULL,
+		NULL,
+		NULL
+	};
+#endif
+#ifdef HAVE_GPLAYER
+  const static Auditioner a_gplayer = {
+		&gplayer_connect,
+		&gplayer_disconnect,
+		&gplayer_play_path,
+		&gplayer_play,
+		&gplayer_toggle,
+		&gplayer_play_all,
+		&gplayer_stop,
+		NULL,
+		NULL,
+		NULL,
+		NULL
+	};
+#endif
+
+	gboolean connected = false;
+#ifdef HAVE_JACK
+	if(!connected && can_use(app.players, "jack")){
+		// TODO test weak-jack linking,
+		// check if connect to jack works.
+		app.auditioner = & a_jack;
+		connected = true;
+		printf("JACK playback.\n");
+	}
+#endif
+#ifdef HAVE_AYYIDBUS
+	if(!connected && can_use(app.players, "ayyi")){
+		app.auditioner = & a_ayyidbus;
+		// TODO: check if we get a dbus reply from ayyi_auditioner.
+		connected = true;
+		printf("ayyi_audition.\n");
+	}
+#endif
+#ifdef HAVE_GPLAYER
+	if(!connected && can_use(app.players, "cli")){
+		app.auditioner = & a_gplayer;
+		// TODO: check if either of afplay, gst-launch, totem-audio-preview
+		// is in PATH and executable 
+		connected = true;
+		printf("using CLI player.\n");
+	}
+#endif
+	if (!connected) {
+		printf("no playback support.\n");
+		app.auditioner = & a_null;
+	}
+}
 
 static gboolean
-can_use_backend(const char* backend)
+can_use (GList *l, const char* d)
 {
-	GList* l = app.backends;
 	for(;l;l=l->next){
-		if(!strcmp(l->data, backend)){
+		if(!strcmp(l->data, d)){
 			return true;
 		}
 	}

@@ -39,7 +39,8 @@ void     jplay__disconnect ();
  */
 void     jplay__play       (Sample*);
 /**
- * identical to \ref jplay__play
+ * if currently playing, call \ref jplay_stop. 
+ * if playback is stopped, call \ref jplay__play.
  */
 void     jplay__toggle     (Sample*);
 /**
