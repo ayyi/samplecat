@@ -87,6 +87,7 @@ samplecat_SOURCES = \
 	listmodel.c listmodel.h \
 	listview.c listview.h \
 	inspector.c inspector.h \
+	player_control.c player_control.h \
 	sample.c sample.h \
 	overview.c overview.h \
 	pixmaps.c pixmaps.h \

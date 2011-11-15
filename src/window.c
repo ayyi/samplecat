@@ -19,6 +19,7 @@
 #include "dnd.h"
 #include "file_view.h"
 #include "inspector.h"
+#include "player_control.h"
 #ifndef NO_USE_DEVHELP_DIRTREE
 #include "dh_link.h"
 #include "dh_tree.h"
@@ -109,7 +110,9 @@ GtkWindow
    |     |     +--treeview file manager
    |     +--GtkHPaned
    |        +--vpaned (main left pane)
-   |        |  +--directory tree
+	 |        |  +-- vpaned
+   |        |  |   +--directory tree
+   |        |  |   +--player control
    |        |  +--inspector
    |        | 
    |        +--vpaned (main right pane)
@@ -467,18 +470,21 @@ left_pane()
 {
 	app.vpaned = gtk_vpaned_new();
 
+	GtkWidget* pcpaned = gtk_vpaned_new();
+	gtk_paned_add1(GTK_PANED(app.vpaned), pcpaned);
+
 	if(!BACKEND_IS_NULL){
 #ifndef NO_USE_DEVHELP_DIRTREE
 		GtkWidget* tree = _dir_tree_new();
 		GtkWidget* scroll = scrolled_window_new();
 		gtk_container_add((GtkContainer*)scroll, tree);
-		gtk_paned_add1(GTK_PANED(app.vpaned), scroll);
+		gtk_paned_add1(GTK_PANED(pcpaned), scroll);
 		g_signal_connect(tree, "link-selected", G_CALLBACK(on_dir_tree_link_selected), NULL);
 #else
 		GtkWidget* tree = _dir_tree_new();
 		GtkWidget* scroll = scrolled_window_new();
 		gtk_container_add((GtkContainer*)scroll, tree);
-		gtk_paned_add1(GTK_PANED(app.vpaned), scroll);
+		gtk_paned_add1(GTK_PANED(pcpaned), scroll);
 #endif
 	}
 
@@ -491,7 +497,7 @@ left_pane()
 	gint expand = TRUE;
 	ViewDirTree *dir_list = vdtree_new(app.home_dir, expand);
 	GtkWidget* tree = dir_list->widget;
-	gtk_paned_add1(GTK_PANED(app.vpaned), tree);
+	gtk_paned_add1(GTK_PANED(pcpaned), tree);
 #endif
 
 	/*
@@ -511,6 +517,10 @@ left_pane()
 	}
 
 	*/
+
+	player_control_new();
+	if (app.auditioner->status && app.auditioner->seek) 
+		gtk_paned_add2(GTK_PANED(pcpaned), app.playercontrol->widget);
 
 	inspector_new();
 	//g_signal_connect(app.inspector->widget, "size-allocate", (gpointer)on_inspector_allocate, NULL);

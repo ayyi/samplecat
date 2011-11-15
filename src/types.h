@@ -28,6 +28,17 @@ struct _inspector
 	GtkWidget*     level;
 	GtkWidget*     ebur;
 	GtkWidget*     image;
+	GtkWidget*     text;
+	GtkTextBuffer* notes;
+	GtkWidget*     edit;
+	int            min_height;
+	int            user_height;
+};
+
+struct _playctrl
+{
+	GtkWidget*     widget;
+
 	GtkWidget*     slider1; // player position
 	GtkWidget*     slider2; // player pitch
 	GtkWidget*     slider3; // player speed
@@ -35,11 +46,6 @@ struct _inspector
 	GtkWidget*     cblnk;   // link speed/pitch
 	GtkWidget*     pbctrl;  // playback control box (pause/stop)
 	GtkWidget*     pbpause; // playback pause button
-	GtkWidget*     text;
-	GtkTextBuffer* notes;
-	GtkWidget*     edit;
-	int            min_height;
-	int            user_height;
 };
 
 struct _auditioner {

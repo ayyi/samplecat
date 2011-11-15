@@ -123,6 +123,7 @@ struct _app
 
 	GtkListStore*  store;
 	Inspector*     inspector;
+	PlayCtrl*      playercontrol;
 	
 	GtkWidget*     window;
 	GtkWidget*     vbox;
