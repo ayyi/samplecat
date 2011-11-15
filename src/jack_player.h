@@ -30,8 +30,9 @@
 
 /** stop playback - if active */
 void     jplay__stop       ();
-/** auditioner API compat. jplay__connect does nothing */
+
 void     jplay__connect    ();
+void     jplay__disconnect ();
 /**
  * look up path from sample and play it
  * it sets global app.playing_id and triggers

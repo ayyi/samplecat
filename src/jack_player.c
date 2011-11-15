@@ -56,6 +56,7 @@ static int      m_channels   = 2;
 static int      m_samplerate = 0;
 static int64_t  m_frames = 0;
 static int      thread_run   = 0;
+static int      player_active = 0;
 static volatile int silent = 0;
 static volatile int playpause  = 0;
 static volatile double seek_request = -1.0;
@@ -83,10 +84,14 @@ float m_fResampleRatio = 1.0;
 static GList* play_queue = NULL;
 void jplay__play_next();
 void JACKclose();
+void JACKconnect();
+void JACKdisconnect();
 
 
 int jack_audio_callback(jack_nframes_t nframes, void *arg) {
 	int c,s;
+
+	if (!player_active) return (0);
 
 	for(c=0; c< m_channels; c++) {
 		j_out[c] = (jack_default_audio_sample_t*) jack_port_get_buffer(j_output_port[c], nframes);
@@ -120,7 +125,7 @@ int jack_audio_callback(jack_nframes_t nframes, void *arg) {
 void jack_shutdown_callback(void *arg){
 	dbg(0, "jack server [unexpectedly] shut down.");
 	j_client=NULL;
-	JACKclose();
+	JACKdisconnect();
 }
 
 inline void
@@ -187,6 +192,7 @@ void *jack_player_thread(void *unused){
 	pthread_mutex_lock(&player_thread_lock);
 
 	/** ALL SYSTEMS GO **/
+	player_active=1;
 	while(thread_run) {
 		int rv = ad_read(myplayer, tmpbuf, nframes * m_channels);
 		decoder_position+=rv/m_channels;
@@ -334,13 +340,14 @@ void *jack_player_thread(void *unused){
 		for(i=0;i<m_channels;i++) {
 			ladspah_deinit(myplugin[i]);
 		}
-		JACKclose();
+		JACKclose(); 
 	}
 	free(tmpbuf);
 #ifdef ENABLE_RESAMPLING
 	src_delete(src_state);
 	free(smpbuf);
 #endif
+	player_active=0;
 	if(play_queue) jplay__play_next();
 	return NULL;
 }
@@ -349,8 +356,11 @@ void *jack_player_thread(void *unused){
 void JACKaudiooutputinit(void *sf, int channels, int samplerate, int64_t frames){
 	int i;
 
-	if(j_client || thread_run || rb) {
-			dbg(0, "already connected to jack.");
+	if(!j_client) JACKconnect();
+	if(!j_client) return;
+
+	if(thread_run || rb) {
+			dbg(0, "already playing.");
 			return;
 	}
 
@@ -360,16 +370,6 @@ void JACKaudiooutputinit(void *sf, int channels, int samplerate, int64_t frames)
 	m_samplerate = samplerate;
 	playpause = silent = 0;
 	play_position =0;
-
-	j_client = jack_client_open("samplecat", (jack_options_t) 0, NULL);
-
-	if(!j_client) {
-			dbg(0, "could not connect to JACK.");
-			return;
-	}
-
-	jack_on_shutdown(j_client, jack_shutdown_callback, NULL);
-	jack_set_process_callback(j_client, jack_audio_callback, NULL);
 
 	j_output_port=(jack_port_t**) calloc(m_channels, sizeof(jack_port_t*));
 
@@ -412,8 +412,6 @@ void JACKaudiooutputinit(void *sf, int channels, int samplerate, int64_t frames)
 	pthread_create(&player_thread_id, NULL, jack_player_thread, NULL);
 	sched_yield();
 
-	jack_activate(j_client);
-
 #if 1
 	char *jack_autoconnect = getenv("JACK_AUTOCONNECT");
 	if(!jack_autoconnect) {
@@ -443,11 +441,13 @@ void JACKclose() {
 		}
 		pthread_join(player_thread_id, NULL);
 	}
-	if(j_client){
-		//jack_deactivate(j_client);
-		jack_client_close(j_client);
-	}
+
 	if(j_output_port) {
+		int i;
+		for(i=0;i<m_channels;i++) {
+			jack_port_unregister(j_client, j_output_port[i]);
+		}
+
 		free(j_output_port);
 		j_output_port=NULL;
 	}
@@ -467,20 +467,47 @@ void JACKclose() {
 	if (myplayer) ad_close(myplayer);
 	myplayer=NULL;
 	myplugin=NULL;
-	j_client=NULL;
 	app.playing_id = 0;
 };
+
+void JACKconnect() {
+	j_client = jack_client_open("samplecat", (jack_options_t) 0, NULL);
+
+	if(!j_client) {
+			dbg(0, "could not connect to JACK.");
+			return;
+	}
+
+	jack_on_shutdown(j_client, jack_shutdown_callback, NULL);
+	jack_set_process_callback(j_client, jack_audio_callback, NULL);
+	jack_activate(j_client);
+}
+
+void JACKdisconnect() {
+	JACKclose();
+	if(j_client){
+		//jack_deactivate(j_client);
+		jack_client_close(j_client);
+	}
+	j_client=NULL;
+}
 
 
 /* SampleCat API */
 
-void jplay__connect() {;}
+void jplay__connect() {
+	JACKconnect();
+}
+
+void jplay__disconnect() {
+	JACKdisconnect();
+}
 
 int
 jplay__play_path(const char* path)
 {
 	if(app.playing_id) jplay__stop(); //stop any previous playback.
-	if(j_client) jplay__stop();
+	if(myplayer) jplay__stop();
 
 	struct adinfo nfo;
 	void *sf = ad_open(path, &nfo);
@@ -553,13 +580,13 @@ jplay__play_all() {
 
 void jplay__seek (double pos) {
 	if(!app.playing_id) return;
-	if(!j_client) return;
+	if(!myplayer) return;
 	seek_request = pos;
 }
 
 
 int jplay__pause (int on) {
-	if(!j_client) return -1;
+	if(!myplayer) return -1;
 	if (on==1) playpause=1;
 	else if (on==0) playpause=0;
 	else if (on==-1) playpause = !playpause;
@@ -569,7 +596,7 @@ int jplay__pause (int on) {
 double jplay__getposition() {
 	if(!app.playing_id) return -1;
 	if(seek_request != -1.0) return -2;
-	if(!j_client) return -1;
+	if(!myplayer) return -1;
 	if(m_frames<1) return -1;
 	return (double)play_position / m_frames;
 }

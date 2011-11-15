@@ -94,6 +94,7 @@ static bool       config_load               ();
 static void       config_new                ();
 static bool       config_save               ();
 static void       menu_delete_row           (GtkMenuItem*, gpointer);
+void              menu_play_stop(           GtkWidget* widget, gpointer user_data);
 
 
 struct _app app;
@@ -338,6 +339,8 @@ main(int argc, char** argv)
 
 #if (defined USE_DBUS || defined USE_GAUDITION)
 	auditioner_connect();
+#elif (defined HAVE_JACK)
+	jplay__connect();
 #endif
 
 #ifdef USE_AYYI
@@ -360,9 +363,11 @@ main(int argc, char** argv)
 #endif
 	gtk_main();
 
-#if (defined USE_DBUS || defined USE_GAUDITION)
-	auditioner_stop();
+	menu_play_stop(NULL,NULL);
+#ifdef HAVE_JACK
+	jplay__disconnect();
 #endif
+
 	exit(EXIT_SUCCESS);
 }
 
@@ -966,7 +971,6 @@ update_rows(GtkWidget *widget, gpointer user_data)
 static void
 menu_play_all(GtkWidget* widget, gpointer user_data)
 {
-	dbg(0, "...");
 #if (defined USE_DBUS || defined USE_GAUDITION)
 	auditioner_play_all();
 #elif (defined HAVE_JACK)
@@ -978,7 +982,6 @@ menu_play_all(GtkWidget* widget, gpointer user_data)
 void
 menu_play_stop(GtkWidget* widget, gpointer user_data)
 {
-	dbg(0, "...");
 #if (defined USE_DBUS || defined USE_GAUDITION)
 	auditioner_stop();
 #elif (defined HAVE_JACK)
@@ -1434,11 +1437,14 @@ on_quit(GtkMenuItem* menuitem, gpointer user_data)
 	int exit_code = GPOINTER_TO_INT(user_data);
 	if(exit_code > 1) exit_code = 0; //ignore invalid exit code.
 
-#if (defined HAVE_JACK && !(defined USE_DBUS || defined USE_GAUDITION))
-	jplay__stop();
+	if(app.loaded) config_save();
+
+	menu_play_stop(NULL,NULL);
+#ifdef HAVE_JACK
+	jplay__disconnect();
 #endif
 
-	if(app.loaded) config_save();
+	backend.disconnect();
 
 #if 0
 	//disabled due to errors when quitting early.
@@ -1447,8 +1453,6 @@ on_quit(GtkMenuItem* menuitem, gpointer user_data)
 
 	gtk_main_quit();
 #endif
-
-	backend.disconnect();
 
 	dbg (1, "done.");
 	exit(exit_code);
