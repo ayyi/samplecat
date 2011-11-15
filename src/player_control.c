@@ -32,9 +32,9 @@ GtkWidget*
 player_control_new()
 {
 	g_return_val_if_fail(!app.playercontrol, NULL);
-	PlayCtrl* playercontrol = app.playercontrol = g_new0(PlayCtrl, 1);
+	PlayCtrl* pc = app.playercontrol = g_new0(PlayCtrl, 1);
 
-	GtkWidget* top = app.playercontrol->widget = gtk_scrolled_window_new(NULL, NULL);
+	GtkWidget* top = pc->widget = gtk_scrolled_window_new(NULL, NULL);
 	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(top), GTK_POLICY_NEVER, GTK_POLICY_NEVER);
 
 	GtkWidget* vbox = gtk_vbox_new(FALSE, 0);
@@ -52,7 +52,7 @@ player_control_new()
 	gtk_alignment_set_padding(GTK_ALIGNMENT(align9), 0, 0, MarginLeft-BORDERMARGIN, 0);
 	gtk_box_pack_start(GTK_BOX(vbox), align9, EXPAND_FALSE, FILL_FALSE, 0);
 
-	GtkWidget *slider = app.playercontrol->slider1 = gtk_hscale_new_with_range(0.0,1.0,1.0/(float)OVERVIEW_WIDTH);
+	GtkWidget *slider = pc->slider1 = gtk_hscale_new_with_range(0.0,1.0,1.0/(float)OVERVIEW_WIDTH);
 	gtk_widget_set_size_request(slider, OVERVIEW_WIDTH+BORDERMARGIN+BORDERMARGIN, -1);
 	gtk_widget_set_tooltip_text(slider, "playhead position / seek");
 	gtk_scale_set_draw_value(GTK_SCALE(slider), false);
@@ -62,7 +62,7 @@ player_control_new()
   } /* end JACK auditioner */
 
 	/* play ctrl buttons */
-	GtkWidget* hbox2 = app.playercontrol->pbctrl = gtk_hbox_new(FALSE, 10);
+	GtkWidget* hbox2 = pc->pbctrl = gtk_hbox_new(FALSE, 10);
 	gtk_box_pack_start(GTK_BOX(vbox), hbox2, EXPAND_FALSE, FILL_FALSE, 0);
 
 	GtkWidget* pb1 = gtk_button_new_with_label("stop");
@@ -70,7 +70,7 @@ player_control_new()
 	g_signal_connect((gpointer)pb1, "clicked", G_CALLBACK(menu_play_stop), NULL);
 
 	if (app.auditioner->playpause) {
-		GtkWidget* pb0 = app.playercontrol->pbpause = gtk_toggle_button_new_with_label("pause");
+		GtkWidget* pb0 = pc->pbpause = gtk_toggle_button_new_with_label("pause");
 		gtk_box_pack_start(GTK_BOX(hbox2), pb0, EXPAND_TRUE, FILL_TRUE, 0);
 		g_signal_connect((gpointer)pb0, "toggled", G_CALLBACK(cb_playpause), NULL);
 	}
@@ -85,7 +85,7 @@ player_control_new()
 	gtk_alignment_set_padding(GTK_ALIGNMENT(align10), 0, 0, MarginLeft-BORDERMARGIN, 0);
 	gtk_box_pack_start(GTK_BOX(vbox), align10, EXPAND_FALSE, FILL_FALSE, 0);
 
-	GtkWidget *slider2 = app.playercontrol->slider2 =gtk_hscale_new_with_range(-1200,1200,1.0);
+	GtkWidget *slider2 = pc->slider2 =gtk_hscale_new_with_range(-1200,1200,1.0);
 	gtk_widget_set_size_request(slider2, OVERVIEW_WIDTH+BORDERMARGIN+BORDERMARGIN, -1);
 	gtk_range_set_value(GTK_RANGE(slider2), app.effect_param[0]);
 	gtk_widget_set_tooltip_text(slider2, "Pitch in Cents (1/100 semitone)");
@@ -96,13 +96,13 @@ player_control_new()
 	GtkWidget* hbox = gtk_hbox_new(FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(vbox), hbox, EXPAND_FALSE, FILL_FALSE, 0);
 
-	GtkWidget* cb0 = app.playercontrol->cbfx = gtk_check_button_new_with_label("enable pitch-shift");
+	GtkWidget* cb0 = pc->cbfx = gtk_check_button_new_with_label("enable pitch-shift");
 	gtk_widget_set_tooltip_text(cb0, "Pitch-shifting (rubberband) will decrease playback-quality and increase CPU load.");
 	gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(cb0), app.enable_effect);
 	gtk_box_pack_start(GTK_BOX(hbox), cb0, EXPAND_FALSE, FILL_FALSE, 0);
 	g_signal_connect((gpointer)cb0, "toggled", G_CALLBACK(cb_pitch_toggled), NULL);
 #ifdef VARISPEED
-	GtkWidget* cb1 = app.playercontrol->cblnk = gtk_check_button_new_with_label("preserve pitch.");
+	GtkWidget* cb1 = pc->cblnk = gtk_check_button_new_with_label("preserve pitch.");
 	gtk_widget_set_tooltip_text(cb1, "link the two sliders to preserve the original pitch.");
 	gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(cb1), true);
 	gtk_widget_set_sensitive(cb1, app.enable_effect);
@@ -115,7 +115,7 @@ player_control_new()
 	gtk_alignment_set_padding(GTK_ALIGNMENT(align11), 0, 0, MarginLeft-BORDERMARGIN, 0);
 	gtk_box_pack_start(GTK_BOX(vbox), align11, EXPAND_FALSE, FILL_FALSE, 0);
 
-	GtkWidget *slider3 = app.playercontrol->slider3 = gtk_hscale_new_with_range(0.5,2.0,.01);
+	GtkWidget *slider3 = pc->slider3 = gtk_hscale_new_with_range(0.5,2.0,.01);
 	gtk_widget_set_size_request(slider3, OVERVIEW_WIDTH+BORDERMARGIN+BORDERMARGIN, -1);
 	gtk_range_set_inverted(GTK_RANGE(slider3),true);
 	gtk_widget_set_tooltip_text(slider3, "Playback speed factor.");
@@ -128,7 +128,6 @@ player_control_new()
 	slider3sigid = g_signal_connect((gpointer)slider3, "value-changed", G_CALLBACK(speed_value_changed), slider2);
 #endif /* LADSPA-rubberband/VARISPEED */
 	}
-
 
 	return vbox;
 }
@@ -177,6 +176,9 @@ static void cb_pitch_toggled(GtkToggleButton *btn, gpointer user_data) {
 
 static void cb_link_toggled(GtkToggleButton *btn, gpointer user_data) {
 	app.link_speed_pitch = gtk_toggle_button_get_active (btn);
+	if (app.link_speed_pitch) {
+		speed_value_changed(GTK_RANGE(app.playercontrol->slider3), app.playercontrol->slider2);
+	}
 }
 #endif
 
