@@ -126,6 +126,7 @@ inspector_new()
 	GtkWidget *slider2 = app.inspector->slider2 =gtk_hscale_new_with_range(-1200,1200,1.0);
 	gtk_widget_set_size_request(slider2, OVERVIEW_WIDTH+BORDERMARGIN+BORDERMARGIN, -1);
 	gtk_range_set_value(GTK_RANGE(slider2), app.effect_param[0]);
+	gtk_widget_set_tooltip_text(slider2, "Pitch in Cents (1/100 semitone)");
 	//gtk_scale_set_draw_value(GTK_SCALE(slider2), false);
 	gtk_container_add(GTK_CONTAINER(align10), slider2);	
 
@@ -134,12 +135,15 @@ inspector_new()
 	gtk_box_pack_start(GTK_BOX(vbox), hbox, EXPAND_FALSE, FILL_FALSE, 0);
 
 	GtkWidget* cb0 = app.inspector->cbfx = gtk_check_button_new_with_label("enable pitch-shift");
-	gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(cb0), true);
+	gtk_widget_set_tooltip_text(cb0, "Pitch-shifting (rubberband) will decrease playback-quality and increase CPU load.");
+	gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(cb0), app.enable_effect);
 	gtk_box_pack_start(GTK_BOX(hbox), cb0, EXPAND_FALSE, FILL_FALSE, 0);
 	g_signal_connect((gpointer)cb0, "toggled", G_CALLBACK(cb_pitch_toggled), NULL);
 #ifdef VARISPEED
 	GtkWidget* cb1 = app.inspector->cblnk = gtk_check_button_new_with_label("preserve pitch.");
+	gtk_widget_set_tooltip_text(cb1, "link the two sliders to preserve the original pitch.");
 	gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(cb1), true);
+	gtk_widget_set_sensitive(cb1, app.enable_effect);
 	gtk_box_pack_start(GTK_BOX(hbox), cb1, EXPAND_FALSE, FILL_FALSE, 0);
 	g_signal_connect((gpointer)cb1, "toggled", G_CALLBACK(cb_link_toggled), NULL);
 #endif
@@ -152,6 +156,7 @@ inspector_new()
 	GtkWidget *slider3 = app.inspector->slider3 = gtk_hscale_new_with_range(0.5,2.0,.01);
 	gtk_widget_set_size_request(slider3, OVERVIEW_WIDTH+BORDERMARGIN+BORDERMARGIN, -1);
 	gtk_range_set_inverted(GTK_RANGE(slider3),true);
+	gtk_widget_set_tooltip_text(slider3, "Playback speed factor.");
 	//gtk_scale_set_draw_value(GTK_SCALE(slider3), false);
 	gtk_range_set_value(GTK_RANGE(slider3), app.playback_speed);
 	gtk_container_add(GTK_CONTAINER(align11), slider3);	
@@ -698,6 +703,13 @@ gboolean update_slider (gpointer data) {
 	if (gtk_widget_has_grab(GTK_WIDGET(data))) return TRUE; // user is manipulating the slider
 	if (!app.auditioner->status) return FALSE;
 
+	if ( gtk_widget_get_sensitive(app.inspector->slider2)
+			&& (!app.enable_effect || !app.effect_enabled)) {
+		/* Note: app.effect_enabled is set by player thread 
+		 * and not yet up-to-date in show_player() */
+		gtk_widget_set_sensitive(app.inspector->slider2, false);
+	}
+
   double v = app.auditioner->status();
 	if (v>=0 && v<=1) {
 		g_signal_handler_block(data, slider1sigid);
@@ -740,7 +752,7 @@ void show_player() {
 #ifndef VARISPEED
 		gtk_widget_set_sensitive(app.inspector->slider3, false);
 #endif
-		if (!app.enable_effect || !app.effect_enabled) {
+		if (!app.enable_effect) {
 			gtk_widget_set_sensitive(app.inspector->slider2, false);
 		}
 #endif
