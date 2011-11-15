@@ -163,20 +163,23 @@ listmodel__add_result(Sample* result)
 void
 listmodel__update_result(Sample* sample, int what)
 {
-	if(!sample->row_ref){
-		/* this should NEVER HAPPEN */
-		dbg(0,"FIXME: rowref not set");
+	if(!sample->row_ref || !gtk_tree_row_reference_valid(sample->row_ref)){
+		/* this should never happen  --
+		 * it may if the file is removed again before
+		 * the background-process(es) completed
+		 */
+		dbg(0,"rowref not set");
 	}
 
 	switch (what) {
 		case COL_OVERVIEW:
 			backend.update_pixbuf(sample);
-			if (sample->row_ref) // XXX
+			if (sample->row_ref)
 				listmodel__set_overview(sample->row_ref, sample->overview);
 			break;
 		case COL_PEAKLEVEL:
 			backend.update_peaklevel(sample->id, sample->peak_level);
-			if (sample->row_ref) // XXX
+			if (sample->row_ref)
 				listmodel__set_peaklevel(sample->row_ref, sample->peak_level);
 			break;
 		case COLX_EBUR:
