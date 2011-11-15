@@ -611,13 +611,13 @@ create_nodes_for_path(gchar** path)
 				gchar* uri = make_uri(path, i);
 				if(strcmp(uri, g_get_home_dir())){
 					DhLink* l = dh_link_new(DH_LINK_TYPE_PAGE, path[i], uri);
-					g_free(uri);
 					GNode* leaf = g_node_new(l);
 
 					gint position = -1; //end
 					g_node_insert(node, position, leaf);
 					node = leaf;
 				}
+				if (uri) g_free(uri);
 			}
 		}
 	}
