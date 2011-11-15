@@ -803,7 +803,7 @@ menu__play(GtkMenuItem* menuitem, gpointer user_data)
 #if (defined USE_DBUS || defined USE_GAUDITION)
 		auditioner_play_path(item);
 #elif (defined HAVE_JACK)
-		jplay__play_path(item);
+		jplay__play_path(item, 1);
 #endif
 		g_free(item);
 	}

@@ -43,12 +43,38 @@ extern struct _app app;
 
 #include <jack/jack.h> // TODO use weakjack.h
 #include <jack/ringbuffer.h>
+
 #include "audio_decoder/ad.h"
 
 static jack_client_t *j_client = NULL;
 static jack_port_t **j_output_port = NULL;
 static jack_default_audio_sample_t **j_out = NULL;
 static jack_ringbuffer_t *rb = NULL;
+
+#define JACK_MIDI 1
+#ifdef JACK_MIDI
+#warning COMPILING W/ JACK-MIDI PLAYER TRIGGER
+#include <jack/midiport.h>
+static jack_port_t *jack_midi_port = NULL;
+
+#define JACK_MIDI_QUEUE_SIZE (1024)
+typedef struct my_midi_event {
+	jack_nframes_t time;
+	size_t size;
+	jack_midi_data_t buffer[16];
+} my_midi_event_t;
+
+my_midi_event_t event_queue[JACK_MIDI_QUEUE_SIZE];
+int queued_events_start = 0;
+int queued_events_end = 0;
+
+static int      midi_thread_run = 0;
+pthread_t midi_thread_id;
+pthread_mutex_t midi_thread_lock = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t  midi_ready = PTHREAD_COND_INITIALIZER;
+static int midi_note = 0;
+static int midi_octave = 0;
+#endif
 
 static void *   myplayer;
 static LadSpa** myplugin = NULL;
@@ -91,6 +117,31 @@ void JACKdisconnect();
 int jack_audio_callback(jack_nframes_t nframes, void *arg) {
 	int c,s;
 
+#ifdef JACK_MIDI
+	int n;
+	void *jack_buf = jack_port_get_buffer(jack_midi_port, nframes);
+	int nevents = jack_midi_get_event_count(jack_buf);
+	for (n=0; n<nevents; n++) {
+		jack_midi_event_t ev;
+		jack_midi_event_get(&ev, jack_buf, n);
+
+		if (ev.size <3 || ev.size > 3) continue; // filter note on/off
+		else {
+			event_queue[queued_events_end].time = ev.time;
+			event_queue[queued_events_end].size = ev.size;
+			memcpy (event_queue[queued_events_end].buffer, ev.buffer, ev.size);
+			queued_events_end = (queued_events_end +1 ) % JACK_MIDI_QUEUE_SIZE;
+		}
+  }
+	if (queued_events_start != queued_events_end) {
+		/* Tell the midi thread there is work to do. */
+		if(pthread_mutex_trylock(&midi_thread_lock) == 0) {
+			pthread_cond_signal(&midi_ready);
+			pthread_mutex_unlock(&midi_thread_lock);
+		}
+	}
+#endif
+
 	if (!player_active) return (0);
 
 	for(c=0; c< m_channels; c++) {
@@ -121,6 +172,37 @@ int jack_audio_callback(jack_nframes_t nframes, void *arg) {
 	return(0);
 };
 
+#ifdef JACK_MIDI
+void *jack_midi_thread(void *unused){
+
+	pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
+	pthread_mutex_lock(&midi_thread_lock);
+	while(midi_thread_run) {
+		while (queued_events_start != queued_events_end) {
+		 my_midi_event_t *ev = &event_queue[queued_events_start];
+		 if (ev->size != 3) continue;
+		 if ((ev->buffer[0]&0x80) != 0x80) continue;
+		 int note = ev->buffer[1]&0x7f;
+		 int velo = ev->buffer[2]&0x7f;
+		 if ((ev->buffer[0]&0x10)==0 || (ev->buffer[2]==0)) {
+			 dbg (0, "NOTE OFF: %d", note);
+		 } else {
+#define BASE_NOTE (69) ///< untransposed sample on this key.
+			 midi_note= (132+note-(BASE_NOTE))%12;
+			 midi_octave= floor((note-BASE_NOTE)/12.0);
+			 if (midi_octave<-3) { midi_octave=-3; midi_note=0;}
+			 if (midi_octave> 3) { midi_octave=3;  midi_note=11;}
+			 dbg (0, "NOTE On : %d -- %d %d", note, midi_octave, midi_note);
+			 jplay__play_selected();
+		 }
+		 queued_events_start = (queued_events_start +1 ) % JACK_MIDI_QUEUE_SIZE;
+		}
+		pthread_cond_wait(&midi_ready, &midi_thread_lock);
+	}
+	pthread_mutex_unlock(&midi_thread_lock);
+	return NULL;
+}
+#endif
 
 void jack_shutdown_callback(void *arg){
 	dbg(0, "jack server [unexpectedly] shut down.");
@@ -196,7 +278,11 @@ void *jack_player_thread(void *unused){
 	while(thread_run) {
 		int rv = ad_read(myplayer, tmpbuf, nframes * m_channels);
 		decoder_position+=rv/m_channels;
+#ifdef JACK_MIDI
+		const float pp[3] = {app.effect_param[0], app.effect_param[1]+midi_note, app.effect_param[2]+midi_octave};
+#else
 		const float pp[3] = {app.effect_param[0], app.effect_param[1], app.effect_param[2]};
+#endif
 #if (defined ENABLE_RESAMPLING) && (defined VARISPEED)
 		const float varispeed = app.playback_speed;
 #if 0
@@ -447,7 +533,6 @@ void JACKclose() {
 		for(i=0;i<m_channels;i++) {
 			jack_port_unregister(j_client, j_output_port[i]);
 		}
-
 		free(j_output_port);
 		j_output_port=NULL;
 	}
@@ -471,6 +556,8 @@ void JACKclose() {
 };
 
 void JACKconnect() {
+//TODO: allow mult. instances.
+// try append -1, -2,.. if name already in use
 	j_client = jack_client_open("samplecat", (jack_options_t) 0, NULL);
 
 	if(!j_client) {
@@ -480,11 +567,33 @@ void JACKconnect() {
 
 	jack_on_shutdown(j_client, jack_shutdown_callback, NULL);
 	jack_set_process_callback(j_client, jack_audio_callback, NULL);
+
+#ifdef JACK_MIDI
+	jack_midi_port = jack_port_register(j_client, "Midi in", JACK_DEFAULT_MIDI_TYPE, JackPortIsInput , 0);
+	if (jack_midi_port == NULL) {
+    dbg(0, "can't register jack-midi-port\n");
+  }
+	midi_thread_run = 1;
+	pthread_create(&midi_thread_id, NULL, jack_midi_thread, NULL);
+	sched_yield();
+#endif
+
 	jack_activate(j_client);
 }
 
 void JACKdisconnect() {
 	JACKclose();
+#ifdef JACK_MIDI
+	if(midi_thread_run) {
+		midi_thread_run = 0;
+		if(pthread_mutex_trylock(&midi_thread_lock) == 0) {
+			pthread_cond_signal(&midi_ready);
+			pthread_mutex_unlock(&midi_thread_lock);
+		}
+		pthread_join(midi_thread_id, NULL);
+	}
+#endif
+
 	if(j_client){
 		//jack_deactivate(j_client);
 		jack_client_close(j_client);
@@ -504,10 +613,17 @@ void jplay__disconnect() {
 }
 
 int
-jplay__play_path(const char* path)
+jplay__play_path(const char* path, int reset_pitch)
 {
 	if(app.playing_id) jplay__stop(); //stop any previous playback.
 	if(myplayer) jplay__stop();
+
+#ifdef JACK_MIDI
+	if (reset_pitch) {
+		midi_note =0;
+		midi_octave =0;
+	}
+#endif
 
 	struct adinfo nfo;
 	void *sf = ad_open(path, &nfo);
@@ -523,7 +639,7 @@ void
 jplay__play(Sample* sample)
 {
 	if(!sample->id){ perr("bad arg: id=0\n"); return; }
-	if (jplay__play_path(sample->full_path)) return;
+	if (jplay__play_path(sample->full_path, 1)) return;
 	app.playing_id = sample->id;
 	show_player();
 }
@@ -557,6 +673,26 @@ jplay__play_next() {
 	}else{
 		dbg(1, "play_all finished. disconnecting...");
 	}
+}
+
+void
+jplay__play_selected() {
+	dbg(0, "...");
+	Sample *sample = sample_get_by_row_ref(app.inspector->row_ref);
+	if (!sample) {
+		dbg(0, "no sample selected. not starting playback");
+		return;
+	}
+	dbg(0, "MIDI PLAY %s", sample->full_path);
+
+	/* jplay__play(s); - no reset midi pitch */
+	if(!sample->id){ perr("bad arg: id=0\n"); return; }
+	if (jplay__play_path(sample->full_path, 0)) return;
+	app.playing_id = sample->id;
+	show_player();
+	/* jplay__play(s); */
+
+	sample_unref(sample);
 }
 
 void

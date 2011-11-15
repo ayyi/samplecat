@@ -47,9 +47,10 @@ void     jplay__toggle     (Sample*);
  * play audio-file with given file-path
  * app.playing_id is set to (-1), player UI is triggered
  * @param path absolute path to the file.
+ * @param reset_pitch 1: reset set midi pitch adj.
  * @return 0 on success, -1 on error.
  */
-int      jplay__play_path  (const char* path);
+int      jplay__play_path  (const char* path, int reset_pitch);
 /**
  * play all files currently in main Tree model
  */
@@ -60,6 +61,7 @@ void     jplay__play_all   ();
  * player and not present in the Samplecat auditioner API
  */
 
+void     jplay__play_selected();
 /** 
  * toggle, set or unset playback pause
  * @param on: 1: pause playback, 0: resume playback, -1: toggle,
