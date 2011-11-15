@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <gtk/gtk.h>
+#include "typedefs.h"
 
 #define dbg(A, B, ...) debug_printf(__func__, A, B, ##__VA_ARGS__)
 #define perr(A, ...) errprintf2(__func__, A, ##__VA_ARGS__)
@@ -27,13 +28,6 @@
 #define TIMER_CONTINUE TRUE
 #define HANDLED TRUE
 #define NOT_HANDLED FALSE
-
-#ifndef false
-  #define false FALSE
-#endif
-#ifndef true
-  #define true TRUE
-#endif
 
 typedef struct _rect {
   double x1;

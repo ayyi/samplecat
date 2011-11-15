@@ -1,5 +1,6 @@
 #ifndef __SAMPLECAT_DND_H_
 #define __SAMPLECAT_DND_H_
+#include <gtk/gtk.h>
 enum {
   TARGET_APP_COLLECTION_MEMBER,
   TARGET_URI_LIST,

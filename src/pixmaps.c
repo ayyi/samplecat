@@ -47,7 +47,6 @@
 #include "src/typedefs.h"
 #include "fscache.h"
 //#include "gui_support.h"
-#include "rox/rox_support.h"
 #include "pixmaps.h"
 //#include "main.h"
 //#include "filer.h"

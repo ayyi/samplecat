@@ -1,4 +1,10 @@
-typedef enum
+#ifndef __SAMPLECAT_OVERVIEW_H
+#define __SAMPLECAT_OVERVIEW_H
+
+#include <gtk/gtk.h>
+#include "typedefs.h"
+
+enum MsgType
 {
 	MSG_TYPE_OVERVIEW,
 	MSG_TYPE_PEAKLEVEL,
@@ -7,7 +13,7 @@ typedef enum
 
 struct _message
 {
-	MsgType type;
+	enum MsgType type;
 	Sample* sample;
 };
 
@@ -15,4 +21,4 @@ gpointer    overview_thread        (gpointer data);
 void        request_overview       (Sample*);
 void        request_peaklevel      (Sample*);
 void        request_ebur128        (Sample*);
-
+#endif

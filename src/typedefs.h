@@ -26,9 +26,9 @@ typedef enum {
 	BACKEND_TRACKER,
 } BackendType;
 
-typedef struct _sample            Sample;
-
 typedef struct _menu_def          MenuDef;
+typedef struct _sample            Sample;
+typedef struct _inspector         Inspector;
 typedef struct _auditioner        Auditioner;
 
 #ifndef __file_manager_h__
@@ -56,6 +56,10 @@ typedef struct _ViewDirTree ViewDirTree;
 
 #ifndef true
   #define true TRUE
+#endif
+
+#ifndef false
+  #define false FALSE
 #endif
 
 #ifndef bool

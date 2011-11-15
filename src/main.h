@@ -2,8 +2,8 @@
 #define __SAMPLECAT_MAIN_H_
 
 #include <gtk/gtk.h>
-#include "types.h"
 #include "typedefs.h"
+#include "types.h"
 
 char err [32];
 char warn[32];
@@ -93,6 +93,7 @@ struct _app
 	gchar*         search_category;
 	gboolean       add_recursive;
 	gboolean       loop_playback;
+	Auditioner     auditioner;
 #if (defined HAVE_JACK)
 	gboolean       enable_effect;
 	gboolean       effect_enabled; // read-only set by jack_player.c
@@ -118,10 +119,6 @@ struct _app
 	GList*         backends;
 
 	int            playing_id; ///< database index of the file that is currently playing, or zero if none playing, -1 if playing an external file.
-
-#ifdef USE_DBUS
-	Auditioner*    auditioner;
-#endif
 
 	GtkListStore*  store;
 	Inspector*     inspector;

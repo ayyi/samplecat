@@ -1,4 +1,4 @@
-
+#include <gtk/gtk.h>
 gboolean    window_new            ();
 void        colour_box_update     ();
 gboolean    tag_selector_new      ();

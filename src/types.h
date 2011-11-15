@@ -1,28 +1,7 @@
 #ifndef __SAMPLECAT_TYPES_H_
 #define __SAMPLECAT_TYPES_H_
-//TODO this is annoyingly similar to struct Sample - consider merging...
-#if 0 // merge in progress
-struct _samplecat_result
-{
-	int                  idx;
-	GtkTreeRowReference* row_ref;
-	char*                sample_name;
-	char*                full_path;
-	char*                dir;
-	char*                keywords;
-	GdkPixbuf*           overview;
-	char*                mimetype;
-	unsigned             length;
-	unsigned             sample_rate;
-	int                  channels;
-	float                peak_level;
-	char*                ebur;
-	char*                notes;
-	int                  colour;
-	gboolean             online;
-	char*                updated; //TODO char* ? int? date?
-};
-#endif
+#include <gtk/gtk.h>
+#include "typedefs.h"
 
 struct _menu_def
 {
@@ -32,7 +11,7 @@ struct _menu_def
 	gboolean             sensitive;
 };
 
-typedef struct _inspector
+struct _inspector
 {
 	unsigned       row_id;
 	GtkTreeRowReference* row_ref;
@@ -61,5 +40,21 @@ typedef struct _inspector
 	GtkWidget*     edit;
 	int            min_height;
 	int            user_height;
-} Inspector;
+};
+
+struct _auditioner {
+	void    (*connect)();
+	void    (*disconnect)();
+	void    (*play_path)(const char *);
+	void    (*play)(Sample *);
+	void    (*toggle)(Sample *);
+	void    (*play_all)();
+	void    (*stop)();
+/* extended API */
+	void    (*play_selected)();
+	int     (*playpause)(int);
+	void    (*seek)(double);
+	double  (*status)();
+};
+
 #endif

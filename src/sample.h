@@ -3,12 +3,13 @@
 
 #include <stdlib.h>
 #include <stdint.h>
+#include <gtk/gtk.h>
+#include "typedefs.h"
 
 #ifndef PATH_MAX
 #define PATH_MAX (1024)
 #endif
 
-#include <gtk/gtk.h> // TODO get rid of GTK tpes in the struct
 struct _sample
 {
 	int                  id;  // database index.
@@ -37,6 +38,7 @@ struct _sample
 
 	GdkPixbuf*   overview; // pixbuf
 };
+
 
 /** create new sample structures
  * all _new, _dup functions imply sample_ref() 

@@ -1,7 +1,7 @@
 #ifndef __INSPECTOR_H_
 #define __INSPECTOR_H_
 #include <gtk/gtk.h>
-#include "types.h"
+#include "typedefs.h"
 
 GtkWidget* inspector_new();
 void       inspector_free(Inspector*);

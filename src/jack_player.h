@@ -24,7 +24,6 @@
 #ifndef __SAMPLEJACK_H_
 #define __SAMPLEJACK_H_
 #include "typedefs.h"
-#include "sample.h"
 
 #define VARISPEED 1 ///< allow to change speed while playing
 
@@ -50,7 +49,8 @@ void     jplay__toggle     (Sample*);
  * @param reset_pitch 1: reset set midi pitch adj.
  * @return 0 on success, -1 on error.
  */
-int      jplay__play_path  (const char* path, int reset_pitch);
+void     jplay__play_path  (const char* path);
+int      jplay__play_pathX (const char* path, int reset_pitch);
 /**
  * play all files currently in main Tree model
  */

@@ -7,6 +7,10 @@
 #ifndef _FSCACHE_H
 #define _FSCACHE_H
 
+#include <fcntl.h>
+#include "file_manager/rox_global.h"
+#include "file_manager/rox/rox_support.h"
+
 #include <sys/stat.h>
 #include <unistd.h>
 #include <stdlib.h>
