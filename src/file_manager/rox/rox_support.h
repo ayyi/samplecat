@@ -6,6 +6,9 @@
 #ifndef _SUPPORT_H
 #define _SUPPORT_H
 
+#include <unistd.h>
+#include "rox_global.h"
+
 #define PRETTY_SIZE_LIMIT 10000
 #define TIME_FORMAT "%T %d %b %Y"
 

@@ -7,8 +7,6 @@
 #define _PIXMAP_H
 
 #include <gtk/gtk.h>
-#include "file_manager/rox_global.h"
-#include "file_manager/rox/rox_support.h"
 
 extern GFSCache *pixmap_cache;
 
