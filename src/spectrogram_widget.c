@@ -241,10 +241,8 @@ SpectrogramWidget* spectrogram_widget_new (void) {
 static GObject * spectrogram_widget_constructor (GType type, guint n_construct_properties, GObjectConstructParam * construct_properties) {
 	GObject * obj;
 	GObjectClass * parent_class;
-	SpectrogramWidget * self;
 	parent_class = G_OBJECT_CLASS (spectrogram_widget_parent_class);
 	obj = parent_class->constructor (type, n_construct_properties, construct_properties);
-	self = SPECTROGRAM_WIDGET (obj);
 	return obj;
 }
 
