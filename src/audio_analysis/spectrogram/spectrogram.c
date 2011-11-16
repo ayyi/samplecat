@@ -136,7 +136,7 @@ get_colour_map_value (float value, double spec_floor_db, unsigned char colour [3
 
 	if (indx < 0) {
 		printf ("\nError : colour map array index is %d\n\n", indx);
-		exit (1) ;
+		exit (1) ; // XXX we must not exit samplecat !
 	};
 
 	if (indx >= G_N_ELEMENTS (map) - 1) {
@@ -194,7 +194,7 @@ apply_window (double * data, int datalen)
 		if (datalen > G_N_ELEMENTS (window))
 		{
 			printf ("%s : datalen >  MAX_HEIGHT\n", __func__) ;
-			exit (1) ;
+			exit (1) ; // XXX we must not exit samplecat !
 		} ;
 
 		calc_kaiser_window (window, datalen, 20.0) ;
@@ -284,7 +284,7 @@ calculate_ticks (double max, double distance, TICKS * ticks)
 
 	if (max < 0)
 	{	printf ("\nError in %s : max < 0\n\n", __func__) ;
-		exit (1) ;
+		exit (1) ; // XXX we must not exit samplecat !
 		} ;
 
 	while (scale * max >= G_N_ELEMENTS (div_array))
@@ -302,7 +302,7 @@ calculate_ticks (double max, double distance, TICKS * ticks)
 
 	if (divisions > G_N_ELEMENTS (ticks->value) - 1)
 	{	printf ("Error : divisions (%d) > G_N_ELEMENTS (ticks->value) (%lu)\n", divisions, (long unsigned) G_N_ELEMENTS (ticks->value)) ;
-		exit (1) ;
+		exit (1) ; // XXX we must not exit samplecat !
 		} ;
 
 	for (k = 0 ; k <= divisions ; k++)
@@ -368,13 +368,13 @@ render_to_pixbuf (const RENDER * render, void *infile, int samplerate, int64_t f
 
 	if (2 * speclen > G_N_ELEMENTS (time_domain)) {
 		printf ("%s : 2 * speclen > G_N_ELEMENTS (time_domain)\n", __func__);
-		exit (1);
+		exit (1); // XXX we must not exit samplecat !
 	};
 
 	plan = fftw_plan_r2r_1d (2 * speclen, time_domain, freq_domain, FFTW_R2HC, FFTW_MEASURE | FFTW_PRESERVE_INPUT) ;
 	if (plan == NULL) {
 		printf ("%s : line %d : create plan failed.\n", __FILE__, __LINE__);
-		exit (1) ;
+		exit (1) ; // XXX we must not exit samplecat !
 	};
 
 	for (w = 0 ; w < width ; w++) {
@@ -394,6 +394,11 @@ render_to_pixbuf (const RENDER * render, void *infile, int samplerate, int64_t f
 
 		interp_spec (mag_spec [w], height, single_mag_spec, speclen) ;
 	};
+
+	/* FIXME: there's some worm in here - on OSX i386 max_mag can become NaN
+	 * it's also been seen but more rarely on OSX x86_64.
+	 * -> image creation fails w/ "colour map array index < 0"
+	 */
 
 	fftw_destroy_plan (plan);
 
@@ -438,7 +443,7 @@ check_int_range (const char * name, int value, int lower, int upper)
 {
 	if (value < lower || value > upper)
 	{	printf ("Error : '%s' parameter must be in range [%d, %d]\n", name, lower, upper) ;
-		exit (1) ;
+		exit (1) ; // XXX we must not exit samplecat !
 		} ;
 } /* check_int_range */
 
