@@ -30,6 +30,8 @@ enum {
   MYSQL_LAST_CHECKED,
   MYSQL_MIMETYPE,
   MYSQL_PEAKLEVEL,
+	// TODO rg: save MTIME, EBUR and ABSOLUTE_PATH
+	// see mysql__update_ebur() and  mysql__update_online() below as well
 };
 #define MYSQL_NOTES 11
 #define MYSQL_COLOUR 12
@@ -302,7 +304,7 @@ mysql__update_peaklevel(int id, float level)
 gboolean
 mysql__file_exists(const char* path)
 {
-	return false; // TODO - check if given file is already in DB.
+	return false; // TODO rg - check if given file is already in DB. - needs ABSOLUTE_PATH
 }
 
 //-------------------------------------------------------------
@@ -402,7 +404,7 @@ mysql__search_iter_next_(unsigned long** lengths)
 	full_path[PATH_MAX-1]='\0';
 
 	result.id          = atoi(row[MYSQL_ID]);
-	result.full_path   = full_path; // XXX TODO save in database!
+	result.full_path   = full_path; // TODO rg - save in database
 	result.sample_name = row[MYSQL_NAME];
 	result.dir         = row[MYSQL_DIR];
 	result.keywords    = row[MYSQL_KEYWORDS];
@@ -412,11 +414,11 @@ mysql__search_iter_next_(unsigned long** lengths)
 	result.peak_level  = get_float(row, MYSQL_PEAKLEVEL);
 	result.overview    = pixbuf;
 	result.notes       = row[MYSQL_NOTES];
-	result.ebur        = ""; // row[MYSQL_EBUR] TODO
+	result.ebur        = ""; // TODO rg - save in database
 	result.colour_index= get_int(row, MYSQL_COLOUR);
 	result.mimetype    = row[MYSQL_MIMETYPE];
 	result.online      = get_int(row, MYSQL_ONLINE);
-	result.mtime       = 0; 
+	result.mtime       = 0; // TODO rg - save in database
 	return &result;
 }
 
