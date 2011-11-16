@@ -81,7 +81,7 @@ mysql__connect()
 	if(!mysql.host){
 		if(!mysql_init(&mysql)){
 			printf("Failed to initiate MySQL connection.\n");
-			exit(1);
+			return 0;
 		}
 	}
 	dbg (1, "MySQL Client Version is %s", mysql_get_client_info());
