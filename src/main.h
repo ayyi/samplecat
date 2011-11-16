@@ -27,18 +27,19 @@ char warn[32];
 
 struct _config
 {
+	char      database_backend[64];
 	char      database_host[64];
 	char      database_user[64];
 	char      database_pass[64];
 	char      database_name[64];
-	char      show_dir[256];
-	char      window_width[64];
-	char      window_height[64];
+	char      show_dir[PATH_MAX];
+	char      window_width[8];
+	char      window_height[8];
 	char      colour[PALETTE_SIZE][8];
 	//gboolean  add_recursive; ///< TODO save w/ config ?
 	//gboolean  loop_playback; ///< TODO save w/ config ?
-	char      column_widths[4][64];
-	char      browse_dir[64];
+	char      column_widths[4][8];
+	char      browse_dir[PATH_MAX];
 };
 
 

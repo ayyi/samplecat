@@ -19,6 +19,10 @@
 # define PRIi64   __PRI64_PREFIX "i"
 #endif
 
+#ifndef PATH_MAX
+#define PATH_MAX (1024)
+#endif
+
 typedef enum {
 	BACKEND_NONE = 0,
 	BACKEND_MYSQL,

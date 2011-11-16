@@ -6,10 +6,6 @@
 #include <gtk/gtk.h>
 #include "typedefs.h"
 
-#ifndef PATH_MAX
-#define PATH_MAX (1024)
-#endif
-
 struct _sample
 {
 	int                  id;  // database index.

@@ -278,6 +278,12 @@ main(int argc, char** argv)
 
 	config_load();
 
+	if (app.config.database_backend && can_use(app.backends, app.config.database_backend)) {
+		list_clear(app.backends);
+		ADD_BACKEND(app.config.database_backend);
+		dbg(0, "config: %s", app.config.database_backend);
+	}
+
 	g_thread_init(NULL);
 	gdk_threads_init();
 	app.mutex = g_mutex_new();
@@ -1280,7 +1286,7 @@ toggle_recursive_add(GtkWidget *widget, gpointer user_data)
 	return false;
 }
 
-extern char theme_name[];
+extern char theme_name[64];
 
 static bool
 config_load()
@@ -1301,28 +1307,42 @@ config_load()
 		gchar* groupname = g_key_file_get_start_group(app.key_file);
 		dbg (2, "group=%s.", groupname);
 		if(!strcmp(groupname, "Samplecat")){
-			/*
-			gsize length;
-			gchar** keys = g_key_file_get_keys(app.key_file, "Samplecat", &length, &error);
-			*/
+#define num_keys (12)
+#define ADD_CONFIG_KEY(VAR, NAME) \
+			strcpy(keys[i],NAME); \
+			loc[i] = VAR; \
+			siz[i] = G_N_ELEMENTS(VAR);\
+			i++;
 
-			#define num_keys (11)
-			//FIXME 64 is not long enough for directories
-			char keys[num_keys+(PALETTE_SIZE-1)][64] = 
-				{"database_host",          "database_user",          "database_pass",          "database_name",          "show_dir",          "window_height",          "window_width",         "icon_theme", "col1_width",                "filter",          "browse_dir"};
-			char* loc[num_keys+(PALETTE_SIZE-1)]     = 
-				{app.config.database_host, app.config.database_user, app.config.database_pass, app.config.database_name, app.config.show_dir, app.config.window_height, app.config.window_width, theme_name,  app.config.column_widths[0], app.search_phrase, app.config.browse_dir};
+			char keys[num_keys+(PALETTE_SIZE-1)][64];
+			char *loc[num_keys+(PALETTE_SIZE-1)];
+			size_t siz[num_keys+(PALETTE_SIZE-1)];
 
-			for (i=0;i<PALETTE_SIZE-1;i++) {
-				snprintf(keys[i+num_keys],64, "colorkey%02d", i+1);
-				loc[i+num_keys] = app.config.colour[i+1];
-			}
+			i=0;
+			ADD_CONFIG_KEY (app.config.database_backend, "database_backend");
+			ADD_CONFIG_KEY (app.config.database_host,    "mysql_host");
+			ADD_CONFIG_KEY (app.config.database_user,    "mysql_user");
+			ADD_CONFIG_KEY (app.config.database_pass,    "mysql_pass");
+			ADD_CONFIG_KEY (app.config.database_name,    "mysql_name");
+			ADD_CONFIG_KEY (app.config.show_dir,         "show_dir");
+			ADD_CONFIG_KEY (app.config.window_height,    "window_height");
+			ADD_CONFIG_KEY (app.config.window_width,     "window_width");
+			ADD_CONFIG_KEY (theme_name,                  "icon_theme");
+			ADD_CONFIG_KEY (app.config.column_widths[0], "col1_width");
+			ADD_CONFIG_KEY (app.search_phrase,           "filter");
+			ADD_CONFIG_KEY (app.config.browse_dir,       "browse_dir");
 
 			int k;
-			gchar* keyval;
+			for (k=0;k<PALETTE_SIZE-1;k++) {
+				char tmp[16]; snprintf(tmp,16, "colorkey%02d", k+1);
+				ADD_CONFIG_KEY(app.config.colour[k+1], tmp)
+			}
+
 			for(k=0;k<(num_keys+PALETTE_SIZE-1);k++){
+				gchar* keyval;
 				if((keyval = g_key_file_get_string(app.key_file, groupname, keys[k], &error))){
-					snprintf(loc[k], 64, "%s", keyval);
+					size_t keylen = siz[k];
+					snprintf(loc[k], keylen, "%s", keyval); loc[k][keylen-1] = '\0';
 					dbg(2, "%s=%s", keys[k], keyval);
 					g_free(keyval);
 				}else{
@@ -1438,10 +1458,11 @@ config_new()
 	char data[256 * 256];
 	sprintf(data, "# this is the default config file for the Samplecat application.\n# pls enter your database details.\n"
 		"[Samplecat]\n"
-		"database_host=localhost\n"
-		"database_user=username\n"
-		"database_pass=pass\n"
-		"database_name=samplelib\n"
+		"database_backend=sqlite\n"
+		"mysql_host=localhost\n"
+		"mysql_user=username\n"
+		"mysql_pass=pass\n"
+		"mysql_name=samplelib\n"
 		"show_dir=\n"
 		);
 
@@ -1468,7 +1489,7 @@ on_quit(GtkMenuItem* menuitem, gpointer user_data)
 	menu_play_stop(NULL,NULL);
 	app.auditioner->disconnect();
 
-	backend.disconnect();
+	if (backend.disconnect) backend.disconnect();
 
 #if 0
 	//disabled due to errors when quitting early.
@@ -1580,6 +1601,7 @@ void auditioner_nullS(Sample *s) {;}
 void
 set_auditioner() /* tentative - WIP */
 {
+  printf("auditioner backend: "); fflush(stdout);
   const static Auditioner a_null = {
 		&auditioner_nullC,
 		&auditioner_null,
