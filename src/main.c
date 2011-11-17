@@ -399,6 +399,7 @@ main(int argc, char** argv)
 	app.loaded = true;
 	dbg(1, "loaded");
 	message_panel__add_msg("hello", GTK_STOCK_INFO);
+	statusbar_print(2,PACKAGE_NAME". Version "PACKAGE_VERSION);
 
 #ifdef __APPLE__
 	gtk_osxapplication_ready(osxApp);
@@ -1070,7 +1071,7 @@ static MenuDef _menu_def[] = {
 	{"Play All",       G_CALLBACK(menu_play_all),   GTK_STOCK_MEDIA_PLAY, true},
 	{"Stop Playback",  G_CALLBACK(menu_play_stop),  GTK_STOCK_MEDIA_STOP, true},
 	{"Reset Colours",  G_CALLBACK(listview__reset_colours),
-		                                         GTK_STOCK_REVERT_TO_SAVED, true},
+		                                         GTK_STOCK_OK, true},
 	{"Edit tags",      G_CALLBACK(edit_row),   GTK_STOCK_EDIT,        true},
 	{"Open",           G_CALLBACK(edit_row),   GTK_STOCK_OPEN,       false},
 	{"Open Directory", G_CALLBACK(NULL),       GTK_STOCK_OPEN,        true},
@@ -1483,8 +1484,7 @@ config_new()
 void
 on_quit(GtkMenuItem* menuitem, gpointer user_data)
 {
-	//if(user_data) dbg(0, "exitcode=%i", GPOINTER_TO_INT(user_data));
-	int exit_code = (int) GPOINTER_TO_INT(user_data);
+	int exit_code = GPOINTER_TO_INT(user_data);
 	if(exit_code > 1) exit_code = 0; //ignore invalid exit code.
 
 	if(app.loaded) config_save();
