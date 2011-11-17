@@ -63,7 +63,8 @@ typedef void (*SpectrogramReady)(const char* filename, GdkPixbuf*, gpointer);
 typedef void (*SpectrogramReadyTarget)(const char* filename, GdkPixbuf*, gpointer, void* target);
 
 #define SG_WIDTH  (1024)
-#define SG_HEIGHT (640)
+#define SG_HEIGHT (364)
+#define MAX_HEIGHT (2048) // due to speclen depending on sample-rate, max samplerate that can be analysed is MAX_HEIGHT*100;
 #define	SPEC_FLOOR_DB		-120.0
 
 
@@ -153,7 +154,7 @@ read_mono_audio (void * file, struct adinfo *nfo, double * data, int datalen, in
 static int
 apply_window (double * data, int datalen)
 {
-	static double window [10 * SG_HEIGHT] ;
+	static double window [10 * MAX_HEIGHT] ;
 	static int window_len = 0 ;
 	int k ;
 
@@ -162,7 +163,7 @@ apply_window (double * data, int datalen)
 		window_len = datalen ;
 		if (datalen > G_N_ELEMENTS (window))
 		{
-			printf ("%s : datalen >  SG_HEIGHT\n", __func__) ;
+			printf ("%s : datalen >  MAX_HEIGHT\n", __func__) ;
 			return -1;
 		}
 
@@ -192,7 +193,7 @@ calc_magnitude (const double * freq, int freqlen, double * magnitude)
 
 
 static int
-_render_spectrogram_to_pixbuf (GdkPixbuf* pixbuf, double spec_floor_db, float mag2d [SG_WIDTH][SG_HEIGHT], double maxval)
+_render_spectrogram_to_pixbuf (GdkPixbuf* pixbuf, double spec_floor_db, float mag2d [SG_WIDTH][MAX_HEIGHT], double maxval)
 {
 	unsigned char colour [3] = { 0, 0, 0 } ;
 	double linear_spec_floor ;
@@ -252,15 +253,15 @@ static int
 render_to_pixbuf (void *infile, struct adinfo *nfo, GdkPixbuf* pixbuf)
 {
 	int rv =0; /* OK */
-	static double time_domain [10 * SG_HEIGHT];
-	static double freq_domain [10 * SG_HEIGHT];
-	static double single_mag_spec [5 * SG_HEIGHT];
-	static float mag_spec [SG_WIDTH][SG_HEIGHT];
+	static double time_domain [10 * MAX_HEIGHT];
+	static double freq_domain [10 * MAX_HEIGHT];
+	static double single_mag_spec [5 * MAX_HEIGHT];
+	static float mag_spec [SG_WIDTH][MAX_HEIGHT];
 
 	fftw_plan plan;
 	double max_mag = 0;
 	int w, h, speclen;
-	for (w=0;w<SG_WIDTH; w++) for (h=0;h<SG_HEIGHT; h++) mag_spec[w][h] =0;
+	for (w=0;w<SG_WIDTH; w++) for (h=0;h<MAX_HEIGHT; h++) mag_spec[w][h] =0;
 
 	/*
 	**	Choose a speclen value that is long enough to represent frequencies down
@@ -271,7 +272,7 @@ render_to_pixbuf (void *infile, struct adinfo *nfo, GdkPixbuf* pixbuf)
 	speclen += 0x40 - (speclen & 0x3f) ;
 
 	if (2 * speclen > G_N_ELEMENTS (time_domain)) {
-		printf ("%s : 2 * speclen > G_N_ELEMENTS (time_domain)\n", __func__);
+		printf ("%s : 2 * speclen > G_N_ELEMENTS (time_domain) (%d > %d)\n", __func__, 2 * speclen, G_N_ELEMENTS (time_domain));
 		return -1;
 	};
 
@@ -617,7 +618,7 @@ get_spectrogram(const char* path, SpectrogramReady callback, gpointer user_data)
 				dbg(2, "...");
 				GError** error = NULL;
 				GDir* dir = g_dir_open(cache_dir, 0, error);
-				#define MAX_CACHE_ITEMS 100
+				#define MAX_CACHE_ITEMS 100 // files are ~ 700kBytes
 				int n = 0;
 				while(g_dir_read_name(dir)) n++;
 				g_dir_close(dir);
