@@ -107,7 +107,7 @@ inspector_new()
 	gtk_container_add(GTK_CONTAINER(align4), label4);	
 
 	//-----------
-	GtkWidget* hbox3 = gtk_hbox_new(FALSE, 10);
+	GtkWidget* hbox3 = gtk_hbox_new(FALSE, 4);
 	gtk_box_pack_start(GTK_BOX(vbox), hbox3, EXPAND_FALSE, FILL_FALSE, 0);
 	
 	GtkWidget* align5 = gtk_alignment_new(0.0, 0.5, 0.0, 0.0);
