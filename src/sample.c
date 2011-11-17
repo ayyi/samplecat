@@ -87,6 +87,7 @@ sample_dup(Sample* s)
 	r->peak_level   = s->peak_level;
 	r->colour_index = s->colour_index;
 	r->online       = s->online;
+	r->mtime        = s->mtime;
 #define DUPSTR(P) if (s->P) r->P=strdup(s->P);
 	DUPSTR(dir)
 	DUPSTR(sample_name)

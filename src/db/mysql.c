@@ -30,7 +30,7 @@ enum {
   MYSQL_LAST_CHECKED,
   MYSQL_MIMETYPE,
   MYSQL_PEAKLEVEL,
-	// TODO rg: save MTIME, EBUR and ABSOLUTE_PATH
+	// TODO rg: save MTIME, EBUR FRAMES and ABSOLUTE_PATH
 	// see mysql__update_ebur() and  mysql__update_online() below as well
 };
 #define MYSQL_NOTES 11
@@ -408,7 +408,7 @@ mysql__search_iter_next_(unsigned long** lengths)
 	result.sample_name = row[MYSQL_NAME];
 	result.dir         = row[MYSQL_DIR];
 	result.keywords    = row[MYSQL_KEYWORDS];
-	result.length      = get_int(row, MYSQL_LENGTH);
+	result.length      = get_int(row, MYSQL_LENGTH); // TODO rg - check int64_t
 	result.sample_rate = get_int(row, MYSQL_SAMPLERATE);
 	result.channels    = get_int(row, MYSQL_CHANNELS);
 	result.peak_level  = get_float(row, MYSQL_PEAKLEVEL);
@@ -419,6 +419,8 @@ mysql__search_iter_next_(unsigned long** lengths)
 	result.mimetype    = row[MYSQL_MIMETYPE];
 	result.online      = get_int(row, MYSQL_ONLINE);
 	result.mtime       = 0; // TODO rg - save in database
+	result.bitdepth    = 0; // TODO rg - save in database
+	result.frames      = result.length * result.sample_rate /1000; // TODO rg - save in database
 	return &result;
 }
 

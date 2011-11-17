@@ -38,6 +38,7 @@ enum {
 	COLUMN_EBUR,
 	COLUMN_ABSPATH,
 	COLUMN_MTIME,
+	COLUMN_FRAMES,
 };
 
 static gboolean sqlite__update_string(int id, const char*, const char*);
@@ -101,6 +102,10 @@ sqlite__connect()
 				dbg(0, "updating to new model: mtime");
 				sqlite3_exec(db, "ALTER TABLE samples add mtime INT;", NULL, NULL, &errmsg);
 			}
+			if (!strstr(table[3], "frames INT")) { 
+				dbg(0, "updating to new model: frames");
+				sqlite3_exec(db, "ALTER TABLE samples add frames INT;", NULL, NULL, &errmsg);
+			}
 		}
 	} else {
 		dbg(0, "SQL: %s", errmsg?errmsg:"-");
@@ -114,7 +119,7 @@ sqlite__connect()
 			"id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, "
 			"filename TEXT, filedir TEXT, keywords TEXT, pixbuf BLOB, length INT, sample_rate INT, channels INT, "
 			"online INT, last_checked INT, mimetype TEXT, peaklevel REAL, notes TEXT, colour INT, "
-			"ebur TEXT, abspath TEXT, mtime INT)",
+			"ebur TEXT, abspath TEXT, mtime INT, frames INT)",
 			on_create_table, 0, &errmsg);
 		if (n != SQLITE_OK) {
 			if (!strstr(errmsg, "already exists")) {
@@ -143,13 +148,13 @@ sqlite__insert(Sample* sample)
 	sqlite3_int64 idx = -1;
 
 	char* sql = sqlite3_mprintf(
-		"INSERT INTO samples(abspath,filename,filedir,length,sample_rate,channels,online,mimetype,ebur,peaklevel,colour,mtime) "
-		"VALUES ('%q','%q','%q',%"PRIi64",'%i','%i','%i','%q','%q','%f','%i','%i')",
+		"INSERT INTO samples(abspath,filename,filedir,length,sample_rate,channels,online,mimetype,ebur,peaklevel,colour,mtime,frames) "
+		"VALUES ('%q','%q','%q',%"PRIi64",'%i','%i','%i','%q','%q','%f','%i','%lu',%"PRIi64")",
 		sample->full_path, sample->sample_name, sample->dir,
 		sample->length, sample->sample_rate, sample->channels,
 		sample->online, sample->mimetype, 
 		sample->ebur?sample->ebur:"", 
-		sample->peak_level, sample->colour_index, sample->mtime
+		sample->peak_level, sample->colour_index, (unsigned long) sample->mtime, sample->frames
 	);
 
 	if(sqlite3_exec(db, sql, NULL, NULL, &errMsg) != SQLITE_OK){
@@ -281,7 +286,7 @@ sqlite__update_online(int id, gboolean online, time_t mtime)
 	}
 
 	gboolean ok = true;
-	gchar* sql = sqlite3_mprintf("UPDATE samples SET online=%i, mtime=%i, last_checked=datetime('now') WHERE id=%i", online, mtime, id);
+	gchar* sql = sqlite3_mprintf("UPDATE samples SET online=%i, mtime=%lu, last_checked=datetime('now') WHERE id=%i", online, (unsigned long) mtime, id);
 	dbg(1, "sql=%s", sql);
 	char* errMsg = 0;
 	int n = sqlite3_exec(db, sql, on_update, 0, &errMsg);
@@ -411,6 +416,7 @@ sqlite__search_iter_next(unsigned long** lengths)
 	result.keywords    = (char*)sqlite3_column_text(ppStmt, COLUMN_KEYWORDS);
 	result.length      = sqlite3_column_int(ppStmt, COLUMN_LENGTH);
 	result.sample_rate = sqlite3_column_int(ppStmt, COLUMN_SAMPLERATE);
+	result.frames      = sqlite3_column_int(ppStmt, COLUMN_FRAMES);
 	result.channels    = sqlite3_column_int(ppStmt, COLUMN_CHANNELS);
 	result.overview    = (GdkPixbuf*)sqlite3_column_blob(ppStmt, COLUMN_PIXBUF);
 	result.notes       = (char*)sqlite3_column_text(ppStmt, COLUMN_NOTES);
@@ -419,7 +425,7 @@ sqlite__search_iter_next(unsigned long** lengths)
 	result.mimetype    = (char*)sqlite3_column_text(ppStmt, COLUMN_MIMETYPE);
 	result.peak_level  = sqlite3_column_double(ppStmt, COLUMN_PEAKLEVEL);
 	result.online      = sqlite3_column_int(ppStmt, COLUMN_ONLINE);
-	result.mtime       = sqlite3_column_int(ppStmt, COLUMN_MTIME);
+	result.mtime       = (unsigned long) sqlite3_column_int(ppStmt, COLUMN_MTIME);
 	result.overview    = pixbuf;
 
 	/* backwards compat. */
@@ -427,6 +433,11 @@ sqlite__search_iter_next(unsigned long** lengths)
 		static char full_path[PATH_MAX];
 		snprintf(full_path, PATH_MAX, "%s/%s", result.dir, result.sample_name); full_path[PATH_MAX-1]='\0';
 		result.full_path  = full_path;
+		dbg(1, "compat: filling in path by dir & filename");
+	}
+	if (!result.frames) {
+		dbg(1, "compat: filling in frame-count by sample-rate & length");
+		result.frames = result.length * result.sample_rate / 1000;
 	}
 
 	//sqlite3_result_blob(sqlite3_context*, const void*, int, void(*)(void*));
