@@ -18,29 +18,15 @@
 void
 draw_cairo_line(cairo_t* cr, drect *pts, double line_width, GdkColor *colour)
 {
-	if(pts->y1 == pts->y2) return;
-
-	//cairo_set_line_width(cr, 1);
 	float r, g, b;
 	colour_get_float(colour, &r, &g, &b, 0xff);
-	cairo_set_source_rgba (cr, b, g, r, 0.5);
-
-	cairo_move_to (cr, pts->x1 - 0.5, pts->y1 + 1);
-	cairo_line_to (cr, pts->x2 - 0.5, pts->y2 - 1);
-	cairo_stroke (cr);
-	cairo_move_to (cr, pts->x1 + 0.5, pts->y1);
-	cairo_line_to (cr, pts->x2 + 0.5, pts->y2);
-	cairo_stroke (cr);
-	cairo_move_to (cr, pts->x1 + 1.5, pts->y1 + 1);
-	cairo_line_to (cr, pts->x2 + 1.5, pts->y2 - 1);
-	cairo_stroke (cr);
-
-	//main line:
 	cairo_set_source_rgba (cr, b, g, r, 1.0);
-	cairo_move_to (cr, pts->x1 + 0.5, pts->y1 + 1);
-	cairo_line_to (cr, pts->x2 + 0.5, pts->y2 - 1);
+	cairo_move_to (cr, pts->x1 - 0.5, pts->y1 +.5);
+	cairo_line_to (cr, pts->x2 - 0.5, pts->y2 -.5);
 	cairo_stroke (cr);
-
+	cairo_move_to (cr, pts->x1 + 0.5, pts->y1 +.5);
+	cairo_line_to (cr, pts->x2 + 0.5, pts->y2 -.5);
+	cairo_stroke (cr);
 }
 
 void
@@ -57,19 +43,19 @@ GdkPixbuf* make_overview(Sample* sample) {
   dbg(0, "NEW OVERVIEW");
 
 	GdkPixbuf* pixbuf = gdk_pixbuf_new(GDK_COLORSPACE_RGB, HAS_ALPHA_TRUE, BITS_PER_CHAR_8, OVERVIEW_WIDTH, OVERVIEW_HEIGHT);
-	pixbuf_clear(pixbuf, &app.fg_colour);
+	pixbuf_clear(pixbuf, &app.bg_colour);
 
   cairo_format_t format;
   if (gdk_pixbuf_get_n_channels(pixbuf) == 3) format = CAIRO_FORMAT_RGB24; else format = CAIRO_FORMAT_ARGB32;
   cairo_surface_t* surface = cairo_image_surface_create_for_data (gdk_pixbuf_get_pixels(pixbuf), format, OVERVIEW_WIDTH, OVERVIEW_HEIGHT, gdk_pixbuf_get_rowstride(pixbuf));
   cairo_t* cr = cairo_create(surface);
-  cairo_set_line_width (cr, 1.0);
+  cairo_set_line_width (cr, 0.5);
 
   if (1) {
     drect pts = {0, OVERVIEW_HEIGHT/2, OVERVIEW_WIDTH, OVERVIEW_HEIGHT/2 +1};
-    GdkColor color; color.red=0x7fff; color.green=0x7fff; color.blue=0x7fff;
-    draw_cairo_line(cr, &pts, 1.0, &color);
+    draw_cairo_line(cr, &pts, 1.0, &app.base_colour);
   }
+  cairo_set_line_width (cr, 1.0);
 
   int frames_per_buf = nfo.frames / OVERVIEW_WIDTH;
   int buffer_len = frames_per_buf * nfo.channels;
@@ -84,7 +70,7 @@ GdkPixbuf* make_overview(Sample* sample) {
     const int srcidx_start = 0;
     const int srcidx_stop  = frames_per_buf;
 
-    min = 0; max = 0;
+    min = 1.0; max = -1.0;
     for(frame=srcidx_start;frame<srcidx_stop;frame++){ 
 			int ch;
       for(ch=0;ch<nfo.channels;ch++){
@@ -99,8 +85,8 @@ GdkPixbuf* make_overview(Sample* sample) {
     min = rint(min * OVERVIEW_HEIGHT/2.0);
     max = rint(max * OVERVIEW_HEIGHT/2.0);
 
-    drect pts = {x, OVERVIEW_HEIGHT/2 + min, x, OVERVIEW_HEIGHT/2 + max};
-    draw_cairo_line(cr, &pts, 1.0, &app.bg_colour);
+    drect pts = {x, OVERVIEW_HEIGHT/2 - min, x, OVERVIEW_HEIGHT/2 - max};
+    draw_cairo_line(cr, &pts, 1.0, &app.text_colour);
 
     x++;
   }  
