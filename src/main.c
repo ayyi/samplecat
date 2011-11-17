@@ -310,7 +310,6 @@ main(int argc, char** argv)
 	if (app.config.database_backend && can_use(app.backends, app.config.database_backend)) {
 		list_clear(app.backends);
 		ADD_BACKEND(app.config.database_backend);
-		dbg(0, "config: %s", app.config.database_backend);
 	}
 
 	if (!player_opt && app.config.auditioner) {
