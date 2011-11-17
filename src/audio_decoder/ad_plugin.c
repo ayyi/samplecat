@@ -82,16 +82,10 @@ ssize_t ad_read(void *sf, float* out, size_t len){
 	return d->b->read(d->d, out, len);
 }
 
-
-
-ssize_t ad_read_mono(void *sf, float* d, size_t len){
-	struct adinfo nfo;
-	ad_info(sf, &nfo);
-	int chn = nfo.channels;
-	if(chn == 1)
-		return ad_read(sf, d, len);
-
+ssize_t ad_read_mono_dbl(void *sf, struct adinfo *nfo, double* d, size_t len){
 	int c,f;
+	int chn = nfo->channels;
+	if (len<1) return 0;
 
 	static float *buf = NULL;
 	static size_t bufsiz = 0;
@@ -103,7 +97,7 @@ ssize_t ad_read_mono(void *sf, float* d, size_t len){
 	len = ad_read(sf, buf, bufsiz);
 
 	for (f=0;f<len/chn;f++) {
-		float val=0.0;
+		double val=0.0;
 		for (c=0;c<chn;c++) {
 			val+=buf[f*chn + c];
 		}
@@ -111,6 +105,7 @@ ssize_t ad_read_mono(void *sf, float* d, size_t len){
 	}
 	return len/chn;
 }
+
 
 gboolean ad_finfo (const char *fn, struct adinfo *nfo) {
 	void * sf = ad_open(fn, nfo);

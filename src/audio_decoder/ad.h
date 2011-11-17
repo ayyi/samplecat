@@ -1,6 +1,7 @@
 #ifndef __AD_H__
 #define __AD_H__
 #include <unistd.h>
+#include <stdint.h>
 struct adinfo {
 	unsigned int sample_rate;
 	int64_t length; //milliseconds
@@ -25,5 +26,5 @@ int     ad_info (void *sf, struct adinfo *nfo);
 /* high level API */
 #include <gtk/gtk.h>
 gboolean ad_finfo (const char *, struct adinfo *);
-ssize_t ad_read_mono(void *, float*, size_t);
+ssize_t ad_read_mono_dbl(void *, struct adinfo *, double*, size_t);
 #endif
