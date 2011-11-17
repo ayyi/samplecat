@@ -1,6 +1,9 @@
 /*
 ** Copyright (C) 2007-2009 Erik de Castro Lopo <erikd@mega-nerd.com>
 **
+** modified for soundcat by Tim Ordord and Robin Gareus
+** based on sndfile-tools-1.03
+**
 ** This program is free software: you can redistribute it and/or modify
 ** it under the terms of the GNU General Public License as published by
 ** the Free Software Foundation, either version 2 or version 3 of the
@@ -39,6 +42,7 @@
 #include <math.h>
 #include <unistd.h>
 #include <sys/stat.h>
+#include <stdint.h>
 
 #include <sndfile.h>
 #include <cairo.h>
@@ -58,46 +62,20 @@ extern unsigned debug;
 typedef void (*SpectrogramReady)(const char* filename, GdkPixbuf*, gpointer);
 typedef void (*SpectrogramReadyTarget)(const char* filename, GdkPixbuf*, gpointer, void* target);
 
-#define MIN_WIDTH 640
-#define MIN_HEIGHT 480
-#define MAX_WIDTH 8192
-#define MAX_HEIGHT 4096
-
-#define TICK_LEN 6
-#define BORDER_LINE_WIDTH 1.8
-
-#define TITLE_FONT_SIZE 20.0
-#define NORMAL_FONT_SIZE 12.0
-
-#define	LEFT_BORDER			65.0
-#define	TOP_BORDER			30.0
-#define	RIGHT_BORDER		75.0
-#define	BOTTOM_BORDER		40.0
-
-//#define	SPEC_FLOOR_DB		-180.0
-#define	SPEC_FLOOR_DB		-90.0
+#define SG_WIDTH  (1024)
+#define SG_HEIGHT (640)
+#define	SPEC_FLOOR_DB		-120.0
 
 
 typedef struct
 {
 	const char*        sndfilepath;
-	const char*        filename;
-	int                width, height;
-	bool               border, log_freq;
-	double             spec_floor_db;
 	GdkPixbuf*         pixbuf;
 	SpectrogramReady   callback;
 	gpointer           user_data;
 } RENDER;
 
-typedef struct 
-{
-	int left, top, width, height;
-} RECT;
-
-static const char font_family [] = "Terminus";
-
-static void
+static int
 get_colour_map_value (float value, double spec_floor_db, unsigned char colour [3])
 {	static unsigned char map [][3] =
 	{	/* These values were originally calculated for a dynamic range of 180dB. */
@@ -127,21 +105,21 @@ get_colour_map_value (float value, double spec_floor_db, unsigned char colour [3
 
 	if (value >= 0.0)
 	{	colour = map [0] ;
-		return;
+		return 0;
 	};
 
 	value = fabs (value * (-180.0 / spec_floor_db) * 0.1);
 
-	indx = lrintf (floor (value)) ;
+	indx = rintf (floorf (value)) ;
 
 	if (indx < 0) {
 		printf ("\nError : colour map array index is %d\n\n", indx);
-		exit (1) ; // XXX we must not exit samplecat !
+		return -1;
 	};
 
 	if (indx >= G_N_ELEMENTS (map) - 1) {
 		colour = map [G_N_ELEMENTS (map) - 1] ;
-		return ;
+		return 0;
 	};
 
 	rem = fmod (value, 1.0) ;
@@ -150,15 +128,15 @@ get_colour_map_value (float value, double spec_floor_db, unsigned char colour [3
 	colour [1] = lrintf ((1.0 - rem) * map [indx][1] + rem * map [indx + 1][1]) ;
 	colour [2] = lrintf ((1.0 - rem) * map [indx][2] + rem * map [indx + 1][2]) ;
 
-	return ;
+	return 0;
 } /* get_colour_map_value */
 
 static int
-read_mono_audio (void * file, int64_t filelen, double * data, int datalen, int indx, int total)
+read_mono_audio (void * file, struct adinfo *nfo, double * data, int datalen, int indx, int total)
 {
 	int rv = 0;
-	int64_t start = (indx * filelen) / total - datalen / 2 ;
-	memset (data, 0, datalen * sizeof (data [0])) ;
+	int64_t start = (indx * nfo->frames) / total - datalen / 2 ;
+	int i=0; for(i=0;i<datalen;i++) data[i]=0;
 
 	if (start >= 0)
 		ad_seek (file, start);
@@ -168,23 +146,14 @@ read_mono_audio (void * file, int64_t filelen, double * data, int datalen, int i
 		data += start;
 		datalen -= start;
 	}
-
-	int i;
-	// TODO: statically allocate this buffer - realloc on demand
-	float *tbuf = malloc(datalen*sizeof(float));
-	if (ad_read_mono(file, tbuf, datalen) <1) rv=-1;
-	for (i=0;i<datalen;i++) {
-		const double val = tbuf[i];
-		data[i] = val;
-	}
-	free(tbuf);
+	ad_read_mono_dbl(file, nfo, data, datalen);
 	return rv;
 } /* read_mono_audio */
 
-static void
+static int
 apply_window (double * data, int datalen)
 {
-	static double window [10 * MAX_HEIGHT] ;
+	static double window [10 * SG_HEIGHT] ;
 	static int window_len = 0 ;
 	int k ;
 
@@ -193,17 +162,17 @@ apply_window (double * data, int datalen)
 		window_len = datalen ;
 		if (datalen > G_N_ELEMENTS (window))
 		{
-			printf ("%s : datalen >  MAX_HEIGHT\n", __func__) ;
-			exit (1) ; // XXX we must not exit samplecat !
-		} ;
+			printf ("%s : datalen >  SG_HEIGHT\n", __func__) ;
+			return -1;
+		}
 
 		calc_kaiser_window (window, datalen, 20.0) ;
-	} ;
+	}
 
 	for (k = 0 ; k < datalen ; k++)
 		data [k] *= window [k] ;
 
-	return ;
+	return 0;
 } /* apply_window */
 
 static double
@@ -222,8 +191,8 @@ calc_magnitude (const double * freq, int freqlen, double * magnitude)
 } /* calc_magnitude */
 
 
-static void
-_render_spectrogram_to_pixbuf (GdkPixbuf* pixbuf, double spec_floor_db, float mag2d [MAX_WIDTH][MAX_HEIGHT], double maxval, double left, double top, double width, double height)
+static int
+_render_spectrogram_to_pixbuf (GdkPixbuf* pixbuf, double spec_floor_db, float mag2d [SG_WIDTH][SG_HEIGHT], double maxval)
 {
 	unsigned char colour [3] = { 0, 0, 0 } ;
 	double linear_spec_floor ;
@@ -236,82 +205,24 @@ _render_spectrogram_to_pixbuf (GdkPixbuf* pixbuf, double spec_floor_db, float ma
 	linear_spec_floor = pow (10.0, spec_floor_db / 20.0) ;
 
 	int w, h;
-	for (w = 0 ; w < width ; w ++) {
-		for (h = 0 ; h < height ; h++) {
-
+	for (w = 0 ; w < SG_WIDTH ; w ++) {
+		for (h = 0 ; h < SG_HEIGHT ; h++) {
 			mag2d [w][h] = mag2d [w][h] / maxval ;
 			mag2d [w][h] = (mag2d [w][h] < linear_spec_floor) ? spec_floor_db : 20.0 * log10 (mag2d [w][h]) ;
 
-			get_colour_map_value (mag2d [w][h], spec_floor_db, colour);
+			if (get_colour_map_value (mag2d [w][h], spec_floor_db, colour)) return -1;
 
-			int y = height + top - 1 - h;
-			int x = (w + left) * n_channels;
-			data [y * stride + x + 0] = colour [2];
+			int y = SG_HEIGHT - 1 - h;
+			int x = w * n_channels;
+			data [y * stride + x + 0] = colour [0];
 			data [y * stride + x + 1] = colour [1];
-			data [y * stride + x + 2] = colour [0];
-			//data [y * stride + x + 3] = 0;
-		};
+			data [y * stride + x + 2] = colour [2];
+			if (n_channels == 4) 
+				data [y * stride + x + 3] = 0;
+		}
 	}
+	return 0;
 }
-
-static inline void
-x_line (cairo_t * cr, double x, double y, double len)
-{	cairo_move_to (cr, x, y) ;
-	cairo_rel_line_to (cr, len, 0.0) ;
-	cairo_stroke (cr) ;
-} /* x_line */
-
-static inline void
-y_line (cairo_t * cr, double x, double y, double len)
-{	cairo_move_to (cr, x, y) ;
-	cairo_rel_line_to (cr, 0.0, len) ;
-	cairo_stroke (cr) ;
-} /* y_line */
-
-typedef struct
-{	double value [15] ;
-	double distance [15] ;
-} TICKS ;
-
-static inline int
-calculate_ticks (double max, double distance, TICKS * ticks)
-{	const int div_array [] =
-	{	10, 10, 8, 6, 8, 10, 6, 7, 8, 9, 10, 11, 12, 12, 7, 14, 8, 8, 9
-		} ;
-
-	double scale = 1.0, scale_max ;
-	int k, leading, divisions ;
-
-	if (max < 0)
-	{	printf ("\nError in %s : max < 0\n\n", __func__) ;
-		exit (1) ; // XXX we must not exit samplecat !
-		} ;
-
-	while (scale * max >= G_N_ELEMENTS (div_array))
-		scale *= 0.1 ;
-
-	while (scale * max < 1.0)
-		scale *= 10.0 ;
-
-	leading = lround (scale * max) ;
-	divisions = div_array [leading % G_N_ELEMENTS (div_array)] ;
-
-	/* Scale max down. */
-	scale_max = leading / scale ;
-	scale = scale_max / divisions ;
-
-	if (divisions > G_N_ELEMENTS (ticks->value) - 1)
-	{	printf ("Error : divisions (%d) > G_N_ELEMENTS (ticks->value) (%lu)\n", divisions, (long unsigned) G_N_ELEMENTS (ticks->value)) ;
-		exit (1) ; // XXX we must not exit samplecat !
-		} ;
-
-	for (k = 0 ; k <= divisions ; k++)
-	{	ticks->value [k] = k * scale ;
-		ticks->distance [k] = distance * ticks->value [k] / max ;
-		} ;
-
-	return divisions + 1 ;
-} /* calculate_ticks */
 
 static void
 interp_spec (float * mag, int maglen, const double *spec, int speclen)
@@ -337,62 +248,57 @@ interp_spec (float * mag, int maglen, const double *spec, int speclen)
 	return ;
 } /* interp_spec */
 
-static void
-render_to_pixbuf (const RENDER * render, void *infile, int samplerate, int64_t filelen, GdkPixbuf* pixbuf)
+static int
+render_to_pixbuf (void *infile, struct adinfo *nfo, GdkPixbuf* pixbuf)
 {
-	static double time_domain [10 * MAX_HEIGHT];
-	static double freq_domain [10 * MAX_HEIGHT];
-	static double single_mag_spec [5 * MAX_HEIGHT];
-	static float mag_spec [MAX_WIDTH][MAX_HEIGHT];
+	int rv =0; /* OK */
+	static double time_domain [10 * SG_HEIGHT];
+	static double freq_domain [10 * SG_HEIGHT];
+	static double single_mag_spec [5 * SG_HEIGHT];
+	static float mag_spec [SG_WIDTH][SG_HEIGHT];
 
 	fftw_plan plan;
-	double max_mag = 0.0;
-	int width, height, w, speclen;
-
-	if (render->border) {
-		width = lrint (gdk_pixbuf_get_width (pixbuf) - LEFT_BORDER - RIGHT_BORDER) ;
-		height = lrint (gdk_pixbuf_get_height (pixbuf) - TOP_BORDER - BOTTOM_BORDER) ;
-	}
-	else
-	{	width = render->width;
-		height = render->height;
-	}
+	double max_mag = 0;
+	int w, h, speclen;
+	for (w=0;w<SG_WIDTH; w++) for (h=0;h<SG_HEIGHT; h++) mag_spec[w][h] =0;
 
 	/*
 	**	Choose a speclen value that is long enough to represent frequencies down
 	**	to 20Hz, and then increase it slightly so it is a multiple of 0x40 so that
 	**	FFTW calculations will be quicker.
 	*/
-	speclen = height * (samplerate / 20 / height + 1) ;
+	speclen = SG_HEIGHT * (nfo->sample_rate / 20 / SG_HEIGHT + 1) ;
 	speclen += 0x40 - (speclen & 0x3f) ;
 
 	if (2 * speclen > G_N_ELEMENTS (time_domain)) {
 		printf ("%s : 2 * speclen > G_N_ELEMENTS (time_domain)\n", __func__);
-		exit (1); // XXX we must not exit samplecat !
+		return -1;
 	};
 
 	plan = fftw_plan_r2r_1d (2 * speclen, time_domain, freq_domain, FFTW_R2HC, FFTW_MEASURE | FFTW_PRESERVE_INPUT) ;
 	if (plan == NULL) {
 		printf ("%s : line %d : create plan failed.\n", __FILE__, __LINE__);
-		exit (1) ; // XXX we must not exit samplecat !
+		return -1;
 	};
 
-	for (w = 0 ; w < width ; w++) {
+	for (w = 0 ; w < SG_WIDTH ; w++) {
 		double single_max;
 
-		if (read_mono_audio(infile, filelen, time_domain, 2 * speclen, w, width)) {
+		if (read_mono_audio(infile, nfo, time_domain, 2 * speclen, w, SG_WIDTH)<0) {
 			dbg(1, "read failed before EOF");
 			break;
 		}
 
-		apply_window (time_domain, 2 * speclen) ;
+		if (apply_window (time_domain, 2 * speclen)) {
+			rv=-1; break;
+		}
 
 		fftw_execute (plan) ;
 
 		single_max = calc_magnitude (freq_domain, 2 * speclen, single_mag_spec) ;
 		max_mag = MAX (max_mag, single_max) ;
 
-		interp_spec (mag_spec [w], height, single_mag_spec, speclen) ;
+		interp_spec (mag_spec [w], SG_HEIGHT, single_mag_spec, speclen) ;
 	};
 
 	/* FIXME: there's some worm in here - on OSX i386 max_mag can become NaN
@@ -400,44 +306,15 @@ render_to_pixbuf (const RENDER * render, void *infile, int samplerate, int64_t f
 	 * -> image creation fails w/ "colour map array index < 0"
 	 */
 
-	fftw_destroy_plan (plan);
+	fftw_destroy_plan (plan) ;
 
-	_render_spectrogram_to_pixbuf (pixbuf, render->spec_floor_db, mag_spec, max_mag, 0, 0, width, height);
+	if (!rv) 
+		rv = _render_spectrogram_to_pixbuf (pixbuf, SPEC_FLOOR_DB, mag_spec, max_mag);
 
-	return;
+	return rv;
 }
 
-
-static GdkPixbuf*
-render_pixbuf (const RENDER * render, void *infile, int samplerate, int64_t filelen)
-{
-	PF;
-	/*
-	**	CAIRO_FORMAT_RGB24 	 each pixel is a 32-bit quantity, with the upper 8 bits
-	**	unused. Red, Green, and Blue are stored in the remaining 24 bits in that order.
-	*/
-	GdkPixbuf* pixbuf = gdk_pixbuf_new(GDK_COLORSPACE_RGB, /*alpha*/ FALSE, 8, render->width, render->height);
-	render_to_pixbuf (render, infile, samplerate, filelen, pixbuf);
-	return pixbuf;
-}
-
-
-static GdkPixbuf*
-render_sndfile (const RENDER* render)
-{
-	struct adinfo nfo;
-
-	void* infile = ad_open (render->sndfilepath, &nfo);
-	if (!infile) {
-		return NULL;
-	};
-
-	GdkPixbuf* pixbuf = render_pixbuf(render, infile, nfo.sample_rate, nfo.frames);
-	ad_close(infile);
-	return pixbuf;
-}
-
-
+#if 0
 static void
 check_int_range (const char * name, int value, int lower, int upper)
 {
@@ -446,17 +323,45 @@ check_int_range (const char * name, int value, int lower, int upper)
 		exit (1) ; // XXX we must not exit samplecat !
 		} ;
 } /* check_int_range */
+#endif
 
+
+/* END COPY OF sndfile-spectrogram.c */
+
+static GdkPixbuf*
+render_sndfile (const char* file)
+{
+	struct adinfo nfo;
+
+	void* infile = ad_open (file, &nfo);
+	if (!infile) {
+		dbg(0, "can not open file: %s", file);
+		return NULL;
+	};
+
+	GdkPixbuf* pixbuf = gdk_pixbuf_new(GDK_COLORSPACE_RGB, /*alpha*/ FALSE, 8, SG_WIDTH, SG_HEIGHT);
+	if (render_to_pixbuf (infile, &nfo, pixbuf)) {
+		dbg(0, "failed to create pixbuf: %s", file);
+		g_object_unref(pixbuf);
+		pixbuf = NULL;
+	}
+
+	ad_close(infile);
+	return pixbuf;
+}
 
 /*************************
  * SoundCat render queue
+ */
+
+/* TODO: merge all msg queue code with src/overview.c 
+ * but make sure to put it on top of the queue.
  */
 
 RENDER*
 render_new()
 {
 	RENDER* r = g_new0(RENDER, 1);
-	r->spec_floor_db = SPEC_FLOOR_DB;
 	return r;
 }
 
@@ -565,14 +470,14 @@ fft_thread(gpointer data)
 			}
 			*/
 
-			dbg(1, "filename=%s.", render->filename);
-			render->pixbuf = render_sndfile(render);
+			dbg(1, "filename=%s.", render->sndfilepath);
+			render->pixbuf = render_sndfile(render->sndfilepath); /* < this does the actual work */
 
 			//check the completed render wasnt cancelled in the meantime
 			gboolean got_cancel = false;
 			process_messages(&got_cancel);
 
-			if(!got_cancel){
+			if(!got_cancel && render->pixbuf){
 				g_idle_add(do_callback, render);
 			}else{
 				render_free(render);
@@ -585,6 +490,7 @@ fft_thread(gpointer data)
 	}
 	return NULL;
 }
+
 
 static void
 send_message(Message* msg)
@@ -617,23 +523,13 @@ render_spectrogram(const char* path, SpectrogramReady callback, gpointer user_da
 	render->callback = callback;
 	render->user_data = user_data;
 
-	//other rendering options:
-	//render->spec_floor_db = -1.0 * fabs (fval); //dynamic range
-	//render->log_freq = true;                    //log freq
-
-	render->width = 640;
-	render->height = 640;
-
-	check_int_range ("width", render->width, MIN_WIDTH, MAX_WIDTH);
-	check_int_range ("height", render->height, MIN_HEIGHT, MAX_HEIGHT);
-
-	render->filename = strrchr (render->sndfilepath, '/'); 
-	render->filename = (render->filename != NULL) ? render->filename + 1 : render->sndfilepath;
+	//render->filename = strrchr (render->sndfilepath, '/'); 
+	//render->filename = (render->filename != NULL) ? render->filename + 1 : render->sndfilepath;
 
 	Message* m = message_new(QUEUE);
 	m->render = render;
 
-	dbg(1, "%s", render->filename);
+	dbg(1, "%s", render->sndfilepath);
 	send_message(m);
 }
 
@@ -788,3 +684,4 @@ get_spectrogram_with_target(const char* path, SpectrogramReady callback, void* t
 
 	get_spectrogram(path, ready, closure);
 }
+
