@@ -16,9 +16,10 @@
 #include "listview.h"
 
 int gplayer_check() {
-	if (g_find_program_in_path ("afplay")) return 0; /*OK*/
-	if (g_find_program_in_path ("gst-launch-0.10")) return 0; /*OK*/
-	if (g_find_program_in_path ("totem-audio-preview")) return 0; /*OK*/
+	char *c;
+	if ((c=g_find_program_in_path ("afplay"))) {free(c); return 0;}
+	if ((c=g_find_program_in_path ("gst-launch-0.10"))) {free(c); return 0;}
+	if ((c=g_find_program_in_path ("totem-audio-preview"))) {free(c); return 0;}
 	return -1; /* FAIL */
 }
 
