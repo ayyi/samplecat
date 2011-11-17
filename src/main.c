@@ -14,6 +14,7 @@ This software is licensed under the GPL. See accompanying file COPYING.
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <libgen.h>
 #include <getopt.h>
 #include <gtk/gtk.h>
 #include <gdk-pixbuf/gdk-pixdata.h>
@@ -125,21 +126,39 @@ static const struct option long_options[] = {
   { "search",           1, NULL, 's' },
   { "add",              1, NULL, 'a' },
   { "help",             0, NULL, 'h' },
+  { "version",          0, NULL, 'V' },
 };
 
-static const char* const short_options = "b:gv:s:a:p:h";
+static const char* const short_options = "b:gv:s:a:p:hV";
 
 static const char* const usage =
-  "Usage: %s [ options ]\n"
-  " -v --verbose   show more information.\n"
-  " -b --backend   select which database type to use.\n"
-  " -g --no-gui    run as command line app.\n"
-  " -s --search    search using this phrase.\n"
-  " -a --add       add these files.\n"
-  " -p --player    select audio player.\n"
-  " -h --help      show this usage information and quit.\n"
+  "Usage: %s [OPTION]\n\n"
+	"SampleCat is a a program for cataloguing and auditioning audio samples.\n" 
+	"\n"
+	"Options:\n"
+  "  -a, --add <file>       add these files.\n"
+  "  -b, --backend <name>   select which database type to use.\n"
+  "  -g, --no-gui           run as command line app.\n"
+  "  -h, --help             show this usage information and quit.\n"
+  "  -p, --player <name>    select audio player.\n"
+  "  -s, --search <txt>     search using this phrase.\n"
+  "  -v, --verbose <level>  show more information.\n"
+  "  -V, --version          print version and exit.\n"
+  "\n"
+	"Files:\n"
+	"samplecat stores configuration and caches data in\n"
+	"$HOME/.config/samplecat/\n"
+	"\n"
+	"Environment:\n"
+	"The JACK auditioner auto-connects to the first two physical\n"
+	"outputs unless the environement variable JACK_AUTOCONNECT\n"
+	"is set. If it is set to \"DISABLE\", no connections are done\n"
+	"automatically. Otherwise it connects to the client:port specified\n"
+	"in the variable\n" // XXX rephrase this default: "system:playback_"
+	"\n"
+	"Report bugs to <tim@orford.org>.\n"
+	"Website and manual: <http://samplecat.orford.org/>\n"
   "\n";
-
 
 void
 app_init()
@@ -184,9 +203,6 @@ main(int argc, char** argv)
 
 	app_init();
 
-	printf("%s"PACKAGE_NAME". Version "PACKAGE_VERSION"%s\n", yellow, white);
-	ad_init();
-
 #define ADD_BACKEND(A) app.backends = g_list_append(app.backends, A)
 
 #ifdef USE_MYSQL
@@ -211,7 +227,6 @@ main(int argc, char** argv)
 	ADD_PLAYER("cli");
 #endif
 	ADD_PLAYER("null");
-
 
 	gboolean player_opt = false;
 	int opt;
@@ -258,7 +273,7 @@ main(int argc, char** argv)
 				app.no_gui = true;
 				break;
 			case 'h':
-				printf(usage, argv[0]);
+				printf(usage, basename(argv[0]));
 				exit(EXIT_SUCCESS);
 				break;
 			case 's':
@@ -269,14 +284,26 @@ main(int argc, char** argv)
 				printf("add=%s\n", optarg);
 				app.args.add = g_strdup(optarg);
 				break;
+			case 'V':
+				printf ("%s %s\n\n",basename(argv[0]), PACKAGE_VERSION);
+				printf(
+					"Copyright (C) 2007-2011 Tim Orford\n"
+					"Copyright (C) 2011 Robin Gareus\n"
+					"This is free software; see the source for copying conditions.  There is NO\n"
+					"warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n"
+					);
+				exit(EXIT_SUCCESS);
+				break;
 			case '?':
 			default:
 				printf("unknown option: %c\n", optopt);
-				printf(usage, argv[0]);
+				printf(usage, basename(argv[0]));
 				exit(EXIT_FAILURE);
 				break;
 		}
 	}
+
+	printf("%s"PACKAGE_NAME". Version "PACKAGE_VERSION"%s\n", yellow, white);
 
 	config_load();
 
@@ -306,6 +333,7 @@ main(int argc, char** argv)
 	type_init();
 	pixmaps_init();
 	dir_init();
+	ad_init();
 	set_auditioner();
 	app.store = listmodel__new();
 
