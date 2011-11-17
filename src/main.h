@@ -32,6 +32,7 @@ struct _config
 	char      database_user[64];
 	char      database_pass[64];
 	char      database_name[64];
+	char      auditioner[16];
 	char      show_dir[PATH_MAX];
 	char      window_width[8];
 	char      window_height[8];

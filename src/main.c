@@ -213,6 +213,7 @@ main(int argc, char** argv)
 	ADD_PLAYER("null");
 
 
+	gboolean player_opt = false;
 	int opt;
 	while((opt = getopt_long (argc, argv, short_options, long_options, NULL)) != -1) {
 		switch(opt) {
@@ -245,6 +246,7 @@ main(int argc, char** argv)
 				if(can_use(app.players, optarg)){
 					list_clear(app.players);
 					ADD_PLAYER(optarg);
+					player_opt=true;
 				} else{
 					warnprintf("requested player is not available: '%s'\navailable backends:\n", optarg);
 					GList* l = app.players;
@@ -282,6 +284,13 @@ main(int argc, char** argv)
 		list_clear(app.backends);
 		ADD_BACKEND(app.config.database_backend);
 		dbg(0, "config: %s", app.config.database_backend);
+	}
+
+	if (!player_opt && app.config.auditioner) {
+		if(can_use(app.players, app.config.auditioner)){
+			list_clear(app.players);
+			ADD_PLAYER(app.config.auditioner);
+		}
 	}
 
 	g_thread_init(NULL);
@@ -1311,7 +1320,7 @@ config_load()
 		gchar* groupname = g_key_file_get_start_group(app.key_file);
 		dbg (2, "group=%s.", groupname);
 		if(!strcmp(groupname, "Samplecat")){
-#define num_keys (12)
+#define num_keys (13)
 #define ADD_CONFIG_KEY(VAR, NAME) \
 			strcpy(keys[i],NAME); \
 			loc[i] = VAR; \
@@ -1335,6 +1344,7 @@ config_load()
 			ADD_CONFIG_KEY (app.config.column_widths[0], "col1_width");
 			ADD_CONFIG_KEY (app.search_phrase,           "filter");
 			ADD_CONFIG_KEY (app.config.browse_dir,       "browse_dir");
+			ADD_CONFIG_KEY (app.config.auditioner,       "auditioner");
 
 			int k;
 			for (k=0;k<PALETTE_SIZE-1;k++) {
@@ -1468,6 +1478,7 @@ config_new()
 		"mysql_pass=pass\n"
 		"mysql_name=samplelib\n"
 		"show_dir=\n"
+		"auditioner=\n"
 		);
 
 	if(!g_key_file_load_from_data(app.key_file, data, strlen(data), G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS, &error)){
