@@ -1,6 +1,6 @@
 #!/bin/bash
-PRODUCT_NAME="samplecat"
-VERSION=0.1.2+rg
+PRODUCT_NAME="Samplecat"
+VERSION=0.1.2+rg2
 
 GTKDIR=${GTKDIR:-"$HOME/gtk/inst"}
 GTKLOADER=gtk-2.0/2.10.0/loaders
@@ -243,7 +243,7 @@ echo "------------------------------------"
 echo "generating DMG.."
 TMPFILE=/tmp/sctmp.dmg
 MNTPATH=/tmp/mnt/
-VOLNAME=samplecat
+VOLNAME=Samplecat
 APPNAME="${PRODUCT_NAME}.app"
 
 mkdir -p $MNTPATH
@@ -313,7 +313,7 @@ fi
 ls -l $DMGFILE
 ls -lh $DMGFILE
 
-#/bin/echo -n " upload?[Enter|CTRL-C]"
-#read 
-#echo "rsync -Pc $DMGFILE rg42.org:/home/data/download/"
-#rsync -Pc $DMGFILE rg42.org:/home/data/download/
+/bin/echo -n " upload?[Enter|CTRL-C]"
+read 
+echo "rsync -Pc $DMGFILE rg42.org:/home/data/download/"
+rsync -Pc $DMGFILE rg42.org:/home/data/download/
