@@ -1,0 +1,29 @@
+Source: samplecat
+Section: sound
+Priority: optional
+Maintainer: Robin Gareus <robin@gareus.org>
+Build-Depends: debhelper (>= 8.0.0), automake, libtool, autoconf,
+ libgtk2.0-dev,
+ libjack-dev | libjack-jackd2-dev,
+ ladspa-sdk,
+ libsndfile1-dev,
+ libresample1-dev,
+ libavcodec-dev, libavformat-dev, libavutil-dev,
+ libfftw3-dev,
+ libsqlite3-dev,
+ libmysqlclient15-dev | libmysqlclient-dev,
+ libgnome-vfs2.0-cil-dev | libgsf-gnome-1-dev,
+ libart-dev,
+ libdbus-glib-1-dev,
+ libcairo2-dev
+Homepage: http://samplecat.orford.org
+Standards-Version: 3.9.2
+
+Package: samplecat
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Recommends: rubberband-ladspa
+Suggests: totem, gstreamer0.10-tools
+Description: Audio Sample Library Management
+ Samplecat is a file browser aimed at managing large collections
+ of sound samples...
