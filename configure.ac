@@ -82,6 +82,19 @@ fi
 
 dnl -----------------------------------------------------------------------------
 
+AC_MSG_CHECKING([if -Wl,--as-needed works])
+LDFLAGS_save=$LDFLAGS
+LDFLAGS="$LDFLAGS -Wl,--as-needed"
+AC_TRY_LINK([], [],
+            [
+             AC_MSG_RESULT([yes])
+             LIBOAUTH_LDFLAGS="$LIBOAUTH_LDFLAGS -Wl,--as-needed"
+            ], 
+            [AC_MSG_RESULT([no])])
+LDFLAGS=$LDFLAGS_save
+
+dnl -----------------------------------------------------------------------------
+
 
 GTK_CFLAGS=`pkg-config gtk+-2.0 --cflags`
 GTK_LIBS=`pkg-config gtk+-2.0 --libs`
