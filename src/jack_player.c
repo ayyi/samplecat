@@ -461,6 +461,7 @@ void *jack_player_thread(void *unused){
 			update_playposition (decoder_position, varispeed);
 		}
 		thread_run=0;
+		player_active=0;
 		app.effect_enabled = false;
 		int i;
 		for(i=0;i<m_channels;i++) {
@@ -567,6 +568,7 @@ void JACKclose() {
 		}
 		pthread_join(player_thread_id, NULL);
 	}
+	player_active=0;
 
 	if(j_output_port) {
 		int i;
@@ -706,15 +708,21 @@ jplay__stop()
 	JACKclose();
 }
 
+gboolean idle_highlight(gpointer data) {
+	Sample* s = (Sample*) data;
+	highlight_playing_by_ref(s->row_ref); 
+	jplay__play(s);
+	sample_unref(s);
+	return false;
+}
+
 void
 jplay__play_next() {
 	if(play_queue){
 		Sample* result = play_queue->data;
 		play_queue = g_list_remove(play_queue, result);
 		dbg(1, "%s", result->full_path);
-		highlight_playing_by_ref(result->row_ref);
-		jplay__play(result);
-		sample_unref(result);
+		g_idle_add(idle_highlight, result);
 	}else{
 		dbg(1, "play_all finished. disconnecting...");
 	}
