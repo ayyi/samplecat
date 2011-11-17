@@ -179,8 +179,13 @@ ssize_t ad_read_ffmpeg(void *sf, float* d, size_t len) {
           priv->m_tmpBuffer, &data_size, &priv->packet);
 
       if (ret < 0 || ret > priv->pkt_len) {
+#if 0
         dbg(0, "audio decode error");
         return -1;
+#endif
+        priv->pkt_len=0;
+        ret=0;
+        continue;
       }
 
       priv->pkt_len -= ret; priv->pkt_ptr += ret;
@@ -265,10 +270,10 @@ int64_t ad_seek_ffmpeg(void *sf, int64_t pos) {
 }
 
 int ad_eval_ffmpeg(const char *f) { 
-	char *ext = strrchr(f, '.');
-	if (!ext) return 10;
-	// libavformat.. guess_format.. 
-	return 40;
+  char *ext = strrchr(f, '.');
+  if (!ext) return 10;
+  // libavformat.. guess_format.. 
+  return 40;
 }
 #endif
 
