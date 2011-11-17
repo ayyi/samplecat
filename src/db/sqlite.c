@@ -345,7 +345,26 @@ sqlite__search_iter_new(char* search, char* dir, const char* category, int* n_re
 
 	char* where = sqlite3_mprintf("%s", "");
 	if(search && strlen(search)){
+#if 0
 		char* where2 = sqlite3_mprintf("%s AND (filename LIKE '%%%q%%' OR filedir LIKE '%%%q%%' OR keywords LIKE '%%%q%%') ", where, search, search, search);
+#else
+		char* where2a = NULL;
+		char* sd = strdup(search);
+		char* s  = sd;
+		char *tok;
+		while ((tok = strtok(s, " _")) != 0) {
+			char *tmp = sqlite3_mprintf("%s %s (filename LIKE '%%%q%%' OR filedir LIKE '%%%q%%' OR keywords LIKE '%%%q%%') ",
+					where2a?where2a:"", where2a?"AND":"",
+					tok, tok, tok);
+			if (where2a) sqlite3_free(where2a);
+			where2a = tmp;
+			s=NULL;
+		}
+		char* where2 = sqlite3_mprintf("%s AND (%s)", where, where2a);
+		dbg(0, "%s", where2);
+		sqlite3_free(where2a);
+		free(sd);
+#endif
 		sqlite3_free(where);
 		where = where2;
 	}
