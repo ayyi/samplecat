@@ -8,7 +8,7 @@ rm -rf ${TMPDIR}
 git-buildpackage \
 	--git-upstream-branch=master --git-debian-branch=master \
 	--git-upstream-tree=branch \
-	--git-export-dir=${TMPDIR} \
+	--git-export-dir=${TMPDIR} --git-cleaner=/bin/true \
 	--git-force-create \
 	-rfakeroot $@ \
 	|| exit
