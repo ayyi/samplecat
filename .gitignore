@@ -16,3 +16,5 @@ stamp-*
 autom4te.cache/
 tags
 cscope.*
+ltmain.sh
+libtool
