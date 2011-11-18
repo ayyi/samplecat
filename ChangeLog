@@ -1,13 +1,20 @@
+20111118  Robin Gareus  <robin@gareus.org>
+-rebased changes on top of orig svn repository
+-added application icon
+-added man page, updated '--help' text
+-config file changed: s/database_*/mysql_*/
+-version changed to 0.2.0
+	
 20111116  Robin Gareus  <robin@gareus.org>
-- support UTF-8 filenames, fixed DnD for paths with whitespace
-- allow to DnD multiple files
-- added ebu r128 file statistic info to inspector
-- built-in JACK player w/ resampling, pitch-shifting and vari-speed (needs rubberband-ladspa.so), JACK-MIDI trigger
-- added ffmpeg decoder
-- fixed sqlite backend - no more injections, files with "'"
-- save colour schema in config; default to hue spectrum
-- allow to select auditioner backend at runtime
-- removed duplicate code and cruft, fixed some mem leaks
+-support UTF-8 filenames, fixed DnD for paths with whitespace
+-allow to DnD multiple files
+-added ebu r128 file statistic info to inspector
+-built-in JACK player w/ resampling, pitch-shifting and vari-speed (needs rubberband-ladspa.so), JACK-MIDI trigger
+-added ffmpeg decoder
+-fixed sqlite backend - no more injections, files with "'"
+-save colour schema in config; default to hue spectrum
+-allow to select auditioner backend at runtime
+-removed duplicate code and cruft, fixed some mem leaks
 
 20111106
 -fixed segfault on notes editor focus-out.

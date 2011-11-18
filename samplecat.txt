@@ -1,52 +1,46 @@
 todo:
-	-look at spek (vala spectrogram)
-	-insert: dupe-checking not working.
-	-can only dnd one file from filemanager onto database window.
+	-look at spek (vala spectrogram) - why? sndfile's spectrogram is great
 	-appears to freeze when importing from cdrom. move to idle function?
 	-GtkInfBar added in gtk 2.18 - we should probably use it instead of the message_panel__ functions in window.c 
 	-show warning icon in statusbar - eggtrayicon.c ?
-	-freshly imported files dont have the icon set.
 	-check out libsexy SexyUrlLabel (for tags) 
 	-check out chickensys samplemanage.
 	-recursive importing: gui is unresponsive - put in some mainloop stuff
-	-check with valgrind.
+	-check with valgrind. - needs suppression file for gtk libs
 	-how to programmatically enter treeview cell edit mode? (see code)
 	-why segfaults related to tree row_refs - see dir_tree_on_link_selected() 
-	-ffmpeg: look at aqualung to see how they do the FFmpeg support.
 	-add date to database so we can sort by date and show f-spot style bar chart for years.
 	-make samplecat an embeddable widget?
-	-player: look at sndfile-jackplay (in sndfile-tools)
-	-consider using libavformat from ffmpeg to get info for mp3/mp4 etc. see `ffprobe` for example-code.
+	-db-backend: rename/move files, update basic info (dir, name, duration, ..)
+	-db-backend: add 'misc' field for collected format specific meta-data (eg Artist, Album, bitrate, sf2 sample-count, etc)
+	-file-manager: rmdir/mkdir, unlink+confirm
+	-DnD out of samplecat on OSX to non GTK apps (it works with ardour, but not with OSX-Finder)
+	-allow to modify preset-categories and remember changes.
 
-dependencies:
-	-glib/gtk2 - v2.6 is needed for g_key_file
-	-mysql_client
-	-libsndfile
-	-jack
-	-flac
 
 functionality status:
 	-sorting
 		-by date                             no
-	-show files                              done
+	-show files                            done
 		-name                                done
 		-path                                done
 		-category / keywords                 mostly done
 		-waveform overview                   done
 		-inspector                           done
-	-preview files                           done
+	-preview files                         done
 	-import
 		-scan directories                    done
 		-scan dvd's/cdr's                    test
 		-drag n drop                         done
-		-dupe checking                       test
+		-dupe checking                       done
 	export
 		-seismix                             yes
-		-ardour/rosegarden etc               no
-		-drag n drop                         no - test ardour + rosegarden
+		-ardour/rosegarden etc               yes
+		-drag n drop                         ? - ardour:yes, rosegarden:?
 	formats
 		-wav/aiff/etc                        done
 		-flac                                done
+		-all ffmpeg                          done
 	colours
 		-add selector in the toolbar         done
 		-drag n drop to row                  done
@@ -57,11 +51,6 @@ functionality status:
 		-sample versioning                   no
 	slocate
 		-allow searches of slocate db        no
-
-threads:
-	-main thread
-	-overview thread
-	-jack thread (only created on demand) x2
 
 metadata:
 	-gio/gvfs:
@@ -100,14 +89,4 @@ file system trees:
 	-AudioFinder
 	-Netmix - http://www.netmixpro.com/
 
--auditioning
-	-perhaps use the dssi sampleplayer plugin like sonicvisualiser does?
-
--portability
-	-like all systems using a central database, the data is confined to one machine. If you scp or take disk to another machine, all your data is effectively lost.
-	-if a file is moved, its metadata is lost! (could maybe have a find function?)
-
 -papers on automatic metadata and searching: http://audioclas.iua.upf.edu/documents.shtml
-
--tracker:
-

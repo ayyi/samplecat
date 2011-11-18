@@ -1,5 +1,5 @@
 AC_PREREQ(2.59)
-AC_INIT([Samplecat],[0.1.2],[tim@orford.org])
+AC_INIT([Samplecat],[0.2.0],[tim@orford.org])
 AC_CONFIG_SRCDIR([src/main.c])
 AC_CONFIG_HEADER([config.h])
 AC_CANONICAL_HOST
@@ -37,7 +37,7 @@ fi
 # default 'auto' configutaion
 AC_ARG_ENABLE(mysql,    AC_HELP_STRING([--disable-mysql], [disable use of Mysql as backend]),enable_mysql=$enableval, enable_mysql="auto")
 AC_ARG_ENABLE(ffmpeg,   AC_HELP_STRING([--disable-ffmpeg], [disable use of FFMPEG]), enable_ffmpeg=$enableval, enable_ffmpeg="auto")
-AC_ARG_ENABLE(dnotify,  AS_HELP_STRING([--enable-dnotify],[build with dnotify support]),enable_dnotify=$enableval, enable_dnotify="no")
+AC_ARG_ENABLE(dnotify,  AS_HELP_STRING([--disable-dnotify],[build with dnotify support]),enable_dnotify=$enableval, enable_dnotify="auto")
 AC_ARG_ENABLE(ayyi,     AS_HELP_STRING([--enable-ayyi],[build with ayyi support]),enable_ayyi=$enableval, enable_ayyi="no")
 AC_ARG_ENABLE(ayyidbus, AS_HELP_STRING([--disable-ayyidbus],[disable use of dbus]),enable_ayyidbus=$enableval, enable_ayyidbus="auto")
 AC_ARG_ENABLE(jack,     AS_HELP_STRING([--disable-jack],[build with JACK support]),enable_jack=$enableval, enable_jack="auto")
@@ -62,7 +62,7 @@ case $target_os in
 		enable_opengl="no"
 		;;
 	*linux*)
-		enable_dnotify="yes"
+		if test "$enable_dnotify" = "auto"; then enable_dnotify="yes"; fi
 		;;
 	*)	
 		;;
@@ -199,7 +199,7 @@ AC_SUBST(SNDFILE_LIBS)
 dnl -----------------------------------------------------------------------------
 
 AS_IF([test "$enable_ffmpeg" != "no"], [
-	PKG_CHECK_MODULES(FFMPEG, [libavformat libavcodec libavutil], enable_ffmpeg=yes, enable_ffmpeg=no)
+	PKG_CHECK_MODULES(FFMPEG, [libavformat >= 51.0.0 libavcodec >= 51.0.0 libavutil >= 51.0.0], enable_ffmpeg=yes, enable_ffmpeg=no)
        ])
 
 if test "$enable_ffmpeg" = "yes"; then
@@ -243,7 +243,6 @@ if test "$enable_dnotify" = "yes"; then
 	AC_DEFINE(USE_DNOTIFY,1,[Use dnotify on Linux])
 	AC_DEFINE(USE_NOTIFY,1,[Use notification])
 fi
-AM_CONDITIONAL(ENABLE_DNOTIFY, test "$enable_dnotify" = "yes")
 
 dnl -----------------------------------------------------------------------------
 
@@ -414,9 +413,9 @@ AC_MSG_RESULT([Audio players:])
 AC_MSG_RESULT([  built-in JACK:              $jplayer])
 AC_MSG_RESULT([  AYYI/Dbus:                  $enable_ayyidbus])
 AC_MSG_RESULT([  CLI: gst,afplay,totem:      $enable_gplayer])
-AC_MSG_RESULT([Building soundfont support:   $enable_sf2])
-AC_MSG_RESULT([Building nks support:         $enable_nks])
 AC_MSG_RESULT([Building dnotify support:     $enable_dnotify])
-AC_MSG_RESULT([Building ayyi support:        $enable_ayyi])
 AC_MSG_RESULT([Building opengl support:      $enable_opengl])
+AC_MSG_RESULT([Building ayyi support:        $enable_ayyi])
+dnl AC_MSG_RESULT([Building soundfont support:   $enable_sf2])
+dnl AC_MSG_RESULT([Building nks support:         $enable_nks])
 AC_MSG_RESULT([])
