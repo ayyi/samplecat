@@ -141,6 +141,27 @@ samplerate_format(char* str, int samplerate)
 	if(str[strlen(str)-1]=='.') str[strlen(str)-1] = '\0';
 }
 
+void
+bitrate_format(char* str, int bitrate)
+{
+	if(bitrate<1){ str[0] = '\0'; return; }
+	// TODO unit scale:
+	// < 1000 kbit/s  -> kilobits/s (mp3); 
+	// > 1000 kbit/s  -> kBytes (wav)
+	// > 1000 kByte/s -> Mbit/s 
+	// > 1000 kMbit/s -> Mbit/s 
+	snprintf(str, 32, "%d b/s", bitrate);
+	str[31] = '\0';
+}
+
+void
+bitdepth_format(char* str, int bitdepth)
+{
+	if(bitdepth<1){ str[0] = '\0'; return; }
+	snprintf(str, 32, "%d b/sample", bitdepth);
+	str[31] = '\0';
+}
+
 
 char*
 dir_format(char* dir)

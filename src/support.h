@@ -55,6 +55,8 @@ void         debug_printf              (const char* func, int level, const char*
 void         log_handler               (const gchar* log_domain, GLogLevelFlags, const gchar* message, gpointer);
 
 void         samplerate_format         (char*, int samplerate);
+void         bitrate_format            (char* str, int bitdepth);
+void         bitdepth_format           (char* str, int bitdepth);
 gchar*       dir_format                (char*);
 gchar*       channels_format           (int);
 void         len_format                (char*, int64_t);

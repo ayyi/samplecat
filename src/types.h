@@ -26,6 +26,9 @@ struct _inspector
 	GtkWidget*     channels;
 	GtkWidget*     mimetype;
 	GtkWidget*     level;
+	GtkWidget*     bitrate;
+	GtkWidget*     bitdepth;
+	GtkWidget*     metadata;
 	GtkWidget*     ebur;
 	GtkWidget*     image;
 	GtkWidget*     text;

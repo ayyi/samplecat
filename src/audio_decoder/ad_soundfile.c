@@ -42,7 +42,7 @@ int ad_info_sndfile(void *sf, struct adinfo *nfo) {
 		nfo->sample_rate = priv->sfinfo.samplerate;
 		nfo->length      = priv->sfinfo.samplerate ? (priv->sfinfo.frames * 1000) / priv->sfinfo.samplerate : 0;
 		nfo->bit_depth   = parse_bit_depth(priv->sfinfo.format);
-		nfo->bit_rate    = nfo->bit_depth * nfo->channels * nfo->sample_rate /8;
+		nfo->bit_rate    = nfo->bit_depth * nfo->channels * nfo->sample_rate;
 		nfo->meta_data   = NULL;
 	}
 	return 0;

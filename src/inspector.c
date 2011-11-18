@@ -109,6 +109,7 @@ inspector_new()
 	//-----------
 	GtkWidget* hbox3 = gtk_hbox_new(FALSE, 4);
 	gtk_box_pack_start(GTK_BOX(vbox), hbox3, EXPAND_FALSE, FILL_FALSE, 0);
+	//----
 	
 	GtkWidget* align5 = gtk_alignment_new(0.0, 0.5, 0.0, 0.0);
 	gtk_box_pack_start(GTK_BOX(hbox3), align5, EXPAND_FALSE, FILL_FALSE, 0);
@@ -136,14 +137,34 @@ inspector_new()
 	gtk_container_add(GTK_CONTAINER(align7), label7);	
 	
 	//-----------
+	GtkWidget* hbox4 = gtk_hbox_new(FALSE, 4);
+	gtk_box_pack_start(GTK_BOX(vbox), hbox4, EXPAND_FALSE, FILL_FALSE, 0);
+	//----
 
-	char* labels[] = {"Level"};
 	GtkWidget* align = gtk_alignment_new(0.0, 0.5, 0.0, 0.0);
-	gtk_box_pack_start(GTK_BOX(vbox), align, EXPAND_FALSE, FILL_FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(hbox4), align, EXPAND_FALSE, FILL_FALSE, 0);
 
-	GtkWidget* label = app.inspector->level = gtk_label_new(labels[0]);
+	GtkWidget* label = app.inspector->level = gtk_label_new("Level");
 	gtk_misc_set_padding(GTK_MISC(label), margin_left, 2);
 	gtk_container_add(GTK_CONTAINER(align), label);	
+	
+	//-----------
+
+	GtkWidget* align9 = gtk_alignment_new(0.0, 0.5, 0.0, 0.0);
+	gtk_box_pack_start(GTK_BOX(hbox4), align9, EXPAND_FALSE, FILL_FALSE, 0);
+
+	GtkWidget* label9 = app.inspector->bitrate = gtk_label_new("BitRate");
+	gtk_misc_set_padding(GTK_MISC(label9), margin_left, 2);
+	gtk_container_add(GTK_CONTAINER(align9), label9);	
+	
+	//-----------
+
+	GtkWidget* align10 = gtk_alignment_new(0.0, 0.5, 0.0, 0.0);
+	gtk_box_pack_start(GTK_BOX(hbox4), align10, EXPAND_FALSE, FILL_FALSE, 0);
+
+	GtkWidget* label10 = app.inspector->bitdepth = gtk_label_new("BitDepth");
+	gtk_misc_set_padding(GTK_MISC(label10), margin_left, 2);
+	gtk_container_add(GTK_CONTAINER(align10), label10);	
 	
 	//-----------
 
@@ -153,6 +174,14 @@ inspector_new()
 	GtkWidget* label8 = app.inspector->ebur = gtk_label_new("EBUr128");
 	gtk_misc_set_padding(GTK_MISC(label8), margin_left, 2);
 	gtk_container_add(GTK_CONTAINER(align8), label8);	
+	//-----------
+
+	GtkWidget* align11 = gtk_alignment_new(0.0, 0.5, 0.0, 0.0);
+	gtk_box_pack_start(GTK_BOX(vbox), align11, EXPAND_FALSE, FILL_FALSE, 0);
+
+	GtkWidget* label11 = app.inspector->metadata = gtk_label_new("Meta-Data");
+	gtk_misc_set_padding(GTK_MISC(label11), margin_left, 2);
+	gtk_container_add(GTK_CONTAINER(align11), label11);	
 	
 	//-----------
 	//notes:
@@ -206,6 +235,8 @@ inspector_set_labels(Sample* sample)
 
 	char fs_str[32]; samplerate_format(fs_str, sample->sample_rate); strcpy(fs_str + strlen(fs_str), " kHz");
 	char length[32]; len_format(length, sample->length);
+	char bitrate[32]; bitrate_format(bitrate, sample->bit_rate);
+	char bitdepth[32]; bitdepth_format(bitdepth, sample->bit_depth);
 
 	char* keywords = (sample->keywords && strlen(sample->keywords)) ? sample->keywords : "<no tags>";
 
@@ -217,7 +248,10 @@ inspector_set_labels(Sample* sample)
 	gtk_label_set_text(GTK_LABEL(i->channels),   ch_str);
 	gtk_label_set_text(GTK_LABEL(i->mimetype),   sample->mimetype);
 	gtk_label_set_text(GTK_LABEL(i->level),      level);
+	gtk_label_set_text(GTK_LABEL(i->bitrate),    bitrate);
+	gtk_label_set_text(GTK_LABEL(i->bitdepth),   bitdepth);
 	gtk_label_set_markup(GTK_LABEL(i->ebur),     sample->ebur?sample->ebur:"");
+	gtk_label_set_markup(GTK_LABEL(i->metadata), sample->meta_data?sample->meta_data:"");
 	gtk_text_buffer_set_text(i->notes,           sample->notes?sample->notes:"", -1);
 
 	if (sample->overview) {
@@ -360,7 +394,7 @@ static void
 hide_fields()
 {
 	Inspector* i = app.inspector;
-	GtkWidget* fields[] = {i->filename, i->tags, i->length, i->samplerate, i->channels, i->mimetype, i->ebur, i->level, i->text};
+	GtkWidget* fields[] = {i->filename, i->tags, i->length, i->samplerate, i->channels, i->mimetype, i->ebur, i->level, i->text, i->bitdepth, i->bitrate, i->metadata};
 	int f = 0; for(;f<G_N_ELEMENTS(fields);f++){
 		gtk_widget_hide(GTK_WIDGET(fields[f]));
 	}
@@ -371,7 +405,7 @@ static void
 show_fields()
 {
 	Inspector* i = app.inspector;
-	GtkWidget* fields[] = {i->filename, i->tags, i->length, i->samplerate, i->channels, i->mimetype, i->ebur, i->level, i->text};
+	GtkWidget* fields[] = {i->filename, i->tags, i->length, i->samplerate, i->channels, i->mimetype, i->ebur, i->level, i->text, i->bitdepth, i->bitrate, i->metadata};
 	int f = 0; for(;f<G_N_ELEMENTS(fields);f++){
 		gtk_widget_show(GTK_WIDGET(fields[f]));
 	}

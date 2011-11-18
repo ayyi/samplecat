@@ -47,13 +47,14 @@ int ad_info_ffmpeg(void *sf, struct adinfo *nfo) {
     if (nfo->sample_rate==0) return -1;
     nfo->length      = (nfo->frames * 1000) / nfo->sample_rate;
     nfo->bit_rate    = priv->formatContext->bit_rate;
-    nfo->meta_data    = NULL;
+    nfo->bit_depth   = 0;
+    nfo->meta_data   = NULL;
 
 		AVDictionaryEntry *tag = NULL;
 		// Tags in container
 		while ((tag = av_dict_get(priv->formatContext->metadata, "", tag, AV_DICT_IGNORE_SUFFIX))) {
 			dbg(2, "FTAG: %s=%s", tag->key, tag->value);
-			char * tmp = g_strdup_printf("%s%s%s=%s", nfo->meta_data?nfo->meta_data:"",nfo->meta_data?"\n":"", tag->key, tag->value);
+			char * tmp = g_strdup_printf("%s%s<i>%s</i>:%s", nfo->meta_data?nfo->meta_data:"",nfo->meta_data?"\n":"", tag->key, tag->value);
 			if (nfo->meta_data) g_free(nfo->meta_data);
 			nfo->meta_data = tmp;
 		}
@@ -62,7 +63,7 @@ int ad_info_ffmpeg(void *sf, struct adinfo *nfo) {
 		AVStream *stream = priv->formatContext->streams[priv->audioStream];
 		while ((tag = av_dict_get(stream->metadata, "", tag, AV_DICT_IGNORE_SUFFIX))) {
 			dbg(2, "STAG: %s=%s", tag->key, tag->value);
-			char * tmp = g_strdup_printf("%s%s%s=%s", nfo->meta_data?nfo->meta_data:"",nfo->meta_data?"\n":"", tag->key, tag->value);
+			char * tmp = g_strdup_printf("%s%s<i>%s</i>:%s", nfo->meta_data?nfo->meta_data:"",nfo->meta_data?"\n":"", tag->key, tag->value);
 			if (nfo->meta_data) g_free(nfo->meta_data);
 			nfo->meta_data = tmp;
 		}
