@@ -400,15 +400,17 @@ main(int argc, char** argv)
 	if(!app.no_gui) window_new(); 
 	if(!app.no_gui) app.context_menu = make_context_menu();
 
-#ifdef __APPLE__
 	gtk_window_set_title(GTK_WINDOW(app.window), "SampleCat");
-
+#ifdef __APPLE__
 	GtkWidget *menu_bar;
 	menu_bar = gtk_menu_bar_new();
 	/* Note: the default OSX menu bar already includes a 'quit' entry 
 	 * connected to 'gtk_main_quit' by default. so we're fine.
 	 */
 	gtk_osxapplication_set_menu_bar(osxApp, GTK_MENU_SHELL(menu_bar));
+#else
+#include "icons/samplecat.xpm"
+	gtk_window_set_icon(GTK_WINDOW(app.window), gdk_pixbuf_new_from_xpm_data(samplecat_xpm));
 #endif
 
 	if(!backend.pending){ 
