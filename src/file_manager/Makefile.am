@@ -33,7 +33,3 @@ libfilemanager_a_SOURCES = \
 	menu.c menu.h \
 	diritem.c diritem.h \
 	dir.c dir.h
-
-EXTRA_DIST = \
-	file_view.h
-

@@ -28,7 +28,6 @@ bin_PROGRAMS = samplecat
 GQVIEW1_SRC = gqview_view_dir_tree.c gqview_view_dir_tree.h gqview2/gqview.h gqview2/typedefs.h gqview2/ui_fileops.c gqview2/ui_fileops.h gqview2/ui_tree_edit.c gqview2/ui_tree_edit.h gqview2/layout_util.c gqview2/layout_util.h gqview2/filelist.c gqview2/filelist.h gqview2/pixbuf_util.c gqview2/pixbuf_util.h \
 	gqview2/ui_menu.c gqview2/ui_menu.h \
 	gqview2/utilops.c gqview2/utilops.h
-GQVIEW2_SRC = 
 
 if ENABLE_AYYI
 AYYI_SRC = ayyi.c ayyi.h ayyi_model.c ayyi_model.h
@@ -126,7 +125,3 @@ samplecat_LDADD = \
 	$(FFTW3_LIBS) \
 	$(OPENGL_LIBS) \
 	$(FFMPEG_LIBS)
-
-EXTRA_DIST = db/sqlite.c db/sqlite.h db/tracker.c db/tracker.h \
-	gl_spectrogram_view.c gl_spectrogram_view.h
-
