@@ -84,6 +84,7 @@ sample_dup(Sample* s)
 	r->frames       = s->frames;
 	r->channels     = s->channels;
 	r->bit_depth    = s->bit_depth;
+	r->bit_rate     = s->bit_rate;
 	r->peak_level   = s->peak_level;
 	r->colour_index = s->colour_index;
 	r->online       = s->online;

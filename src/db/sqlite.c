@@ -39,6 +39,9 @@ enum {
 	COLUMN_ABSPATH,
 	COLUMN_MTIME,
 	COLUMN_FRAMES,
+	COLUMN_BITRATE,
+	COLUMN_BITDEPTH,
+	COLUMN_METADATA,
 };
 
 static gboolean sqlite__update_string(int id, const char*, const char*);
@@ -106,6 +109,18 @@ sqlite__connect()
 				dbg(0, "updating to new model: frames");
 				sqlite3_exec(db, "ALTER TABLE samples add frames INT;", NULL, NULL, &errmsg);
 			}
+			if (!strstr(table[3], "bitrate INT")) { 
+				dbg(0, "updating to new model: bitrate");
+				sqlite3_exec(db, "ALTER TABLE samples add bitrate INT;", NULL, NULL, &errmsg);
+			}
+			if (!strstr(table[3], "bitdepth INT")) { 
+				dbg(0, "updating to new model: bitdepth");
+				sqlite3_exec(db, "ALTER TABLE samples add bitdepth INT;", NULL, NULL, &errmsg);
+			}
+			if (!strstr(table[3], "metadata TEXT")) { 
+				dbg(0, "updating to new model: bitdepth");
+				sqlite3_exec(db, "ALTER TABLE samples add metadata TEXT;", NULL, NULL, &errmsg);
+			}
 		}
 	} else {
 		dbg(0, "SQL: %s", errmsg?errmsg:"-");
@@ -119,7 +134,7 @@ sqlite__connect()
 			"id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, "
 			"filename TEXT, filedir TEXT, keywords TEXT, pixbuf BLOB, length INT, sample_rate INT, channels INT, "
 			"online INT, last_checked INT, mimetype TEXT, peaklevel REAL, notes TEXT, colour INT, "
-			"ebur TEXT, abspath TEXT, mtime INT, frames INT)",
+			"ebur TEXT, abspath TEXT, mtime INT, frames INT, bitrate INT, bitdepth INT, metadata TEXT)",
 			on_create_table, 0, &errmsg);
 		if (n != SQLITE_OK) {
 			if (!strstr(errmsg, "already exists")) {
@@ -148,13 +163,15 @@ sqlite__insert(Sample* sample)
 	sqlite3_int64 idx = -1;
 
 	char* sql = sqlite3_mprintf(
-		"INSERT INTO samples(abspath,filename,filedir,length,sample_rate,channels,online,mimetype,ebur,peaklevel,colour,mtime,frames) "
-		"VALUES ('%q','%q','%q',%"PRIi64",'%i','%i','%i','%q','%q','%f','%i','%lu',%"PRIi64")",
+		"INSERT INTO samples(abspath,filename,filedir,length,sample_rate,channels,online,mimetype,ebur,peaklevel,colour,mtime,frames,bitrate,bitdepth,metadata) "
+		"VALUES ('%q','%q','%q',%"PRIi64",'%i','%i','%i','%q','%q','%f','%i','%lu',%"PRIi64",'%i','%i','%q')",
 		sample->full_path, sample->sample_name, sample->dir,
 		sample->length, sample->sample_rate, sample->channels,
 		sample->online, sample->mimetype, 
 		sample->ebur?sample->ebur:"", 
-		sample->peak_level, sample->colour_index, (unsigned long) sample->mtime, sample->frames
+		sample->peak_level, sample->colour_index, (unsigned long) sample->mtime,
+		sample->frames, sample->bit_rate, sample->bit_depth,
+		sample->meta_data?sample->meta_data:""
 	);
 
 	if(sqlite3_exec(db, sql, NULL, NULL, &errMsg) != SQLITE_OK){
@@ -445,9 +462,9 @@ sqlite__search_iter_next(unsigned long** lengths)
 	result.peak_level  = sqlite3_column_double(ppStmt, COLUMN_PEAKLEVEL);
 	result.online      = sqlite3_column_int(ppStmt, COLUMN_ONLINE);
 	result.mtime       = (unsigned long) sqlite3_column_int(ppStmt, COLUMN_MTIME);
-	result.bit_depth   = 0; // TODO rg - save in database
-	result.bit_rate    = 0; // TODO rg - save in database
-	result.meta_data   = NULL; // TODO rg - save in database
+	result.bit_depth   = sqlite3_column_int(ppStmt, COLUMN_BITDEPTH);
+	result.bit_rate    = sqlite3_column_int(ppStmt, COLUMN_BITRATE);
+	result.meta_data   = (char*)sqlite3_column_text(ppStmt, COLUMN_METADATA);
 	result.overview    = pixbuf;
 
 	/* backwards compat. */

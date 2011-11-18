@@ -1005,7 +1005,7 @@ update_sample(Sample *sample) {
 			else return;
 
 			if (sample_get_file_info(sample)) {
-				// TODO: update basic file info in db as well
+				// TODO: update "basic" file info in db as well
 				// - but there is no db API for that [yet].
 				// delete/re-add ?
 				sample->mtime = mtime;

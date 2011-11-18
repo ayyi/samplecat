@@ -145,12 +145,11 @@ void
 bitrate_format(char* str, int bitrate)
 {
 	if(bitrate<1){ str[0] = '\0'; return; }
-	// TODO unit scale:
-	// < 1000 kbit/s  -> kilobits/s (mp3); 
-	// > 1000 kbit/s  -> kBytes (wav)
-	// > 1000 kByte/s -> Mbit/s 
-	// > 1000 kMbit/s -> Mbit/s 
-	snprintf(str, 32, "%d b/s", bitrate);
+	else if (bitrate < 1000) snprintf(str, 32, "%d b/s", bitrate);
+	else if (bitrate < 1000000) snprintf(str, 32, "%.1f kb/s", bitrate/1000.0);
+	else if (bitrate < 8192000) snprintf(str, 32, "%.1f kB/s", bitrate/8192.0);
+	else if (bitrate < 1000000000) snprintf(str, 32, "%.1f Mb/s", bitrate/1000000.0);
+	else snprintf(str, 32, "%.1f MB/s", bitrate/8192000.0);
 	str[31] = '\0';
 }
 
@@ -1187,7 +1186,7 @@ gain2dbstring(float gain)
 		//return g_strdup_printf("-200 dB");
 		return g_strdup("");
 
-	return g_strdup_printf("%.2f dB", gain2db(gain));
+	return g_strdup_printf("%.2f dBA", gain2db(gain));
 }
 
 
