@@ -189,6 +189,9 @@ int ad_info_flac(void *sf, struct adinfo *nfo) {
 		nfo->channels     = priv->streaminfo.data.stream_info.channels;
 		nfo->frames       = total_samples;
 		nfo->length       = total_samples * 1000 / nfo->sample_rate  / nfo->channels;
+		nfo->bit_rate     = 0;
+		nfo->bit_depth    = 0;
+		nfo->meta_data    = NULL;
 	}
 	return 0;
 }

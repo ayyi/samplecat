@@ -18,6 +18,21 @@ typedef struct {
 	SNDFILE *sffile;
 } sndfile_audio_decoder;
 
+int parse_bit_depth(int format) {
+	/* see http://www.mega-nerd.com/libsndfile/api.html */
+	switch (format&0x0f) {
+		case SF_FORMAT_PCM_S8: return 8;
+		case SF_FORMAT_PCM_16: return 16; /* Signed 16 bit data */
+		case SF_FORMAT_PCM_24: return 24; /* Signed 24 bit data */
+		case SF_FORMAT_PCM_32: return 32; /* Signed 32 bit data */
+		case SF_FORMAT_PCM_U8: return 8;  /* Unsigned 8 bit data (WAV and RAW only) */
+		case SF_FORMAT_FLOAT : return 32; /* 32 bit float data */
+		case SF_FORMAT_DOUBLE: return 64; /* 64 bit float data */
+		default: break;
+	}
+	return 0;
+}
+
 int ad_info_sndfile(void *sf, struct adinfo *nfo) {
 	sndfile_audio_decoder *priv = (sndfile_audio_decoder*) sf;
 	if (!priv) return -1;
@@ -26,6 +41,9 @@ int ad_info_sndfile(void *sf, struct adinfo *nfo) {
 		nfo->frames      = priv->sfinfo.frames;
 		nfo->sample_rate = priv->sfinfo.samplerate;
 		nfo->length      = priv->sfinfo.samplerate ? (priv->sfinfo.frames * 1000) / priv->sfinfo.samplerate : 0;
+		nfo->bit_depth   = parse_bit_depth(priv->sfinfo.format);
+		nfo->bit_rate    = nfo->bit_depth * nfo->channels * nfo->sample_rate /8;
+		nfo->meta_data   = NULL;
 	}
 	return 0;
 }
