@@ -18,3 +18,4 @@ tags
 cscope.*
 ltmain.sh
 libtool
+.libs
