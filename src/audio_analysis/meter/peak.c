@@ -24,5 +24,6 @@ double ad_maxsignal(const char *fn) {
 
 	ad_close(sf);
 	free(sf_data);
+	ad_free_nfo(&nfo);
 	return max_val;
 }

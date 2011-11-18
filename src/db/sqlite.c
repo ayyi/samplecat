@@ -445,6 +445,9 @@ sqlite__search_iter_next(unsigned long** lengths)
 	result.peak_level  = sqlite3_column_double(ppStmt, COLUMN_PEAKLEVEL);
 	result.online      = sqlite3_column_int(ppStmt, COLUMN_ONLINE);
 	result.mtime       = (unsigned long) sqlite3_column_int(ppStmt, COLUMN_MTIME);
+	result.bit_depth   = 0; // TODO rg - save in database
+	result.bit_rate    = 0; // TODO rg - save in database
+	result.meta_data   = NULL; // TODO rg - save in database
 	result.overview    = pixbuf;
 
 	/* backwards compat. */

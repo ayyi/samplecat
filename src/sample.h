@@ -20,7 +20,9 @@ struct _sample
 	int64_t      length;        //milliseconds
 	int64_t      frames;        //total number of frames (eg a frame for 16bit stereo is 4 bytes).
 	unsigned int channels;
-	int          bitdepth;
+	int          bit_depth;     // yet unused
+	int          bit_rate;      // yet unused
+	char *       meta_data;     // yet unused
 	float        peak_level;
 	int          colour_index;
 

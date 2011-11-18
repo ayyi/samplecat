@@ -93,6 +93,7 @@ GdkPixbuf* make_overview(Sample* sample) {
 
   if(ad_close(sf)) perr("bad file close.\n");
   free(data);
+	ad_free_nfo(&nfo);
   cairo_destroy(cr);
   cairo_surface_destroy(surface);
   sample->overview = pixbuf;

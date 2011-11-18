@@ -419,7 +419,9 @@ mysql__search_iter_next_(unsigned long** lengths)
 	result.mimetype    = row[MYSQL_MIMETYPE];
 	result.online      = get_int(row, MYSQL_ONLINE);
 	result.mtime       = 0; // TODO rg - save in database
-	result.bitdepth    = 0; // TODO rg - save in database
+	result.bit_depth   = 0; // TODO rg - save in database
+	result.bit_rate    = 0; // TODO rg - save in database
+	result.meta_data   = NULL; // TODO rg - save in database
 	result.frames      = result.length * result.sample_rate /1000; // TODO rg - save in database
 	return &result;
 }

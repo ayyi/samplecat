@@ -83,7 +83,7 @@ sample_dup(Sample* s)
 	r->length       = s->length;
 	r->frames       = s->frames;
 	r->channels     = s->channels;
-	r->bitdepth     = s->bitdepth;
+	r->bit_depth    = s->bit_depth;
 	r->peak_level   = s->peak_level;
 	r->colour_index = s->colour_index;
 	r->online       = s->online;
@@ -96,6 +96,7 @@ sample_dup(Sample* s)
 	DUPSTR(ebur)
 	DUPSTR(notes)
 	DUPSTR(mimetype)
+	DUPSTR(meta_data)
 
 	if (s->overview)    r->overview=gdk_pixbuf_copy(s->overview);
 	sample_ref(r);
@@ -115,6 +116,7 @@ sample_free(Sample* sample)
 	if(sample->ebur) g_free(sample->ebur);
 	if(sample->notes) g_free(sample->notes);
 	if(sample->dir) g_free(sample->dir);
+	if(sample->meta_data) g_free(sample->meta_data);
 	//if(sample->overview) g_free(sample->overview); // check how to free that!
 	g_free(sample);
 }
@@ -145,6 +147,10 @@ sample_get_file_info(Sample* sample)
 	sample->channels    = nfo.channels;
 	sample->sample_rate = nfo.sample_rate;
 	sample->length      = nfo.length;
+	sample->bit_rate    = nfo.bit_rate;
+	sample->bit_depth   = nfo.bit_depth;
+	sample->meta_data   = nfo.meta_data;
+	//ad_free_nfo(&nfo); // no! retain allocated meta_data 
 	return true;
 }
 

@@ -45,6 +45,7 @@ ad_plugin const * choose_backend(const char *fn) {
 
 void *ad_open(const char *fn, struct adinfo *nfo) {
 	adecoder *d = (adecoder*) calloc(1, sizeof(adecoder));
+	ad_clear_nfo(nfo);
 
 	d->b = choose_backend(fn);
 	if (!d->b) {
@@ -108,6 +109,26 @@ ssize_t ad_read_mono_dbl(void *sf, struct adinfo *nfo, double* d, size_t len){
 
 
 gboolean ad_finfo (const char *fn, struct adinfo *nfo) {
+	ad_clear_nfo(nfo);
 	void * sf = ad_open(fn, nfo);
 	return ad_close(sf)?false:true;
+}
+
+void ad_clear_nfo(struct adinfo *nfo) {
+	memset(nfo, 0, sizeof(struct adinfo));
+}
+
+void ad_free_nfo(struct adinfo *nfo) {
+	if (nfo->meta_data) free(nfo->meta_data);
+}
+
+void dump_nfo(int dbglvl, struct adinfo *nfo) {
+	dbg(dbglvl, "sample_rate: %u", nfo->sample_rate);
+	dbg(dbglvl, "channels:    %u", nfo->channels);
+	dbg(dbglvl, "length:      %"PRIi64" ms", nfo->length);
+	dbg(dbglvl, "frames:      %"PRIi64, nfo->frames);
+	dbg(dbglvl, "bit_rate:    %d", nfo->bit_rate);
+	dbg(dbglvl, "bit_depth:   %d", nfo->bit_depth);
+	dbg(dbglvl, "channels:    %u", nfo->channels);
+	dbg(dbglvl, "meta-data:   %s", nfo->meta_data?nfo->meta_data:"-");
 }

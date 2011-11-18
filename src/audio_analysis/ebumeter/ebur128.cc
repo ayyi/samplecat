@@ -49,6 +49,7 @@ static int ebur128proc (const char *fn, struct ebur128 *ebr) {
 
 	const int nchan = nfo.channels;
 	const float fsamp = nfo.sample_rate;
+	ad_free_nfo(&nfo);
 	if (nchan > 2) {
 		fprintf (stderr, "Input file must be mono or stereo.\n");
 		ad_close(sf);

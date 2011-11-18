@@ -672,6 +672,7 @@ jplay__play_pathX(const char* path, int reset_pitch)
 	JACKaudiooutputinit(sf, nfo.channels, nfo.sample_rate, nfo.frames);
 	app.playing_id = -1; // ID of filer-inspector (non imported sample)
 	show_player();
+	ad_free_nfo(&nfo);
 	return 0;
 }
 

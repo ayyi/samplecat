@@ -52,6 +52,7 @@ gboolean
 tracker__init(gpointer callback)
 {
 	PF;
+	memset(&result, 0, sizeof(Sample));
 	//note: trackerd doesnt have to be running - it will be auto-started.
 	if((tc = tracker_client_new(0, G_MAXINT))){
 		if(callback){
@@ -251,7 +252,6 @@ tracker__search_iter_next()
 		result.dir = dir;
 		result.id = iter.idx;
 		result.online = true;
-		result.mtime = 0; // XXX
 
 		if(strstr(result.dir, "file://") == result.dir){
 			char* o = result.dir;
@@ -941,6 +941,7 @@ clear_result()
 {
 	if(result.keywords) g_free(result.keywords);
 	if(result.mimetype) g_free(result.mimetype);
+	if(result.meta_data) g_free(result.meta_data);
 	memset(&result, 0, sizeof(Sample));
 }
 

@@ -348,6 +348,7 @@ render_sndfile (const char* file)
 	}
 
 	ad_close(infile);
+	ad_free_nfo(&nfo);
 	return pixbuf;
 }
 
