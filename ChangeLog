@@ -1,4 +1,8 @@
 20111118  Robin Gareus  <robin@gareus.org>
+-support for meta-data and bit-rate/depth
+-version changed to 0.2.1
+
+20111118  Robin Gareus  <robin@gareus.org>
 -rebased changes on top of orig svn repository
 -added application icon
 -added man page, updated '--help' text

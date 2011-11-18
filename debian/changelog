@@ -1,3 +1,9 @@
+samplecat (0.2.1-1) unstable; urgency=low
+
+  * updated to upstream 0.2.1
+
+ -- Robin Gareus <robin@gareus.org>  Fri, 18 Nov 2011 18:43:10 +0100
+
 samplecat (0.2.0-1) unstable; urgency=low
 
   * updated to upstream 0.2.0
