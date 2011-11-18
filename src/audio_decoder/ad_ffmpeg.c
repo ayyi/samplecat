@@ -297,6 +297,7 @@ const static ad_plugin ad_ffmpeg = {
 
 /* dlopen handler */
 const ad_plugin * get_ffmpeg() {
+#ifdef HAVE_FFMPEG
   static int ffinit = 0;
   if (!ffinit) {
     ffinit=1;
@@ -308,5 +309,6 @@ const ad_plugin * get_ffmpeg() {
     else 
       av_log_set_level(AV_LOG_VERBOSE);
   }
+#endif
   return &ad_ffmpeg;
 }

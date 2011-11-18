@@ -195,6 +195,7 @@ static void slider_value_changed (GtkRange *range, gpointer  user_data) {
 	}
 }
 
+#ifdef HAVE_JACK
 gboolean update_slider (gpointer data) {
 	if (gtk_widget_has_grab(GTK_WIDGET(data))) return TRUE; // user is manipulating the slider
 	if (!app.auditioner->status) return FALSE;
@@ -228,6 +229,7 @@ gboolean update_slider (gpointer data) {
 	}
 	return TRUE;
 }
+#endif
 
 
 void show_player() {
@@ -258,9 +260,11 @@ void show_player() {
 		updateinterval = 250; // we still need to catch EOF.
 	}
 
+#ifdef HAVE_JACK
 	/* [re] launch background thread to update play slider play position */
 	if (id) g_source_destroy(source);
 	source = g_timeout_source_new (updateinterval);
 	g_source_set_callback (source, update_slider, app.playercontrol->slider1, NULL);
 	id = g_source_attach (source, NULL);
+#endif
 }
