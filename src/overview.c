@@ -96,7 +96,7 @@ overview_thread(gpointer data)
 				g_idle_add(on_overview_done, sample);
 			}
 			else if(message->type == MSG_TYPE_PEAKLEVEL){
-				sample->peak_level = calc_signal_max(message->sample);
+				sample->peaklevel = calc_signal_max(message->sample);
 				g_idle_add(on_peaklevel_done, sample);
 			}
 			else if(message->type == MSG_TYPE_EBUR128){

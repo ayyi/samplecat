@@ -95,31 +95,38 @@ sqlite__connect()
 			table_exists=TRUE;
 			if (!strstr(table[3], "ebur TEXT")) { 
 				dbg(0, "updating to new model: ebur");
-				sqlite3_exec(db, "ALTER TABLE samples add ebur TEXT;", NULL, NULL, &errmsg);
+				int n = sqlite3_exec(db, "ALTER TABLE samples add ebur TEXT;", NULL, NULL, &errmsg);
+				if (n != SQLITE_OK) perr("Sqlite error: %s\n", errmsg); if (errmsg) sqlite3_free(errmsg);
 			}
-			if (!strstr(table[3], "abspath TEXT")) { 
-				dbg(0, "updating to new model: abspath");
-				sqlite3_exec(db, "ALTER TABLE samples add abspath TEXT;", NULL, NULL, &errmsg);
+			if (!strstr(table[3], "full_path TEXT")) { 
+				dbg(0, "updating to new model: full_path");
+				int n = sqlite3_exec(db, "ALTER TABLE samples add full_path TEXT;", NULL, NULL, &errmsg);
+				if (n != SQLITE_OK) perr("Sqlite error: %s\n", errmsg); if (errmsg) sqlite3_free(errmsg);
 			}
 			if (!strstr(table[3], "mtime INT")) { 
 				dbg(0, "updating to new model: mtime");
-				sqlite3_exec(db, "ALTER TABLE samples add mtime INT;", NULL, NULL, &errmsg);
+				int n = sqlite3_exec(db, "ALTER TABLE samples add mtime INT;", NULL, NULL, &errmsg);
+				if (n != SQLITE_OK) perr("Sqlite error: %s\n", errmsg); if (errmsg) sqlite3_free(errmsg);
 			}
 			if (!strstr(table[3], "frames INT")) { 
 				dbg(0, "updating to new model: frames");
-				sqlite3_exec(db, "ALTER TABLE samples add frames INT;", NULL, NULL, &errmsg);
+				int n = sqlite3_exec(db, "ALTER TABLE samples add frames INT;", NULL, NULL, &errmsg);
+				if (n != SQLITE_OK) perr("Sqlite error: %s\n", errmsg); if (errmsg) sqlite3_free(errmsg);
 			}
-			if (!strstr(table[3], "bitrate INT")) { 
-				dbg(0, "updating to new model: bitrate");
-				sqlite3_exec(db, "ALTER TABLE samples add bitrate INT;", NULL, NULL, &errmsg);
+			if (!strstr(table[3], "bit_rate INT")) { 
+				dbg(0, "updating to new model: bit_rate");
+				int n = sqlite3_exec(db, "ALTER TABLE samples add bit_rate INT;", NULL, NULL, &errmsg);
+				if (n != SQLITE_OK) perr("Sqlite error: %s\n", errmsg); if (errmsg) sqlite3_free(errmsg);
 			}
-			if (!strstr(table[3], "bitdepth INT")) { 
-				dbg(0, "updating to new model: bitdepth");
-				sqlite3_exec(db, "ALTER TABLE samples add bitdepth INT;", NULL, NULL, &errmsg);
+			if (!strstr(table[3], "bit_depth INT")) { 
+				dbg(0, "updating to new model: bit_depth");
+				int n = sqlite3_exec(db, "ALTER TABLE samples add bit_depth INT;", NULL, NULL, &errmsg);
+				if (n != SQLITE_OK) perr("Sqlite error: %s\n", errmsg); if (errmsg) sqlite3_free(errmsg);
 			}
-			if (!strstr(table[3], "metadata TEXT")) { 
-				dbg(0, "updating to new model: bitdepth");
-				sqlite3_exec(db, "ALTER TABLE samples add metadata TEXT;", NULL, NULL, &errmsg);
+			if (!strstr(table[3], "meta_data TEXT")) { 
+				dbg(0, "updating to new model: meta_data");
+				int n = sqlite3_exec(db, "ALTER TABLE samples add meta_data TEXT;", NULL, NULL, &errmsg);
+				if (n != SQLITE_OK) perr("Sqlite error: %s\n", errmsg); if (errmsg) sqlite3_free(errmsg);
 			}
 		}
 	} else {
@@ -134,16 +141,23 @@ sqlite__connect()
 			"id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, "
 			"filename TEXT, filedir TEXT, keywords TEXT, pixbuf BLOB, length INT, sample_rate INT, channels INT, "
 			"online INT, last_checked INT, mimetype TEXT, peaklevel REAL, notes TEXT, colour INT, "
-			"ebur TEXT, abspath TEXT, mtime INT, frames INT, bitrate INT, bitdepth INT, metadata TEXT)",
+			"ebur TEXT, full_path TEXT, mtime INT, frames INT, bit_rate INT, bit_depth INT, meta_data TEXT)",
 			on_create_table, 0, &errmsg);
-		if (n != SQLITE_OK) {
-			if (!strstr(errmsg, "already exists")) {
-				perr("Sqlite error: %s\n", errmsg);
-				return FALSE;
-			}
-		}
-		if (errmsg) sqlite3_free(errmsg);
-		else return TRUE;
+		if (n != SQLITE_OK) perr("Sqlite error: %s\n", errmsg);
+		if (errmsg) { sqlite3_free(errmsg); return FALSE;}
+
+		n = sqlite3_exec(db, "CREATE UNIQUE INDEX idx1 ON samples (full_path);", NULL, NULL, &errmsg);
+		if (n != SQLITE_OK) perr("Sqlite error: %s\n", errmsg); if (errmsg) sqlite3_free(errmsg);
+
+		n = sqlite3_exec(db, "CREATE INDEX idx2 ON samples (keywords);", NULL, NULL, &errmsg);
+		if (n != SQLITE_OK) perr("Sqlite error: %s\n", errmsg); if (errmsg) sqlite3_free(errmsg);
+
+		n = sqlite3_exec(db, "CREATE INDEX idx3 ON samples (filename);", NULL, NULL, &errmsg);
+		if (n != SQLITE_OK) perr("Sqlite error: %s\n", errmsg); if (errmsg) sqlite3_free(errmsg);
+
+		n = sqlite3_exec(db, "CREATE INDEX idx4 ON samples (filedir);", NULL, NULL, &errmsg);
+		if (n != SQLITE_OK) perr("Sqlite error: %s\n", errmsg); if (errmsg) sqlite3_free(errmsg);
+
 	}
 	return TRUE;
 }
@@ -163,13 +177,13 @@ sqlite__insert(Sample* sample)
 	sqlite3_int64 idx = -1;
 
 	char* sql = sqlite3_mprintf(
-		"INSERT INTO samples(abspath,filename,filedir,length,sample_rate,channels,online,mimetype,ebur,peaklevel,colour,mtime,frames,bitrate,bitdepth,metadata) "
+		"INSERT INTO samples(full_path,filename,filedir,length,sample_rate,channels,online,mimetype,ebur,peaklevel,colour,mtime,frames,bit_rate,bit_depth,meta_data) "
 		"VALUES ('%q','%q','%q',%"PRIi64",'%i','%i','%i','%q','%q','%f','%i','%lu',%"PRIi64",'%i','%i','%q')",
-		sample->full_path, sample->sample_name, sample->dir,
+		sample->full_path, sample->sample_name, sample->sample_dir,
 		sample->length, sample->sample_rate, sample->channels,
 		sample->online, sample->mimetype, 
 		sample->ebur?sample->ebur:"", 
-		sample->peak_level, sample->colour_index, (unsigned long) sample->mtime,
+		sample->peaklevel, sample->colour_index, (unsigned long) sample->mtime,
 		sample->frames, sample->bit_rate, sample->bit_depth,
 		sample->meta_data?sample->meta_data:""
 	);
@@ -331,7 +345,7 @@ sqlite__file_exists(const char* path)
   int rows,columns;
   char **table = NULL;
 	char *errmsg= NULL;
-	char* sql = sqlite3_mprintf("SELECT abspath FROM samples WHERE abspath='%q'", path);
+	char* sql = sqlite3_mprintf("SELECT full_path FROM samples WHERE full_path='%q'", path);
 	int rc = sqlite3_get_table(db, sql, &table,&rows,&columns,&errmsg);
 	if(rc==SQLITE_OK && (table != NULL) && (rows>=1)) {
 		ok=true;
@@ -448,7 +462,7 @@ sqlite__search_iter_next(unsigned long** lengths)
 	result.id          = sqlite3_column_int(ppStmt, COLUMN_ID);
 	result.full_path   = (char*)(char*)sqlite3_column_text(ppStmt, COLUMN_ABSPATH);
 	result.sample_name = (char*)sqlite3_column_text(ppStmt, COLUMN_FILENAME);
-	result.dir         = (char*)sqlite3_column_text(ppStmt, COLUMN_DIR);
+	result.sample_dir  = (char*)sqlite3_column_text(ppStmt, COLUMN_DIR);
 	result.keywords    = (char*)sqlite3_column_text(ppStmt, COLUMN_KEYWORDS);
 	result.length      = sqlite3_column_int(ppStmt, COLUMN_LENGTH);
 	result.sample_rate = sqlite3_column_int(ppStmt, COLUMN_SAMPLERATE);
@@ -459,7 +473,7 @@ sqlite__search_iter_next(unsigned long** lengths)
 	result.ebur        = (char*)sqlite3_column_text(ppStmt, COLUMN_EBUR);
 	result.colour_index= sqlite3_column_int(ppStmt, COLUMN_COLOUR);
 	result.mimetype    = (char*)sqlite3_column_text(ppStmt, COLUMN_MIMETYPE);
-	result.peak_level  = sqlite3_column_double(ppStmt, COLUMN_PEAKLEVEL);
+	result.peaklevel   = sqlite3_column_double(ppStmt, COLUMN_PEAKLEVEL);
 	result.online      = sqlite3_column_int(ppStmt, COLUMN_ONLINE);
 	result.mtime       = (unsigned long) sqlite3_column_int(ppStmt, COLUMN_MTIME);
 	result.bit_depth   = sqlite3_column_int(ppStmt, COLUMN_BITDEPTH);
@@ -470,7 +484,7 @@ sqlite__search_iter_next(unsigned long** lengths)
 	/* backwards compat. */
 	if (!result.full_path) {
 		static char full_path[PATH_MAX];
-		snprintf(full_path, PATH_MAX, "%s/%s", result.dir, result.sample_name); full_path[PATH_MAX-1]='\0';
+		snprintf(full_path, PATH_MAX, "%s/%s", result.sample_dir, result.sample_name); full_path[PATH_MAX-1]='\0';
 		result.full_path  = full_path;
 		dbg(1, "compat: filling in path by dir & filename");
 	}

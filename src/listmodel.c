@@ -121,11 +121,11 @@ listmodel__add_result(Sample* result)
 	gtk_list_store_set(app.store, &iter,
 			COL_ICON,       iconbuf,
 			COL_NAME,       result->sample_name,
-			COL_FNAME,      result->dir,
+			COL_FNAME,      result->sample_dir,
 			COL_IDX,        result->id,
 			COL_MIMETYPE,   result->mimetype,
 			COL_KEYWORDS,   NSTR(result->keywords), 
-			COL_PEAKLEVEL,  result->peak_level,
+			COL_PEAKLEVEL,  result->peaklevel,
 			COL_OVERVIEW,   result->overview,
 			COL_LENGTH,     length,
 			COL_SAMPLERATE, samplerate_s,
@@ -143,7 +143,7 @@ listmodel__add_result(Sample* result)
 		gtk_tree_path_free(treepath);
 	}
 
-	if(result->peak_level==0 && result->row_ref){
+	if(result->peaklevel==0 && result->row_ref){
 		dbg(1, "recalucale peak");
 		request_peaklevel(result);
 	}
@@ -178,9 +178,9 @@ listmodel__update_result(Sample* sample, int what)
 				listmodel__set_overview(sample->row_ref, sample->overview);
 			break;
 		case COL_PEAKLEVEL:
-			backend.update_peaklevel(sample->id, sample->peak_level);
+			backend.update_peaklevel(sample->id, sample->peaklevel);
 			if (sample->row_ref)
-				listmodel__set_peaklevel(sample->row_ref, sample->peak_level);
+				listmodel__set_peaklevel(sample->row_ref, sample->peaklevel);
 			break;
 		case COLX_EBUR:
 			backend.update_ebur(sample->id, sample->ebur);

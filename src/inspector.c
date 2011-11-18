@@ -231,7 +231,7 @@ inspector_set_labels(Sample* sample)
 	g_return_if_fail(sample);
 
 	char* ch_str = channels_format(sample->channels);
-	char* level  = gain2dbstring(sample->peak_level);
+	char* level  = gain2dbstring(sample->peaklevel);
 
 	char fs_str[32]; samplerate_format(fs_str, sample->sample_rate); strcpy(fs_str + strlen(fs_str), " kHz");
 	char length[32]; len_format(length, sample->length);

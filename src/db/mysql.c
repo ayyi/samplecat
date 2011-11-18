@@ -406,12 +406,12 @@ mysql__search_iter_next_(unsigned long** lengths)
 	result.id          = atoi(row[MYSQL_ID]);
 	result.full_path   = full_path; // TODO rg - save in database
 	result.sample_name = row[MYSQL_NAME];
-	result.dir         = row[MYSQL_DIR];
+	result.sample_dir  = row[MYSQL_DIR];
 	result.keywords    = row[MYSQL_KEYWORDS];
 	result.length      = get_int(row, MYSQL_LENGTH); // TODO rg - check int64_t
 	result.sample_rate = get_int(row, MYSQL_SAMPLERATE);
 	result.channels    = get_int(row, MYSQL_CHANNELS);
-	result.peak_level  = get_float(row, MYSQL_PEAKLEVEL);
+	result.peaklevel   = get_float(row, MYSQL_PEAKLEVEL);
 	result.overview    = pixbuf;
 	result.notes       = row[MYSQL_NOTES];
 	result.ebur        = ""; // TODO rg - save in database

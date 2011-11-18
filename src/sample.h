@@ -12,7 +12,7 @@ struct _sample
 	int                  ref_count;
 	GtkTreeRowReference* row_ref;
 
-	char*        dir;         ///< directory UTF8
+	char*        sample_dir;  ///< directory UTF8
 	char*        sample_name; ///< basename UTF8
 	char*        full_path;   ///< filename as native to system
 
@@ -23,7 +23,7 @@ struct _sample
 	int          bit_depth;     // yet unused
 	int          bit_rate;      // yet unused
 	char *       meta_data;     // yet unused
-	float        peak_level;
+	float        peaklevel;
 	int          colour_index;
 
 	gboolean     online;

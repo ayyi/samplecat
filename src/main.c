@@ -919,7 +919,7 @@ gboolean
 on_peaklevel_done(gpointer _sample)
 {
 	Sample* sample = _sample;
-	dbg(1, "peaklevel=%.2f id=%i rowref=%p", sample->peak_level, sample->id, sample->row_ref);
+	dbg(1, "peaklevel=%.2f id=%i rowref=%p", sample->peaklevel, sample->id, sample->row_ref);
 	listmodel__update_result(sample, COL_PEAKLEVEL);
 	sample_unref(sample);
 	return IDLE_STOP;

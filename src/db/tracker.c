@@ -249,13 +249,13 @@ tracker__search_iter_next()
 
 		result.sample_name = file;
 		result.full_path   = data[0];
-		result.dir = dir;
+		result.sample_dir = dir;
 		result.id = iter.idx;
 		result.online = true;
 
-		if(strstr(result.dir, "file://") == result.dir){
-			char* o = result.dir;
-			result.dir = g_strdup(o + 7);
+		if(strstr(result.sample_dir, "file://") == result.sample_dir){
+			char* o = result.sample_dir;
+			result.sample_dir = g_strdup(o + 7);
 			g_free(o);
 		}
 

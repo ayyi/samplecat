@@ -62,9 +62,9 @@ sample_new_from_filename(char *path, gboolean path_alloced)
 		sample->sample_name= to_utf8(bn);
 		g_free(bn);
 	}
-	if(!sample->dir){
+	if(!sample->sample_dir){
 		gchar *dn = g_path_get_dirname(sample->full_path);
-		sample->dir = to_utf8(dn);
+		sample->sample_dir = to_utf8(dn);
 		g_free(dn);
 	}
 	return sample;
@@ -77,20 +77,20 @@ sample_dup(Sample* s)
 	Sample* r = g_new0(struct _sample, 1);
 	memset(r,0, sizeof(Sample));
 
-  r->id        = s->id;
-  r->ref_count    =0;
+  r->id           = s->id;
+  r->ref_count    = 0;
 	r->sample_rate  = s->sample_rate;
 	r->length       = s->length;
 	r->frames       = s->frames;
 	r->channels     = s->channels;
 	r->bit_depth    = s->bit_depth;
 	r->bit_rate     = s->bit_rate;
-	r->peak_level   = s->peak_level;
+	r->peaklevel    = s->peaklevel;
 	r->colour_index = s->colour_index;
 	r->online       = s->online;
 	r->mtime        = s->mtime;
 #define DUPSTR(P) if (s->P) r->P=strdup(s->P);
-	DUPSTR(dir)
+	DUPSTR(sample_dir)
 	DUPSTR(sample_name)
 	DUPSTR(full_path)
 	DUPSTR(keywords)
@@ -99,7 +99,7 @@ sample_dup(Sample* s)
 	DUPSTR(mimetype)
 	DUPSTR(meta_data)
 
-	if (s->overview)    r->overview=gdk_pixbuf_copy(s->overview);
+	if (s->overview) r->overview=gdk_pixbuf_copy(s->overview);
 	sample_ref(r);
 	return r;
 }
@@ -116,7 +116,7 @@ sample_free(Sample* sample)
 	if(sample->mimetype) g_free(sample->mimetype);
 	if(sample->ebur) g_free(sample->ebur);
 	if(sample->notes) g_free(sample->notes);
-	if(sample->dir) g_free(sample->dir);
+	if(sample->sample_dir) g_free(sample->sample_dir);
 	if(sample->meta_data) g_free(sample->meta_data);
 	//if(sample->overview) g_free(sample->overview); // check how to free that!
 	g_free(sample);
