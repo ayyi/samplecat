@@ -88,7 +88,7 @@ LDFLAGS="$LDFLAGS -Wl,--as-needed"
 AC_TRY_LINK([], [],
             [
              AC_MSG_RESULT([yes])
-             LIBOAUTH_LDFLAGS="$LIBOAUTH_LDFLAGS -Wl,--as-needed"
+             LDFLAGS="$LIBOAUTH_LDFLAGS -Wl,--as-needed"
             ], 
             [AC_MSG_RESULT([no])])
 LDFLAGS=$LDFLAGS_save
