@@ -47,16 +47,25 @@ static int ebur128proc (const char *fn, struct ebur128 *ebr) {
 		return 1;
 	}
 
-	const int nchan = nfo.channels;
+	const int nchan   = nfo.channels;
+	const int64_t len = nfo.frames;
 	const float fsamp = nfo.sample_rate;
+
 	ad_free_nfo(&nfo);
 	if (nchan > 2) {
-		fprintf (stderr, "Input file must be mono or stereo.\n");
+		fprintf (stderr, "EBU: Input file must be mono or stereo.\n");
 		ad_close(sf);
 		return 1;
 	}
 
 	const int bsize = fsamp / 5;
+
+	if (bsize > len) {
+		fprintf (stderr, "EBU: Input file is too short.\n");
+		ad_close(sf);
+		return 1;
+	}
+
 	inpb = new float [nchan * bsize];
 	if (nchan > 1) {
 		data [0] = new float [bsize];
@@ -69,8 +78,9 @@ static int ebur128proc (const char *fn, struct ebur128 *ebr) {
 	Proc.init (nchan, fsamp);
 	Proc.integr_start ();
 	while (true) {
-		k = ad_read (sf, inpb, bsize);
+		k = ad_read (sf, inpb, bsize*nchan);
 		if (k < 1) break;
+		k=k/nchan;
 		if (nchan > 1) {
 	    float *p = inpb;
 	    for (i = 0; i < k; i++) {
