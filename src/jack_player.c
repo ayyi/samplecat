@@ -40,8 +40,6 @@
 #include "audio_decoder/ad.h"
 
 extern struct _app app;
-#define JACK_MIDI 1 // use JACK midi to trigger samples.
-
 
 #ifdef HAVE_JACK
 
@@ -222,7 +220,7 @@ void *jack_midi_thread(void *unused){
 		 if (ev->size != 3) continue;
 		 if ((ev->buffer[0]&0x80) != 0x80) continue;
 		 int note = ev->buffer[1]&0x7f;
-		 int velo = ev->buffer[2]&0x7f;
+		 //int velo = ev->buffer[2]&0x7f;
 		 if ((ev->buffer[0]&0x10)==0 || (ev->buffer[2]==0)) {
 			 dbg (0, "NOTE OFF: %d", note);
 		 } else {
