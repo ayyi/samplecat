@@ -108,12 +108,13 @@ mysql__connect()
 	return true;
 }
  
-
+#if 0
 gboolean
 mysql__is_connected()
 {
 	return is_connected;
 }
+#endif
 
 
 void
@@ -170,14 +171,14 @@ mysql__exec_sql(const char* sql)
 gboolean
 mysql__update_string(int id, const char* key, const char* value)
 {
-	return mysql__update_blob(id, key, (guint8*) value, (guint) strlen(value));
+	return mysql__update_blob(id, key, (const guint8*) (value?value:""), (const guint) strlen(value));
 }
 
 gboolean
-mysql__update_int(int id, const char* key, const int value)
+mysql__update_int(int id, const char* key, const long int value)
 {
 	char sql[1024];
-	snprintf(sql, 1024, "UPDATE samples SET %s=%d WHERE id=%d", key, value, id);
+	snprintf(sql, 1024, "UPDATE samples SET %s=%li WHERE id=%d", key, value, id);
 	if(mysql_query(&mysql, sql)){
 		perr("update failed! sql=%s\n", sql);
 		return false;
@@ -198,7 +199,7 @@ mysql__update_float(int id, const char* key, const float value)
 }
 
 gboolean
-mysql__update_blob(int id, const char* key, guint8* d, guint len)
+mysql__update_blob(int id, const char* key, const guint8* d, const guint len)
 {
 	char *blob = malloc((len*2+1)*sizeof(char));
 	mysql_real_escape_string(&mysql, blob, (char*)d, len);
@@ -213,141 +214,6 @@ mysql__update_blob(int id, const char* key, guint8* d, guint len)
 	return true;
 }
 
-
-
-
-gboolean
-mysql__update_path(const char* old_path, const char* new_path)
-{
-	gboolean ok = false;
-
-	char* filename = NULL; //FIXME
-	char* old_dir = NULL; //FIXME
-
-	char query[1024];
-	snprintf(query, 1023, "UPDATE samples SET filedir='%s' WHERE filename='%s' AND filedir='%s'", new_path, filename, old_dir);
-	dbg(0, "%s", query);
-
-	if(!mysql__exec_sql(query)){
-		ok = TRUE;
-	}
-	return ok;
-}
-
-
-gboolean
-mysql__update_colour(int id, int colour)
-{
-	char* sql = g_strdup_printf("UPDATE samples SET colour=%u WHERE id=%i", colour, id);
-	dbg(1, "sql=%s", sql);
-	gboolean fail;
-	if((fail = mysql_query(&mysql, sql))){
-		perr("update failed! sql=%s", sql);
-	}
-	g_free(sql);
-	return !fail;
-}
-
-
-gboolean
-mysql__update_keywords(int id, const char* keywords)
-{
-	if(!id) gwarn("id not set.");
-	char* sql = g_strdup_printf("UPDATE samples SET keywords='%s' WHERE id=%u", keywords, id);
-	dbg(1, "sql=%s", sql);
-	gboolean fail;
-	if((fail = mysql_query(&mysql, sql))){
-		perr("update failed! sql=%s\n", sql);
-	}
-	g_free(sql);
-	return !fail;
-}
-
-
-gboolean
-mysql__update_ebur(int id, const char* ebur)
-{
-	// XXX EBUR is not yet in datamodel
-	char sql[1024];
-	snprintf(sql, 1024, "UPDATE samples SET ebur='%s' WHERE id=%u", ebur, id);
-	if(mysql_query(&mysql, sql)){
-		perr("update failed! sql=%s\n", sql);
-		return false;
-	}
-	else return true;
-}
-
-gboolean
-mysql__update_notes(int id, const char* notes)
-{
-	char sql[1024];
-	snprintf(sql, 1024, "UPDATE samples SET notes='%s' WHERE id=%u", notes, id);
-	if(mysql_query(&mysql, sql)){
-		perr("update failed! sql=%s\n", sql);
-		return false;
-	}
-	else return true;
-}
-
-
-#define SQL_LEN 66000
-gboolean
-mysql__update_pixbuf(Sample *sample)
-{
-	GdkPixbuf* pixbuf = sample->overview;
-	if(pixbuf){
-		//serialise the pixbuf:
-		GdkPixdata pixdata;
-		gdk_pixdata_from_pixbuf(&pixdata, pixbuf, 0);
-		guint length;
-		guint8* ser = gdk_pixdata_serialize(&pixdata, &length);
-
-		guint8 blob[SQL_LEN];
-		mysql_real_escape_string(&mysql, (char*)blob, (char*)ser, length);
-
-		char sql[SQL_LEN];
-		snprintf(sql, SQL_LEN, "UPDATE samples SET pixbuf='%s' WHERE id=%i", blob, sample->id);
-		if(mysql_query(&mysql, sql)){
-			pwarn("update failed! sql=%s\n", sql);
-			return false;
-		}
-
-		g_free(ser);
-
-		//at this pt, refcount should be two, we make it 1 so that pixbuf is destroyed with the row:
-		//g_object_unref(pixbuf); //FIXME
-	}else perr("no pixbuf.\n");
-
-	return true;
-}
-
-
-gboolean
-mysql__update_online(int id, gboolean online, time_t mtime)
-{
-	gchar* sql = g_strdup_printf("UPDATE samples SET online=%i, last_checked=NOW() WHERE id=%i", online, id);
-	dbg(2, "row: sql=%s", sql);
-	if(mysql_query(&mysql, sql)){
-		perr("update failed! sql=%s\n", sql);
-	}
-	g_free(sql);
-	return true;
-}
-
-
-gboolean
-mysql__update_peaklevel(int id, float level)
-{
-	gboolean ok = true;
-	gchar* sql = g_strdup_printf("UPDATE samples SET peaklevel=%f WHERE id=%i", level, id);
-	dbg(2, "row: sql=%s", sql);
-	if(mysql_query(&mysql, sql)){
-		perr("update failed! sql=%s\n", sql);
-		ok = false;
-	}
-	g_free(sql);
-	return ok;
-}
 
 gboolean
 mysql__file_exists(const char* path)
@@ -427,14 +293,9 @@ mysql__search_iter_next_(unsigned long** lengths)
 
 	*lengths = mysql_fetch_lengths(search_result); //free? 
 
-	//deserialise the pixbuf field:
-	GdkPixdata pixdata;
 	GdkPixbuf* pixbuf = NULL;
 	if(row[MYSQL_PIXBUF]){
-		dbg(3, "pixbuf_length=%i", (*lengths)[MYSQL_PIXBUF]);
-		if(gdk_pixdata_deserialize(&pixdata, (*lengths)[MYSQL_PIXBUF], (guint8*)row[MYSQL_PIXBUF], NULL)){
-			pixbuf = gdk_pixbuf_from_pixdata(&pixdata, TRUE, NULL);
-		}
+		pixbuf = blob_to_pixbuf((guint8*)row[MYSQL_PIXBUF], (*lengths)[MYSQL_PIXBUF]);
 	}
 
 	int get_int(MYSQL_ROW row, int i)

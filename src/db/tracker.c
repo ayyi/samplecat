@@ -86,35 +86,6 @@ tracker__delete_row(int id)
 }
 
 
-gboolean
-tracker__update_ignore(Sample* sample)
-{
-	return true;
-}
-
-gboolean
-tracker__update_ignoreC(int a, const char*b)
-{
-	return true;
-}
-
-gboolean
-tracker__update_ignoreI(int a, const int b)
-{
-	return true;
-}
-
-gboolean
-tracker__update_ignoreF(int a, const float b)
-{
-	return true;
-}
-
-gboolean tracker__update_ignoreB (int i, const char* k, guint8* d, guint l)
-{
-	g_free(d);
-}
-
 static gint
 str_in_array (const gchar *str, gchar **array)
 {
@@ -426,14 +397,6 @@ tracker__dir_iter_next(unsigned long** unused)
 void
 tracker__dir_iter_free()
 {
-}
-
-
-gboolean
-tracker__update_colour(int id, int colour)
-{
-	pwarn("FIXME\n");
-	return true;
 }
 
 
@@ -925,14 +888,26 @@ tracker__update_keywords(int id, const char* keywords)
 
 
 gboolean
-tracker__update_online(int id, gboolean online, time_t mtime)
+tracker__update_string (int id, const char* k, const char* v) 
+{
+	if (!strcmp(k, "keywords")) return tracker__update_keywords(id, v?v:"");
+	return false;
+}
+
+gboolean
+tracker__update_int (int id, const char* k, const long int v) 
 {
 	return false;
 }
 
+gboolean
+tracker__update_float (int id, const char* k, const float v) 
+{
+	return false;
+}
 
 gboolean
-tracker__update_peaklevel(int id, float level)
+tracker__update_blob (int id, const char* k, const guint8* d, const guint l)
 {
 	return false;
 }
@@ -941,6 +916,7 @@ tracker__update_peaklevel(int id, float level)
 gboolean
 tracker__file_exists (const char* path)
 {
+	// TODO
 	return false;
 }
 

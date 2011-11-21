@@ -928,7 +928,7 @@ delete_selected_rows()
 				int id;
 				gtk_tree_model_get(model, &iter, COL_NAME, &fname, COL_IDX, &id, -1);
 
-				if(!backend.delete(id)) return;
+				if(!backend.remove(id)) return;
 
 				//update the store:
 				gtk_list_store_remove(app.store, &iter);
@@ -1517,20 +1517,22 @@ set_backend(BackendType type)
 			backend.search_iter_new  = mysql__search_iter_new;
 			backend.search_iter_next = mysql__search_iter_next_;
 			backend.search_iter_free = mysql__search_iter_free;
+
 			backend.dir_iter_new     = mysql__dir_iter_new;
 			backend.dir_iter_next    = mysql__dir_iter_next;
 			backend.dir_iter_free    = mysql__dir_iter_free;
+
 			backend.insert           = mysql__insert;
-			backend.delete           = mysql__delete_row;
-			backend.disconnect       = mysql__disconnect;
-			backend.update_colour    = mysql__update_colour;
-			backend.update_keywords  = mysql__update_keywords;
-			backend.update_notes     = mysql__update_notes;
-			backend.update_ebur      = mysql__update_ebur;
-			backend.update_pixbuf    = mysql__update_pixbuf;
-			backend.update_online    = mysql__update_online;
-			backend.update_peaklevel = mysql__update_peaklevel;
+			backend.remove           = mysql__delete_row;
 			backend.file_exists      = mysql__file_exists;
+
+			backend.update_string    = mysql__update_string;
+			backend.update_float     = mysql__update_float;
+			backend.update_int       = mysql__update_int;
+			backend.update_blob      = mysql__update_blob;
+
+			backend.disconnect       = mysql__disconnect;
+
 			printf("backend is mysql.\n");
 			#endif
 			break;
@@ -1539,20 +1541,22 @@ set_backend(BackendType type)
 			backend.search_iter_new  = sqlite__search_iter_new;
 			backend.search_iter_next = sqlite__search_iter_next;
 			backend.search_iter_free = sqlite__search_iter_free;
+
 			backend.dir_iter_new     = sqlite__dir_iter_new;
 			backend.dir_iter_next    = sqlite__dir_iter_next;
 			backend.dir_iter_free    = sqlite__dir_iter_free;
+
 			backend.insert           = sqlite__insert;
-			backend.delete           = sqlite__delete_row;
-			backend.disconnect       = sqlite__disconnect;
-			backend.update_colour    = sqlite__update_colour;
-			backend.update_keywords  = sqlite__update_keywords;
-			backend.update_notes     = sqlite__update_notes;
-			backend.update_ebur      = sqlite__update_ebur;
-			backend.update_pixbuf    = sqlite__update_pixbuf;
-			backend.update_online    = sqlite__update_online;
-			backend.update_peaklevel = sqlite__update_peaklevel;
+			backend.remove           = sqlite__delete_row;
 			backend.file_exists      = sqlite__file_exists;
+
+			backend.update_string    = sqlite__update_string;
+			backend.update_float     = sqlite__update_float;
+			backend.update_int       = sqlite__update_int;
+			backend.update_blob      = sqlite__update_blob;
+
+			backend.disconnect       = sqlite__disconnect;
+
 			printf("backend is sqlite.\n");
 			#endif
 			break;
@@ -1561,19 +1565,20 @@ set_backend(BackendType type)
 			backend.search_iter_new  = tracker__search_iter_new;
 			backend.search_iter_next = tracker__search_iter_next;
 			backend.search_iter_free = tracker__search_iter_free;
+
 			backend.dir_iter_new     = tracker__dir_iter_new;
 			backend.dir_iter_next    = tracker__dir_iter_next;
 			backend.dir_iter_free    = tracker__dir_iter_free;
+
 			backend.insert           = tracker__insert;
-			backend.delete           = tracker__delete_row;
-			backend.update_colour    = tracker__update_ignoreI;
-			backend.update_keywords  = tracker__update_keywords;
-			backend.update_pixbuf    = tracker__update_ignore;
-			backend.update_notes     = tracker__update_ignoreC;
-			backend.update_ebur      = tracker__update_ignoreC;
-			backend.update_online    = tracker__update_online;
-			backend.update_peaklevel = tracker__update_ignoreF;
+			backend.remove           = tracker__delete_row;
 			backend.file_exists      = tracker__file_exists;
+
+			backend.update_string    = tracker__update_string;
+			backend.update_float     = tracker__update_float;
+			backend.update_int       = tracker__update_int;
+			backend.update_blob      = tracker__update_blob;
+
 			backend.disconnect       = tracker__disconnect;
 			printf("backend is tracker.\n");
 

@@ -219,23 +219,23 @@ sqlite__delete_row(int id)
 gboolean
 sqlite__update_string(int id, const char* key, const char* value)
 {
-	return sqlite__execwrap(sqlite3_mprintf("UPDATE samples SET %s='%q' WHERE id=%u", key, value, id));
+	return sqlite__execwrap(sqlite3_mprintf("UPDATE samples SET %s='%q' WHERE id=%u", key, value?value:"", id));
 }
 
 gboolean
-sqlite__update_int(int id, const char* key, const int value)
+sqlite__update_int(int id, const char* key, const long int value)
 {
-	return sqlite__execwrap(sqlite3_mprintf("UPDATE samples SET %s=%i WHERE id=%i", key, value, id));
+	return sqlite__execwrap(sqlite3_mprintf("UPDATE samples SET %s=%li WHERE id=%i", key, value, id));
 }
 
 gboolean
-sqlite__update_float(int id, const char* key, float value)
+sqlite__update_float(int id, const char* key, const float value)
 {
 	return sqlite__execwrap(sqlite3_mprintf("UPDATE samples SET %s=%f WHERE id=%i", key, value, id));
 }
 
 gboolean
-sqlite__update_blob (int id, const char* key, guint8* d, guint len) {
+sqlite__update_blob (int id, const char* key, const guint8* d, const guint len) {
 	gboolean ok =true;
 	sqlite3_stmt* ppStmt = NULL;
 
@@ -243,7 +243,7 @@ sqlite__update_blob (int id, const char* key, guint8* d, guint len) {
 	int rc = sqlite3_prepare_v2(db, sql, -1, &ppStmt, 0);
 	if (rc != SQLITE_OK || !ppStmt) {
 		pwarn("prepare not ok! code=%i %s\n", rc, sqlite3_errmsg(db));
-		g_free(d);
+		g_free((gpointer)d);
 		return false;
 	}
 
@@ -259,101 +259,6 @@ sqlite__update_blob (int id, const char* key, guint8* d, guint len) {
 	}
 	sqlite3_free(sql);
 	return ok;
-}
-
-
-/* high level API */
-gboolean
-sqlite__update_colour(int id, int colour)
-{
-	return sqlite__update_int(id, "colour", colour);
-}
-
-gboolean
-sqlite__update_keywords(int id, const char* keywords)
-{
-	return sqlite__update_string(id, "keywords", keywords);
-}
-
-gboolean
-sqlite__update_ebur(int id, const char* ebur)
-{
-	return sqlite__update_string(id, "ebur", ebur);
-}
-
-gboolean
-sqlite__update_notes(int id, const char* notes)
-{
-	return sqlite__update_string(id, "notes", notes);
-}
-
-gboolean
-sqlite__update_pixbuf(Sample* sample)
-{
-	GdkPixbuf* pixbuf = sample->overview;
-	g_return_val_if_fail(pixbuf, false);
-
-	gboolean ok = true;
-	sqlite3_stmt* ppStmt = NULL;
-	char* sql = sqlite3_mprintf("UPDATE samples SET pixbuf=? WHERE id=%u", sample->id);
-	int rc = sqlite3_prepare_v2(db, sql, -1, &ppStmt, 0);
-	if (rc == SQLITE_OK && ppStmt) {
-		guint length; guint8* buf;
-		buf = pixbuf_to_blob(sample->overview, &length);
-
-		sqlite3_bind_blob(ppStmt, 1, buf, length, g_free);
-		while ((rc = sqlite3_step(ppStmt)) == SQLITE_ROW) {
-		/*
-			int i; for (i = 0; i < sqlite3_column_count(ppStmt); ++i){
-				//print_col(ppStmt, i);
-				dbg(0, "  column.");
-			}
-			printf("\n");
-		*/
-		}
-		if(rc != SQLITE_DONE) pwarn("step: code=%i error=%s\n", rc, sqlite3_errmsg(db));
-		if((rc = sqlite3_finalize(ppStmt)) != SQLITE_OK){
-			pwarn("finalize error: %s", sqlite3_errmsg(db));
-		}
-		dbg(1, "update done");
-	}
-	else pwarn("prepare not ok! code=%i %s\n", rc, sqlite3_errmsg(db));
-	if(sqlite3_changes(db) != 1){ pwarn("n_changes=%i\n", sqlite3_changes(db)); ok = false; }
-	sqlite3_free(sql);
-
-	return ok;
-}
-
-
-gboolean
-sqlite__update_online(int id, gboolean online, time_t mtime)
-{
-	g_return_val_if_fail(id, false);
-
-	int on_update(void* NotUsed, int argc, char** argv, char** azColName)
-	{
-		PF;
-		return 0;
-	}
-
-	gboolean ok = true;
-	gchar* sql = sqlite3_mprintf("UPDATE samples SET online=%i, mtime=%lu, last_checked=datetime('now') WHERE id=%i", online, (unsigned long) mtime, id);
-	dbg(1, "sql=%s", sql);
-	char* errMsg = 0;
-	int n = sqlite3_exec(db, sql, on_update, 0, &errMsg);
-	if (n != SQLITE_OK) {
-		gwarn("sqlite error: %s", errMsg);
-		ok = false;
-	}
-	sqlite3_free(sql);
-	return ok;
-}
-
-
-gboolean
-sqlite__update_peaklevel(int id, float level)
-{
-	return sqlite__update_float(id, "peaklevel", level);
 }
 
 
@@ -465,7 +370,6 @@ sqlite__search_iter_next(unsigned long** lengths)
 	if(n != SQLITE_ROW) return NULL;
 
 	//deserialise the pixbuf field:
-	GdkPixdata pixdata;
 	GdkPixbuf* pixbuf = NULL;
 	const unsigned char* blob = sqlite3_column_blob(ppStmt, COLUMN_PIXBUF);
 	if(blob){

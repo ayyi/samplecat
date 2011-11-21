@@ -173,18 +173,24 @@ listmodel__update_result(Sample* sample, int what)
 
 	switch (what) {
 		case COL_OVERVIEW:
-			backend.update_pixbuf(sample);
-			//if (sample->pixbuf) backend.update_blob(sample->id, "pixbuf", pixbuf_to_blob(sample->pixbuf));
+			if (sample->overview) {
+				guint len;
+				guint8 *blob = pixbuf_to_blob(sample->overview, &len);
+				if (!backend.update_blob(sample->id, "pixbuf", blob, len)) 
+					gwarn("failed to store overview in db");
+			}
 			if (sample->row_ref)
 				listmodel__set_overview(sample->row_ref, sample->overview);
 			break;
 		case COL_PEAKLEVEL:
-			backend.update_peaklevel(sample->id, sample->peaklevel);
+			if (!backend.update_float(sample->id, "peaklevel", sample->peaklevel))
+				gwarn("failed to store peaklevel in db");
 			if (sample->row_ref)
 				listmodel__set_peaklevel(sample->row_ref, sample->peaklevel);
 			break;
 		case COLX_EBUR:
-			backend.update_ebur(sample->id, sample->ebur);
+			if(!backend.update_string(sample->id, "ebur", sample->ebur))
+				gwarn("failed to store ebu level in db");
 			break;
 		default:
 			dbg(0,"update for this type is not yet implemented"); 
@@ -217,7 +223,10 @@ listmodel__update_by_ref(GtkTreeIter *iter, int what, void *data)
 		case COL_ICON: // online/offline, mtime
 			{
 				gboolean online = s->online;
-				backend.update_online(s->id, online, s->mtime);
+				if (!backend.update_int(s->id, "online", online?1:0))
+					gwarn("failed to store online-info in db");
+				if(!backend.update_int(s->id, "mtime", (unsigned long) s->mtime))
+					gwarn("failed to store file mtime in db");
 				GdkPixbuf* iconbuf = NULL;
 				if (online) {
 					MIME_type* mime_type = mime_type_lookup(s->mimetype);
@@ -230,8 +239,10 @@ listmodel__update_by_ref(GtkTreeIter *iter, int what, void *data)
 			break;
 		case COL_KEYWORDS:
 			{
-				if(!backend.update_keywords(s->id, (char*)data)) rv=false;
-				else {
+				if(!backend.update_string(s->id, "keywords", (char*)data)) {
+					gwarn("failed to store keywords in db");
+					rv=false;
+				} else {
 					gtk_list_store_set(app.store, iter, COL_KEYWORDS, (char*)data, -1);
 					if (s->keywords) free(s->keywords);
 					s->keywords=strdup((char*)data);
@@ -239,8 +250,10 @@ listmodel__update_by_ref(GtkTreeIter *iter, int what, void *data)
 			}
 			break;
 		case COLX_NOTES:
-				if (!backend.update_notes(s->id, (char*)data)) rv=false;
-				else {
+				if (!backend.update_string(s->id, "notes", (char*)data)) {
+					gwarn("failed to store notes in db");
+					rv=false;
+				} else {
 					if (s->notes) free(s->notes);
 					s->notes = strdup((char*)data);
 				}
@@ -248,8 +261,10 @@ listmodel__update_by_ref(GtkTreeIter *iter, int what, void *data)
 		case COL_COLOUR:
 			{
 				unsigned int colour_index = *((unsigned int*)data);
-				if(!backend.update_colour(s->id, colour_index)) rv=false;
-				else {
+				if(!backend.update_int(s->id, "colour", colour_index)) {
+					gwarn("failed to store colour in db");
+					rv=false;
+				} else {
 					gtk_list_store_set(app.store, iter, COL_COLOUR, colour_index, -1);
 					s->colour_index=colour_index;
 				}

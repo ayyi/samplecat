@@ -57,20 +57,23 @@ struct _backend
 	void             (*dir_iter_free)    ();
 
 	int              (*insert)           (Sample*);
-	gboolean         (*delete)           (int);
-	gboolean         (*update_colour)    (int, int);
-	gboolean         (*update_keywords)  (int, const char*);
-	gboolean         (*update_notes)     (int, const char*);
-	gboolean         (*update_ebur)      (int, const char*);
-	gboolean         (*update_pixbuf)    (Sample*);
-	gboolean         (*update_online)    (int, gboolean, time_t);
-	gboolean         (*update_peaklevel) (int, float);
+	gboolean         (*remove)           (int);
 	gboolean         (*file_exists)      (const char*);
+
+	gboolean         (*update_string)    (int, const char*, const char*);
+	gboolean         (*update_int)       (int, const char*, const long int);
+	gboolean         (*update_float)     (int, const char*, const float);
+	gboolean         (*update_blob)      (int, const char*, const guint8*, const guint);
 
 	void             (*disconnect)       ();
 };
 #ifdef __main_c__
-struct _backend backend = {false, NULL, NULL, NULL, NULL, NULL, NULL};
+struct _backend backend = {false, 
+	NULL, NULL, NULL, 
+	NULL, NULL, NULL, 
+	NULL, NULL, NULL, 
+	NULL, NULL, NULL, NULL,
+	NULL};
 #else
 extern struct _backend backend;
 #endif
