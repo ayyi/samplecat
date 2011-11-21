@@ -322,22 +322,31 @@ listmodel__set_peaklevel(GtkTreeRowReference* row_ref, float level)
 }
 
 
+struct find_filename {
+	int id;
+	char *rv;
+};
+
+gboolean
+filter_id (GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *iter, gpointer data) {
+	struct find_filename *ff = (struct find_filename*) data;
+	Sample *s = sample_get_by_tree_iter(iter);
+	if (s->id == ff->id) {
+		ff->rv=strdup(s->full_path);
+		sample_unref(s);
+		return TRUE;
+	}
+	sample_unref(s);
+	return FALSE;
+}
+
 char*
 listmodel__get_filename_from_id(int id)
 {
-	char *rv = NULL;
-	gboolean find_id (GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *iter, gpointer data) {
-		Sample *s = sample_get_by_tree_iter(iter);
-		if (s->id == id) {
-			rv=strdup(s->full_path);
-			sample_unref(s);
-			return TRUE;
-		}
-		sample_unref(s);
-		return FALSE;
-	}
+	struct find_filename ff;
+	ff.id=id;
+	ff.rv=NULL;
 	GtkTreeModel* model = GTK_TREE_MODEL(app.store);
-	gtk_tree_model_foreach(model, &find_id, NULL);
-
-	return rv;
+	gtk_tree_model_foreach(model, &filter_id, &ff);
+	return ff.rv;
 }

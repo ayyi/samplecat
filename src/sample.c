@@ -190,19 +190,27 @@ sample_get_by_row_ref(GtkTreeRowReference* ref)
 	return sample;
 }
 
+struct find_sample {
+	Sample *rv;
+	char *abspath;
+};
+
+gboolean filter_sample (GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *iter, gpointer data) {
+	struct find_sample *fs = (struct find_sample*) data;
+	Sample *s = sample_get_by_tree_iter(iter);
+	if (!strcmp(s->full_path, fs->abspath)) {
+		fs->rv=s;
+		return TRUE;
+	}
+	sample_unref(s);
+	return FALSE;
+}
+
 Sample*
 sample_get_by_filename(char *abspath) {
-	Sample *rv = NULL;
-	gboolean find_id (GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *iter, gpointer data) {
-		Sample *s = sample_get_by_tree_iter(iter);
-		if (!strcmp(s->full_path, abspath)) {
-			rv=s;
-			return TRUE;
-		}
-		sample_unref(s);
-		return FALSE;
-	}
+	struct find_sample fs;
+	fs.rv=NULL; fs.abspath=abspath;
 	GtkTreeModel* model = GTK_TREE_MODEL(app.store);
-	gtk_tree_model_foreach(model, &find_id, NULL);
-	return rv;
+	gtk_tree_model_foreach(model, &filter_sample, &fs);
+	return fs.rv;
 }
