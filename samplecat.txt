@@ -1,9 +1,10 @@
 todo:
- v0.2:
+ v0.2.X:
 	-db-backend: rename/move files, update basic info (dir, name, duration, ..)
   -file-manager: hook rename/move files -> db-backend
 	-db-backend: add 'misc' field for collected format specific meta-data (eg Artist, Album, bitrate, sf2 sample-count, etc)
- v0.4:
+	-compress overview/waveform serialized pixbufs stored in db. They're duo-tone only and compress very well.
+ v0.4.X:
   -update mysql backend to new data-model
 	-file-manager: rmdir/mkdir, unlink+confirm
 

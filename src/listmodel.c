@@ -174,6 +174,7 @@ listmodel__update_result(Sample* sample, int what)
 	switch (what) {
 		case COL_OVERVIEW:
 			backend.update_pixbuf(sample);
+			//if (sample->pixbuf) backend.update_blob(sample->id, "pixbuf", pixbuf_to_blob(sample->pixbuf));
 			if (sample->row_ref)
 				listmodel__set_overview(sample->row_ref, sample->overview);
 			break;

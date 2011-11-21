@@ -132,5 +132,5 @@ void         show_widget_if            (GtkWidget*, gboolean);
 GdkPixbuf*   get_iconbuf_from_mimetype(char* mimetype);
 
 uint8_t *    pixbuf_to_blob(GdkPixbuf* in, guint *len);
-GdkPixbuf*   blob_to_pixbuf(const char* blob, guint len);
+GdkPixbuf*   blob_to_pixbuf(const unsigned char* blob, guint len);
 #endif

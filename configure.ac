@@ -246,6 +246,16 @@ fi
 
 dnl -----------------------------------------------------------------------------
 
+dnl TODO: allow to disable?
+PKG_CHECK_MODULES(ZLIB, zlib, enable_zlib="yes", enable_zlib="no")
+AC_SUBST(ZLIB_CFLAGS)
+AC_SUBST(ZLIB_LIBS)
+if test "$enable_zlib" = "yes"; then
+	AC_DEFINE(HAVE_ZLIB,1,[Enable zlib compression])
+fi
+
+dnl -----------------------------------------------------------------------------
+
 AS_IF([test "$enable_ayyidbus" != "no"], [
        PKG_CHECK_MODULES(DBUS, dbus-glib-1, enable_ayyidbus="yes", enable_ayyidbus="no")
        ])
@@ -413,6 +423,7 @@ AC_MSG_RESULT([Audio players:])
 AC_MSG_RESULT([  built-in JACK:              $jplayer])
 AC_MSG_RESULT([  AYYI/Dbus:                  $enable_ayyidbus])
 AC_MSG_RESULT([  CLI: gst,afplay,totem:      $enable_gplayer])
+AC_MSG_RESULT([Building zlib:                $enable_zlib])
 AC_MSG_RESULT([Building dnotify support:     $enable_dnotify])
 AC_MSG_RESULT([Building opengl support:      $enable_opengl])
 AC_MSG_RESULT([Building ayyi support:        $enable_ayyi])

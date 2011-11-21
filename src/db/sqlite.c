@@ -298,10 +298,8 @@ sqlite__update_pixbuf(Sample* sample)
 	char* sql = sqlite3_mprintf("UPDATE samples SET pixbuf=? WHERE id=%u", sample->id);
 	int rc = sqlite3_prepare_v2(db, sql, -1, &ppStmt, 0);
 	if (rc == SQLITE_OK && ppStmt) {
-		GdkPixdata pixdata;
-		gdk_pixdata_from_pixbuf(&pixdata, pixbuf, 0);
-		guint length;
-		guint8* buf = gdk_pixdata_serialize(&pixdata, &length); //this is free'd by the sqlite3_bind_blob callback
+		guint length; guint8* buf;
+		buf = pixbuf_to_blob(sample->overview, &length);
 
 		sqlite3_bind_blob(ppStmt, 1, buf, length, g_free);
 		while ((rc = sqlite3_step(ppStmt)) == SQLITE_ROW) {
@@ -469,13 +467,10 @@ sqlite__search_iter_next(unsigned long** lengths)
 	//deserialise the pixbuf field:
 	GdkPixdata pixdata;
 	GdkPixbuf* pixbuf = NULL;
-	const char* blob = sqlite3_column_blob(ppStmt, COLUMN_PIXBUF);
+	const unsigned char* blob = sqlite3_column_blob(ppStmt, COLUMN_PIXBUF);
 	if(blob){
 		int length = sqlite3_column_bytes(ppStmt, COLUMN_PIXBUF);
-		dbg(2, "pixbuf_length=%i", length);
-		if(gdk_pixdata_deserialize(&pixdata, length, (guint8*)blob, NULL)){
-			pixbuf = gdk_pixbuf_from_pixdata(&pixdata, TRUE, NULL);
-		}
+		pixbuf = blob_to_pixbuf(blob, length);
 	}
 
 	static Sample result;

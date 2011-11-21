@@ -10,6 +10,9 @@
 #include <dirent.h>
 #include <sys/param.h>
 #include <errno.h>
+#ifdef HAVE_ZLIB
+#include <zlib.h>
+#endif
 
 #include <gtk/gtk.h>
 #include <gdk-pixbuf/gdk-pixdata.h>
@@ -1227,17 +1230,49 @@ pixbuf_to_blob(GdkPixbuf* in, guint *len)
 	gdk_pixdata_from_pixbuf(&pixdata, in, 0);
 	guint length;
 	guint8* ser = gdk_pixdata_serialize(&pixdata, &length);
+#ifdef HAVE_ZLIB
+	unsigned long dsize=compressBound(length);
+	unsigned char* dst= malloc(dsize*sizeof(char));
+	int rv = compress(dst, &dsize, (const unsigned char *)ser, length);
+	if(rv == Z_OK) {
+		dbg(0, "compressed pixbuf %d -> %d", length, dsize);
+		if (len) *len = dsize;
+		free(ser);
+		return dst;
+	} else {
+		dbg(2, "compression error");
+	}
+#endif
 	if (len) *len = length;
 	return ser;
 }
 
 GdkPixbuf*
-blob_to_pixbuf(const char* blob, const guint len)
+blob_to_pixbuf(const unsigned char* blob, const guint len)
 {
 	GdkPixdata pixdata;
 	GdkPixbuf* pixbuf = NULL;
+#ifdef HAVE_ZLIB
+	unsigned long dsize=1024*32; // TODO - save orig-length along w/ blob 
+	//here: ~ 16k = 400*20*4bpp = OVERVIEW_HEIGHT * OVERVIEW_WIDTH * 4bpp + GDK-OVERHEAD
+	unsigned char* dst = malloc(dsize*sizeof(char));
+	int rv = uncompress(dst, &dsize, blob, len);
+	if(rv == Z_OK) {
+		if(gdk_pixdata_deserialize(&pixdata, dsize, dst, NULL)){
+				pixbuf = gdk_pixbuf_from_pixdata(&pixdata, TRUE, NULL);
+		}
+		dbg(2, "decompressed pixbuf %d -> %d", len, dsize);
+	} else {
+		dbg(2, "decompression failed");
+		if(gdk_pixdata_deserialize(&pixdata, len, (guint8*)blob, NULL)){
+				pixbuf = gdk_pixbuf_from_pixdata(&pixdata, TRUE, NULL);
+		}
+	}
+	free(dst);
+#else
 	if(gdk_pixdata_deserialize(&pixdata, len, (guint8*)blob, NULL)){
 			pixbuf = gdk_pixbuf_from_pixdata(&pixdata, TRUE, NULL);
 	}
+#endif
 	return pixbuf;
 }
