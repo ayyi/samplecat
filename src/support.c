@@ -12,6 +12,7 @@
 #include <errno.h>
 
 #include <gtk/gtk.h>
+#include <gdk-pixbuf/gdk-pixdata.h>
 
 #include "file_manager/file_manager.h"
 #include "file_manager/support.h"
@@ -1214,4 +1215,29 @@ get_iconbuf_from_mimetype(char* mimetype)
 	return iconbuf;
 }
 
+uint8_t *
+pixbuf_to_blob(GdkPixbuf* in, guint *len)
+{
+	if(!in){ 
+		if (len) *len=0;
+		return NULL;
+	}
+	//serialise the pixbuf:
+	GdkPixdata pixdata;
+	gdk_pixdata_from_pixbuf(&pixdata, in, 0);
+	guint length;
+	guint8* ser = gdk_pixdata_serialize(&pixdata, &length);
+	if (len) *len = length;
+	return ser;
+}
 
+GdkPixbuf*
+blob_to_pixbuf(const char* blob, const guint len)
+{
+	GdkPixdata pixdata;
+	GdkPixbuf* pixbuf = NULL;
+	if(gdk_pixdata_deserialize(&pixdata, len, (guint8*)blob, NULL)){
+			pixbuf = gdk_pixbuf_from_pixdata(&pixdata, TRUE, NULL);
+	}
+	return pixbuf;
+}

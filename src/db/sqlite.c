@@ -44,10 +44,6 @@ enum {
 	COLUMN_METADATA,
 };
 
-static gboolean sqlite__update_string(int id, const char*, const char*);
-static gboolean sqlite__update_int(int id, int, const char*);
-static gboolean sqlite__update_float(int id, float, const char*);
-
 
 void
 sqlite__create_db()
@@ -220,23 +216,49 @@ sqlite__delete_row(int id)
 	return sqlite__execwrap(sqlite3_mprintf("DELETE FROM samples WHERE id=%i", id));
 }
 
-static gboolean
-sqlite__update_string(int id, const char* value, const char* field)
+gboolean
+sqlite__update_string(int id, const char* key, const char* value)
 {
-	return sqlite__execwrap(sqlite3_mprintf("UPDATE samples SET %s='%q' WHERE id=%u", field, value, id));
+	return sqlite__execwrap(sqlite3_mprintf("UPDATE samples SET %s='%q' WHERE id=%u", key, value, id));
 }
 
-
-static gboolean
-sqlite__update_int(int id, int value, const char* field)
+gboolean
+sqlite__update_int(int id, const char* key, const int value)
 {
-	return sqlite__execwrap(sqlite3_mprintf("UPDATE samples SET %s=%i WHERE id=%i", field, value, id));
+	return sqlite__execwrap(sqlite3_mprintf("UPDATE samples SET %s=%i WHERE id=%i", key, value, id));
 }
 
-static gboolean
-sqlite__update_float(int id, float value, const char* field)
+gboolean
+sqlite__update_float(int id, const char* key, float value)
 {
-	return sqlite__execwrap(sqlite3_mprintf("UPDATE samples SET %s=%f WHERE id=%i", field, value, id));
+	return sqlite__execwrap(sqlite3_mprintf("UPDATE samples SET %s=%f WHERE id=%i", key, value, id));
+}
+
+gboolean
+sqlite__update_blob (int id, const char* key, guint8* d, guint len) {
+	gboolean ok =true;
+	sqlite3_stmt* ppStmt = NULL;
+
+	char* sql = sqlite3_mprintf("UPDATE samples SET %s=? WHERE id=%u", key, id);
+	int rc = sqlite3_prepare_v2(db, sql, -1, &ppStmt, 0);
+	if (rc != SQLITE_OK || !ppStmt) {
+		pwarn("prepare not ok! code=%i %s\n", rc, sqlite3_errmsg(db));
+		g_free(d);
+		return false;
+	}
+
+	sqlite3_bind_blob(ppStmt, 1, d, len, g_free);
+	while ((rc = sqlite3_step(ppStmt)) == SQLITE_ROW) { ; }
+	if(rc != SQLITE_DONE) { 
+		pwarn("step: code=%i error=%s\n", rc, sqlite3_errmsg(db));
+		ok=true;
+	}
+	if((rc = sqlite3_finalize(ppStmt)) != SQLITE_OK){
+		pwarn("finalize error: %s", sqlite3_errmsg(db));
+		ok=false;
+	}
+	sqlite3_free(sql);
+	return ok;
 }
 
 
@@ -244,25 +266,25 @@ sqlite__update_float(int id, float value, const char* field)
 gboolean
 sqlite__update_colour(int id, int colour)
 {
-	return sqlite__update_int(id, colour, "colour");
+	return sqlite__update_int(id, "colour", colour);
 }
 
 gboolean
 sqlite__update_keywords(int id, const char* keywords)
 {
-	return sqlite__update_string(id, keywords, "keywords");
+	return sqlite__update_string(id, "keywords", keywords);
 }
 
 gboolean
 sqlite__update_ebur(int id, const char* ebur)
 {
-	return sqlite__update_string(id, ebur, "ebur");
+	return sqlite__update_string(id, "ebur", ebur);
 }
 
 gboolean
 sqlite__update_notes(int id, const char* notes)
 {
-	return sqlite__update_string(id, notes, "notes");
+	return sqlite__update_string(id, "notes", notes);
 }
 
 gboolean
@@ -333,7 +355,7 @@ sqlite__update_online(int id, gboolean online, time_t mtime)
 gboolean
 sqlite__update_peaklevel(int id, float level)
 {
-	return sqlite__update_float(id, level, "peaklevel");
+	return sqlite__update_float(id, "peaklevel", level);
 }
 
 

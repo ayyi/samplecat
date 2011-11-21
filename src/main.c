@@ -575,75 +575,34 @@ do_search(char* search, char* dir)
 
 	listmodel__clear();
 
-	//detach the model from the view to speed up row inserts:
-	/*
-	model = gtk_tree_view_get_model(GTK_TREE_VIEW(view));
-	g_object_ref(model);
-	gtk_tree_view_set_model(GTK_TREE_VIEW(view), NULL);
-	*/ 
-
-	if(
-		#ifdef USE_MYSQL
-		BACKEND_IS_MYSQL
-		#else
-		false
-		#endif
-		#ifdef USE_SQLITE
-		|| BACKEND_IS_SQLITE
-		#endif
-		){
-		int row_count = 0;
-		unsigned long* lengths;
-		Sample* result;
-		while((result = backend.search_iter_next(&lengths)) && row_count < MAX_DISPLAY_ROWS){
-			if(app.no_gui){
-				if(!row_count) console__show_result_header();
-				console__show_result(result);
-			}else{
-				Sample *s = sample_dup(result);
-				listmodel__add_result(s);
-				sample_unref(s);
-			}
-			row_count++;
-		}
-		if(app.no_gui) console__show_result_footer(row_count);
-
-		backend.search_iter_free();
-
-		if(0 && row_count < MAX_DISPLAY_ROWS){
-			statusbar_print(1, "%i samples found.", row_count);
-		}else if(!row_count){
-			statusbar_print(1, "no samples found. filters: dir=%s", app.search_dir);
+	int row_count = 0;
+	unsigned long* lengths;
+	Sample* result;
+	while((result = backend.search_iter_next(&lengths)) && row_count < MAX_DISPLAY_ROWS){
+		if(app.no_gui){
+			if(!row_count) console__show_result_header();
+			console__show_result(result);
+			if(BACKEND_IS_TRACKER && row_count > 20) break;
 		}else{
-			statusbar_print(1, "showing %i of %i samples", row_count, n_results);
-		}
-	}
-	#ifdef USE_TRACKER
-	else if(BACKEND_IS_TRACKER){
-		int row_count = 0;
-		Sample* result;
-		while((result = tracker__search_iter_next()) && row_count < MAX_DISPLAY_ROWS){
-			if(app.no_gui && row_count > 20) continue;
 			Sample *s = sample_dup(result);
 			listmodel__add_result(s);
 			sample_unref(s);
-			if(app.no_gui){
-				if(!row_count) console__show_result_header();
-				console__show_result(result);
-			}
-			row_count++;
 		}
-		backend.search_iter_free();
-
-		if(0 && row_count < MAX_DISPLAY_ROWS){
-			statusbar_print(1, "%i samples found.", row_count);
-		}else if(!row_count){
-			statusbar_print(1, "no samples found. filters: dir=%s", app.search_dir);
-		}else{
-			statusbar_print(1, "showing %i samples", row_count);
-		}
+		row_count++;
 	}
-	#endif
+	if(app.no_gui) console__show_result_footer(row_count);
+
+	backend.search_iter_free();
+
+	if(0 && row_count < MAX_DISPLAY_ROWS){
+		statusbar_print(1, "%i samples found.", row_count);
+	}else if(!row_count){
+		statusbar_print(1, "no samples found. filters: dir=%s", app.search_dir);
+	}else if (n_results <0) {
+		statusbar_print(1, "showing %i sample(s)", row_count);
+	}else{
+		statusbar_print(1, "showing %i of %i sample(s)", row_count, n_results);
+	}
 
 	//treeview_unblock_motion_handler();  //causes a segfault even before it is run ??!!
 }
@@ -1600,19 +1559,20 @@ set_backend(BackendType type)
 		case BACKEND_TRACKER:
 			#ifdef USE_TRACKER
 			backend.search_iter_new  = tracker__search_iter_new;
+			backend.search_iter_next = tracker__search_iter_next;
 			backend.search_iter_free = tracker__search_iter_free;
 			backend.dir_iter_new     = tracker__dir_iter_new;
 			backend.dir_iter_next    = tracker__dir_iter_next;
 			backend.dir_iter_free    = tracker__dir_iter_free;
 			backend.insert           = tracker__insert;
 			backend.delete           = tracker__delete_row;
-			backend.update_colour    = tracker__update_colour;
+			backend.update_colour    = tracker__update_ignoreI;
 			backend.update_keywords  = tracker__update_keywords;
 			backend.update_pixbuf    = tracker__update_ignore;
-			backend.update_notes     = tracker__update_ignore2;
-			backend.update_ebur      = tracker__update_ignore2;
+			backend.update_notes     = tracker__update_ignoreC;
+			backend.update_ebur      = tracker__update_ignoreC;
 			backend.update_online    = tracker__update_online;
-			backend.update_peaklevel = tracker__update_peaklevel;
+			backend.update_peaklevel = tracker__update_ignoreF;
 			backend.file_exists      = tracker__file_exists;
 			backend.disconnect       = tracker__disconnect;
 			printf("backend is tracker.\n");

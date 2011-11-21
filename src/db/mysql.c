@@ -167,6 +167,54 @@ mysql__exec_sql(const char* sql)
 	return mysql_real_query(&mysql, sql, strlen(sql));
 }
 
+gboolean
+mysql__update_string(int id, const char* key, const char* value)
+{
+	return mysql__update_blob(id, key, (guint8*) value, (guint) strlen(value));
+}
+
+gboolean
+mysql__update_int(int id, const char* key, const int value)
+{
+	char sql[1024];
+	snprintf(sql, 1024, "UPDATE samples SET %s=%d WHERE id=%d", key, value, id);
+	if(mysql_query(&mysql, sql)){
+		perr("update failed! sql=%s\n", sql);
+		return false;
+	}
+	return true;
+}
+
+gboolean
+mysql__update_float(int id, const char* key, const float value)
+{
+	char sql[1024];
+	snprintf(sql, 1024, "UPDATE samples SET %s=%f WHERE id=%d", key, value, id);
+	if(mysql_query(&mysql, sql)){
+		perr("update failed! sql=%s\n", sql);
+		return false;
+	}
+	return true;
+}
+
+gboolean
+mysql__update_blob(int id, const char* key, guint8* d, guint len)
+{
+	char *blob = malloc((len*2+1)*sizeof(char));
+	mysql_real_escape_string(&mysql, blob, (char*)d, len);
+	char *sql = malloc((strlen(blob)+33/*query string*/+20 /*int*/+strlen(key))*sizeof(char));
+	sprintf(sql, "UPDATE samples SET %s='%s' WHERE id=%i", key, blob, id);
+	if(mysql_query(&mysql, sql)){
+		free(blob); free(sql);
+		pwarn("update failed! sql=%s\n", sql);
+		return false;
+	}
+	free(blob); free(sql);
+	return true;
+}
+
+
+
 
 gboolean
 mysql__update_path(const char* old_path, const char* new_path)
@@ -474,13 +522,13 @@ mysql__dir_iter_free()
 }
 
 
+#if NEVER
 void
 mysql__iter_to_result(Sample* result)
 {
 	memset(result, 0, sizeof(Sample));
 }
 
-#if NEVER
 void
 mysql__add_row_to_model(MYSQL_ROW row, unsigned long* lengths)
 {

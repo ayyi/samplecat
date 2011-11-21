@@ -93,9 +93,26 @@ tracker__update_ignore(Sample* sample)
 }
 
 gboolean
-tracker__update_ignore2(int a, const char*b)
+tracker__update_ignoreC(int a, const char*b)
 {
 	return true;
+}
+
+gboolean
+tracker__update_ignoreI(int a, const int b)
+{
+	return true;
+}
+
+gboolean
+tracker__update_ignoreF(int a, const float b)
+{
+	return true;
+}
+
+gboolean tracker__update_ignoreB (int i, const char* k, guint8* d, guint l)
+{
+	g_free(d);
 }
 
 static gint
@@ -120,6 +137,7 @@ tracker__search_iter_new(char* search, char* dir, const char* category, int* n_r
 	g_return_val_if_fail(tc, false);
 
 	dbg(0, "search=%s category=%s.", search, category);
+	*n_results = -1;
 
 	char* tag_filter = "";
 	if(category && category[0]){
@@ -226,7 +244,7 @@ tracker__search_iter_new(char* search, char* dir, const char* category, int* n_r
 
 
 Sample*
-tracker__search_iter_next()
+tracker__search_iter_next(unsigned long** unused)
 {
 	if(iter.idx >= iter.results->len) return NULL;
 
@@ -399,7 +417,7 @@ tracker__dir_iter_new()
 
 
 char*
-tracker__dir_iter_next()
+tracker__dir_iter_next(unsigned long** unused)
 {
 	return NULL;
 }
