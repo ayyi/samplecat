@@ -581,7 +581,7 @@ filter_new()
 		const gchar* text = gtk_entry_get_text(GTK_ENTRY(app.search));
 		if(strcmp(text, app.search_phrase)){
 			strncpy(app.search_phrase, text, 255);
-			do_search((gchar*)text, app.search_dir);
+			do_search(app.search_phrase, app.search_dir);
 		}
 		return NOT_HANDLED;
 	}

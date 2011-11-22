@@ -93,7 +93,7 @@ struct _app
 	char*          config_filename;
 	const char*    cache_dir;
 	struct _config config;
-	char           search_phrase[256];
+	char           search_phrase[256]; // XXX TODO increase to PATH_MAX
 	char*          search_dir;
 	gchar*         search_category;
 	gboolean       add_recursive;

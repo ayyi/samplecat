@@ -566,6 +566,9 @@ do_search(char* search, char* dir)
 	if(BACKEND_IS_NULL) return;
 	search_pending = false;
 
+	if (!search) search = app.search_phrase;
+	if (!dir) dir = app.search_dir;
+
 	int n_results = 0;
 	if(!backend.search_iter_new(search, dir, app.search_category, &n_results)) {
 		return;
