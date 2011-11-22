@@ -6,7 +6,7 @@ void     sqlite__disconnect       ();
 
 int      sqlite__insert           (Sample*);
 gboolean sqlite__delete_row       (int id);
-gboolean sqlite__file_exists      (const char*);
+gboolean sqlite__file_exists      (const char*, int *id);
 
 gboolean sqlite__update_string    (int id, const char*, const char*);
 gboolean sqlite__update_int       (int id, const char*, const long int);

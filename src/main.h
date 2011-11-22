@@ -58,7 +58,7 @@ struct _backend
 
 	int              (*insert)           (Sample*);
 	gboolean         (*remove)           (int);
-	gboolean         (*file_exists)      (const char*);
+	gboolean         (*file_exists)      (const char*, int *);
 
 	gboolean         (*update_string)    (int, const char*, const char*);
 	gboolean         (*update_int)       (int, const char*, const long int);

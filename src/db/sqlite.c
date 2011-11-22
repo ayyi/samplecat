@@ -280,16 +280,17 @@ sqlite__update_blob (int id, const char* key, const guint8* d, const guint len) 
 
 
 gboolean
-sqlite__file_exists(const char* path)
+sqlite__file_exists(const char* path, int *id)
 {
 	PF;
 	gboolean ok =false;
   int rows,columns;
   char **table = NULL;
 	char *errmsg= NULL;
-	char* sql = sqlite3_mprintf("SELECT full_path FROM samples WHERE full_path='%q'", path);
+	char* sql = sqlite3_mprintf("SELECT id FROM samples WHERE full_path='%q'", path);
 	int rc = sqlite3_get_table(db, sql, &table,&rows,&columns,&errmsg);
-	if(rc==SQLITE_OK && (table != NULL) && (rows>=1)) {
+	if(rc==SQLITE_OK && (table != NULL) && (rows>=1) && (columns==1)) {
+		if (id) *id= atoi(table[1]);
 		ok=true;
 	}
 	if (table) sqlite3_free_table(table);

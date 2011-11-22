@@ -136,15 +136,33 @@ mysql__disconnect()
 	mysql_close(&mysql);
 }
 
+#define MYSQL_ESCAPE(VAR,STR) \
+	char *VAR; if (!(STR) || strlen(STR)==0) {VAR=calloc(1,sizeof(char));} else { \
+		int sl=strlen(STR);\
+		VAR = malloc((sl*2+1)*sizeof(char)); \
+	  mysql_real_escape_string(&mysql, VAR, (STR), sl); \
+	}
 
 int
 mysql__insert(Sample* sample)
 {
 	int id = 0;
-	gchar* filedir = g_path_get_dirname(sample->full_path);
-	gchar* filename = g_path_get_basename(sample->full_path);
+	MYSQL_ESCAPE(full_path,   sample->full_path);
+	MYSQL_ESCAPE(sample_name, sample->sample_name);
+	MYSQL_ESCAPE(sample_dir,  sample->sample_dir);
+	MYSQL_ESCAPE(mimetype,    sample->mimetype);
+	MYSQL_ESCAPE(ebur,        sample->ebur);
+	MYSQL_ESCAPE(meta_data,   sample->meta_data);
 
-	gchar* sql = g_strdup_printf("INSERT INTO samples SET filename='%s', filedir='%s', length=%"PRIi64", sample_rate=%i, channels=%i, mimetype='%s' ", filename, filedir, sample->length, sample->sample_rate, sample->channels, sample->mimetype);
+	gchar* sql = g_strdup_printf(
+		"INSERT INTO samples(full_path,filename,filedir,length,sample_rate,channels,online,mimetype,ebur,peaklevel,colour,mtime,frames,bit_rate,bit_depth,meta_data) "
+		"VALUES ('%s','%s','%s',%"PRIi64",'%i','%i','%i','%s','%s','%f','%i','%lu',%"PRIi64",'%i','%i','%s')",
+			full_path, sample_name, sample_dir,
+			sample->length, sample->sample_rate, sample->channels,
+			sample->online, mimetype, ebur,
+			sample->peaklevel, sample->colour_index, (unsigned long) sample->mtime,
+			sample->frames, sample->bit_rate, sample->bit_depth, meta_data
+		);
 	dbg(1, "sql=%s", sql);
 
 	if(mysql__exec_sql(sql)==0){
@@ -154,8 +172,12 @@ mysql__insert(Sample* sample)
 		perr("not ok...\n");
 	}
 	g_free(sql);
-	g_free(filedir);
-	g_free(filename);
+	free(full_path);
+	free(sample_name);
+	free(sample_dir);
+	free(mimetype);
+	free(ebur);
+	free(meta_data);
 	return id;
 }
 
@@ -229,9 +251,30 @@ mysql__update_blob(int id, const char* key, const guint8* d, const guint len)
 
 
 gboolean
-mysql__file_exists(const char* path)
+mysql__file_exists(const char* path, int *id)
 {
-	return false; // TODO rg - check if given file is already in DB. - needs ABSOLUTE_PATH
+	int rv=false;
+	const int len = strlen(path);
+	char *esc = malloc((len*2+1)*sizeof(char));
+	mysql_real_escape_string(&mysql, esc, path, len);
+	char *sql = malloc((43/*query string*/+strlen(esc))*sizeof(char));
+	sprintf(sql, "SELECT id FROM samples WHERE full_path='%s';",esc);
+	dbg(0,"%s",sql);
+	if (id) *id=0;
+	if(!mysql_query(&mysql, sql)){
+		MYSQL_RES *sr = mysql_store_result(&mysql);
+		if (sr) {
+			MYSQL_ROW row = mysql_fetch_row(sr);
+			if (row) {
+				if (id) *id=atoi(row[0]);
+				rv=true;
+			}
+			mysql_free_result(sr);
+		}
+	}
+	free(sql); free(esc);
+	return rv;
+	
 }
 
 //-------------------------------------------------------------

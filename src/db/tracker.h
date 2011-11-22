@@ -6,7 +6,7 @@ void     tracker__disconnect       ();
 
 int      tracker__insert           (Sample*);
 gboolean tracker__delete_row       (int id);
-gboolean tracker__file_exists      (const char*);
+gboolean tracker__file_exists      (const char*, int *id);
 
 gboolean tracker__search_iter_new  (char* search, char* dir, const char* category, int* n_results);
 Sample * tracker__search_iter_next (unsigned long** lengths);

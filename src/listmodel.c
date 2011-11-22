@@ -358,9 +358,7 @@ listmodel__move_files(GList *list, const gchar *dest_path)
 		if (src_path) {
 			dbg(0,"move %s -> %s | NEW: %s", src_path, dest_path, full_path);
 			int id = -1;
-			// TODO: lookup ID in database ! (it may not currently be displayed)
-			dbg(0, "TODO update path in storage");
-			if (id>0) {
+			if(backend.file_exists(src_path, &id) && id>0) {
 				backend.update_string(id, "filedir", dest_path);
 				backend.update_string(id, "full_path", full_path);
 			}
@@ -372,11 +370,11 @@ listmodel__move_files(GList *list, const gchar *dest_path)
 				free(s->sample_dir);
 				s->full_path  = strdup(full_path);
 				s->sample_dir = strdup(dest_path);
-				if((treepath = gtk_tree_row_reference_get_path(s->row_ref))){ //it's possible the row may no longer be visible.
+				//it's possible the row may no longer be visible:
+				if((treepath = gtk_tree_row_reference_get_path(s->row_ref))){
 					GtkTreeIter iter;
 					if(gtk_tree_model_get_iter(GTK_TREE_MODEL(app.store), &iter, treepath)){
 						gtk_list_store_set(app.store, &iter, COL_FNAME, s->sample_dir, -1);
-						dbg(0,"file updated!");
 					}
 				}
 			}

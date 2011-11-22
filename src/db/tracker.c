@@ -914,10 +914,10 @@ tracker__update_blob (int id, const char* k, const guint8* d, const guint l)
 
 
 gboolean
-tracker__file_exists (const char* path)
+tracker__file_exists (const char* path, int *id)
 {
-	// TODO
-	return false;
+	if (id) *id=0;
+	return false; // TODO check if given file exists
 }
 
 

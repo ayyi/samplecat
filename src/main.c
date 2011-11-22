@@ -816,7 +816,7 @@ add_file(char* path)
 	/* check if file already exists in the store
 	 * -> don't add it again
 	 */
-	if(backend.file_exists(path)) {
+	if(backend.file_exists(path, NULL)) {
 		statusbar_print(1, "duplicate: not re-adding a file already in db.");
 		gwarn("duplicate file: %s\n", path);
 		Sample *s = sample_get_by_filename(path);
