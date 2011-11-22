@@ -59,7 +59,7 @@ void         bitrate_format            (char* str, int bitdepth);
 void         bitdepth_format           (char* str, int bitdepth);
 gchar*       dir_format                (char*);
 gchar*       channels_format           (int);
-void         len_format                (char*, int64_t);
+void         smpte_format              (char*, int64_t);
 //gint         strcmp2(gconstpointer a, gconstpointer b);
 //GPtrArray*   list_dir(const guchar *path);
 gboolean     file_exists               (const char*);
@@ -96,9 +96,6 @@ gboolean     is_white                  (GdkColor*);
 gboolean     is_dark                   (GdkColor*);
 gboolean     is_similar                (GdkColor* colour1, GdkColor* colour2, int min_diff);
 gboolean     is_similar_rgb            (unsigned colour1, unsigned colour2);
-
-void         format_time               (char* length, const char* milliseconds);
-void         format_time_int           (char* length, int milliseconds);
 
 char*        str_array_join            (const char**, const char*);
 

@@ -148,6 +148,7 @@ sample_get_file_info(Sample* sample)
 	sample->channels    = nfo.channels;
 	sample->sample_rate = nfo.sample_rate;
 	sample->length      = nfo.length;
+	sample->frames      = nfo.frames;
 	sample->bit_rate    = nfo.bit_rate;
 	sample->bit_depth   = nfo.bit_depth;
 	sample->meta_data   = nfo.meta_data;

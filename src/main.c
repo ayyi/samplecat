@@ -100,7 +100,7 @@ static void       config_new                ();
 static bool       config_save               ();
 static void       menu_delete_row           (GtkMenuItem*, gpointer);
 void              menu_play_stop(           GtkWidget* widget, gpointer user_data);
-static void       update_sample             (Sample *sample);
+static void       update_sample             (Sample *sample, gboolean force_update);
 
 
 struct _app app;
@@ -821,7 +821,7 @@ add_file(char* path)
 		gwarn("duplicate file: %s\n", path);
 		Sample *s = sample_get_by_filename(path);
 		if (s) {
-			update_sample(s);
+			update_sample(s, false);
 			sample_unref(s);
 		} else {
 			dbg(0, "Sample found in DB but not in model.");
@@ -951,10 +951,10 @@ menu_delete_row(GtkMenuItem* widget, gpointer user_data)
 }
 
 static void
-update_sample(Sample *sample) {
+update_sample(Sample *sample, gboolean force_update) {
 	time_t mtime = file_mtime(sample->full_path);
 	if(mtime>0){
-		if (sample->mtime < mtime) {
+		if (sample->mtime < mtime || force_update) {
 			/* file may have changed - FULL UPDATE */
 			dbg(0, "file modified: full update: %s", sample->full_path);
 
@@ -964,9 +964,7 @@ update_sample(Sample *sample) {
 			else return;
 
 			if (sample_get_file_info(sample)) {
-				// TODO: update "basic" file info in db as well
-				// - but there is no db API for that [yet].
-				// delete/re-add ?
+				listmodel__update_by_rowref(sample->row_ref, -1, NULL);
 				sample->mtime = mtime;
 				request_peaklevel(sample);
 				request_overview(sample);
@@ -991,6 +989,7 @@ update_rows(GtkWidget *widget, gpointer user_data)
 	PF;
 	//GtkTreeModel *model = gtk_tree_view_get_model(GTK_TREE_VIEW(app.view));
 	GtkTreeModel *model = GTK_TREE_MODEL(app.store);
+	gboolean force_update = (GPOINTER_TO_INT(user_data)==2)?true:false; // NOTE - linked to order in _menu_def[]
 
 	GtkTreeSelection* selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(app.view));
 	GList* selectionlist = gtk_tree_selection_get_selected_rows(selection, &(model));
@@ -1001,7 +1000,7 @@ update_rows(GtkWidget *widget, gpointer user_data)
 	for(i=0;i<g_list_length(selectionlist);i++){
 		GtkTreePath *treepath = g_list_nth_data(selectionlist, i);
 		Sample *sample = sample_get_from_model(treepath);
-		update_sample(sample);
+		update_sample(sample, force_update);
 		statusbar_print(1, "online status updated (%s)", sample->online ? "online" : "not online");
 		sample_unref(sample);
 	}
@@ -1065,6 +1064,7 @@ edit_row(GtkWidget* widget, gpointer user_data)
 static MenuDef _menu_def[] = {
 	{"Delete",         G_CALLBACK(menu_delete_row), GTK_STOCK_DELETE,     true},
 	{"Update",         G_CALLBACK(update_rows),      GTK_STOCK_REFRESH,    true},
+	{"Force Update",   G_CALLBACK(update_rows),      GTK_STOCK_REFRESH,    true},
 	{"Play All",       G_CALLBACK(menu_play_all),   GTK_STOCK_MEDIA_PLAY, true},
 	{"Stop Playback",  G_CALLBACK(menu_play_stop),  GTK_STOCK_MEDIA_STOP, true},
 	{"Reset Colours",  G_CALLBACK(listview__reset_colours),

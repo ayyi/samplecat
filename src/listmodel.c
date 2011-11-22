@@ -96,7 +96,7 @@ listmodel__add_result(Sample* result)
 	}
 
 	char samplerate_s[32]; samplerate_format(samplerate_s, result->sample_rate);
-	char length[64]; format_time_int(length, result->length);
+	char length_s[64]; smpte_format(length_s, result->length);
 
 #ifdef USE_AYYI
 	GdkPixbuf* ayyi_icon = NULL;
@@ -127,7 +127,7 @@ listmodel__add_result(Sample* result)
 			COL_KEYWORDS,   NSTR(result->keywords), 
 			COL_PEAKLEVEL,  result->peaklevel,
 			COL_OVERVIEW,   result->overview,
-			COL_LENGTH,     length,
+			COL_LENGTH,     length_s,
 			COL_SAMPLERATE, samplerate_s,
 			COL_CHANNELS,   result->channels, 
 			COL_COLOUR,     result->colour_index,
@@ -177,20 +177,20 @@ listmodel__update_result(Sample* sample, int what)
 				guint len;
 				guint8 *blob = pixbuf_to_blob(sample->overview, &len);
 				if (!backend.update_blob(sample->id, "pixbuf", blob, len)) 
-					gwarn("failed to store overview in db");
+					gwarn("failed to store overview in the database");
 			}
 			if (sample->row_ref)
 				listmodel__set_overview(sample->row_ref, sample->overview);
 			break;
 		case COL_PEAKLEVEL:
 			if (!backend.update_float(sample->id, "peaklevel", sample->peaklevel))
-				gwarn("failed to store peaklevel in db");
+				gwarn("failed to store peaklevel in the database");
 			if (sample->row_ref)
 				listmodel__set_peaklevel(sample->row_ref, sample->peaklevel);
 			break;
 		case COLX_EBUR:
 			if(!backend.update_string(sample->id, "ebur", sample->ebur))
-				gwarn("failed to store ebu level in db");
+				gwarn("failed to store ebu level in the database");
 			break;
 		default:
 			dbg(0,"update for this type is not yet implemented"); 
@@ -224,9 +224,9 @@ listmodel__update_by_ref(GtkTreeIter *iter, int what, void *data)
 			{
 				gboolean online = s->online;
 				if (!backend.update_int(s->id, "online", online?1:0))
-					gwarn("failed to store online-info in db");
+					gwarn("failed to store online-info in the database");
 				if(!backend.update_int(s->id, "mtime", (unsigned long) s->mtime))
-					gwarn("failed to store file mtime in db");
+					gwarn("failed to store file mtime in the database");
 				GdkPixbuf* iconbuf = NULL;
 				if (online) {
 					MIME_type* mime_type = mime_type_lookup(s->mimetype);
@@ -240,7 +240,7 @@ listmodel__update_by_ref(GtkTreeIter *iter, int what, void *data)
 		case COL_KEYWORDS:
 			{
 				if(!backend.update_string(s->id, "keywords", (char*)data)) {
-					gwarn("failed to store keywords in db");
+					gwarn("failed to store keywords in the database");
 					rv=false;
 				} else {
 					gtk_list_store_set(app.store, iter, COL_KEYWORDS, (char*)data, -1);
@@ -251,7 +251,7 @@ listmodel__update_by_ref(GtkTreeIter *iter, int what, void *data)
 			break;
 		case COLX_NOTES:
 				if (!backend.update_string(s->id, "notes", (char*)data)) {
-					gwarn("failed to store notes in db");
+					gwarn("failed to store notes in the database");
 					rv=false;
 				} else {
 					if (s->notes) free(s->notes);
@@ -262,11 +262,34 @@ listmodel__update_by_ref(GtkTreeIter *iter, int what, void *data)
 			{
 				unsigned int colour_index = *((unsigned int*)data);
 				if(!backend.update_int(s->id, "colour", colour_index)) {
-					gwarn("failed to store colour in db");
+					gwarn("failed to store colour in the database");
 					rv=false;
 				} else {
 					gtk_list_store_set(app.store, iter, COL_COLOUR, colour_index, -1);
 					s->colour_index=colour_index;
+				}
+			}
+			break;
+		case -1: // update basic info from sample_get_file_info()
+			{
+				gboolean ok=true;
+				ok&=backend.update_int(s->id, "channels", s->channels);
+				ok&=backend.update_int(s->id, "sample_rate", s->sample_rate);
+				ok&=backend.update_int(s->id, "length", s->length);
+				ok&=backend.update_int(s->id, "bit_rate", s->bit_rate);
+				ok&=backend.update_int(s->id, "bit_depth", s->bit_depth);
+				ok&=backend.update_string(s->id, "meta_data", s->meta_data);
+				if (!ok) {
+					gwarn("failed to store basic-info in the database");
+					rv=false;
+				} else {
+					char samplerate_s[32]; samplerate_format(samplerate_s, s->sample_rate);
+					char length_s[64]; smpte_format(length_s, s->length);
+					gtk_list_store_set(app.store, iter, 
+							COL_CHANNELS, s->channels,
+							COL_SAMPLERATE, samplerate_s,
+							COL_LENGTH, length_s,
+							-1);
 				}
 			}
 			break;

@@ -234,7 +234,7 @@ inspector_set_labels(Sample* sample)
 	char* level  = gain2dbstring(sample->peaklevel);
 
 	char fs_str[32]; samplerate_format(fs_str, sample->sample_rate); strcpy(fs_str + strlen(fs_str), " kHz");
-	char length[32]; len_format(length, sample->length);
+	char length[64]; smpte_format(length, sample->length); sprintf(length+strlen(length), " = %"PRIi64"f", sample->frames); //XXX
 	char bitrate[32]; bitrate_format(bitrate, sample->bit_rate);
 	char bitdepth[32]; bitdepth_format(bitdepth, sample->bit_depth);
 

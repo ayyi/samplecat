@@ -190,34 +190,11 @@ channels_format(int n_ch)
 
 
 void
-len_format(char* str, int64_t t /*milliseconds*/)
+smpte_format(char* str, int64_t t /*milliseconds*/)
 {
-#if 0
-	//str should be allocated at least 32 bytes.
-
-	int secs = t / 1000;
-	int mins = secs / 60;
-
-	char min_str[16];
-	min_str[0] = '\0';
-	if(mins){
-		snprintf(min_str, 15, "%im", mins);
-	}
-
-	//show milliseconds if short sample
-	char ms_str[16];
-	ms_str[0] = '\0';
-	if(!mins){
-		snprintf(ms_str, 15, ".%i", t % 1000);
-	}
-
-	snprintf(str, 31, "%s%i%s%s", min_str, secs % 60, ms_str, mins ? "" : "s");
-	str[31] = '\0';
-#else
-	snprintf(str, 31, "%02d:%02d:%02d.%03d",
+	snprintf(str, 64, "%02d:%02d:%02d.%03d",
 			(int)(t/3600000), (int)(t/60000)%60, (int)(t/1000)%60, (int)(t%1000));
-	str[31] = '\0';
-#endif
+	str[63] = '\0';
 }
 
 
@@ -529,40 +506,6 @@ is_similar_rgb(unsigned colour1, unsigned colour2)
 	return FALSE;
 }
 #endif
-
-
-void
-format_time(char* length, const char* milliseconds)
-{
-	g_return_if_fail(length);
-	if(!milliseconds){ snprintf(length, 64, " "); return; }
-#if 0
-	gchar secs_str[64] = "";
-	gchar mins_str[64] = "";
-	int t = atoi(milliseconds);
-	int secs = t / 1000;
-	int mins = secs / 60;
-	if(mins){
-		snprintf(mins_str, 64, "%i:", mins);
-		secs = secs % 60;
-		snprintf(secs_str, 64, "%02i", secs);
-	}else snprintf(secs_str, 64, "%i", secs);
-	
-	snprintf(length, 64, "%s%s.%03i", mins_str, secs_str, t % 1000);
-#else
-	len_format(length, atol(milliseconds));
-#endif
-}
-
-
-void
-format_time_int(char* length, int milliseconds)
-{
-	g_return_if_fail(length);
-
-	if(!milliseconds) length[0] = '\0';
-	else snprintf(length, 64, "%i.%03i", milliseconds / 1000, milliseconds % 1000);
-}
 
 
 char*
