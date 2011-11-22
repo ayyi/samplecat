@@ -48,6 +48,7 @@ AC_ARG_ENABLE(tracker,  AS_HELP_STRING([--enable-tracker],[build with tracker su
 AC_ARG_ENABLE(sqlite,   AS_HELP_STRING([--enable-sqlite],[build with sqlite support]),enable_sqlite=$enableval, enable_sqlite="auto")
 AC_ARG_ENABLE(opengl,   AC_HELP_STRING([--disable-opengl], [disable use of OpenGL]),enable_opengl=$enableval,enable_opengl="no")
 AC_ARG_ENABLE(fftw,     AC_HELP_STRING([--disable-fftw], [disable usage of FFTW ]),enable_fftw=$enableval,enable_fftw="auto")
+AC_ARG_ENABLE(vala,     AC_HELP_STRING([--disable-vala], [disable usage of Vala. Vala is only needed for developers ]), enable_vala=$enableval, enable_vala="auto")
 
 case $target_os in
 	*darwin*)
@@ -212,26 +213,6 @@ AC_SUBST(FFMPEG_LIBS)
 dnl -----------------------------------------------------------------------------
 dnl ** libflac usage is deprecated -> sndfile and ffmpeg can decode it **
 
-dnl flac doesnt provide pkg-config info
-dnl AC_ARG_ENABLE(flac, AC_HELP_STRING([--disable-flac], [disable use of FLAC]), enable_flac=$enableval, enable_flac="auto")
-dnl 
-dnl if test x$enable_flac != xno ; then
-dnl 	AC_CHECK_HEADERS(FLAC/all.h)
-dnl 	if test x$ac_cv_header_FLAC_all_h = xyes ; then
-dnl 		AC_CHECK_LIB(FLAC, FLAC__metadata_get_streaminfo, HAVE_FLAC="yes")
-dnl 		if test "$HAVE_FLAC" = "yes" ; then
-dnl 			AC_DEFINE(HAVE_FLAC, [1], [Define to 1 if you have libflac])
-dnl 			FLAC_LIBS="-lFLAC"
-dnl 			enable_flac="yes"
-dnl 		else
-dnl 			enable_flac="no"
-dnl 		fi
-dnl 	fi
-dnl fi
-dnl # FLAC requires jack_ringbuffer
-dnl AS_IF([test "$enable_flac" = "yes"], [
-dnl 	    PKG_CHECK_MODULES(JACK, jack,, enable_flac=no)
-dnl 			])
 enable_flac="deprecated"
 AM_CONDITIONAL(ENABLE_FLAC, test "$enable_flac" = "yes")
 AC_SUBST(FLAC_CFLAGS)
@@ -382,6 +363,15 @@ AM_CONDITIONAL(ENABLE_FFTW3, test "$enable_fftw" = "yes")
 
 dnl -----------------------------------------------------------------------------
 
+dnl TODO vala is not needed when compiling from tarball so this should probably be used in conjunction with --enable-maintainer-mode
+
+AS_IF([test "$enable_vala" != "no"], [
+	PKG_CHECK_MODULES(VALA, vala-0.10, [AC_DEFINE([HAVE_VALA], 1, [Set to 1 if you have vala.]) enable_vala=yes], enable_vala=no)
+])
+AM_CONDITIONAL(ENABLE_VALA, test "$enable_vala" = "yes")
+
+dnl -----------------------------------------------------------------------------
+
 #AC_DEFINE(NO_USE_DEVHELP_DIRTREE, 1, [Use the new directory tree])
 
 # Bolt on a few specific flags to CXXFLAGS that should always be used
@@ -411,12 +401,12 @@ if test "$enable_jack" = "yes" -o "$enable_jackosx" = "yes"; then
 fi
 
 AC_MSG_RESULT([])
-AC_MSG_RESULT([DB-backend:])
+AC_MSG_RESULT([Database backend:])
 AC_MSG_RESULT([  mysql support:              $enable_mysql])
 AC_MSG_RESULT([  sqlite support:             $enable_sqlite])
 AC_MSG_RESULT([  tracker support:            $enable_tracker])
 AC_MSG_RESULT([Audio decoders:])
-AC_MSG_RESULT([ soundfile:                   yes])
+AC_MSG_RESULT([  soundfile:                  yes])
 AC_MSG_RESULT([  ffmpeg decoder:             $enable_ffmpeg])
 AC_MSG_RESULT([  direct flac support:        $enable_flac])
 AC_MSG_RESULT([Audio players:])

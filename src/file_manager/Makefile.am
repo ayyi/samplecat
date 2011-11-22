@@ -1,5 +1,8 @@
 
-SUBDIRS = filetypes
+if ENABLE_VALA
+VALA_DIR = vala
+endif
+SUBDIRS = filetypes $(VALA_DIR)
 
 AM_CFLAGS = \
 	-g -Wall \
