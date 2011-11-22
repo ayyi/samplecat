@@ -7,3 +7,4 @@ all:
 	@#add extern directive - dont know how to do this in vala
 	@sed -i -e 's/static gpointer ayyi_libfilemanager_parent_class = NULL;/static gpointer ayyi_libfilemanager_parent_class = NULL; \nextern char theme_name[];/' filemanager.c
 	@#mv app.c app.h ..
+

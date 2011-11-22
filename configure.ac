@@ -250,8 +250,9 @@ AM_CONDITIONAL(ENABLE_AYYIDBUS, [test "$enable_ayyidbus" = "yes"])
 dnl -----------------------------------------------------------------------------
 
 AS_IF([test "$enable_ayyi" = "yes"], [
-       PKG_CHECK_MODULES(DBUS, dbus-glib-1, AC_DEFINE(USE_AYYI,1,[Use ayyi]), enable_ayyi="no")
+       PKG_CHECK_MODULES(AYYI, libayyi, AC_DEFINE(USE_AYYI,1,[Use ayyi]), enable_ayyi="no")
        ])
+AC_SUBST(AYYI_LIBS)
 AM_CONDITIONAL(ENABLE_AYYI, [test "$enable_ayyi" = "yes"])
 
 dnl -----------------------------------------------------------------------------
@@ -310,7 +311,7 @@ if `test "$enable_nks" = "yes"`; then
 else
 	enable_nks="no"
 fi;
-AM_CONDITIONAL(ENABLE_TRACKER, test "$nks_found" = "yes") dnl ENABLE_TRACKER typo ??
+AM_CONDITIONAL(ENABLE_NKS, test "$nks_found" = "yes")
 AC_SUBST(NKS_CFLAGS)
 AC_SUBST(NKS_LDFLAGS)
 
@@ -382,10 +383,10 @@ AC_CONFIG_FILES([Makefile])
 AC_CONFIG_FILES([src/Makefile])
 AC_CONFIG_FILES([src/file_manager/Makefile])
 AC_CONFIG_FILES([src/file_manager/filetypes/Makefile])
+AC_CONFIG_FILES([src/file_manager/vala/Makefile])
 AC_CONFIG_FILES([src/gimp/Makefile])
 AC_CONFIG_FILES([src/xdgmime/Makefile])
 dnl AC_CONFIG_FILES([src/vala/Makefile])
-AC_CONFIG_FILES([ayyi/Makefile])
 AC_OUTPUT
 
 jplayer="no"

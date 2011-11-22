@@ -32,7 +32,6 @@ GQVIEW1_SRC = gqview_view_dir_tree.c gqview_view_dir_tree.h gqview2/gqview.h gqv
 
 if ENABLE_AYYI
 AYYI_SRC = ayyi.c ayyi.h ayyi_model.c ayyi_model.h
-AYYI_LIBS = ../ayyi/libayyi.a
 endif
 
 AD_SRC = audio_decoder/ad.h audio_decoder/ad_plugin.h audio_decoder/ad_plugin.c \
