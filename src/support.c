@@ -652,10 +652,7 @@ add_menu_items_from_defn(GtkWidget* menu, MenuDef* menu_def, int n)
 			GtkWidget* menu_item = gtk_image_menu_item_new_with_label (item->label);
 			gtk_menu_shell_append (GTK_MENU_SHELL(menu), menu_item);
 			if(item->stock_id){
-				GtkIconSet* set = gtk_style_lookup_icon_set(gtk_widget_get_style(menu), item->stock_id);
-				GdkPixbuf* pixbuf = gtk_icon_set_render_icon(set, gtk_widget_get_style(menu), GTK_TEXT_DIR_LTR, GTK_STATE_NORMAL, GTK_ICON_SIZE_MENU, menu, NULL);
-
-				GtkWidget* ico = gtk_image_new_from_pixbuf(pixbuf);
+				GtkWidget *ico = gtk_image_new_from_stock(item->stock_id, GTK_ICON_SIZE_MENU);
 				gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(menu_item), ico);
 			}
 			if(item->callback) g_signal_connect (G_OBJECT(menu_item), "activate", G_CALLBACK(item->callback), GINT_TO_POINTER(i));
