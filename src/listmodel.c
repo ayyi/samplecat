@@ -352,7 +352,7 @@ listmodel__move_files(GList *list, const gchar *dest_path)
 		const gchar *src_path=l->data;
 
 		gchar *bn =g_path_get_basename(src_path);
-		const gchar *full_path = g_strdup_printf("%s%c%s",dest_path, G_DIR_SEPARATOR, bn);
+		gchar *full_path = g_strdup_printf("%s%c%s",dest_path, G_DIR_SEPARATOR, bn);
 		g_free(bn);
 
 		if (src_path) {

@@ -59,8 +59,6 @@ enum  {
 };
 void spectrogram_widget_image_ready (SpectrogramWidget* self, gchar* filename, GdkPixbuf* _pixbuf, void* user_data);
 void spectrogram_widget_set_file (SpectrogramWidget* self, gchar* filename);
-static void _lambda0_ (gchar* filename, GdkPixbuf* a, void* b, SpectrogramWidget* self);
-static void __lambda0__render_done_func (gchar* filename, GdkPixbuf* a, void* user_data_, gpointer self);
 static void _spectrogram_widget_image_ready_render_done_func (gchar* filename, GdkPixbuf* a, void* user_data_, gpointer self);
 static void spectrogram_widget_real_realize (GtkWidget* base);
 static void spectrogram_widget_real_unrealize (GtkWidget* base);
@@ -83,18 +81,6 @@ void spectrogram_widget_image_ready (SpectrogramWidget* self, gchar* filename, G
 }
 
 
-static void _lambda0_ (gchar* filename, GdkPixbuf* a, void* b, SpectrogramWidget* self) {
-	self->priv->pixbuf = a;
-	fprintf (stdout, "set_file: got callback!\n");
-	gtk_widget_queue_draw ((GtkWidget*) self);
-}
-
-
-static void __lambda0__render_done_func (gchar* filename, GdkPixbuf* a, void* user_data_, gpointer self) {
-	_lambda0_ (filename, a, user_data_, self);
-}
-
-
 static void _spectrogram_widget_image_ready_render_done_func (gchar* filename, GdkPixbuf* a, void* user_data_, gpointer self) {
 	spectrogram_widget_image_ready (self, filename, a, user_data_);
 }
@@ -103,7 +89,6 @@ static void _spectrogram_widget_image_ready_render_done_func (gchar* filename, G
 void spectrogram_widget_set_file (SpectrogramWidget* self, gchar* filename) {
 	gchar* _tmp0_ = NULL;
 	gchar* _tmp1_;
-	RenderDoneFunc p1;
 	void* p1_target = NULL;
 	GDestroyNotify p1_target_destroy_notify = NULL;
 	g_return_if_fail (self != NULL);
@@ -111,14 +96,12 @@ void spectrogram_widget_set_file (SpectrogramWidget* self, gchar* filename) {
 	_tmp1_ = _tmp0_;
 	_g_free0 (self->priv->_filename);
 	self->priv->_filename = _tmp1_;
-	p1 = __lambda0__render_done_func;
 	p1_target = g_object_ref (self);
 	p1_target_destroy_notify = g_object_unref;
 	if (self->priv->pixbuf) gdk_pixbuf_fill(self->priv->pixbuf, 0x0);
 	cancel_spectrogram (NULL);
 	get_spectrogram_with_target (filename, _spectrogram_widget_image_ready_render_done_func, self, NULL);
 	(p1_target_destroy_notify == NULL) ? NULL : (p1_target_destroy_notify (p1_target), NULL);
-	p1 = NULL;
 	p1_target = NULL;
 	p1_target_destroy_notify = NULL;
 	gtk_widget_queue_draw ((GtkWidget*) self);
