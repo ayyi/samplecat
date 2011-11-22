@@ -135,9 +135,26 @@ sqlite__connect()
 	if (!table_exists) {
 		int n = sqlite3_exec(db, "CREATE TABLE samples ("
 			"id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, "
-			"filename TEXT, filedir TEXT, keywords TEXT, pixbuf BLOB, length INT, sample_rate INT, channels INT, "
-			"online INT, last_checked INT, mimetype TEXT, peaklevel REAL, notes TEXT, colour INT, "
-			"ebur TEXT, full_path TEXT, mtime INT, frames INT, bit_rate INT, bit_depth INT, meta_data TEXT)",
+			"filename TEXT,"
+			"filedir TEXT,"
+			"keywords TEXT,"
+			"pixbuf BLOB,"
+			"length INT,"
+			"sample_rate INT,"
+			"channels INT,"
+			"online INT,"
+			"last_checked INT,"
+			"mimetype TEXT,"
+			"peaklevel REAL,"
+			"notes TEXT,"
+			"colour INT, "
+			"ebur TEXT,"
+			"full_path TEXT,"
+			"mtime INT,"
+			"frames INT,"
+			"bit_rate INT,"
+			"bit_depth INT,"
+			"meta_data TEXT)",
 			on_create_table, 0, &errmsg);
 		if (n != SQLITE_OK) perr("Sqlite error: %s\n", errmsg);
 		if (errmsg) { sqlite3_free(errmsg); return FALSE;}

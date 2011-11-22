@@ -29,12 +29,17 @@ enum {
   MYSQL_ONLINE,
   MYSQL_LAST_CHECKED,
   MYSQL_MIMETYPE,
+  MYSQL_NOTES,
+  MYSQL_COLOUR,
   MYSQL_PEAKLEVEL,
-	// TODO rg: save MTIME, EBUR FRAMES and ABSOLUTE_PATH
-	// see mysql__update_ebur() and  mysql__update_online() below as well
+  MYSQL_EBUR,
+  MYSQL_FULL_PATH,
+  MYSQL_MTIME,
+  MYSQL_FRAMES,
+  MYSQL_BITRATE,
+  MYSQL_BITDEPTH,
+  MYSQL_METADATA,
 };
-#define MYSQL_NOTES 11
-#define MYSQL_COLOUR 12
 
 MYSQL mysql = {{NULL}, NULL, NULL};
 
@@ -68,6 +73,13 @@ static void clear_result    ();
 	  `notes` mediumtext,
 	  `colour` tinyint(4) default NULL,
 	  `peaklevel` float(24) default NULL,
+	  `ebur` text default NULL,
+	  `full_path` text NOT NULL,
+	  `mtime` int(22) default NULL,
+	  `frames` int(22) default NULL,
+	  `bit_rate` int(11) default NULL,
+	  `bit_depth` int(8) default NULL,
+	  `meta_data` text default NULL,
 	  PRIMARY KEY  (`id`)
 	)
 
@@ -103,6 +115,7 @@ mysql__connect()
 		errprintf("Failed to connect to Database: %s\n", mysql_error(&mysql));
 		return false;
 	}
+	memset(&result, 0, sizeof(Sample));
 
 	is_connected = true;
 	return true;
@@ -171,7 +184,7 @@ mysql__exec_sql(const char* sql)
 gboolean
 mysql__update_string(int id, const char* key, const char* value)
 {
-	return mysql__update_blob(id, key, (const guint8*) (value?value:""), (const guint) strlen(value));
+	return mysql__update_blob(id, key, (const guint8*) (value?value:""), (const guint) value?strlen(value):0);
 }
 
 gboolean
@@ -309,29 +322,33 @@ mysql__search_iter_next_(unsigned long** lengths)
 	}
 
 	static char full_path[PATH_MAX];
-	snprintf(full_path, PATH_MAX, "%s/%s", row[MYSQL_DIR], row[MYSQL_NAME]);
-	full_path[PATH_MAX-1]='\0';
+	if (row[MYSQL_FULL_PATH] && *(row[MYSQL_FULL_PATH])) {
+		strcpy(full_path, row[MYSQL_FULL_PATH]);
+	} else {
+		snprintf(full_path, PATH_MAX, "%s/%s", row[MYSQL_DIR], row[MYSQL_NAME]);
+		full_path[PATH_MAX-1]='\0';
+	}
 
 	result.id          = atoi(row[MYSQL_ID]);
-	result.full_path   = full_path; // TODO rg - save in database
+	result.full_path   = full_path;
 	result.sample_name = row[MYSQL_NAME];
 	result.sample_dir  = row[MYSQL_DIR];
 	result.keywords    = row[MYSQL_KEYWORDS];
-	result.length      = get_int(row, MYSQL_LENGTH); // TODO rg - check int64_t
+	result.length      = get_int(row, MYSQL_LENGTH);
 	result.sample_rate = get_int(row, MYSQL_SAMPLERATE);
 	result.channels    = get_int(row, MYSQL_CHANNELS);
 	result.peaklevel   = get_float(row, MYSQL_PEAKLEVEL);
 	result.overview    = pixbuf;
 	result.notes       = row[MYSQL_NOTES];
-	result.ebur        = ""; // TODO rg - save in database
+	result.ebur        = row[MYSQL_EBUR];
 	result.colour_index= get_int(row, MYSQL_COLOUR);
 	result.mimetype    = row[MYSQL_MIMETYPE];
 	result.online      = get_int(row, MYSQL_ONLINE);
-	result.mtime       = 0; // TODO rg - save in database
-	result.bit_depth   = 0; // TODO rg - save in database
-	result.bit_rate    = 0; // TODO rg - save in database
-	result.meta_data   = NULL; // TODO rg - save in database
-	result.frames      = result.length * result.sample_rate /1000; // TODO rg - save in database
+	result.mtime       = get_int(row, MYSQL_MTIME);
+	result.bit_depth   = get_int(row, MYSQL_BITDEPTH);
+	result.bit_rate    = get_int(row, MYSQL_BITRATE);
+	result.meta_data   = row[MYSQL_METADATA];
+	result.frames      = get_int(row, MYSQL_FRAMES); 
 	return &result;
 }
 
@@ -387,7 +404,7 @@ mysql__dir_iter_free()
 void
 mysql__iter_to_result(Sample* result)
 {
-	memset(result, 0, sizeof(Sample));
+memset(&result, 0, sizeof(Sample));
 }
 
 void
