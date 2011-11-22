@@ -1,7 +1,15 @@
 todo:
- v0.4.X:
+ v0.2.X:
+  -update old config-file s/database_/mysql_/
   -mysql backend: automatically create or alter database.
+  -mysql backend: search - split by space, wildcards 
+ v0.3.X:
 	-file-manager: rmdir/mkdir, unlink+confirm
+	-re-connect files when moved external to samplecat
+	 * search new file 
+	 * mass-updates
+	 * compare md5sum ? or compare already known audio-properties (frames, peaklevel)
+	-fix dnotify/inotify code - it does not seem to do anything.
 
 sometime:
 	-minor GUI redesign:
@@ -14,6 +22,8 @@ sometime:
    * preferences and about windows
 	 * fix focus-save behaviour of notes and tag-edit in inspector.
 	 * add button and/or shortcut to reset colours of played files.
+	-merge w/ latest geeqie/gqview and ROX code
+	-fix compiler warnings in file manager code. remove cruft.
 	-select and expand prev folder in dir-tree-view (bottom-left) on startup.
   -update tracker backend 0.10 , new values in data-model
 	-look at spek (vala spectrogram) -- but why? sndfile's spectrogram is great :)
