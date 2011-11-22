@@ -18,6 +18,7 @@ observer__files_moved(GList* file_list, const char* dest)
 {
 	PF;
 	GList* l = file_list;
+	listmodel__move_files(file_list, dest);
 	for(;l;l=l->next){
 		dbg(0, "%s", l->data);
 	}

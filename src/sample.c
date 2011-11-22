@@ -192,7 +192,7 @@ sample_get_by_row_ref(GtkTreeRowReference* ref)
 
 struct find_sample {
 	Sample *rv;
-	char *abspath;
+	const char *abspath;
 };
 
 gboolean filter_sample (GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *iter, gpointer data) {
@@ -207,7 +207,7 @@ gboolean filter_sample (GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *ite
 }
 
 Sample*
-sample_get_by_filename(char *abspath) {
+sample_get_by_filename(const char *abspath) {
 	struct find_sample fs;
 	fs.rv=NULL; fs.abspath=abspath;
 	GtkTreeModel* model = GTK_TREE_MODEL(app.store);
