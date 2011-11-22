@@ -106,6 +106,7 @@ gboolean
 tracker__search_iter_new(char* search, char* dir, const char* category, int* n_results)
 {
 	g_return_val_if_fail(tc, false);
+	// TODO handle search==NULL and dir==NULL cases.
 
 	dbg(0, "search=%s category=%s.", search, category);
 	*n_results = -1;

@@ -290,7 +290,8 @@ mysql__search_iter_new(char* search, char* dir, const char* category, int* n_res
 	if(search_result) gwarn("previous query not free'd?");
 
 	GString* q = g_string_new("SELECT * FROM samples WHERE 1 ");
-	if(strlen(search)) g_string_append_printf(q, "AND (filename LIKE '%%%s%%' OR filedir LIKE '%%%s%%' OR keywords LIKE '%%%s%%') ", search, search, search);
+	// TODO: split 'search' by whitespace, add wildcards, -- compare db/sqlite.c
+	if(search && strlen(search)) g_string_append_printf(q, "AND (filename LIKE '%%%s%%' OR filedir LIKE '%%%s%%' OR keywords LIKE '%%%s%%') ", search, search, search);
 	if(dir && strlen(dir))
 #ifdef DONT_SHOW_SUBDIRS //TODO
 		g_string_append_printf(q, "AND filedir='%s' ", dir);
