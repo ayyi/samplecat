@@ -19,6 +19,7 @@
 
 #include "typedefs.h"
 #include "support.h"
+#include "listmodel.h"
 
 #include "filelist.h"
 #include "layout_util.h"
@@ -313,6 +314,7 @@ static void vdtree_drop_menu_move_cb(GtkWidget *widget, gpointer data)
 
 	vdt->drop_list = NULL;
 
+	listmodel__move_files(list, path);
 	file_util_move_simple(list, path);
 	file_manager__update_all();
 }
