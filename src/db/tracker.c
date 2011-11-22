@@ -86,18 +86,6 @@ tracker__delete_row(int id)
 }
 
 
-gboolean
-tracker__update_ignore(Sample* sample)
-{
-	return true;
-}
-
-gboolean
-tracker__update_ignore2(int a, const char*b)
-{
-	return true;
-}
-
 static gint
 str_in_array (const gchar *str, gchar **array)
 {
@@ -118,8 +106,10 @@ gboolean
 tracker__search_iter_new(char* search, char* dir, const char* category, int* n_results)
 {
 	g_return_val_if_fail(tc, false);
+	// TODO handle search==NULL and dir==NULL cases.
 
 	dbg(0, "search=%s category=%s.", search, category);
+	*n_results = -1;
 
 	char* tag_filter = "";
 	if(category && category[0]){
@@ -226,7 +216,7 @@ tracker__search_iter_new(char* search, char* dir, const char* category, int* n_r
 
 
 Sample*
-tracker__search_iter_next()
+tracker__search_iter_next(unsigned long** unused)
 {
 	if(iter.idx >= iter.results->len) return NULL;
 
@@ -399,7 +389,7 @@ tracker__dir_iter_new()
 
 
 char*
-tracker__dir_iter_next()
+tracker__dir_iter_next(unsigned long** unused)
 {
 	return NULL;
 }
@@ -408,14 +398,6 @@ tracker__dir_iter_next()
 void
 tracker__dir_iter_free()
 {
-}
-
-
-gboolean
-tracker__update_colour(int id, int colour)
-{
-	pwarn("FIXME\n");
-	return true;
 }
 
 
@@ -907,23 +889,36 @@ tracker__update_keywords(int id, const char* keywords)
 
 
 gboolean
-tracker__update_online(int id, gboolean online, time_t mtime)
+tracker__update_string (int id, const char* k, const char* v) 
+{
+	if (!strcmp(k, "keywords")) return tracker__update_keywords(id, v?v:"");
+	return false;
+}
+
+gboolean
+tracker__update_int (int id, const char* k, const long int v) 
+{
+	return false;
+}
+
+gboolean
+tracker__update_float (int id, const char* k, const float v) 
+{
+	return false;
+}
+
+gboolean
+tracker__update_blob (int id, const char* k, const guint8* d, const guint l)
 {
 	return false;
 }
 
 
 gboolean
-tracker__update_peaklevel(int id, float level)
+tracker__file_exists (const char* path, int *id)
 {
-	return false;
-}
-
-
-gboolean
-tracker__file_exists (const char* path)
-{
-	return false;
+	if (id) *id=0;
+	return false; // TODO check if given file exists
 }
 
 

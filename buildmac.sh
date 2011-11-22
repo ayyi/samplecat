@@ -1,6 +1,7 @@
 #!/bin/bash
 PRODUCT_NAME="Samplecat"
-VERSION=0.1.2+rg2
+VERSION=`grep AC_INIT configure.ac | sed 's/^.*\[\([0-9.]*\)\].*$/\1/g'`
+echo "version: $VERSION"
 
 GTKDIR=${GTKDIR:-"$HOME/gtk/inst"}
 GTKLOADER=gtk-2.0/2.10.0/loaders
@@ -8,6 +9,15 @@ PANGOPATH=pango/1.6.0/modules
 
 DMGFILE=/tmp/${PRODUCT_NAME}_v$VERSION.dmg
 echo "building: $DMGFILE"
+
+if [ -e $DMGFILE ]; then
+	echo "DMG file exists:"
+	ls -dl $DMGFILE 
+  exit;
+fi
+
+/bin/echo -n " go?[Enter|CTRL-C]"
+read 
 
 #NOREBUILD=1
 #NOCLEAN=1
@@ -22,9 +32,11 @@ else
 fi
 
 if test -z "$NOREBUILD"; then
-	automake --add-missing
-	libtoolize || glibtoolize
-	autoreconf
+	libtoolize --automake || glibtoolize
+	aclocal
+	autoheader -Wall
+	automake --gnu --add-missing -Wall
+	autoconf
   CFLAGS="-arch i386 -arch x86_64 -arch ppc" \
   CXXFLAGS="-arch i386 -arch x86_64 -arch ppc" \
 		./configure --disable-dependency-tracking

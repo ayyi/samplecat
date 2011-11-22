@@ -1,101 +1,120 @@
 todo:
- v0.2:
-	-db-backend: rename/move files, update basic info (dir, name, duration, ..)
-  -file-manager: hook rename/move files -> db-backend
-	-db-backend: add 'misc' field for collected format specific meta-data (eg Artist, Album, bitrate, sf2 sample-count, etc)
- v0.4:
-  -update mysql backend to new data-model
-	-file-manager: rmdir/mkdir, unlink+confirm
+ v0.2.X:
+  -update old config-file s/database_/mysql_/
+  -mysql backend: automatically create or alter database.
+  -mysql backend: search - split by space, wildcards 
+ v0.3.X:
+  -file-manager: rmdir/mkdir, unlink+confirm
+  -re-connect files when moved external to samplecat
+   * search new file 
+   * mass-updates
+   * compare md5sum ? or compare already known audio-properties (frames, peaklevel)
+  -fix dnotify/inotify code - it does not seem to do anything.
 
 sometime:
-  -use GDL docking widgets
-	-major GUI redesign
+  -minor GUI redesign:
+   * make "play" move obvious: tooltip on waveform, play-icon overlay?
+   * move "loop" from menu->pref to player_control.
+   * make use of the two status-bars.
+  -major GUI redesign.
+   * use GDL docking widgets
+   * flexible, configurable list-view
+   * preferences and about windows
+   * fix focus-save behaviour of notes and tag-edit in inspector.
+   * add button and/or shortcut to reset colours of played files.
+  -merge w/ latest geeqie/gqview and ROX code
+  -fix compiler warnings in file manager code. remove cruft.
+  -select and expand prev folder in dir-tree-view (bottom-left) on startup.
   -update tracker backend 0.10 , new values in data-model
-	-look at spek (vala spectrogram) - why? sndfile's spectrogram is great
-	-appears to freeze when importing from cdrom. move to idle function?
-	-GtkInfBar added in gtk 2.18 - we should probably use it instead of the message_panel__ functions in window.c 
-	-show warning icon in statusbar - eggtrayicon.c ?
-	-check out libsexy SexyUrlLabel (for tags) 
-	-check out chickensys samplemanage.
-	-recursive importing: gui is unresponsive - put in some mainloop stuff
-	-check with valgrind. - needs suppression file for gtk libs
-	-how to programmatically enter treeview cell edit mode? (see code)
-	-why segfaults related to tree row_refs - see dir_tree_on_link_selected()  -- possibly fixed already
-	-add date to database so we can sort by date and show f-spot style bar chart for years. -- mtime already present in model
-	-make samplecat an embeddable widget?
-	-DnD out of samplecat on OSX to non GTK apps (it works with ardour, but not with OSX-Finder)
-	-allow to modify preset-categories and remember changes.
+  -look at spek (vala spectrogram) -- but why? sndfile's spectrogram is great :)
+  -appears to freeze when importing from cdrom. move to idle function?
+  -GtkInfBar added in gtk 2.18 - we should probably use it instead of the message_panel__ functions in window.c 
+  -show warning icon in statusbar - eggtrayicon.c ?
+  -check out libsexy SexyUrlLabel (for tags) 
+  -check out chickensys samplemanage.
+  -recursive importing: gui is unresponsive - put in some mainloop stuff
+  -check with valgrind. - needs suppression file for gtk libs
+  -how to programmatically enter treeview cell edit mode? (see code)
+  -why segfaults related to tree row_refs - see dir_tree_on_link_selected()  -- possibly fixed already
+  -add date to database so we can sort by date and show f-spot style bar chart for years. -- mtime already present in model
+  -make samplecat an embeddable widget?
+  -DnD out of samplecat on OSX to non GTK apps (it works with ardour, but not with OSX-Finder)
+  -allow to modify preset-categories and remember changes.
+  -better meta_data handling and meta-data edit.
+  -add support for sample-libs (sf2, etc).
+  -ffmpge decoder: parse and set bit_depth.
+  -move player-code into sub-directory src/audio_players/ ?
 
 
 functionality status:
-	-sorting
-		-by date                             no
-	-show files                            done
-		-name                                done
-		-path                                done
-		-category / keywords                 mostly done
-		-waveform overview                   done
-		-inspector                           done
-	-preview files                         done
-	-import
-		-scan directories                    done
-		-scan dvd's/cdr's                    test
-		-drag n drop                         done
-		-dupe checking                       done
-	export
-		-seismix                             yes
-		-ardour/rosegarden etc               yes
-		-drag n drop                         ? - ardour:yes, rosegarden:?
-	formats
-		-wav/aiff/etc                        done
-		-flac                                done
-		-all ffmpeg                          done
-	colours
-		-add selector in the toolbar         done
-		-drag n drop to row                  done
-		-drag n drop to overview             no
-		-click to apply to selected.         check - probably not.
-	updates
-		-"locate": scan for moved file.      no
-		-sample versioning                   no
-	slocate
-		-allow searches of slocate db        no
+  -sorting
+    -by date                             no
+  -show files                            done
+    -name                                done
+    -path                                done
+    -category / keywords                 mostly done
+    -waveform overview                   done
+    -inspector                           done
+  -preview files                         done
+  -import
+    -scan directories                    done
+    -scan dvd's/cdr's                    test
+    -drag n drop                         done
+    -dupe checking                       done
+  export
+    -seismix                             yes
+    -ardour/rosegarden etc               yes
+    -drag n drop                         ? - ardour:yes, rosegarden:?
+  formats
+    -wav/aiff/etc                        done
+    -flac                                done
+    -all ffmpeg                          done
+  colours
+    -add selector in the toolbar         done
+    -drag n drop to row                  done
+    -drag n drop to overview             no
+    -click to apply to selected.         check - probably not.
+  updates
+    -"locate": scan for moved file.      no
+    -sample versioning                   no
+  slocate
+    -allow searches of slocate db        no
 
 metadata:
-	-gio/gvfs:
-		-try g_file_query_info() using the 'metadata' namespace
-		-uses different store to tracker! designed to be faster.
-		-gio/gvfs metadata breaks mv etc, as it will use the metadata. You are supposed to use 'gvfs-move'.
-			-the proper way to do this is to use xattrs, which are supported by the filesystem, however Nautilus guy says they are too slow.
-		-what metadata will gio/gvfs give us?
-			-custom icon
-			-per-folder default view
-			-per-folder background
-			-per folder (spatial) geometry
-			-per folder icon view and list view settings (colums, zoom level, etc)
-			-icon position in manual layout mode (e.g. on desktop)
-			-icon scaling
-			-emblems
-			-file annotations (a note you can add on a file)
-			note: thumbnails are stored in another way (see thumbnail spec)
-		-evince uses gfvs-metadata.
+  -gio/gvfs:
+    -try g_file_query_info() using the 'metadata' namespace
+    -uses different store to tracker! designed to be faster.
+    -gio/gvfs metadata breaks mv etc, as it will use the metadata. You are supposed to use 'gvfs-move'.
+      -the proper way to do this is to use xattrs, which are supported by the filesystem, however Nautilus guy says they are too slow.
+    -what metadata will gio/gvfs give us?
+      -custom icon
+      -per-folder default view
+      -per-folder background
+      -per folder (spatial) geometry
+      -per folder icon view and list view settings (colums, zoom level, etc)
+      -icon position in manual layout mode (e.g. on desktop)
+      -icon scaling
+      -emblems
+      -file annotations (a note you can add on a file)
+      note: thumbnails are stored in another way (see thumbnail spec)
+    -evince uses gfvs-metadata.
 
 removable media:
-	-currently we (probably?) dont store the volume name.
-	-you can get a (UUID) volume name using libudev.
+  -currently we (probably?) dont store the volume name.
+  -you can get a (UUID) volume name using libudev.
 
 file system trees:
-	-the first implementation was based on devhelp and worked ok, but didnt do too much.
-	-second implementation used gqview's gtkclist implemtation - aborted due to implementation of gtktreeview theming into gtk2.10.
-	-3rd implementation uses gqviews gtktreeview imlementation - not yet finished.
+  -the first implementation was based on devhelp and worked ok, but didnt do too much.
+  -second implementation used gqview's gtkclist implemtation - aborted due to implementation of gtktreeview theming into gtk2.10.
+  -3rd implementation uses gqviews gtktreeview imlementation - not yet finished.
 
 -databases:
-	-mysql has an 'embedded' mode, ie it can be used without a daemon. Ideally it would be nice to support this. Used by Amarok for example.
+  -mysql has an 'embedded' mode, ie it can be used without a daemon. Ideally it would be nice to support this. Used by Amarok for example.
 
 -commercial competitors:
-	-soundminer: http://www.soundminer.com/SM_Site/Home.html
-	-chickensys samplemanage
-	-AudioFinder
-	-Netmix - http://www.netmixpro.com/
+  -soundminer: http://www.soundminer.com/SM_Site/Home.html
+  -chickensys samplemanage
+  -AudioFinder
+  -Netmix - http://www.netmixpro.com/
 
 -papers on automatic metadata and searching: http://audioclas.iua.upf.edu/documents.shtml

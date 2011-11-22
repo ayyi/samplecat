@@ -100,7 +100,7 @@ static void       config_new                ();
 static bool       config_save               ();
 static void       menu_delete_row           (GtkMenuItem*, gpointer);
 void              menu_play_stop(           GtkWidget* widget, gpointer user_data);
-static void       update_sample             (Sample *sample);
+static void       update_sample             (Sample *sample, gboolean force_update);
 
 
 struct _app app;
@@ -566,6 +566,9 @@ do_search(char* search, char* dir)
 	if(BACKEND_IS_NULL) return;
 	search_pending = false;
 
+	if (!search) search = app.search_phrase;
+	if (!dir) dir = app.search_dir;
+
 	int n_results = 0;
 	if(!backend.search_iter_new(search, dir, app.search_category, &n_results)) {
 		return;
@@ -575,75 +578,36 @@ do_search(char* search, char* dir)
 
 	listmodel__clear();
 
-	//detach the model from the view to speed up row inserts:
-	/*
-	model = gtk_tree_view_get_model(GTK_TREE_VIEW(view));
-	g_object_ref(model);
-	gtk_tree_view_set_model(GTK_TREE_VIEW(view), NULL);
-	*/ 
-
-	if(
-		#ifdef USE_MYSQL
-		BACKEND_IS_MYSQL
-		#else
-		false
-		#endif
-		#ifdef USE_SQLITE
-		|| BACKEND_IS_SQLITE
-		#endif
-		){
-		int row_count = 0;
-		unsigned long* lengths;
-		Sample* result;
-		while((result = backend.search_iter_next(&lengths)) && row_count < MAX_DISPLAY_ROWS){
-			if(app.no_gui){
-				if(!row_count) console__show_result_header();
-				console__show_result(result);
-			}else{
-				Sample *s = sample_dup(result);
-				listmodel__add_result(s);
-				sample_unref(s);
-			}
-			row_count++;
-		}
-		if(app.no_gui) console__show_result_footer(row_count);
-
-		backend.search_iter_free();
-
-		if(0 && row_count < MAX_DISPLAY_ROWS){
-			statusbar_print(1, "%i samples found.", row_count);
-		}else if(!row_count){
-			statusbar_print(1, "no samples found. filters: dir=%s", app.search_dir);
+	int row_count = 0;
+	unsigned long* lengths;
+	Sample* result;
+	while((result = backend.search_iter_next(&lengths)) && row_count < MAX_DISPLAY_ROWS){
+		if(app.no_gui){
+			if(!row_count) console__show_result_header();
+			console__show_result(result);
+#ifdef USE_TRACKER
+			if(BACKEND_IS_TRACKER && row_count > 20) break;
+#endif
 		}else{
-			statusbar_print(1, "showing %i of %i samples", row_count, n_results);
-		}
-	}
-	#ifdef USE_TRACKER
-	else if(BACKEND_IS_TRACKER){
-		int row_count = 0;
-		Sample* result;
-		while((result = tracker__search_iter_next()) && row_count < MAX_DISPLAY_ROWS){
-			if(app.no_gui && row_count > 20) continue;
 			Sample *s = sample_dup(result);
 			listmodel__add_result(s);
 			sample_unref(s);
-			if(app.no_gui){
-				if(!row_count) console__show_result_header();
-				console__show_result(result);
-			}
-			row_count++;
 		}
-		backend.search_iter_free();
-
-		if(0 && row_count < MAX_DISPLAY_ROWS){
-			statusbar_print(1, "%i samples found.", row_count);
-		}else if(!row_count){
-			statusbar_print(1, "no samples found. filters: dir=%s", app.search_dir);
-		}else{
-			statusbar_print(1, "showing %i samples", row_count);
-		}
+		row_count++;
 	}
-	#endif
+	if(app.no_gui) console__show_result_footer(row_count);
+
+	backend.search_iter_free();
+
+	if(0 && row_count < MAX_DISPLAY_ROWS){
+		statusbar_print(1, "%i samples found.", row_count);
+	}else if(!row_count){
+		statusbar_print(1, "no samples found. filters: dir=%s", app.search_dir);
+	}else if (n_results <0) {
+		statusbar_print(1, "showing %i sample(s)", row_count);
+	}else{
+		statusbar_print(1, "showing %i of %i sample(s)", row_count, n_results);
+	}
 
 	//treeview_unblock_motion_handler();  //causes a segfault even before it is run ??!!
 }
@@ -857,12 +821,12 @@ add_file(char* path)
 	/* check if file already exists in the store
 	 * -> don't add it again
 	 */
-	if(backend.file_exists(path)) {
+	if(backend.file_exists(path, NULL)) {
 		statusbar_print(1, "duplicate: not re-adding a file already in db.");
 		gwarn("duplicate file: %s\n", path);
 		Sample *s = sample_get_by_filename(path);
 		if (s) {
-			update_sample(s);
+			update_sample(s, false);
 			sample_unref(s);
 		} else {
 			dbg(0, "Sample found in DB but not in model.");
@@ -969,7 +933,7 @@ delete_selected_rows()
 				int id;
 				gtk_tree_model_get(model, &iter, COL_NAME, &fname, COL_IDX, &id, -1);
 
-				if(!backend.delete(id)) return;
+				if(!backend.remove(id)) return;
 
 				//update the store:
 				gtk_list_store_remove(app.store, &iter);
@@ -992,10 +956,10 @@ menu_delete_row(GtkMenuItem* widget, gpointer user_data)
 }
 
 static void
-update_sample(Sample *sample) {
+update_sample(Sample *sample, gboolean force_update) {
 	time_t mtime = file_mtime(sample->full_path);
 	if(mtime>0){
-		if (sample->mtime < mtime) {
+		if (sample->mtime < mtime || force_update) {
 			/* file may have changed - FULL UPDATE */
 			dbg(0, "file modified: full update: %s", sample->full_path);
 
@@ -1005,9 +969,7 @@ update_sample(Sample *sample) {
 			else return;
 
 			if (sample_get_file_info(sample)) {
-				// TODO: update "basic" file info in db as well
-				// - but there is no db API for that [yet].
-				// delete/re-add ?
+				listmodel__update_by_rowref(sample->row_ref, -1, NULL);
 				sample->mtime = mtime;
 				request_peaklevel(sample);
 				request_overview(sample);
@@ -1032,6 +994,7 @@ update_rows(GtkWidget *widget, gpointer user_data)
 	PF;
 	//GtkTreeModel *model = gtk_tree_view_get_model(GTK_TREE_VIEW(app.view));
 	GtkTreeModel *model = GTK_TREE_MODEL(app.store);
+	gboolean force_update = (GPOINTER_TO_INT(user_data)==2)?true:false; // NOTE - linked to order in _menu_def[]
 
 	GtkTreeSelection* selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(app.view));
 	GList* selectionlist = gtk_tree_selection_get_selected_rows(selection, &(model));
@@ -1042,7 +1005,7 @@ update_rows(GtkWidget *widget, gpointer user_data)
 	for(i=0;i<g_list_length(selectionlist);i++){
 		GtkTreePath *treepath = g_list_nth_data(selectionlist, i);
 		Sample *sample = sample_get_from_model(treepath);
-		update_sample(sample);
+		update_sample(sample, force_update);
 		statusbar_print(1, "online status updated (%s)", sample->online ? "online" : "not online");
 		sample_unref(sample);
 	}
@@ -1106,6 +1069,7 @@ edit_row(GtkWidget* widget, gpointer user_data)
 static MenuDef _menu_def[] = {
 	{"Delete",         G_CALLBACK(menu_delete_row), GTK_STOCK_DELETE,     true},
 	{"Update",         G_CALLBACK(update_rows),      GTK_STOCK_REFRESH,    true},
+	{"Force Update",   G_CALLBACK(update_rows),      GTK_STOCK_REFRESH,    true},
 	{"Play All",       G_CALLBACK(menu_play_all),   GTK_STOCK_MEDIA_PLAY, true},
 	{"Stop Playback",  G_CALLBACK(menu_play_stop),  GTK_STOCK_MEDIA_STOP, true},
 	{"Reset Colours",  G_CALLBACK(listview__reset_colours),
@@ -1558,20 +1522,22 @@ set_backend(BackendType type)
 			backend.search_iter_new  = mysql__search_iter_new;
 			backend.search_iter_next = mysql__search_iter_next_;
 			backend.search_iter_free = mysql__search_iter_free;
+
 			backend.dir_iter_new     = mysql__dir_iter_new;
 			backend.dir_iter_next    = mysql__dir_iter_next;
 			backend.dir_iter_free    = mysql__dir_iter_free;
+
 			backend.insert           = mysql__insert;
-			backend.delete           = mysql__delete_row;
-			backend.disconnect       = mysql__disconnect;
-			backend.update_colour    = mysql__update_colour;
-			backend.update_keywords  = mysql__update_keywords;
-			backend.update_notes     = mysql__update_notes;
-			backend.update_ebur      = mysql__update_ebur;
-			backend.update_pixbuf    = mysql__update_pixbuf;
-			backend.update_online    = mysql__update_online;
-			backend.update_peaklevel = mysql__update_peaklevel;
+			backend.remove           = mysql__delete_row;
 			backend.file_exists      = mysql__file_exists;
+
+			backend.update_string    = mysql__update_string;
+			backend.update_float     = mysql__update_float;
+			backend.update_int       = mysql__update_int;
+			backend.update_blob      = mysql__update_blob;
+
+			backend.disconnect       = mysql__disconnect;
+
 			printf("backend is mysql.\n");
 			#endif
 			break;
@@ -1580,40 +1546,44 @@ set_backend(BackendType type)
 			backend.search_iter_new  = sqlite__search_iter_new;
 			backend.search_iter_next = sqlite__search_iter_next;
 			backend.search_iter_free = sqlite__search_iter_free;
+
 			backend.dir_iter_new     = sqlite__dir_iter_new;
 			backend.dir_iter_next    = sqlite__dir_iter_next;
 			backend.dir_iter_free    = sqlite__dir_iter_free;
+
 			backend.insert           = sqlite__insert;
-			backend.delete           = sqlite__delete_row;
-			backend.disconnect       = sqlite__disconnect;
-			backend.update_colour    = sqlite__update_colour;
-			backend.update_keywords  = sqlite__update_keywords;
-			backend.update_notes     = sqlite__update_notes;
-			backend.update_ebur      = sqlite__update_ebur;
-			backend.update_pixbuf    = sqlite__update_pixbuf;
-			backend.update_online    = sqlite__update_online;
-			backend.update_peaklevel = sqlite__update_peaklevel;
+			backend.remove           = sqlite__delete_row;
 			backend.file_exists      = sqlite__file_exists;
+
+			backend.update_string    = sqlite__update_string;
+			backend.update_float     = sqlite__update_float;
+			backend.update_int       = sqlite__update_int;
+			backend.update_blob      = sqlite__update_blob;
+
+			backend.disconnect       = sqlite__disconnect;
+
 			printf("backend is sqlite.\n");
 			#endif
 			break;
 		case BACKEND_TRACKER:
 			#ifdef USE_TRACKER
 			backend.search_iter_new  = tracker__search_iter_new;
+			backend.search_iter_next = tracker__search_iter_next;
 			backend.search_iter_free = tracker__search_iter_free;
+
 			backend.dir_iter_new     = tracker__dir_iter_new;
 			backend.dir_iter_next    = tracker__dir_iter_next;
 			backend.dir_iter_free    = tracker__dir_iter_free;
+
 			backend.insert           = tracker__insert;
-			backend.delete           = tracker__delete_row;
-			backend.update_colour    = tracker__update_colour;
-			backend.update_keywords  = tracker__update_keywords;
-			backend.update_pixbuf    = tracker__update_ignore;
-			backend.update_notes     = tracker__update_ignore2;
-			backend.update_ebur      = tracker__update_ignore2;
-			backend.update_online    = tracker__update_online;
-			backend.update_peaklevel = tracker__update_peaklevel;
+			backend.remove           = tracker__delete_row;
 			backend.file_exists      = tracker__file_exists;
+
+			backend.update_string    = tracker__update_string;
+			backend.update_float     = tracker__update_float;
+			backend.update_int       = tracker__update_int;
+			backend.update_blob      = tracker__update_blob;
+
 			backend.disconnect       = tracker__disconnect;
 			printf("backend is tracker.\n");
 

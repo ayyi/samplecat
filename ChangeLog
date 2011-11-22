@@ -1,3 +1,10 @@
+20111123  Robin Gareus  <robin@gareus.org>
+-updated mysql-db support.
+-compress overview-pixbuf for storage in db
+-update references when moving files
+-minor code cleanup.
+-version changed to 0.2.2
+
 20111118  Robin Gareus  <robin@gareus.org>
 -support for meta-data and bit-rate/depth
 -version changed to 0.2.1

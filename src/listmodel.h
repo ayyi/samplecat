@@ -38,6 +38,7 @@ gboolean      listmodel__update_by_ref         (GtkTreeIter *iter, int what, voi
 gboolean      listmodel__update_by_rowref      (GtkTreeRowReference *row_ref, int what, void *data);
 
 char*         listmodel__get_filename_from_id  (int);
+void          listmodel__move_files            (GList *list, const gchar *dest_path);
 
 void          listmodel__set_overview          (GtkTreeRowReference*, GdkPixbuf*);
 void          listmodel__set_peaklevel         (GtkTreeRowReference*, float);

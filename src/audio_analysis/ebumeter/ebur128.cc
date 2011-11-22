@@ -41,6 +41,10 @@ static int ebur128proc (const char *fn, struct ebur128 *ebr) {
 	Ebu_r128_proc  Proc;
 	float *data[2];
 	float *inpb;
+	if (ebr) {
+		memset(ebr, 0, sizeof(struct ebur128));
+		ebr->err=1;
+	}
 
 	if (!(sf=ad_open(fn, &nfo))) {
 		fprintf (stderr, "Can't open input file '%s'.\n", fn);
@@ -60,9 +64,10 @@ static int ebur128proc (const char *fn, struct ebur128 *ebr) {
 
 	const int bsize = fsamp / 5;
 
-	if (bsize > len) {
+	if (bsize > len) { // XXX check do we need bsize or 2*bsize?
 		fprintf (stderr, "EBU: Input file is too short.\n");
 		ad_close(sf);
+		if (ebr) {return 0;} // do not repeat analysis later.
 		return 1;
 	}
 
@@ -99,6 +104,7 @@ static int ebur128proc (const char *fn, struct ebur128 *ebr) {
 	delete[] inpb;
 
 	if (ebr) {
+		ebr->err=0;
 		if (lufs) {
 			ebr->lufs = 1;
 			ebr->integrated = Proc.integrated ();
@@ -122,7 +128,7 @@ static int ebur128proc (const char *fn, struct ebur128 *ebr) {
 		}
 	}
 
-#if 1 /* dump to stdout */
+#if 0 /* dump to stdout */
 	printf ("ebu_r128 - file: '%s'\n", fn);
 	if (lufs) {
 		printf ("Integrated loudness:   %6.1lf LUFS\n", Proc.integrated ());

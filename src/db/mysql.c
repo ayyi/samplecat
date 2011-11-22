@@ -29,12 +29,17 @@ enum {
   MYSQL_ONLINE,
   MYSQL_LAST_CHECKED,
   MYSQL_MIMETYPE,
+  MYSQL_NOTES,
+  MYSQL_COLOUR,
   MYSQL_PEAKLEVEL,
-	// TODO rg: save MTIME, EBUR FRAMES and ABSOLUTE_PATH
-	// see mysql__update_ebur() and  mysql__update_online() below as well
+  MYSQL_EBUR,
+  MYSQL_FULL_PATH,
+  MYSQL_MTIME,
+  MYSQL_FRAMES,
+  MYSQL_BITRATE,
+  MYSQL_BITDEPTH,
+  MYSQL_METADATA,
 };
-#define MYSQL_NOTES 11
-#define MYSQL_COLOUR 12
 
 MYSQL mysql = {{NULL}, NULL, NULL};
 
@@ -68,6 +73,13 @@ static void clear_result    ();
 	  `notes` mediumtext,
 	  `colour` tinyint(4) default NULL,
 	  `peaklevel` float(24) default NULL,
+	  `ebur` text default NULL,
+	  `full_path` text NOT NULL,
+	  `mtime` int(22) default NULL,
+	  `frames` int(22) default NULL,
+	  `bit_rate` int(11) default NULL,
+	  `bit_depth` int(8) default NULL,
+	  `meta_data` text default NULL,
 	  PRIMARY KEY  (`id`)
 	)
 
@@ -103,17 +115,19 @@ mysql__connect()
 		errprintf("Failed to connect to Database: %s\n", mysql_error(&mysql));
 		return false;
 	}
+	memset(&result, 0, sizeof(Sample));
 
 	is_connected = true;
 	return true;
 }
  
-
+#if 0
 gboolean
 mysql__is_connected()
 {
 	return is_connected;
 }
+#endif
 
 
 void
@@ -122,15 +136,33 @@ mysql__disconnect()
 	mysql_close(&mysql);
 }
 
+#define MYSQL_ESCAPE(VAR,STR) \
+	char *VAR; if (!(STR) || strlen(STR)==0) {VAR=calloc(1,sizeof(char));} else { \
+		int sl=strlen(STR);\
+		VAR = malloc((sl*2+1)*sizeof(char)); \
+	  mysql_real_escape_string(&mysql, VAR, (STR), sl); \
+	}
 
 int
 mysql__insert(Sample* sample)
 {
 	int id = 0;
-	gchar* filedir = g_path_get_dirname(sample->full_path);
-	gchar* filename = g_path_get_basename(sample->full_path);
+	MYSQL_ESCAPE(full_path,   sample->full_path);
+	MYSQL_ESCAPE(sample_name, sample->sample_name);
+	MYSQL_ESCAPE(sample_dir,  sample->sample_dir);
+	MYSQL_ESCAPE(mimetype,    sample->mimetype);
+	MYSQL_ESCAPE(ebur,        sample->ebur);
+	MYSQL_ESCAPE(meta_data,   sample->meta_data);
 
-	gchar* sql = g_strdup_printf("INSERT INTO samples SET filename='%s', filedir='%s', length=%"PRIi64", sample_rate=%i, channels=%i, mimetype='%s' ", filename, filedir, sample->length, sample->sample_rate, sample->channels, sample->mimetype);
+	gchar* sql = g_strdup_printf(
+		"INSERT INTO samples(full_path,filename,filedir,length,sample_rate,channels,online,mimetype,ebur,peaklevel,colour,mtime,frames,bit_rate,bit_depth,meta_data) "
+		"VALUES ('%s','%s','%s',%"PRIi64",'%i','%i','%i','%s','%s','%f','%i','%lu',%"PRIi64",'%i','%i','%s')",
+			full_path, sample_name, sample_dir,
+			sample->length, sample->sample_rate, sample->channels,
+			sample->online, mimetype, ebur,
+			sample->peaklevel, sample->colour_index, (unsigned long) sample->mtime,
+			sample->frames, sample->bit_rate, sample->bit_depth, meta_data
+		);
 	dbg(1, "sql=%s", sql);
 
 	if(mysql__exec_sql(sql)==0){
@@ -140,8 +172,12 @@ mysql__insert(Sample* sample)
 		perr("not ok...\n");
 	}
 	g_free(sql);
-	g_free(filedir);
-	g_free(filename);
+	free(full_path);
+	free(sample_name);
+	free(sample_dir);
+	free(mimetype);
+	free(ebur);
+	free(meta_data);
 	return id;
 }
 
@@ -167,144 +203,78 @@ mysql__exec_sql(const char* sql)
 	return mysql_real_query(&mysql, sql, strlen(sql));
 }
 
-
 gboolean
-mysql__update_path(const char* old_path, const char* new_path)
+mysql__update_string(int id, const char* key, const char* value)
 {
-	gboolean ok = false;
-
-	char* filename = NULL; //FIXME
-	char* old_dir = NULL; //FIXME
-
-	char query[1024];
-	snprintf(query, 1023, "UPDATE samples SET filedir='%s' WHERE filename='%s' AND filedir='%s'", new_path, filename, old_dir);
-	dbg(0, "%s", query);
-
-	if(!mysql__exec_sql(query)){
-		ok = TRUE;
-	}
-	return ok;
+	return mysql__update_blob(id, key, (const guint8*) (value?value:""), (const guint) value?strlen(value):0);
 }
 
-
 gboolean
-mysql__update_colour(int id, int colour)
+mysql__update_int(int id, const char* key, const long int value)
 {
-	char* sql = g_strdup_printf("UPDATE samples SET colour=%u WHERE id=%i", colour, id);
-	dbg(1, "sql=%s", sql);
-	gboolean fail;
-	if((fail = mysql_query(&mysql, sql))){
-		perr("update failed! sql=%s", sql);
-	}
-	g_free(sql);
-	return !fail;
-}
-
-
-gboolean
-mysql__update_keywords(int id, const char* keywords)
-{
-	if(!id) gwarn("id not set.");
-	char* sql = g_strdup_printf("UPDATE samples SET keywords='%s' WHERE id=%u", keywords, id);
-	dbg(1, "sql=%s", sql);
-	gboolean fail;
-	if((fail = mysql_query(&mysql, sql))){
-		perr("update failed! sql=%s\n", sql);
-	}
-	g_free(sql);
-	return !fail;
-}
-
-
-gboolean
-mysql__update_ebur(int id, const char* ebur)
-{
-	// XXX EBUR is not yet in datamodel
 	char sql[1024];
-	snprintf(sql, 1024, "UPDATE samples SET ebur='%s' WHERE id=%u", ebur, id);
+	snprintf(sql, 1024, "UPDATE samples SET %s=%li WHERE id=%d", key, value, id);
 	if(mysql_query(&mysql, sql)){
 		perr("update failed! sql=%s\n", sql);
 		return false;
 	}
-	else return true;
+	return true;
 }
 
 gboolean
-mysql__update_notes(int id, const char* notes)
+mysql__update_float(int id, const char* key, const float value)
 {
 	char sql[1024];
-	snprintf(sql, 1024, "UPDATE samples SET notes='%s' WHERE id=%u", notes, id);
+	snprintf(sql, 1024, "UPDATE samples SET %s=%f WHERE id=%d", key, value, id);
 	if(mysql_query(&mysql, sql)){
 		perr("update failed! sql=%s\n", sql);
 		return false;
 	}
-	else return true;
+	return true;
+}
+
+gboolean
+mysql__update_blob(int id, const char* key, const guint8* d, const guint len)
+{
+	char *blob = malloc((len*2+1)*sizeof(char));
+	mysql_real_escape_string(&mysql, blob, (char*)d, len);
+	char *sql = malloc((strlen(blob)+33/*query string*/+20 /*int*/+strlen(key))*sizeof(char));
+	sprintf(sql, "UPDATE samples SET %s='%s' WHERE id=%i", key, blob, id);
+	if(mysql_query(&mysql, sql)){
+		free(blob); free(sql);
+		pwarn("update failed! sql=%s\n", sql);
+		return false;
+	}
+	free(blob); free(sql);
+	return true;
 }
 
 
-#define SQL_LEN 66000
 gboolean
-mysql__update_pixbuf(Sample *sample)
+mysql__file_exists(const char* path, int *id)
 {
-	GdkPixbuf* pixbuf = sample->overview;
-	if(pixbuf){
-		//serialise the pixbuf:
-		GdkPixdata pixdata;
-		gdk_pixdata_from_pixbuf(&pixdata, pixbuf, 0);
-		guint length;
-		guint8* ser = gdk_pixdata_serialize(&pixdata, &length);
-
-		guint8 blob[SQL_LEN];
-		mysql_real_escape_string(&mysql, (char*)blob, (char*)ser, length);
-
-		char sql[SQL_LEN];
-		snprintf(sql, SQL_LEN, "UPDATE samples SET pixbuf='%s' WHERE id=%i", blob, sample->id);
-		if(mysql_query(&mysql, sql)){
-			pwarn("update failed! sql=%s\n", sql);
-			return false;
+	int rv=false;
+	const int len = strlen(path);
+	char *esc = malloc((len*2+1)*sizeof(char));
+	mysql_real_escape_string(&mysql, esc, path, len);
+	char *sql = malloc((43/*query string*/+strlen(esc))*sizeof(char));
+	sprintf(sql, "SELECT id FROM samples WHERE full_path='%s';",esc);
+	dbg(0,"%s",sql);
+	if (id) *id=0;
+	if(!mysql_query(&mysql, sql)){
+		MYSQL_RES *sr = mysql_store_result(&mysql);
+		if (sr) {
+			MYSQL_ROW row = mysql_fetch_row(sr);
+			if (row) {
+				if (id) *id=atoi(row[0]);
+				rv=true;
+			}
+			mysql_free_result(sr);
 		}
-
-		g_free(ser);
-
-		//at this pt, refcount should be two, we make it 1 so that pixbuf is destroyed with the row:
-		//g_object_unref(pixbuf); //FIXME
-	}else perr("no pixbuf.\n");
-
-	return true;
-}
-
-
-gboolean
-mysql__update_online(int id, gboolean online, time_t mtime)
-{
-	gchar* sql = g_strdup_printf("UPDATE samples SET online=%i, last_checked=NOW() WHERE id=%i", online, id);
-	dbg(2, "row: sql=%s", sql);
-	if(mysql_query(&mysql, sql)){
-		perr("update failed! sql=%s\n", sql);
 	}
-	g_free(sql);
-	return true;
-}
-
-
-gboolean
-mysql__update_peaklevel(int id, float level)
-{
-	gboolean ok = true;
-	gchar* sql = g_strdup_printf("UPDATE samples SET peaklevel=%f WHERE id=%i", level, id);
-	dbg(2, "row: sql=%s", sql);
-	if(mysql_query(&mysql, sql)){
-		perr("update failed! sql=%s\n", sql);
-		ok = false;
-	}
-	g_free(sql);
-	return ok;
-}
-
-gboolean
-mysql__file_exists(const char* path)
-{
-	return false; // TODO rg - check if given file is already in DB. - needs ABSOLUTE_PATH
+	free(sql); free(esc);
+	return rv;
+	
 }
 
 //-------------------------------------------------------------
@@ -320,7 +290,8 @@ mysql__search_iter_new(char* search, char* dir, const char* category, int* n_res
 	if(search_result) gwarn("previous query not free'd?");
 
 	GString* q = g_string_new("SELECT * FROM samples WHERE 1 ");
-	if(strlen(search)) g_string_append_printf(q, "AND (filename LIKE '%%%s%%' OR filedir LIKE '%%%s%%' OR keywords LIKE '%%%s%%') ", search, search, search);
+	// TODO: split 'search' by whitespace, add wildcards, -- compare db/sqlite.c
+	if(search && strlen(search)) g_string_append_printf(q, "AND (filename LIKE '%%%s%%' OR filedir LIKE '%%%s%%' OR keywords LIKE '%%%s%%') ", search, search, search);
 	if(dir && strlen(dir))
 #ifdef DONT_SHOW_SUBDIRS //TODO
 		g_string_append_printf(q, "AND filedir='%s' ", dir);
@@ -379,14 +350,9 @@ mysql__search_iter_next_(unsigned long** lengths)
 
 	*lengths = mysql_fetch_lengths(search_result); //free? 
 
-	//deserialise the pixbuf field:
-	GdkPixdata pixdata;
 	GdkPixbuf* pixbuf = NULL;
 	if(row[MYSQL_PIXBUF]){
-		dbg(3, "pixbuf_length=%i", (*lengths)[MYSQL_PIXBUF]);
-		if(gdk_pixdata_deserialize(&pixdata, (*lengths)[MYSQL_PIXBUF], (guint8*)row[MYSQL_PIXBUF], NULL)){
-			pixbuf = gdk_pixbuf_from_pixdata(&pixdata, TRUE, NULL);
-		}
+		pixbuf = blob_to_pixbuf((guint8*)row[MYSQL_PIXBUF], (*lengths)[MYSQL_PIXBUF]);
 	}
 
 	int get_int(MYSQL_ROW row, int i)
@@ -400,29 +366,33 @@ mysql__search_iter_next_(unsigned long** lengths)
 	}
 
 	static char full_path[PATH_MAX];
-	snprintf(full_path, PATH_MAX, "%s/%s", row[MYSQL_DIR], row[MYSQL_NAME]);
-	full_path[PATH_MAX-1]='\0';
+	if (row[MYSQL_FULL_PATH] && *(row[MYSQL_FULL_PATH])) {
+		strcpy(full_path, row[MYSQL_FULL_PATH]);
+	} else {
+		snprintf(full_path, PATH_MAX, "%s/%s", row[MYSQL_DIR], row[MYSQL_NAME]);
+		full_path[PATH_MAX-1]='\0';
+	}
 
 	result.id          = atoi(row[MYSQL_ID]);
-	result.full_path   = full_path; // TODO rg - save in database
+	result.full_path   = full_path;
 	result.sample_name = row[MYSQL_NAME];
 	result.sample_dir  = row[MYSQL_DIR];
 	result.keywords    = row[MYSQL_KEYWORDS];
-	result.length      = get_int(row, MYSQL_LENGTH); // TODO rg - check int64_t
+	result.length      = get_int(row, MYSQL_LENGTH);
 	result.sample_rate = get_int(row, MYSQL_SAMPLERATE);
 	result.channels    = get_int(row, MYSQL_CHANNELS);
 	result.peaklevel   = get_float(row, MYSQL_PEAKLEVEL);
 	result.overview    = pixbuf;
 	result.notes       = row[MYSQL_NOTES];
-	result.ebur        = ""; // TODO rg - save in database
+	result.ebur        = row[MYSQL_EBUR];
 	result.colour_index= get_int(row, MYSQL_COLOUR);
 	result.mimetype    = row[MYSQL_MIMETYPE];
 	result.online      = get_int(row, MYSQL_ONLINE);
-	result.mtime       = 0; // TODO rg - save in database
-	result.bit_depth   = 0; // TODO rg - save in database
-	result.bit_rate    = 0; // TODO rg - save in database
-	result.meta_data   = NULL; // TODO rg - save in database
-	result.frames      = result.length * result.sample_rate /1000; // TODO rg - save in database
+	result.mtime       = get_int(row, MYSQL_MTIME);
+	result.bit_depth   = get_int(row, MYSQL_BITDEPTH);
+	result.bit_rate    = get_int(row, MYSQL_BITRATE);
+	result.meta_data   = row[MYSQL_METADATA];
+	result.frames      = get_int(row, MYSQL_FRAMES); 
 	return &result;
 }
 
@@ -474,13 +444,13 @@ mysql__dir_iter_free()
 }
 
 
+#if NEVER
 void
 mysql__iter_to_result(Sample* result)
 {
-	memset(result, 0, sizeof(Sample));
+memset(&result, 0, sizeof(Sample));
 }
 
-#if NEVER
 void
 mysql__add_row_to_model(MYSQL_ROW row, unsigned long* lengths)
 {

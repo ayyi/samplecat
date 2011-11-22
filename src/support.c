@@ -10,8 +10,12 @@
 #include <dirent.h>
 #include <sys/param.h>
 #include <errno.h>
+#ifdef HAVE_ZLIB
+#include <zlib.h>
+#endif
 
 #include <gtk/gtk.h>
+#include <gdk-pixbuf/gdk-pixdata.h>
 
 #include "file_manager/file_manager.h"
 #include "file_manager/support.h"
@@ -186,34 +190,11 @@ channels_format(int n_ch)
 
 
 void
-len_format(char* str, int64_t t /*milliseconds*/)
+smpte_format(char* str, int64_t t /*milliseconds*/)
 {
-#if 0
-	//str should be allocated at least 32 bytes.
-
-	int secs = t / 1000;
-	int mins = secs / 60;
-
-	char min_str[16];
-	min_str[0] = '\0';
-	if(mins){
-		snprintf(min_str, 15, "%im", mins);
-	}
-
-	//show milliseconds if short sample
-	char ms_str[16];
-	ms_str[0] = '\0';
-	if(!mins){
-		snprintf(ms_str, 15, ".%i", t % 1000);
-	}
-
-	snprintf(str, 31, "%s%i%s%s", min_str, secs % 60, ms_str, mins ? "" : "s");
-	str[31] = '\0';
-#else
-	snprintf(str, 31, "%02d:%02d:%02d.%03d",
+	snprintf(str, 64, "%02d:%02d:%02d.%03d",
 			(int)(t/3600000), (int)(t/60000)%60, (int)(t/1000)%60, (int)(t%1000));
-	str[31] = '\0';
-#endif
+	str[63] = '\0';
 }
 
 
@@ -527,40 +508,6 @@ is_similar_rgb(unsigned colour1, unsigned colour2)
 #endif
 
 
-void
-format_time(char* length, const char* milliseconds)
-{
-	g_return_if_fail(length);
-	if(!milliseconds){ snprintf(length, 64, " "); return; }
-#if 0
-	gchar secs_str[64] = "";
-	gchar mins_str[64] = "";
-	int t = atoi(milliseconds);
-	int secs = t / 1000;
-	int mins = secs / 60;
-	if(mins){
-		snprintf(mins_str, 64, "%i:", mins);
-		secs = secs % 60;
-		snprintf(secs_str, 64, "%02i", secs);
-	}else snprintf(secs_str, 64, "%i", secs);
-	
-	snprintf(length, 64, "%s%s.%03i", mins_str, secs_str, t % 1000);
-#else
-	len_format(length, atol(milliseconds));
-#endif
-}
-
-
-void
-format_time_int(char* length, int milliseconds)
-{
-	g_return_if_fail(length);
-
-	if(!milliseconds) length[0] = '\0';
-	else snprintf(length, 64, "%i.%03i", milliseconds / 1000, milliseconds % 1000);
-}
-
-
 char*
 str_array_join(const char** array, const char* separator)
 {
@@ -705,10 +652,7 @@ add_menu_items_from_defn(GtkWidget* menu, MenuDef* menu_def, int n)
 			GtkWidget* menu_item = gtk_image_menu_item_new_with_label (item->label);
 			gtk_menu_shell_append (GTK_MENU_SHELL(menu), menu_item);
 			if(item->stock_id){
-				GtkIconSet* set = gtk_style_lookup_icon_set(gtk_widget_get_style(menu), item->stock_id);
-				GdkPixbuf* pixbuf = gtk_icon_set_render_icon(set, gtk_widget_get_style(menu), GTK_TEXT_DIR_LTR, GTK_STATE_NORMAL, GTK_ICON_SIZE_MENU, menu, NULL);
-
-				GtkWidget* ico = gtk_image_new_from_pixbuf(pixbuf);
+				GtkWidget *ico = gtk_image_new_from_stock(item->stock_id, GTK_ICON_SIZE_MENU);
 				gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(menu_item), ico);
 			}
 			if(item->callback) g_signal_connect (G_OBJECT(menu_item), "activate", G_CALLBACK(item->callback), GINT_TO_POINTER(i));
@@ -1214,4 +1158,61 @@ get_iconbuf_from_mimetype(char* mimetype)
 	return iconbuf;
 }
 
+uint8_t *
+pixbuf_to_blob(GdkPixbuf* in, guint *len)
+{
+	if(!in){ 
+		if (len) *len=0;
+		return NULL;
+	}
+	//serialise the pixbuf:
+	GdkPixdata pixdata;
+	gdk_pixdata_from_pixbuf(&pixdata, in, 0);
+	guint length;
+	guint8* ser = gdk_pixdata_serialize(&pixdata, &length);
+#ifdef HAVE_ZLIB
+	unsigned long dsize=compressBound(length);
+	unsigned char* dst= malloc(dsize*sizeof(char));
+	int rv = compress(dst, &dsize, (const unsigned char *)ser, length);
+	if(rv == Z_OK) {
+		dbg(0, "compressed pixbuf %d -> %d", length, dsize);
+		if (len) *len = dsize;
+		free(ser);
+		return dst;
+	} else {
+		dbg(2, "compression error");
+	}
+#endif
+	if (len) *len = length;
+	return ser;
+}
 
+GdkPixbuf*
+blob_to_pixbuf(const unsigned char* blob, const guint len)
+{
+	GdkPixdata pixdata;
+	GdkPixbuf* pixbuf = NULL;
+#ifdef HAVE_ZLIB
+	unsigned long dsize=1024*32; // TODO - save orig-length along w/ blob 
+	//here: ~ 16k = 400*20*4bpp = OVERVIEW_HEIGHT * OVERVIEW_WIDTH * 4bpp + GDK-OVERHEAD
+	unsigned char* dst = malloc(dsize*sizeof(char));
+	int rv = uncompress(dst, &dsize, blob, len);
+	if(rv == Z_OK) {
+		if(gdk_pixdata_deserialize(&pixdata, dsize, dst, NULL)){
+				pixbuf = gdk_pixbuf_from_pixdata(&pixdata, TRUE, NULL);
+		}
+		dbg(2, "decompressed pixbuf %d -> %d", len, dsize);
+	} else {
+		dbg(2, "decompression failed");
+		if(gdk_pixdata_deserialize(&pixdata, len, (guint8*)blob, NULL)){
+				pixbuf = gdk_pixbuf_from_pixdata(&pixdata, TRUE, NULL);
+		}
+	}
+	free(dst);
+#else
+	if(gdk_pixdata_deserialize(&pixdata, len, (guint8*)blob, NULL)){
+			pixbuf = gdk_pixbuf_from_pixdata(&pixdata, TRUE, NULL);
+	}
+#endif
+	return pixbuf;
+}

@@ -96,7 +96,7 @@ listmodel__add_result(Sample* result)
 	}
 
 	char samplerate_s[32]; samplerate_format(samplerate_s, result->sample_rate);
-	char length[64]; format_time_int(length, result->length);
+	char length_s[64]; smpte_format(length_s, result->length);
 
 #ifdef USE_AYYI
 	GdkPixbuf* ayyi_icon = NULL;
@@ -127,7 +127,7 @@ listmodel__add_result(Sample* result)
 			COL_KEYWORDS,   NSTR(result->keywords), 
 			COL_PEAKLEVEL,  result->peaklevel,
 			COL_OVERVIEW,   result->overview,
-			COL_LENGTH,     length,
+			COL_LENGTH,     length_s,
 			COL_SAMPLERATE, samplerate_s,
 			COL_CHANNELS,   result->channels, 
 			COL_COLOUR,     result->colour_index,
@@ -173,17 +173,24 @@ listmodel__update_result(Sample* sample, int what)
 
 	switch (what) {
 		case COL_OVERVIEW:
-			backend.update_pixbuf(sample);
+			if (sample->overview) {
+				guint len;
+				guint8 *blob = pixbuf_to_blob(sample->overview, &len);
+				if (!backend.update_blob(sample->id, "pixbuf", blob, len)) 
+					gwarn("failed to store overview in the database");
+			}
 			if (sample->row_ref)
 				listmodel__set_overview(sample->row_ref, sample->overview);
 			break;
 		case COL_PEAKLEVEL:
-			backend.update_peaklevel(sample->id, sample->peaklevel);
+			if (!backend.update_float(sample->id, "peaklevel", sample->peaklevel))
+				gwarn("failed to store peaklevel in the database");
 			if (sample->row_ref)
 				listmodel__set_peaklevel(sample->row_ref, sample->peaklevel);
 			break;
 		case COLX_EBUR:
-			backend.update_ebur(sample->id, sample->ebur);
+			if(!backend.update_string(sample->id, "ebur", sample->ebur))
+				gwarn("failed to store ebu level in the database");
 			break;
 		default:
 			dbg(0,"update for this type is not yet implemented"); 
@@ -216,7 +223,10 @@ listmodel__update_by_ref(GtkTreeIter *iter, int what, void *data)
 		case COL_ICON: // online/offline, mtime
 			{
 				gboolean online = s->online;
-				backend.update_online(s->id, online, s->mtime);
+				if (!backend.update_int(s->id, "online", online?1:0))
+					gwarn("failed to store online-info in the database");
+				if(!backend.update_int(s->id, "mtime", (unsigned long) s->mtime))
+					gwarn("failed to store file mtime in the database");
 				GdkPixbuf* iconbuf = NULL;
 				if (online) {
 					MIME_type* mime_type = mime_type_lookup(s->mimetype);
@@ -229,8 +239,10 @@ listmodel__update_by_ref(GtkTreeIter *iter, int what, void *data)
 			break;
 		case COL_KEYWORDS:
 			{
-				if(!backend.update_keywords(s->id, (char*)data)) rv=false;
-				else {
+				if(!backend.update_string(s->id, "keywords", (char*)data)) {
+					gwarn("failed to store keywords in the database");
+					rv=false;
+				} else {
 					gtk_list_store_set(app.store, iter, COL_KEYWORDS, (char*)data, -1);
 					if (s->keywords) free(s->keywords);
 					s->keywords=strdup((char*)data);
@@ -238,8 +250,10 @@ listmodel__update_by_ref(GtkTreeIter *iter, int what, void *data)
 			}
 			break;
 		case COLX_NOTES:
-				if (!backend.update_notes(s->id, (char*)data)) rv=false;
-				else {
+				if (!backend.update_string(s->id, "notes", (char*)data)) {
+					gwarn("failed to store notes in the database");
+					rv=false;
+				} else {
 					if (s->notes) free(s->notes);
 					s->notes = strdup((char*)data);
 				}
@@ -247,10 +261,35 @@ listmodel__update_by_ref(GtkTreeIter *iter, int what, void *data)
 		case COL_COLOUR:
 			{
 				unsigned int colour_index = *((unsigned int*)data);
-				if(!backend.update_colour(s->id, colour_index)) rv=false;
-				else {
+				if(!backend.update_int(s->id, "colour", colour_index)) {
+					gwarn("failed to store colour in the database");
+					rv=false;
+				} else {
 					gtk_list_store_set(app.store, iter, COL_COLOUR, colour_index, -1);
 					s->colour_index=colour_index;
+				}
+			}
+			break;
+		case -1: // update basic info from sample_get_file_info()
+			{
+				gboolean ok=true;
+				ok&=backend.update_int(s->id, "channels", s->channels);
+				ok&=backend.update_int(s->id, "sample_rate", s->sample_rate);
+				ok&=backend.update_int(s->id, "length", s->length);
+				ok&=backend.update_int(s->id, "bit_rate", s->bit_rate);
+				ok&=backend.update_int(s->id, "bit_depth", s->bit_depth);
+				ok&=backend.update_string(s->id, "meta_data", s->meta_data);
+				if (!ok) {
+					gwarn("failed to store basic-info in the database");
+					rv=false;
+				} else {
+					char samplerate_s[32]; samplerate_format(samplerate_s, s->sample_rate);
+					char length_s[64]; smpte_format(length_s, s->length);
+					gtk_list_store_set(app.store, iter, 
+							COL_CHANNELS, s->channels,
+							COL_SAMPLERATE, samplerate_s,
+							COL_LENGTH, length_s,
+							-1);
 				}
 			}
 			break;
@@ -321,23 +360,79 @@ listmodel__set_peaklevel(GtkTreeRowReference* row_ref, float level)
 	} else dbg(2, "no path for rowref. row_ref=%p\n", row_ref); //this is not an error. The row may not be part of the current search.
 }
 
+void
+listmodel__move_files(GList *list, const gchar *dest_path)
+{
+	/* This is called _before_ the files are actually moved!
+	 * file_util_move_simple() which is called afterwards 
+	 * will free the list and dest_path.
+	 */
+	if (!list) return;
+	if (!dest_path) return;
+
+	GList *l = list;
+	do {
+		const gchar *src_path=l->data;
+
+		gchar *bn =g_path_get_basename(src_path);
+		gchar *full_path = g_strdup_printf("%s%c%s",dest_path, G_DIR_SEPARATOR, bn);
+		g_free(bn);
+
+		if (src_path) {
+			dbg(0,"move %s -> %s | NEW: %s", src_path, dest_path, full_path);
+			int id = -1;
+			if(backend.file_exists(src_path, &id) && id>0) {
+				backend.update_string(id, "filedir", dest_path);
+				backend.update_string(id, "full_path", full_path);
+			}
+
+			Sample *s = sample_get_by_filename(src_path);
+			if (s) {
+				GtkTreePath* treepath;
+				free(s->full_path);
+				free(s->sample_dir);
+				s->full_path  = strdup(full_path);
+				s->sample_dir = strdup(dest_path);
+				//it's possible the row may no longer be visible:
+				if((treepath = gtk_tree_row_reference_get_path(s->row_ref))){
+					GtkTreeIter iter;
+					if(gtk_tree_model_get_iter(GTK_TREE_MODEL(app.store), &iter, treepath)){
+						gtk_list_store_set(app.store, &iter, COL_FNAME, s->sample_dir, -1);
+					}
+				}
+			}
+		}
+		g_free(full_path);
+		l=l->next;
+	} while (l);
+}
+
+
+struct find_filename {
+	int id;
+	char *rv;
+};
+
+gboolean
+filter_id (GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *iter, gpointer data) {
+	struct find_filename *ff = (struct find_filename*) data;
+	Sample *s = sample_get_by_tree_iter(iter);
+	if (s->id == ff->id) {
+		ff->rv=strdup(s->full_path);
+		sample_unref(s);
+		return TRUE;
+	}
+	sample_unref(s);
+	return FALSE;
+}
 
 char*
 listmodel__get_filename_from_id(int id)
 {
-	char *rv = NULL;
-	gboolean find_id (GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *iter, gpointer data) {
-		Sample *s = sample_get_by_tree_iter(iter);
-		if (s->id == id) {
-			rv=strdup(s->full_path);
-			sample_unref(s);
-			return TRUE;
-		}
-		sample_unref(s);
-		return FALSE;
-	}
+	struct find_filename ff;
+	ff.id=id;
+	ff.rv=NULL;
 	GtkTreeModel* model = GTK_TREE_MODEL(app.store);
-	gtk_tree_model_foreach(model, &find_id, NULL);
-
-	return rv;
+	gtk_tree_model_foreach(model, &filter_id, &ff);
+	return ff.rv;
 }

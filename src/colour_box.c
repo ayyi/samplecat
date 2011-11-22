@@ -164,7 +164,6 @@ static int
 colour_box__drag_dataget(GtkWidget *widget, GdkDragContext *drag_context, GtkSelectionData *data, guint info, guint time, gpointer user_data)
 {
 	char text[16];
-	gboolean data_sent = false;
 	PF;
 
 	int box_num = GPOINTER_TO_UINT(user_data); //box_num corresponds to the colour index.
@@ -173,7 +172,6 @@ colour_box__drag_dataget(GtkWidget *widget, GdkDragContext *drag_context, GtkSel
 	sprintf(text, "colour:%i%c%c", box_num + 1, 13, 10); //1 based to avoid atoi problems.
 
 	gtk_selection_data_set(data, GDK_SELECTION_TYPE_STRING, BITS_PER_CHAR_8, (guchar*)text, strlen(text));
-	data_sent = true;
 
 	return false;
 }

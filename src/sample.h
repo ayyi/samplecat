@@ -65,7 +65,7 @@ Sample*     sample_get_by_tree_iter  (GtkTreeIter* iter);
  */
 Sample*     sample_get_by_row_ref    (GtkTreeRowReference* ref); 
 
-Sample*     sample_get_by_filename   (char *abspath);
+Sample*     sample_get_by_filename   (const char *abspath);
 
 void        sample_ref               (Sample*);
 void        sample_unref             (Sample*);
