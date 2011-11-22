@@ -585,7 +585,9 @@ do_search(char* search, char* dir)
 		if(app.no_gui){
 			if(!row_count) console__show_result_header();
 			console__show_result(result);
+#ifdef USE_TRACKER
 			if(BACKEND_IS_TRACKER && row_count > 20) break;
+#endif
 		}else{
 			Sample *s = sample_dup(result);
 			listmodel__add_result(s);
