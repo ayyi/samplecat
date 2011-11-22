@@ -31,10 +31,22 @@ License: GPL-1
 
 Files: ./src/xdgmime/*
 Copyright:
- 2003  Red Hat, Inc.
- 2003  Jonathan Blandford <jrb@alum.mit.edu>
+ 2003 Red Hat, Inc.
+ 2003 Jonathan Blandford <jrb@alum.mit.edu>
 License: LGPL-2
 
+Files: ./src/cellrenderer_hypertext.*
+ 2003 Ximian, Inc.
+ 2003 Federico Mena-Quintero <federico@ximian.com>
+License: LGPL-2
+
+Files: ./src/audio_analysis/ebumeter/*
+ 2010-2011 Fons Adriaensen <fons@linuxaudio.org>
+License: LGPL-2
+
+Files: ./src/audio_analysis/spectrogram/*
+ 2007-2009 Erik de Castro Lopo <erikd@mega-nerd.com>
+License: GPL-2
 
 License: GPL-2
  This program is free software: you can redistribute it and/or modify
