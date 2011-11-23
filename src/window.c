@@ -19,6 +19,7 @@
 #include "dnd.h"
 #include "file_view.h"
 #include "inspector.h"
+#include "progress_dialog.h"
 #include "player_control.h"
 #ifndef NO_USE_DEVHELP_DIRTREE
 #include "dh_link.h"
@@ -773,11 +774,12 @@ menu__add_to_db(GtkMenuItem* menuitem, gpointer user_data)
 			gtk_tree_model_get(model, &iter, FILE_VIEW_COL_FILENAME, &leaf, -1);
 			gchar* filepath = g_build_filename(filer.real_path, leaf, NULL);
 			dbg(2, "filepath=%s", filepath);
-
+			if (do_progress(0,0)) break;
 			add_file(filepath);
 			g_free(filepath);
 		}
 	}
+	hide_progress();
 	g_list_foreach(l, (GFunc)gtk_tree_path_free, NULL);
 	g_list_free(l);
 }
@@ -792,6 +794,7 @@ menu__add_dir_to_db(GtkMenuItem* menuitem, gpointer user_data)
 	if(path){
 		int n_added = 0;
 		add_dir(path, &n_added);
+		hide_progress();
 	}
 }
 

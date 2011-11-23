@@ -50,6 +50,7 @@ char * program_name;
 #include "listview.h"
 #include "window.h"
 #include "inspector.h"
+#include "progress_dialog.h"
 #include "dnd.h"
 #ifdef HAVE_AYYIDBUS
   #include "auditioner.h"
@@ -375,7 +376,9 @@ main(int argc, char** argv)
 #endif
 
 	if(app.args.add){
+		do_progress(0,0);
 		add_file(app.args.add);
+		hide_progress();
 	}
 
 	if(!app.no_gui) file_manager__init(); // set filer
@@ -530,6 +533,7 @@ add_dir(const char* path, int* added_count)
 			if(file[0]=='.') continue;
 			snprintf(filepath, PATH_MAX, "%s%c%s", path, G_DIR_SEPARATOR, file);
 			filepath[PATH_MAX-1]='\0';
+			if (do_progress(0,0)) break;
 
 			if(!g_file_test(filepath, G_FILE_TEST_IS_DIR)){
 				if(add_file(filepath)) (*added_count)++;
@@ -540,6 +544,7 @@ add_dir(const char* path, int* added_count)
 				add_dir(filepath, added_count);
 			}
 		}
+		//hide_progress();
 		g_dir_close(dir);
 	}else{
 		perr("cannot open directory. %s\n", error->message);
