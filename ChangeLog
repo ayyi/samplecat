@@ -1,4 +1,9 @@
 20111123  Robin Gareus  <robin@gareus.org>
+-added JACK autoconnect (audio+midi) to configfile
+-squashed bugs in recent commits (NULL search etc).
+-version changed to 0.2.2
+
+20111123  Robin Gareus  <robin@gareus.org>
 -updated mysql-db support.
 -compress overview-pixbuf for storage in db
 -update references when moving files
