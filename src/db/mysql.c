@@ -314,7 +314,7 @@ mysql__file_exists(const char* path, int *id)
 	mysql_real_escape_string(&mysql, esc, path, len);
 	char *sql = malloc((43/*query string*/+strlen(esc))*sizeof(char));
 	sprintf(sql, "SELECT id FROM samples WHERE full_path='%s';",esc);
-	dbg(0,"%s",sql);
+	dbg(2,"%s",sql);
 	if (id) *id=0;
 	if(!mysql_query(&mysql, sql)){
 		MYSQL_RES *sr = mysql_store_result(&mysql);
@@ -353,7 +353,7 @@ mysql__filter_by_audio(Sample *s)
 		g_string_append_printf(sql, " AND peaklevel=%f", s->peaklevel);
 
 	g_string_append_printf(sql, ";");
-	dbg(0,"%s",sql->str);
+	dbg(2,"%s",sql->str);
 
 	if(mysql_query(&mysql, sql->str)){
 		g_string_free(sql, true);

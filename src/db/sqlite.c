@@ -318,7 +318,7 @@ sqlite__filter_by_audio(Sample *s)
 		g_string_append_printf(sql, " AND peaklevel=%f", s->peaklevel);
 
 	g_string_append_printf(sql, ";");
-	dbg(0,"%s",sql->str);
+	dbg(2,"%s",sql->str);
 
   int rows,columns;
   char **table= NULL;
