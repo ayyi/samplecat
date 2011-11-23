@@ -8,6 +8,8 @@ todo:
    * mass-updates
    * compare md5sum ? or compare already known audio-properties (frames, peaklevel)
   -fix dnotify/inotify code - it does not seem to do anything.
+ v0.4.X:
+  -allow to modify/add/delete preset-categories/tags and remember changes.
 
 sometime:
   -minor GUI redesign:
@@ -37,11 +39,12 @@ sometime:
   -add date to database so we can sort by date and show f-spot style bar chart for years. -- mtime already present in model
   -make samplecat an embeddable widget?
   -DnD out of samplecat on OSX to non GTK apps (it works with ardour, but not with OSX-Finder)
-  -allow to modify preset-categories and remember changes.
   -better meta_data handling and meta-data edit.
   -add support for sample-libs (sf2, etc).
   -ffmpge decoder: parse and set bit_depth.
   -move player-code into sub-directory src/audio_players/ ?
+  -save EBU loudness information in searchable format. - serialize struct
+  -allow to search/filter on sample-traits: duration, max/min loudness, sample-rate
 
 
 functionality status:

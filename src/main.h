@@ -61,6 +61,7 @@ struct _backend
 	int              (*insert)           (Sample*);
 	gboolean         (*remove)           (int);
 	gboolean         (*file_exists)      (const char*, int *);
+	GList *          (*filter_by_audio)  (Sample*);
 
 	gboolean         (*update_string)    (int, const char*, const char*);
 	gboolean         (*update_int)       (int, const char*, const long int);
@@ -73,7 +74,7 @@ struct _backend
 struct _backend backend = {false, 
 	NULL, NULL, NULL, 
 	NULL, NULL, NULL, 
-	NULL, NULL, NULL, 
+	NULL, NULL, NULL, NULL,
 	NULL, NULL, NULL, NULL,
 	NULL};
 #else

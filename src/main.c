@@ -844,6 +844,21 @@ add_file(char* path)
 		sample_unref(sample);
 		return false;
 	}
+#if 1
+	/* check if /same/ file already exists w/ different path */
+	GList* existing;
+	if((existing=backend.filter_by_audio(sample))) {
+		GList* l = existing;
+		for(;l;l=l->next){
+			/* TODO :prompt user: ask to delete one of the files
+			 * - import/update the remaining file(s)
+			 */
+			dbg(0, "found similar or identical file: %s", l->data);
+		}
+		g_list_foreach (existing, (GFunc)g_free, NULL);
+	  g_list_free(existing);
+	}
+#endif
 
 	sample->online=1;
 	sample->id = backend.insert(sample);
@@ -1527,6 +1542,7 @@ set_backend(BackendType type)
 			backend.insert           = mysql__insert;
 			backend.remove           = mysql__delete_row;
 			backend.file_exists      = mysql__file_exists;
+			backend.filter_by_audio  = mysql__filter_by_audio;
 
 			backend.update_string    = mysql__update_string;
 			backend.update_float     = mysql__update_float;
@@ -1551,6 +1567,7 @@ set_backend(BackendType type)
 			backend.insert           = sqlite__insert;
 			backend.remove           = sqlite__delete_row;
 			backend.file_exists      = sqlite__file_exists;
+			backend.filter_by_audio  = sqlite__filter_by_audio;
 
 			backend.update_string    = sqlite__update_string;
 			backend.update_float     = sqlite__update_float;
@@ -1575,6 +1592,7 @@ set_backend(BackendType type)
 			backend.insert           = tracker__insert;
 			backend.remove           = tracker__delete_row;
 			backend.file_exists      = tracker__file_exists;
+			backend.filter_by_audio  = tracker__filter_by_audio;
 
 			backend.update_string    = tracker__update_string;
 			backend.update_float     = tracker__update_float;
