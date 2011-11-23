@@ -538,14 +538,15 @@ void JACKaudiooutputinit(void *sf, int channels, int samplerate, int64_t frames)
 	sched_yield();
 
 #if 1
-	char *jack_autoconnect = getenv("JACK_AUTOCONNECT");
-	if(!jack_autoconnect) {
+	char *jack_autoconnect = app.config.jack_autoconnect;
+	if(!jack_autoconnect || strlen(jack_autoconnect)<1) {
 		jack_autoconnect = (char*) "system:playback_";
 	} else if(!strncmp(jack_autoconnect,"DISABLE", 7)) {
 		jack_autoconnect = NULL;
 	}
 	if(jack_autoconnect) {
 		int myc=0;
+		dbg(0, "JACK connect to '%s'", jack_autoconnect);
 		const char **found_ports = jack_get_ports(j_client, jack_autoconnect, NULL, JackPortIsInput);
 		for(i = 0; found_ports && found_ports[i]; i++) {
 				if(jack_connect(j_client, jack_port_name(j_output_port[myc]), found_ports[i])) {
@@ -611,12 +612,28 @@ void JACKconnect() {
 	if (jack_midi_port == NULL) {
     dbg(0, "can't register jack-midi-port\n");
   }
+
 	midi_thread_run = 1;
 	pthread_create(&midi_thread_id, NULL, jack_midi_thread, NULL);
 	sched_yield();
 #endif
 
 	jack_activate(j_client);
+
+#if 1
+	char *jack_midiconnect = app.config.jack_midiconnect;
+	if(!jack_midiconnect || strlen(jack_midiconnect)<1) {
+		jack_midiconnect = NULL;
+	} else if(!strncmp(jack_midiconnect,"DISABLE", 7)) {
+		jack_midiconnect = NULL;
+	}
+	if(jack_midiconnect) {
+		dbg(0, "MIDI autoconnect '%s' -> '%s'", jack_midiconnect, jack_port_name(jack_midi_port));
+		if(jack_connect(j_client, jack_midiconnect, jack_port_name(jack_midi_port))) {
+				dbg(0, "Auto-connect jack midi port failed.");
+		}
+	}
+#endif
 }
 
 void JACKdisconnect() {

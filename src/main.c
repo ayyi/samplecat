@@ -1313,7 +1313,7 @@ config_load()
 		gchar* groupname = g_key_file_get_start_group(app.key_file);
 		dbg (2, "group=%s.", groupname);
 		if(!strcmp(groupname, "Samplecat")){
-#define num_keys (13)
+#define num_keys (15)
 #define ADD_CONFIG_KEY(VAR, NAME) \
 			strcpy(keys[i],NAME); \
 			loc[i] = VAR; \
@@ -1338,6 +1338,8 @@ config_load()
 			ADD_CONFIG_KEY (app.search_phrase,           "filter");
 			ADD_CONFIG_KEY (app.config.browse_dir,       "browse_dir");
 			ADD_CONFIG_KEY (app.config.auditioner,       "auditioner");
+			ADD_CONFIG_KEY (app.config.jack_autoconnect, "jack_autoconnect");
+			ADD_CONFIG_KEY (app.config.jack_midiconnect, "jack_midiconnect");
 
 			int k;
 			for (k=0;k<PALETTE_SIZE-1;k++) {
@@ -1472,6 +1474,8 @@ config_new()
 		"mysql_name=samplelib\n"
 		"show_dir=\n"
 		"auditioner=\n"
+		"jack_autoconnect=system:playback_\n"
+		"jack_midiconnect=DISABLED\n"
 		);
 
 	if(!g_key_file_load_from_data(app.key_file, data, strlen(data), G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS, &error)){

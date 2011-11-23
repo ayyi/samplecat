@@ -41,6 +41,8 @@ struct _config
 	//gboolean  loop_playback; ///< TODO save w/ config ?
 	char      column_widths[4][8];
 	char      browse_dir[PATH_MAX];
+	char      jack_autoconnect[1024];
+	char      jack_midiconnect[1024];
 };
 
 
