@@ -149,13 +149,6 @@ static const char* const usage =
 	"samplecat stores configuration and caches data in\n"
 	"$HOME/.config/samplecat/\n"
 	"\n"
-	"Environment:\n"
-	"The JACK auditioner auto-connects to the first two physical\n"
-	"outputs unless the environement variable JACK_AUTOCONNECT\n"
-	"is set. If it is set to \"DISABLE\", no connections are done\n"
-	"automatically. Otherwise it connects to the client:port specified\n"
-	"in the variable\n" // XXX rephrase this default: "system:playback_"
-	"\n"
 	"Report bugs to <tim@orford.org>.\n"
 	"Website and manual: <http://samplecat.orford.org/>\n"
   "\n";
