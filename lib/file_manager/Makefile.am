@@ -11,9 +11,9 @@ AM_CFLAGS = \
 	-DIMAGES_DIR=\"$(imagesdir)\" \
 	-I../ \
 	-I../gqview2 \
-	-I../xdgmime \
 	-DG_LOG_DOMAIN=\"FileMan\" \
 	-I$(top_srcdir)/src \
+	-I$(top_srcdir)/src/xdgmime \
 	-I$(top_srcdir)/lib \
 	$(GTK_CFLAGS)
 
@@ -24,7 +24,6 @@ BUILT_SOURCES =
 CLEANFILES =
 
 libfilemanager_a_SOURCES = \
-	$(libgdl_headers) \
 	file_manager.c file_manager.h \
 	vala/filemanager.c vala/filemanager.h \
 	rox_global.h typedefs.h \
@@ -37,3 +36,4 @@ libfilemanager_a_SOURCES = \
 	menu.c menu.h \
 	diritem.c diritem.h \
 	dir.c dir.h
+

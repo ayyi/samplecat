@@ -38,7 +38,7 @@
 
 #include "file_manager.h"
 #include "src/typedefs.h"
-#include "src/support.h"
+#include "utils/ayyi_utils.h"
 #include "rox_global.h"
 
 #define display_dirs_first TRUE
@@ -262,7 +262,7 @@ draw_small_icon(GdkWindow *window, GdkRectangle *area, DirItem *item, MaskedPixm
 		? create_spotlight_pixbuf(image->sm_pixbuf, color)
 		: image->sm_pixbuf;
 
-	ASSERT_POINTER(pixbuf, "pixbuf");
+	g_return_if_fail(pixbuf);
 	//dbg(0, "selected=%i pixbuf=%p ispixbuf=%i", selected, pixbuf, GDK_IS_PIXBUF(pixbuf));
 	if(!GDK_IS_PIXBUF(pixbuf)) errprintf("%s bad icon pixbuf", __func__);
 

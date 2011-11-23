@@ -1,6 +1,6 @@
 ## Process this file with automake to produce Makefile.in
 
-SUBDIRS = src
+SUBDIRS = lib src
 
 pkgconfigdir = $(libdir)/pkgconfig
 

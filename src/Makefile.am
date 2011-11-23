@@ -1,15 +1,16 @@
 ## Process this file with automake to produce Makefile.in
 
-#SUBDIRS = file_manager gimp xdgmime vala
-SUBDIRS = file_manager gimp xdgmime
+VALA_DIR =
+SUBDIRS = gimp xdgmime $(VALA_DIR)
 
 AM_CFLAGS = \
 	-g -Wall -O2 \
 	-DPACKAGE_DATA_DIR=\""$(datadir)"\" \
 	-DPACKAGE_LOCALE_DIR=\""$(prefix)/$(DATADIRNAME)/locale"\" \
 	-DIMAGES_DIR=\"$(imagesdir)\" \
+	-I$(top_srcdir)/lib \
+	-I$(top_srcdir)/lib/file_manager \
 	-I./gqview2 \
-	-I./file_manager \
 	-I./gimp \
 	-I./xdgmime \
 	$(SAMPLECAT_CFLAGS) \
@@ -111,7 +112,7 @@ samplecat_SOURCES = \
 	$(GQVIEW1_SRC)
 
 samplecat_LDADD = \
-	file_manager/libfilemanager.a \
+	$(top_srcdir)/lib/file_manager/libfilemanager.a \
 	gimp/libgimpwidgets.a \
 	xdgmime/libxdgmime.a \
 	$(SAMPLECAT_LIBS) \
