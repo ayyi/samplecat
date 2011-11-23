@@ -334,9 +334,14 @@ sqlite__search_iter_new(char* search, char* dir, const char* category, int* n_re
 			where2a = tmp;
 			s=NULL;
 		}
-		char* where2 = sqlite3_mprintf("%s AND (%s)", where, where2a);
-		dbg(2, "%s", where2);
-		sqlite3_free(where2a);
+		char* where2;
+		if (where2a) {
+			where2 = sqlite3_mprintf("%s AND (%s)", where, where2a);
+			dbg(2, "%s", where2);
+			sqlite3_free(where2a);
+		} else {
+			where2 = sqlite3_mprintf("%s", where);
+		}
 		free(sd);
 #endif
 		sqlite3_free(where);

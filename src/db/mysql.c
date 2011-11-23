@@ -378,15 +378,45 @@ mysql__search_iter_new(char* search, char* dir, const char* category, int* n_res
 	if(search_result) gwarn("previous query not free'd?");
 
 	GString* q = g_string_new("SELECT * FROM samples WHERE 1 ");
-	// TODO: split 'search' by whitespace, add wildcards, -- compare db/sqlite.c
-	if(search && strlen(search)) g_string_append_printf(q, "AND (filename LIKE '%%%s%%' OR filedir LIKE '%%%s%%' OR keywords LIKE '%%%s%%') ", search, search, search);
-	if(dir && strlen(dir))
-#ifdef DONT_SHOW_SUBDIRS //TODO
-		g_string_append_printf(q, "AND filedir='%s' ", dir);
+	if(search && strlen(search)) {
+#if 0
+		g_string_append_printf(q, "AND (filename LIKE '%%%s%%' OR filedir LIKE '%%%s%%' OR keywords LIKE '%%%s%%') ", search, search, search);
 #else
-		g_string_append_printf(q, "AND filedir LIKE '%s%%' ", dir);
+		gchar* where = NULL;
+		char* sd = strdup(search);
+		char* s  = sd;
+		char *tok;
+		while ((tok = strtok(s, " _")) != 0) {
+			MYSQL_ESCAPE(esc, tok);
+			gchar *tmp = g_strdup_printf("%s %s (filename LIKE '%%%s%%' OR filedir LIKE '%%%s%%' OR keywords LIKE '%%%s%%') ",
+					where?where:"", where?"AND":"",
+					esc, esc, esc);
+			free(esc);
+			if (where) g_free(where);
+			where = tmp;
+			s=NULL;
+		}
+		if (where) {
+			g_string_append_printf(q, "AND (%s)", where);
+			g_free(where);
+		}
 #endif
-	if(app.search_category) g_string_append_printf(q, "AND keywords LIKE '%%%s%%' ", category);
+	}
+
+	if(dir && strlen(dir)) {
+		MYSQL_ESCAPE(esc, dir);
+#ifdef DONT_SHOW_SUBDIRS //TODO
+		g_string_append_printf(q, "AND filedir='%s' ", esc);
+#else
+		g_string_append_printf(q, "AND filedir LIKE '%s%%' ", esc);
+#endif
+		free(esc);
+	}
+	if(app.search_category) {
+		MYSQL_ESCAPE(esc, category);
+		g_string_append_printf(q, "AND keywords LIKE '%%%s%%' ", esc);
+		free(esc);
+	}
 
 	dbg(1, "%s", q->str);
 
