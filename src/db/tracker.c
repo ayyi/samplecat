@@ -921,6 +921,11 @@ tracker__file_exists (const char* path, int *id)
 	return false; // TODO check if given file exists
 }
 
+GList *
+tracker__filter_by_audio  (Sample *s)
+{
+	return NULL;
+}
 
 #ifdef TRACKER_0_6
 static void

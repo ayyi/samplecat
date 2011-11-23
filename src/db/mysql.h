@@ -8,6 +8,7 @@ void      mysql__disconnect       ();
 int       mysql__insert           (Sample*);
 gboolean  mysql__delete_row       (int id);
 gboolean  mysql__file_exists      (const char*, int *id);
+GList *   mysql__filter_by_audio  (Sample *s);
 
 gboolean  mysql__update_string    (int id, const char*, const char*);
 gboolean  mysql__update_int       (int id, const char*, const long int);

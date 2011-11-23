@@ -299,6 +299,47 @@ sqlite__file_exists(const char* path, int *id)
 	return ok;
 }
 
+GList *
+sqlite__filter_by_audio(Sample *s) 
+{
+	GList *rv = NULL;
+	GString* sql = g_string_new("SELECT full_path FROM samples WHERE 1");
+	if (s->channels>0)
+		g_string_append_printf(sql, " AND channels=%i", s->channels);
+	if (s->sample_rate>0)
+		g_string_append_printf(sql, " AND sample_rate=%i", s->sample_rate);
+	if (s->frames>0)
+		g_string_append_printf(sql, " AND frames=%"PRIi64, s->frames);
+	if (s->bit_rate>0)
+		g_string_append_printf(sql, " AND bit_rate=%i", s->bit_rate);
+	if (s->bit_depth>0)
+		g_string_append_printf(sql, " AND bit_depth=%i", s->bit_depth);
+	if (s->peaklevel>0)
+		g_string_append_printf(sql, " AND peaklevel=%f", s->peaklevel);
+
+	g_string_append_printf(sql, ";");
+	dbg(0,"%s",sql->str);
+
+  int rows,columns;
+  char **table= NULL;
+	char *errmsg= NULL;
+	int n = sqlite3_get_table(db, sql->str, &table,&rows,&columns,&errmsg);
+	if(n!=SQLITE_OK || (table == NULL) || (rows<1) || (columns!=1)) {
+		g_string_free(sql, true);
+		return NULL;
+	}
+	int i; for(i=0;i<rows;i++) {
+		rv = g_list_prepend(rv, g_strdup(table[i*columns+1]));
+	}
+
+	if (table) sqlite3_free_table(table);
+	if (errmsg) sqlite3_free(errmsg);
+	g_string_free(sql, true);
+	return rv;
+}
+
+
+
 gboolean
 sqlite__search_iter_new(char* search, char* dir, const char* category, int* n_results)
 {

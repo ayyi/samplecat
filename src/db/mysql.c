@@ -61,39 +61,6 @@ static void clear_result    ();
 	  mysql_real_escape_string(&mysql, VAR, (STR), sl); \
 	}
 
-
-/*
-	CREATE DATABASE samplelib;
-
-	CREATE TABLE `samples` (
-	  `id` int(11) NOT NULL auto_increment,
-	  `filename` text NOT NULL,
-	  `filedir` text,
-	  `keywords` varchar(60) default '',
-	  `pixbuf` blob,
-	  `length` int(22) default NULL,
-	  `sample_rate` int(11) default NULL,
-	  `channels` int(4) default NULL,
-	  `online` int(1) default NULL,
-	  `last_checked` datetime default NULL,
-	  `mimetype` tinytext,
-	  `notes` mediumtext,
-	  `colour` tinyint(4) default NULL,
-	  `peaklevel` float(24) default NULL,
-	  `ebur` text default NULL,
-	  `full_path` text NOT NULL,
-	  `mtime` int(22) default NULL,
-	  `frames` int(22) default NULL,
-	  `bit_rate` int(11) default NULL,
-	  `bit_depth` int(8) default NULL,
-	  `meta_data` text default NULL,
-	  PRIMARY KEY  (`id`)
-	)
-
-	BLOB can handle up to 64k.
-
-*/
-
 struct ColumnDefinitions { const char* key; const char* def; };
 
 static const struct ColumnDefinitions sct[] = {
@@ -363,6 +330,45 @@ mysql__file_exists(const char* path, int *id)
 	free(sql); free(esc);
 	return rv;
 	
+}
+
+//-------------------------------------------------------------
+
+GList *
+mysql__filter_by_audio(Sample *s) 
+{
+	GList *rv = NULL;
+	GString* sql = g_string_new("SELECT full_path FROM samples WHERE 1");
+	if (s->channels>0)
+		g_string_append_printf(sql, " AND channels=%i", s->channels);
+	if (s->sample_rate>0)
+		g_string_append_printf(sql, " AND sample_rate=%i", s->sample_rate);
+	if (s->frames>0)
+		g_string_append_printf(sql, " AND frames=%"PRIi64, s->frames);
+	if (s->bit_rate>0)
+		g_string_append_printf(sql, " AND bit_rate=%i", s->bit_rate);
+	if (s->bit_depth>0)
+		g_string_append_printf(sql, " AND bit_depth=%i", s->bit_depth);
+	if (s->peaklevel>0)
+		g_string_append_printf(sql, " AND peaklevel=%f", s->peaklevel);
+
+	g_string_append_printf(sql, ";");
+	dbg(0,"%s",sql->str);
+
+	if(mysql_query(&mysql, sql->str)){
+		g_string_free(sql, true);
+		return NULL;
+	}
+	MYSQL_RES *sr = mysql_store_result(&mysql);
+	if (sr) {
+		MYSQL_ROW row;
+		while ((row = mysql_fetch_row(sr))) {
+			rv = g_list_prepend(rv, g_strdup(row[0]));
+		}
+		mysql_free_result(sr);
+	}
+	g_string_free(sql, true);
+	return rv;
 }
 
 //-------------------------------------------------------------
