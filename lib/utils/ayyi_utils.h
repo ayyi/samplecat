@@ -2,8 +2,6 @@
 #define __ayyi_utils_h__
 
 #include "glib.h"
-#include "ayyi/ayyi_typedefs.h"
-#include "ayyi/ayyi_client.h"
 
 #define dbg(A, B, ...) debug_printf(__func__, A, B, ##__VA_ARGS__)
 #define gerr(A, ...) g_critical("%s(): "A, __func__, ##__VA_ARGS__)
@@ -13,7 +11,6 @@
 #define PF2 {if(ayyi.debug > 1) printf("%s()...\n", __func__);}
 #define PF_DONE printf("%s(): done.\n", __func__);
 #define ASSERT_POINTER(A, B) if((unsigned)A < 1024){ errprintf2(__func__, "bad %s pointer (%p).\n", B, A); return; } 
-#define IS_PTR(A) ((guint)A > 1024)
 #define P_GERR if(error){ gerr("%s\n", error->message); g_error_free(error); error = NULL; }
 #define GERR_INFO if(error){ printf("%s\n", error->message); g_error_free(error); error = NULL; }
 #define GERR_WARN if(error){ gwarn("%s", error->message); g_error_free(error); error = NULL; }

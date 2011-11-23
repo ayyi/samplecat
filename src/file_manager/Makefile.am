@@ -14,6 +14,7 @@ AM_CFLAGS = \
 	-I../xdgmime \
 	-DG_LOG_DOMAIN=\"FileMan\" \
 	-I$(top_srcdir)/src \
+	-I$(top_srcdir)/lib \
 	$(GTK_CFLAGS)
 
 noinst_LIBRARIES = libfilemanager.a

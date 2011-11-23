@@ -20,11 +20,8 @@
 #include "mysql/mysql.h"
 #endif
 #include <gtk/gtk.h>
-#ifdef OLD
-  #include <libart_lgpl/libart.h>
-#endif
 
-#include "ayyi/ayyi_utils.h"
+#include "utils/ayyi_utils.h"
 #include "file_manager/support.h"
 #include "rox_global.h"
 #include "rox/rox_support.h"

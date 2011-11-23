@@ -16,7 +16,7 @@ AC_TYPE_SIZE_T
 
 LT_INIT
 
-AC_LIBTOOL_DLOPEN                                                                                                                                                             
+AC_LIBTOOL_DLOPEN
 AC_PROG_LIBTOOL
 
 AC_SYS_LARGEFILE
@@ -201,7 +201,7 @@ dnl ----------------------------------------------------------------------------
 
 AS_IF([test "$enable_ffmpeg" != "no"], [
 	PKG_CHECK_MODULES(FFMPEG, [libavformat >= 51.0.0 libavcodec >= 51.0.0 libavutil >= 51.0.0], enable_ffmpeg=yes, enable_ffmpeg=no)
-       ])
+	])
 
 if test "$enable_ffmpeg" = "yes"; then
 	AC_DEFINE(HAVE_FFMPEG,1,[Use ffmpeg audio decoder])
@@ -273,7 +273,7 @@ enable_ladspa="no"
 enable_resampling="no"
 AS_IF([test "$enable_jack" = "yes" -o "$enable_jackosx" = "yes"], [
 	PKG_CHECK_MODULES(SAMPLERATE, samplerate,
-	  [AC_DEFINE(ENABLE_RESAMPLING,1,[JACK player resampling])
+		[AC_DEFINE(ENABLE_RESAMPLING,1,[JACK player resampling])
 		enable_resampling="yes"
 		 dnl only use LADSPA/rubberband if libsamplerate is also available.
 		 AC_CHECK_HEADER(ladspa.h, enable_ladspa="yes", AC_MSG_ERROR([LADSPA is required  see http://www.ladspa.org/]))
