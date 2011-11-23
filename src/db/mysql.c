@@ -54,6 +54,13 @@ static Sample result;
 static int  mysql__exec_sql (const char* sql);
 static void clear_result    ();
 
+#define MYSQL_ESCAPE(VAR,STR) \
+	char *VAR; if (!(STR) || strlen(STR)==0) {VAR=calloc(1,sizeof(char));} else { \
+		int sl=strlen(STR);\
+		VAR = malloc((sl*2+1)*sizeof(char)); \
+	  mysql_real_escape_string(&mysql, VAR, (STR), sl); \
+	}
+
 
 /*
 	CREATE DATABASE samplelib;
@@ -87,6 +94,33 @@ static void clear_result    ();
 
 */
 
+struct ColumnDefinitions { const char* key; const char* def; };
+
+static const struct ColumnDefinitions sct[] = {
+	{"id",           "`id` int(11) NOT NULL auto_increment"},
+	{"filename",     "`filename` text NOT NULL"},
+	{"filedir",      "`filedir` text"},
+	{"keywords",     "`keywords` varchar(60) default ''"},
+	{"pixbuf",       "`pixbuf` blob"},
+	{"length",       "`length` int(22) default NULL"},
+	{"sample_rate",  "`sample_rate` int(11) default NULL"},
+	{"channels",     "`channels` int(4) default NULL"},
+	{"online",       "`online` int(1) default NULL"},
+	{"last_checked", "`last_checked` datetime default NULL"},
+	{"mimetype",     "`mimetype` tinytext"},
+	{"notes",        "`notes` mediumtext"},
+	{"colour",       "`colour` tinyint(4) default NULL"},
+	{"peaklevel",    "`peaklevel` float(24) default NULL"},
+	{"ebur",         "`ebur` text default NULL"},
+	{"full_path",    "`full_path` text NOT NULL"},
+	{"mtime",        "`mtime` int(22) default NULL"},
+	{"frames",       "`frames` int(22) default NULL"},
+	{"bit_rate",     "`bit_rate` int(11) default NULL"},
+	{"bit_depth",    "`bit_depth` int(8) default NULL"},
+	{"meta_data",    "`meta_data` text default NULL"},
+};
+#define COLCOUNT (21)
+
 gboolean
 mysql__connect()
 {
@@ -115,6 +149,67 @@ mysql__connect()
 		errprintf("Failed to connect to Database: %s\n", mysql_error(&mysql));
 		return false;
 	}
+	/* check if table exists */
+	gboolean dbexists=false;
+	int64_t colflag=0;
+
+	MYSQL_ESCAPE(dbname, app.config.database_name);
+	char *sql = malloc((100/*query string*/+strlen(dbname))*sizeof(char));
+	sprintf(sql, "SELECT column_name from INFORMATION_SCHEMA.COLUMNS where table_schema='%s' AND table_name='samples';", app.config.database_name);
+	if(!mysql_query(&mysql, sql)){
+		MYSQL_RES *sr = mysql_store_result(&mysql);
+		if (sr) {
+			if (mysql_num_rows(sr) == COLCOUNT) {dbexists=true; colflag=(1<<(COLCOUNT))-1;}
+			else if (mysql_num_rows(sr) != 0) {
+				dbexists=true;
+				/* ALTER TABLE */
+				MYSQL_ROW row;
+				while ((row = mysql_fetch_row(sr))) {
+					int i; for (i=0;i<COLCOUNT;i++) {
+						if (!strcmp(row[0], sct[i].key)) { colflag|=1<<i; break; }
+					}
+				}
+			}
+			mysql_free_result(sr);
+		}
+	}
+	free(dbname); free(sql);
+
+	if (!dbexists) {
+		/* CREATE Table */
+		int off=0; int i;
+		sql = malloc(4096*sizeof(char)); // XXX current length is 643 chars
+		off=sprintf(sql, "CREATE TABLE `samples` (");
+		for (i=0;i<COLCOUNT;i++)
+			off+=sprintf(sql+off, "%s, ",sct[i].def);
+		sprintf(sql+off, "PRIMARY KEY  (`id`));");
+		dbg(0, "%d: %s", off, sql);
+
+		if (mysql_real_query(&mysql, sql, strlen(sql))) {
+			warnprintf("cannot create database-table: %s\n", mysql_error(&mysql));
+			mysql_close(&mysql);
+			free(sql);
+			return false;
+		}
+		free(sql);
+	} else {
+		/* Alter Table if neccesary */
+		int i;
+		sql = malloc(1024*sizeof(char));
+		for (i=0;i<COLCOUNT;i++) if ((colflag&(1<<i))==0) {
+			sprintf(sql, "ALTER TABLE samples ADD %s;", sct[i].def);
+			dbg(0, "%s", sql);
+		  if (mysql_real_query(&mysql, sql, strlen(sql))) {
+				warnprintf("cannot update database-table to new model: %s\n", mysql_error(&mysql));
+				mysql_close(&mysql);
+				free(sql);
+				return false;
+			}
+		}
+		free(sql);
+	}
+
+
 	memset(&result, 0, sizeof(Sample));
 
 	is_connected = true;
@@ -135,13 +230,6 @@ mysql__disconnect()
 {
 	mysql_close(&mysql);
 }
-
-#define MYSQL_ESCAPE(VAR,STR) \
-	char *VAR; if (!(STR) || strlen(STR)==0) {VAR=calloc(1,sizeof(char));} else { \
-		int sl=strlen(STR);\
-		VAR = malloc((sl*2+1)*sizeof(char)); \
-	  mysql_real_escape_string(&mysql, VAR, (STR), sl); \
-	}
 
 int
 mysql__insert(Sample* sample)
