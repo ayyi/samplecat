@@ -276,6 +276,7 @@ listmodel__update_by_ref(GtkTreeIter *iter, int what, void *data)
 				ok&=backend.update_int(s->id, "channels", s->channels);
 				ok&=backend.update_int(s->id, "sample_rate", s->sample_rate);
 				ok&=backend.update_int(s->id, "length", s->length);
+				ok&=backend.update_int(s->id, "frames", s->frames);
 				ok&=backend.update_int(s->id, "bit_rate", s->bit_rate);
 				ok&=backend.update_int(s->id, "bit_depth", s->bit_depth);
 				ok&=backend.update_string(s->id, "meta_data", s->meta_data);
