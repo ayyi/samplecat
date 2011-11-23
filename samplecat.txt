@@ -1,7 +1,6 @@
 todo:
  v0.2.X:
-  -update old config-file s/database_/mysql_/
-  -mysql backend: automatically create or alter database.
+  -automatically update old config-file s/database_/mysql_/ - add new values.
   -mysql backend: search - split by space, wildcards 
  v0.3.X:
   -file-manager: rmdir/mkdir, unlink+confirm
