@@ -1,6 +1,8 @@
 todo:
  v0.2.X:
   -automatically update old config-file s/database_/mysql_/ - add new values.
+   eval: how many users * time to notify/document  vs. time to write one-time updater.
+  -prepare dialog(s) for file-management
  v0.3.X:
   -file-manager: rmdir/mkdir, unlink+confirm
   -re-connect files when moved external to samplecat
@@ -8,6 +10,7 @@ todo:
    * mass-updates
    * compare md5sum ? or compare already known audio-properties (frames, peaklevel)
   -fix dnotify/inotify code - it does not seem to do anything.
+  -select, expand and scroll to prev. folder in dir-tree-view (bottom-left) on startup.
  v0.4.X:
   -allow to modify/add/delete preset-categories/tags and remember changes.
 
@@ -18,13 +21,13 @@ sometime:
    * make use of the two status-bars.
   -major GUI redesign.
    * use GDL docking widgets
+   * make samplecat an embeddable widget?
    * flexible, configurable list-view
    * preferences and about windows
    * fix focus-save behaviour of notes and tag-edit in inspector.
    * add button and/or shortcut to reset colours of played files.
   -merge w/ latest geeqie/gqview and ROX code
   -fix compiler warnings in file manager code. remove cruft.
-  -select and expand prev folder in dir-tree-view (bottom-left) on startup.
   -update tracker backend 0.10 , new values in data-model
   -look at spek (vala spectrogram) -- but why? sndfile's spectrogram is great :)
   -appears to freeze when importing from cdrom. move to idle function?
@@ -32,12 +35,10 @@ sometime:
   -show warning icon in statusbar - eggtrayicon.c ?
   -check out libsexy SexyUrlLabel (for tags) 
   -check out chickensys samplemanage.
-  -recursive importing: gui is unresponsive - put in some mainloop stuff
-  -check with valgrind. - needs suppression file for gtk libs
+  -check with valgrind. -- needs suppression file for gtk libs
   -how to programmatically enter treeview cell edit mode? (see code)
   -why segfaults related to tree row_refs - see dir_tree_on_link_selected()  -- possibly fixed already
   -add date to database so we can sort by date and show f-spot style bar chart for years. -- mtime already present in model
-  -make samplecat an embeddable widget?
   -DnD out of samplecat on OSX to non GTK apps (it works with ardour, but not with OSX-Finder)
   -better meta_data handling and meta-data edit.
   -add support for sample-libs (sf2, etc).
@@ -45,6 +46,8 @@ sometime:
   -move player-code into sub-directory src/audio_players/ ?
   -save EBU loudness information in searchable format. - serialize struct
   -allow to search/filter on sample-traits: duration, max/min loudness, sample-rate
+  -allow to configure a custom command to audition audio-files.
+  -built in JACK player: compensate for latency/delay between libsamplerate and rubberband when updating parameters in real-time.
 
 
 functionality status:
@@ -57,6 +60,10 @@ functionality status:
     -waveform overview                   done
     -inspector                           done
   -preview files                         done
+  -audition 
+    -JACK, midi sampler                  done
+    -ayyi_auditioner/dbus                done
+    -command-line player                 done (hardcoded, no config)
   -import
     -scan directories                    done
     -scan dvd's/cdr's                    test
@@ -75,6 +82,7 @@ functionality status:
     -drag n drop to row                  done
     -drag n drop to overview             no
     -click to apply to selected.         check - probably not.
+    -highlight recently played files     done
   updates
     -"locate": scan for moved file.      no
     -sample versioning                   no
