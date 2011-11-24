@@ -853,13 +853,29 @@ add_file(char* path)
 	/* check if /same/ file already exists w/ different path */
 	GList* existing;
 	if((existing=backend.filter_by_audio(sample))) {
-		GList* l = existing;
-		for(;l;l=l->next){
+		GList* l = existing; int i;
+		GString* note = g_string_new("Similar or identical file(s) already present in database:\n");
+		for(i=1;l;l=l->next, i++){
 			/* TODO :prompt user: ask to delete one of the files
 			 * - import/update the remaining file(s)
 			 */
 			dbg(0, "found similar or identical file: %s", l->data);
+			if (i<10)
+				g_string_append_printf(note, "%d: '%s'\n",i, (char*) l->data);
 		}
+		if (i>9)
+				g_string_append_printf(note, "..\n and %d more.",i-9);
+		g_string_append_printf(note, "Add this file: '%s' ?", sample->full_path);
+
+		if (do_progress_question(note->str)!=1) {
+			// 0, aborted: -> whole add_file loop is aborted on next do_progress() call.
+			// 1, OK
+			// 2, cancled: -> only this file is skipped
+			sample_unref(sample);
+			g_string_free(note, true);
+			return false;
+		}
+		g_string_free(note, true);
 		g_list_foreach (existing, (GFunc)g_free, NULL);
 	  g_list_free(existing);
 	}
@@ -1018,10 +1034,12 @@ update_rows(GtkWidget *widget, gpointer user_data)
 	for(i=0;i<g_list_length(selectionlist);i++){
 		GtkTreePath *treepath = g_list_nth_data(selectionlist, i);
 		Sample *sample = sample_get_from_model(treepath);
+		if (do_progress(0,0)) break; // TODO: set progress title to "updating"
 		update_sample(sample, force_update);
 		statusbar_print(1, "online status updated (%s)", sample->online ? "online" : "not online");
 		sample_unref(sample);
 	}
+	hide_progress();
 	//g_list_free(selectionlist);
 }
 

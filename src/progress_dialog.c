@@ -8,7 +8,10 @@
 struct _progres {
 	GtkWidget *bar;
 	GtkWidget *win;
+	GtkWidget *label;
+	GtkWidget *btn_ok, *btn_yes, *btn_no;
 	gboolean aborted;
+	int btn;
 	int tics;
 };
 
@@ -27,6 +30,11 @@ static gboolean on_abort (GtkWidget* w, gpointer p) {
 	return FALSE;
 }
 
+static gboolean on_btn (GtkWidget* w, gpointer p) {
+	pw.btn=GPOINTER_TO_INT(p);
+	return FALSE;
+}
+
 GtkWidget*
 progress_win_new(GtkWidget *parent, gchar *title)
 {
@@ -36,22 +44,41 @@ progress_win_new(GtkWidget *parent, gchar *title)
 	gtk_window_set_destroy_with_parent(GTK_WINDOW(window), true);
 	gtk_window_set_position(GTK_WINDOW(window),GTK_WIN_POS_CENTER_ON_PARENT);
 
-	GtkWidget* v = gtk_vbox_new(NON_HOMOGENOUS, 2);
+	GtkWidget* v = gtk_vbox_new(FALSE, 2);
 	gtk_container_add((GtkContainer*)window, v);
 
-	GtkWidget* lb = gtk_label_new(title);
+	GtkWidget* lb = pw.label = gtk_label_new(title);
 	gtk_box_pack_start((GtkBox*)v, lb, EXPAND_FALSE, FILL_FALSE, 0);
 
 	GtkWidget* pb = pw.bar = gtk_progress_bar_new();
 	gtk_box_pack_start((GtkBox*)v, pb, EXPAND_FALSE, FILL_FALSE, 0);
 
+	GtkWidget* h = gtk_hbox_new(TRUE, 0);
+	gtk_box_pack_start((GtkBox*)v, h, EXPAND_FALSE, FILL_FALSE, 0);
+
 	GtkWidget* ab = gtk_button_new_with_label("Abort");
-	gtk_box_pack_start((GtkBox*)v, ab, EXPAND_FALSE, FILL_FALSE, 0);
+	gtk_box_pack_start((GtkBox*)h, ab, EXPAND_FALSE, FILL_FALSE, 0);
 	pw.aborted=false;
 
+	GtkWidget* ok = pw.btn_ok = gtk_button_new_with_label("OK");
+	gtk_box_pack_start((GtkBox*)h, ok, EXPAND_FALSE, FILL_FALSE, 0);
+
+	GtkWidget* no = pw.btn_no = gtk_button_new_with_label("No");
+	gtk_box_pack_start((GtkBox*)h, no, EXPAND_FALSE, FILL_FALSE, 0);
+
+	GtkWidget* yes = pw.btn_yes = gtk_button_new_with_label("Yes");
+	gtk_box_pack_start((GtkBox*)h, yes, EXPAND_FALSE, FILL_FALSE, 0);
+
 	gtk_widget_show_all(window);
+	gtk_widget_hide(ok);
+	gtk_widget_hide(no);
+	gtk_widget_hide(yes);
+
 	g_signal_connect (G_OBJECT(window), "delete_event", G_CALLBACK(on_destroy), NULL);
 	g_signal_connect (G_OBJECT(ab), "clicked", G_CALLBACK(on_abort), NULL);
+	g_signal_connect (G_OBJECT(ok), "clicked", G_CALLBACK(on_btn), GINT_TO_POINTER(1));
+	g_signal_connect (G_OBJECT(yes),"clicked", G_CALLBACK(on_btn), GINT_TO_POINTER(1));
+	g_signal_connect (G_OBJECT(no), "clicked", G_CALLBACK(on_btn), GINT_TO_POINTER(2));
 	g_signal_connect (G_OBJECT(ab), "destroy", G_CALLBACK(on_destroy), NULL);
 	return window;
 }
@@ -76,13 +103,14 @@ set_progress(int cur, int all)
 
 /*****************************************************************************/
 
+#define DEFAULT_TEXT "Referencing files.."
+
 int 
 do_progress(int cur, int all) 
 {
-	dbg(0, "..");
 	if (pw.aborted) return 1;
 	if (!pw.win) {
-		pw.win=progress_win_new(app.window, "Referencing files..");
+		pw.win=progress_win_new(app.window, DEFAULT_TEXT);
 		pw.tics=0;
 	}
   set_progress(cur, all);
@@ -93,10 +121,62 @@ do_progress(int cur, int all)
 void
 hide_progress()
 {
-	dbg(0, "..");
 	if (pw.win) {
 		gtk_widget_destroy(pw.win);
 	}
 	pw.win=NULL;
 	pw.aborted=false;
+}
+
+int
+do_progress_question(gchar *msg /* TODO: question-ID, config, options */ )
+{
+	if (!pw.win) {
+		dbg(0, "question w/o window: THIS SHOULD NEVER HAPPEN!");
+		pw.win=progress_win_new(app.window, DEFAULT_TEXT);
+		pw.tics=0;
+	}
+
+	/* TODO 
+	 * currently: it is basic working skeleton 
+	 */
+	int btnoption = 2|4;
+
+	// check config: "do this to all" -> early return
+
+	// prepare window
+	gtk_widget_hide(pw.bar);
+
+	// set question/info text.
+	gtk_label_set_text(GTK_LABEL(pw.label), msg);
+
+	// add radio or checkboxes (choose file, action, options)
+	// add [YES|NO|OK]  buttons
+
+	pw.btn=0;
+	if (btnoption&1) gtk_widget_show(pw.btn_ok);
+	if (btnoption&2) gtk_widget_show(pw.btn_no);
+	if (btnoption&3) gtk_widget_show(pw.btn_yes);
+
+	/* Wait for decision */
+	gtk_window_set_modal(GTK_WINDOW(pw.win), true);
+	while (pw.win && pw.btn==0 && !pw.aborted) {
+		gtk_main_iteration ();
+		//while (gtk_events_pending ()) gtk_main_iteration (); usleep(10000);
+	}
+	if (!pw.win) return 0; ///< window was closed: abort.
+	///NOTE: IF pw.aborted THEN pw.btn=0
+
+	// pre-parse decision - fi. "repeat this decision for all"
+
+	/* clean up window */
+	gtk_window_set_modal(GTK_WINDOW(pw.win), false);
+	gtk_widget_hide(pw.btn_ok);
+	gtk_widget_hide(pw.btn_no);
+	gtk_widget_hide(pw.btn_yes);
+	gtk_widget_show(pw.bar);
+	gtk_label_set_text(GTK_LABEL(pw.label), DEFAULT_TEXT);
+	
+	// return decision 
+	return pw.btn;
 }
