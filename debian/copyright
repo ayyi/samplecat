@@ -42,7 +42,7 @@ License: LGPL-2
 
 Files: ./src/audio_analysis/ebumeter/*
  2010-2011 Fons Adriaensen <fons@linuxaudio.org>
-License: LGPL-2
+License: GPL-2
 
 Files: ./src/audio_analysis/spectrogram/*
  2007-2009 Erik de Castro Lopo <erikd@mega-nerd.com>

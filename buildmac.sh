@@ -32,9 +32,9 @@ else
 fi
 
 if test -z "$NOREBUILD"; then
+	automake --gnu --add-missing -Wall
 	libtoolize --automake || glibtoolize
-	aclocal
-	autoheader -Wall
+	autoreconf
 	automake --gnu --add-missing -Wall
 	autoconf
   CFLAGS="-arch i386 -arch x86_64 -arch ppc" \
