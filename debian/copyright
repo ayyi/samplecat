@@ -19,7 +19,7 @@ Copyright:
  2004 Michael Natterer <mitch@gimp.org>
 License: GPL-2
 
-Files: ./src/file_manager/*
+Files: ./lib/file_manager/*
 Copyright:
  2005 the ROX-Filer team
  2006 Thomas Leonard
