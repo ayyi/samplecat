@@ -294,7 +294,8 @@ void *jack_player_thread(void *unused){
 	if (m_use_effect && app.enable_effect) {
 		int i;
 		for(i=0;i<m_channels;i++) {
-			ladspaerr|= ladspah_init(myplugin[i], m_use_effect, m_effectno, m_samplerate, maxbufsiz);
+			ladspaerr|= ladspah_init(myplugin[i], m_use_effect, m_effectno, 
+					jack_get_sample_rate(j_client) /* m_samplerate */, maxbufsiz);
 		}
 		if (ladspaerr) {
 			dbg(0, "error setting up LADSPA plugin - effect disabled.\n");
@@ -315,7 +316,8 @@ void *jack_player_thread(void *unused){
 	player_active=1;
 	while(thread_run) {
 		int rv = ad_read(myplayer, tmpbuf, nframes * m_channels);
-		decoder_position+=rv/m_channels;
+		if (rv>0) decoder_position+=rv/m_channels;
+
 #ifdef JACK_MIDI
 		const float pp[3] = {app.effect_param[0], app.effect_param[1]+midi_note, app.effect_param[2]+midi_octave};
 #else
@@ -328,18 +330,21 @@ void *jack_player_thread(void *unused){
 		 * src_set_ratio() allow for immediate updates at loss of quality */
 		static float oldspd = -1;
 		if (oldspd != varispeed) {
-			if ((err=src_set_ratio(src_state, varispeed))) dbg(0, "SRC ERROR: %s", src_strerror(err)); // instant change.
+			if ((err=src_set_ratio(src_state, m_fResampleRatio*varispeed))) dbg(0, "SRC ERROR: %s", src_strerror(err)); // instant change.
 			oldspd = varispeed;
 		}
 #endif
 		nframes_r = floorf((float) nframes*m_fResampleRatio*varispeed); ///< # of frames after resampling
+		src_data.input_frames  = nframes;
 		src_data.output_frames = nframes_r;
 		src_data.src_ratio     = m_fResampleRatio * varispeed;
+		src_data.end_of_input=0;
 #endif
 
 		if (rv != nframes * m_channels) {
 			dbg(1, "end of file.");
 			if (rv>0) {
+				dbg(0, "handle short end.");
 #ifdef ENABLE_RESAMPLING
 # ifdef VARISPEED
 				if (1) 
@@ -353,24 +358,31 @@ void *jack_player_thread(void *unused){
 #else
 					src_data.output_frames = floorf((float)(rv / m_channels)*m_fResampleRatio);
 #endif
-					src_data.end_of_input=1;
+					src_data.end_of_input=app.loop_playback?0:1;
 					src_process(src_state, &src_data);
 					bufptr = smpbuf;
 					rv = src_data.output_frames_gen * m_channels;
 				}
 #endif
-				ladspah_set_param(myplugin, m_channels, 0 /*cents */, pp[0]); /* -100 .. 100 */
-				ladspah_set_param(myplugin, m_channels, 1 /*semitones */, pp[1]); /* -12 .. 12 */
-				ladspah_set_param(myplugin, m_channels, 2 /*octave */, pp[2]);    /*  -3 ..  3 */
-				if (!ladspaerr) ladspah_process_nch(myplugin, m_channels, bufptr, rv / m_channels);
+				if (!ladspaerr) {
+					ladspah_set_param(myplugin, m_channels, 0 /*cents */, pp[0]); /* -100 .. 100 */
+					ladspah_set_param(myplugin, m_channels, 1 /*semitones */, pp[1]); /* -12 .. 12 */
+					ladspah_set_param(myplugin, m_channels, 2 /*octave */, pp[2]);    /*  -3 ..  3 */
+					ladspah_process_nch(myplugin, m_channels, bufptr, rv / m_channels);
+				}
 				jack_ringbuffer_write(rb, (char *) bufptr, rv *  sizeof(float));
 			}
 			if (app.loop_playback) {
 				ad_seek(myplayer, 0);
 				decoder_position=0;
 #ifdef ENABLE_RESAMPLING
-				src_reset (src_state);
-				if(m_fResampleRatio != 1.0){
+				//src_reset (src_state); // XXX causes click
+# ifdef VARISPEED
+				if (1) 
+# else
+				if(m_fResampleRatio != 1.0)
+# endif
+				{
 					src_data.end_of_input=0;
 					src_data.input_frames  = nframes;
 					src_data.output_frames = nframes_r;
@@ -445,6 +457,7 @@ void *jack_player_thread(void *unused){
 #endif
 	}
 
+	/** END OF PLAYBACK **/
 #if (defined ENABLE_RESAMPLING) && (defined VARISPEED)
 	const float varispeed = app.playback_speed;
 #else
@@ -521,9 +534,12 @@ void JACKaudiooutputinit(void *sf, int channels, int samplerate, int64_t frames)
 	memset(rb->buf, 0, rbsize);
 
 	jack_nframes_t jsr = jack_get_sample_rate(j_client);
+
+	m_fResampleRatio = 1.0;
 	if(jsr != samplerate) {
 #ifdef ENABLE_RESAMPLING
 		m_fResampleRatio = (float) jsr / (float) samplerate;
+		dbg(2, "resampling %d -> %d (f:%.2f).", samplerate, jsr, m_fResampleRatio);
 #else
 		dbg(0, "audio samplerate does not match JACK's samplerate.");
 #endif
@@ -546,7 +562,7 @@ void JACKaudiooutputinit(void *sf, int channels, int samplerate, int64_t frames)
 	}
 	if(jack_autoconnect) {
 		int myc=0;
-		dbg(0, "JACK connect to '%s'", jack_autoconnect);
+		dbg(1, "JACK connect to '%s'", jack_autoconnect);
 		const char **found_ports = jack_get_ports(j_client, jack_autoconnect, NULL, JackPortIsInput);
 		for(i = 0; found_ports && found_ports[i]; i++) {
 				if(jack_connect(j_client, jack_port_name(j_output_port[myc]), found_ports[i])) {
@@ -620,7 +636,7 @@ void JACKconnect() {
 
 	jack_activate(j_client);
 
-#if 1
+#ifdef JACK_MIDI
 	char *jack_midiconnect = app.config.jack_midiconnect;
 	if(!jack_midiconnect || strlen(jack_midiconnect)<1) {
 		jack_midiconnect = NULL;
@@ -628,7 +644,7 @@ void JACKconnect() {
 		jack_midiconnect = NULL;
 	}
 	if(jack_midiconnect) {
-		dbg(0, "MIDI autoconnect '%s' -> '%s'", jack_midiconnect, jack_port_name(jack_midi_port));
+		dbg(1, "MIDI autoconnect '%s' -> '%s'", jack_midiconnect, jack_port_name(jack_midi_port));
 		if(jack_connect(j_client, jack_midiconnect, jack_port_name(jack_midi_port))) {
 				dbg(0, "Auto-connect jack midi port failed.");
 		}
