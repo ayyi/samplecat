@@ -250,7 +250,7 @@ int ladspah_init(LadSpa* p, const char* dll, const int plugin, int samplerate, s
 				}
 				control_index++;
 			} else if (LADSPA_IS_PORT_OUTPUT(pd)) {
-#if 0
+#if 1
 				p->l_desc->connect_port(p->l_handle, port, &p->dummy_control_output);
 #else
 				p->l_desc->connect_port(p->l_handle, port, NULL);
@@ -270,16 +270,17 @@ int ladspah_init(LadSpa* p, const char* dll, const int plugin, int samplerate, s
 	if (verbose) printf("LADSPA Host: connected mono audio-port | control ports: %i\n", control_index);
 	p->ctrls=control_index;
 
-#if 0
+#if 1
 	p->control_values[0] = 0; // 'Cents'
 	p->control_values[1] = 0; // 'Semitones'
 	p->control_values[2] = 0; // 'Octaves'
-	p->control_values[3] = 0; // 'Crispness'
-	p->control_values[4] = 0; // 'Formant Preserving'
-	p->control_values[5] = 0; // 'Faster'
+	p->control_values[3] = 3; // 'Crispness'
+	p->control_values[4] = 1; // 'Formant Preserving'
+	p->control_values[5] = 1; // 'Faster'
 #endif
 
-	p->l_desc->activate(p->l_handle);
+	if (p->l_desc->activate)
+		p->l_desc->activate(p->l_handle);
 	return 0;
 }
 
