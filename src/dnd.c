@@ -49,7 +49,7 @@ drag_received(GtkWidget *widget, GdkDragContext *drag_context, gint x, gint y,
 
     if(get_mouseover_row() > -1)
     //if(widget==app.view)
-		{
+    {
       dbg(1, "treeview!");
     }
 
@@ -95,6 +95,9 @@ drag_received(GtkWidget *widget, GdkDragContext *drag_context, gint x, gint y,
     int i = 0;
     int added_count = 0;
     GList* l = list;
+#ifdef __APPLE__
+    gdk_threads_enter();
+#endif
     for(;l;l=l->next){
       char* u = l->data;
 
@@ -111,7 +114,7 @@ drag_received(GtkWidget *widget, GdkDragContext *drag_context, gint x, gint y,
 
         char* uri = (strstr(uri_unescaped, "///") == uri_unescaped) ? uri_unescaped + 2 : uri_unescaped;
 
-				if (do_progress(0,0)) break;
+        if (do_progress(0,0)) break;
         if(is_dir(uri)) add_dir(uri, &added_count);
         else if(add_file(uri)) added_count++;
 
@@ -120,7 +123,10 @@ drag_received(GtkWidget *widget, GdkDragContext *drag_context, gint x, gint y,
       else pwarn("drag drop: unknown format: '%s'. Ignoring.\n", u);
       i++;
     }
-		hide_progress();
+    hide_progress();
+#ifdef __APPLE__
+    gdk_threads_leave();
+#endif
 
     statusbar_print(1, "import complete. %i files added", added_count);
 

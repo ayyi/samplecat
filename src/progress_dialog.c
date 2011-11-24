@@ -5,6 +5,8 @@
 #include "support.h"
 #include "progress_dialog.h"
 
+#define NOPROGBARWIN 1
+
 struct _progres {
 	GtkWidget *bar;
 	GtkWidget *win;
@@ -15,13 +17,12 @@ struct _progres {
 	int tics;
 };
 
-static struct _progres pw = {NULL, NULL, false};
+static struct _progres pw = {NULL, NULL, NULL, NULL, NULL, NULL, false, 0, 0};
 
 
 static gboolean on_destroy (GtkWidget* w, gpointer p) {
 	gtk_widget_destroyed(w,p);
 	pw.win=NULL;
-	pw.aborted=false;
 	return FALSE;
 }
 
@@ -58,7 +59,6 @@ progress_win_new(GtkWidget *parent, gchar *title)
 
 	GtkWidget* ab = gtk_button_new_with_label("Abort");
 	gtk_box_pack_start((GtkBox*)h, ab, EXPAND_FALSE, FILL_FALSE, 0);
-	pw.aborted=false;
 
 	GtkWidget* ok = pw.btn_ok = gtk_button_new_with_label("OK");
 	gtk_box_pack_start((GtkBox*)h, ok, EXPAND_FALSE, FILL_FALSE, 0);
@@ -80,6 +80,8 @@ progress_win_new(GtkWidget *parent, gchar *title)
 	g_signal_connect (G_OBJECT(yes),"clicked", G_CALLBACK(on_btn), GINT_TO_POINTER(1));
 	g_signal_connect (G_OBJECT(no), "clicked", G_CALLBACK(on_btn), GINT_TO_POINTER(2));
 	g_signal_connect (G_OBJECT(ab), "destroy", G_CALLBACK(on_destroy), NULL);
+
+	pw.tics=0;
 	return window;
 }
 
@@ -88,7 +90,6 @@ set_progress(int cur, int all)
 {
 	GtkProgressBar *p = GTK_PROGRESS_BAR(pw.bar);
 	gchar txt[64];
-	pw.tics++;
 	if (all < 1 || cur > all) {
 		gtk_progress_bar_set_pulse_step(p, .1);
 		sprintf(txt, "%d", pw.tics);
@@ -109,11 +110,15 @@ int
 do_progress(int cur, int all) 
 {
 	if (pw.aborted) return 1;
+	pw.tics++;
+#ifndef NOPROGBARWIN
 	if (!pw.win) {
 		pw.win=progress_win_new(app.window, DEFAULT_TEXT);
 		pw.tics=0;
 	}
   set_progress(cur, all);
+#endif
+	statusbar_print(2,"referencing files.%s%s",(pw.tics&2)?"..":"",(pw.tics&1)?".":"");
 	while (gtk_events_pending ()) gtk_main_iteration ();
 	return 0;
 }
@@ -124,6 +129,7 @@ hide_progress()
 	if (pw.win) {
 		gtk_widget_destroy(pw.win);
 	}
+	statusbar_print(2,PACKAGE_NAME". Version "PACKAGE_VERSION);
 	pw.win=NULL;
 	pw.aborted=false;
 }
@@ -132,9 +138,7 @@ int
 do_progress_question(gchar *msg /* TODO: question-ID, config, options */ )
 {
 	if (!pw.win) {
-		dbg(0, "question w/o window: THIS SHOULD NEVER HAPPEN!");
 		pw.win=progress_win_new(app.window, DEFAULT_TEXT);
-		pw.tics=0;
 	}
 
 	/* TODO 
@@ -161,8 +165,8 @@ do_progress_question(gchar *msg /* TODO: question-ID, config, options */ )
 	/* Wait for decision */
 	gtk_window_set_modal(GTK_WINDOW(pw.win), true);
 	while (pw.win && pw.btn==0 && !pw.aborted) {
-		gtk_main_iteration ();
-		//while (gtk_events_pending ()) gtk_main_iteration (); usleep(10000);
+		//gtk_main_iteration ();
+		while (gtk_events_pending ()) gtk_main_iteration (); usleep(10000);
 	}
 	if (!pw.win) return 0; ///< window was closed: abort.
 	///NOTE: IF pw.aborted THEN pw.btn=0
@@ -176,6 +180,10 @@ do_progress_question(gchar *msg /* TODO: question-ID, config, options */ )
 	gtk_widget_hide(pw.btn_yes);
 	gtk_widget_show(pw.bar);
 	gtk_label_set_text(GTK_LABEL(pw.label), DEFAULT_TEXT);
+#ifdef NOPROGBARWIN
+	gtk_widget_destroy(pw.win);
+	pw.win=NULL;
+#endif
 	
 	// return decision 
 	return pw.btn;

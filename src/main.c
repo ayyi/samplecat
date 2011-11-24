@@ -314,10 +314,10 @@ main(int argc, char** argv)
 		}
 	}
 
-	g_thread_init(NULL);
+	if (!g_thread_supported())
+		g_thread_init(NULL);
 	gdk_threads_init();
-	app.mutex = g_mutex_new();
-	gtk_init(&argc, &argv);
+	gtk_init_check(&argc, &argv);
 
 #ifdef __APPLE__
 	GtkOSXApplication *osxApp = (GtkOSXApplication*) 
@@ -377,6 +377,7 @@ main(int argc, char** argv)
 #endif
 
 	if(app.args.add){
+		/* initial import from commandline */
 		do_progress(0,0);
 		add_file(app.args.add);
 		hide_progress();
@@ -545,7 +546,7 @@ add_dir(const char* path, int* added_count)
 				add_dir(filepath, added_count);
 			}
 		}
-		//hide_progress();
+		//hide_progress(); ///no: keep window open until last recursion.
 		g_dir_close(dir);
 	}else{
 		perr("cannot open directory. %s\n", error->message);
@@ -823,6 +824,7 @@ add_file(char* path)
 	if(backend.file_exists(path, NULL)) {
 		statusbar_print(1, "duplicate: not re-adding a file already in db.");
 		gwarn("duplicate file: %s\n", path);
+		//TODO ask what to do
 		Sample *s = sample_get_by_filename(path);
 		if (s) {
 			update_sample(s, false);

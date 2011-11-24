@@ -172,8 +172,6 @@ struct _app
 	//nasty!
 	gint       mouse_x;
 	gint       mouse_y;
-
-	GMutex*    mutex;
 };
 #ifndef __main_c__
 extern struct _app app;
