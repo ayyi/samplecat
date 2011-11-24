@@ -19,14 +19,14 @@
 
 #include "file_manager/file_manager.h"
 #include "file_manager/support.h"
-#include <gqview2/typedefs.h>
+#include <dir_tree/typedefs.h>
 #include <gimp/gimpaction.h>
 #include <gimp/gimpactiongroup.h>
 #include "typedefs.h"
 #include "src/support.h"
 #include "main.h"
-#include "gqview2/ui_fileops.h"
-#include "rox/rox_support.h"
+#include "dir_tree/ui_fileops.h"
+#include "rox_support.h"
 
 #define HEX_ESCAPE '%'
 #define N_(A) A 
@@ -34,84 +34,6 @@
 
 extern struct _app app;
 extern unsigned debug;
-
-
-#ifndef USE_AYYI
-void
-errprintf(char *format, ...)
-{
-	//fn prints an error string, then passes arguments on to vprintf.
-
-	va_list argp; //points to each unnamed arg in turn
-
-	printf("%s ", err);
-
-	va_start(argp, format); //make ap (arg pointer) point to 1st unnamed arg
-
-	vprintf(format, argp);
-
-	va_end(argp); //clean up
-}
-
-
-void
-errprintf2(const char* func, char *format, ...)
-{
-	//fn prints an error string, then passes arguments on to vprintf.
-
-	printf("%s %s(): ", err, func);
-
-	va_list argp;
-	va_start(argp, format);
-	vprintf(format, argp);
-	va_end(argp);
-}
-#endif
-
-
-void
-warnprintf(char *format, ...)
-{
-	//fn prints a warning string, then passes arguments on to vprintf.
-
-	printf("%s ", warn);
-
-	va_list argp;           //points to each unnamed arg in turn
-	va_start(argp, format); //make ap (arg pointer) point to 1st unnamed arg
-	vprintf(format, argp);
-	va_end(argp);           //clean up
-}
-
-
-#ifndef USE_AYYI
-void 
-warnprintf2(const char* func, char *format, ...)
-{
-	//fn prints a warning string, then passes arguments on to vprintf.
-
-	printf("%s %s(): ", warn, func);
-
-	va_list argp;
-	va_start(argp, format);
-	vprintf(format, argp);
-	va_end(argp);
-}
-
-
-void
-debug_printf(const char* func, int level, const char *format, ...)
-{
-	va_list args;
-
-	va_start(args, format);
-	if (level <= debug) {
-		fprintf(stderr, "%s(): ", func);
-		vfprintf(stderr, format, args);
-		fprintf(stderr, "\n");
-	}
-	va_end(args);
-}
-#endif
 
 
 void
@@ -411,11 +333,11 @@ hexstring_from_gdkcolor(char* hexstring, GdkColor* c)
 void
 color_rgba_to_gdk(GdkColor* colour, uint32_t rgba)
 {
-  ASSERT_POINTER(colour, "colour");
+	g_return_if_fail(colour, "colour");
 
-  colour->red   = (rgba & 0xff000000) >> 16;
-  colour->green = (rgba & 0x00ff0000) >> 8;
-  colour->blue  = (rgba & 0x0000ff00);
+	colour->red   = (rgba & 0xff000000) >> 16;
+	colour->green = (rgba & 0x00ff0000) >> 8;
+	colour->blue  = (rgba & 0x0000ff00);
 }
 #endif
 
@@ -560,36 +482,36 @@ treecell_get_row(GtkWidget *widget, GdkRectangle *cell_area)
 void
 statusbar_print(int n, char* fmt, ...)
 {
-  if(n<1||n>3) n = 1;
+	if(n<1||n>3) n = 1;
 
-  char s[128];
-  va_list argp;
+	char s[128];
+	va_list argp;
 
-  va_start(argp, fmt);
-  vsnprintf(s, 127, fmt, argp);
-  va_end(argp);
+	va_start(argp, fmt);
+	vsnprintf(s, 127, fmt, argp);
+	va_end(argp);
 
-  if(debug) printf("%s\n", s);
+	if(debug) printf("%s\n", s);
 
-  GtkWidget *statusbar = NULL;
-  if     (n==1) statusbar = app.statusbar;
-  else if(n==2) statusbar = app.statusbar2;
-  else { perr("bad statusbar index (%i)\n", n); n=1; }
+	GtkWidget *statusbar = NULL;
+	if     (n==1) statusbar = app.statusbar;
+	else if(n==2) statusbar = app.statusbar2;
+	else { perr("bad statusbar index (%i)\n", n); n=1; }
 
-  //if((unsigned)statusbar<1024) return; //window may not be open.
+	if(!statusbar) return; //window may not be open.
 
-  gint cid = gtk_statusbar_get_context_id(GTK_STATUSBAR(statusbar), "dummy");
-  gtk_statusbar_push(GTK_STATUSBAR(statusbar), cid, s);
+	gint cid = gtk_statusbar_get_context_id(GTK_STATUSBAR(statusbar), "dummy");
+	gtk_statusbar_push(GTK_STATUSBAR(statusbar), cid, s);
 }
 
 
 static void
 shortcuts_add_action(GtkAction* action, GimpActionGroup* action_group)
 {
-  g_return_if_fail(action_group);
+	g_return_if_fail(action_group);
 
-  gtk_action_group_add_action(GTK_ACTION_GROUP(action_group), action);
-  dbg(2, "group=%s group_size=%i action=%s", gtk_action_group_get_name(GTK_ACTION_GROUP(action_group)), g_list_length(gtk_action_group_list_actions(GTK_ACTION_GROUP(action_group))), gtk_action_get_name(action));
+	gtk_action_group_add_action(GTK_ACTION_GROUP(action_group), action);
+	dbg(2, "group=%s group_size=%i action=%s", gtk_action_group_get_name(GTK_ACTION_GROUP(action_group)), g_list_length(gtk_action_group_list_actions(GTK_ACTION_GROUP(action_group))), gtk_action_get_name(action));
 }
 
 

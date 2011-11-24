@@ -12,7 +12,7 @@
 #ifndef VIEW_DIR_TREE_H
 #define VIEW_DIR_TREE_H
 
-#include <gqview2/typedefs.h>
+#include <dir_tree/typedefs.h>
 
 ViewDirTree* vdtree_new                  (const gchar* path, gint expand);
 void         vdtree_set_select_func      (ViewDirTree*, void (*func)(ViewDirTree*, const gchar* path, gpointer data), gpointer data);

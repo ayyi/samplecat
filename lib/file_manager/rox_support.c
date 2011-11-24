@@ -41,14 +41,11 @@
 #include <gtk/gtk.h>
 
 #include "file_manager/file_manager.h"
-#include "src/typedefs.h"
 #include "support.h"
 #include "rox_global.h"
 
-//#include "options.h"
 #include "rox_support.h"
 //#include "fscache.h"
-//#include "xml.h"
 
 /* printf format string to print file sizes */
 #ifdef LARGE_FILE_SUPPORT

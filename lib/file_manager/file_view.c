@@ -29,16 +29,14 @@
 #include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
 
-//#include "file_manager/typedefs.h"
 #include "file_manager.h"
 #include "rox_global.h"
 #include "src/typedefs.h"
 #include "src/types.h"
-#include "rox/rox_support.h"
-#warning dont include app support files!
-#include "src/support.h"
+#include "rox_support.h"
+#include "utils/ayyi_utils.h"
 
-#include "rox/view_iface.h"
+#include "view_iface.h"
 #include "file_view.h"
 #include "dir.h"
 #include "diritem.h"
@@ -375,12 +373,10 @@ details_get_value(GtkTreeModel* tree_model, GtkTreeIter* iter, gint column, GVal
 			g_value_init(value, G_TYPE_STRING);
 			if(show_full_type)
 				g_value_set_string(value, 
-						   item->flags & ITEM_FLAG_APPDIR? "Application" :
 						   //mime_type_comment(item->mime_type));
 						   "type string");
 			else
 				g_value_set_string(value, 
-						   item->flags & ITEM_FLAG_APPDIR? "App" :
 						   S_ISDIR(m) ? "Dir" :
 						   S_ISCHR(m) ? "Char" :
 						   S_ISBLK(m) ? "Blck" :

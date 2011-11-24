@@ -5,7 +5,6 @@
 #include <string.h>
 #include <gtk/gtk.h>
 #include "file_manager.h"
-#include "gqview_view_dir_tree.h"
 #include <gimp/gimpaction.h>
 #include <gimp/gimpactiongroup.h>
 #include "typedefs.h"

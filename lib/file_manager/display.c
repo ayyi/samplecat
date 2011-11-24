@@ -44,13 +44,9 @@
 #define display_dirs_first TRUE
 #define display_caps_first FALSE
 
-#include "rox/rox_support.h"
+#include "rox_support.h"
 #include "dir.h"
 #include "filer.h"
-#if 0
-#include "display.h"
-#include "gui_support.h"
-#endif
 #include "pixmaps.h"
 #if 0
 #include "menu.h"
@@ -63,7 +59,7 @@
 #endif
 #include "mimetype.h"
 #include "diritem.h"
-#include "rox/view_iface.h"
+#include "view_iface.h"
 #if 0
 #include "fscache.h"
 #include "xtypes.h"
@@ -301,16 +297,15 @@ draw_small_icon(GdkWindow *window, GdkRectangle *area, DirItem *item, MaskedPixm
  * passed as arguments to display_set_sort_fn().
  */
 
-#define IS_A_DIR(item) (item->base_type == TYPE_DIRECTORY && \
-			!(item->flags & ITEM_FLAG_APPDIR))
+#define IS_A_DIR(item) (item->base_type == TYPE_DIRECTORY)
 
 
 #define SORT_DIRS	\
 	if (display_dirs_first) {	\
 		gboolean id1 = IS_A_DIR(i1);	\
 		gboolean id2 = IS_A_DIR(i2);	\
-		if (id1 && !id2) return -1;				\
-		if (id2 && !id1) return 1;				\
+		if (id1 && !id2) return -1;		\
+		if (id2 && !id1) return 1;		\
 	}
 
 int
@@ -337,9 +332,6 @@ int sort_by_type(const void *item1, const void *item2)
 
 	int	 diff = i1->base_type - i2->base_type;
 
-	if (!diff)
-		diff = (i1->flags & ITEM_FLAG_APPDIR)
-		     - (i2->flags & ITEM_FLAG_APPDIR);
 	if (diff)
 		return diff > 0 ? 1 : -1;
 

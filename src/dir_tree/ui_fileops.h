@@ -27,7 +27,6 @@ extern gint file_sort_case_sensitive;
 void print_term(const gchar *text_utf8);
 
 //gchar *path_to_utf8(const gchar *path);
-gchar *path_from_utf8(const gchar *path);
 
 const gchar *homedir(void);
 gint stat_utf8(const gchar *s, struct stat *st);

@@ -7,24 +7,16 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <sys/wait.h>
-//#include <netdb.h>
-//#include <ctype.h>
-//#include <pwd.h>
-//#include <grp.h>
-//#include <fcntl.h>
 #include <dirent.h>
 #include <sys/param.h>
 #include <errno.h>
 
-#ifdef USE_MYSQL
-#include "mysql/mysql.h"
-#endif
 #include <gtk/gtk.h>
 
 #include "utils/ayyi_utils.h"
 #include "file_manager/support.h"
 #include "rox_global.h"
-#include "rox/rox_support.h"
+#include "rox_support.h"
 
 #define HEX_ESCAPE '%'
 
@@ -201,8 +193,8 @@ dir_is_empty(const char *path)
 void
 file_extension(const char* path, char* extn)
 {
-	ASSERT_POINTER(path, "path");
-	ASSERT_POINTER(extn, "extn");
+	g_return_if_fail(path);
+	g_return_if_fail(extn);
 
 	gchar** split = g_strsplit(path, ".", 0);
 	if(split[0]){
@@ -1043,11 +1035,11 @@ hexstring_from_gdkcolor(char* hexstring, GdkColor* c)
 void
 color_rgba_to_gdk(GdkColor* colour, uint32_t rgba)
 {
-  ASSERT_POINTER(colour, "colour");
+	g_return_if_fail(colour);
 
-  colour->red   = (rgba & 0xff000000) >> 16;
-  colour->green = (rgba & 0x00ff0000) >> 8;
-  colour->blue  = (rgba & 0x0000ff00);
+	colour->red   = (rgba & 0xff000000) >> 16;
+	colour->green = (rgba & 0x00ff0000) >> 8;
+	colour->blue  = (rgba & 0x0000ff00);
 }
 
 

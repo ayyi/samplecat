@@ -25,12 +25,13 @@ This software is licensed under the GPL. See accompanying file COPYING.
 char * program_name;
 #endif
 
+#include "utils/ayyi_utils.h"
 #ifdef USE_AYYI
   #include "ayyi.h"
   #include "ayyi_model.h"
 #endif
 #include "file_manager.h"
-#include "gqview_view_dir_tree.h"
+#include "view_dir_tree.h"
 #include "typedefs.h"
 #ifdef USE_TRACKER
   #include "src/db/tracker.h"
@@ -167,12 +168,12 @@ app_init()
 	app.cache_dir = g_build_filename(g_get_home_dir(), ".config", PACKAGE, "cache", NULL);
 
 #if (defined HAVE_JACK)
-	app.enable_effect=true;
-	app.link_speed_pitch=true;
-	app.effect_param[0]=0.0; /* cent transpose [-100 .. 100] */
-	app.effect_param[1]=0.0; /* semitone transpose [-12 .. 12] */
-	app.effect_param[2]=0.0; /* octave [-3 .. 3] */
-	app.playback_speed=1.0;
+	app.enable_effect = true;
+	app.link_speed_pitch = true;
+	app.effect_param[0] = 0.0; /* cent transpose [-100 .. 100] */
+	app.effect_param[1] = 0.0; /* semitone transpose [-12 .. 12] */
+	app.effect_param[2] = 0.0; /* octave [-3 .. 3] */
+	app.playback_speed = 1.0;
 #endif
 }
 

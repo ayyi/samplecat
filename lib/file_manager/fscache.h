@@ -9,7 +9,7 @@
 
 #include <fcntl.h>
 #include "file_manager/rox_global.h"
-#include "file_manager/rox/rox_support.h"
+#include "file_manager/rox_support.h"
 
 #include <sys/stat.h>
 #include <unistd.h>

@@ -4,8 +4,7 @@
 #include <string.h>
 #include <gtk/gtk.h>
 #include "file_manager/file_manager.h"
-#include "file_manager/rox/rox_support.h" // to_utf8()
-#include "gqview_view_dir_tree.h"
+#include "file_manager/rox_support.h" // to_utf8()
 #include "typedefs.h"
 #include "support.h"
 #include "main.h"

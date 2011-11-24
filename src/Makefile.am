@@ -10,7 +10,7 @@ AM_CFLAGS = \
 	-DIMAGES_DIR=\"$(imagesdir)\" \
 	-I$(top_srcdir)/lib \
 	-I$(top_srcdir)/lib/file_manager \
-	-I./gqview2 \
+	-I./dir_tree \
 	-I./gimp \
 	-I./xdgmime \
 	$(SAMPLECAT_CFLAGS) \
@@ -27,9 +27,10 @@ AM_CXXFLAGS = $(AM_CFLAGS)
 
 bin_PROGRAMS = samplecat
 
-GQVIEW1_SRC = gqview_view_dir_tree.c gqview_view_dir_tree.h gqview2/gqview.h gqview2/typedefs.h gqview2/ui_fileops.c gqview2/ui_fileops.h gqview2/ui_tree_edit.c gqview2/ui_tree_edit.h gqview2/layout_util.c gqview2/layout_util.h gqview2/filelist.c gqview2/filelist.h gqview2/pixbuf_util.c gqview2/pixbuf_util.h \
-	gqview2/ui_menu.c gqview2/ui_menu.h \
-	gqview2/utilops.c gqview2/utilops.h
+GQVIEW_SRC = view_dir_tree.c view_dir_tree.h dir_tree/gqview.h dir_tree/typedefs.h dir_tree/ui_fileops.c dir_tree/ui_fileops.h dir_tree/ui_tree_edit.c dir_tree/ui_tree_edit.h dir_tree/layout_util.c dir_tree/layout_util.h dir_tree/filelist.c dir_tree/filelist.h \
+	dir_tree/pixbuf_util.c dir_tree/pixbuf_util.h \
+	dir_tree/ui_menu.c dir_tree/ui_menu.h \
+	dir_tree/utilops.c dir_tree/utilops.h
 
 if ENABLE_AYYI
 AYYI_SRC = ayyi.c ayyi.h ayyi_model.c ayyi_model.h
@@ -98,7 +99,6 @@ samplecat_SOURCES = \
 	colour_box.c colour_box.h \
 	dnd.c dnd.h \
 	observer.c observer.h \
-	fscache.c fscache.h \
 	support.c support.h \
 	console_view.c console_view.h \
 	$(AUDIOANALYSERS_SRC) \
@@ -110,9 +110,10 @@ samplecat_SOURCES = \
 	$(OPENGL_SRC) \
 	$(AYYI_SRC) \
 	$(AUDITIONER_AYYI) $(AUDITIONER_GPLAYER) $(AUDITIONER_JACK) \
-	$(GQVIEW1_SRC)
+	$(GQVIEW_SRC)
 
 samplecat_LDADD = \
+	$(top_srcdir)/lib/utils/libutils.a \
 	$(top_srcdir)/lib/file_manager/libfilemanager.a \
 	gimp/libgimpwidgets.a \
 	xdgmime/libxdgmime.a \

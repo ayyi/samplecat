@@ -57,14 +57,13 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "file_manager/file_manager.h"
-#include "src/typedefs.h"
 #include "utils/ayyi_utils.h"
+#include "file_manager.h"
 #include "rox_global.h"
 
 #include "dir.h"
 #include "diritem.h"
-#include "rox/rox_support.h"
+#include "rox_support.h"
 #include "fscache.h"
 #include "pixmaps.h"
 #include "mimetype.h"
@@ -1152,7 +1151,8 @@ dnotify_handler(int sig, siginfo_t *si, void *data)
 	 */
 	dnotify_last_fd = si->si_fd;
 	dnotify_wakeup_flag = TRUE;
-	write(to_wakeup_pipe, "\0", 1);	/* Wake up! */
+	if(write(to_wakeup_pipe, "\0", 1) == -1){ // Wake up!
+	}
 }
 #endif
 

@@ -32,8 +32,11 @@ libfilemanager_a_SOURCES = \
 	mimetype.c mimetype.h \
 	support.c support.h \
 	display.c display.h \
-	rox/view_iface.c rox/view_iface.h rox/rox_support.c rox/rox_support.h cell_icon.c cell_icon.h \
+	view_iface.c view_iface.h \
+	rox_support.c rox_support.h \
+	cell_icon.c cell_icon.h \
 	menu.c menu.h \
 	diritem.c diritem.h \
-	dir.c dir.h
+	dir.c dir.h \
+	fscache.c fscache.h
 

@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <gtk/gtk.h>
 #include "typedefs.h"
+#include "utils/ayyi_utils.h"
 
 #define dbg(A, B, ...) debug_printf(__func__, A, B, ##__VA_ARGS__)
 #define perr(A, ...) errprintf2(__func__, A, ##__VA_ARGS__)
@@ -11,11 +12,8 @@
 #ifndef __ayyi_h__
 #define PF {if(debug) printf("%s()...\n", __func__);}
 #define PF_DONE printf("%s(): done.\n", __func__);
-#define ASSERT_POINTER(A, B) if((unsigned)A < 1024){ errprintf2(__func__, "bad %s pointer (%p).\n", B, A); return; }
 #define gwarn(A, ...) g_warning("%s(): "A, __func__, ##__VA_ARGS__);
-#define ASSERT_POINTER_FALSE(A, B) if(GPOINTER_TO_UINT(A) < 1024){ errprintf2(__func__, "bad %s pointer (%p).\n", B, A); return FALSE; } 
 #define GERR_WARN if(error){ gwarn("%s", error->message); g_error_free(error); error = NULL; }
-#define P_GERR if(error){ errprintf2(__func__, "%s\n", error->message); g_error_free(error); error = NULL; }
 #endif
 #define g_error_clear(E) { if(E){ g_error_free(E); E = NULL; }}
 #define list_clear(L) g_list_free(L); L = NULL;
@@ -23,7 +21,6 @@
 
 #define HAS_ALPHA_FALSE 0
 #define HAS_ALPHA_TRUE 1
-#define BITS_PER_CHAR_8 8
 #define IDLE_STOP FALSE
 #define TIMER_CONTINUE TRUE
 #define HANDLED TRUE
@@ -47,11 +44,6 @@ struct _accel {
 	gpointer      user_data;
 };
 
-void         errprintf                 (char* fmt, ...);
-void         errprintf2                (const char* func, char* format, ...);
-void         warnprintf                (char* format, ...);
-void         warnprintf2               (const char* func, char *format, ...);
-void         debug_printf              (const char* func, int level, const char* format, ...);
 void         log_handler               (const gchar* log_domain, GLogLevelFlags, const gchar* message, gpointer);
 
 void         samplerate_format         (char*, int samplerate);

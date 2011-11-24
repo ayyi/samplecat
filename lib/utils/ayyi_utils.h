@@ -3,6 +3,11 @@
 
 #include "glib.h"
 
+#ifndef true
+#define true TRUE
+#define false FALSE
+#endif
+
 #define dbg(A, B, ...) debug_printf(__func__, A, B, ##__VA_ARGS__)
 #define gerr(A, ...) g_critical("%s(): "A, __func__, ##__VA_ARGS__)
 #define gwarn(A, ...) g_warning("%s(): "A, __func__, ##__VA_ARGS__);
@@ -16,11 +21,13 @@
 #define UNDERLINE printf("-----------------------------------------------------\n")
 #define call(FN, A, ...) if(FN) (FN)(A, ##__VA_ARGS__)
 #define IDLE_STOP FALSE
+#define BITS_PER_CHAR_8 8
 
 void        debug_printf             (const char* func, int level, const char* format, ...);
 void        errprintf                (char* fmt, ...);
 void        errprintf2               (const char* func, char *format, ...);
 void        errprintf3               (const char* func, char *format, ...);
+void        warnprintf               (char* format, ...);
 void        warnprintf2              (const char* func, char *format, ...);
 void        warn_gerror              (const char* msg, GError**);
 void        info_gerror              (const char* msg, GError**);
@@ -37,6 +44,9 @@ gboolean    audio_path_get_leaf      (const char* path, char* leaf);
 gchar*      audio_path_get_base      (const char*);
 gboolean    audio_path_get_wav_leaf  (char* leaf, const char* path, int len);
 char*       audio_path_truncate      (char*, char);
+
+char err [32];
+char warn[32];
 
 #ifdef __ayyi_utils_c__
 char white    [16] = "\x1b[0;39m"; // 0 = normal

@@ -1,1 +1,1 @@
-SUBDIRS = file_manager
+SUBDIRS = utils file_manager

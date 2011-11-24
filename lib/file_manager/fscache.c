@@ -27,7 +27,8 @@
  */
 
 #include <gtk/gtk.h>
-#include "file_manager/file_manager.h"
+#include "utils/ayyi_utils.h"
+#include "file_manager.h"
 #include "typedefs.h"
 #include "support.h"
 #include "fscache.h"

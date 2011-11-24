@@ -6,11 +6,9 @@
 #include <sys/ioctl.h>
 #include <glib.h>
 
-#include "ayyi_typedefs.h"
-#include "ayyi_types.h"
-#include "ayyi_shm.h"
-#include "ayyi_client.h"
 #include "ayyi_utils.h"
+
+extern unsigned debug;
 
 
 void
@@ -19,7 +17,7 @@ debug_printf(const char* func, int level, const char* format, ...)
     va_list args;
 
     va_start(args, format);
-    if (level <= ayyi.debug) {
+    if (level <= debug) {
         fprintf(stderr, "%s(): ", func);
         vfprintf(stderr, format, args);
         fprintf(stderr, "\n");
@@ -71,6 +69,20 @@ errprintf3(const char* func, char *format, ...)
   va_end(argp);           //clean up
 
   g_critical("%s", str);
+}
+
+
+void
+warnprintf(char *format, ...)
+{
+	//fn prints a warning string, then passes arguments on to vprintf.
+
+	printf("%s ", warn);
+
+	va_list argp;           //points to each unnamed arg in turn
+	va_start(argp, format); //make ap (arg pointer) point to 1st unnamed arg
+	vprintf(format, argp);
+	va_end(argp);           //clean up
 }
 
 
@@ -161,7 +173,7 @@ get_dirlist(const char* path)
 		}
 		g_dir_close(dir);
 	}else{
-		if(ayyi.debug > 1) gwarn ("cannot open directory. %s", error->message);
+		if(debug > 1) gwarn ("cannot open directory. %s", error->message);
 		g_error_free(error);
 		error = NULL;
 	}
@@ -228,7 +240,7 @@ audio_path_get_leaf(const char* path, char* leaf)
 	//make leaf contain the last segment:
 	g_strlcpy(leaf, pos, 128);
 
-	return true;
+	return TRUE;
 }
 
 
@@ -285,7 +297,7 @@ audio_path_get_wav_leaf(char* leaf, const char* path, int len)
 		strcpy(pos + 1, "wav");
 	}
 
-	return true;
+	return TRUE;
 }
 
 

@@ -5,9 +5,6 @@
 #include "typedefs.h"
 #include "types.h"
 
-char err [32];
-char warn[32];
-
 #define EXPAND_TRUE 1
 #define EXPAND_FALSE 0
 #define FILL_TRUE 1
@@ -19,10 +16,6 @@ char warn[32];
 #define PALETTE_SIZE 17
 
 #define MAX_DISPLAY_ROWS 1000
-
-#define POINTER_OK_NULL(A, B, C) if((unsigned)A < 1024){ errprintf("%s(): bad %s pointer (%p).\n", B, C, A); return NULL; }
-#ifndef USE_AYYI
-#endif
 
 
 struct _config

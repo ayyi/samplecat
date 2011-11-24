@@ -7,7 +7,7 @@
 #include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
 #include "file_manager.h"
-#include "gqview_view_dir_tree.h"
+#include "view_dir_tree.h"
 #include <gimp/gimpaction.h>
 #include <gimp/gimpactiongroup.h>
 #include "typedefs.h"

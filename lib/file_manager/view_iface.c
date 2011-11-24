@@ -26,8 +26,7 @@
 #include <gtk/gtk.h>
 
 #include "file_manager/file_manager.h"
-#include "src/typedefs.h"
-#include "src/support.h"
+#include "utils/ayyi_utils.h"
 
 #include "rox_global.h"
 

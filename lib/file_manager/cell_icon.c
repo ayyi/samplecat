@@ -28,10 +28,9 @@
 #include <string.h>
 #include <sys/stat.h>
 
-#include "file_manager/file_manager.h"
-#include "src/typedefs.h"
 #include "utils/ayyi_utils.h"
 #include "rox_global.h"
+#include "file_manager.h"
 
 #include "file_view.h"
 #include "cell_icon.h"
@@ -40,8 +39,7 @@
 #include "display.h"
 #include "diritem.h"
 #include "pixmaps.h"
-#include "mimetype.h"
-#include "rox/rox_support.h"
+#include "rox_support.h"
 #include "fscache.h"
 
 typedef struct _CellIcon CellIcon;

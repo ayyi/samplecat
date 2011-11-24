@@ -10,33 +10,13 @@
  */
 #include <gtk/gtk.h>
 #include "file_manager/file_manager.h"
-#include "gqview_view_dir_tree.h"
+#include "view_dir_tree.h"
 #include "../typedefs.h"
 #include "support.h"
 
 #include "gqview.h"
 #include "layout_util.h"
-
-//#include "bar_info.h"
-//#include "bar_exif.h"
-//#include "bar_sort.h"
-//#include "cache_maint.h"
-//#include "collect.h"
-//#include "collect-dlg.h"
-//#include "dupe.h"
-//#include "editors.h"
-//#include "info.h"
-//#include "layout_image.h"
 #include "pixbuf_util.h"
-//#include "preferences.h"
-//#include "print.h"
-//#include "search.h"
-//#include "utilops.h"
-//#include "ui_bookmark.h"
-//#include "ui_fileops.h"
-//#include "ui_menu.h"
-//#include "ui_misc.h"
-//#include "ui_tabcomp.h"
 
 #include <gdk/gdkkeysyms.h> /* for keyboard values */
 

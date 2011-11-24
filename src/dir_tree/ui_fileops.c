@@ -26,6 +26,7 @@
 #include <glib.h>
 #include <gtk/gtk.h>	/* for locale warning dialog */
 
+#include "utils/ayyi_utils.h"
 #include "ui_fileops.h"
 
 //#include "ui_utildlg.h"	/* for locale warning dialog */
@@ -144,30 +145,6 @@ gchar *path_to_utf8(const gchar *path)
 		}
 
 	return utf8;
-}
-#endif
-
-#ifndef USE_AYYI
-gchar *path_from_utf8(const gchar *utf8)
-{
-	gchar *path;
-	GError *error = NULL;
-
-	if (!utf8) return NULL;
-
-	path = g_filename_from_utf8(utf8, -1, NULL, NULL, &error);
-	if (error)
-		{
-		printf("Unable to convert filename to locale from UTF-8:\n%s\n%s\n", utf8, error->message);
-		g_error_free(error);
-		}
-	if (!path)
-		{
-		/* if invalid UTF-8, text probaby still in original form, so just copy it */
-		path = g_strdup(utf8);
-		}
-
-	return path;
 }
 #endif
 

@@ -29,14 +29,13 @@
 #include <gdk/gdkkeysyms.h>
 
 #include "file_manager/file_manager.h"
-#include "rox/view_iface.h"
+#include "view_iface.h"
 #include "file_view.h"
 #include "dir.h"
 #include "diritem.h"
-#include "rox/rox_support.h"
+#include "rox_support.h"
 #include "mimetype.h"
 
-#include "src/typedefs.h"
 #include "utils/ayyi_utils.h"
 
 

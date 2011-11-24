@@ -35,42 +35,21 @@
 #include <gdk/gdkkeysyms.h>
 
 #include "file_manager/file_manager.h"
-#include "src/typedefs.h"
-#include "src/support.h"
+//#include "src/typedefs.h"
+#include "utils/ayyi_utils.h"
 
 #include "rox_global.h"
 #include "display.h"
 #include "dir.h"
 #include "filer.h"
 #include "fscache.h"
-#include "rox/rox_support.h"
-#if 0
-#include "choices.h"
-#endif
+#include "rox_support.h"
 #include "pixmaps.h"
 #include "menu.h"
-#if 0
-#include "dnd.h"
-#endif
 #include "diritem.h"
-#include "rox/view_iface.h"
+#include "view_iface.h"
 #include "file_view.h"
 #include "mimetype.h"
-#if 0
-#include "options.h"
-#include "minibuffer.h"
-#include "icon.h"
-#include "toolbar.h"
-#include "bind.h"
-#include "appinfo.h"
-#include "mount.h"
-#include "xml.h"
-#include "view_collection.h"
-#include "view_details.h"
-#include "action.h"
-#include "bookmarks.h"
-#include "xtypes.h"
-#endif
 #include "cell_icon.h"
 
 extern GFSCache* pixmap_cache;
@@ -407,7 +386,7 @@ void
 update_display(Directory *dir, DirAction action, GPtrArray* items, Filer* filer_window)
 {
 	ViewIface *view = (ViewIface *) filer_window->view;
-	ASSERT_POINTER(view, "filer_window->view");
+	g_return_if_fail(view);
 
 	switch (action)
 	{
@@ -861,15 +840,6 @@ void filer_openitem(FilerWindow *filer_window, ViewIter *iter, OpenFlags flags)
 
 	if (item->base_type == TYPE_UNKNOWN)
 		dir_update_item(filer_window->directory, item->leafname);
-
-	if (item->base_type == TYPE_DIRECTORY)
-	{
-		/* Never close a filer window when opening a directory
-		 * (click on a dir or click on an app with shift).
-		 */
-		if (shift || !(item->flags & ITEM_FLAG_APPDIR))
-			close_window = FALSE;
-	}
 
 	full_path = make_path(filer_window->sym_path, item->leafname);
 	if (shift && (item->flags & ITEM_FLAG_SYMLINK))
@@ -2337,28 +2307,7 @@ void filer_add_tip_details(FilerWindow *filer_window,
 		}
 	}
 	
-	if (item->flags & ITEM_FLAG_APPDIR)
-	{
-		XMLwrapper *info;
-		xmlNode *node;
-
-		info = appinfo_get(fullpath, item);
-		if (info && ((node = xml_get_section(info, NULL, "Summary"))))
-		{
-			guchar *str;
-			str = xmlNodeListGetString(node->doc,
-					node->xmlChildrenNode, 1);
-			if (str)
-			{
-				g_string_append(tip, str);
-				g_string_append_c(tip, '\n');
-				g_free(str);
-			}
-		}
-		if (info)
-			g_object_unref(info);
-	}
-	else if (item->mime_type == application_x_desktop)
+	if (item->mime_type == application_x_desktop)
 	{
 		char *summary;
 		summary = tip_from_desktop_file(fullpath);
@@ -2789,8 +2738,7 @@ static gboolean drag_motion(GtkWidget		*widget,
 	 * allow drops on non-writeable SUBdirectories so that we can
 	 * do the spring-open thing.
 	 */
-	if (item && type == drop_dest_dir &&
-			!(item->flags & ITEM_FLAG_APPDIR))
+	if (item && type == drop_dest_dir)
 	{
 		dnd_spring_load(context, filer_window);
 	}

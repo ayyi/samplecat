@@ -48,29 +48,18 @@
 #endif
 
 #include "file_manager/file_manager.h"
-#include "src/typedefs.h"
+//#include "src/typedefs.h"
 #include "rox_global.h"
 
 #include "string.h"
 #include "fscache.h"
-//#include "main.h"
 #include "pixmaps.h"
-//#include "run.h"
-//#include "gui_support.h"
-//#include "choices.h"
 #include "mimetype.h"
-#include "rox/rox_support.h"
+#include "rox_support.h"
 #include "diritem.h"
-//#include "dnd.h"
-//#include "options.h"
-//#include "filer.h"
-//#include "action.h"		/* (for action_chmod) */
-//#include "xml.h"
-//#include "dropbox.h"
 #include "xdgmime.h"
-//#include "xtypes.h"
 
-#include "src/support.h"
+#include "utils/ayyi_utils.h"
 #include "observer.h"
 extern unsigned debug;
 
@@ -249,8 +238,6 @@ const char *basetype_name(DirItem *item)
 		return _("Sym link");
 	else if (item->flags & ITEM_FLAG_MOUNT_POINT)
 		return _("Mount point");
-	else if (item->flags & ITEM_FLAG_APPDIR)
-		return _("App dir");
 
 	switch (item->base_type)
 	{
@@ -750,7 +737,7 @@ static void drag_app_dropped(GtkWidget	*drop_box,
 
 	item = diritem_new("");
 	diritem_restat(app, item, NULL);
-	if (item->flags & ITEM_FLAG_APPDIR || EXECUTABLE_FILE(item))
+	if (item->flags & EXECUTABLE_FILE(item))
 	{
 		guchar	*path;
 
@@ -825,8 +812,6 @@ GdkColor *type_get_colour(DirItem *item, GdkColor *normal)
 
 	if (EXECUTABLE_FILE(item))
 		type = TYPE_EXEC;
-	else if (item->flags & ITEM_FLAG_APPDIR)
-		type = TYPE_APPDIR;
 
 	g_return_val_if_fail(type >= 0 && type < NUM_TYPE_COLOURS, normal);
 
