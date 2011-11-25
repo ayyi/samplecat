@@ -1,7 +1,7 @@
 ## Process this file with automake to produce Makefile.in
 
 VALA_DIR =
-SUBDIRS = gimp xdgmime $(VALA_DIR)
+SUBDIRS = gimp $(VALA_DIR)
 
 AM_CFLAGS = \
 	-g -Wall -O2 \
@@ -10,9 +10,9 @@ AM_CFLAGS = \
 	-DIMAGES_DIR=\"$(imagesdir)\" \
 	-I$(top_srcdir)/lib \
 	-I$(top_srcdir)/lib/file_manager \
+	-I$(top_srcdir)/xdgmime \
 	-I./dir_tree \
 	-I./gimp \
-	-I./xdgmime \
 	$(SAMPLECAT_CFLAGS) \
 	$(FFTW3_CFLAGS) \
 	$(OPENGL_CFLAGS) \
@@ -27,10 +27,7 @@ AM_CXXFLAGS = $(AM_CFLAGS)
 
 bin_PROGRAMS = samplecat
 
-GQVIEW_SRC = view_dir_tree.c view_dir_tree.h dir_tree/gqview.h dir_tree/typedefs.h dir_tree/ui_fileops.c dir_tree/ui_fileops.h dir_tree/ui_tree_edit.c dir_tree/ui_tree_edit.h dir_tree/layout_util.c dir_tree/layout_util.h dir_tree/filelist.c dir_tree/filelist.h \
-	dir_tree/pixbuf_util.c dir_tree/pixbuf_util.h \
-	dir_tree/ui_menu.c dir_tree/ui_menu.h \
-	dir_tree/utilops.c dir_tree/utilops.h
+GQVIEW_SRC = view_dir_tree.c view_dir_tree.h
 
 if ENABLE_AYYI
 AYYI_SRC = ayyi.c ayyi.h ayyi_model.c ayyi_model.h
@@ -115,8 +112,9 @@ samplecat_SOURCES = \
 samplecat_LDADD = \
 	$(top_srcdir)/lib/utils/libutils.a \
 	$(top_srcdir)/lib/file_manager/libfilemanager.a \
+	$(top_srcdir)/lib/xdgmime/libxdgmime.a \
+	$(top_srcdir)/lib/dir_tree/libdirtree.a \
 	gimp/libgimpwidgets.a \
-	xdgmime/libxdgmime.a \
 	$(SAMPLECAT_LIBS) \
 	$(AYYI_LIBS) \
 	$(DBUS_LIBS) \

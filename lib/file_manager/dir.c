@@ -717,6 +717,7 @@ insert_item(Directory *dir, const guchar *leafname)
 {
 	DirItem		old;
 	gboolean	do_compare = FALSE;	/* (old is filled in) */
+	memset(&old, 0, sizeof(DirItem));
 
 	if (leafname[0] == '.' && (leafname[1] == '\n' ||
 			(leafname[1] == '.' && leafname[2] == '\n')))

@@ -1,15 +1,24 @@
 /*
+  copyright (C) 2007-2011 Tim Orford <tim@orford.org>
 
-Copyright (C) Tim Orford 2007-2008
+  This program is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License version 3
+  as published by the Free Software Foundation.
 
-This software is licensed under the GPL. See accompanying file COPYING.
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
 
-*/
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
-/*
+  -------------------------------------------------------------------
 
-This file contains functions from the Ayyi C client model lib.
-The limited Ayyi functionality required by Samplecat doesnt warrant linking against the full lib.
+  This file contains functions from the Ayyi C client model lib.
+  The limited Ayyi functionality required by Samplecat doesnt warrant
+  linking against the full lib.
 
 */
 #include "config.h"
@@ -21,26 +30,6 @@ The limited Ayyi functionality required by Samplecat doesnt warrant linking agai
 #include "ayyi_model.h"
 
 
-gboolean
-pool__file_exists(char* fname)
-{
-	// looks through the core fil array looking for the given filename.
-	// @param fname - must be either absolute path, or relative to song root.
-
-	g_return_val_if_fail (ayyi.got_shm, FALSE);
-	dbg (2, "looking for '%s'...", fname);
-
-	char leafname[256];
-	audio_path_get_leaf(fname, leafname); //this means we cant have different files with the same name. Fix later...
-
-	AyyiFilesource* f = NULL;
-	while((f = ayyi_song__filesource_next(f))){
-		dbg (3, "%i: %s", f, f->name);
-		if(!strcmp(f->name, leafname)) return TRUE;
-	}
-	dbg (0, "file not found in pool (%s).", fname);
-	return FALSE;
-}
 
 
 

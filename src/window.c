@@ -8,8 +8,8 @@
 #include <gdk/gdkkeysyms.h>
 #include "file_manager.h"
 #include "view_dir_tree.h"
-#include <gimp/gimpaction.h>
-#include <gimp/gimpactiongroup.h>
+#include "gimp/gimpaction.h"
+#include "gimp/gimpactiongroup.h"
 #include "typedefs.h"
 #include "sample.h"
 #include "support.h"
@@ -111,7 +111,7 @@ GtkWindow
    |     |     +--treeview file manager
    |     +--GtkHPaned
    |        +--vpaned (main left pane)
-	 |        |  +-- vpaned
+   |        |  +-- vpaned
    |        |  |   +--directory tree
    |        |  |   +--player control
    |        |  +--inspector

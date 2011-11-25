@@ -546,12 +546,14 @@ gimp_action_group_add_enum_actions (GimpActionGroup     *group,
 
       if (! group->mnemonics) label = gimp_strip_uline (label);
 
-/*
+#if 0
       action = gimp_enum_action_new (entries[i].name, label, tooltip,
 				     entries[i].stock_id,
 				     entries[i].value,
                      entries[i].value_variable);
-*/
+#else
+      action = NULL;
+#endif
       if (! group->mnemonics) g_free (label);
 
       if (callback)
@@ -595,12 +597,14 @@ gimp_action_group_add_string_actions (GimpActionGroup       *group,
 
       if (! group->mnemonics) label = gimp_strip_uline (label);
 
-      printf("gimp_action_group_add_string_actions(): ********* disabled.\n");
-/*
+      printf("%s(): ********* disabled.\n", __func__);
+#if 0
       action = gimp_string_action_new (entries[i].name, label, tooltip,
                                        entries[i].stock_id,
                                        entries[i].value);
-*/
+#else
+      action = NULL;
+#endif
       if (! group->mnemonics)
         g_free (label);
 

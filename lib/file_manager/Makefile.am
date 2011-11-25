@@ -13,7 +13,7 @@ AM_CFLAGS = \
 	-I../gqview2 \
 	-DG_LOG_DOMAIN=\"FileMan\" \
 	-I$(top_srcdir)/src \
-	-I$(top_srcdir)/src/xdgmime \
+	-I$(top_srcdir)/lib/xdgmime \
 	-I$(top_srcdir)/lib \
 	$(GTK_CFLAGS)
 

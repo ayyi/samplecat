@@ -290,7 +290,7 @@ gtk_cell_renderer_hyper_text_render(GtkCellRenderer      *cell,
   //(it renders the text freshly each time!)
   //PangoLayout *layout = get_layout(hypercell, widget, TRUE, flags);
   PangoLayout *layout = get_layout(hypercell, widget, TRUE, 0);
-  if(!layout){ errprintf("cell_renderer_hyper_text_render(): layout NULL\n"); return; }
+  if(!layout){ dbg(0, "layout NULL"); return; }
 
   gtk_cell_renderer_hyper_text_get_size(cell, widget, cell_area, &x_offset, &y_offset, NULL, NULL);
 

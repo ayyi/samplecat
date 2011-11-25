@@ -382,12 +382,13 @@ CFLAGS="$CFLAGS -pipe  -fmessage-length=139 -fdiagnostics-show-location=every-li
 AC_CONFIG_FILES([Makefile])
 AC_CONFIG_FILES([lib/Makefile])
 AC_CONFIG_FILES([lib/utils/Makefile])
+AC_CONFIG_FILES([lib/xdgmime/Makefile])
 AC_CONFIG_FILES([lib/file_manager/Makefile])
 AC_CONFIG_FILES([lib/file_manager/filetypes/Makefile])
 AC_CONFIG_FILES([lib/file_manager/vala/Makefile])
+AC_CONFIG_FILES([lib/dir_tree/Makefile])
 AC_CONFIG_FILES([src/Makefile])
 AC_CONFIG_FILES([src/gimp/Makefile])
-AC_CONFIG_FILES([src/xdgmime/Makefile])
 dnl AC_CONFIG_FILES([src/vala/Makefile])
 AC_OUTPUT
 

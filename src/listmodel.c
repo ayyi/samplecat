@@ -102,16 +102,17 @@ listmodel__add_result(Sample* result)
 	GdkPixbuf* ayyi_icon = NULL;
 #endif
 
-#if 0
-//#ifdef USE_AYYI
+#ifdef USE_AYYI
 	//is the file loaded in the current Ayyi song?
 	if(ayyi.got_song){
 		gchar* fullpath = g_build_filename(row[MYSQL_DIR], sample_name, NULL);
-		if(pool__file_exists(fullpath)) dbg(0, "exists"); else dbg(0, "doesnt exist");
+		if(ayyi_song__have_file(fullpath)){
+			dbg(1, "sample is used in current project TODO set icon");
+		} else dbg(2, "sample not used in current project");
 		g_free(fullpath);
 	}
-//#endif
 #endif
+
 #define NSTR(X) (X?X:"")
 	//icon (only shown if the sound file is currently available):
 	GdkPixbuf* iconbuf = result->online ? get_iconbuf_from_mimetype(result->mimetype) : NULL;

@@ -1,1 +1,1 @@
-SUBDIRS = utils file_manager
+SUBDIRS = utils xdgmime file_manager dir_tree
