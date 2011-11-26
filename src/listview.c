@@ -6,6 +6,7 @@
 #ifdef USE_AYYI
 #include <ayyi/ayyi.h>
 #endif
+#include "utils/pixmaps.h"
 #include "file_manager/support.h"
 
 #include "typedefs.h"
@@ -15,7 +16,6 @@
 #include "sample.h"
 #include "dnd.h"
 #include "cellrenderer_hypertext.h"
-#include "pixmaps.h"
 #include "overview.h"
 #include "listview.h"
 #include "inspector.h"

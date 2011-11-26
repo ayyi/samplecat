@@ -7,6 +7,7 @@
 #include <sys/time.h>
 #include <gtk/gtk.h>
 
+#include "utils/pixmaps.h"
 #include "file_manager.h"
 #include "typedefs.h"
 #include "support.h"
@@ -16,7 +17,6 @@
 #include "cellrenderer_hypertext.h"
 
 #include "mimetype.h"
-#include "pixmaps.h"
 
 #include "audio_decoder/ad.h"
 #include "audio_analysis/waveform/waveform.h"

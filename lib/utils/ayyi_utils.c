@@ -221,29 +221,6 @@ get_terminal_width()
 }
 
 
-gboolean
-audio_path_get_leaf(const char* path, char* leaf)
-{
-	//gives the leafname contained in the given path.
-	//-if the path is a directory, leaf should be empty, but without checking we have no way of knowing...
-
-	//TODO just use g_path_get_basename() instead.
-
-	g_return_val_if_fail(strlen(path), FALSE);
-
-	//look for slashes and chop off anything before:
-	char* pos;
-	if((pos = g_strrstr(path, "/"))){
-		pos += 1; //move to the rhs of the slash.
-	}else pos = (char*)path;
-
-	//make leaf contain the last segment:
-	g_strlcpy(leaf, pos, 128);
-
-	return TRUE;
-}
-
-
 gchar*
 audio_path_get_base(const char* path)
 {

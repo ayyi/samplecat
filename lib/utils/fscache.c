@@ -28,9 +28,7 @@
 
 #include <gtk/gtk.h>
 #include "utils/ayyi_utils.h"
-#include "file_manager.h"
 #include "typedefs.h"
-#include "support.h"
 #include "fscache.h"
 
 extern int debug;

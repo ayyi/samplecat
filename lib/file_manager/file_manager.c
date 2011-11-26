@@ -28,16 +28,15 @@
 #include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
 
-#include "file_manager/file_manager.h"
+#include "utils/ayyi_utils.h"
+#include "utils/mime_type.h"
+#include "file_manager.h"
 #include "view_iface.h"
 #include "file_view.h"
 #include "dir.h"
 #include "diritem.h"
 #include "rox_support.h"
 #include "mimetype.h"
-
-#include "utils/ayyi_utils.h"
-
 
 Filer filer;
 GList* all_filer_windows = NULL;
@@ -55,7 +54,7 @@ enum {
 static void file_manager__load_plugins();
 
 
-Filer*
+static Filer*
 file_manager__init()
 {
 	filer.filter               = FILER_SHOW_ALL;
@@ -67,9 +66,14 @@ file_manager__init()
 
 	new_file_manager = ayyi_libfilemanager_new(&filer);
 
+	//type_init();
+	//pixmaps_init();
+	dir_init();
+
 	gboolean _load_plugins(gpointer user_data){ file_manager__load_plugins(); return IDLE_STOP; }
 	g_idle_add(_load_plugins, NULL);
 
+	initialised = TRUE;
 	return &filer;
 	//return &new_file_manager->file_window;
 }
@@ -78,6 +82,8 @@ file_manager__init()
 GtkWidget*
 file_manager__new_window(const char* path)
 {
+	if(!initialised) file_manager__init();
+
 	GtkWidget* file_view = view_details_new(&filer);
 	filer.view = (ViewIface*)file_view;
 
@@ -86,6 +92,14 @@ file_manager__new_window(const char* path)
 	filer_change_to(&filer, path, NULL);
 
 	return file_view;
+}
+
+
+Filer*
+file_manager__get()
+{
+	if(!initialised) file_manager__init();
+	return &filer;
 }
 
 
@@ -112,20 +126,6 @@ file_manager__update_all(void)
 			filer_update_dir(filer_window, TRUE);
 	}
 }
-
-
-//removed. call ayyi_filemanager_set_icon_theme(char*) instead.
-/*
-void
-file_manager__set_icon_theme(const char* name)
-{
-	strncpy(theme_name, name, 63);
-	_set_icon_theme();
-
-	ayyi_filemanager_set_icon_theme(new_file_manager, name);
-	//ayyi_filemanager_emit_theme_changed(new_file_manager);
-}
-*/
 
 
 void

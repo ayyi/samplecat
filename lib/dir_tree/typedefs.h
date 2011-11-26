@@ -14,16 +14,14 @@
 #define __gqview2_typedefs_h__
 
 
-/*
 typedef enum {
-	SORT_NONE,
-	SORT_NAME,
-	SORT_SIZE,
-	SORT_TIME,
-	SORT_PATH,
-	SORT_NUMBER
-} SortType;
-*/
+	DT_SORT_NONE,
+	DT_SORT_NAME,
+	DT_SORT_SIZE,
+	DT_SORT_TIME,
+	DT_SORT_PATH,
+	DT_SORT_NUMBER
+} DtSortType;
 
 typedef enum {
 	ALTER_NONE,		/* do nothing */
@@ -141,7 +139,7 @@ struct _CollectionData
 	gchar *path;
 	gchar *name;
 	GList *list;
-	SortType sort_method;
+	DtSortType sort_method;
 
 	ThumbLoader *thumb_loader;
 	CollectInfo *thumb_info;
@@ -396,7 +394,7 @@ struct _LayoutWindow
 	GtkWidget *file_view;
 
 	gint icon_view;
-	SortType sort_method;
+	DtSortType sort_method;
 	gint sort_ascend;
 
 	/* status bar */
@@ -507,7 +505,7 @@ struct _ViewFileList
 	gchar *path;
 	GList *list;
 
-	SortType sort_method;
+	DtSortType sort_method;
 	gint sort_ascend;
 
 	FileData *click_fd;
@@ -560,7 +558,7 @@ struct _ViewFileIcon
 	gint focus_row;
 	gint focus_column;
 
-	SortType sort_method;
+	DtSortType sort_method;
 	gint sort_ascend;
 
 	gint show_text;

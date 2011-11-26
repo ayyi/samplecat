@@ -42,7 +42,7 @@
 #include "diritem.h"
 #include "mimetype.h"
 #include "display.h"
-#include "pixmaps.h"
+#include "utils/pixmaps.h"
 #include "dnd.h"
 #include "menu.h"
 #include "cell_icon.h"
@@ -100,8 +100,6 @@ static void     view_details_set_selected        (ViewIface *view, ViewIter *ite
 static gboolean view_details_get_selected        (ViewIface *view, ViewIter *iter);
 static void     view_details_select_only         (ViewIface *view, ViewIter *iter);
 static void     view_details_set_frozen          (ViewIface *view, gboolean frozen);
-static void     view_details_wink_item           (ViewIface *view, ViewIter *iter);
-//static void view_details_autosize(ViewIface *view);
 static gboolean view_details_cursor_visible      (ViewIface *view);
 static void     view_details_set_base            (ViewIface *view, ViewIter *iter);
 static void     view_details_start_lasso_box     (ViewIface *view, GdkEventButton*);
@@ -125,7 +123,6 @@ static gboolean get_selected                     (ViewDetails *view_details, int
 static void     free_view_item                   (ViewItem *view_item);
 static void     details_update_header_visibility (ViewDetails *view_details);
 //static void set_lasso(ViewDetails *view_details, int x, int y);
-static void     cancel_wink                      (ViewDetails*);
 static void     view_details_on_realise          (ViewDetails*, gpointer user_data);
 static void     view_details_on_edited           (GtkCellRendererText*, gchar* path_string, gchar* new_text, ViewDetails*);
 
@@ -914,10 +911,10 @@ static void view_details_drag_data_received(GtkWidget *widget,
 static void
 view_details_destroy(GtkObject *obj)
 {
+	/*
 	ViewDetails *view_details = VIEW_DETAILS(obj);
-
-	//view_details->filer_window = NULL;
-	cancel_wink(view_details);
+	view_details->filer_window = NULL;
+	*/
 }
 
 static void
@@ -1114,7 +1111,6 @@ view_details_iface_init(gpointer giface, gpointer iface_data)
 	iface->get_selected      = view_details_get_selected;
 	iface->set_frozen        = view_details_set_frozen;
 	iface->select_only       = view_details_select_only;
-	iface->wink_item         = view_details_wink_item;
 	iface->cursor_visible    = view_details_cursor_visible;
 	iface->set_base          = view_details_set_base;
 	iface->start_lasso_box   = view_details_start_lasso_box;
@@ -1572,75 +1568,6 @@ view_details_select_only(ViewIface *view, ViewIter *iter)
 static void
 view_details_set_frozen(ViewIface *view, gboolean frozen)
 {
-}
-
-static void
-redraw_wink_area(ViewDetails *view_details)
-{
-	GtkTreePath *wink_path;
-	GdkRectangle wink_area;
-	GtkTreeView *tree = (GtkTreeView *) view_details;
-
-	g_return_if_fail(view_details->wink_item >= 0);
-
-	wink_path = gtk_tree_path_new();
-	gtk_tree_path_append_index(wink_path, view_details->wink_item);
-	gtk_tree_view_get_background_area(tree, wink_path, NULL, &wink_area);
-	gtk_tree_path_free(wink_path);
-
-	if (wink_area.height)
-	{
-		GdkWindow *window;
-		window = gtk_tree_view_get_bin_window(tree);
-
-		wink_area.width = GTK_WIDGET(tree)->allocation.width;
-		gdk_window_invalidate_rect(window, &wink_area, FALSE);
-	}
-}
-
-static void
-cancel_wink(ViewDetails *view_details)
-{
-	if (view_details->wink_item == -1) return;
-
-	//if (view_details->filer_window) redraw_wink_area(view_details);
-
-	view_details->wink_item = -1;
-	g_source_remove(view_details->wink_timeout);
-}
-
-static gboolean wink_timeout(ViewDetails *view_details)
-{
-	view_details->wink_step--;
-	if (view_details->wink_step < 1)
-	{
-		cancel_wink(view_details);
-		return FALSE;
-	}
-
-	redraw_wink_area(view_details);
-
-	return TRUE;
-}
-
-static void
-view_details_wink_item(ViewIface *view, ViewIter *iter)
-{
-	ViewDetails *view_details = (ViewDetails *) view;
-	GtkTreePath *path;
-
-	cancel_wink(view_details);
-	if (!iter) return;
-
-	view_details->wink_item = iter->i;
-	view_details->wink_timeout = g_timeout_add(70, (GSourceFunc) wink_timeout, view_details);
-	view_details->wink_step = 7;
-	redraw_wink_area(view_details);
-
-	path = gtk_tree_path_new();
-	gtk_tree_path_append_index(path, iter->i);
-	gtk_tree_view_scroll_to_cell(GTK_TREE_VIEW(view), path, NULL, FALSE, 0, 0);
-	gtk_tree_path_free(path);
 }
 
 #if 0

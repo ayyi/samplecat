@@ -142,7 +142,7 @@ extern gchar *editor_name[];
 extern gchar *editor_command[];
 
 extern gint thumbnails_enabled;
-extern SortType file_sort_method;
+extern DtSortType file_sort_method;
 extern gint file_sort_ascending;
 
 extern gint slideshow_delay;	/* in tenths of a second */

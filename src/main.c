@@ -26,6 +26,7 @@ char * program_name;
 #endif
 
 #include "utils/ayyi_utils.h"
+#include "utils/pixmaps.h"
 #ifdef USE_AYYI
   #include "ayyi.h"
   #include "ayyi_model.h"
@@ -78,8 +79,6 @@ char * program_name;
 
 #include "audio_decoder/ad.h"
 
-#include "pixmaps.h"
-
 #ifdef USE_SQLITE
   #include "db/sqlite.h"
 #endif
@@ -87,7 +86,6 @@ char * program_name;
 #undef DEBUG_NO_THREADS
 
 
-extern void       dir_init                  ();
 static void       update_rows               (GtkWidget*, gpointer);
 static void       edit_row                  (GtkWidget*, gpointer);
 static GtkWidget* make_context_menu         ();
@@ -326,7 +324,6 @@ main(int argc, char** argv)
 
 	type_init();
 	pixmaps_init();
-	dir_init();
 	ad_init();
 	set_auditioner();
 	app.store = listmodel__new();
@@ -383,8 +380,6 @@ main(int argc, char** argv)
 		hide_progress();
 	}
 
-	if(!app.no_gui) file_manager__init(); // set filer
-
 #ifndef DEBUG_NO_THREADS
 	dbg(3, "creating overview thread...");
 	GError *error = NULL;
@@ -423,7 +418,7 @@ main(int argc, char** argv)
 
 #ifdef USE_AYYI
 	ayyi_client_init();
-	ayyi_connect();
+	g_idle_add(ayyi_connect, NULL);
 #endif
 
 #ifdef USE_TRACKER
@@ -435,7 +430,7 @@ main(int argc, char** argv)
 	app.loaded = true;
 	dbg(1, "loaded");
 	message_panel__add_msg("hello", GTK_STOCK_INFO);
-	statusbar_print(2,PACKAGE_NAME". Version "PACKAGE_VERSION);
+	statusbar_print(2, PACKAGE_NAME". Version "PACKAGE_VERSION);
 
 #ifdef __APPLE__
 	gtk_osxapplication_ready(osxApp);

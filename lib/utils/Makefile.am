@@ -16,5 +16,8 @@ noinst_LIBRARIES = libutils.a
 CLEANFILES =
 
 libutils_a_SOURCES = \
-	ayyi_utils.c ayyi_utils.h
+	ayyi_utils.c ayyi_utils.h \
+	fscache.c fscache.h \
+	mime_type.c mime_type.h \
+	pixmaps.c pixmaps.h
 

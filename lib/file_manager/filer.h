@@ -8,22 +8,6 @@
 
 #include <gtk/gtk.h>
 
-#if 0
-enum {
-	RESIZE_STYLE = 0,
-	RESIZE_ALWAYS = 1,
-	RESIZE_NEVER = 2,
-};
-
-typedef enum
-{
-	OPEN_SHIFT		= 0x01,	/* Do ShiftOpen */
-	OPEN_SAME_WINDOW	= 0x02, /* Directories open in same window */
-	OPEN_CLOSE_WINDOW	= 0x04, /* Opening files closes the window */
-	OPEN_FROM_MINI		= 0x08,	/* Non-dir => close minibuffer */
-} OpenFlags;
-#endif
-
 typedef enum
 {
 	FILER_NEEDS_RESCAN	= 0x01, /* Call may_rescan after scanning */
@@ -60,15 +44,15 @@ struct _Filer
 	gboolean	 temp_item_selected;
 	gboolean	 show_hidden;
 	gboolean	 filter_directories;
-	FilerFlags	 flags;
-	SortType	 sort_type;
-	GtkSortType	 sort_order;
+	FilerFlags   flags;
+	FmSortType   sort_type;
+	GtkSortType  sort_order;
 
-	DetailsType	 details_type;
+	DetailsType  details_type;
 	DisplayStyle display_style;
 	DisplayStyle display_style_wanted;
 
-	Directory	*directory;
+	Directory   *directory;
 
 	gboolean	 had_cursor;	/* (before changing directory) */
 	char		*auto_select;	/* If it we find while scanning */

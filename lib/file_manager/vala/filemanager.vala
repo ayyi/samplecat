@@ -6,8 +6,6 @@ public class Ayyi.Libfilemanager : GLib.Object
 {
 	//public int state = 0;
 
-	//removed as illconceived idea.
-	//public signal void theme_changed(string s);
 	public FM.Filer* file_window;
 
 	public signal void dir_changed(string s);
@@ -24,7 +22,7 @@ public class Ayyi.Libfilemanager : GLib.Object
 	public void
 	set_icon_theme (string theme)
 	{
-		stdout.printf("set_icon_theme(): theme=%s\n", theme);
+		print("%s(): theme=%s\n", Log.METHOD, theme);
 
 		//g_strlcpy(theme_name, theme, 63);
 		Memory.copy(theme_name, theme, theme.length + 1);

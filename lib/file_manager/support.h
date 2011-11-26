@@ -1,7 +1,6 @@
 #include "stdint.h"
 
 #if 0
-#define HAS_ALPHA_FALSE 0
 
 typedef struct _rect {
   double x1;
@@ -9,11 +8,6 @@ typedef struct _rect {
   double x2;
   double y2;
 } rect;
-
-void         errprintf(char* fmt, ...);
-void         errprintf2(const char* func, char* format, ...);
-void         warnprintf(char* format, ...);
-void         debug_printf(const char* func, int level, const char* format, ...);
 
 void         samplerate_format(char* str, int samplerate);
 gint         strcmp2(gconstpointer a, gconstpointer b);

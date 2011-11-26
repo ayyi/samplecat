@@ -9,6 +9,7 @@
  * This software comes with no warranty of any kind, use at your own risk!
  */
 #include <gtk/gtk.h>
+#include "utils/mime_type.h"
 #include "file_manager/file_manager.h"
 #include "view_dir_tree.h"
 #include "support.h"

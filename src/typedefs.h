@@ -37,22 +37,7 @@ typedef struct _playctrl          PlayCtrl;
 typedef struct _auditioner        Auditioner;
 
 #ifndef __file_manager_h__
-typedef enum {
-	SORT_NONE = 0,
-	SORT_NAME,
-	SORT_TYPE,
-	SORT_DATE,
-	SORT_SIZE,
-	SORT_OWNER,
-	SORT_GROUP,
-	SORT_NUMBER,
-	SORT_PATH
-} SortType;
-
-typedef struct _MaskedPixmap       MaskedPixmap;
-typedef struct _MIME_type          MIME_type;
 typedef struct _GimpActionGroup    GimpActionGroup;
-typedef struct _GFSCache           GFSCache;
 #endif
 
 #ifndef __gqview2_typedefs_h__

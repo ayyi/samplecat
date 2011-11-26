@@ -8,12 +8,12 @@
 #include "filer.h"
 #include "file_manager/vala/filemanager.h"
 #include "file_manager/filetypes/filetype_plugin.h"
+#include "file_view.h"
 
-Filer*     file_manager__init           ();
-GtkWidget* file_manager__new_window     (const char* path);
-void       file_manager__update_all     ();
-//void       file_manager__set_icon_theme (const char*);
-void       file_manager__on_dir_changed ();
-AyyiLibfilemanager* file_manager__get_signaller();
+Filer*              file_manager__get            ();
+GtkWidget*          file_manager__new_window     (const char* path);
+void                file_manager__update_all     ();
+void                file_manager__on_dir_changed ();
+AyyiLibfilemanager* file_manager__get_signaller  ();
 
 #endif //__file_manager_h__

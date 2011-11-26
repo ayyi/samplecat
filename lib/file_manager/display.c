@@ -37,7 +37,6 @@
 #include <gdk/gdkkeysyms.h>
 
 #include "file_manager.h"
-#include "src/typedefs.h"
 #include "utils/ayyi_utils.h"
 #include "rox_global.h"
 
@@ -47,41 +46,12 @@
 #include "rox_support.h"
 #include "dir.h"
 #include "filer.h"
-#include "pixmaps.h"
-#if 0
-#include "menu.h"
-#include "dnd.h"
-#include "run.h"
-#include "mount.h"
-#include "options.h"
-#include "action.h"
-#include "minibuffer.h"
-#endif
+#include "utils/pixmaps.h"
 #include "mimetype.h"
 #include "diritem.h"
 #include "view_iface.h"
 #if 0
-#include "fscache.h"
-#include "xtypes.h"
-
 #define HUGE_WRAP (1.5 * o_large_width.int_value)
-
-/* Options bits */
-static Option o_display_caps_first;
-static Option o_display_dirs_first;
-Option o_display_size;
-Option o_display_details;
-Option o_display_sort_by;
-static Option o_large_width;
-Option o_small_width;
-Option o_display_show_hidden;
-Option o_display_show_thumbs;
-Option o_display_show_headers;
-Option o_display_show_full_type;
-Option o_display_inherit_options;
-static Option o_filer_change_size_num;
-Option o_vertical_order_small, o_vertical_order_large;
-Option o_xattr_show;
 
 /* Static prototypes */
 static void display_details_set(FilerWindow *filer_window, DetailsType details);
@@ -96,25 +66,6 @@ static void display_set_actual_size_real(FilerWindow *filer_window);
 
 void display_init()
 {
-	option_add_int(&o_display_caps_first, "display_caps_first", FALSE);
-	option_add_int(&o_display_dirs_first, "display_dirs_first", FALSE);
-	option_add_int(&o_display_size, "display_icon_size", AUTO_SIZE_ICONS);
-	option_add_int(&o_display_details, "display_details", DETAILS_NONE);
-	option_add_int(&o_display_sort_by, "display_sort_by", SORT_NAME);
-	option_add_int(&o_large_width, "display_large_width", 155);
-	option_add_int(&o_small_width, "display_small_width", 250);
-	option_add_int(&o_display_show_hidden, "display_show_hidden", FALSE);
-	option_add_int(&o_display_show_thumbs, "display_show_thumbs", FALSE);
-	option_add_int(&o_display_show_headers, "display_show_headers", TRUE);
-	option_add_int(&o_display_show_full_type, "display_show_full_type", FALSE);
-	option_add_int(&o_display_inherit_options,
-		       "display_inherit_options", FALSE); 
-	option_add_int(&o_filer_change_size_num, "filer_change_size_num", 30); 
-	option_add_int(&o_vertical_order_small, "vertical_order_small", FALSE);
-	option_add_int(&o_vertical_order_large, "vertical_order_large", FALSE);
-	option_add_int(&o_xattr_show, "xattr_show", TRUE);
-
-	option_add_notify(options_changed);
 }
 
 static void draw_emblem_on_icon(GdkWindow *window, MaskedPixmap *image,
@@ -412,7 +363,7 @@ int sort_by_size(const void *item1, const void *item2)
 }
 
 void
-display_set_sort_type(Filer* filer_window, SortType sort_type, GtkSortType order)
+display_set_sort_type(Filer* filer_window, FmSortType sort_type, GtkSortType order)
 {
 	if (filer_window->sort_type == sort_type &&
 	    filer_window->sort_order == order)

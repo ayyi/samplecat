@@ -89,7 +89,6 @@ samplecat_SOURCES = \
 	player_control.c player_control.h \
 	sample.c sample.h \
 	overview.c overview.h \
-	pixmaps.c pixmaps.h \
 	dh_link.c dh_link.h \
 	dh_tree.c dh_tree.h \
 	cellrenderer_hypertext.c cellrenderer_hypertext.h \

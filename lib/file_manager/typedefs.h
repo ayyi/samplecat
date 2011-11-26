@@ -11,9 +11,9 @@ typedef enum {
 	SORT_GROUP,
 	SORT_NUMBER,
 	SORT_PATH
-} SortType;
+} FmSortType;
 
-typedef struct _MIME_type          MIME_type;
+//typedef struct _MIME_type          MIME_type;
 typedef struct _GimpActionGroup    GimpActionGroup;
 
 #endif //__file_manager_typedefs_h__

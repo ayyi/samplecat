@@ -64,8 +64,8 @@
 #include "dir.h"
 #include "diritem.h"
 #include "rox_support.h"
-#include "fscache.h"
-#include "pixmaps.h"
+#include "utils/fscache.h"
+#include "utils/pixmaps.h"
 #include "mimetype.h"
 #include "menu.h"
 
@@ -197,20 +197,15 @@ dir_attach(Directory *dir, DirCallback callback, gpointer data)
 	{
 		int fd;
 		
-		if (dir->notify_fd != -1)
-			g_warning("dir_attach: dnotify error\n");
+		if (dir->notify_fd != -1) g_warning("dir_attach: dnotify error\n");
 		
 		fd = open(dir->pathname, O_RDONLY);
-		g_return_if_fail(g_hash_table_lookup(notify_fd_to_dir,
-				 GINT_TO_POINTER(fd)) == NULL);
-		if (fd != -1)
-		{
+		g_return_if_fail(g_hash_table_lookup(notify_fd_to_dir, GINT_TO_POINTER(fd)) == NULL);
+		if (fd != -1) {
 			dir->notify_fd = fd;
-			g_hash_table_insert(notify_fd_to_dir,
-					GINT_TO_POINTER(fd), dir);
+			g_hash_table_insert(notify_fd_to_dir, GINT_TO_POINTER(fd), dir);
 			fcntl(fd, F_SETSIG, SIGRTMIN);
-			fcntl(fd, F_NOTIFY, DN_CREATE | DN_DELETE | DN_RENAME |
-					    DN_ATTRIB | DN_MULTISHOT);
+			fcntl(fd, F_NOTIFY, DN_CREATE | DN_DELETE | DN_RENAME | DN_ATTRIB | DN_MULTISHOT);
 		}
 	}
 #endif
@@ -237,7 +232,6 @@ dir_attach(Directory *dir, DirCallback callback, gpointer data)
 void
 dir_detach(Directory *dir, DirCallback callback, gpointer data)
 {
-	PF;
 	DirUser	*user;
 	GList	*list;
 
@@ -347,7 +341,7 @@ dir_drop_all_notifies(void)
 void
 dir_force_update_path(const gchar *path)
 {
-	gchar	*dir_path;
+	gchar *dir_path;
 	Directory *dir;
 
 	g_return_if_fail(path[0] == '/');

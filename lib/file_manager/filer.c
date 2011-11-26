@@ -34,17 +34,16 @@
 #include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
 
+#include "utils/fscache.h"
 #include "file_manager/file_manager.h"
-//#include "src/typedefs.h"
 #include "utils/ayyi_utils.h"
 
 #include "rox_global.h"
 #include "display.h"
 #include "dir.h"
 #include "filer.h"
-#include "fscache.h"
 #include "rox_support.h"
-#include "pixmaps.h"
+#include "utils/pixmaps.h"
 #include "menu.h"
 #include "diritem.h"
 #include "view_iface.h"
@@ -56,8 +55,6 @@ extern GFSCache* pixmap_cache;
 extern int debug;
 
 #if 0
-static XMLwrapper *groups = NULL;
-
 /* Item we are about to display a tooltip for */
 static DirItem *tip_item = NULL;
 
@@ -171,23 +168,10 @@ void filer_init(void)
 	const gchar *dpy;
 	gchar *dpyhost, *tmp;
   
-	option_add_int(&o_filer_size_limit, "filer_size_limit", 75);
-	option_add_int(&o_filer_auto_resize, "filer_auto_resize",
-							RESIZE_ALWAYS);
-	option_add_int(&o_unique_filer_windows, "filer_unique_windows", 0);
-
-	option_add_int(&o_short_flag_names, "filer_short_flag_names", FALSE);
-
-	option_add_int(&o_filer_view_type, "filer_view_type",
-			VIEW_TYPE_COLLECTION); 
-
-	option_add_notify(filer_options_changed);
-
 	busy_cursor = gdk_cursor_new(GDK_WATCH);
 	crosshair = gdk_cursor_new(GDK_CROSSHAIR);
 
-	window_with_id = g_hash_table_new_full(g_str_hash, g_str_equal,
-					       NULL, NULL);
+	window_with_id = g_hash_table_new_full(g_str_hash, g_str_equal, NULL, NULL);
 
 	/* Is the display on the local machine, or are we being
 	 * run remotely? See filer_set_title().
@@ -941,97 +925,6 @@ static void return_pressed(FilerWindow *filer_window, GdkEventKey *event)
 	filer_openitem(filer_window, &iter, flags);
 }
 
-/* Makes sure that 'groups' is up-to-date, reloading from file if it has
- * changed. If no groups were loaded and there is no file then initialised
- * groups to an empty document.
- * Return the node for the 'name' group.
- */
-static xmlNode *group_find(char *name)
-{
-	xmlNode *node;
-	gchar *path;
-
-	/* Update the groups, if possible */
-	path = choices_find_xdg_path_load("Groups.xml", PROJECT, SITE);
-	if (path)
-	{
-		XMLwrapper *wrapper;
-		wrapper = xml_cache_load(path);
-		if (wrapper)
-		{
-			if (groups)
-				g_object_unref(groups);
-			groups = wrapper;
-		}
-
-		g_free(path);
-	}
-
-	if (!groups)
-	{
-		groups = xml_new(NULL);
-		groups->doc = xmlNewDoc("1.0");
-
-		xmlDocSetRootElement(groups->doc,
-			xmlNewDocNode(groups->doc, NULL, "groups", NULL));
-		return NULL;
-	}
-
-	node = xmlDocGetRootElement(groups->doc);
-
-	for (node = node->xmlChildrenNode; node; node = node->next)
-	{
-		guchar	*gid;
-
-		gid = xmlGetProp(node, "name");
-
-		if (!gid)
-			continue;
-
-		if (strcmp(name, gid) != 0)
-			continue;
-
-		g_free(gid);
-
-		return node;
-	}
-
-	return NULL;
-}
-
-static void group_save(FilerWindow *filer_window, char *name)
-{
-	xmlNode	*group;
-	guchar	*save_path;
-	DirItem *item;
-	ViewIter iter;
-
-	group = group_find(name);
-	if (group)
-	{
-		xmlUnlinkNode(group);
-		xmlFreeNode(group);
-	}
-	group = xmlNewChild(xmlDocGetRootElement(groups->doc),
-			NULL, "group", NULL);
-	xmlSetProp(group, "name", name);
-
-	xmlNewTextChild(group, NULL, "directory", filer_window->sym_path);
-
-	view_get_iter(filer_window->view, &iter, VIEW_ITER_SELECTED);
-
-	while ((item = iter.next(&iter)))
-		xmlNewTextChild(group, NULL, "item", item->leafname);
-
-	save_path = choices_find_xdg_path_save("Groups.xml", PROJECT, SITE,
-					       TRUE);
-	if (save_path)
-	{
-		save_xml_file(groups->doc, save_path);
-		g_free(save_path);
-	}
-}
-
 static gboolean group_restore_cb(ViewIter *iter, gpointer data)
 {
 	GHashTable *in_group = (GHashTable *) data;
@@ -1040,55 +933,6 @@ static gboolean group_restore_cb(ViewIter *iter, gpointer data)
 				   iter->peek(iter)->leafname) != NULL;
 }
 	
-static void group_restore(FilerWindow *filer_window, char *name)
-{
-	GHashTable *in_group;
-	char	*path;
-	xmlNode	*group, *node;
-
-	group = group_find(name);
-
-	if (!group)
-	{
-		report_error(_("Group %s is not set. Select some files "
-			     "and press Ctrl+%s to set the group. Press %s "
-			     "on its own to reselect the files later.\n"
-			     "Make sure NumLock is on if you use the keypad."),
-			     name, name, name);
-		return;
-	}
-
-	node = get_subnode(group, NULL, "directory");
-	g_return_if_fail(node != NULL);
-	path = xmlNodeListGetString(groups->doc, node->xmlChildrenNode, 1);
-	g_return_if_fail(path != NULL);
-
-	if (strcmp(path, filer_window->sym_path) != 0) filer_change_to(filer_window, path, NULL);
-	g_free(path);
-
-	in_group = g_hash_table_new(g_str_hash, g_str_equal);
-	for (node = group->xmlChildrenNode; node; node = node->next)
-	{
-		gchar *leaf;
-		if (node->type != XML_ELEMENT_NODE)
-			continue;
-		if (strcmp(node->name, "item") != 0)
-			continue;
-
-		leaf = xmlNodeListGetString(groups->doc,
-						node->xmlChildrenNode, 1);
-		if (!leaf)
-			g_warning("Missing leafname!\n");
-		else
-			g_hash_table_insert(in_group, leaf, filer_window);
-	}
-
-	view_select_if(filer_window->view, &group_restore_cb, in_group);
-	
-	g_hash_table_foreach(in_group, (GHFunc) g_free, NULL);
-	g_hash_table_destroy(in_group);
-}
-
 static gboolean
 popup_menu(GtkWidget *widget, FilerWindow *filer_window)
 {

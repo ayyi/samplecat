@@ -37,6 +37,5 @@ libfilemanager_a_SOURCES = \
 	cell_icon.c cell_icon.h \
 	menu.c menu.h \
 	diritem.c diritem.h \
-	dir.c dir.h \
-	fscache.c fscache.h
+	dir.c dir.h
 

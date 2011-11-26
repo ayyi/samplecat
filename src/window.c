@@ -17,7 +17,6 @@
 #include "listview.h"
 #include "file_manager/menu.h"
 #include "dnd.h"
-#include "file_view.h"
 #include "inspector.h"
 #include "progress_dialog.h"
 #include "player_control.h"

@@ -35,66 +35,6 @@ static void        process_flag(char flag);
 
 #if 0
 void
-errprintf(char *format, ...)
-{
-  //fn prints an error string, then passes arguments on to vprintf.
-
-  va_list argp; //points to each unnamed arg in turn
-
-  printf("%s ", err);
-
-  va_start(argp, format); //make ap (arg pointer) point to 1st unnamed arg
-
-  vprintf(format, argp);
-
-  va_end(argp); //clean up
-}
-
-
-void
-errprintf2(const char* func, char *format, ...)
-{
-  //fn prints an error string, then passes arguments on to vprintf.
-
-  printf("%s %s(): ", err, func);
-
-  va_list argp;
-  va_start(argp, format);
-  vprintf(format, argp);
-  va_end(argp);
-}
-
-
-void
-warnprintf(char *format, ...)
-{
-  //fn prints a warning string, then passes arguments on to vprintf.
-
-  printf("%s ", warn);
-
-  va_list argp;           //points to each unnamed arg in turn
-  va_start(argp, format); //make ap (arg pointer) point to 1st unnamed arg
-  vprintf(format, argp);
-  va_end(argp);           //clean up
-}
-
-
-void
-debug_printf(const char* func, int level, const char *format, ...)
-{
-	va_list args;
-
-	va_start(args, format);
-	if (level <= debug) {
-		fprintf(stderr, "%s(): ", func);
-		vfprintf(stderr, format, args);
-		fprintf(stderr, "\n");
-	}
-	va_end(args);
-}
-
-
-void
 samplerate_format(char* str, int samplerate)
 {
 	snprintf(str, 32, "%f", ((float)samplerate) / 1000);

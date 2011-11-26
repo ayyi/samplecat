@@ -7,7 +7,6 @@
 #include <file_manager/file_manager.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
 #include <file_manager/mimetype.h>
 #include <file_manager/rox_global.h>
 #include <gtk/gtk.h>
@@ -66,7 +65,7 @@ void ayyi_libfilemanager_set_icon_theme (AyyiLibfilemanager* self, const gchar* 
 	gint _tmp0_;
 	g_return_if_fail (self != NULL);
 	g_return_if_fail (theme != NULL);
-	fprintf (stdout, "set_icon_theme(): theme=%s\n", theme);
+	g_print ("%s(): theme=%s\n", "Ayyi.Libfilemanager.set_icon_theme", theme);
 	_tmp0_ = strlen (theme);
 	memcpy (theme_name, theme, (gsize) (_tmp0_ + 1));
 	_set_icon_theme ();

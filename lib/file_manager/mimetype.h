@@ -7,6 +7,7 @@
 #define _TYPE_H
 
 #include <gtk/gtk.h>
+#include "utils/mime_type.h"
 
 
 extern MIME_type *text_plain;		// often used as a default type
@@ -40,31 +41,15 @@ struct _Option {
 typedef struct _Option Option;
 
 
-struct _MIME_type
-{
-	char			*media_type;
-	char			*subtype;
-	MaskedPixmap 	*image;		/* NULL => not loaded yet */
-	time_t			image_time;	/* When we loaded the image */
-
-	/* Private: use mime_type_comment() instead */
-	char			*comment;	/* Name in local language */
-	gboolean		executable;	/* Subclass of application/x-executable */
-};
-//typedef struct _MIME_type MIME_type; 
-
-
 
 
 /* Prototypes */
 void               type_init(void);
 //const char*        basetype_name(DirItem *item);
 MIME_type*         type_get_type(const guchar *path);
-GdkPixbuf*         mime_type_get_pixbuf(MIME_type*);
 
 MIME_type*         type_from_path(const char *path);
 gboolean           type_open(const char *path, MIME_type *type);
-MaskedPixmap*      type_to_icon(MIME_type *type);
 GdkAtom            type_to_atom(MIME_type *type);
 MIME_type*         mime_type_from_base_type(int base_type);
 int                mode_to_base_type(int st_mode);

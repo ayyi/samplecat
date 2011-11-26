@@ -8,6 +8,7 @@
 #define _DIRITEM_H
 
 #include <sys/types.h>
+#include "utils/mime_type.h"
 
 extern time_t diritem_recent_time;
 

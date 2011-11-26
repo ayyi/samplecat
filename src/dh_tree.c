@@ -27,6 +27,7 @@
 
 #include "typedefs.h"
 #include "support.h"
+#include "utils/mime_type.h"
 #include "dh_tree.h"
 
 #define d(x)

@@ -21,7 +21,7 @@
 
 /* pixmaps.c - code for handling pixbufs (despite the name!) */
 
-//#include "config.h"
+#include "config.h"
 #define PIXMAPS_C
 
 /* Remove pixmaps from the cache when they haven't been accessed for
@@ -43,24 +43,8 @@
 
 #include <gtk/gtk.h>
 
-#include "file_manager.h"
-#include "src/typedefs.h"
-#include "fscache.h"
-//#include "gui_support.h"
-#include "pixmaps.h"
-//#include "main.h"
-//#include "filer.h"
-//#include "dir.h"
-//#include "diritem.h"
-//#include "choices.h"
-//#include "options.h"
-//#include "action.h"
-#include "mimetype.h"
-
-#ifdef OLD
-  #include <libart_lgpl/libart.h>
-#endif
-#include "support.h"
+#include "utils/ayyi_utils.h"
+#include "utils/pixmaps.h"
 
 GFSCache *pixmap_cache = NULL;
 

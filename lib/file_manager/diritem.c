@@ -44,15 +44,8 @@
 #include "rox_support.h"
 
 #include "diritem.h"
-//#include "support.h"
-//#include "gui_support.h"
-//#include "mount.h"
 #include "mimetype.h"
-//#include "usericons.h"
-//#include "options.h"
-//#include "fscache.h"
-#include "pixmaps.h"
-//#include "xtypes.h"
+#include "utils/pixmaps.h"
 
 #define RECENT_DELAY (5 * 60)	/* Time in seconds to consider a file recent */
 #define ABOUT_NOW(time) (diritem_recent_time - time < RECENT_DELAY)

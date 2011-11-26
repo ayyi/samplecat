@@ -9,12 +9,12 @@
 #endif
 
 #include "typedefs.h"
+#include "utils/pixmaps.h"
 #include "file_manager/mimetype.h"
 #include "support.h"
 #include "main.h"
 #include "sample.h"
 #include "dnd.h"
-#include "pixmaps.h"
 #include "overview.h"
 #include "listmodel.h"
 #include "inspector.h"
@@ -100,12 +100,10 @@ listmodel__add_result(Sample* result)
 
 #ifdef USE_AYYI
 	GdkPixbuf* ayyi_icon = NULL;
-#endif
 
-#ifdef USE_AYYI
 	//is the file loaded in the current Ayyi song?
-	if(ayyi.got_song){
-		gchar* fullpath = g_build_filename(row[MYSQL_DIR], sample_name, NULL);
+	if(ayyi.got_shm){
+		gchar* fullpath = g_build_filename(result->sample_dir, result->sample_name, NULL);
 		if(ayyi_song__have_file(fullpath)){
 			dbg(1, "sample is used in current project TODO set icon");
 		} else dbg(2, "sample not used in current project");

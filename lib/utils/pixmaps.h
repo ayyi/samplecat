@@ -7,6 +7,7 @@
 #define _PIXMAP_H
 
 #include <gtk/gtk.h>
+#include "utils/fscache.h"
 
 extern GFSCache *pixmap_cache;
 

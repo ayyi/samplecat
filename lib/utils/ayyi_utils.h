@@ -40,7 +40,6 @@ void        string_increment_suffix  (char* newstr, const char* orig, int new_ma
 
 int         get_terminal_width       ();
 
-gboolean    audio_path_get_leaf      (const char* path, char* leaf);
 gchar*      audio_path_get_base      (const char*);
 gboolean    audio_path_get_wav_leaf  (char* leaf, const char* path, int len);
 char*       audio_path_truncate      (char*, char);

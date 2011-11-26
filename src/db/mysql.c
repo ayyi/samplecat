@@ -10,7 +10,6 @@
 #include "typedefs.h"
 #include "support.h"
 #include "mimetype.h"
-#include "pixmaps.h"
 #include "main.h"
 #include "listview.h"
 #include "sample.h"
