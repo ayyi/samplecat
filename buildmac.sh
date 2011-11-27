@@ -37,8 +37,9 @@ if test -z "$NOREBUILD"; then
 	autoreconf
 	automake --gnu --add-missing -Wall
 	autoconf
-  CFLAGS="-arch i386 -arch x86_64 -arch ppc" \
-  CXXFLAGS="-arch i386 -arch x86_64 -arch ppc" \
+	CFLAGS="-arch i386 -arch x86_64 -arch ppc" \
+	CXXFLAGS="-arch i386 -arch x86_64 -arch ppc" \
+	LDFLAGS="-headerpad_max_install_names" \
 		./configure --disable-dependency-tracking
 	make clean
   make || exit

@@ -321,6 +321,7 @@ main(int argc, char** argv)
 	GtkOSXApplication *osxApp = (GtkOSXApplication*) 
 	g_object_new(GTK_TYPE_OSX_APPLICATION, NULL);
 #endif
+	app.gui_thread = pthread_self();
 
 	type_init();
 	pixmaps_init();

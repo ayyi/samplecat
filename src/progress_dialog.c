@@ -119,7 +119,10 @@ do_progress(int cur, int all)
 	set_progress(cur, all);
 #endif
 	statusbar_print(2,"referencing files.%s%s",(pw.tics&2)?"..":"",(pw.tics&1)?".":"");
+	int needlock = !pthread_equal(pthread_self(),app.gui_thread);                                                               
+	if(needlock) gdk_threads_enter();
 	while (gtk_events_pending ()) gtk_main_iteration ();
+	if(needlock) gdk_threads_leave();
 	return 0;
 }
 
@@ -165,8 +168,11 @@ do_progress_question(gchar *msg /* TODO: question-ID, config, options */ )
 	/* Wait for decision */
 	gtk_window_set_modal(GTK_WINDOW(pw.win), true);
 	while (pw.win && pw.btn==0 && !pw.aborted) {
-		//gtk_main_iteration ();
-		while (gtk_events_pending ()) gtk_main_iteration (); usleep(10000);
+		int needlock = !pthread_equal(pthread_self(),app.gui_thread);                                                               
+		if(needlock) gdk_threads_enter();
+		while (gtk_events_pending ()) gtk_main_iteration ();
+		if(needlock) gdk_threads_leave();
+		usleep(10000);
 	}
 	if (!pw.win) return 0; ///< window was closed: abort.
 	///NOTE: IF pw.aborted THEN pw.btn=0

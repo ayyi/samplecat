@@ -2,6 +2,7 @@
 #define __SAMPLECAT_MAIN_H_
 
 #include <gtk/gtk.h>
+#include <pthread.h>
 #include "typedefs.h"
 #include "types.h"
 #include "utils/mime_type.h"
@@ -90,6 +91,7 @@ struct _app
 	char*          config_filename;
 	const char*    cache_dir;
 	struct _config config;
+	pthread_t      gui_thread;
 	char           search_phrase[256]; // XXX TODO increase to PATH_MAX
 	char*          search_dir;
 	gchar*         search_category;
