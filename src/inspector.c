@@ -1,4 +1,4 @@
-#include "../config.h"
+#include "config.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -315,18 +315,21 @@ inspector_update_from_result(Sample* sample)
 }
 
 
-extern Filer filer;
 void
 inspector_update_from_fileview(GtkTreeView* treeview)
 {
 	Inspector* i = app.inspector;
+	Filer* filer = file_manager__get();
+
+#ifdef NO_USE_FM_VIEW_IF
 	GtkTreeModel* model = gtk_tree_view_get_model(treeview);
 	GtkTreeSelection* selection = gtk_tree_view_get_selection(treeview);
 	GList* list                 = gtk_tree_selection_get_selected_rows(selection, NULL);
 
-	if(!list){ return;}
+	if(!list){ return; }
 	if(g_list_length(list)<1){
 		g_list_free (list);
+		g_return_if_fail(false); //cannot get here - list of length < 1 is NULL (?)
 		return;
 	}
 
@@ -338,7 +341,21 @@ inspector_update_from_fileview(GtkTreeView* treeview)
 #define FILE_VIEW_COL_FILENAME 11 // see file_manager/file_view.c
 	gchar* fname;
 	gtk_tree_model_get(model, &iter, FILE_VIEW_COL_FILENAME, &fname, -1);
-	gchar * full_path = g_strdup_printf("%s%c%s", filer.real_path, G_DIR_SEPARATOR, fname);
+	gchar* full_path = g_strdup_printf("%s%c%s", filer->real_path, G_DIR_SEPARATOR, fname);
+
+#else
+	gchar* full_path = NULL;
+	DirItem* item;
+	ViewIter iter;
+	view_get_iter(filer->view, &iter, 0);
+	while((item = iter.next(&iter))){
+		if(view_get_selected(filer->view, &iter)){
+			full_path = g_build_filename(filer->real_path, item->leafname, NULL);
+			break;
+		}
+	}
+#endif
+	if(!full_path) return;
 
 	/* TODO: do nothing if directory selected 
 	 * 
@@ -372,7 +389,7 @@ inspector_update_from_fileview(GtkTreeView* treeview)
 		inspector_set_labels(sample);
 	} else {
 		inspector_clear();
-		gtk_label_set_text(GTK_LABEL(i->name),       sample->sample_name);
+		gtk_label_set_text(GTK_LABEL(i->name), sample->sample_name);
 	}
 	sample_unref(sample);
 }

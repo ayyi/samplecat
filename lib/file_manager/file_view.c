@@ -1260,10 +1260,10 @@ view_details_add_items(ViewIface* view, GPtrArray* new_items)
 		else                                      vitem->utf8_name = NULL;
 		dbg(2, "leaf=%20s owner=%3i size=%i", leafname, item->uid, item->size);
 
-		g_ptr_array_add(items, vitem);
+		g_ptr_array_add(items, vitem); // !!! model just points to the garray entry???? !!!
 
-		iter.user_data = GINT_TO_POINTER(items->len - 1); // !!! model just points to the garray entry???? !!!
-		gtk_tree_model_row_inserted(model, path, &iter);
+		iter.user_data = GINT_TO_POINTER(items->len - 1);
+		gtk_tree_model_row_inserted(model, path, &iter); // emit "row-inserted"
 		gtk_tree_path_next(path);
 	}
 

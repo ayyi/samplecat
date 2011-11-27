@@ -3,12 +3,14 @@
 #include <gtk/gtk.h>
 #include "rox_global.h"
 #include "dir.h"
+#include "diritem.h"
 #include "file_manager/typedefs.h"
 #include "file_manager/support.h"
 #include "filer.h"
 #include "file_manager/vala/filemanager.h"
 #include "file_manager/filetypes/filetype_plugin.h"
 #include "file_view.h"
+#include "view_iface.h"
 
 Filer*              file_manager__get            ();
 GtkWidget*          file_manager__new_window     (const char* path);

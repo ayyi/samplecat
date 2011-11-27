@@ -7,6 +7,7 @@
 #include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
 #include "file_manager.h"
+#include "file_manager/menu.h"
 #include "view_dir_tree.h"
 #include "gimp/gimpaction.h"
 #include "gimp/gimpactiongroup.h"
@@ -15,7 +16,6 @@
 #include "support.h"
 #include "main.h"
 #include "listview.h"
-#include "file_manager/menu.h"
 #include "dnd.h"
 #include "inspector.h"
 #include "progress_dialog.h"
@@ -756,12 +756,13 @@ window_on_fileview_row_selected(GtkTreeView* treeview, gpointer user_data)
 }
 
 
-#define FILE_VIEW_COL_FILENAME 11 // see file_manager/file_view.c
 static void
 menu__add_to_db(GtkMenuItem* menuitem, gpointer user_data)
 {
 	PF;
 
+#ifdef NO_USE_FM_VIEW_IF
+#define FILE_VIEW_COL_FILENAME 11 // see file_manager/file_view.c
 	GtkTreeModel* model = gtk_tree_view_get_model(GTK_TREE_VIEW(filer.view));
 	GtkTreeSelection* selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(filer.view));
 	GList* l = gtk_tree_selection_get_selected_rows(selection, NULL);
@@ -773,7 +774,7 @@ menu__add_to_db(GtkMenuItem* menuitem, gpointer user_data)
 			gtk_tree_model_get(model, &iter, FILE_VIEW_COL_FILENAME, &leaf, -1);
 			gchar* filepath = g_build_filename(filer.real_path, leaf, NULL);
 			dbg(2, "filepath=%s", filepath);
-			if (do_progress(0,0)) break;
+			if (do_progress(0, 0)) break;
 			add_file(filepath);
 			g_free(filepath);
 		}
@@ -781,6 +782,20 @@ menu__add_to_db(GtkMenuItem* menuitem, gpointer user_data)
 	hide_progress();
 	g_list_foreach(l, (GFunc)gtk_tree_path_free, NULL);
 	g_list_free(l);
+#else
+	DirItem* item;
+	ViewIter iter;
+	view_get_iter(filer.view, &iter, 0);
+	while((item = iter.next(&iter))){
+		if(view_get_selected(filer.view, &iter)){
+			gchar* filepath = g_build_filename(filer.real_path, item->leafname, NULL);
+			if(do_progress(0, 0)) break;
+			add_file(filepath);
+			g_free(filepath);
+		}
+	}
+	hide_progress();
+#endif
 }
 
 

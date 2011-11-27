@@ -29,7 +29,7 @@ sample_new()
 }
 
 Sample*
-sample_new_from_filename(char *path, gboolean path_alloced)
+sample_new_from_filename(char* path, gboolean path_alloced)
 {
 	if (!file_exists(path)) {
 		perr("file not found: %s\n", path);
