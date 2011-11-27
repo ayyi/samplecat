@@ -2,9 +2,9 @@ todo:
  v0.2.X:
   -automatically update old config-file s/database_/mysql_/ - add new values.
    eval: how many users * time to notify/document  vs. time to write one-time updater.
-  -prepare dialog(s) for file-management
  v0.3.X:
   -file-manager: rmdir/mkdir, unlink+confirm
+  -interactive import - similar, duplicate files.
   -re-connect files when moved external to samplecat
    * search new file 
    * mass-updates
@@ -48,6 +48,9 @@ sometime:
   -allow to search/filter on sample-traits: duration, max/min loudness, sample-rate
   -allow to configure a custom command to audition audio-files.
   -built in JACK player: compensate for latency/delay between libsamplerate and rubberband when updating parameters in real-time.
+  -bug or feature? newly imported files are added to the view - regardless of the search query filter.
+  -import/update files/dir -> queue, background processing.
+  -non-interactive import: List of postponed import tasks. /icon in taskbar -> popup conflict-resolver UI/.
 
 
 functionality status:

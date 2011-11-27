@@ -852,19 +852,23 @@ add_file(char* path)
 	GList* existing;
 	if((existing=backend.filter_by_audio(sample))) {
 		GList* l = existing; int i;
+#ifdef INTERACTIVE_IMPORT
 		GString* note = g_string_new("Similar or identical file(s) already present in database:\n");
+#endif
 		for(i=1;l;l=l->next, i++){
 			/* TODO :prompt user: ask to delete one of the files
 			 * - import/update the remaining file(s)
 			 */
 			dbg(0, "found similar or identical file: %s", l->data);
+#ifdef INTERACTIVE_IMPORT
 			if (i<10)
 				g_string_append_printf(note, "%d: '%s'\n",i, (char*) l->data);
+#endif
 		}
+#ifdef INTERACTIVE_IMPORT
 		if (i>9)
 				g_string_append_printf(note, "..\n and %d more.",i-9);
 		g_string_append_printf(note, "Add this file: '%s' ?", sample->full_path);
-
 		if (do_progress_question(note->str)!=1) {
 			// 0, aborted: -> whole add_file loop is aborted on next do_progress() call.
 			// 1, OK
@@ -876,8 +880,9 @@ add_file(char* path)
 		g_string_free(note, true);
 		g_list_foreach (existing, (GFunc)g_free, NULL);
 	  g_list_free(existing);
+#endif /* END interactive import */
 	}
-#endif
+#endif /* END check for similar files on import */
 
 	sample->online=1;
 	sample->id = backend.insert(sample);
