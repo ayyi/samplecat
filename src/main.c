@@ -419,7 +419,7 @@ main(int argc, char** argv)
 
 #ifdef USE_AYYI
 	ayyi_client_init();
-	g_idle_add(ayyi_connect, NULL);
+	g_idle_add((GSourceFunc)ayyi_connect, NULL);
 #endif
 
 #ifdef USE_TRACKER

@@ -104,9 +104,13 @@ static GPtrArray* hash_to_array(GHashTable *hash);
 static void       dir_force_update_item(Directory *dir, const gchar *leaf);
 static Directory* dir_new(const char *pathname);
 static void       dir_rescan(Directory *dir);
-#ifdef USE_DNOTIFY
+#ifdef USE_NOTIFY
 static void       dir_rescan_soon(Directory *dir);
+# ifdef USE_INOTIFY
+static gboolean   inotify_handler(GIOChannel *source, GIOCondition condition, gpointer udata);
+# else
 static void       dnotify_handler(int sig, siginfo_t *si, void *data);
+# endif
 #endif
 
 /****************************************************************
@@ -310,7 +314,7 @@ dir_check_this(const guchar *path)
 	g_free(real_path);
 }
 
-#ifdef USE_NOTIFY
+#ifdef USE_DNOTIFY //not currently used with inotify
 static void
 drop_notify(gpointer key, gpointer value, gpointer data)
 {

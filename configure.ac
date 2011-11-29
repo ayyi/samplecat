@@ -222,8 +222,10 @@ dnl ----------------------------------------------------------------------------
 
 if test "$enable_dnotify" = "yes"; then
 	AC_DEFINE(USE_DNOTIFY,1,[Use dnotify on Linux])
-	AC_DEFINE(USE_NOTIFY,1,[Use notification])
+	dnl AC_DEFINE(USE_NOTIFY,1,[Use notification]) dnl is set in dir.h
 fi
+
+AC_CHECK_HEADERS(sys/inotify.h)
 
 dnl -----------------------------------------------------------------------------
 
@@ -419,7 +421,7 @@ AC_MSG_RESULT([  AYYI/Dbus:                  $enable_ayyidbus])
 AC_MSG_RESULT([  CLI: gst,afplay,totem:      $enable_gplayer])
 AC_MSG_RESULT([Building zlib:                $enable_zlib])
 AC_MSG_RESULT([Building dnotify support:     $enable_dnotify])
-AC_MSG_RESULT([Building inotify support:     $enable_inotify])
+AC_MSG_RESULT([Building inotify support:     $ac_cv_header_sys_inotify_h])
 AC_MSG_RESULT([Building opengl support:      $enable_opengl])
 AC_MSG_RESULT([Building ayyi support:        $enable_ayyi])
 dnl AC_MSG_RESULT([Building soundfont support:   $enable_sf2])

@@ -321,29 +321,6 @@ inspector_update_from_fileview(GtkTreeView* treeview)
 	Inspector* i = app.inspector;
 	Filer* filer = file_manager__get();
 
-#ifdef NO_USE_FM_VIEW_IF
-	GtkTreeModel* model = gtk_tree_view_get_model(treeview);
-	GtkTreeSelection* selection = gtk_tree_view_get_selection(treeview);
-	GList* list                 = gtk_tree_selection_get_selected_rows(selection, NULL);
-
-	if(!list){ return; }
-	if(g_list_length(list)<1){
-		g_list_free (list);
-		g_return_if_fail(false); //cannot get here - list of length < 1 is NULL (?)
-		return;
-	}
-
-	GtkTreeIter iter;
-	gtk_tree_model_get_iter(model, &iter, list->data);
-	g_list_foreach (list, (GFunc)gtk_tree_path_free, NULL);
-	g_list_free (list);
-
-#define FILE_VIEW_COL_FILENAME 11 // see file_manager/file_view.c
-	gchar* fname;
-	gtk_tree_model_get(model, &iter, FILE_VIEW_COL_FILENAME, &fname, -1);
-	gchar* full_path = g_strdup_printf("%s%c%s", filer->real_path, G_DIR_SEPARATOR, fname);
-
-#else
 	gchar* full_path = NULL;
 	DirItem* item;
 	ViewIter iter;
@@ -354,7 +331,6 @@ inspector_update_from_fileview(GtkTreeView* treeview)
 			break;
 		}
 	}
-#endif
 	if(!full_path) return;
 
 	/* TODO: do nothing if directory selected 

@@ -34,8 +34,8 @@ ayyi_connect()
 
 	GError* error = NULL;
 	if((ayyi_client_connect (engine, &error))){
-		ardourd->on_shm = on_shm;
-		ayyi_client__dbus_get_shm(ardourd, NULL);
+		engine->on_shm = on_shm;
+		ayyi_client__dbus_get_shm(engine, NULL);
 	}else{
 		P_GERR;
 		dbg (0, "ayyi dbus connection failed.");

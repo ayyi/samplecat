@@ -20,7 +20,8 @@ libxdgmime_a_SOURCES = \
 	xdgmimeglob.c xdgmimeglob.h \
 	xdgmimeint.c xdgmimeint.h \
 	xdgmimemagic.c xdgmimemagic.h \
-	xdgmimeparent.c xdgmimeparent.h
+	xdgmimeparent.c xdgmimeparent.h \
+	xdgmimeicon.c xdgmimeicon.h
 
 EXTRA_DIST =
 

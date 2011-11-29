@@ -59,8 +59,7 @@
 #define COL_COLOUR 8
 #define COL_WEIGHT 9
 #define COL_VIEW_ITEM 10
-#define COL_FILENAME 11
-#define N_COLUMNS 12
+#define N_COLUMNS 11
 
 extern Filer filer;
 extern int debug;
@@ -282,12 +281,14 @@ details_get_value(GtkTreeModel* tree_model, GtkTreeIter* iter, gint column, GVal
 		g_value_set_string(value, view_item->utf8_name ? view_item->utf8_name : item->leafname);
 		return;
 	}
+#if 0
 	else if (column == COL_FILENAME)
 	{
 		g_value_init(value, G_TYPE_STRING);
 		g_value_set_string(value, item->leafname);
 		return;
 	}
+#endif
 	else if (column == COL_VIEW_ITEM)
 	{
 		g_value_init(value, G_TYPE_POINTER);
@@ -639,7 +640,7 @@ view_details_button_press(GtkWidget* widget, GdkEventButton* ev)
 {
 	PF;
 	Filer *filer_window = ((ViewDetails *) widget)->filer_window;
-	//GtkTreeView *tree = (GtkTreeView *) widget;
+	GtkTreeView* treeview = (GtkTreeView *) widget;
 
 	if(ev->type == GDK_BUTTON_PRESS && ev->button == 3){
 		if(filer_window->menu) gtk_menu_popup(GTK_MENU(filer_window->menu),
@@ -647,11 +648,11 @@ view_details_button_press(GtkWidget* widget, GdkEventButton* ev)
                    (ev) ? ev->button : 0,
                    gdk_event_get_time((GdkEvent*)ev));
 
-		GtkTreeSelection* selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(widget));
+		GtkTreeSelection* selection = gtk_tree_view_get_selection(treeview);
 		GList* selectionlist = gtk_tree_selection_get_selected_rows(selection, NULL);
 		if(!selectionlist){
 			GtkTreePath* path;
-			if(gtk_tree_view_get_path_at_pos(GTK_TREE_VIEW(widget), (gint)ev->x, (gint)ev->y, &path, NULL, NULL, NULL)){
+			if(gtk_tree_view_get_path_at_pos(treeview, (gint)ev->x, (gint)ev->y, &path, NULL, NULL, NULL)){
 				gtk_tree_selection_unselect_all(selection);
 				gtk_tree_selection_select_path(selection, path);
 				gtk_tree_path_free(path);
@@ -662,7 +663,7 @@ view_details_button_press(GtkWidget* widget, GdkEventButton* ev)
 		return FALSE;
 	}
 
-	//if (bev->window != gtk_tree_view_get_bin_window(tree))
+	//if (ev->window != gtk_tree_view_get_bin_window(treeview))
 		return GTK_WIDGET_CLASS(parent_class)->button_press_event(widget, ev);
 
 	//if (dnd_motion_press(widget, bev)) filer_perform_action(filer_window, bev);
@@ -1900,13 +1901,13 @@ view_details_dnd_get(GtkWidget* widget, GdkDragContext* context, GtkSelectionDat
 
 	ViewDetails* view = (ViewDetails*)widget;
 
+	gint length = 0;
+#ifdef OLD
 	GtkTreeModel* model        = (GtkTreeModel *) view;
 	GtkTreeSelection* selection = view->selection;
 	GList* selected_rows = gtk_tree_selection_get_selected_rows(selection, &(model));
 
 	GList* drop_list = NULL;
-	gchar *uri_text = NULL;
-	gint length = 0;
 
 	GtkTreeIter iter;
 	GList* row = selected_rows;
@@ -1928,7 +1929,22 @@ view_details_dnd_get(GtkWidget* widget, GdkDragContext* context, GtkSelectionDat
 	GList* l = selected_rows;
 	for(;l;l=l->next) gtk_tree_path_free(l->data);
 	g_list_free(selected_rows);
+#else
+	GList* drop_list = NULL;
 
+	DirItem* item;
+	ViewIter iter;
+	view_get_iter((ViewIface*)view, &iter, 0);
+	while((item = iter.next(&iter))){
+		if(view_get_selected((ViewIface*)view, &iter)){
+			gchar* path = g_build_filename(view->filer_window->real_path, item->leafname, NULL);
+			drop_list = g_list_append(drop_list, path);
+			break;
+		}
+	}
+#endif
+
+	gchar* uri_text = NULL;
 	switch (info) {
 		case TARGET_URI_LIST:
 		case TARGET_TEXT_PLAIN:
@@ -1942,7 +1958,8 @@ view_details_dnd_get(GtkWidget* widget, GdkDragContext* context, GtkSelectionDat
 	}
 
 	if(drop_list){
-		for(l=drop_list;l;l=l->next) g_free(l->data); //free path strings.
+		GList* l = drop_list;
+		for(;l;l=l->next) g_free(l->data); //free path strings.
 		g_list_free(drop_list);
 	}
 }

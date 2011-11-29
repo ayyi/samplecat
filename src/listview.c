@@ -38,7 +38,7 @@ static gboolean listview__get_first_selected_iter(GtkTreeIter*);
 static GtkTreePath* listview__get_first_selected_path();
 #if NEVER
 static int      listview__path_get_id            (GtkTreePath*);
-static gboolean treeview_get_tags_cell  (GtkTreeView*, guint x, guint y, GtkCellRenderer**);
+static gboolean treeview_get_tags_cell           (GtkTreeView*, guint x, guint y, GtkCellRenderer**);
 #endif
 
 
@@ -454,7 +454,7 @@ listview__dnd_get(GtkWidget *widget, GdkDragContext *context, GtkSelectionData *
 	}
 
 	if (uri_text) {
-		gtk_selection_data_set(selection_data, selection_data->target, BITS_PER_CHAR_8, (guchar*)uri_text, length);
+		gtk_selection_data_set(selection_data, selection_data->target, 8, (guchar*)uri_text, length);
 		g_free(uri_text);
 	}
 

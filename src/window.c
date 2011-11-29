@@ -352,7 +352,7 @@ colourise_boxes()
 #define LUMSHIFT (0)
 	colour_box_add(&app.bg_colour); // "transparent" - none
 	int i;
-  for (i=0;i<PALETTE_SIZE-1;i++) {
+	for (i=0;i<PALETTE_SIZE-1;i++) {
 		float h, s, l; 
 		l=1.0; h = (float)i / ((float)PALETTE_SIZE-1.0);
 		s=(i%2)?.6:.9; 
@@ -761,28 +761,6 @@ menu__add_to_db(GtkMenuItem* menuitem, gpointer user_data)
 {
 	PF;
 
-#ifdef NO_USE_FM_VIEW_IF
-#define FILE_VIEW_COL_FILENAME 11 // see file_manager/file_view.c
-	GtkTreeModel* model = gtk_tree_view_get_model(GTK_TREE_VIEW(filer.view));
-	GtkTreeSelection* selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(filer.view));
-	GList* l = gtk_tree_selection_get_selected_rows(selection, NULL);
-	for (;l;l=l->next) {
-		GtkTreePath* path = l->data;
-		GtkTreeIter iter;
-		if (gtk_tree_model_get_iter(model, &iter, path)) {
-			gchar* leaf;
-			gtk_tree_model_get(model, &iter, FILE_VIEW_COL_FILENAME, &leaf, -1);
-			gchar* filepath = g_build_filename(filer.real_path, leaf, NULL);
-			dbg(2, "filepath=%s", filepath);
-			if (do_progress(0, 0)) break;
-			add_file(filepath);
-			g_free(filepath);
-		}
-	}
-	hide_progress();
-	g_list_foreach(l, (GFunc)gtk_tree_path_free, NULL);
-	g_list_free(l);
-#else
 	DirItem* item;
 	ViewIter iter;
 	view_get_iter(filer.view, &iter, 0);
@@ -795,7 +773,6 @@ menu__add_to_db(GtkMenuItem* menuitem, gpointer user_data)
 		}
 	}
 	hide_progress();
-#endif
 }
 
 

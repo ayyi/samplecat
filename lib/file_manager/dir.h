@@ -14,10 +14,18 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 
-/* Check for dnotify support */
-#if defined(DN_MULTISHOT) && defined(SIGRTMIN)
-//# define USE_DNOTIFY
+/* Check for [id]notify support */
+#if defined(HAVE_SYS_INOTIFY_H)
+# define USE_INOTIFY
+#elif defined(DN_MULTISHOT) && defined(SIGRTMIN)
+# define USE_DNOTIFY
+#endif
+#if defined(USE_INOTIFY) || defined(USE_DNOTIFY)
+#define USE_NOTIFY
 extern gboolean dnotify_wakeup_flag;
+#endif
+#if defined(USE_INOTIFY)
+#undef USE_DNOTIFY //TODO this conflicts with configure.ac
 #endif
 
 typedef enum {
