@@ -321,7 +321,7 @@ type_from_path(const char *path)
 	*/
 
 	/* Try name and contents next */
-	const char* type_name = xdg_mime_get_mime_type_for_file(path);
+	const char* type_name = xdg_mime_get_mime_type_for_file(path, NULL);
 	if (type_name) return get_mime_type(type_name, TRUE);
 
 	return NULL;
