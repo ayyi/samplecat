@@ -148,8 +148,8 @@ make_path(const char *dir, const char *leaf)
 	if (!buffer)
 		buffer = g_string_new(NULL);
 
-	g_return_val_if_fail(dir != NULL, (guchar*)buffer->str);
-	g_return_val_if_fail(leaf != NULL, (guchar*)buffer->str);
+	g_return_val_if_fail(dir, (guchar*)buffer->str);
+	g_return_val_if_fail(leaf, (guchar*)buffer->str);
 
 	if (buffer->str != dir)
 		g_string_assign(buffer, dir);

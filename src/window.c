@@ -177,8 +177,7 @@ GtkWindow
 	gtk_container_add(GTK_CONTAINER(app.scroll), app.view);
 
 	dbg(2, "making fileview pane...");
-	void
-	make_fileview_pane()
+	void make_fileview_pane()
 	{
 		GtkWidget* fman_hpaned = gtk_hpaned_new();
 		gtk_paned_set_position(GTK_PANED(fman_hpaned), 210);

@@ -51,6 +51,8 @@ static void file_manager__load_plugins();
 static Filer*
 file_manager__init()
 {
+	memset(&filer, 0, sizeof(Filer));
+
 	filer.filter               = FILER_SHOW_ALL;
 	filer.filter_string        = NULL;
 	filer.regexp               = NULL;
