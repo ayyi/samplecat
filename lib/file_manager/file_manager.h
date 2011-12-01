@@ -2,8 +2,10 @@
 #define __file_manager_h__
 #include <gtk/gtk.h>
 #include "rox_global.h"
+#include "mimetype.h"
 #include "dir.h"
 #include "diritem.h"
+#include "rox_support.h"
 #include "file_manager/typedefs.h"
 #include "file_manager/support.h"
 #include "filer.h"

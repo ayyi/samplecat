@@ -76,7 +76,7 @@ char theme_name[64] = "Amaranth";
 static MIME_type *get_mime_type(const gchar *type_name, gboolean can_create);
 //static gboolean remove_handler_with_confirm(const guchar *path);
 /*static*/ void _set_icon_theme(void);
-static GList *build_icon_theme(/*Option *option, xmlNode *node, */guchar *label);
+static GList *build_icon_theme(/*guchar *label */);
 static void print_icon_list();
 
 /* Hash of all allocated MIME types, indexed by "media/subtype".
@@ -140,23 +140,10 @@ void type_init(void)
 	inode_unknown = get_mime_type("inode/unknown", TRUE);
 	inode_door = get_mime_type("inode/door", TRUE);
 
-	//option_add_string(&o_icon_theme, "icon_theme", "ROX");
-	//option_add_int(&o_display_colour_types, "display_colour_types", TRUE);
-	//option_register_widget("icon-theme-chooser", build_icon_theme);
-	
-	//int i;
-	//for (i = 0; i < NUM_TYPE_COLOURS; i++)
-	//	option_add_string(&o_type_colours[i],
-	//			  opt_type_colours[i][0],
-	//			  opt_type_colours[i][1]);
-	//alloc_type_colours();
-
 	_set_icon_theme();
 
-	//option_add_notify(options_changed);
-
-	guchar* label = g_new0(guchar, 64);
-	themes = build_icon_theme(label);
+	//guchar* label = g_new0(guchar, 64);
+	themes = build_icon_theme(/*label*/);
 }
 
 
@@ -792,7 +779,7 @@ add_themes_from_dir(GPtrArray *names, const char *dir)
 
 
 static GList*
-build_icon_theme(/*Option *option, xmlNode *node, */guchar *label)
+build_icon_theme(/*guchar *label*/)
 {
 	//-appears to build a menu list of availabe themes.
 
@@ -802,18 +789,7 @@ build_icon_theme(/*Option *option, xmlNode *node, */guchar *label)
 	gint n_dirs = 0;
 	int i;
 
-	//g_return_val_if_fail(option != NULL, NULL);
-	g_return_val_if_fail(label != NULL, NULL);
-
-	//hbox = gtk_hbox_new(FALSE, 4);
-
-	//gtk_box_pack_start(GTK_BOX(hbox), gtk_label_new(label),	FALSE, TRUE, 0);
-
-	//button = gtk_option_menu_new();
-	//gtk_box_pack_start(GTK_BOX(hbox), button, TRUE, TRUE, 0);
-
 	menu = gtk_menu_new();
-	//gtk_option_menu_set_menu(GTK_OPTION_MENU(button), menu);
 
 	gtk_icon_theme_get_search_path(icon_theme, &theme_dirs, &n_dirs);
 	names = g_ptr_array_new();

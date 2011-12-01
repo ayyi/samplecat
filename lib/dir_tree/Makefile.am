@@ -13,6 +13,7 @@ AM_CFLAGS = \
 noinst_LIBRARIES = libdirtree.a
 
 libdirtree_a_SOURCES = \
+	view_dir_tree.c view_dir_tree.h \
 	gqview.h typedefs.h \
 	ui_fileops.c ui_fileops.h \
 	ui_tree_edit.c ui_tree_edit.h \

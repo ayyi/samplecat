@@ -8,7 +8,7 @@
 #include <gdk/gdkkeysyms.h>
 #include "file_manager.h"
 #include "file_manager/menu.h"
-#include "view_dir_tree.h"
+#include "dir_tree/view_dir_tree.h"
 #include "gimp/gimpaction.h"
 #include "gimp/gimpactiongroup.h"
 #include "typedefs.h"
@@ -186,7 +186,7 @@ GtkWindow
 
 		void fman_left()
 		{
-			void dir_on_select(ViewDirTree *vdt, const gchar *path, gpointer data)
+			void dir_on_select(ViewDirTree* vdt, const gchar* path, gpointer data)
 			{
 				PF;
 				filer_change_to(&filer, path, NULL);
@@ -203,12 +203,9 @@ GtkWindow
 
 		void fman_right()
 		{
-			GtkWidget* scroll2 = scrolled_window_new();
-			gtk_paned_add2(GTK_PANED(fman_hpaned), scroll2);
-
 			const char* dir = (app.config.browse_dir && app.config.browse_dir[0] && g_file_test(app.config.browse_dir, G_FILE_TEST_IS_DIR)) ? app.config.browse_dir : g_get_home_dir();
 			GtkWidget* file_view = app.fm_view = file_manager__new_window(dir);
-			gtk_container_add(GTK_CONTAINER(scroll2), file_view);
+			gtk_paned_add2(GTK_PANED(fman_hpaned), VIEW_DETAILS(file_view)->scroll_win);
 			g_signal_connect(G_OBJECT(file_view), "cursor-changed", G_CALLBACK(window_on_fileview_row_selected), NULL);
 
 			void window_on_dir_changed(GtkWidget* widget, gpointer data)

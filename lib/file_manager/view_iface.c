@@ -141,8 +141,6 @@ gboolean view_autoselect(ViewIface *obj, const gchar *leaf)
 
 		if (view_cursor_visible(obj))
 			view_cursor_to_iter(obj, &iter);
-		else
-			view_wink_item(obj, &iter);
 
 		return TRUE;
 	}
@@ -273,14 +271,6 @@ gboolean view_get_selected(ViewIface *obj, ViewIter *iter)
 	g_return_val_if_fail(VIEW_IS_IFACE(obj), FALSE);
 
 	return VIEW_IFACE_GET_CLASS(obj)->get_selected(obj, iter);
-}
-
-/* Flash / draw attention to this item */
-void view_wink_item(ViewIface *obj, ViewIter *iter)
-{
-	g_return_if_fail(VIEW_IS_IFACE(obj));
-
-	VIEW_IFACE_GET_CLASS(obj)->wink_item(obj, iter);
 }
 
 /* Clear the selection, then select this item. Does it atomically to avoid

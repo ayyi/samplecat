@@ -30,17 +30,8 @@
 #include <gdk/gdkkeysyms.h>
 
 #include "file_manager.h"
-#include "rox_global.h"
-#include "src/typedefs.h"
-#include "src/types.h"
-#include "rox_support.h"
 #include "utils/ayyi_utils.h"
 
-#include "view_iface.h"
-#include "file_view.h"
-#include "dir.h"
-#include "diritem.h"
-#include "mimetype.h"
 #include "display.h"
 #include "utils/pixmaps.h"
 #include "dnd.h"
@@ -139,9 +130,14 @@ view_details_new(Filer* filer_window)
 	ViewDetails* view_details = g_object_new(view_details_get_type(), NULL);
 	view_details->filer_window = filer_window;
 	view_details->use_alt_colours = false;
+	filer_window->view = (ViewIface*)view_details;
 
 	filer_window->menu = fm__make_context_menu();
 
+	view_details->scroll_win = gtk_scrolled_window_new(NULL, NULL); //adjustments created automatically.
+	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(view_details->scroll_win), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
+	gtk_container_add(GTK_CONTAINER(view_details->scroll_win), (GtkWidget*)view_details);
+	gtk_widget_show(view_details->scroll_win);
 #if 0
 	gtk_range_set_adjustment(GTK_RANGE(filer_window->scrollbar),
 		gtk_tree_view_get_vadjustment(GTK_TREE_VIEW(view_details)));
@@ -281,14 +277,6 @@ details_get_value(GtkTreeModel* tree_model, GtkTreeIter* iter, gint column, GVal
 		g_value_set_string(value, view_item->utf8_name ? view_item->utf8_name : item->leafname);
 		return;
 	}
-#if 0
-	else if (column == COL_FILENAME)
-	{
-		g_value_init(value, G_TYPE_STRING);
-		g_value_set_string(value, item->leafname);
-		return;
-	}
-#endif
 	else if (column == COL_VIEW_ITEM)
 	{
 		g_value_init(value, G_TYPE_POINTER);
@@ -1161,11 +1149,9 @@ wrap_sort(gconstpointer a, gconstpointer b, ViewDetails *view_details)
 	ViewItem *ia = *(ViewItem **) a;
 	ViewItem *ib = *(ViewItem **) b;
 
-//#if 0
 	if (view_details->filer_window->sort_order == GTK_SORT_ASCENDING)
 		return view_details->sort_fn(ia->item, ib->item);
 	else
-//#endif
 		return -view_details->sort_fn(ia->item, ib->item);
 }
 
@@ -1174,9 +1160,6 @@ resort(ViewDetails *view_details)
 {
 	ViewItem **items = (ViewItem **) view_details->items->pdata;
 	gint i, len = view_details->items->len;
-#if 0
-	int wink_item = view_details->wink_item;
-#endif
 
 	if (!len) return;
 
@@ -1202,14 +1185,7 @@ resort(ViewDetails *view_details)
 	for (i = len - 1; i >= 0; i--)
 	{
 		new_order[i] = items[i]->old_pos;
-#if 0
-		if (wink_item == items[i]->old_pos) wink_item = i;
-#endif
 	}
-
-#if 0
-	view_details->wink_item = wink_item;
-#endif
 
 	GtkTreePath* path = gtk_tree_path_new();
 	gtk_tree_model_rows_reordered((GtkTreeModel*)view_details, path, NULL, (int*)new_order);
@@ -1220,7 +1196,6 @@ resort(ViewDetails *view_details)
 static void
 view_details_sort(ViewIface *view)
 {
-	PF;
 	resort((ViewDetails *) view);
 	gtk_tree_sortable_sort_column_changed((GtkTreeSortable *) view);
 }
@@ -1318,7 +1293,7 @@ view_details_update_items(ViewIface *view, GPtrArray *items)
 {
 	PF;
 	ViewDetails	*view_details = (ViewDetails *) view;
-	GtkTreeModel	*model = (GtkTreeModel *) view_details;
+	GtkTreeModel *model = (GtkTreeModel *) view_details;
 
 	g_return_if_fail(items->len > 0);
 	

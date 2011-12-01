@@ -13,7 +13,6 @@ typedef enum {
 	SORT_PATH
 } FmSortType;
 
-//typedef struct _MIME_type          MIME_type;
 typedef struct _GimpActionGroup    GimpActionGroup;
 
 #endif //__file_manager_typedefs_h__

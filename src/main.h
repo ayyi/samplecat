@@ -6,6 +6,7 @@
 #include "typedefs.h"
 #include "types.h"
 #include "utils/mime_type.h"
+#include "dir_tree/view_dir_tree.h"
 
 #define EXPAND_TRUE 1
 #define EXPAND_FALSE 0

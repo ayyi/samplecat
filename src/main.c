@@ -32,7 +32,6 @@ char * program_name;
   #include "ayyi_model.h"
 #endif
 #include "file_manager.h"
-#include "view_dir_tree.h"
 #include "typedefs.h"
 #ifdef USE_TRACKER
   #include "src/db/tracker.h"
@@ -1065,7 +1064,7 @@ menu_play_stop(GtkWidget* widget, gpointer user_data)
 static void
 edit_row(GtkWidget* widget, gpointer user_data)
 {
-	//currently this only works for the The tags cell.	
+	//currently this only works for the The tags cell.
 	PF;
 	GtkTreeView* treeview = GTK_TREE_VIEW(app.view);
 
@@ -1092,7 +1091,6 @@ edit_row(GtkWidget* widget, gpointer user_data)
 			                                 START_EDITING);
 			//g_signal_handlers_unblock_by_func(treeview, cursor_changed, self);
 
-
 			g_free(path_str);
 		} else perr("cannot get iter.\n");
 		gtk_tree_path_free(treepath);
@@ -1102,25 +1100,25 @@ edit_row(GtkWidget* widget, gpointer user_data)
 
 
 static MenuDef _menu_def[] = {
-	{"Delete",         G_CALLBACK(menu_delete_row), GTK_STOCK_DELETE,     true},
-	{"Update",         G_CALLBACK(update_rows),      GTK_STOCK_REFRESH,    true},
-	{"Force Update",   G_CALLBACK(update_rows),      GTK_STOCK_REFRESH,    true},
-	{"Play All",       G_CALLBACK(menu_play_all),   GTK_STOCK_MEDIA_PLAY, true},
-	{"Stop Playback",  G_CALLBACK(menu_play_stop),  GTK_STOCK_MEDIA_STOP, true},
+	{"Delete",         G_CALLBACK(menu_delete_row), GTK_STOCK_DELETE,      true},
+	{"Update",         G_CALLBACK(update_rows),     GTK_STOCK_REFRESH,     true},
+	{"Force Update",   G_CALLBACK(update_rows),     GTK_STOCK_REFRESH,     true},
+	{"Play All",       G_CALLBACK(menu_play_all),   GTK_STOCK_MEDIA_PLAY,  true},
+	{"Stop Playback",  G_CALLBACK(menu_play_stop),  GTK_STOCK_MEDIA_STOP,  true},
 	{"Reset Colours",  G_CALLBACK(listview__reset_colours),
-		                                         GTK_STOCK_OK, true},
-	{"Edit tags",      G_CALLBACK(edit_row),   GTK_STOCK_EDIT,        true},
-	{"Open",           G_CALLBACK(edit_row),   GTK_STOCK_OPEN,       false},
-	{"Open Directory", G_CALLBACK(NULL),       GTK_STOCK_OPEN,        true},
-	{"",                                                                  },
-	{"View",           G_CALLBACK(NULL),       GTK_STOCK_PREFERENCES, true},
-	{"Prefs",          G_CALLBACK(NULL),       GTK_STOCK_PREFERENCES, true},
+	                                                GTK_STOCK_OK, true},
+	{"Edit tags",      G_CALLBACK(edit_row),        GTK_STOCK_EDIT,        true},
+	{"Open",           G_CALLBACK(edit_row),        GTK_STOCK_OPEN,       false},
+	{"Open Directory", G_CALLBACK(NULL),            GTK_STOCK_OPEN,        true},
+	{"",                                                                       },
+	{"View",           G_CALLBACK(NULL),            GTK_STOCK_PREFERENCES, true},
+	{"Prefs",          G_CALLBACK(NULL),            GTK_STOCK_PREFERENCES, true},
 };
 
 static GtkWidget*
 make_context_menu()
 {
-	GtkWidget *menu = gtk_menu_new();
+	GtkWidget* menu = gtk_menu_new();
 
 	add_menu_items_from_defn(menu, _menu_def, G_N_ELEMENTS(_menu_def));
 
@@ -1139,7 +1137,7 @@ make_context_menu()
 		GtkWidget* sub = gtk_menu_new();
 		gtk_menu_item_set_submenu(GTK_MENU_ITEM(view), sub);
 
-		void set_view_toggle_state(GtkMenuItem* item, struct _view_option* option)
+		void set_view_toggle_state(GtkMenuItem* item, ViewOption* option)
 		{
 			option->value = !option->value;
 			gulong sig_id = g_signal_handler_find(item, G_SIGNAL_MATCH_FUNC, 0, 0, 0, option->on_toggle, NULL);
@@ -1153,7 +1151,7 @@ make_context_menu()
 
 		void toggle_view_spectrogram(GtkMenuItem* item, gpointer userdata)
 		{
-			struct _view_option* option = &app.view_options[SHOW_SPECTROGRAM];
+			ViewOption* option = &app.view_options[SHOW_SPECTROGRAM];
 			option->value = gtk_check_menu_item_get_active(GTK_CHECK_MENU_ITEM(item));
 			dbg(2, "on=%i", option->value);
 
@@ -1163,13 +1161,13 @@ make_context_menu()
 		void toggle_view_filemanager(GtkMenuItem* item, gpointer userdata)
 		{
 			PF;
-			struct _view_option* option = &app.view_options[SHOW_SPECTROGRAM];
+			ViewOption* option = &app.view_options[SHOW_SPECTROGRAM];
 			option->value = gtk_check_menu_item_get_active(GTK_CHECK_MENU_ITEM(item));
 			show_widget_if(app.fm_view, option->value);
 			show_widget_if(app.dir_treeview2->widget, option->value);
 		}
 
-		struct _view_option* option = &app.view_options[SHOW_FILEMANAGER];
+		ViewOption* option = &app.view_options[SHOW_FILEMANAGER];
 		option->name = "Filemanager";
 		option->value = true;
 		option->on_toggle = toggle_view_filemanager;
@@ -1179,7 +1177,7 @@ make_context_menu()
 		option->on_toggle = toggle_view_spectrogram;
 
 		int i; for(i=0;i<MAX_VIEW_OPTIONS;i++){
-			struct _view_option* option = &app.view_options[i];
+			ViewOption* option = &app.view_options[i];
 			GtkWidget* menu_item = gtk_check_menu_item_new_with_mnemonic(option->name);
 			gtk_menu_shell_append(GTK_MENU_SHELL(sub), menu_item);
 			gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menu_item), option->value);
@@ -1656,8 +1654,8 @@ void auditioner_nullS(Sample *s) {;}
 void
 set_auditioner() /* tentative - WIP */
 {
-  printf("auditioner backend: "); fflush(stdout);
-  const static Auditioner a_null = {
+	printf("auditioner backend: "); fflush(stdout);
+	const static Auditioner a_null = {
 		&auditioner_nullC,
 		&auditioner_null,
 		&auditioner_null,
@@ -1685,7 +1683,7 @@ set_auditioner() /* tentative - WIP */
 	};
 #endif
 #ifdef HAVE_AYYIDBUS
-  const static Auditioner a_ayyidbus = {
+	const static Auditioner a_ayyidbus = {
 		&auditioner_check,
 		&auditioner_connect,
 		&auditioner_disconnect,
@@ -1701,7 +1699,7 @@ set_auditioner() /* tentative - WIP */
 	};
 #endif
 #ifdef HAVE_GPLAYER
-  const static Auditioner a_gplayer = {
+	const static Auditioner a_gplayer = {
 		&gplayer_check,
 		&gplayer_connect,
 		&gplayer_disconnect,

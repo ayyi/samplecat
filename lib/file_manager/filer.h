@@ -112,7 +112,7 @@ gboolean filer_update_dir(Filer *filer_window, gboolean warning);
 #if 0
 DirItem *filer_selected_item(FilerWindow *filer_window);
 #endif
-void change_to_parent(Filer *filer_window);
+void fm__change_to_parent(Filer *filer_window);
 void full_refresh(void);
 #if 0
 void filer_openitem(FilerWindow *filer_window, ViewIter *iter, OpenFlags flags);

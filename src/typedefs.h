@@ -35,13 +35,10 @@ typedef struct _sample            Sample;
 typedef struct _inspector         Inspector;
 typedef struct _playctrl          PlayCtrl;
 typedef struct _auditioner        Auditioner;
+typedef struct _view_option       ViewOption;
 
 #ifndef __file_manager_h__
 typedef struct _GimpActionGroup    GimpActionGroup;
-#endif
-
-#ifndef __gqview2_typedefs_h__
-typedef struct _ViewDirTree ViewDirTree;
 #endif
 
 #ifndef true

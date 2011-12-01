@@ -10,7 +10,6 @@ AM_CFLAGS = \
 	-DPACKAGE_LOCALE_DIR=\""$(prefix)/$(DATADIRNAME)/locale"\" \
 	-DIMAGES_DIR=\"$(imagesdir)\" \
 	-I../ \
-	-I../gqview2 \
 	-DG_LOG_DOMAIN=\"FileMan\" \
 	-I$(top_srcdir)/src \
 	-I$(top_srcdir)/lib/xdgmime \

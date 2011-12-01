@@ -34,20 +34,13 @@
 #include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
 
+#include "file_manager.h"
 #include "utils/fscache.h"
-#include "file_manager/file_manager.h"
 #include "utils/ayyi_utils.h"
 
-#include "rox_global.h"
 #include "display.h"
-#include "dir.h"
-#include "filer.h"
-#include "rox_support.h"
 #include "utils/pixmaps.h"
 #include "menu.h"
-#include "diritem.h"
-#include "view_iface.h"
-#include "file_view.h"
 #include "mimetype.h"
 #include "cell_icon.h"
 
@@ -1077,7 +1070,7 @@ filer_open_parent(FilerWindow *filer_window)
 #endif //0
 
 void
-change_to_parent(Filer *filer_window)
+fm__change_to_parent(Filer *filer_window)
 {
 	const char *current = filer_window->sym_path;
 

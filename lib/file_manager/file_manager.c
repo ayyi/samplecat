@@ -31,12 +31,6 @@
 #include "utils/ayyi_utils.h"
 #include "utils/mime_type.h"
 #include "file_manager.h"
-#include "view_iface.h"
-#include "file_view.h"
-#include "dir.h"
-#include "diritem.h"
-#include "rox_support.h"
-#include "mimetype.h"
 
 Filer filer;
 GList* all_filer_windows = NULL;
@@ -67,7 +61,7 @@ file_manager__init()
 	new_file_manager = ayyi_libfilemanager_new(&filer);
 
 	//type_init();
-	//pixmaps_init();
+	pixmaps_init();
 	dir_init();
 
 	gboolean _load_plugins(gpointer user_data){ file_manager__load_plugins(); return IDLE_STOP; }

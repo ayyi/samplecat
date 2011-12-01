@@ -24,6 +24,7 @@ typedef struct _ViewDetails ViewDetails;
 struct _ViewDetails {
 	GtkTreeView       treeview;
 	GtkTreeSelection* selection;
+	GtkWidget*        scroll_win;
 
 	Filer*            filer_window; /* Used for styles, etc */
 

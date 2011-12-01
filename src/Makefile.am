@@ -27,8 +27,6 @@ AM_CXXFLAGS = $(AM_CFLAGS)
 
 bin_PROGRAMS = samplecat
 
-GQVIEW_SRC = view_dir_tree.c view_dir_tree.h
-
 if ENABLE_AYYI
 AYYI_SRC = ayyi.c ayyi.h ayyi_model.c ayyi_model.h
 endif
@@ -105,8 +103,7 @@ samplecat_SOURCES = \
 	$(FFT_SRC) \
 	$(OPENGL_SRC) \
 	$(AYYI_SRC) \
-	$(AUDITIONER_AYYI) $(AUDITIONER_GPLAYER) $(AUDITIONER_JACK) \
-	$(GQVIEW_SRC)
+	$(AUDITIONER_AYYI) $(AUDITIONER_GPLAYER) $(AUDITIONER_JACK)
 
 samplecat_LDADD = \
 	$(top_srcdir)/lib/utils/libutils.a \

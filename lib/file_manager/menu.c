@@ -299,7 +299,7 @@ menu__go_down_dir(GtkMenuItem* menuitem, gpointer user_data)
 static void
 menu__go_up_dir(GtkMenuItem* menuitem, gpointer user_data)
 {
-	change_to_parent(&filer);
+	fm__change_to_parent(&filer);
 }
 
 
