@@ -183,7 +183,7 @@ GtkWindow
 		gtk_paned_set_position(GTK_PANED(fman_hpaned), 210);
 		gtk_paned_add2(GTK_PANED(main_vpaned), fman_hpaned);
 
-		void fman_left()
+		void fman_left(const char* initial_folder)
 		{
 			void dir_on_select(ViewDirTree* vdt, const gchar* path, gpointer data)
 			{
@@ -192,7 +192,7 @@ GtkWindow
 			}
 
 			gint expand = TRUE;
-			ViewDirTree* dir_list = app.dir_treeview2 = vdtree_new(g_get_home_dir(), expand);
+			ViewDirTree* dir_list = app.dir_treeview2 = vdtree_new(initial_folder, expand); 
 			vdtree_set_select_func(dir_list, dir_on_select, NULL); //callback
 			GtkWidget* fs_tree = dir_list->widget;
 			gtk_paned_add1(GTK_PANED(fman_hpaned), fs_tree);
@@ -200,10 +200,9 @@ GtkWindow
 			make_menu_actions(fm_tree_keys, G_N_ELEMENTS(fm_tree_keys), vdtree_add_menu_item);
 		}
 
-		void fman_right()
+		void fman_right(const char* initial_folder)
 		{
-			const char* dir = (app.config.browse_dir && app.config.browse_dir[0] && g_file_test(app.config.browse_dir, G_FILE_TEST_IS_DIR)) ? app.config.browse_dir : g_get_home_dir();
-			GtkWidget* file_view = app.fm_view = file_manager__new_window(dir);
+			GtkWidget* file_view = app.fm_view = file_manager__new_window(initial_folder);
 			gtk_paned_add2(GTK_PANED(fman_hpaned), VIEW_DETAILS(file_view)->scroll_win);
 			g_signal_connect(G_OBJECT(file_view), "cursor-changed", G_CALLBACK(window_on_fileview_row_selected), NULL);
 
@@ -222,8 +221,9 @@ GtkWindow
 			g_signal_connect(G_OBJECT(file_view), "drag_data_get", G_CALLBACK(view_details_dnd_get), NULL);
 		}
 
-		fman_left();
-		fman_right();
+		const char* dir = (app.config.browse_dir && app.config.browse_dir[0] && g_file_test(app.config.browse_dir, G_FILE_TEST_IS_DIR)) ? app.config.browse_dir : g_get_home_dir();
+		fman_left(dir);
+		fman_right(dir);
 	}
 	make_fileview_pane();
 
@@ -942,6 +942,9 @@ on_layout_changed()
 			}
 		}
 	}
+
+	/* scroll to current dir in tree-view bottom left */
+	vdtree_set_path(app.dir_treeview2, app.dir_treeview2->path);
 }
 
 

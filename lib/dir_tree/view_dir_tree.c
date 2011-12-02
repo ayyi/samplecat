@@ -1382,11 +1382,19 @@ gint vdtree_set_path(ViewDirTree *vdt, const gchar *path)
 	GtkTreeIter iter;
 
 	if (!path) return FALSE;
+#if 0
 	if (vdt->path && strcmp(path, vdt->path) == 0) return TRUE;
 
 	g_free(vdt->path);
 	vdt->path = g_strdup(path);
 
+#else
+	if (!vdt->path || strcmp(path, vdt->path)) {
+		g_free(vdt->path);
+		vdt->path = g_strdup(path);
+	}
+	/* scroll to path - no matter if it changed */
+#endif
 	fd = vdtree_populate_path(vdt, vdt->path, TRUE, TRUE);
 
 	if (!fd) return FALSE;
