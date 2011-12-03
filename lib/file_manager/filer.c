@@ -37,8 +37,6 @@
 #include "file_manager.h"
 #include "utils/fscache.h"
 #include "utils/ayyi_utils.h"
-
-#include "display.h"
 #include "utils/pixmaps.h"
 #include "menu.h"
 #include "mimetype.h"

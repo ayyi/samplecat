@@ -1,7 +1,7 @@
 /*
 ** Copyright (C) 2007-2009 Erik de Castro Lopo <erikd@mega-nerd.com>
 **
-** modified for soundcat by Tim Ordord and Robin Gareus
+** modified for soundcat by Tim Orford and Robin Gareus
 ** based on sndfile-tools-1.03
 **
 ** This program is free software: you can redistribute it and/or modify
@@ -549,14 +549,14 @@ cancel_spectrogram(const char* path)
 void
 get_spectrogram(const char* path, SpectrogramReady callback, gpointer user_data)
 {
-	gchar* cache_dir = g_build_filename(app.cache_dir, "spectrogram", NULL);
+	gchar* cache_dir = g_build_filename(application->cache_dir, "spectrogram", NULL);
 	g_mkdir_with_parents(cache_dir, S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP);
 
 	gchar* make_cache_name(const char* path)
 	{
 		gchar* name = str_replace(path, "/", "___");
 		gchar* name2 = g_strdup_printf("%s.png", name);
-		gchar* cache_path = g_build_filename(app.cache_dir, "spectrogram", name2, NULL);
+		gchar* cache_path = g_build_filename(application->cache_dir, "spectrogram", name2, NULL);
 		g_free(name);
 		g_free(name2);
 		return cache_path;
@@ -632,7 +632,7 @@ get_spectrogram(const char* path, SpectrogramReady callback, gpointer user_data)
 			}
 
 			if(pixbuf){
-				gchar* cache_dir = g_build_filename(app.cache_dir, "spectrogram", NULL);
+				gchar* cache_dir = g_build_filename(application->cache_dir, "spectrogram", NULL);
 
 				maintain_cache(cache_dir);
 

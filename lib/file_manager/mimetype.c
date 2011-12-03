@@ -23,7 +23,6 @@
 /* type.c - code for dealing with filetypes */
 
 #include "config.h"
-
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -35,49 +34,29 @@
 #include <sys/types.h>
 #include <fcntl.h>
 #include <unistd.h>
-
 #include <sys/stat.h>
 #include <gtk/gtk.h>
 
-//this gnome-vfs stuff seems to require bonobo!
-#ifdef WITH_GNOMEVFS
-# include <libgnomevfs/gnome-vfs.h>
-# include <libgnomevfs/gnome-vfs-mime.h>
-# include <libgnomevfs/gnome-vfs-mime-handlers.h>
-# include <libgnomevfs/gnome-vfs-application-registry.h>
-#endif
-#include "string.h"
-
-#include "file_manager/file_manager.h"
-#include "rox_global.h"
-
 #include "utils/fscache.h"
 #include "utils/pixmaps.h"
-#include "mimetype.h"
-#include "rox_support.h"
-#include "diritem.h"
 #include "xdgmime.h"
-
 #include "utils/ayyi_utils.h"
 #include "utils/mime_type.h"
-#include "observer.h"
+#include "file_manager/file_manager.h"
+
 extern unsigned debug;
 
 #define TYPE_NS "http://www.freedesktop.org/standards/shared-mime-info"
 enum {SET_MEDIA, SET_TYPE};
 
-char theme_name[64] = "Amaranth";
+extern char theme_name[];
 
 
 /* Static prototypes */
 //static void alloc_type_colours(void);
-//static void options_changed(void);
 //static char *get_action_save_path(GtkWidget *dialog);
 static MIME_type *get_mime_type(const gchar *type_name, gboolean can_create);
 //static gboolean remove_handler_with_confirm(const guchar *path);
-/*static*/ void _set_icon_theme(void);
-static GList *build_icon_theme(/*guchar *label */);
-static void print_icon_list();
 
 /* Hash of all allocated MIME types, indexed by "media/subtype".
  * MIME_type structs are never freed; this table prevents memory leaks
@@ -100,29 +79,11 @@ MIME_type *application_x_desktop;
 MIME_type *inode_unknown;
 MIME_type *inode_door;
 
-//static Option o_display_colour_types;
-//static Option o_icon_theme;
-
 extern GtkIconTheme *icon_theme;
-GList* themes = NULL; 
 
 
 void type_init(void)
 {
-	icon_theme = gtk_icon_theme_new();
-	//icon_theme = gtk_icon_theme_get_default();
-
-	gint n_elements;
-	gchar** path[64];
-	gtk_icon_theme_get_search_path(icon_theme, path, &n_elements);
-	//printf("type_init(): &path=%p path=%p path[0]=%p *path[0]=%p path1[1]=%s\n", &path, path, path[0], *path[0], path[0][1]);
-	//printf("type_init(): count=%i path: %s\n", n_elements, *path[0]);
-	int i;
-	for(i=0;i<n_elements;i++){
-		dbg(2, "icon_theme_path=%s", path[0][i]);
-	}
-	g_strfreev(*path);
-
 	type_hash = g_hash_table_new(g_str_hash, g_str_equal);
 
 	text_plain = get_mime_type("text/plain", TRUE);
@@ -139,28 +100,8 @@ void type_init(void)
 	application_x_desktop->executable = TRUE;
 	inode_unknown = get_mime_type("inode/unknown", TRUE);
 	inode_door = get_mime_type("inode/door", TRUE);
-
-	_set_icon_theme();
-
-	//guchar* label = g_new0(guchar, 64);
-	themes = build_icon_theme(/*label*/);
 }
 
-
-static void
-on_theme_select(GtkMenuItem* menuitem, gpointer user_data)
-{
-	g_return_if_fail(menuitem);
-
-	gchar* name = g_object_get_data(G_OBJECT(menuitem), "theme");
-	dbg(0, "theme=%s", name);
-
-	if(name && strlen(name)) strncpy(theme_name, name, 64);
-
-	print_icon_list();
-	_set_icon_theme();
-	observer__icon_theme(); //TODO replace this with a signal or callback
-}
 
 /* Read-load all the glob patterns.
  * Note: calls filer_update_all.
@@ -182,7 +123,8 @@ reread_mime_files(void)
 static MIME_type*
 get_mime_type(const gchar *type_name, gboolean can_create)
 {
-	if(!type_name){ errprintf("%s(): bad arg: type_name NULL\n", __func__); return NULL; }
+	g_return_val_if_fail(type_name, NULL);
+
 	gchar *slash;
 
 	MIME_type* mtype = g_hash_table_lookup(type_hash, type_name);
@@ -750,150 +692,10 @@ static guchar *read_theme(Option *option)
 }
 #endif
 
-static void
-add_themes_from_dir(GPtrArray *names, const char *dir)
+void
+reset_type_hash()
 {
-	GPtrArray *list;
-	int i;
-
-	if (access(dir, F_OK) != 0)	return;
-
-	list = list_dir((guchar*)dir);
-	g_return_if_fail(list != NULL);
-
-	for (i = 0; i < list->len; i++){
-		char *index_path;
-
-		index_path = g_build_filename(dir, list->pdata[i], "index.theme", NULL);
-		
-		if (access(index_path, F_OK) == 0){
-			g_ptr_array_add(names, list->pdata[i]);
-		}
-		else g_free(list->pdata[i]);
-
-		g_free(index_path);
-	}
-
-	g_ptr_array_free(list, TRUE);
-}
-
-
-static GList*
-build_icon_theme(/*guchar *label*/)
-{
-	//-appears to build a menu list of availabe themes.
-
-	GtkWidget *menu;
-	GPtrArray *names;
-	gchar **theme_dirs = NULL;
-	gint n_dirs = 0;
-	int i;
-
-	menu = gtk_menu_new();
-
-	gtk_icon_theme_get_search_path(icon_theme, &theme_dirs, &n_dirs);
-	names = g_ptr_array_new();
-	for (i = 0; i < n_dirs; i++) add_themes_from_dir(names, theme_dirs[i]);
-	g_strfreev(theme_dirs);
-
-	g_ptr_array_sort(names, strcmp2);
-
-	for (i = 0; i < names->len; i++) {
-		char *name = names->pdata[i];
-		dbg(2, "name=%s", name);
-
-		GtkWidget* item = gtk_menu_item_new_with_label(name);
-		gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
-		gtk_widget_show_all(item);
-
-		g_object_set_data(G_OBJECT(item), "theme", g_strdup(name)); //make sure this string is free'd when menu is updated.
-
-		g_signal_connect(G_OBJECT(item), "activate", G_CALLBACK(on_theme_select), NULL);
-
-		g_free(name);
-	}
-
-	g_ptr_array_free(names, TRUE);
-
-	return g_list_append(NULL, menu);
-}
-
-
-static void
-print_icon_list()
-{
-	GList* icon_list = gtk_icon_theme_list_icons(icon_theme, "MimeTypes");
-	if(icon_list){
-		dbg(0, "%s----------------------------------", theme_name);
-		for(;icon_list;icon_list=icon_list->next){
-			char* icon = icon_list->data;
-			printf("%s\n", icon);
-			g_free(icon);
-		}
-		g_list_free(icon_list);
-		printf("-------------------------------------------------\n");
-	}
-	else warnprintf("icon_theme has no mimetype icons?\n");
-
-}
-
-
-/*static */void
-_set_icon_theme()
-{
-	//const char *home_dir = g_get_home_dir();
-	GtkIconInfo *info;
-	//char *icon_home;
-
-	//if (!theme_name || !*theme_name) theme_name = "ROX";
-	if (/*!theme_name ||*/ !*theme_name) strcpy(theme_name, "ROX");
-
 	g_hash_table_remove_all(type_hash);
-
-	while (1)
-	{
-		dbg(1, "setting theme: %s.", theme_name);
-		gtk_icon_theme_set_custom_theme(icon_theme, theme_name);
-		return;
-
-		//the test below is disabled as its not reliable
-
-		info = gtk_icon_theme_lookup_icon(icon_theme, "mime-application:postscript", ICON_HEIGHT, 0);
-		if (!info)
-		{
-			//printf("set_icon_theme(): looking up test icon...\n");
-			info = gtk_icon_theme_lookup_icon(icon_theme, "gnome-mime-application-postscript", ICON_HEIGHT, 0);
-		}
-		if (info)
-		{
-			dbg(0, "got test icon ok. Using theme '%s'", theme_name);
-			print_icon_list();
-			gtk_icon_info_free(info);
-			return;
-		}
-
-		if (strcmp(theme_name, "ROX") == 0) break;
-
-		warnprintf("Icon theme '%s' does not contain MIME icons. Using ROX default theme instead.\n", theme_name);
-		
-		//theme_name = "ROX";
-		strcpy(theme_name, "ROX");
-	}
-
-#if 0
-	icon_home = g_build_filename(home_dir, ".icons", NULL);
-	if (!file_exists(icon_home)) mkdir(icon_home, 0755);
-	g_free(icon_home);
-#endif
-
-	//icon_home = g_build_filename(home_dir, ".icons", "ROX", NULL);
-	//if (symlink(make_path(app_dir, "ROX"), icon_home))
-	//	errprintf("Failed to create symlink '%s':\n%s\n\n"
-	//	"(this may mean that the ROX theme already exists there, but "
-	//	"the 'mime-application:postscript' icon couldn't be loaded for "
-	//	"some reason)", icon_home, g_strerror(errno));
-	//g_free(icon_home);
-
-	gtk_icon_theme_rescan_if_needed(icon_theme);
 }
+
 

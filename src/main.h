@@ -7,6 +7,7 @@
 #include "types.h"
 #include "utils/mime_type.h"
 #include "dir_tree/view_dir_tree.h"
+#include "application.h"
 
 #define EXPAND_TRUE 1
 #define EXPAND_FALSE 0
@@ -90,7 +91,6 @@ struct _app
 	gboolean       loaded;
 
 	char*          config_filename;
-	const char*    cache_dir;
 	struct _config config;
 	pthread_t      gui_thread;
 	char           search_phrase[256]; // XXX TODO increase to PATH_MAX
@@ -179,6 +179,7 @@ struct _app
 };
 #ifndef __main_c__
 extern struct _app app;
+extern Application* application;
 #endif
 
 struct _palette {

@@ -197,7 +197,8 @@ file_manager__plugin_load(const gchar* filepath)
 
 
 #define plugin_path "/usr/lib/samplecat/:/usr/local/lib/samplecat/"
-static void file_manager__load_plugins()
+static void
+file_manager__load_plugins()
 {
 	FileTypePluginPtr plugin = NULL;
 	GError* error = NULL;

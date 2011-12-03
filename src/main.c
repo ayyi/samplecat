@@ -53,6 +53,8 @@ char * program_name;
 #include "inspector.h"
 #include "progress_dialog.h"
 #include "dnd.h"
+#include "icon_theme.h"
+#include "application.h"
 #ifdef HAVE_AYYIDBUS
   #include "auditioner.h"
 #endif
@@ -98,11 +100,12 @@ static bool       config_load               ();
 static void       config_new                ();
 static bool       config_save               ();
 static void       menu_delete_row           (GtkMenuItem*, gpointer);
-void              menu_play_stop(           GtkWidget* widget, gpointer user_data);
+void              menu_play_stop            (GtkWidget* widget, gpointer);
 static void       update_sample             (Sample *sample, gboolean force_update);
 
 
 struct _app app;
+Application* application = NULL;
 struct _palette palette;
 GList* mime_types; // list of MIME_type*
 extern GList* themes; 
@@ -162,7 +165,6 @@ app_init()
 	memset(app.config.colour, 0, PALETTE_SIZE * 8);
 
 	app.config_filename = g_strdup_printf("%s/.config/" PACKAGE "/" PACKAGE, g_get_home_dir());
-	app.cache_dir = g_build_filename(g_get_home_dir(), ".config", PACKAGE, "cache", NULL);
 
 #if (defined HAVE_JACK)
 	app.enable_effect = true;
@@ -295,6 +297,11 @@ main(int argc, char** argv)
 		}
 	}
 
+	if (!g_thread_supported())
+		g_thread_init(NULL);
+	gdk_threads_init();
+	gtk_init_check(&argc, &argv);
+
 	printf("%s"PACKAGE_NAME". Version "PACKAGE_VERSION"%s\n", yellow, white);
 
 	config_load();
@@ -311,11 +318,6 @@ main(int argc, char** argv)
 		}
 	}
 
-	if (!g_thread_supported())
-		g_thread_init(NULL);
-	gdk_threads_init();
-	gtk_init_check(&argc, &argv);
-
 #ifdef __APPLE__
 	GtkOSXApplication *osxApp = (GtkOSXApplication*) 
 	g_object_new(GTK_TYPE_OSX_APPLICATION, NULL);
@@ -323,7 +325,9 @@ main(int argc, char** argv)
 	app.gui_thread = pthread_self();
 
 	type_init();
+	icon_theme_init();
 	pixmaps_init();
+	application = application_new();
 	ad_init();
 	set_auditioner();
 	app.store = listmodel__new();

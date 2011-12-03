@@ -59,10 +59,10 @@ gchar*             describe_current_command(MIME_type *type);
 //GdkColor*          type_get_colour(DirItem *item, GdkColor *normal);
 void               reread_mime_files(void);
 extern const char* mime_type_comment(MIME_type *type);
-extern MIME_type*  mime_type_lookup(const char *type);
-extern GList*      mime_type_name_list(void);
+extern MIME_type*  mime_type_lookup         (const char *type);
+extern GList*      mime_type_name_list      ();
 
-void               _set_icon_theme(void);
+void               reset_type_hash          ();
 
 #define EXECUTABLE_FILE(item) ((item)->mime_type && (item)->mime_type->executable && \
 				((item)->flags & ITEM_FLAG_EXEC_FILE))

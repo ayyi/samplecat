@@ -1,8 +1,6 @@
 #include "config.h"
 #include <gtk/gtk.h>
-#include "file_manager/file_manager.h"
 #include "typedefs.h"
-#include "listview.h"
 #include "support.h"
 #include "main.h"
 
@@ -31,15 +29,6 @@ observer__files_moved(GList* file_list, const char* dest)
 
 	//FIXME
 	//db_update_path(const char* old_path, const char* new_path);
-}
-
-
-void
-observer__icon_theme()
-{
-	listmodel__update();
-	vdtree_on_icon_theme_changed((ViewDirTree*)app.dir_treeview2);
-	file_manager__update_all();
 }
 
 

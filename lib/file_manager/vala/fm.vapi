@@ -24,7 +24,9 @@ namespace FM {
 	}
 	[CCode(cheader_filename = "file_manager/mimetype.h", lower_case_cprefix = "", cprefix = "")]
 	char* theme_name;
-	void  _set_icon_theme();
+	[CCode(cheader_filename = "src/icon_theme.h", lower_case_cprefix = "", cprefix = "")]
+	void  set_icon_theme();
+
 	public struct Mimetype {
 	}
 }

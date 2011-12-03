@@ -1,4 +1,4 @@
-#include "../config.h"
+#include "config.h"
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -18,15 +18,13 @@
 #include <gdk-pixbuf/gdk-pixdata.h>
 
 #include "file_manager/file_manager.h"
-#include "file_manager/support.h"
-#include <dir_tree/typedefs.h>
+#include "dir_tree/typedefs.h"
+#include "dir_tree/ui_fileops.h"
 #include <gimp/gimpaction.h>
 #include <gimp/gimpactiongroup.h>
 #include "typedefs.h"
 #include "src/support.h"
 #include "main.h"
-#include "dir_tree/ui_fileops.h"
-#include "rox_support.h"
 
 #define HEX_ESCAPE '%'
 #define N_(A) A 

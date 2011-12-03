@@ -29,7 +29,6 @@ enum
 };
 
 GtkListStore* listmodel__new                   ();
-void          listmodel__update                ();
 void          listmodel__clear                 ();
 void          listmodel__add_result            (Sample*);
 

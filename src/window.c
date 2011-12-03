@@ -197,6 +197,12 @@ GtkWindow
 			GtkWidget* fs_tree = dir_list->widget;
 			gtk_paned_add1(GTK_PANED(fman_hpaned), fs_tree);
 
+			void icon_theme_changed(Application* a, char* theme, gpointer _dir_tree)
+			{
+				vdtree_on_icon_theme_changed((ViewDirTree*)app.dir_treeview2);
+			}
+			g_signal_connect((gpointer)application, "icon-theme", G_CALLBACK(icon_theme_changed), dir_list);
+
 			make_menu_actions(fm_tree_keys, G_N_ELEMENTS(fm_tree_keys), vdtree_add_menu_item);
 		}
 
@@ -211,6 +217,12 @@ GtkWindow
 				PF;
 			}
 			g_signal_connect(G_OBJECT(file_manager__get_signaller()), "dir_changed", G_CALLBACK(window_on_dir_changed), NULL);
+
+			void icon_theme_changed(Application* a, char* theme, gpointer _dir_tree)
+			{
+				file_manager__update_all();
+			}
+			g_signal_connect((gpointer)application, "icon-theme", G_CALLBACK(icon_theme_changed), file_view);
 
 			make_menu_actions(menu_keys, G_N_ELEMENTS(menu_keys), fm__add_menu_item);
 
@@ -904,13 +916,15 @@ show_spectrogram(gboolean enable)
 		gtk_box_pack_start(GTK_BOX(app.vbox), app.spectrogram, EXPAND_TRUE, FILL_TRUE, 0);
 
 		gchar* filename = listview__get_first_selected_filepath();
-		dbg(1, "file=%s", filename);
+		if(filename){
+			dbg(1, "file=%s", filename);
 #ifdef USE_OPENGL
-		gl_spectrogram_set_file((GlSpectrogram*)app.spectrogram, filename);
+			gl_spectrogram_set_file((GlSpectrogram*)app.spectrogram, filename);
 #else
-		spectrogram_widget_set_file((SpectrogramWidget*)app.spectrogram, filename);
+			spectrogram_widget_set_file((SpectrogramWidget*)app.spectrogram, filename);
 #endif
-		g_free(filename);
+			g_free(filename);
+		}
 	}
 
 	if(app.spectrogram){

@@ -1877,34 +1877,6 @@ view_details_dnd_get(GtkWidget* widget, GdkDragContext* context, GtkSelectionDat
 	ViewDetails* view = (ViewDetails*)widget;
 
 	gint length = 0;
-#ifdef OLD
-	GtkTreeModel* model        = (GtkTreeModel *) view;
-	GtkTreeSelection* selection = view->selection;
-	GList* selected_rows = gtk_tree_selection_get_selected_rows(selection, &(model));
-
-	GList* drop_list = NULL;
-
-	GtkTreeIter iter;
-	GList* row = selected_rows;
-	for(; row; row=row->next){
-		GtkTreePath* treepath_selection = row->data;
-		gtk_tree_model_get_iter(model, &iter, treepath_selection);
-
-		GValue leaf = {0};
-		details_get_value(model, &iter, COL_FILENAME, &leaf);
-
-		dbg(1, "leaf=%s", g_value_get_string(&leaf));
-		gchar* path = g_strconcat(view->filer_window->real_path, "/", g_value_get_string(&leaf), NULL);
-		g_value_unset(&leaf);
-		//append is slow, but g_list_prepend() is wrong order :(
-		drop_list = g_list_append(drop_list, path);
-	}
-
-	//free the selection list data:
-	GList* l = selected_rows;
-	for(;l;l=l->next) gtk_tree_path_free(l->data);
-	g_list_free(selected_rows);
-#else
 	GList* drop_list = NULL;
 
 	DirItem* item;
@@ -1913,11 +1885,11 @@ view_details_dnd_get(GtkWidget* widget, GdkDragContext* context, GtkSelectionDat
 	while((item = iter.next(&iter))){
 		if(view_get_selected((ViewIface*)view, &iter)){
 			gchar* path = g_build_filename(view->filer_window->real_path, item->leafname, NULL);
+			// g_list_prepend() is faster but wrong order :(
 			drop_list = g_list_append(drop_list, path);
 			break;
 		}
 	}
-#endif
 
 	gchar* uri_text = NULL;
 	switch (info) {

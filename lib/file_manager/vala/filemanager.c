@@ -7,8 +7,6 @@
 #include <file_manager/file_manager.h>
 #include <stdlib.h>
 #include <string.h>
-#include <file_manager/mimetype.h>
-#include <file_manager/rox_global.h>
 #include <gtk/gtk.h>
 
 
@@ -41,7 +39,6 @@ enum  {
 };
 AyyiLibfilemanager* ayyi_libfilemanager_new (struct _Filer* _file_window);
 AyyiLibfilemanager* ayyi_libfilemanager_construct (GType object_type, struct _Filer* _file_window);
-void ayyi_libfilemanager_set_icon_theme (AyyiLibfilemanager* self, const gchar* theme);
 GtkWidget* ayyi_libfilemanager_new_window (AyyiLibfilemanager* self, const gchar* path);
 void ayyi_libfilemanager_emit_dir_changed (AyyiLibfilemanager* self);
 static GObject * ayyi_libfilemanager_constructor (GType type, guint n_construct_properties, GObjectConstructParam * construct_properties);
@@ -58,17 +55,6 @@ AyyiLibfilemanager* ayyi_libfilemanager_construct (GType object_type, struct _Fi
 
 AyyiLibfilemanager* ayyi_libfilemanager_new (struct _Filer* _file_window) {
 	return ayyi_libfilemanager_construct (AYYI_TYPE_LIBFILEMANAGER, _file_window);
-}
-
-
-void ayyi_libfilemanager_set_icon_theme (AyyiLibfilemanager* self, const gchar* theme) {
-	gint _tmp0_;
-	g_return_if_fail (self != NULL);
-	g_return_if_fail (theme != NULL);
-	g_print ("%s(): theme=%s\n", "Ayyi.Libfilemanager.set_icon_theme", theme);
-	_tmp0_ = strlen (theme);
-	memcpy (theme_name, theme, (gsize) (_tmp0_ + 1));
-	_set_icon_theme ();
 }
 
 

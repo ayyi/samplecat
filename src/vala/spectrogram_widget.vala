@@ -20,6 +20,7 @@ public delegate void RenderDoneFunc(char* filename, Gdk.Pixbuf* a, void* user_da
 public extern void get_spectrogram_with_target(char* path, RenderDoneFunc on_ready, void* user_data);
 //[CCode (has_target = false)]
 //public extern void get_spectrogram(char* path, RenderDoneFunc callback, void* user_data);
+public extern void cancel_spectrogram          (char* path);
  
 public class SpectrogramWidget : Gtk.Widget {
 	private string _filename;
@@ -39,10 +40,13 @@ public class SpectrogramWidget : Gtk.Widget {
 	{
 		_filename = ((string*)filename)->dup();
 
+		if ((bool)pixbuf) pixbuf->fill(0x0);
+		cancel_spectrogram(null);
+
 		//TODO currently not using this as self is not set properly when called?
 		RenderDoneFunc p1 = (filename, a, b) => {
 			pixbuf = a;
-			stdout.printf("set_file: got callback!\n");
+			print("%s: got callback!\n", Log.METHOD);
 			this.queue_draw();
 		};
 

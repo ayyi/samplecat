@@ -79,6 +79,7 @@ AUDIOANALYSERS_SRC = \
 samplecat_SOURCES = \
 	typedefs.h types.h \
 	main.c main.h \
+	application.c application.h \
 	window.c window.h \
 	listmodel.c listmodel.h \
 	progress_dialog.c progress_dialog.h \
@@ -95,6 +96,7 @@ samplecat_SOURCES = \
 	observer.c observer.h \
 	support.c support.h \
 	console_view.c console_view.h \
+	icon_theme.c icon_theme.h \
 	$(AUDIOANALYSERS_SRC) \
 	$(AD_SRC) \
 	$(MYSQL_SRC) \

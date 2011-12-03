@@ -39,7 +39,6 @@ struct _AyyiLibfilemanagerClass {
 GType ayyi_libfilemanager_get_type (void) G_GNUC_CONST;
 AyyiLibfilemanager* ayyi_libfilemanager_new (struct _Filer* _file_window);
 AyyiLibfilemanager* ayyi_libfilemanager_construct (GType object_type, struct _Filer* _file_window);
-void ayyi_libfilemanager_set_icon_theme (AyyiLibfilemanager* self, const gchar* theme);
 GtkWidget* ayyi_libfilemanager_new_window (AyyiLibfilemanager* self, const gchar* path);
 void ayyi_libfilemanager_emit_dir_changed (AyyiLibfilemanager* self);
 

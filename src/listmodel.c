@@ -13,6 +13,7 @@
 #include "file_manager/mimetype.h"
 #include "support.h"
 #include "main.h"
+#include "application.h"
 #include "sample.h"
 #include "dnd.h"
 #include "overview.h"
@@ -20,12 +21,18 @@
 #include "inspector.h"
 
 extern struct _app app;
+extern Application* application;
 extern unsigned debug;
+
+static void listmodel__update ();
 
 
 GtkListStore*
 listmodel__new()
 {
+	void icon_theme_changed(Application* application, char* theme, gpointer data){ listmodel__update(); }
+	g_signal_connect((gpointer)application, "icon-theme", G_CALLBACK(icon_theme_changed), NULL);
+
 	return gtk_list_store_new(NUM_COLS, 
 	 GDK_TYPE_PIXBUF,  // COL_ICON
  #ifdef USE_AYYI
@@ -47,7 +54,7 @@ listmodel__new()
 }
 
 
-void
+static void
 listmodel__update()
 {
 	do_search(NULL, NULL);
