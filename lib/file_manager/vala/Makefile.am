@@ -8,3 +8,6 @@ all:
 	@sed -i -e 's/static gpointer ayyi_libfilemanager_parent_class = NULL;/static gpointer ayyi_libfilemanager_parent_class = NULL; \nextern char theme_name[];/' filemanager.c
 	@#mv app.c app.h ..
 
+EXTRA_DIST = \
+	fm.vapi \
+	filemanager.vala
