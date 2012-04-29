@@ -1,4 +1,22 @@
+/*
+  This file is part of Samplecat. http://samplecat.orford.org
+  copyright (C) 2007-2012 Tim Orford and others.
+
+  This program is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License version 3
+  as published by the Free Software Foundation.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+*/
 #define _GNU_SOURCE
+#include "config.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -6,12 +24,9 @@
 #include <gtk/gtk.h>
 #include <gdk-pixbuf/gdk-pixdata.h>
 #include <mysql/errmsg.h>
-#include "file_manager.h"
 #include "typedefs.h"
 #include "support.h"
-#include "mimetype.h"
 #include "main.h"
-#include "listview.h"
 #include "sample.h"
 #include "db/mysql.h"
 
@@ -42,10 +57,11 @@ enum {
 
 MYSQL mysql = {{NULL}, NULL, NULL};
 
-extern struct _app app;
 extern unsigned debug;
 
 static gboolean is_connected = FALSE;
+static SamplecatModel* model = NULL;
+static struct _mysql_config* config = NULL;
 static MYSQL_RES *dir_iter_result = NULL;
 static MYSQL_RES *search_result = NULL;
 static Sample result;
@@ -57,7 +73,7 @@ static void clear_result    ();
 	char *VAR; if (!(STR) || strlen(STR)==0) {VAR=calloc(1,sizeof(char));} else { \
 		int sl=strlen(STR);\
 		VAR = malloc((sl*2+1)*sizeof(char)); \
-	  mysql_real_escape_string(&mysql, VAR, (STR), sl); \
+		mysql_real_escape_string(&mysql, VAR, (STR), sl); \
 	}
 
 struct ColumnDefinitions { const char* key; const char* def; };
@@ -87,9 +103,19 @@ static const struct ColumnDefinitions sct[] = {
 };
 #define COLCOUNT (21)
 
+void
+mysql__init(SamplecatModel* _model, void* _config)
+{
+	model = _model;
+	config = _config;
+}
+
+
 gboolean
 mysql__connect()
 {
+	g_return_val_if_fail(model, false);
+
 	if(!mysql.host){
 		if(!mysql_init(&mysql)){
 			printf("Failed to initiate MySQL connection.\n");
@@ -99,19 +125,19 @@ mysql__connect()
 	dbg (1, "MySQL Client Version is %s", mysql_get_client_info());
 	mysql.reconnect = true;
 
-	if(!mysql_real_connect(&mysql, app.config.database_host, app.config.database_user, app.config.database_pass, app.config.database_name, 0, NULL, 0)){
+	if(!mysql_real_connect(&mysql, config->host, config->user, config->pass, config->name, 0, NULL, 0)){
 		if(mysql_errno(&mysql) == CR_CONNECTION_ERROR){
 			warnprintf("cannot connect to database: MYSQL server not online.\n");
 		}else{
-			warnprintf("cannot connect to database: %s\n", mysql_error(&mysql));
+			warnprintf("cannot connect to mysql database: %s\n", mysql_error(&mysql));
 			//currently this won't be displayed, as the window is not yet opened.
-			statusbar_print(1, "cannot connect to database: %s\n", mysql_error(&mysql));
+			statusbar_print(1, "cannot connect to mysql database: %s\n", mysql_error(&mysql));
 		}
 		return false;
 	}
 	if(debug) printf("MySQL Server Version is %s\n", mysql_get_server_info(&mysql));
 
-	if(mysql_select_db(&mysql, app.config.database_name)){
+	if(mysql_select_db(&mysql, config->name)){
 		errprintf("Failed to connect to Database: %s\n", mysql_error(&mysql));
 		return false;
 	}
@@ -119,9 +145,9 @@ mysql__connect()
 	gboolean dbexists=false;
 	int64_t colflag=0;
 
-	MYSQL_ESCAPE(dbname, app.config.database_name);
-	char *sql = malloc((100/*query string*/+strlen(dbname))*sizeof(char));
-	sprintf(sql, "SELECT column_name from INFORMATION_SCHEMA.COLUMNS where table_schema='%s' AND table_name='samples';", app.config.database_name);
+	MYSQL_ESCAPE(dbname, config->name);
+	char* sql = malloc((100/*query string*/+strlen(dbname))*sizeof(char));
+	sprintf(sql, "SELECT column_name from INFORMATION_SCHEMA.COLUMNS where table_schema='%s' AND table_name='samples';", config->name);
 	if(!mysql_query(&mysql, sql)){
 		MYSQL_RES *sr = mysql_store_result(&mysql);
 		if (sr) {
@@ -174,7 +200,6 @@ mysql__connect()
 		}
 		free(sql);
 	}
-
 
 	memset(&result, 0, sizeof(Sample));
 
@@ -257,11 +282,13 @@ mysql__exec_sql(const char* sql)
 	return mysql_real_query(&mysql, sql, strlen(sql));
 }
 
+
 gboolean
 mysql__update_string(int id, const char* key, const char* value)
 {
 	return mysql__update_blob(id, key, (const guint8*) (value?value:""), (const guint) value?strlen(value):0);
 }
+
 
 gboolean
 mysql__update_int(int id, const char* key, const long int value)
@@ -275,6 +302,7 @@ mysql__update_int(int id, const char* key, const long int value)
 	return true;
 }
 
+
 gboolean
 mysql__update_float(int id, const char* key, const float value)
 {
@@ -286,6 +314,7 @@ mysql__update_float(int id, const char* key, const float value)
 	}
 	return true;
 }
+
 
 gboolean
 mysql__update_blob(int id, const char* key, const guint8* d, const guint len)
@@ -333,7 +362,7 @@ mysql__file_exists(const char* path, int *id)
 
 //-------------------------------------------------------------
 
-GList *
+GList*
 mysql__filter_by_audio(Sample *s) 
 {
 	GList *rv = NULL;
@@ -374,15 +403,18 @@ mysql__filter_by_audio(Sample *s)
 
 
 gboolean
-mysql__search_iter_new(char* search, char* dir, const char* category, int* n_results)
+mysql__search_iter_new(char* X, char* dir, const char* category, int* n_results)
 {
 	//return TRUE on success.
+
+	g_return_val_if_fail(model, false);
 
 	gboolean ok = true;
 
 	if(search_result) gwarn("previous query not free'd?");
 
 	GString* q = g_string_new("SELECT * FROM samples WHERE 1 ");
+	const char* search = model->filters.phrase;
 	if(search && strlen(search)) {
 #if 0
 		g_string_append_printf(q, "AND (filename LIKE '%%%s%%' OR filedir LIKE '%%%s%%' OR keywords LIKE '%%%s%%') ", search, search, search);
@@ -390,16 +422,16 @@ mysql__search_iter_new(char* search, char* dir, const char* category, int* n_res
 		gchar* where = NULL;
 		char* sd = strdup(search);
 		char* s  = sd;
-		char *tok;
+		char* tok;
 		while ((tok = strtok(s, " _")) != 0) {
 			MYSQL_ESCAPE(esc, tok);
-			gchar *tmp = g_strdup_printf("%s %s (filename LIKE '%%%s%%' OR filedir LIKE '%%%s%%' OR keywords LIKE '%%%s%%') ",
+			gchar* tmp = g_strdup_printf("%s %s (filename LIKE '%%%s%%' OR filedir LIKE '%%%s%%' OR keywords LIKE '%%%s%%') ",
 					where?where:"", where?"AND":"",
 					esc, esc, esc);
 			free(esc);
 			if (where) g_free(where);
 			where = tmp;
-			s=NULL;
+			s = NULL;
 		}
 		if (where) {
 			g_string_append_printf(q, "AND (%s)", where);
@@ -417,7 +449,7 @@ mysql__search_iter_new(char* search, char* dir, const char* category, int* n_res
 #endif
 		free(esc);
 	}
-	if(app.search_category) {
+	if(app.model.filters.category) {
 		MYSQL_ESCAPE(esc, category);
 		g_string_append_printf(q, "AND keywords LIKE '%%%s%%' ", esc);
 		free(esc);

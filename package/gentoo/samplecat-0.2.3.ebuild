@@ -20,7 +20,7 @@ DEPEND=">=media-sound/jack-audio-connection-kit-0.99
 	tracker? ( >=app-misc/tracker-0.6 )
 	auditioner? ( >=media-sound/ayyi_auditioner-0.1 )
 	>=x11-libs/gtk+-2.6"
-	
+
 src_compile() {
 	local myconf=""
 
@@ -37,4 +37,4 @@ src_install() {
 	make DESTDIR=${D} install || die
 	dodoc NEWS
 }
-	
+

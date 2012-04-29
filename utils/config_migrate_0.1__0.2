@@ -1,0 +1,8 @@
+#!/bin/sh
+configfile=~/.config/samplecat/samplecat
+ls $configfile
+cp -p $configfile $configfile.bak
+sed -i -e "s/database_host/mysql_host/" $configfile
+sed -i -e "s/database_user/mysql_user/" $configfile
+sed -i -e "s/database_pass/mysql_pass/" $configfile
+sed -i -e "s/database_name/mysql_name/" $configfile

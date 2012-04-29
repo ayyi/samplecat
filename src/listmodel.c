@@ -11,6 +11,7 @@
 #include "typedefs.h"
 #include "utils/pixmaps.h"
 #include "file_manager/mimetype.h"
+#include "db/db.h"
 #include "support.h"
 #include "main.h"
 #include "application.h"

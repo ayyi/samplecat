@@ -1,7 +1,7 @@
 ## Process this file with automake to produce Makefile.in
 
 VALA_DIR =
-SUBDIRS = gimp $(VALA_DIR)
+SUBDIRS = gimp db $(VALA_DIR)
 
 AM_CFLAGS = \
 	-g -Wall -O2 \
@@ -35,18 +35,6 @@ AD_SRC = audio_decoder/ad.h audio_decoder/ad_plugin.h audio_decoder/ad_plugin.c 
 	audio_decoder/ad_soundfile.c \
 	audio_decoder/ad_flac.c \
 	audio_decoder/ad_ffmpeg.c
-
-if ENABLE_MYSQL
-MYSQL_SRC = db/mysql.c db/mysql.h
-endif
-
-if ENABLE_SQLITE
-SQLITE_SRC = db/sqlite.c db/sqlite.h
-endif
-
-if ENABLE_TRACKER
-TRACKER_SRC = db/tracker.c db/tracker.h
-endif
 
 if ENABLE_FFTW3
 FFT_SRC = spectrogram_widget.c spectrogram_widget.h
@@ -99,9 +87,6 @@ samplecat_SOURCES = \
 	icon_theme.c icon_theme.h \
 	$(AUDIOANALYSERS_SRC) \
 	$(AD_SRC) \
-	$(MYSQL_SRC) \
-	$(TRACKER_SRC) \
-	$(SQLITE_SRC) \
 	$(FFT_SRC) \
 	$(OPENGL_SRC) \
 	$(AYYI_SRC) \
@@ -113,6 +98,7 @@ samplecat_LDADD = \
 	$(top_srcdir)/lib/xdgmime/libxdgmime.a \
 	$(top_srcdir)/lib/dir_tree/libdirtree.a \
 	gimp/libgimpwidgets.a \
+	db/libsamplecatdb.a \
 	$(SAMPLECAT_LIBS) \
 	$(AYYI_LIBS) \
 	$(DBUS_LIBS) \

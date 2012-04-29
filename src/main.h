@@ -8,6 +8,9 @@
 #include "utils/mime_type.h"
 #include "dir_tree/view_dir_tree.h"
 #include "application.h"
+#ifdef USE_MYSQL
+#include "db/mysql.h"
+#endif
 
 #define EXPAND_TRUE 1
 #define EXPAND_FALSE 0
@@ -25,10 +28,9 @@
 struct _config
 {
 	char      database_backend[64];
-	char      database_host[64];
-	char      database_user[64];
-	char      database_pass[64];
-	char      database_name[64];
+#ifdef USE_MYSQL
+	struct _mysql_config mysql;
+#endif
 	char      auditioner[16];
 	char      show_dir[PATH_MAX];
 	char      window_width[8];
@@ -43,30 +45,6 @@ struct _config
 };
 
 
-struct _backend
-{
-	gboolean         pending;
-
-	gboolean         (*search_iter_new)  (char* search, char* dir, const char* category, int* n_results);
-	Sample*          (*search_iter_next) (unsigned long**);
-	void             (*search_iter_free) ();
-
-	void             (*dir_iter_new)     ();
-	char*            (*dir_iter_next)    ();
-	void             (*dir_iter_free)    ();
-
-	int              (*insert)           (Sample*);
-	gboolean         (*remove)           (int);
-	gboolean         (*file_exists)      (const char*, int *);
-	GList *          (*filter_by_audio)  (Sample*);
-
-	gboolean         (*update_string)    (int, const char*, const char*);
-	gboolean         (*update_int)       (int, const char*, const long int);
-	gboolean         (*update_float)     (int, const char*, const float);
-	gboolean         (*update_blob)      (int, const char*, const guint8*, const guint);
-
-	void             (*disconnect)       ();
-};
 #ifdef __main_c__
 struct _backend backend = {false, 
 	NULL, NULL, NULL, 
@@ -78,12 +56,20 @@ struct _backend backend = {false,
 extern struct _backend backend;
 #endif
 
-#define BACKEND_IS_NULL (backend.search_iter_new == NULL)
-
 enum {
 	SHOW_FILEMANAGER = 0,
 	SHOW_SPECTROGRAM,
 	MAX_VIEW_OPTIONS
+};
+
+struct _samplecat_model
+{
+	struct {
+		char       phrase[256]; // XXX TODO increase to PATH_MAX
+		char*      dir;
+		gchar*     category;
+
+	} filters;
 };
 
 struct _app
@@ -92,10 +78,8 @@ struct _app
 
 	char*          config_filename;
 	struct _config config;
+	SamplecatModel model;
 	pthread_t      gui_thread;
-	char           search_phrase[256]; // XXX TODO increase to PATH_MAX
-	char*          search_dir;
-	gchar*         search_category;
 	gboolean       add_recursive;
 	gboolean       loop_playback;
 	Auditioner const* auditioner;

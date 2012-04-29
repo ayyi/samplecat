@@ -2,7 +2,7 @@
 
 Samplecat
 
-Copyright (C) Tim Orford 2007-2011
+Copyright (C) Tim Orford 2007-2012
 
 This software is licensed under the GPL. See accompanying file COPYING.
 
@@ -43,6 +43,7 @@ char * program_name;
 #include "dh_link.h"
 #include "dh_tree.h"
 
+#include "db/db.h"
 #include "main.h"
 #include "support.h"
 #include "sample.h"
@@ -335,6 +336,7 @@ main(int argc, char** argv)
 	gboolean db_connected = false;
 #ifdef USE_MYSQL
 	if(can_use(app.backends, "mysql")){
+		mysql__init(&app.model, &app.config.mysql);
 		if(mysql__connect()){
 			set_backend(BACKEND_MYSQL);
 			db_connected = true;
@@ -351,7 +353,7 @@ main(int argc, char** argv)
 #endif
 
 	if (!db_connected) {
-		gwarn("can not connected to any database.\n");
+		g_warning("cannot connect to any database.\n");
 #ifdef QUIT_WITHOUT_DB
 		on_quit(NULL, GINT_TO_POINTER(EXIT_FAILURE));
 #endif
@@ -364,7 +366,7 @@ main(int argc, char** argv)
 			dbg(2, "...");
 			set_backend(BACKEND_TRACKER);
 			if(search_pending){
-				do_search(app.args.search ? app.args.search : app.search_phrase, app.search_dir);
+				do_search(app.args.search ? app.args.search : app.model.filters.phrase, app.model.filters.dir);
 			}
 		}
 		if(app.no_gui){
@@ -411,7 +413,7 @@ main(int argc, char** argv)
 #endif
 
 	if(!backend.pending){ 
-		do_search(app.args.search ? app.args.search : app.search_phrase, app.search_dir);
+		do_search(app.args.search ? app.args.search : app.model.filters.phrase, app.model.filters.dir);
 	}else{
 		search_pending = true;
 	}
@@ -483,10 +485,10 @@ _set_search_dir(char* dir)
 
 	//if string is empty, we show all directories?
 
-	if(!dir){ perr("dir!\n"); return; }
+	g_return_if_fail(dir);
 
 	dbg (1, "dir=%s", dir);
-	app.search_dir = dir;
+	app.model.filters.dir = dir;
 }
 
 
@@ -565,11 +567,11 @@ do_search(char* search, char* dir)
 	if(BACKEND_IS_NULL) return;
 	search_pending = false;
 
-	if (!search) search = app.search_phrase;
-	if (!dir) dir = app.search_dir;
+	if (search) g_strlcpy(app.model.filters.phrase, search, 256); //the search phrase is now always taken from the model.
+	if (!dir) dir = app.model.filters.dir;
 
 	int n_results = 0;
-	if(!backend.search_iter_new(search, dir, app.search_category, &n_results)) {
+	if(!backend.search_iter_new(search, dir, app.model.filters.category, &n_results)) {
 		return;
 	}
 
@@ -601,7 +603,7 @@ do_search(char* search, char* dir)
 	if(0 && row_count < MAX_DISPLAY_ROWS){
 		statusbar_print(1, "%i samples found.", row_count);
 	}else if(!row_count){
-		statusbar_print(1, "no samples found. filters: dir=%s", app.search_dir);
+		statusbar_print(1, "no samples found. filters: dir=%s", app.model.filters.dir);
 	}else if (n_results <0) {
 		statusbar_print(1, "showing %i sample(s)", row_count);
 	}else{
@@ -902,6 +904,7 @@ add_file(char* path)
 	return true;
 }
 
+
 gboolean
 on_overview_done(gpointer _sample)
 {
@@ -925,6 +928,7 @@ on_peaklevel_done(gpointer _sample)
 	return IDLE_STOP;
 }
 
+
 gboolean
 on_ebur128_done(gpointer _sample)
 {
@@ -933,6 +937,7 @@ on_ebur128_done(gpointer _sample)
 	sample_unref(sample);
 	return IDLE_STOP;
 }
+
 
 void
 delete_selected_rows()
@@ -990,6 +995,7 @@ menu_delete_row(GtkMenuItem* widget, gpointer user_data)
 {
 	delete_selected_rows();
 }
+
 
 static void
 update_sample(Sample *sample, gboolean force_update) {
@@ -1334,7 +1340,9 @@ extern char theme_name[64];
 static bool
 config_load()
 {
-	snprintf(app.config.database_name, 64, "samplelib");
+#ifdef USE_MYSQL
+	strcpy(app.config.mysql.name, "samplecat");
+#endif
 	strcpy(app.config.show_dir, "");
 
 	int i;
@@ -1363,16 +1371,18 @@ config_load()
 
 			i=0;
 			ADD_CONFIG_KEY (app.config.database_backend, "database_backend");
-			ADD_CONFIG_KEY (app.config.database_host,    "mysql_host");
-			ADD_CONFIG_KEY (app.config.database_user,    "mysql_user");
-			ADD_CONFIG_KEY (app.config.database_pass,    "mysql_pass");
-			ADD_CONFIG_KEY (app.config.database_name,    "mysql_name");
+#ifdef USE_MYSQL
+			ADD_CONFIG_KEY (app.config.mysql.host,       "mysql_host");
+			ADD_CONFIG_KEY (app.config.mysql.user,       "mysql_user");
+			ADD_CONFIG_KEY (app.config.mysql.pass,       "mysql_pass");
+			ADD_CONFIG_KEY (app.config.mysql.name,       "mysql_name");
+#endif
 			ADD_CONFIG_KEY (app.config.show_dir,         "show_dir");
 			ADD_CONFIG_KEY (app.config.window_height,    "window_height");
 			ADD_CONFIG_KEY (app.config.window_width,     "window_width");
 			ADD_CONFIG_KEY (theme_name,                  "icon_theme");
 			ADD_CONFIG_KEY (app.config.column_widths[0], "col1_width");
-			ADD_CONFIG_KEY (app.search_phrase,           "filter");
+			ADD_CONFIG_KEY (app.model.filters.phrase,    "filter");
 			ADD_CONFIG_KEY (app.config.browse_dir,       "browse_dir");
 			ADD_CONFIG_KEY (app.config.auditioner,       "auditioner");
 			ADD_CONFIG_KEY (app.config.jack_autoconnect, "jack_autoconnect");
@@ -1425,7 +1435,7 @@ config_save()
 {
 	if(app.loaded){
 		//update the search directory:
-		g_key_file_set_value(app.key_file, "Samplecat", "show_dir", app.search_dir?app.search_dir:"");
+		g_key_file_set_value(app.key_file, "Samplecat", "show_dir", app.model.filters.dir ? app.model.filters.dir : "");
 
 		//save window dimensions:
 		gint width, height;
@@ -1560,6 +1570,8 @@ set_backend(BackendType type)
 	switch(type){
 		case BACKEND_MYSQL:
 			#ifdef USE_MYSQL
+			backend.init             = mysql__init;
+
 			backend.search_iter_new  = mysql__search_iter_new;
 			backend.search_iter_next = mysql__search_iter_next_;
 			backend.search_iter_free = mysql__search_iter_free;

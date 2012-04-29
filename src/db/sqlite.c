@@ -4,9 +4,7 @@
 #include <sqlite3.h>
 #include <gtk/gtk.h>
 #include <gdk-pixbuf/gdk-pixdata.h>
-#include "file_manager.h"
 #include "typedefs.h"
-#include "mimetype.h"
 #include <gimp/gimpaction.h>
 #include <gimp/gimpactiongroup.h>
 

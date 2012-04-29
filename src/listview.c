@@ -264,7 +264,7 @@ listview__on_row_clicked(GtkWidget *widget, GdkEventButton *event, gpointer user
 
 					if(tags && strlen(tags)){
 						gtk_entry_set_text(GTK_ENTRY(app.search), tags);
-						strncpy(app.search_phrase, tags, 255);
+						strncpy(app.model.filters.phrase, tags, 255);
 						do_search(tags, NULL);
 					}
 				}

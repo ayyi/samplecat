@@ -12,6 +12,7 @@
 #include "gimp/gimpaction.h"
 #include "gimp/gimpactiongroup.h"
 #include "typedefs.h"
+#include "db/db.h"
 #include "sample.h"
 #include "support.h"
 #include "main.h"
@@ -587,16 +588,16 @@ filter_new()
 	{
 		PF;
 		const gchar* text = gtk_entry_get_text(GTK_ENTRY(app.search));
-		if(strcmp(text, app.search_phrase)){
-			strncpy(app.search_phrase, text, 255);
-			do_search(app.search_phrase, app.search_dir);
+		if(strcmp(text, app.model.filters.phrase)){
+			strncpy(app.model.filters.phrase, text, 255);
+			do_search(app.model.filters.phrase, app.model.filters.dir);
 		}
 		return NOT_HANDLED;
 	}
 
 	GtkWidget *entry = app.search = gtk_entry_new();
 	gtk_entry_set_max_length(GTK_ENTRY(entry), 64);
-	gtk_entry_set_text(GTK_ENTRY(entry), app.search_phrase);
+	gtk_entry_set_text(GTK_ENTRY(entry), app.model.filters.phrase);
 	gtk_box_pack_start(GTK_BOX(hbox), entry, EXPAND_TRUE, TRUE, 0);
 	g_signal_connect(G_OBJECT(entry), "focus-out-event", G_CALLBACK(on_focus_out), NULL);
 	gtk_entry_set_activates_default(GTK_ENTRY(entry), TRUE);
@@ -740,14 +741,14 @@ tagshow_selector_new()
 		//update the sample list with the new view-category.
 		PF;
 
-		if (app.search_category){ g_free(app.search_category); app.search_category = NULL; }
+		if (app.model.filters.category){ g_free(app.model.filters.category); app.model.filters.category = NULL; }
 		char* category = gtk_combo_box_get_active_text(GTK_COMBO_BOX(app.view_category));
 		if (strcmp(category, ALL_CATEGORIES)){
-			app.search_category = category;
+			app.model.filters.category = category;
 		}
 		else g_free(category);
 
-		do_search(app.search_phrase, app.search_dir);
+		do_search(app.model.filters.phrase, app.model.filters.dir);
 	}
 	g_signal_connect(combo, "changed", G_CALLBACK(on_view_category_changed), NULL);
 
