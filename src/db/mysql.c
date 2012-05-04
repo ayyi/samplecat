@@ -25,10 +25,14 @@
 #include <gdk-pixbuf/gdk-pixdata.h>
 #include <mysql/errmsg.h>
 #include "typedefs.h"
-#include "support.h"
+#include "utils/ayyi_utils.h"
 #include "main.h"
 #include "sample.h"
+#include "db/db.h"
 #include "db/mysql.h"
+
+#define pwarn(A, ...) warnprintf2(__func__, A, ##__VA_ARGS__)
+#define perr(A, ...) errprintf2(__func__, A, ##__VA_ARGS__)
 
 //mysql table layout (database column numbers):
 enum {
@@ -65,6 +69,26 @@ static struct _mysql_config* config = NULL;
 static MYSQL_RES *dir_iter_result = NULL;
 static MYSQL_RES *search_result = NULL;
 static Sample result;
+
+static void      mysql__disconnect       ();
+static int       mysql__insert           (Sample*);
+static gboolean  mysql__delete_row       (int id);
+static gboolean  mysql__file_exists      (const char*, int *id);
+static GList *   mysql__filter_by_audio  (Sample *s);
+
+static gboolean  mysql__update_string    (int id, const char*, const char*);
+static gboolean  mysql__update_int       (int id, const char*, const long int);
+static gboolean  mysql__update_float     (int id, const char*, float);
+static gboolean  mysql__update_blob      (int id, const char*, const guint8*, const guint);
+
+static gboolean  mysql__search_iter_new  (char* search, char* dir, const char* category, int* n_results);
+static Sample*   mysql__search_iter_next_(unsigned long** lengths);
+static void      mysql__search_iter_free ();
+
+static void      mysql__dir_iter_new     ();
+static char*     mysql__dir_iter_next    ();
+static void      mysql__dir_iter_free    ();
+
 
 static int  mysql__exec_sql (const char* sql);
 static void clear_result    ();
@@ -111,6 +135,33 @@ mysql__init(SamplecatModel* _model, void* _config)
 }
 
 
+void
+mysql__set_as_backend(SamplecatBackend* backend)
+{
+	backend->init             = mysql__init;
+
+	backend->search_iter_new  = mysql__search_iter_new;
+	backend->search_iter_next = mysql__search_iter_next_;
+	backend->search_iter_free = mysql__search_iter_free;
+
+	backend->dir_iter_new     = mysql__dir_iter_new;
+	backend->dir_iter_next    = mysql__dir_iter_next;
+	backend->dir_iter_free    = mysql__dir_iter_free;
+
+	backend->insert           = mysql__insert;
+	backend->remove           = mysql__delete_row;
+	backend->file_exists      = mysql__file_exists;
+	backend->filter_by_audio  = mysql__filter_by_audio;
+
+	backend->update_string    = mysql__update_string;
+	backend->update_float     = mysql__update_float;
+	backend->update_int       = mysql__update_int;
+	backend->update_blob      = mysql__update_blob;
+
+	backend->disconnect       = mysql__disconnect;
+}
+
+
 gboolean
 mysql__connect()
 {
@@ -131,7 +182,9 @@ mysql__connect()
 		}else{
 			warnprintf("cannot connect to mysql database: %s\n", mysql_error(&mysql));
 			//currently this won't be displayed, as the window is not yet opened.
+#if 0
 			statusbar_print(1, "cannot connect to mysql database: %s\n", mysql_error(&mysql));
+#endif
 		}
 		return false;
 	}
@@ -216,7 +269,7 @@ mysql__is_connected()
 #endif
 
 
-void
+static void
 mysql__disconnect()
 {
 	mysql_close(&mysql);
@@ -261,7 +314,7 @@ mysql__insert(Sample* sample)
 }
 
 
-gboolean
+static gboolean
 mysql__delete_row(int id)
 {
 	gboolean ok = true;
@@ -283,14 +336,14 @@ mysql__exec_sql(const char* sql)
 }
 
 
-gboolean
+static gboolean
 mysql__update_string(int id, const char* key, const char* value)
 {
 	return mysql__update_blob(id, key, (const guint8*) (value?value:""), (const guint) value?strlen(value):0);
 }
 
 
-gboolean
+static gboolean
 mysql__update_int(int id, const char* key, const long int value)
 {
 	char sql[1024];
@@ -303,7 +356,7 @@ mysql__update_int(int id, const char* key, const long int value)
 }
 
 
-gboolean
+static gboolean
 mysql__update_float(int id, const char* key, const float value)
 {
 	char sql[1024];
@@ -316,7 +369,7 @@ mysql__update_float(int id, const char* key, const float value)
 }
 
 
-gboolean
+static gboolean
 mysql__update_blob(int id, const char* key, const guint8* d, const guint len)
 {
 	char *blob = malloc((len*2+1)*sizeof(char));
@@ -333,7 +386,7 @@ mysql__update_blob(int id, const char* key, const guint8* d, const guint len)
 }
 
 
-gboolean
+static gboolean
 mysql__file_exists(const char* path, int *id)
 {
 	int rv=false;
@@ -362,7 +415,7 @@ mysql__file_exists(const char* path, int *id)
 
 //-------------------------------------------------------------
 
-GList*
+static GList*
 mysql__filter_by_audio(Sample *s) 
 {
 	GList *rv = NULL;
@@ -402,7 +455,7 @@ mysql__filter_by_audio(Sample *s)
 //-------------------------------------------------------------
 
 
-gboolean
+static gboolean
 mysql__search_iter_new(char* X, char* dir, const char* category, int* n_results)
 {
 	//return TRUE on success.
@@ -449,7 +502,7 @@ mysql__search_iter_new(char* X, char* dir, const char* category, int* n_results)
 #endif
 		free(esc);
 	}
-	if(app.model.filters.category) {
+	if(model->filters.category) {
 		MYSQL_ESCAPE(esc, category);
 		g_string_append_printf(q, "AND keywords LIKE '%%%s%%' ", esc);
 		free(esc);
@@ -458,7 +511,7 @@ mysql__search_iter_new(char* X, char* dir, const char* category, int* n_results)
 	dbg(1, "%s", q->str);
 
 	int e; if((e = mysql__exec_sql(q->str)) != 0){
-		statusbar_print(1, "Failed to find any records: %s", mysql_error(&mysql));
+		dbg(1, "Failed to find any records: %s", mysql_error(&mysql));
 
 		if((e == CR_SERVER_GONE_ERROR) || (e == CR_SERVER_LOST)){ //default is to time out after 8 hours
 			dbg(0, "mysql connection timed out. Reconnecting... (not tested!)");
@@ -493,7 +546,7 @@ mysql__search_iter_next(unsigned long** lengths)
 }
 
 
-Sample*
+static Sample*
 mysql__search_iter_next_(unsigned long** lengths)
 {
 	if(!search_result) return NULL;
@@ -552,7 +605,7 @@ mysql__search_iter_next_(unsigned long** lengths)
 }
 
 
-void
+static void
 mysql__search_iter_free()
 {
 	if(search_result) mysql_free_result(search_result);
@@ -563,7 +616,7 @@ mysql__search_iter_free()
 //-------------------------------------------------------------
 
 
-void
+static void
 mysql__dir_iter_new()
 {
 	#define DIR_LIST_QRY "SELECT DISTINCT filedir FROM samples ORDER BY filedir"
@@ -580,7 +633,7 @@ mysql__dir_iter_new()
 }
 
 
-char*
+static char*
 mysql__dir_iter_next()
 {
 	if(!dir_iter_result) return NULL;
@@ -591,7 +644,7 @@ mysql__dir_iter_next()
 }
 
 
-void
+static void
 mysql__dir_iter_free()
 {
 	if(dir_iter_result) mysql_free_result(dir_iter_result);

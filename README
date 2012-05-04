@@ -8,10 +8,9 @@ SampleCat is a program for cataloguing and auditioning audio samples.
 
 SampleCat is available under the GNU General Public License and runs mainly on
 GNU/Linux systems. It is written in C and uses the GTK graphics library. 
-MySql is used for the database.
+MySql and Sqlite can be used for the database.
 
-Currently, basic functionality is working, but the application lacks the bells 
-and whistles to make it a serious tool.
+Currently, most basic functionality is in place and working.
 
 
 known issues:

@@ -23,6 +23,7 @@
 
 extern struct _app app;
 extern Application* application;
+extern SamplecatModel* model;
 extern unsigned debug;
 
 static void listmodel__update ();
@@ -33,6 +34,13 @@ listmodel__new()
 {
 	void icon_theme_changed(Application* application, char* theme, gpointer data){ listmodel__update(); }
 	g_signal_connect((gpointer)application, "icon-theme", G_CALLBACK(icon_theme_changed), NULL);
+
+	void sample_changed(SamplecatModel* m, Sample* sample, int what, void* data, gpointer user_data)
+	{
+		dbg(1, "");
+		listmodel__update_by_rowref(sample->row_ref, what, data);
+	}
+	g_signal_connect((gpointer)model, "sample-changed", G_CALLBACK(sample_changed), NULL);
 
 	return gtk_list_store_new(NUM_COLS, 
 	 GDK_TYPE_PIXBUF,  // COL_ICON
@@ -212,12 +220,12 @@ listmodel__update_result(Sample* sample, int what)
 /* used when user interactively changes meta-data listview.c/window.c,
  * or when modifying meta-data in the inspector.c (wrapped by
  * listmodel__update_by_rowref() below.
- * Also used  when user invokes an 'update' command - main.c */
+ * Also used when user invokes an 'update' command - main.c */
 gboolean
 listmodel__update_by_ref(GtkTreeIter *iter, int what, void *data)
 {
 	gboolean rv = true;
-	Sample *s=NULL;
+	Sample* s = NULL;
 	gtk_tree_model_get(GTK_TREE_MODEL(app.store), iter, COL_SAMPLEPTR, &s, -1);
 	if (!s) {
 		// THIS SHOULD NEVER HAPPEN!
@@ -298,6 +306,7 @@ listmodel__update_by_ref(GtkTreeIter *iter, int what, void *data)
 							COL_SAMPLERATE, samplerate_s,
 							COL_LENGTH, length_s,
 							-1);
+					dbg(1, "file info updated.");
 				}
 			}
 			break;
@@ -313,11 +322,12 @@ listmodel__update_by_ref(GtkTreeIter *iter, int what, void *data)
 	return rv;
 }
 
+
 gboolean
 listmodel__update_by_rowref(GtkTreeRowReference *row_ref, int what, void *data)
 {
 	// used by the inspector..
-	GtkTreePath *path;
+	GtkTreePath* path;
 	if(!(path = gtk_tree_row_reference_get_path(row_ref))) {
 		/* this SHOULD never happen:
 		 * it was possible before the inspector hid 
@@ -334,7 +344,6 @@ listmodel__update_by_rowref(GtkTreeRowReference *row_ref, int what, void *data)
 	gtk_tree_path_free(path);
 	return listmodel__update_by_ref(&iter, what, data);
 }
-
 
 
 void

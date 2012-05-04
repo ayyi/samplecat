@@ -108,18 +108,17 @@ gchar*       gimp_get_accel_string     (guint key, GdkModifierType modifiers);
 
 gchar*       str_replace               (const gchar* string, const gchar* search, const gchar* replace);
 
-GList*       uri_list_to_glist         (const char *uri_list);
+GList*       uri_list_to_glist         (const char* uri_list);
 void         uri_list_free             (GList*);
-const gchar* vfs_get_method_string     (const gchar *substring, gchar **method_string);
-char*        vfs_unescape_string       (const gchar *escaped_string, const gchar *illegal_characters);
+const gchar* vfs_get_method_string     (const gchar* substring, gchar** method_string);
+char*        vfs_unescape_string       (const gchar* escaped_string, const gchar* illegal_characters);
 
 float        gain2db                   (float);
 char*        gain2dbstring             (float);
 
 void         show_widget_if            (GtkWidget*, gboolean);
 
-GdkPixbuf*   get_iconbuf_from_mimetype(char* mimetype);
+GdkPixbuf*   get_iconbuf_from_mimetype (char* mimetype);
 
-uint8_t *    pixbuf_to_blob(GdkPixbuf* in, guint *len);
-GdkPixbuf*   blob_to_pixbuf(const unsigned char* blob, guint len);
+uint8_t*     pixbuf_to_blob            (GdkPixbuf* in, guint* len);
 #endif

@@ -45,6 +45,7 @@ char * program_name;
 
 #include "db/db.h"
 #include "main.h"
+#include "model.h"
 #include "support.h"
 #include "sample.h"
 #include "overview.h"
@@ -107,6 +108,7 @@ static void       update_sample             (Sample *sample, gboolean force_upda
 
 struct _app app;
 Application* application = NULL;
+SamplecatModel* model = NULL;
 struct _palette palette;
 GList* mime_types; // list of MIME_type*
 extern GList* themes; 
@@ -329,6 +331,7 @@ main(int argc, char** argv)
 	icon_theme_init();
 	pixmaps_init();
 	application = application_new();
+	model = samplecat_model_new();
 	ad_init();
 	set_auditioner();
 	app.store = listmodel__new();
@@ -337,17 +340,13 @@ main(int argc, char** argv)
 #ifdef USE_MYSQL
 	if(can_use(app.backends, "mysql")){
 		mysql__init(&app.model, &app.config.mysql);
-		if(mysql__connect()){
-			set_backend(BACKEND_MYSQL);
-			db_connected = true;
-		}
+		db_connected = samplecat_set_backend(BACKEND_MYSQL);
 	}
 #endif
 #ifdef USE_SQLITE
-	if(!db_connected && can_use(app.backends, "sqlite")){
+	if(!db_connected && can_use(app.backends, "sqlite") && ensure_config_dir()){
 		if(sqlite__connect()){
-			set_backend(BACKEND_SQLITE);
-			db_connected = true;
+			db_connected = samplecat_set_backend(BACKEND_SQLITE);
 		}
 	}
 #endif
@@ -364,7 +363,20 @@ main(int argc, char** argv)
 		void on_tracker_init()
 		{
 			dbg(2, "...");
-			set_backend(BACKEND_TRACKER);
+			samplecat_set_backend(BACKEND_TRACKER);
+
+			//hide unsupported inspector notes
+			GtkWidget* notes = app.inspector->text;
+#if 1 
+			// may not work -- it could re-appear ?! show_fields()??
+			if(notes) gtk_widget_hide(notes);
+#else // THIS NEEDS TESTING:
+			g_object_ref(notes); //stops gtk deleting the unparented widget.
+			gtk_container_remove(GTK_CONTAINER(notes->parent), notes);
+#endif
+
+			if(notes) gtk_widget_hide(notes);
+
 			if(search_pending){
 				do_search(app.args.search ? app.args.search : app.model.filters.phrase, app.model.filters.dir);
 			}
@@ -590,7 +602,7 @@ do_search(char* search, char* dir)
 			if(BACKEND_IS_TRACKER && row_count > 20) break;
 #endif
 		}else{
-			Sample *s = sample_dup(result);
+			Sample* s = sample_dup(result);
 			listmodel__add_result(s);
 			sample_unref(s);
 		}
@@ -824,7 +836,7 @@ add_file(char* path)
 	 */
 	if(backend.file_exists(path, NULL)) {
 		statusbar_print(1, "duplicate: not re-adding a file already in db.");
-		gwarn("duplicate file: %s\n", path);
+		gwarn("duplicate file: %s", path);
 		//TODO ask what to do
 		Sample *s = sample_get_by_filename(path);
 		if (s) {
@@ -856,7 +868,7 @@ add_file(char* path)
 #if 1
 	/* check if /same/ file already exists w/ different path */
 	GList* existing;
-	if((existing=backend.filter_by_audio(sample))) {
+	if((existing = backend.filter_by_audio(sample))) {
 		GList* l = existing; int i;
 #ifdef INTERACTIVE_IMPORT
 		GString* note = g_string_new("Similar or identical file(s) already present in database:\n");
@@ -867,15 +879,15 @@ add_file(char* path)
 			 */
 			dbg(0, "found similar or identical file: %s", l->data);
 #ifdef INTERACTIVE_IMPORT
-			if (i<10)
-				g_string_append_printf(note, "%d: '%s'\n",i, (char*) l->data);
+			if (i < 10)
+				g_string_append_printf(note, "%d: '%s'\n", i, (char*) l->data);
 #endif
 		}
 #ifdef INTERACTIVE_IMPORT
 		if (i>9)
-				g_string_append_printf(note, "..\n and %d more.",i-9);
+			g_string_append_printf(note, "..\n and %d more.", i - 9);
 		g_string_append_printf(note, "Add this file: '%s' ?", sample->full_path);
-		if (do_progress_question(note->str)!=1) {
+		if (do_progress_question(note->str) != 1) {
 			// 0, aborted: -> whole add_file loop is aborted on next do_progress() call.
 			// 1, OK
 			// 2, cancled: -> only this file is skipped
@@ -884,8 +896,8 @@ add_file(char* path)
 			return false;
 		}
 		g_string_free(note, true);
-		g_list_foreach (existing, (GFunc)g_free, NULL);
-	  g_list_free(existing);
+		g_list_foreach(existing, (GFunc)g_free, NULL);
+		g_list_free(existing);
 #endif /* END interactive import */
 	}
 #endif /* END check for similar files on import */
@@ -922,7 +934,7 @@ gboolean
 on_peaklevel_done(gpointer _sample)
 {
 	Sample* sample = _sample;
-	dbg(1, "peaklevel=%.2f id=%i rowref=%p", sample->peaklevel, sample->id, sample->row_ref);
+	dbg(1, "peaklevel=%.2f id=%i", sample->peaklevel, sample->id);
 	listmodel__update_result(sample, COL_PEAKLEVEL);
 	sample_unref(sample);
 	return IDLE_STOP;
@@ -951,7 +963,7 @@ delete_selected_rows()
 
 	GList* selected_row_refs = NULL;
 
-	//get row refs for each selected row:
+	//get row refs for each selected row before the list is modified:
 	GList* l = selectionlist;
 	for(;l;l=l->next){
 		GtkTreePath* treepath_selection = l->data;
@@ -970,7 +982,7 @@ delete_selected_rows()
 		if((path = gtk_tree_row_reference_get_path(row_ref))){
 
 			if(gtk_tree_model_get_iter(model, &iter, path)){
-				gchar *fname;
+				gchar* fname;
 				int id;
 				gtk_tree_model_get(model, &iter, COL_NAME, &fname, COL_IDX, &id, -1);
 
@@ -998,9 +1010,10 @@ menu_delete_row(GtkMenuItem* widget, gpointer user_data)
 
 
 static void
-update_sample(Sample *sample, gboolean force_update) {
+update_sample(Sample* sample, gboolean force_update)
+{
 	time_t mtime = file_mtime(sample->full_path);
-	if(mtime>0){
+	if(mtime > 0){
 		if (sample->mtime < mtime || force_update) {
 			/* file may have changed - FULL UPDATE */
 			dbg(0, "file modified: full update: %s", sample->full_path);
@@ -1011,7 +1024,7 @@ update_sample(Sample *sample, gboolean force_update) {
 			else return;
 
 			if (sample_get_file_info(sample)) {
-				listmodel__update_by_rowref(sample->row_ref, -1, NULL);
+				g_signal_emit_by_name (model, "sample-changed", sample, -1, NULL);
 				sample->mtime = mtime;
 				request_peaklevel(sample);
 				request_overview(sample);
@@ -1026,15 +1039,15 @@ update_sample(Sample *sample, gboolean force_update) {
 		/* file does not exist */
 		sample->online = 0;
 	}
-	listmodel__update_by_rowref(sample->row_ref, COL_ICON, NULL);
+	g_signal_emit_by_name (model, "sample-changed", sample, COL_ICON, NULL);
 }
+
 
 /** sync the catalogue row with the filesystem. */
 static void
 update_rows(GtkWidget *widget, gpointer user_data)
 {
 	PF;
-	//GtkTreeModel *model = gtk_tree_view_get_model(GTK_TREE_VIEW(app.view));
 	GtkTreeModel *model = GTK_TREE_MODEL(app.store);
 	gboolean force_update = (GPOINTER_TO_INT(user_data)==2)?true:false; // NOTE - linked to order in _menu_def[]
 
@@ -1561,106 +1574,6 @@ on_quit(GtkMenuItem* menuitem, gpointer user_data)
 	exit(exit_code);
 }
 
-
-void
-set_backend(BackendType type)
-{
-	backend.pending = false;
-
-	switch(type){
-		case BACKEND_MYSQL:
-			#ifdef USE_MYSQL
-			backend.init             = mysql__init;
-
-			backend.search_iter_new  = mysql__search_iter_new;
-			backend.search_iter_next = mysql__search_iter_next_;
-			backend.search_iter_free = mysql__search_iter_free;
-
-			backend.dir_iter_new     = mysql__dir_iter_new;
-			backend.dir_iter_next    = mysql__dir_iter_next;
-			backend.dir_iter_free    = mysql__dir_iter_free;
-
-			backend.insert           = mysql__insert;
-			backend.remove           = mysql__delete_row;
-			backend.file_exists      = mysql__file_exists;
-			backend.filter_by_audio  = mysql__filter_by_audio;
-
-			backend.update_string    = mysql__update_string;
-			backend.update_float     = mysql__update_float;
-			backend.update_int       = mysql__update_int;
-			backend.update_blob      = mysql__update_blob;
-
-			backend.disconnect       = mysql__disconnect;
-
-			printf("backend is mysql.\n");
-			#endif
-			break;
-		case BACKEND_SQLITE:
-			#ifdef USE_SQLITE
-			backend.search_iter_new  = sqlite__search_iter_new;
-			backend.search_iter_next = sqlite__search_iter_next;
-			backend.search_iter_free = sqlite__search_iter_free;
-
-			backend.dir_iter_new     = sqlite__dir_iter_new;
-			backend.dir_iter_next    = sqlite__dir_iter_next;
-			backend.dir_iter_free    = sqlite__dir_iter_free;
-
-			backend.insert           = sqlite__insert;
-			backend.remove           = sqlite__delete_row;
-			backend.file_exists      = sqlite__file_exists;
-			backend.filter_by_audio  = sqlite__filter_by_audio;
-
-			backend.update_string    = sqlite__update_string;
-			backend.update_float     = sqlite__update_float;
-			backend.update_int       = sqlite__update_int;
-			backend.update_blob      = sqlite__update_blob;
-
-			backend.disconnect       = sqlite__disconnect;
-
-			printf("backend is sqlite.\n");
-			#endif
-			break;
-		case BACKEND_TRACKER:
-			#ifdef USE_TRACKER
-			backend.search_iter_new  = tracker__search_iter_new;
-			backend.search_iter_next = tracker__search_iter_next;
-			backend.search_iter_free = tracker__search_iter_free;
-
-			backend.dir_iter_new     = tracker__dir_iter_new;
-			backend.dir_iter_next    = tracker__dir_iter_next;
-			backend.dir_iter_free    = tracker__dir_iter_free;
-
-			backend.insert           = tracker__insert;
-			backend.remove           = tracker__delete_row;
-			backend.file_exists      = tracker__file_exists;
-			backend.filter_by_audio  = tracker__filter_by_audio;
-
-			backend.update_string    = tracker__update_string;
-			backend.update_float     = tracker__update_float;
-			backend.update_int       = tracker__update_int;
-			backend.update_blob      = tracker__update_blob;
-
-			backend.disconnect       = tracker__disconnect;
-			printf("backend is tracker.\n");
-
-			//hide unsupported inspector notes
-			GtkWidget* notes = app.inspector->text;
-#if 1 
-			// may not work -- it could re-appear ?! show_fields()??
-			if(notes) gtk_widget_hide(notes);
-#else // THIS NEEDS TESTING:
-			g_object_ref(notes); //stops gtk deleting the unparented widget.
-			gtk_container_remove(GTK_CONTAINER(notes->parent), notes);
-#endif
-
-			if(notes) gtk_widget_hide(notes);
-
-			#endif
-			break;
-		default:
-			break;
-	}
-}
 
 int  auditioner_nullC() {return 0;}
 void auditioner_null() {;}

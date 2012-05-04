@@ -197,8 +197,6 @@ gboolean    keyword_is_dupe(char* new, char* existing);
 
 void        on_quit(GtkMenuItem*, gpointer user_data);
 
-void        set_backend(BackendType);
-
 void        set_auditioner();
 
 void        observer__item_selected(Sample*);

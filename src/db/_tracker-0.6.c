@@ -603,7 +603,7 @@ tracker__update_online(int id, gboolean online)
 static void
 tracker__on_dbus_timeout()
 {
-	statusbar_print(1, "tracker: dbus timeout");
+	dbg(0, "tracker: dbus timeout");
 }
 
 

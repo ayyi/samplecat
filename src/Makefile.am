@@ -68,6 +68,7 @@ samplecat_SOURCES = \
 	typedefs.h types.h \
 	main.c main.h \
 	application.c application.h \
+	model.c model.h \
 	window.c window.h \
 	listmodel.c listmodel.h \
 	progress_dialog.c progress_dialog.h \

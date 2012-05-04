@@ -8,15 +8,19 @@
 #include <gimp/gimpaction.h>
 #include <gimp/gimpactiongroup.h>
 
-#include "support.h"
+#include "utils/ayyi_utils.h"
 #include "types.h"
 #include "sample.h"
+#include "db/db.h"
 #include "db/sqlite.h"
 
 static sqlite3* db;
 sqlite3_stmt* ppStmt = NULL;
 extern int debug;
 #define MAX_LEN 256 //temp!
+
+#define pwarn(A, ...) warnprintf2(__func__, A, ##__VA_ARGS__)
+#define perr(A, ...) errprintf2(__func__, A, ##__VA_ARGS__)
 
 enum {
 	COLUMN_ID,
@@ -55,7 +59,6 @@ sqlite__connect()
 	PF;
 	int rc;
 
-	if(!ensure_config_dir()) return FALSE;
 	char* db_name = g_strdup_printf("%s/.config/" PACKAGE "/" PACKAGE ".sqlite", g_get_home_dir());
 	rc = sqlite3_open(db_name, &db); //if the file doesnt exist, it be created.
 	if (rc) {

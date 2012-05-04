@@ -22,6 +22,7 @@
 #endif
 
 extern struct _app app;
+extern SamplecatModel* model;
 extern int debug;
 
 static void       inspector_clear           ();
@@ -222,6 +223,7 @@ inspector_free(Inspector* inspector)
 	g_free(inspector);
 }
 
+
 void
 inspector_set_labels(Sample* sample)
 {
@@ -281,6 +283,7 @@ inspector_set_labels(Sample* sample)
 	if (app.auditioner->status &&  app.auditioner->status() != -1.0)
 		show_player(); // show/hide player
 }
+
 
 /// this is somewhat redundant w/ inspector_update_from_fileview()
 void
@@ -433,14 +436,22 @@ on_notes_focus_out(GtkWidget *widget, gpointer userdata)
 	gchar* notes = gtk_text_buffer_get_text(textbuf, &start_iter, &end_iter, true);
 	dbg(2, "start=%i end=%i", gtk_text_iter_get_offset(&start_iter), gtk_text_iter_get_offset(&end_iter));
 
+#if 0
 	if (listmodel__update_by_rowref(app.inspector->row_ref, COLX_NOTES, notes)) {
 		statusbar_print(1, "notes updated");
 	} else {
 		dbg(0, "failed to update notes");
 	}
+#else
+	Sample* sample = listview__get_sample_by_rowref(app.inspector->row_ref);
+	if(sample){
+		g_signal_emit_by_name (model, "sample-changed", sample, COLX_NOTES, notes);
+	}
+#endif
 	g_free(notes);
 	return FALSE;
 }
+
 
 gboolean
 row_set_tags_from_id(int id, GtkTreeRowReference* row_ref, const char* tags_new)
@@ -455,6 +466,7 @@ row_set_tags_from_id(int id, GtkTreeRowReference* row_ref, const char* tags_new)
 	}
 	return true;
 }
+
 
 static void
 tag_edit_start(int tnum)

@@ -211,14 +211,6 @@ AC_SUBST(FFMPEG_CFLAGS)
 AC_SUBST(FFMPEG_LIBS)
 
 dnl -----------------------------------------------------------------------------
-dnl ** libflac usage is deprecated -> sndfile and ffmpeg can decode it **
-
-enable_flac="deprecated"
-AM_CONDITIONAL(ENABLE_FLAC, test "$enable_flac" = "yes")
-AC_SUBST(FLAC_CFLAGS)
-AC_SUBST(FLAC_LIBS)
-
-dnl -----------------------------------------------------------------------------
 
 if test "$enable_dnotify" = "yes"; then
 	AC_DEFINE(USE_DNOTIFY,1,[Use dnotify on Linux])
@@ -415,7 +407,6 @@ AC_MSG_RESULT([  tracker support:            $enable_tracker])
 AC_MSG_RESULT([Audio decoders:])
 AC_MSG_RESULT([  libsndfile:                 yes])
 AC_MSG_RESULT([  ffmpeg decoder:             $enable_ffmpeg])
-AC_MSG_RESULT([  direct flac support:        $enable_flac])
 AC_MSG_RESULT([Audio players:])
 AC_MSG_RESULT([  built-in JACK:              $jplayer])
 AC_MSG_RESULT([  AYYI/Dbus:                  $enable_ayyidbus])

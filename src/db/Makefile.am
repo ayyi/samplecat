@@ -36,6 +36,7 @@ TRACKER_SRC = tracker.c tracker.h
 endif
 
 libsamplecatdb_a_SOURCES = \
+	db.c db.h \
 	$(MYSQL_SRC) \
 	$(TRACKER_SRC) \
 	$(SQLITE_SRC)

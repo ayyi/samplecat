@@ -423,6 +423,13 @@ listview__get_first_selected_filepath()
 }
 
 
+Sample*
+listview__get_sample_by_rowref(GtkTreeRowReference* row_ref)
+{
+	return sample_get_by_row_ref(row_ref); //TODO fn is misplaced. move out of the sample object.
+}
+
+
 static void
 listview__dnd_get(GtkWidget *widget, GdkDragContext *context, GtkSelectionData *selection_data, guint info, guint time, gpointer data)
 {

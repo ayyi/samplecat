@@ -931,7 +931,7 @@ tracker__filter_by_audio  (Sample *s)
 static void
 tracker__on_dbus_timeout()
 {
-	statusbar_print(1, "tracker: dbus timeout");
+	dbg(1, "tracker: dbus timeout");
 }
 #endif
 
