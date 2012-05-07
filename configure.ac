@@ -202,7 +202,7 @@ AC_SUBST(SNDFILE_LIBS)
 dnl -----------------------------------------------------------------------------
 
 AS_IF([test "$enable_ffmpeg" != "no"], [
-	PKG_CHECK_MODULES(FFMPEG, [libavformat >= 51.0.0 libavcodec >= 51.0.0 libavutil >= 51.0.0], enable_ffmpeg=yes, enable_ffmpeg=no)
+	PKG_CHECK_MODULES(FFMPEG, [libavformat >= 51.0.0 libavcodec >= 51.0.0 libavutil >= 50.0.0], enable_ffmpeg=yes, enable_ffmpeg=no)
 	])
 
 if test "$enable_ffmpeg" = "yes"; then
@@ -342,18 +342,19 @@ AC_SUBST(SQLITE_LIBS)
 
 dnl -----------------------------------------------------------------------------
 
-AS_IF([test "$enable_mx" != "no"],[
-       PKG_CHECK_MODULES(MX, mx-1.0, AC_DEFINE(USE_MX, 1, Use mx widget toolkit) enable_mx="yes", enable_mx="no")
-       ])
+AS_IF([test "$enable_mx" = "yes"],
+       [PKG_CHECK_MODULES(MX, mx-1.0, AC_DEFINE(USE_MX, 1, Use mx widget toolkit) enable_mx="yes", enable_mx="no")],
+       [enable_mx="no"]
+)
 AM_CONDITIONAL(ENABLE_MX, test "$enable_mx" = "yes")
 AC_SUBST(MX_CFLAGS)
 AC_SUBST(MX_LDFLAGS)
 
 dnl -----------------------------------------------------------------------------
 
-AS_IF([test "$enable_webkit" != "no"],[
+AS_IF([test "$enable_webkit" = "yes"],[
        PKG_CHECK_MODULES(WEBKIT, webkit-1.0, AC_DEFINE(USE_WEBKIT, 1, Use experimental Webkit interface) enable_webkit="yes", enable_webkit="no")
-       ])
+       ], [enable_webkit="no"])
 AM_CONDITIONAL(ENABLE_WEBKIT, test "$enable_webkit" = "yes")
 AC_SUBST(WEBKIT_CFLAGS)
 AC_SUBST(WEBKIT_LDFLAGS)

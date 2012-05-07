@@ -46,6 +46,10 @@ marshal.c: Makefile marshal.list
 	cp -f xgen-tmc marshal.c && \
 	rm -f xgen-tmc
 
-EXTRA_DIST =
+BUILT_SOURCES = \
+	marshal.h
+
+EXTRA_DIST = \
+	marshal.list
 
 #-include $(top_srcdir)/git.mk
