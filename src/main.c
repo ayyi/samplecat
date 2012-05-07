@@ -103,7 +103,6 @@ static void       config_new                ();
 static bool       config_save               ();
 static void       menu_delete_row           (GtkMenuItem*, gpointer);
 void              menu_play_stop            (GtkWidget* widget, gpointer);
-static void       update_sample             (Sample *sample, gboolean force_update);
 
 
 struct _app app;
@@ -840,7 +839,7 @@ add_file(char* path)
 		//TODO ask what to do
 		Sample *s = sample_get_by_filename(path);
 		if (s) {
-			update_sample(s, false);
+			sample_refresh(s, false);
 			sample_unref(s);
 		} else {
 			dbg(0, "Sample found in DB but not in model.");
@@ -924,7 +923,7 @@ on_overview_done(gpointer _sample)
 	Sample* sample = _sample;
 	g_return_val_if_fail(sample, false);
 	if(!sample->overview){ dbg(1, "overview creation failed (no pixbuf).\n"); return false; }
-	listmodel__update_result(sample, COL_OVERVIEW);
+	listmodel__update_sample(sample, COL_OVERVIEW, NULL);
 	sample_unref(sample);
 	return IDLE_STOP;
 }
@@ -935,7 +934,7 @@ on_peaklevel_done(gpointer _sample)
 {
 	Sample* sample = _sample;
 	dbg(1, "peaklevel=%.2f id=%i", sample->peaklevel, sample->id);
-	listmodel__update_result(sample, COL_PEAKLEVEL);
+	listmodel__update_sample(sample, COL_PEAKLEVEL, NULL);
 	sample_unref(sample);
 	return IDLE_STOP;
 }
@@ -945,7 +944,7 @@ gboolean
 on_ebur128_done(gpointer _sample)
 {
 	Sample* sample = _sample;
-	listmodel__update_result(sample, COLX_EBUR);
+	listmodel__update_sample(sample, COLX_EBUR, NULL);
 	sample_unref(sample);
 	return IDLE_STOP;
 }
@@ -1009,40 +1008,6 @@ menu_delete_row(GtkMenuItem* widget, gpointer user_data)
 }
 
 
-static void
-update_sample(Sample* sample, gboolean force_update)
-{
-	time_t mtime = file_mtime(sample->full_path);
-	if(mtime > 0){
-		if (sample->mtime < mtime || force_update) {
-			/* file may have changed - FULL UPDATE */
-			dbg(0, "file modified: full update: %s", sample->full_path);
-
-			// re-check mime-type
-			Sample* test = sample_new_from_filename(sample->full_path, false);
-			if (test) sample_unref(test);
-			else return;
-
-			if (sample_get_file_info(sample)) {
-				g_signal_emit_by_name (model, "sample-changed", sample, -1, NULL);
-				sample->mtime = mtime;
-				request_peaklevel(sample);
-				request_overview(sample);
-				request_ebur128(sample);
-			} else {
-				dbg(0, "full update - reading file info failed!");
-			}
-		}
-		sample->mtime = mtime;
-		sample->online = 1;
-	}else{
-		/* file does not exist */
-		sample->online = 0;
-	}
-	g_signal_emit_by_name (model, "sample-changed", sample, COL_ICON, NULL);
-}
-
-
 /** sync the catalogue row with the filesystem. */
 static void
 update_rows(GtkWidget *widget, gpointer user_data)
@@ -1058,10 +1023,10 @@ update_rows(GtkWidget *widget, gpointer user_data)
 
 	int i;
 	for(i=0;i<g_list_length(selectionlist);i++){
-		GtkTreePath *treepath = g_list_nth_data(selectionlist, i);
-		Sample *sample = sample_get_from_model(treepath);
+		GtkTreePath* treepath = g_list_nth_data(selectionlist, i);
+		Sample* sample = sample_get_from_model(treepath);
 		if (do_progress(0,0)) break; // TODO: set progress title to "updating"
-		update_sample(sample, force_update);
+		sample_refresh(sample, force_update);
 		statusbar_print(1, "online status updated (%s)", sample->online ? "online" : "not online");
 		sample_unref(sample);
 	}
@@ -1678,6 +1643,7 @@ set_auditioner() /* tentative - WIP */
 	}
 }
 
+
 static gboolean
 can_use (GList *l, const char* d)
 {
@@ -1695,7 +1661,7 @@ observer__item_selected(Sample* s)
 {
 	//TODO move these to idle functions
 
-	inspector_update_from_result(s);
+	g_signal_emit_by_name (application, "selection-changed", s, COL_ICON, NULL);
 
 #ifdef HAVE_FFTW3
 	if(app.spectrogram){

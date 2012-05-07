@@ -1,0 +1,8 @@
+
+table#samples      { width: 100%; margin: 0 0 1em;}
+tr.odd             { background-color: #eee; }
+.dataTables_filter { display: none;}
+.dataTables_info   { font-size: 80%; }
+#search-box        { padding: 4px; background-color: #eee; }
+#search-box input  { margin-top: 6px; width: 80%; }
+#search-box button.btn { Xmargin: 0 !important; }

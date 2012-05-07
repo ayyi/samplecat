@@ -32,9 +32,9 @@ GtkListStore* listmodel__new                   ();
 void          listmodel__clear                 ();
 void          listmodel__add_result            (Sample*);
 
-void          listmodel__update_result         (Sample*, int what);
-gboolean      listmodel__update_by_ref         (GtkTreeIter *iter, int what, void *data);
-gboolean      listmodel__update_by_rowref      (GtkTreeRowReference *row_ref, int what, void *data);
+void          listmodel__update_sample         (Sample*, int what, void* data);
+gboolean      listmodel__update_by_tree_iter   (GtkTreeIter*, int what, void* data);
+gboolean      listmodel__update_by_rowref      (GtkTreeRowReference*, int what, void* data);
 
 char*         listmodel__get_filename_from_id  (int);
 void          listmodel__move_files            (GList *list, const gchar *dest_path);

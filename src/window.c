@@ -874,13 +874,13 @@ on_category_set_clicked(GtkComboBox *widget, gpointer user_data)
 		GtkTreePath *treepath_selection = g_list_nth_data(selectionlist, i);
 
 		if(gtk_tree_model_get_iter(GTK_TREE_MODEL(app.store), &iter, treepath_selection)){
-			gchar *fname; gchar *tags;
+			gchar* fname; gchar* tags;
 			int id;
 			gtk_tree_model_get(GTK_TREE_MODEL(app.store), &iter, COL_NAME, &fname, COL_KEYWORDS, &tags, COL_IDX, &id, -1);
 			dbg(1, "id=%i name=%s", id, fname);
 
 			if(!strcmp(category, "no categories"))
-				listmodel__update_by_ref(&iter, COL_KEYWORDS, "");
+				listmodel__update_by_tree_iter(&iter, COL_KEYWORDS, "");
 			else{
 
 				if(!keyword_is_dupe(category, tags)){
@@ -888,7 +888,7 @@ on_category_set_clicked(GtkComboBox *widget, gpointer user_data)
 					snprintf(tags_new, 1024, "%s %s", tags ? tags : "", category);
 					g_strstrip(tags_new);//trim
 
-					listmodel__update_by_ref(&iter, COL_KEYWORDS, (void*)tags_new);
+					listmodel__update_by_tree_iter(&iter, COL_KEYWORDS, (void*)tags_new);
 				}else{
 					dbg(1, "keyword is a dupe - not applying.");
 					statusbar_print(1, "ignoring duplicate keyword.");

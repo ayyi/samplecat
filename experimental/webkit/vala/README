@@ -1,0 +1,3 @@
+The makefile uses a hardcoded version valac-0.16.
+Versions before this will not work because of incomplete webkit vapi file.
+

@@ -16,6 +16,7 @@
 
 
 extern struct _app app;
+extern SamplecatModel* model;
 
 
 Sample*
@@ -134,6 +135,41 @@ sample_unref(Sample* sample)
 	sample->ref_count--;
 	if(sample->ref_count < 1) sample_free(sample);
 }
+
+
+void
+sample_refresh(Sample* sample, gboolean force_update)
+{
+	time_t mtime = file_mtime(sample->full_path);
+	if(mtime > 0){
+		if (sample->mtime < mtime || force_update) {
+			/* file may have changed - FULL UPDATE */
+			dbg(0, "file modified: full update: %s", sample->full_path);
+
+			// re-check mime-type
+			Sample* test = sample_new_from_filename(sample->full_path, false);
+			if (test) sample_unref(test);
+			else return;
+
+			if (sample_get_file_info(sample)) {
+				g_signal_emit_by_name (model, "sample-changed", sample, -1, NULL);
+				sample->mtime = mtime;
+				request_peaklevel(sample);
+				request_overview(sample);
+				request_ebur128(sample);
+			} else {
+				dbg(0, "full update - reading file info failed!");
+			}
+		}
+		sample->mtime = mtime;
+		sample->online = 1;
+	}else{
+		/* file does not exist */
+		sample->online = 0;
+	}
+	g_signal_emit_by_name (model, "sample-changed", sample, COL_ICON, NULL);
+}
+
 
 // TODO move to audio_analysis/analyzers.c ?! or overview.c
 #include "audio_decoder/ad.h"

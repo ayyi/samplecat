@@ -1,3 +1,20 @@
+/*
+  This file is part of Samplecat. http://samplecat.orford.org
+  copyright (C) 2007-2012 Tim Orford and others.
+
+  This program is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License version 3
+  as published by the Free Software Foundation.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+*/
 #include "config.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -26,6 +43,7 @@ extern SamplecatModel* model;
 extern int debug;
 
 static void       inspector_clear           ();
+static void       inspector_update_from_sample(Application*, Sample*, gpointer);
 static void       hide_fields               ();
 static void       show_fields               ();
 static gboolean   inspector_on_tags_clicked (GtkWidget*, GdkEventButton*, gpointer);
@@ -213,6 +231,8 @@ inspector_new()
 	gtk_entry_set_text(GTK_ENTRY(edit), "");
 	g_object_ref(edit); //stops gtk deleting the unparented widget.
 
+	g_signal_connect((gpointer)application, "selection-changed", G_CALLBACK(inspector_update_from_sample), NULL);
+
 	return vbox;
 }
 
@@ -280,14 +300,15 @@ inspector_set_labels(Sample* sample)
 		gtk_widget_hide(GTK_WIDGET(i->tags));
 	}
 
-	if (app.auditioner->status &&  app.auditioner->status() != -1.0)
+	if (app.auditioner->status && app.auditioner->status() != -1.0)
 		show_player(); // show/hide player
 }
 
 
 /// this is somewhat redundant w/ inspector_update_from_fileview()
-void
-inspector_update_from_result(Sample* sample)
+//  (but this fn has the correct interface)
+static void
+inspector_update_from_sample(Application* a, Sample* sample, gpointer user_data)
 {
 	PF;
 	Inspector* i = app.inspector;
@@ -445,7 +466,7 @@ on_notes_focus_out(GtkWidget *widget, gpointer userdata)
 #else
 	Sample* sample = listview__get_sample_by_rowref(app.inspector->row_ref);
 	if(sample){
-		g_signal_emit_by_name (model, "sample-changed", sample, COLX_NOTES, notes);
+		listmodel__update_sample(sample, COLX_NOTES, notes);
 	}
 #endif
 	g_free(notes);

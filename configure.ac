@@ -46,6 +46,8 @@ AC_ARG_ENABLE(nks,      AS_HELP_STRING([--enable-nks],[build with nks support]),
 AC_ARG_ENABLE(sf2,      AC_HELP_STRING([--enable-sf2], [build with sf2 support. Currently this option doesnt do anything useful.]),enable_sf2="$enableval", enable_sf2="no")
 AC_ARG_ENABLE(tracker,  AS_HELP_STRING([--enable-tracker],[build with tracker support]),enable_tracker=$enableval, enable_tracker="auto")
 AC_ARG_ENABLE(sqlite,   AS_HELP_STRING([--enable-sqlite],[build with sqlite support]),enable_sqlite=$enableval, enable_sqlite="auto")
+AC_ARG_ENABLE(mx,       AS_HELP_STRING([--enable-mx], [build with mx support -- experimental]), enable_mx=$enableval, enable_mx="auto")
+AC_ARG_ENABLE(webkit,   AS_HELP_STRING([--enable-webkit], [build with webkit support -- experimental]), enable_webkit=$enableval, enable_webkit="auto")
 AC_ARG_ENABLE(opengl,   AC_HELP_STRING([--disable-opengl], [disable use of OpenGL]),enable_opengl=$enableval,enable_opengl="no")
 AC_ARG_ENABLE(fftw,     AC_HELP_STRING([--disable-fftw], [disable usage of FFTW ]),enable_fftw=$enableval,enable_fftw="auto")
 AC_ARG_ENABLE(vala,     AC_HELP_STRING([--disable-vala], [disable usage of Vala. Vala is only needed for developers ]), enable_vala=$enableval, enable_vala="auto")
@@ -340,6 +342,24 @@ AC_SUBST(SQLITE_LIBS)
 
 dnl -----------------------------------------------------------------------------
 
+AS_IF([test "$enable_mx" != "no"],[
+       PKG_CHECK_MODULES(MX, mx-1.0, AC_DEFINE(USE_MX, 1, Use mx widget toolkit) enable_mx="yes", enable_mx="no")
+       ])
+AM_CONDITIONAL(ENABLE_MX, test "$enable_mx" = "yes")
+AC_SUBST(MX_CFLAGS)
+AC_SUBST(MX_LDFLAGS)
+
+dnl -----------------------------------------------------------------------------
+
+AS_IF([test "$enable_webkit" != "no"],[
+       PKG_CHECK_MODULES(WEBKIT, webkit-1.0, AC_DEFINE(USE_WEBKIT, 1, Use experimental Webkit interface) enable_webkit="yes", enable_webkit="no")
+       ])
+AM_CONDITIONAL(ENABLE_WEBKIT, test "$enable_webkit" = "yes")
+AC_SUBST(WEBKIT_CFLAGS)
+AC_SUBST(WEBKIT_LDFLAGS)
+
+dnl -----------------------------------------------------------------------------
+
 AS_IF([test "$enable_opengl" = "yes"], [
        PKG_CHECK_MODULES(OPENGL, gtkglext-1.0, [AC_DEFINE(USE_OPENGL, 1, Opengl features are enabled)])
        ])
@@ -384,6 +404,9 @@ AC_CONFIG_FILES([lib/dir_tree/Makefile])
 AC_CONFIG_FILES([src/Makefile])
 AC_CONFIG_FILES([src/db/Makefile])
 AC_CONFIG_FILES([src/gimp/Makefile])
+AC_CONFIG_FILES([experimental/Makefile])
+AC_CONFIG_FILES([experimental/webkit/Makefile])
+AC_CONFIG_FILES([experimental/mx/Makefile])
 dnl AC_CONFIG_FILES([src/vala/Makefile])
 AC_OUTPUT
 
@@ -416,6 +439,13 @@ AC_MSG_RESULT([Building dnotify support:     $enable_dnotify])
 AC_MSG_RESULT([Building inotify support:     $ac_cv_header_sys_inotify_h])
 AC_MSG_RESULT([Building opengl support:      $enable_opengl])
 AC_MSG_RESULT([Building ayyi support:        $enable_ayyi])
-dnl AC_MSG_RESULT([Building soundfont support:   $enable_sf2])
-dnl AC_MSG_RESULT([Building nks support:         $enable_nks])
 AC_MSG_RESULT([])
+
+if test "$enable_mx" = "yes" -o "$enable_webkit" = "yes" -o "$enable_sf2" = "yes" -o "$enable_nks" = "yes"; then
+AC_MSG_RESULT([*** You have experimental options enabled. These are of no use other than to developers])
+AC_MSG_RESULT([  soundfont support:          $enable_sf2])
+AC_MSG_RESULT([  nks support:                $enable_nks])
+AC_MSG_RESULT([  mx support:                 $enable_mx])
+AC_MSG_RESULT([  webkit support:             $enable_webkit])
+AC_MSG_RESULT([])
+fi

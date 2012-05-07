@@ -321,7 +321,7 @@ listview__item_set_colour(GtkTreePath* path, unsigned colour_index)
 	GtkTreeIter iter;
 	gtk_tree_model_get_iter(GTK_TREE_MODEL(app.store), &iter, path);
 
-	if(!listmodel__update_by_ref(&iter, COL_COLOUR, (void*)&colour_index)) {
+	if(!listmodel__update_by_tree_iter(&iter, COL_COLOUR, (void*)&colour_index)) {
 		statusbar_print(1, "error! colour not updated");
 		return false;
 	}
@@ -665,7 +665,7 @@ listview__on_keywords_edited(GtkCellRendererText *cell, gchar *path_string, gcha
 	//gchar* lower = g_ascii_strdown(new_text, -1);
 	//g_free(lower);
 
-	if(listmodel__update_by_ref(&iter, COL_KEYWORDS, (void*)new_text)) {
+	if(listmodel__update_by_tree_iter(&iter, COL_KEYWORDS, (void*)new_text)) {
 		statusbar_print(1, "keywords updated");
 	}
 	else statusbar_print(1, "database error! keywords not updated");
@@ -673,11 +673,11 @@ listview__on_keywords_edited(GtkCellRendererText *cell, gchar *path_string, gcha
 
 
 static void
-path_cell_data(GtkTreeViewColumn *tree_column, GtkCellRenderer *cell, GtkTreeModel *tree_model, GtkTreeIter *iter, gpointer data)
+path_cell_data(GtkTreeViewColumn* tree_column, GtkCellRenderer* cell, GtkTreeModel* tree_model, GtkTreeIter* iter, gpointer data)
 {
 	cell_data_bg(tree_column, cell, tree_model, iter, data);
 
-	GtkCellRendererText *celltext = (GtkCellRendererText*)cell;
+	GtkCellRendererText* celltext = (GtkCellRendererText*)cell;
 	if(celltext){
 		gchar* text = g_strdup(dir_format(celltext->text));
 		g_free(celltext->text);

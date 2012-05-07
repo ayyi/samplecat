@@ -176,7 +176,7 @@ listmodel__add_result(Sample* result)
 /* used to update information that was generated in
  * a backgound analysis process */
 void
-listmodel__update_result(Sample* sample, int what)
+listmodel__update_sample(Sample* sample, int what, void* data)
 {
 	if(!sample->row_ref || !gtk_tree_row_reference_valid(sample->row_ref)){
 		/* this should never happen  --
@@ -196,6 +196,14 @@ listmodel__update_result(Sample* sample, int what)
 			}
 			if (sample->row_ref)
 				listmodel__set_overview(sample->row_ref, sample->overview);
+			break;
+		case COLX_NOTES:
+			if (!backend.update_string(sample->id, "notes", (char*)data)) {
+				gwarn("failed to store notes in the database");
+			} else {
+				if (sample->notes) free(sample->notes);
+				sample->notes = strdup((char*)data);
+			}
 			break;
 		case COL_PEAKLEVEL:
 			if (!backend.update_float(sample->id, "peaklevel", sample->peaklevel))
@@ -222,7 +230,7 @@ listmodel__update_result(Sample* sample, int what)
  * listmodel__update_by_rowref() below.
  * Also used when user invokes an 'update' command - main.c */
 gboolean
-listmodel__update_by_ref(GtkTreeIter *iter, int what, void *data)
+listmodel__update_by_tree_iter(GtkTreeIter* iter, int what, void* data)
 {
 	gboolean rv = true;
 	Sample* s = NULL;
@@ -256,7 +264,7 @@ listmodel__update_by_ref(GtkTreeIter *iter, int what, void *data)
 			{
 				if(!backend.update_string(s->id, "keywords", (char*)data)) {
 					gwarn("failed to store keywords in the database");
-					rv=false;
+					rv = false;
 				} else {
 					gtk_list_store_set(app.store, iter, COL_KEYWORDS, (char*)data, -1);
 					if (s->keywords) free(s->keywords);
@@ -264,30 +272,21 @@ listmodel__update_by_ref(GtkTreeIter *iter, int what, void *data)
 				}
 			}
 			break;
-		case COLX_NOTES:
-				if (!backend.update_string(s->id, "notes", (char*)data)) {
-					gwarn("failed to store notes in the database");
-					rv=false;
-				} else {
-					if (s->notes) free(s->notes);
-					s->notes = strdup((char*)data);
-				}
-			break;
 		case COL_COLOUR:
 			{
 				unsigned int colour_index = *((unsigned int*)data);
 				if(!backend.update_int(s->id, "colour", colour_index)) {
 					gwarn("failed to store colour in the database");
-					rv=false;
+					rv = false;
 				} else {
 					gtk_list_store_set(app.store, iter, COL_COLOUR, colour_index, -1);
-					s->colour_index=colour_index;
+					s->colour_index = colour_index;
 				}
 			}
 			break;
 		case -1: // update basic info from sample_get_file_info()
 			{
-				gboolean ok=true;
+				gboolean ok = true;
 				ok&=backend.update_int(s->id, "channels", s->channels);
 				ok&=backend.update_int(s->id, "sample_rate", s->sample_rate);
 				ok&=backend.update_int(s->id, "length", s->length);
@@ -297,7 +296,7 @@ listmodel__update_by_ref(GtkTreeIter *iter, int what, void *data)
 				ok&=backend.update_string(s->id, "meta_data", s->meta_data);
 				if (!ok) {
 					gwarn("failed to store basic-info in the database");
-					rv=false;
+					rv = false;
 				} else {
 					char samplerate_s[32]; samplerate_format(samplerate_s, s->sample_rate);
 					char length_s[64]; smpte_format(length_s, s->length);
@@ -324,7 +323,7 @@ listmodel__update_by_ref(GtkTreeIter *iter, int what, void *data)
 
 
 gboolean
-listmodel__update_by_rowref(GtkTreeRowReference *row_ref, int what, void *data)
+listmodel__update_by_rowref(GtkTreeRowReference* row_ref, int what, void* data)
 {
 	// used by the inspector..
 	GtkTreePath* path;
@@ -342,7 +341,7 @@ listmodel__update_by_rowref(GtkTreeRowReference *row_ref, int what, void *data)
 	GtkTreeIter iter;
 	gtk_tree_model_get_iter(GTK_TREE_MODEL(app.store), &iter, path);
 	gtk_tree_path_free(path);
-	return listmodel__update_by_ref(&iter, what, data);
+	return listmodel__update_by_tree_iter(&iter, what, data);
 }
 
 
