@@ -35,6 +35,7 @@
 #include "support.h"
 #include "main.h"
 #include "inspector.h"
+#include "player_control.h"
 #include "sample.h"
 #include "ladspa_proc.h"
 #include "audio_decoder/ad.h"
@@ -702,7 +703,7 @@ jplay__play_pathX(const char* path, int reset_pitch)
 	seek_request = -1.0;
 	JACKaudiooutputinit(sf, nfo.channels, nfo.sample_rate, nfo.frames);
 	app.playing_id = -1; // ID of filer-inspector (non imported sample)
-	show_player();
+	if(app.view_options[SHOW_PLAYER].value) show_player(true);
 	ad_free_nfo(&nfo);
 	return 0;
 }
@@ -719,7 +720,7 @@ jplay__play(Sample* sample)
 	if(!sample->id){ perr("bad arg: id=0\n"); return; }
 	if (jplay__play_pathX(sample->full_path, 1)) return;
 	app.playing_id = sample->id;
-	show_player();
+	if(app.view_options[SHOW_PLAYER].value) show_player(true);
 }
 
 void
@@ -774,7 +775,7 @@ jplay__play_selected() {
 	if(!sample->id){ perr("bad arg: id=0\n"); return; }
 	if (jplay__play_pathX(sample->full_path, 0)) return;
 	app.playing_id = sample->id;
-	show_player();
+	if(app.view_options[SHOW_PLAYER].value) show_player(true);
 	/* jplay__play(s); */
 
 	sample_unref(sample);

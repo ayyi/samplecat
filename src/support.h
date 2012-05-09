@@ -45,6 +45,7 @@ struct _accel {
 };
 
 void         log_handler               (const gchar* log_domain, GLogLevelFlags, const gchar* message, gpointer);
+void         p_                        (int level, const char* format, ...);
 
 void         samplerate_format         (char*, int samplerate);
 void         bitrate_format            (char* str, int bitdepth);

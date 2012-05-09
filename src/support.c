@@ -52,6 +52,20 @@ log_handler(const gchar* log_domain, GLogLevelFlags log_level, const gchar* mess
 
 
 void
+p_(int level, const char* format, ...)
+{
+	va_list argp;
+	va_start(argp, format);
+	if (level <= debug) {
+		gchar* s = g_strdup_vprintf(format, argp);
+		fprintf(stdout, "%s\n", s);
+		g_free(s);
+	}
+	va_end(argp);
+}
+
+
+void
 samplerate_format(char* str, int samplerate)
 {
 	// format a samplerate given in Hz to be output in kHz

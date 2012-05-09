@@ -8,6 +8,4 @@ void       inspector_free                 (Inspector*);
 void       inspector_set_labels           (Sample*);
 void       inspector_update_from_fileview (GtkTreeView*);
 
-void       show_player();
-
 #endif

@@ -40,24 +40,19 @@ struct _config
 	//gboolean  loop_playback; ///< TODO save w/ config ?
 	char      column_widths[4][8];
 	char      browse_dir[PATH_MAX];
+	char      show_player[8];
 	char      jack_autoconnect[1024];
 	char      jack_midiconnect[1024];
 };
 
 
-#ifdef __main_c__
-struct _backend backend = {false, 
-	NULL, NULL, NULL, 
-	NULL, NULL, NULL, 
-	NULL, NULL, NULL, NULL,
-	NULL, NULL, NULL, NULL,
-	NULL};
-#else
+#ifndef __main_c__
 extern struct _backend backend;
 #endif
 
 enum {
-	SHOW_FILEMANAGER = 0,
+	SHOW_PLAYER = 0,
+	SHOW_FILEMANAGER,
 	SHOW_SPECTROGRAM,
 	MAX_VIEW_OPTIONS
 };
@@ -98,9 +93,9 @@ struct _app
 
 	struct _view_option {
 		char*            name;
+		void             (*on_toggle)(gboolean);
 		gboolean         value;
 		GtkWidget*       menu_item;
-		void             (*on_toggle)(GtkMenuItem*, gpointer);
 	} view_options[MAX_VIEW_OPTIONS];
 
 	GKeyFile*      key_file;   //config file data.

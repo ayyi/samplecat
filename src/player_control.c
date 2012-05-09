@@ -5,6 +5,7 @@
 #include <gtk/gtk.h>
 #include <math.h>
 
+#include "support.h"
 #include "main.h"
 
 #if (defined HAVE_JACK)
@@ -14,17 +15,19 @@
 extern struct _app app;
 
 
-void menu_play_stop(GtkWidget* widget, gpointer user_data); //defined in main.c
-static void cb_playpause (GtkToggleButton *btn, gpointer user_data);
+void         menu_play_stop       (GtkWidget*, gpointer user_data); //defined in main.c
+static void  cb_playpause         (GtkToggleButton*, gpointer user_data);
 
 static guint slider1sigid;
-static void slider_value_changed (GtkRange *range, gpointer  user_data);
+static void  slider_value_changed (GtkRange*, gpointer  user_data);
+
 #if (defined ENABLE_LADSPA)
 static guint slider2sigid, slider3sigid;
-static void speed_value_changed  (GtkRange *range, gpointer user_data);
-static void pitch_value_changed  (GtkRange *range, gpointer user_data);
-static void cb_pitch_toggled(GtkToggleButton *btn, gpointer user_data);
-static void cb_link_toggled (GtkToggleButton *btn, gpointer user_data);
+
+static void  speed_value_changed  (GtkRange*, gpointer user_data);
+static void  pitch_value_changed  (GtkRange*, gpointer user_data);
+static void  cb_pitch_toggled     (GtkToggleButton*, gpointer user_data);
+static void  cb_link_toggled      (GtkToggleButton*, gpointer user_data);
 #endif
 
 
@@ -48,18 +51,18 @@ player_control_new()
 
 	if (app.auditioner->status && app.auditioner->seek) {  //JACK seek-slider
 
-	GtkWidget* align9 = gtk_alignment_new(0.0, 0.5, 0.0, 0.0);
-	gtk_alignment_set_padding(GTK_ALIGNMENT(align9), 0, 0, MarginLeft-BORDERMARGIN, 0);
-	gtk_box_pack_start(GTK_BOX(vbox), align9, EXPAND_FALSE, FILL_FALSE, 0);
+		GtkWidget* align9 = gtk_alignment_new(0.0, 0.5, 0.0, 0.0);
+		gtk_alignment_set_padding(GTK_ALIGNMENT(align9), 0, 0, MarginLeft-BORDERMARGIN, 0);
+		gtk_box_pack_start(GTK_BOX(vbox), align9, EXPAND_FALSE, FILL_FALSE, 0);
 
-	GtkWidget *slider = pc->slider1 = gtk_hscale_new_with_range(0.0,1.0,1.0/(float)OVERVIEW_WIDTH);
-	gtk_widget_set_size_request(slider, OVERVIEW_WIDTH+BORDERMARGIN+BORDERMARGIN, -1);
-	gtk_widget_set_tooltip_text(slider, "playhead position / seek");
-	gtk_scale_set_draw_value(GTK_SCALE(slider), false);
-	gtk_container_add(GTK_CONTAINER(align9), slider);	
+		GtkWidget *slider = pc->slider1 = gtk_hscale_new_with_range(0.0,1.0,1.0/(float)OVERVIEW_WIDTH);
+		gtk_widget_set_size_request(slider, OVERVIEW_WIDTH+BORDERMARGIN+BORDERMARGIN, -1);
+		gtk_widget_set_tooltip_text(slider, "playhead position / seek");
+		gtk_scale_set_draw_value(GTK_SCALE(slider), false);
+		gtk_container_add(GTK_CONTAINER(align9), slider);
 
-	slider1sigid = g_signal_connect((gpointer)slider, "value-changed", G_CALLBACK(slider_value_changed), NULL);
-  } /* end JACK auditioner */
+		slider1sigid = g_signal_connect((gpointer)slider, "value-changed", G_CALLBACK(slider_value_changed), NULL);
+	} /* end JACK auditioner */
 
 	/* play ctrl buttons */
 	GtkWidget* hbox2 = pc->pbctrl = gtk_hbox_new(FALSE, 10);
@@ -111,17 +114,17 @@ player_control_new()
 #endif
 
 	/* speed - samplerate */
-  GtkWidget* align11 = gtk_alignment_new(0.0, 0.5, 0.0, 0.0);
+	GtkWidget* align11 = gtk_alignment_new(0.0, 0.5, 0.0, 0.0);
 	gtk_alignment_set_padding(GTK_ALIGNMENT(align11), 0, 0, MarginLeft-BORDERMARGIN, 0);
 	gtk_box_pack_start(GTK_BOX(vbox), align11, EXPAND_FALSE, FILL_FALSE, 0);
 
-	GtkWidget *slider3 = pc->slider3 = gtk_hscale_new_with_range(0.5,2.0,.01);
+	GtkWidget* slider3 = pc->slider3 = gtk_hscale_new_with_range(0.5,2.0,.01);
 	gtk_widget_set_size_request(slider3, OVERVIEW_WIDTH+BORDERMARGIN+BORDERMARGIN, -1);
 	gtk_range_set_inverted(GTK_RANGE(slider3),true);
 	gtk_widget_set_tooltip_text(slider3, "Playback speed factor.");
 	//gtk_scale_set_draw_value(GTK_SCALE(slider3), false);
 	gtk_range_set_value(GTK_RANGE(slider3), app.playback_speed);
-	gtk_container_add(GTK_CONTAINER(align11), slider3);	
+	gtk_container_add(GTK_CONTAINER(align11), slider3);
 
 
 	slider2sigid = g_signal_connect((gpointer)slider2, "value-changed", G_CALLBACK(pitch_value_changed), slider3);
@@ -232,9 +235,19 @@ gboolean update_slider (gpointer data) {
 #endif
 
 
-void show_player() {
+void
+show_player(gboolean enable)
+{
+	//TODO should be split into 2 fns, one to hide show whole panel, other to hide show the slider.
+
+	gboolean visible = gtk_widget_get_visible(app.playercontrol->widget);
+	show_widget_if(app.playercontrol->widget, enable);
+	if(!enable){
+		return;
+	}
+
 	static guint id = 0;
-	static GSource *source=NULL;
+	static GSource* source = NULL;
 	int updateinterval = 50; /* ms */
 	if (!app.auditioner->status) return;
 	if (!app.auditioner->playpause) return;
@@ -242,9 +255,14 @@ void show_player() {
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(app.playercontrol->pbpause), (app.auditioner->playpause(-2)==1)?true:false);
 
 	if (app.playing_id == app.inspector->row_id) {
-		/* show player */
-		gtk_widget_show(app.playercontrol->slider1);
-		gtk_widget_show(app.playercontrol->pbctrl);
+		if(!visible){
+			gtk_widget_set_no_show_all(app.playercontrol->widget, false);
+			gtk_widget_show_all(app.playercontrol->widget);
+		}else{
+			/* show player */
+			gtk_widget_show(app.playercontrol->slider1);
+			gtk_widget_show(app.playercontrol->pbctrl);
+		}
 #if (defined ENABLE_LADSPA)
 		gtk_widget_set_sensitive(app.playercontrol->cbfx, false);
 #ifndef VARISPEED
@@ -268,3 +286,4 @@ void show_player() {
 	id = g_source_attach (source, NULL);
 #endif
 }
+

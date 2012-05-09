@@ -244,6 +244,7 @@ inspector_free(Inspector* inspector)
 }
 
 
+#include "player_control.h" //perhaps temporary, as player_control should probably be independant of the Inspector.
 void
 inspector_set_labels(Sample* sample)
 {
@@ -300,8 +301,9 @@ inspector_set_labels(Sample* sample)
 		gtk_widget_hide(GTK_WIDGET(i->tags));
 	}
 
-	if (app.auditioner->status && app.auditioner->status() != -1.0)
-		show_player(); // show/hide player
+	if (app.auditioner->status && app.auditioner->status() != -1.0 && app.view_options[SHOW_PLAYER].value){
+		show_player(true); // show/hide player
+	}
 }
 
 

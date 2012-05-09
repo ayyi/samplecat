@@ -248,7 +248,7 @@ GtkWindow
 	}
 #endif
 
-	GtkWidget *hbox_statusbar = gtk_hbox_new(FALSE, 0);
+	GtkWidget* hbox_statusbar = gtk_hbox_new(FALSE, 0);
 	gtk_box_pack_end(GTK_BOX(vbox), hbox_statusbar, EXPAND_FALSE, FALSE, 0);
 
 	GtkWidget* statusbar = app.statusbar = gtk_statusbar_new();
@@ -257,7 +257,7 @@ GtkWindow
 	gtk_container_set_border_width(GTK_CONTAINER(statusbar), 5);
 	gtk_box_pack_start(GTK_BOX(hbox_statusbar), statusbar, EXPAND_TRUE, FILL_TRUE, 0);
 
-	GtkWidget *statusbar2 = app.statusbar2 = gtk_statusbar_new();
+	GtkWidget* statusbar2 = app.statusbar2 = gtk_statusbar_new();
 	gtk_statusbar_set_has_resize_grip(GTK_STATUSBAR(statusbar2), FALSE);
 	gtk_container_set_border_width(GTK_CONTAINER(statusbar2), 5);
 	gtk_box_pack_start(GTK_BOX(hbox_statusbar), statusbar2, EXPAND_TRUE, FILL_TRUE, 0);
@@ -277,8 +277,10 @@ GtkWindow
 	gtk_widget_show_all(window);
 
 #if (defined HAVE_JACK)
-	/* initially hider player seek bar */
-	show_player();
+	/* initially hide player seek bar */
+	if(app.view_options[SHOW_PLAYER].value){
+		show_player(true);
+	}
 #endif
 
 	dnd_setup();
@@ -290,7 +292,7 @@ GtkWindow
 
 
 static void
-window_on_realise(GtkWidget *win, gpointer user_data)
+window_on_realise(GtkWidget* win, gpointer user_data)
 {
 	gtk_tree_view_column_set_resizable(app.col_name, TRUE);
 	gtk_tree_view_column_set_resizable(app.col_path, TRUE);
@@ -528,6 +530,8 @@ left_pane()
 	*/
 
 	player_control_new();
+	if(!app.view_options[SHOW_PLAYER].value)
+		gtk_widget_set_no_show_all(app.playercontrol->widget, true);
 	if (app.auditioner->status && app.auditioner->seek) 
 		gtk_paned_add2(GTK_PANED(pcpaned), app.playercontrol->widget);
 
@@ -903,6 +907,7 @@ on_category_set_clicked(GtkComboBox *widget, gpointer user_data)
 	g_free(category);
 }
 
+
 #ifdef HAVE_FFTW3
 void
 show_spectrogram(gboolean enable)
@@ -938,6 +943,14 @@ show_spectrogram(gboolean enable)
 #endif
 
 
+void
+show_filemanager(gboolean enable)
+{
+	show_widget_if(app.fm_view, enable);
+	show_widget_if(app.dir_treeview2->widget, enable);
+}
+
+
 static void
 on_layout_changed()
 {
@@ -968,3 +981,4 @@ k_delete_row(GtkAccelGroup* _, gpointer user_data)
 {
 	delete_selected_rows();
 }
+

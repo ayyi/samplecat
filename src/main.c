@@ -54,6 +54,7 @@ char * program_name;
 #include "window.h"
 #include "inspector.h"
 #include "progress_dialog.h"
+#include "player_control.h"
 #include "dnd.h"
 #include "icon_theme.h"
 #include "application.h"
@@ -108,6 +109,7 @@ void              menu_play_stop            (GtkWidget* widget, gpointer);
 struct _app app;
 Application* application = NULL;
 SamplecatModel* model = NULL;
+struct _backend backend; 
 struct _palette palette;
 GList* mime_types; // list of MIME_type*
 extern GList* themes; 
@@ -136,26 +138,26 @@ static const struct option long_options[] = {
 static const char* const short_options = "b:gv:s:a:p:hV";
 
 static const char* const usage =
-  "Usage: %s [OPTION]\n\n"
+	"Usage: %s [OPTION]\n\n"
 	"SampleCat is a a program for cataloguing and auditioning audio samples.\n" 
 	"\n"
 	"Options:\n"
-  "  -a, --add <file>       add these files.\n"
-  "  -b, --backend <name>   select which database type to use.\n"
-  "  -g, --no-gui           run as command line app.\n"
-  "  -h, --help             show this usage information and quit.\n"
-  "  -p, --player <name>    select audio player.\n"
-  "  -s, --search <txt>     search using this phrase.\n"
-  "  -v, --verbose <level>  show more information.\n"
-  "  -V, --version          print version and exit.\n"
-  "\n"
+	"  -a, --add <file>       add these files.\n"
+	"  -b, --backend <name>   select which database type to use.\n"
+	"  -g, --no-gui           run as command line app.\n"
+	"  -h, --help             show this usage information and quit.\n"
+	"  -p, --player <name>    select audio player.\n"
+	"  -s, --search <txt>     search using this phrase.\n"
+	"  -v, --verbose <level>  show more information.\n"
+	"  -V, --version          print version and exit.\n"
+	"\n"
 	"Files:\n"
 	"samplecat stores configuration and caches data in\n"
 	"$HOME/.config/samplecat/\n"
 	"\n"
 	"Report bugs to <tim@orford.org>.\n"
 	"Website and manual: <http://samplecat.orford.org/>\n"
-  "\n";
+	"\n";
 
 void
 app_init()
@@ -198,6 +200,7 @@ main(int argc, char** argv)
 	g_log_set_handler ("Gtk", G_LOG_LEVEL_CRITICAL | G_LOG_FLAG_FATAL | G_LOG_FLAG_RECURSION, log_handler, NULL);
 
 	app_init();
+	memset(&backend, 0, sizeof(struct _backend)); 
 
 #define ADD_BACKEND(A) app.backends = g_list_append(app.backends, A)
 
@@ -1137,32 +1140,12 @@ make_context_menu()
 			dbg(2, "value=%i", option->value);
 		}
 
-		void toggle_view_spectrogram(GtkMenuItem* item, gpointer userdata)
-		{
-			ViewOption* option = &app.view_options[SHOW_SPECTROGRAM];
-			option->value = gtk_check_menu_item_get_active(GTK_CHECK_MENU_ITEM(item));
-			dbg(2, "on=%i", option->value);
-
-			show_spectrogram(option->value);
-		}
-
-		void toggle_view_filemanager(GtkMenuItem* item, gpointer userdata)
+		void toggle_view(GtkMenuItem* item, gpointer _option)
 		{
 			PF;
-			ViewOption* option = &app.view_options[SHOW_SPECTROGRAM];
-			option->value = gtk_check_menu_item_get_active(GTK_CHECK_MENU_ITEM(item));
-			show_widget_if(app.fm_view, option->value);
-			show_widget_if(app.dir_treeview2->widget, option->value);
+			ViewOption* option = (ViewOption*)_option;
+			option->on_toggle(option->value = gtk_check_menu_item_get_active(GTK_CHECK_MENU_ITEM(item)));
 		}
-
-		ViewOption* option = &app.view_options[SHOW_FILEMANAGER];
-		option->name = "Filemanager";
-		option->value = true;
-		option->on_toggle = toggle_view_filemanager;
-
-		option = &app.view_options[SHOW_SPECTROGRAM];
-		option->name = "Spectrogram";
-		option->on_toggle = toggle_view_spectrogram;
 
 		int i; for(i=0;i<MAX_VIEW_OPTIONS;i++){
 			ViewOption* option = &app.view_options[i];
@@ -1171,7 +1154,7 @@ make_context_menu()
 			gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menu_item), option->value);
 			option->value = !option->value; //toggle before it gets toggled back.
 			set_view_toggle_state((GtkMenuItem*)menu_item, option);
-			g_signal_connect(G_OBJECT(menu_item), "activate", G_CALLBACK(option->on_toggle), NULL);
+			g_signal_connect(G_OBJECT(menu_item), "activate", G_CALLBACK(toggle_view), option);
 		}
 	}
 
@@ -1180,7 +1163,7 @@ make_context_menu()
 	gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menu_item), app.add_recursive);
 	g_signal_connect(G_OBJECT(menu_item), "activate", G_CALLBACK(toggle_recursive_add), NULL);
 
-  if (app.auditioner->seek) {
+	if (app.auditioner->seek) {
 		menu_item = gtk_check_menu_item_new_with_mnemonic("Loop Playback");
 		gtk_menu_shell_append(GTK_MENU_SHELL(sub), menu_item);
 		gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menu_item), app.loop_playback);
@@ -1329,22 +1312,22 @@ config_load()
 		snprintf(app.config.colour[i], 7, "%s", "000000");
 	}
 
-	GError *error = NULL;
+	GError* error = NULL;
 	app.key_file = g_key_file_new();
 	if(g_key_file_load_from_file(app.key_file, app.config_filename, G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS, &error)){
-		if(debug) printf("ini file loaded.\n");
+		p_(1, "config loaded.");
 		gchar* groupname = g_key_file_get_start_group(app.key_file);
 		dbg (2, "group=%s.", groupname);
 		if(!strcmp(groupname, "Samplecat")){
-#define num_keys (15)
+#define num_keys (16)
 #define ADD_CONFIG_KEY(VAR, NAME) \
-			strcpy(keys[i],NAME); \
+			strcpy(keys[i], NAME); \
 			loc[i] = VAR; \
-			siz[i] = G_N_ELEMENTS(VAR);\
+			siz[i] = G_N_ELEMENTS(VAR); \
 			i++;
 
-			char keys[num_keys+(PALETTE_SIZE-1)][64];
-			char *loc[num_keys+(PALETTE_SIZE-1)];
+			char  keys[num_keys+(PALETTE_SIZE-1)][64];
+			char*  loc[num_keys+(PALETTE_SIZE-1)];
 			size_t siz[num_keys+(PALETTE_SIZE-1)];
 
 			i=0;
@@ -1362,13 +1345,14 @@ config_load()
 			ADD_CONFIG_KEY (app.config.column_widths[0], "col1_width");
 			ADD_CONFIG_KEY (app.model.filters.phrase,    "filter");
 			ADD_CONFIG_KEY (app.config.browse_dir,       "browse_dir");
+			ADD_CONFIG_KEY (app.config.show_player,      "show_player");
 			ADD_CONFIG_KEY (app.config.auditioner,       "auditioner");
 			ADD_CONFIG_KEY (app.config.jack_autoconnect, "jack_autoconnect");
 			ADD_CONFIG_KEY (app.config.jack_midiconnect, "jack_midiconnect");
 
 			int k;
 			for (k=0;k<PALETTE_SIZE-1;k++) {
-				char tmp[16]; snprintf(tmp,16, "colorkey%02d", k+1);
+				char tmp[16]; snprintf(tmp, 16, "colorkey%02d", k+1);
 				ADD_CONFIG_KEY(app.config.colour[k+1], tmp)
 			}
 
@@ -1386,6 +1370,10 @@ config_load()
 				}
 			}
 			_set_search_dir(app.config.show_dir);
+
+			app.view_options[SHOW_PLAYER]      = (ViewOption){"Player",      show_player,      strcmp(app.config.show_player, "false")};
+			app.view_options[SHOW_FILEMANAGER] = (ViewOption){"Filemanager", show_filemanager, true};
+			app.view_options[SHOW_SPECTROGRAM] = (ViewOption){"Spectrogram", show_spectrogram, false};
 		}
 		else{ pwarn("cannot find Samplecat key group.\n"); return false; }
 		g_free(groupname);
@@ -1447,6 +1435,8 @@ config_save()
 			g_key_file_set_value(app.key_file, "Samplecat", "browse_dir", f->real_path);
 		}
 
+		g_key_file_set_value(app.key_file, "Samplecat", "show_player", app.view_options[SHOW_PLAYER].value ? "true" : "false");
+
 		int i;
 		for (i=1;i<PALETTE_SIZE;i++) {
 			char keyname[32];
@@ -1455,7 +1445,7 @@ config_save()
 		}
 	}
 
-	GError *error = NULL;
+	GError* error = NULL;
 	gsize length;
 	gchar* string = g_key_file_to_data(app.key_file, &length, &error);
 	if(error){
