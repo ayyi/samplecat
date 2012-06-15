@@ -47,6 +47,8 @@ struct _SamplecatMxListItemPrivate {
 
 G_DEFINE_TYPE (SamplecatMxListItem, samplecat_mx_list_item, MX_TYPE_BOX_LAYOUT);
 
+GList* selected_rows = NULL;
+
 
 static void
 set_id (SamplecatMxListItem* self, const gchar* id)
@@ -264,6 +266,8 @@ samplecat_mx_list_item_init (SamplecatMxListItem* self)
 	SamplecatMxListItemPrivate* priv = SAMPLECAT_MX_LIST_ITEM_GET_PRIVATE (self);
 
 	mx_box_layout_set_spacing((MxBoxLayout*)self, 10);
+	clutter_actor_set_name((ClutterActor*)self, "row");
+	dbg(0, "name=%s", clutter_actor_get_name((ClutterActor*)self));
 
 #if 0
 	void on_clicked (MxButton* button, SamplecatMxListItem* self)
@@ -280,7 +284,59 @@ samplecat_mx_list_item_init (SamplecatMxListItem* self)
 	g_signal_connect (G_OBJECT (button), "clicked", G_CALLBACK (on_clicked), self);
 #else
 	priv->label0 = (MxLabel*)mx_label_new();
+	clutter_actor_set_width((ClutterActor*)priv->label0, 200.0);
 	mx_box_layout_add_actor((MxBoxLayout*)self, (ClutterActor*)priv->label0, 0);
+	gboolean on_button_press(ClutterActor* actor, ClutterEvent* event, gpointer user_data)
+	{
+		//dbg(0, "button-press");
+		return TRUE;
+	}
+	gboolean on_button_release(ClutterActor* actor, ClutterEvent* event, gpointer user_data)
+	{
+		dbg(0, "button-release");
+		/*
+		clutter_actor_set_name(actor, "row0");
+
+		guint n_props = 0;
+		GParamSpec** ps = mx_stylable_list_properties(MX_STYLABLE(actor), &n_props);
+		if(ps){
+			int n; for(n=0;n<n_props;n++){
+				GParamSpec* p = ps[n];
+				dbg(0, "  %s", p->name);
+			}
+			g_free(ps);
+		}
+
+		ClutterColor* bg_color;
+		mx_stylable_get(MX_STYLABLE(actor), "bg-color", &bg_color, NULL);
+		*/
+
+		GList* l = selected_rows;
+		if(l){
+			for(;l;l=l->next){
+				mx_stylable_set_style_pseudo_class(MX_STYLABLE(l->data), "");
+			}
+			g_list_free(selected_rows);
+		}
+
+		mx_stylable_set_style_pseudo_class(MX_STYLABLE(actor), "selected");
+		selected_rows = g_list_prepend(NULL, actor);
+
+		mx_stylable_style_changed(MX_STYLABLE(actor), MX_STYLE_CHANGED_FORCE);
+		return TRUE;
+	}
+	/*
+	void on_allocation_changed(ClutterActor* actor, ClutterActorBox* box, ClutterAllocationFlags flags, gpointer user_data)
+	{
+		dbg(0, "allocation-changed");
+	}
+	g_signal_connect (self, "allocation-changed", G_CALLBACK(on_allocation_changed), NULL);
+	*/
+	//clutter_actor_set_reactive((ClutterActor*)priv->label0, TRUE);
+	clutter_actor_set_reactive((ClutterActor*)self, TRUE);
+	//g_signal_connect (priv->label0, "button-release-event", G_CALLBACK(on_button_release), NULL);
+	g_signal_connect (self, "button-release-event", G_CALLBACK(on_button_release), NULL);
+	g_signal_connect (priv->label0, "button-press-event", G_CALLBACK(on_button_press), NULL);
 #endif
 
 	priv->label1 = (MxLabel*)mx_label_new();

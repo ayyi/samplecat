@@ -48,7 +48,7 @@ item_factory_init (gpointer g_iface, gpointer iface_data)
 
 
 static void
-list_view_class_init (SamplecatMxListViewClass *klass)
+list_view_class_init (SamplecatMxListViewClass* klass)
 {
 	list_view_signals[ACTIVATED] =
 		g_signal_new ("activated",
@@ -62,7 +62,7 @@ list_view_class_init (SamplecatMxListViewClass *klass)
 
 
 static void
-list_view_init (SamplecatMxListView *self)
+list_view_init (SamplecatMxListView* self)
 {
 	mx_list_view_set_factory   (MX_LIST_VIEW(self), MX_ITEM_FACTORY (self));
 

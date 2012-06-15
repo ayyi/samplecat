@@ -10,6 +10,7 @@ AM_CFLAGS = \
 	-DIMAGES_DIR=\"$(imagesdir)\" \
 	-I$(top_srcdir)/lib \
 	-I$(top_srcdir)/lib/file_manager \
+	-I$(top_srcdir)/lib/waveform \
 	-I$(top_srcdir)/xdgmime \
 	-I./dir_tree \
 	-I./gimp \
@@ -43,6 +44,7 @@ endif
 
 if ENABLE_OPENGL
 OPENGL_SRC = gl_spectrogram_view.c gl_spectrogram_view.h
+OPENGL_LDFLAGS = $(top_srcdir)/lib/waveform/waveform/.libs/libwaveform.a $(OPENGL_LIBS)
 endif
 
 if ENABLE_AYYIDBUS
@@ -70,6 +72,7 @@ samplecat_SOURCES = \
 	main.c main.h \
 	application.c application.h \
 	model.c model.h \
+	list_store.c list_store.h \
 	window.c window.h \
 	listmodel.c listmodel.h \
 	progress_dialog.c progress_dialog.h \
@@ -110,6 +113,6 @@ samplecat_LDADD = \
 	$(JACK_LIBS) $(SNDFILE_LIBS) ${SAMPLERATE_LIBS} \
 	$(GTHREAD_LIBS) \
 	$(FFTW3_LIBS) \
-	$(OPENGL_LIBS) \
+	$(OPENGL_LDFLAGS) \
 	$(ZLIB_LIBS) \
 	$(FFMPEG_LIBS)

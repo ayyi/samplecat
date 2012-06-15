@@ -50,6 +50,7 @@ BUILT_SOURCES = \
 	marshal.h
 
 EXTRA_DIST = \
-	marshal.list
+	marshal.list \
+	style.css
 
 #-include $(top_srcdir)/git.mk

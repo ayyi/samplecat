@@ -33,6 +33,7 @@ typedef enum {
 typedef struct _menu_def          MenuDef;
 typedef struct _sample            Sample;
 typedef struct _inspector         Inspector;
+typedef struct _inspector_priv    InspectorPriv;
 typedef struct _playctrl          PlayCtrl;
 typedef struct _auditioner        Auditioner;
 typedef struct _view_option       ViewOption;

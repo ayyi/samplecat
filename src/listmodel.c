@@ -18,8 +18,9 @@
 #include "sample.h"
 #include "dnd.h"
 #include "overview.h"
+#include "list_store.h"
 #include "listmodel.h"
-#include "inspector.h"
+#include "inspector.h" //TODO
 
 extern struct _app app;
 extern Application* application;
@@ -42,6 +43,7 @@ listmodel__new()
 	}
 	g_signal_connect((gpointer)model, "sample-changed", G_CALLBACK(sample_changed), NULL);
 
+#if 0
 	return gtk_list_store_new(NUM_COLS, 
 	 GDK_TYPE_PIXBUF,  // COL_ICON
  #ifdef USE_AYYI
@@ -60,6 +62,9 @@ listmodel__new()
 	 G_TYPE_INT,       // COL_COLOUR
 	 G_TYPE_POINTER    // COL_SAMPLEPTR
 	 );
+#else
+	return samplecat_list_store_new();
+#endif
 }
 
 

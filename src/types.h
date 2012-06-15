@@ -17,7 +17,6 @@ struct _inspector
 	GtkTreeRowReference* row_ref;
 	GtkWidget*     widget;     //scrollwin
 	GtkWidget*     vbox;
-	GtkWidget*     name;
 	GtkWidget*     filename;
 	GtkWidget*     tags;
 	GtkWidget*     tags_ev;    //event box for mouse clicks
@@ -30,12 +29,13 @@ struct _inspector
 	GtkWidget*     bitdepth;
 	GtkWidget*     metadata;
 	GtkWidget*     ebur;
-	GtkWidget*     image;
 	GtkWidget*     text;
 	GtkTextBuffer* notes;
 	GtkWidget*     edit;
 	int            min_height;
 	int            user_height;
+	gboolean       show_waveform;
+	InspectorPriv* priv;
 };
 
 struct _playctrl

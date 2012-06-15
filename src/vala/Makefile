@@ -1,5 +1,7 @@
 
 all:
+	valac -C -H list_store.h --pkg config --pkg gdk-2.0 --pkg gtk+-2.0 --pkg gmodule-2.0 --pkg samplecat --vapidir=. list_store.vala
+	mv list_store.c list_store.h ..
 	valac -C -H application.h --pkg config --pkg gtk+-2.0 --pkg gmodule-2.0 --pkg samplecat --vapidir=. application.vala
 	mv application.c application.h ..
 	valac -C -H model.h --pkg config --pkg gtk+-2.0 --pkg gmodule-2.0 --pkg samplecat --vapidir=. model.vala

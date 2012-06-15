@@ -1,1 +1,1 @@
-SUBDIRS = utils xdgmime file_manager dir_tree
+SUBDIRS = utils xdgmime file_manager dir_tree waveform

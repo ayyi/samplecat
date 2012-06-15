@@ -73,13 +73,6 @@ char * program_name;
   #include "view_dir_list.h"
   #include "view_dir_tree.h"
 #endif
-#ifdef HAVE_FFTW3
-#ifdef USE_OPENGL
-#include "gl_spectrogram_view.h"
-#else
-#include "spectrogram_widget.h"
-#endif
-#endif
 
 #include "audio_decoder/ad.h"
 
@@ -198,6 +191,7 @@ main(int argc, char** argv)
 
 	g_log_set_handler (NULL, G_LOG_LEVEL_WARNING | G_LOG_LEVEL_CRITICAL | G_LOG_FLAG_FATAL | G_LOG_FLAG_RECURSION, log_handler, NULL);
 	g_log_set_handler ("Gtk", G_LOG_LEVEL_CRITICAL | G_LOG_FLAG_FATAL | G_LOG_FLAG_RECURSION, log_handler, NULL);
+	g_log_set_handler ("Waveform", G_LOG_LEVEL_WARNING | G_LOG_LEVEL_CRITICAL | G_LOG_FLAG_FATAL, log_handler, NULL);
 
 	app_init();
 	memset(&backend, 0, sizeof(struct _backend)); 
@@ -1319,7 +1313,7 @@ config_load()
 		gchar* groupname = g_key_file_get_start_group(app.key_file);
 		dbg (2, "group=%s.", groupname);
 		if(!strcmp(groupname, "Samplecat")){
-#define num_keys (16)
+#define num_keys (18)
 #define ADD_CONFIG_KEY(VAR, NAME) \
 			strcpy(keys[i], NAME); \
 			loc[i] = VAR; \
@@ -1346,6 +1340,8 @@ config_load()
 			ADD_CONFIG_KEY (app.model.filters.phrase,    "filter");
 			ADD_CONFIG_KEY (app.config.browse_dir,       "browse_dir");
 			ADD_CONFIG_KEY (app.config.show_player,      "show_player");
+			ADD_CONFIG_KEY (app.config.show_waveform,    "show_waveform");
+			ADD_CONFIG_KEY (app.config.show_spectrogram, "show_spectrogram");
 			ADD_CONFIG_KEY (app.config.auditioner,       "auditioner");
 			ADD_CONFIG_KEY (app.config.jack_autoconnect, "jack_autoconnect");
 			ADD_CONFIG_KEY (app.config.jack_midiconnect, "jack_midiconnect");
@@ -1373,7 +1369,8 @@ config_load()
 
 			app.view_options[SHOW_PLAYER]      = (ViewOption){"Player",      show_player,      strcmp(app.config.show_player, "false")};
 			app.view_options[SHOW_FILEMANAGER] = (ViewOption){"Filemanager", show_filemanager, true};
-			app.view_options[SHOW_SPECTROGRAM] = (ViewOption){"Spectrogram", show_spectrogram, false};
+			app.view_options[SHOW_WAVEFORM]    = (ViewOption){"Waveform",    show_waveform,    !strcmp(app.config.show_waveform, "true")};
+			app.view_options[SHOW_SPECTROGRAM] = (ViewOption){"Spectrogram", show_spectrogram, !strcmp(app.config.show_spectrogram, "true")};
 		}
 		else{ pwarn("cannot find Samplecat key group.\n"); return false; }
 		g_free(groupname);
@@ -1436,6 +1433,8 @@ config_save()
 		}
 
 		g_key_file_set_value(app.key_file, "Samplecat", "show_player", app.view_options[SHOW_PLAYER].value ? "true" : "false");
+		g_key_file_set_value(app.key_file, "Samplecat", "show_waveform", app.view_options[SHOW_WAVEFORM].value ? "true" : "false");
+		g_key_file_set_value(app.key_file, "Samplecat", "show_spectrogram", app.view_options[SHOW_SPECTROGRAM].value ? "true" : "false");
 
 		int i;
 		for (i=1;i<PALETTE_SIZE;i++) {
@@ -1635,7 +1634,7 @@ set_auditioner() /* tentative - WIP */
 
 
 static gboolean
-can_use (GList *l, const char* d)
+can_use (GList* l, const char* d)
 {
 	for(;l;l=l->next){
 		if(!strcmp(l->data, d)){
@@ -1643,25 +1642,6 @@ can_use (GList *l, const char* d)
 		}
 	}
 	return false;
-}
-
-
-void
-observer__item_selected(Sample* s)
-{
-	//TODO move these to idle functions
-
-	g_signal_emit_by_name (application, "selection-changed", s, COL_ICON, NULL);
-
-#ifdef HAVE_FFTW3
-	if(app.spectrogram){
-#ifdef USE_OPENGL
-		gl_spectrogram_set_file((GlSpectrogram*)app.spectrogram, s->full_path);
-#else
-		spectrogram_widget_set_file ((SpectrogramWidget*)app.spectrogram, s->full_path);
-#endif
-	}
-#endif
 }
 
 

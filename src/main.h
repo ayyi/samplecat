@@ -41,6 +41,8 @@ struct _config
 	char      column_widths[4][8];
 	char      browse_dir[PATH_MAX];
 	char      show_player[8];
+	char      show_waveform[8];
+	char      show_spectrogram[8];
 	char      jack_autoconnect[1024];
 	char      jack_midiconnect[1024];
 };
@@ -53,6 +55,7 @@ extern struct _backend backend;
 enum {
 	SHOW_PLAYER = 0,
 	SHOW_FILEMANAGER,
+	SHOW_WAVEFORM,
 	SHOW_SPECTROGRAM,
 	MAX_VIEW_OPTIONS
 };
@@ -110,19 +113,13 @@ struct _app
 	PlayCtrl*      playercontrol;
 	
 	GtkWidget*     window;
-	GtkWidget*     vbox;
-	GtkWidget*     toolbar;
-	GtkWidget*     toolbar2;
-	GtkWidget*     scroll;
-	GtkWidget*     hpaned;
 	GtkWidget*     view;
 	GtkWidget*     msg_panel;
 	GtkWidget*     statusbar;
 	GtkWidget*     statusbar2;
 	GtkWidget*     search;
-	GtkWidget*     category;
-	GtkWidget*     view_category;
 	GtkWidget*     context_menu;
+	GtkWidget*     waveform;
 	GtkWidget*     spectrogram;
 
 	GtkWidget*     colour_button[PALETTE_SIZE];
@@ -194,5 +191,4 @@ void        on_quit(GtkMenuItem*, gpointer user_data);
 
 void        set_auditioner();
 
-void        observer__item_selected(Sample*);
 #endif

@@ -21,6 +21,8 @@ AC_PROG_LIBTOOL
 
 AC_SYS_LARGEFILE
 
+AC_CONFIG_SUBDIRS([lib/waveform])
+
 # Check for debugging flag
 debug="no"
 AC_ARG_ENABLE(debug,
@@ -48,7 +50,7 @@ AC_ARG_ENABLE(tracker,  AS_HELP_STRING([--enable-tracker],[build with tracker su
 AC_ARG_ENABLE(sqlite,   AS_HELP_STRING([--enable-sqlite],[build with sqlite support]),enable_sqlite=$enableval, enable_sqlite="auto")
 AC_ARG_ENABLE(mx,       AS_HELP_STRING([--enable-mx], [build with mx support -- experimental]), enable_mx=$enableval, enable_mx="auto")
 AC_ARG_ENABLE(webkit,   AS_HELP_STRING([--enable-webkit], [build with webkit support -- experimental]), enable_webkit=$enableval, enable_webkit="auto")
-AC_ARG_ENABLE(opengl,   AC_HELP_STRING([--disable-opengl], [disable use of OpenGL]),enable_opengl=$enableval,enable_opengl="no")
+AC_ARG_ENABLE(opengl,   AC_HELP_STRING([--disable-opengl], [disable use of OpenGL]),enable_opengl=$enableval,enable_opengl="auto")
 AC_ARG_ENABLE(fftw,     AC_HELP_STRING([--disable-fftw], [disable usage of FFTW ]),enable_fftw=$enableval,enable_fftw="auto")
 AC_ARG_ENABLE(vala,     AC_HELP_STRING([--disable-vala], [disable usage of Vala. Vala is only needed for developers ]), enable_vala=$enableval, enable_vala="auto")
 
@@ -361,8 +363,9 @@ AC_SUBST(WEBKIT_LDFLAGS)
 
 dnl -----------------------------------------------------------------------------
 
-AS_IF([test "$enable_opengl" = "yes"], [
+AS_IF([test "$enable_opengl" != "no"], [
        PKG_CHECK_MODULES(OPENGL, gtkglext-1.0, [AC_DEFINE(USE_OPENGL, 1, Opengl features are enabled)])
+       enable_opengl="yes"
        ])
 AC_SUBST(OPENGL_CFLAGS)
 AC_SUBST(OPENGL_LDIBS)

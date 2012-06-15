@@ -1,0 +1,20 @@
+/*
+#row {
+	background-color: #78e;
+}
+*/
+
+#row:hover {
+	background-color: #ddd;
+}
+/*
+hover {
+	background-color: #eee;
+}
+.hover {
+	background-color: #eee;
+}
+*/
+:selected {
+	background-color: #8be;
+}

@@ -308,7 +308,7 @@ listview__on_cursor_change(GtkTreeView* widget, gpointer user_data)
 	dbg(2, "...");
 	Sample* s;
 	if((s = listview__get_first_selected_result())){
-		observer__item_selected(s);
+		g_signal_emit_by_name (application, "selection-changed", s, /*COL_ICON, */NULL);
 		sample_unref(s);
 	}
 }

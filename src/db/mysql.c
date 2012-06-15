@@ -194,19 +194,28 @@ mysql__connect()
 		errprintf("Failed to connect to Database: %s\n", mysql_error(&mysql));
 		return false;
 	}
-	/* check if table exists */
-	gboolean dbexists=false;
-	int64_t colflag=0;
+	// check if table exists
+	gboolean table_exists = false;
+	int64_t colflag = 0;
 
 	MYSQL_ESCAPE(dbname, config->name);
-	char* sql = malloc((100/*query string*/+strlen(dbname))*sizeof(char));
+	char* sql = g_malloc((100/*query string*/ + strlen(dbname)) * sizeof(char));
 	sprintf(sql, "SELECT column_name from INFORMATION_SCHEMA.COLUMNS where table_schema='%s' AND table_name='samples';", config->name);
-	if(!mysql_query(&mysql, sql)){
-		MYSQL_RES *sr = mysql_store_result(&mysql);
+	if(mysql_query(&mysql, sql)){
+		// probably out of disc space.
+		errprintf("Failed to get column_name: %s\n", mysql_error(&mysql));
+		free(dbname);
+		g_free(sql);
+		return false;
+	}else{
+		MYSQL_RES* sr = mysql_store_result(&mysql);
 		if (sr) {
-			if (mysql_num_rows(sr) == COLCOUNT) {dbexists=true; colflag=(1<<(COLCOUNT))-1;}
+			if (mysql_num_rows(sr) == COLCOUNT) {
+				table_exists = true;
+				colflag = (1 << (COLCOUNT)) - 1;
+			}
 			else if (mysql_num_rows(sr) != 0) {
-				dbexists=true;
+				table_exists = true;
 				/* ALTER TABLE */
 				MYSQL_ROW row;
 				while ((row = mysql_fetch_row(sr))) {
@@ -218,40 +227,40 @@ mysql__connect()
 			mysql_free_result(sr);
 		}
 	}
-	free(dbname); free(sql);
+	free(dbname); g_free(sql);
 
-	if (!dbexists) {
+	if (!table_exists) {
 		/* CREATE Table */
 		int off=0; int i;
-		sql = malloc(4096*sizeof(char)); // XXX current length is 643 chars
+		sql = g_malloc(4096 * sizeof(char)); // XXX current length is 643 chars
 		off=sprintf(sql, "CREATE TABLE `samples` (");
 		for (i=0;i<COLCOUNT;i++)
-			off+=sprintf(sql+off, "%s, ",sct[i].def);
+			off += sprintf(sql + off, "%s, ", sct[i].def);
 		sprintf(sql+off, "PRIMARY KEY  (`id`));");
 		dbg(0, "%d: %s", off, sql);
 
 		if (mysql_real_query(&mysql, sql, strlen(sql))) {
 			warnprintf("cannot create database-table: %s\n", mysql_error(&mysql));
 			mysql_close(&mysql);
-			free(sql);
+			g_free(sql);
 			return false;
 		}
-		free(sql);
+		g_free(sql);
 	} else {
 		/* Alter Table if neccesary */
 		int i;
-		sql = malloc(1024*sizeof(char));
+		sql = g_malloc(1024*sizeof(char));
 		for (i=0;i<COLCOUNT;i++) if ((colflag&(1<<i))==0) {
 			sprintf(sql, "ALTER TABLE samples ADD %s;", sct[i].def);
 			dbg(0, "%s", sql);
-		  if (mysql_real_query(&mysql, sql, strlen(sql))) {
+			if (mysql_real_query(&mysql, sql, strlen(sql))) {
 				warnprintf("cannot update database-table to new model: %s\n", mysql_error(&mysql));
 				mysql_close(&mysql);
-				free(sql);
+				g_free(sql);
 				return false;
 			}
 		}
-		free(sql);
+		g_free(sql);
 	}
 
 	memset(&result, 0, sizeof(Sample));

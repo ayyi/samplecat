@@ -42,6 +42,12 @@ extern struct _app app;
 extern SamplecatModel* model;
 extern int debug;
 
+struct _inspector_priv
+{
+	GtkWidget*     name;
+	GtkWidget*     image;
+};
+
 static void       inspector_clear           ();
 static void       inspector_update_from_sample(Application*, Sample*, gpointer);
 static void       hide_fields               ();
@@ -61,7 +67,9 @@ inspector_new()
 	g_return_val_if_fail(!app.inspector, NULL);
 
 	Inspector* inspector = app.inspector = g_new0(Inspector, 1);
+	InspectorPriv* i = inspector->priv = g_new0(InspectorPriv, 1);
 	inspector->min_height = 200; //this is actually more like preferred height, as the box can be smaller if there is no room for it.
+	inspector->show_waveform = true;
 
 	int margin_left = 5;
 
@@ -76,7 +84,7 @@ inspector_new()
 	gtk_box_pack_start(GTK_BOX(vbox), align1, EXPAND_FALSE, FILL_FALSE, 0);
 
 	// sample name:
-	GtkWidget* label1 = inspector->name = gtk_label_new("");
+	GtkWidget* label1 = inspector->priv->name = gtk_label_new("");
 	gtk_misc_set_padding(GTK_MISC(label1), margin_left, 5);
 	gtk_container_add(GTK_CONTAINER(align1), label1);	
 
@@ -86,10 +94,10 @@ inspector_new()
 
 	//-----------
 
-	app.inspector->image = gtk_image_new_from_pixbuf(NULL);
-	gtk_misc_set_alignment(GTK_MISC(app.inspector->image), 0.0, 0.5);
-	gtk_misc_set_padding(GTK_MISC(app.inspector->image), margin_left, 2);
-	gtk_box_pack_start(GTK_BOX(vbox), app.inspector->image, EXPAND_FALSE, FILL_FALSE, 0);
+	i->image = gtk_image_new_from_pixbuf(NULL);
+	gtk_misc_set_alignment(GTK_MISC(i->image), 0.0, 0.5);
+	gtk_misc_set_padding(GTK_MISC(i->image), margin_left, 2);
+	gtk_box_pack_start(GTK_BOX(vbox), i->image, EXPAND_FALSE, FILL_FALSE, 0);
 
 	//-----------
 
@@ -240,6 +248,7 @@ inspector_new()
 void
 inspector_free(Inspector* inspector)
 {
+	g_free(inspector->priv);
 	g_free(inspector);
 }
 
@@ -251,6 +260,7 @@ inspector_set_labels(Sample* sample)
 	Inspector* i = app.inspector;
 	if(!i) return;
 	g_return_if_fail(sample);
+	InspectorPriv* i_ = i->priv;
 
 	char* ch_str = channels_format(sample->channels);
 	char* level  = gain2dbstring(sample->peaklevel);
@@ -262,7 +272,7 @@ inspector_set_labels(Sample* sample)
 
 	char* keywords = (sample->keywords && strlen(sample->keywords)) ? sample->keywords : "<no tags>";
 
-	gtk_label_set_text(GTK_LABEL(i->name),       sample->sample_name);
+	gtk_label_set_text(GTK_LABEL(i_->name),       sample->sample_name);
 	gtk_label_set_text(GTK_LABEL(i->filename),   to_utf8(sample->full_path));
 	gtk_label_set_text(GTK_LABEL(i->tags),       keywords);
 	gtk_label_set_text(GTK_LABEL(i->length),     length);
@@ -276,10 +286,15 @@ inspector_set_labels(Sample* sample)
 	gtk_label_set_markup(GTK_LABEL(i->metadata), sample->meta_data?sample->meta_data:"");
 	gtk_text_buffer_set_text(i->notes,           sample->notes?sample->notes:"", -1);
 
-	if (sample->overview) {
-		gtk_image_set_from_pixbuf(GTK_IMAGE(i->image), sample->overview);
+	if (i->show_waveform) {
+		if (sample->overview) {
+			gtk_image_set_from_pixbuf(GTK_IMAGE(i_->image), sample->overview);
+		} else {
+			gtk_image_clear(GTK_IMAGE(i_->image));
+		}
+		gtk_widget_show(i_->image);
 	} else {
-		gtk_image_clear(GTK_IMAGE(i->image));
+		gtk_widget_hide(i_->image);
 	}
 
 	show_fields();
@@ -379,7 +394,7 @@ inspector_update_from_fileview(GtkTreeView* treeview)
 	Sample* sample = sample_new_from_filename(full_path, true);
 	if (!sample) {
 		inspector_clear();
-		gtk_label_set_text(GTK_LABEL(i->name), "");
+		gtk_label_set_text(GTK_LABEL(i->priv->name), "");
 		return;
 	}
 
@@ -391,7 +406,7 @@ inspector_update_from_fileview(GtkTreeView* treeview)
 		inspector_set_labels(sample);
 	} else {
 		inspector_clear();
-		gtk_label_set_text(GTK_LABEL(i->name), sample->sample_name);
+		gtk_label_set_text(GTK_LABEL(i->priv->name), sample->sample_name);
 	}
 	sample_unref(sample);
 }
@@ -404,7 +419,7 @@ inspector_clear()
 	if(!i) return;
 
 	hide_fields();
-	gtk_image_clear(GTK_IMAGE(i->image));
+	gtk_image_clear(GTK_IMAGE(i->priv->image));
 }
 
 

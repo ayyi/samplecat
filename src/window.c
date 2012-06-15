@@ -21,6 +21,9 @@
 #include "inspector.h"
 #include "progress_dialog.h"
 #include "player_control.h"
+#ifdef USE_OPENGL
+#include "waveform/view.h"
+#endif
 #ifndef NO_USE_DEVHELP_DIRTREE
 #include "dh_link.h"
 #include "dh_tree.h"
@@ -72,6 +75,14 @@ static void       on_layout_changed               ();
 
 static void       k_delete_row                    (GtkAccelGroup*, gpointer);
 
+struct _window {
+	GtkWidget* vbox;
+	GtkWidget* scroll;
+	GtkWidget* toolbar;
+	GtkWidget* toolbar2;
+	GtkWidget* category;
+	GtkWidget* view_category;
+} window;
 
 struct _accel menu_keys[] = {
 	{"Add to database",NULL,        {{(char)'a',    0               },  {0, 0}}, menu__add_to_db, GINT_TO_POINTER(0)},
@@ -131,12 +142,14 @@ GtkWindow
       +--statusbar2
 
 */
-	GtkWidget* window = app.window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-	g_signal_connect (G_OBJECT(window), "delete_event", G_CALLBACK(on_quit), NULL);
-	g_signal_connect(window, "destroy", G_CALLBACK(window_on_destroy), NULL);
+	memset(&window, 0, sizeof(struct _window));
 
-	GtkWidget* vbox = app.vbox = gtk_vbox_new(FALSE, 0);
-	gtk_container_add(GTK_CONTAINER(window), vbox);
+	app.window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+	g_signal_connect (G_OBJECT(app.window), "delete_event", G_CALLBACK(on_quit), NULL);
+	g_signal_connect(app.window, "destroy", G_CALLBACK(window_on_destroy), NULL);
+
+	GtkWidget* vbox = window.vbox = gtk_vbox_new(FALSE, 0);
+	gtk_container_add(GTK_CONTAINER(app.window), vbox);
 
 	filter_new();
 	tagshow_selector_new();
@@ -152,7 +165,7 @@ GtkWindow
 	//gtk_paned_set_position(GTK_PANED(r_vpaned), 300);
 	gtk_container_add(GTK_CONTAINER(align1), main_vpaned);
 
-	GtkWidget* hpaned = app.hpaned = gtk_hpaned_new();
+	GtkWidget* hpaned = gtk_hpaned_new();
 	gtk_paned_set_position(GTK_PANED(hpaned), 210);
 	//gtk_container_add(GTK_CONTAINER(align1), hpaned);
 	gtk_paned_add1(GTK_PANED(main_vpaned), hpaned);
@@ -170,12 +183,12 @@ GtkWindow
 	gtk_paned_set_position(GTK_PANED(r_vpaned), 300);
 	gtk_box_pack_start(GTK_BOX(rhs_vbox), r_vpaned, EXPAND_TRUE, TRUE, 0);
 
-	app.scroll = scrolled_window_new();
-	gtk_paned_add1(GTK_PANED(r_vpaned), app.scroll);
+	window.scroll = scrolled_window_new();
+	gtk_paned_add1(GTK_PANED(r_vpaned), window.scroll);
 
 	listview__new();
 	if(0 && BACKEND_IS_NULL) gtk_widget_set_no_show_all(app.view, true); //dont show main view if no database.
-	gtk_container_add(GTK_CONTAINER(app.scroll), app.view);
+	gtk_container_add(GTK_CONTAINER(window.scroll), app.view);
 
 	dbg(2, "making fileview pane...");
 	void make_fileview_pane()
@@ -240,6 +253,12 @@ GtkWindow
 	}
 	make_fileview_pane();
 
+#ifdef USE_OPENGL
+	if(app.view_options[SHOW_WAVEFORM].value){
+		show_waveform(true);
+	}
+#endif
+
 #ifdef HAVE_FFTW3
 	if(app.view_options[SHOW_SPECTROGRAM].value){
 		show_spectrogram(true);
@@ -262,19 +281,19 @@ GtkWindow
 	gtk_container_set_border_width(GTK_CONTAINER(statusbar2), 5);
 	gtk_box_pack_start(GTK_BOX(hbox_statusbar), statusbar2, EXPAND_TRUE, FILL_TRUE, 0);
 
-	g_signal_connect(G_OBJECT(window), "realize", G_CALLBACK(window_on_realise), NULL);
-	g_signal_connect(G_OBJECT(window), "size-request", G_CALLBACK(window_on_size_request), NULL);
-	g_signal_connect(G_OBJECT(window), "size-allocate", G_CALLBACK(window_on_allocate), NULL);
-	g_signal_connect(G_OBJECT(window), "configure_event", G_CALLBACK(window_on_configure), NULL);
+	g_signal_connect(G_OBJECT(app.window), "realize", G_CALLBACK(window_on_realise), NULL);
+	g_signal_connect(G_OBJECT(app.window), "size-request", G_CALLBACK(window_on_size_request), NULL);
+	g_signal_connect(G_OBJECT(app.window), "size-allocate", G_CALLBACK(window_on_allocate), NULL);
+	g_signal_connect(G_OBJECT(app.window), "configure_event", G_CALLBACK(window_on_configure), NULL);
 
 	GtkAccelGroup* accel_group = gtk_accel_group_new();
 	gboolean mnemonics = FALSE;
 	GimpActionGroupUpdateFunc update_func = NULL;
 	GimpActionGroup* action_group = gimp_action_group_new("Samplecat-window", "Samplecat-window", "gtk-paste", mnemonics, NULL, update_func);
 	make_accels(accel_group, action_group, window_keys, G_N_ELEMENTS(window_keys), NULL);
-	gtk_window_add_accel_group(GTK_WINDOW(window), accel_group);
+	gtk_window_add_accel_group(GTK_WINDOW(app.window), accel_group);
 
-	gtk_widget_show_all(window);
+	gtk_widget_show_all(app.window);
 
 #if (defined HAVE_JACK)
 	/* initially hide player seek bar */
@@ -282,6 +301,26 @@ GtkWindow
 		show_player(true);
 	}
 #endif
+
+	void window_on_selection_change(Application* a, Sample* sample, gpointer user_data)
+	{
+		PF;
+#ifdef HAVE_FFTW3
+		if(app.spectrogram){
+#ifdef USE_OPENGL
+			gl_spectrogram_set_file((GlSpectrogram*)app.spectrogram, sample->full_path);
+#else
+			spectrogram_widget_set_file ((SpectrogramWidget*)app.spectrogram, sample->full_path);
+#endif
+		}
+#endif
+#ifdef USE_OPENGL
+		if(app.waveform){
+			waveform_view_load_file((WaveformView*)app.waveform, sample->full_path);
+		}
+#endif
+	}
+	g_signal_connect((gpointer)application, "selection-changed", G_CALLBACK(window_on_selection_change), NULL);
 
 	dnd_setup();
 
@@ -305,6 +344,7 @@ window_on_size_request(GtkWidget* widget, GtkRequisition* req, gpointer user_dat
 {
 	req->height = atoi(app.config.window_height);
 }
+
 
 static void
 colourise_boxes()
@@ -375,6 +415,7 @@ colourise_boxes()
 	}
 #endif
 }
+
 
 static void
 window_on_allocate(GtkWidget *win, GtkAllocation *allocation, gpointer user_data)
@@ -581,8 +622,8 @@ filter_new()
 
 	g_return_val_if_fail(app.window, FALSE);
 
-	GtkWidget* hbox = app.toolbar = gtk_hbox_new(FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(app.vbox), hbox, EXPAND_FALSE, FILL_FALSE, 0);
+	GtkWidget* hbox = window.toolbar = gtk_hbox_new(FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(window.vbox), hbox, EXPAND_FALSE, FILL_FALSE, 0);
 
 	GtkWidget* label1 = gtk_label_new("Search");
 	gtk_misc_set_padding(GTK_MISC(label1), 5,5);
@@ -610,8 +651,8 @@ filter_new()
 	//----------------------------------------------------------------------
 
 	//second row (metadata edit):
-	GtkWidget* hbox_edit = app.toolbar2 = gtk_hbox_new(FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(app.vbox), hbox_edit, EXPAND_FALSE, FILL_FALSE, 0);
+	GtkWidget* hbox_edit = window.toolbar2 = gtk_hbox_new(FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(window.vbox), hbox_edit, EXPAND_FALSE, FILL_FALSE, 0);
 
 	//left align the label:
 	GtkWidget* align1 = gtk_alignment_new(0.0, 0.5, 0.0, 0.0);
@@ -706,17 +747,17 @@ tag_selector_new()
 {
 	//the tag _edit_ selector
 
-	GtkWidget* combo2 = app.category = gtk_combo_box_entry_new_text();
+	GtkWidget* combo2 = window.category = gtk_combo_box_entry_new_text();
 	GtkComboBox* combo_ = GTK_COMBO_BOX(combo2);
 	gtk_combo_box_append_text(combo_, "no categories");
 	int i; for (i=0;i<G_N_ELEMENTS(categories);i++) {
 		gtk_combo_box_append_text(combo_, categories[i]);
 	}
-	gtk_box_pack_start(GTK_BOX(app.toolbar2), combo2, EXPAND_FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(window.toolbar2), combo2, EXPAND_FALSE, FALSE, 0);
 
 	//"set" button:
 	GtkWidget* set = gtk_button_new_with_label("Set Tag");
-	gtk_box_pack_start(GTK_BOX(app.toolbar2), set, EXPAND_FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(window.toolbar2), set, EXPAND_FALSE, FALSE, 0);
 	g_signal_connect(set, "clicked", G_CALLBACK(on_category_set_clicked), NULL);
 
 	return TRUE;
@@ -730,14 +771,14 @@ tagshow_selector_new()
 
 	#define ALL_CATEGORIES "all categories"
 
-	GtkWidget* combo = app.view_category = gtk_combo_box_new_text();
+	GtkWidget* combo = window.view_category = gtk_combo_box_new_text();
 	GtkComboBox* combo_ = GTK_COMBO_BOX(combo);
 	gtk_combo_box_append_text(combo_, ALL_CATEGORIES);
 	int i; for(i=0;i<G_N_ELEMENTS(categories);i++){
 		gtk_combo_box_append_text(combo_, categories[i]);
 	}
 	gtk_combo_box_set_active(combo_, 0);
-	gtk_box_pack_start(GTK_BOX(app.toolbar), combo, EXPAND_FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(window.toolbar), combo, EXPAND_FALSE, FALSE, 0);
 
 	void
 	on_view_category_changed(GtkComboBox *widget, gpointer user_data)
@@ -746,7 +787,7 @@ tagshow_selector_new()
 		PF;
 
 		if (app.model.filters.category){ g_free(app.model.filters.category); app.model.filters.category = NULL; }
-		char* category = gtk_combo_box_get_active_text(GTK_COMBO_BOX(app.view_category));
+		char* category = gtk_combo_box_get_active_text(GTK_COMBO_BOX(window.view_category));
 		if (strcmp(category, ALL_CATEGORIES)){
 			app.model.filters.category = category;
 		}
@@ -866,7 +907,7 @@ on_category_set_clicked(GtkComboBox *widget, gpointer user_data)
 	//add selected category to selected samples.
 	PF;
 	//selected category?
-	gchar* category = gtk_combo_box_get_active_text(GTK_COMBO_BOX(app.category));
+	gchar* category = gtk_combo_box_get_active_text(GTK_COMBO_BOX(window.category));
 
 	GtkTreeSelection* selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(app.view));
 	GList* selectionlist = gtk_tree_selection_get_selected_rows(selection, NULL);
@@ -908,6 +949,25 @@ on_category_set_clicked(GtkComboBox *widget, gpointer user_data)
 }
 
 
+#ifdef USE_OPENGL
+void
+show_waveform(gboolean enable)
+{
+	if(enable && !app.waveform){
+		wf_debug = 0;
+		/*WaveformView* waveform = (WaveformView*)*/(app.waveform = (GtkWidget*)waveform_view_new(NULL));
+		gtk_box_pack_start(GTK_BOX(window.vbox), app.waveform, EXPAND_FALSE, FILL_TRUE, 0);
+		gtk_widget_set_size_request(app.waveform, 100, 96);
+	}
+
+	if(app.waveform){
+		show_widget_if(app.waveform, enable);
+		app.inspector->show_waveform = !enable;
+	}
+}
+#endif
+
+
 #ifdef HAVE_FFTW3
 void
 show_spectrogram(gboolean enable)
@@ -919,7 +979,7 @@ show_spectrogram(gboolean enable)
 #else
 		app.spectrogram = (GtkWidget*)spectrogram_widget_new();
 #endif
-		gtk_box_pack_start(GTK_BOX(app.vbox), app.spectrogram, EXPAND_TRUE, FILL_TRUE, 0);
+		gtk_box_pack_start(GTK_BOX(window.vbox), app.spectrogram, EXPAND_TRUE, FILL_TRUE, 0);
 
 		gchar* filename = listview__get_first_selected_filepath();
 		if(filename){

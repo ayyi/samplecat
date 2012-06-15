@@ -62,6 +62,10 @@ main (int argc, char **argv)
 		//g_strlcpy(model.filters.phrase, "909", 256);
 	}
 
+	GError* error = NULL;
+	MxStyle* style = mx_style_get_default();
+	mx_style_load_from_file(style, "style.css", &error);
+
 	MxWindow* window = mx_application_create_window (app);
 	ClutterActor* stage = (ClutterActor*)mx_window_get_clutter_stage (window);
 	mx_window_set_icon_name (window, "window-new");
@@ -73,6 +77,13 @@ main (int argc, char **argv)
 	mx_window_set_child (window, table);
 
 	ClutterActor* entry = mx_entry_new();
+	mx_entry_set_hint_text((MxEntry*)entry, "search");
+
+	void on_entry_text_change (MxEntry* entry, GParamSpec* pspec, MxWindow* window)
+	{
+		dbg(0, "notify: %s", mx_entry_get_text(entry));
+	}
+	g_signal_connect(entry, "notify::text", G_CALLBACK(on_entry_text_change), window);
 
 	ClutterActor* scroll_view = mx_scroll_view_new ();
 	mx_scroll_view_set_scroll_policy(MX_SCROLL_VIEW(scroll_view), MX_SCROLL_POLICY_VERTICAL);
