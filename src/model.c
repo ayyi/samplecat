@@ -4,8 +4,13 @@
 
 #include <glib.h>
 #include <glib-object.h>
+#include <string.h>
 #include <config.h>
+#include <main.h>
+#include <sample.h>
 
+
+#define SAMPLECAT_TYPE_FILTERS (samplecat_filters_get_type ())
 
 #define SAMPLECAT_TYPE_MODEL (samplecat_model_get_type ())
 #define SAMPLECAT_MODEL(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), SAMPLECAT_TYPE_MODEL, SamplecatModel))
@@ -14,33 +19,65 @@
 #define SAMPLECAT_IS_MODEL_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), SAMPLECAT_TYPE_MODEL))
 #define SAMPLECAT_MODEL_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), SAMPLECAT_TYPE_MODEL, SamplecatModelClass))
 
-typedef struct _SamplecatModel SamplecatModel;
-typedef struct _SamplecatModelClass SamplecatModelClass;
-typedef struct _SamplecatModelPrivate SamplecatModelPrivate;
 
-struct _SamplecatModel {
+struct x_SamplecatFilters {
+	gchar phrase[256];
+	gchar* dir;
+	gchar* category;
+};
+
+struct x_SamplecatModel {
 	GObject parent_instance;
 	SamplecatModelPrivate * priv;
 	gint state;
 	gchar* cache_dir;
+	SamplecatFilters filters;
 };
 
-struct _SamplecatModelClass {
+struct x_SamplecatModelClass {
 	GObjectClass parent_class;
 };
 
 
 static gpointer samplecat_model_parent_class = NULL;
 
+GType samplecat_filters_get_type (void) G_GNUC_CONST;
+SamplecatFilters* samplecat_filters_dup (const SamplecatFilters* self);
+void samplecat_filters_free (SamplecatFilters* self);
 GType samplecat_model_get_type (void) G_GNUC_CONST;
 enum  {
 	SAMPLECAT_MODEL_DUMMY_PROPERTY
 };
 SamplecatModel* samplecat_model_new (void);
 SamplecatModel* samplecat_model_construct (GType object_type);
+void samplecat_model_set_search_dir (SamplecatModel* self, gchar* dir);
 static void g_cclosure_user_marshal_VOID__POINTER_INT_POINTER (GClosure * closure, GValue * return_value, guint n_param_values, const GValue * param_values, gpointer invocation_hint, gpointer marshal_data);
 static GObject * samplecat_model_constructor (GType type, guint n_construct_properties, GObjectConstructParam * construct_properties);
 static void samplecat_model_finalize (GObject* obj);
+
+
+SamplecatFilters* samplecat_filters_dup (const SamplecatFilters* self) {
+	SamplecatFilters* dup;
+	dup = g_new0 (SamplecatFilters, 1);
+	memcpy (dup, self, sizeof (SamplecatFilters));
+	return dup;
+}
+
+
+void samplecat_filters_free (SamplecatFilters* self) {
+	g_free (self);
+}
+
+
+GType samplecat_filters_get_type (void) {
+	static volatile gsize samplecat_filters_type_id__volatile = 0;
+	if (g_once_init_enter (&samplecat_filters_type_id__volatile)) {
+		GType samplecat_filters_type_id;
+		samplecat_filters_type_id = g_boxed_type_register_static ("SamplecatFilters", (GBoxedCopyFunc) samplecat_filters_dup, (GBoxedFreeFunc) samplecat_filters_free);
+		g_once_init_leave (&samplecat_filters_type_id__volatile, samplecat_filters_type_id);
+	}
+	return samplecat_filters_type_id__volatile;
+}
 
 
 SamplecatModel* samplecat_model_construct (GType object_type) {
@@ -58,6 +95,12 @@ SamplecatModel* samplecat_model_construct (GType object_type) {
 
 SamplecatModel* samplecat_model_new (void) {
 	return samplecat_model_construct (SAMPLECAT_TYPE_MODEL);
+}
+
+
+void samplecat_model_set_search_dir (SamplecatModel* self, gchar* dir) {
+	g_return_if_fail (self != NULL);
+	(*app.model).filters.dir = dir;
 }
 
 

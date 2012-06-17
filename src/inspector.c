@@ -303,13 +303,14 @@ inspector_set_labels(Sample* sample)
 
 	//store a reference to the row id in the inspector widget:
 	// needed to later updated "notes" for that sample
-	// as well to check for updates when
+	// as well to check for updates
+	// *** row_ref is deprecated. use database id instead.
 	i->row_id = sample->id;
 	if(i->row_ref) gtk_tree_row_reference_free(i->row_ref);
-	if (sample->row_ref) {
+	if(sample->row_ref){
 		i->row_ref = gtk_tree_row_reference_copy(sample->row_ref);
 	} else {
-		dbg(0, "setting row_ref failed!");
+		dbg(2, "setting row_ref failed");
 		i->row_ref = NULL;
 		/* can not edit tags or notes w/o reference */
 		gtk_widget_hide(GTK_WIDGET(i->text));
@@ -322,15 +323,23 @@ inspector_set_labels(Sample* sample)
 }
 
 
-/// this is somewhat redundant w/ inspector_update_from_fileview()
-//  (but this fn has the correct interface)
 static void
 inspector_update_from_sample(Application* a, Sample* sample, gpointer user_data)
 {
 	PF;
 	Inspector* i = app.inspector;
 	if(!i) return;
-	g_return_if_fail(sample);
+
+	if(!sample){
+		inspector_clear();
+		gtk_label_set_text(GTK_LABEL(i->priv->name), "");
+		return;
+	}
+
+	/* forget previous inspector item */
+	if(i->row_ref) gtk_tree_row_reference_free(i->row_ref);
+	i->row_ref = NULL;
+	i->row_id = 0;
 
 	#ifdef USE_TRACKER
 	if(BACKEND_IS_TRACKER){
@@ -352,63 +361,16 @@ inspector_update_from_sample(Application* a, Sample* sample, gpointer user_data)
 		}
 	}
 	#endif
-	inspector_set_labels(sample);
-}
-
-
-void
-inspector_update_from_fileview(GtkTreeView* treeview)
-{
-	Inspector* i = app.inspector;
-	Filer* filer = file_manager__get();
-
-	gchar* full_path = NULL;
-	DirItem* item;
-	ViewIter iter;
-	view_get_iter(filer->view, &iter, 0);
-	while((item = iter.next(&iter))){
-		if(view_get_selected(filer->view, &iter)){
-			full_path = g_build_filename(filer->real_path, item->leafname, NULL);
-			break;
-		}
-	}
-	if(!full_path) return;
-
-	/* TODO: do nothing if directory selected 
-	 * 
-	 * this happens when a dir is selected in the left tree-browser
-	 * while some file was previously selected in the right file-list
-	 * -> we get the new dir + old filename
-	 *
-	 * event-handling in window.c should use 
-	 *   gtk_tree_selection_set_select_function()
-	 * or block file-list events during updates after the
-	 * dir-tree brower selection changed.
-	 */
-
-	/* forget previous inspector item */
-	if(i->row_ref) gtk_tree_row_reference_free(i->row_ref);
-	i->row_ref = NULL;
-	i->row_id = 0;
-
-	Sample* sample = sample_new_from_filename(full_path, true);
-	if (!sample) {
-		inspector_clear();
-		gtk_label_set_text(GTK_LABEL(i->priv->name), "");
-		return;
-	}
 
 	// - check if file is already in DB -> load sample-info
 	// - check if file is an audio-file -> read basic info directly from file
 	// - else just display the base-name in the inspector..
-
 	if(sample_get_file_info(sample)){
 		inspector_set_labels(sample);
 	} else {
 		inspector_clear();
 		gtk_label_set_text(GTK_LABEL(i->priv->name), sample->sample_name);
 	}
-	sample_unref(sample);
 }
 
 

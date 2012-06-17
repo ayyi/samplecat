@@ -2,6 +2,7 @@
 #define __LISTMODEL_H_
 #include <gtk/gtk.h>
 #include "typedefs.h"
+#include "list_store.h"
 
 enum
 {
@@ -37,7 +38,7 @@ gboolean      listmodel__update_by_tree_iter   (GtkTreeIter*, int what, void* da
 gboolean      listmodel__update_by_rowref      (GtkTreeRowReference*, int what, void* data);
 
 char*         listmodel__get_filename_from_id  (int);
-void          listmodel__move_files            (GList *list, const gchar *dest_path);
+void          listmodel__move_files            (GList*, const gchar* dest_path);
 
 void          listmodel__set_overview          (GtkTreeRowReference*, GdkPixbuf*);
 void          listmodel__set_peaklevel         (GtkTreeRowReference*, float);

@@ -5,6 +5,7 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <config.h>
+#include <sample.h>
 
 
 #define TYPE_APPLICATION (application_get_type ())

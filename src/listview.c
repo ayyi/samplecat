@@ -264,7 +264,7 @@ listview__on_row_clicked(GtkWidget *widget, GdkEventButton *event, gpointer user
 
 					if(tags && strlen(tags)){
 						gtk_entry_set_text(GTK_ENTRY(app.search), tags);
-						strncpy(app.model.filters.phrase, tags, 255);
+						strncpy(app.model->filters.phrase, tags, 255);
 						do_search(tags, NULL);
 					}
 				}
@@ -307,8 +307,8 @@ listview__on_cursor_change(GtkTreeView* widget, gpointer user_data)
 {
 	dbg(2, "...");
 	Sample* s;
-	if((s = listview__get_first_selected_result())){
-		g_signal_emit_by_name (application, "selection-changed", s, /*COL_ICON, */NULL);
+	if((s = listview__get_first_selected_sample())){
+		g_signal_emit_by_name (application, "selection-changed", s, NULL);
 		sample_unref(s);
 	}
 }
@@ -382,7 +382,7 @@ listview__get_first_selected_path()
  * @return: Sample* -- must be sample_unref() after use.
  */
 Sample*
-listview__get_first_selected_result()
+listview__get_first_selected_sample()
 {
 	GtkTreePath* path = listview__get_first_selected_path();
 	if(path){

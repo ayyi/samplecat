@@ -43,6 +43,9 @@
 #include "colour_box.h"
 #include "window.h"
 #include "auditioner.h"
+#ifndef __APPLE__
+#include "icons/samplecat.xpm"
+#endif
 
 extern struct _app app;
 extern Filer filer;
@@ -145,8 +148,13 @@ GtkWindow
 	memset(&window, 0, sizeof(struct _window));
 
 	app.window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+	gtk_window_set_title(GTK_WINDOW(app.window), "SampleCat");
 	g_signal_connect (G_OBJECT(app.window), "delete_event", G_CALLBACK(on_quit), NULL);
 	g_signal_connect(app.window, "destroy", G_CALLBACK(window_on_destroy), NULL);
+
+#ifndef __APPLE__
+	gtk_window_set_icon(GTK_WINDOW(app.window), gdk_pixbuf_new_from_xpm_data(samplecat_xpm));
+#endif
 
 	GtkWidget* vbox = window.vbox = gtk_vbox_new(FALSE, 0);
 	gtk_container_add(GTK_CONTAINER(app.window), vbox);
@@ -633,16 +641,16 @@ filter_new()
 	{
 		PF;
 		const gchar* text = gtk_entry_get_text(GTK_ENTRY(app.search));
-		if(strcmp(text, app.model.filters.phrase)){
-			strncpy(app.model.filters.phrase, text, 255);
-			do_search(app.model.filters.phrase, app.model.filters.dir);
+		if(strcmp(text, app.model->filters.phrase)){
+			strncpy(app.model->filters.phrase, text, 255);
+			do_search(app.model->filters.phrase, app.model->filters.dir);
 		}
 		return NOT_HANDLED;
 	}
 
 	GtkWidget *entry = app.search = gtk_entry_new();
 	gtk_entry_set_max_length(GTK_ENTRY(entry), 64);
-	gtk_entry_set_text(GTK_ENTRY(entry), app.model.filters.phrase);
+	gtk_entry_set_text(GTK_ENTRY(entry), app.model->filters.phrase);
 	gtk_box_pack_start(GTK_BOX(hbox), entry, EXPAND_TRUE, TRUE, 0);
 	g_signal_connect(G_OBJECT(entry), "focus-out-event", G_CALLBACK(on_focus_out), NULL);
 	gtk_entry_set_activates_default(GTK_ENTRY(entry), TRUE);
@@ -786,14 +794,14 @@ tagshow_selector_new()
 		//update the sample list with the new view-category.
 		PF;
 
-		if (app.model.filters.category){ g_free(app.model.filters.category); app.model.filters.category = NULL; }
+		if (app.model->filters.category){ g_free(app.model->filters.category); app.model->filters.category = NULL; }
 		char* category = gtk_combo_box_get_active_text(GTK_COMBO_BOX(window.view_category));
 		if (strcmp(category, ALL_CATEGORIES)){
-			app.model.filters.category = category;
+			app.model->filters.category = category;
 		}
 		else g_free(category);
 
-		do_search(app.model.filters.phrase, app.model.filters.dir);
+		do_search(app.model->filters.phrase, app.model->filters.dir);
 	}
 	g_signal_connect(combo, "changed", G_CALLBACK(on_view_category_changed), NULL);
 
@@ -806,7 +814,40 @@ window_on_fileview_row_selected(GtkTreeView* treeview, gpointer user_data)
 {
 	//a filesystem file has been clicked on.
 	PF;
-	inspector_update_from_fileview(treeview);
+
+	Filer* filer = file_manager__get();
+
+	gchar* full_path = NULL;
+	DirItem* item;
+	ViewIter iter;
+	view_get_iter(filer->view, &iter, 0);
+	while((item = iter.next(&iter))){
+		if(view_get_selected(filer->view, &iter)){
+			full_path = g_build_filename(filer->real_path, item->leafname, NULL);
+			break;
+		}
+	}
+	if(!full_path) return;
+
+	dbg(1, "%s", full_path);
+
+	/* TODO: do nothing if directory selected 
+	 * 
+	 * this happens when a dir is selected in the left tree-browser
+	 * while some file was previously selected in the right file-list
+	 * -> we get the new dir + old filename
+	 *
+	 * event-handling in window.c should use 
+	 *   gtk_tree_selection_set_select_function()
+	 * or block file-list events during updates after the
+	 * dir-tree brower selection changed.
+	 */
+
+	Sample* s = sample_new_from_filename(full_path, true);
+	if(s){
+		g_signal_emit_by_name (application, "selection-changed", s, NULL);
+		sample_unref(s);
+	}
 }
 
 
@@ -895,8 +936,13 @@ on_dir_tree_link_selected(GObject *ignored, DhLink *link, gpointer data)
 {
 	g_return_val_if_fail(link, false);
 
-	dbg(2, "uri=%s", link->uri);
-	update_search_dir(link->uri);
+	dbg(1, "dir=%s", link->uri);
+
+	samplecat_model_set_search_dir (app.model, link->uri);
+
+	const gchar* text = app.search ? gtk_entry_get_text(GTK_ENTRY(app.search)) : "";
+	do_search((gchar*)text, link->uri);
+
 	return FALSE;
 }
 

@@ -10,6 +10,9 @@
 G_BEGIN_DECLS
 
 
+#define SAMPLECAT_TYPE_FILTERS (samplecat_filters_get_type ())
+typedef struct _SamplecatFilters SamplecatFilters;
+
 #define SAMPLECAT_TYPE_MODEL (samplecat_model_get_type ())
 #define SAMPLECAT_MODEL(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), SAMPLECAT_TYPE_MODEL, SamplecatModel))
 #define SAMPLECAT_MODEL_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST ((klass), SAMPLECAT_TYPE_MODEL, SamplecatModelClass))
@@ -20,11 +23,18 @@ G_BEGIN_DECLS
 typedef struct _SamplecatModelClass SamplecatModelClass;
 typedef struct _SamplecatModelPrivate SamplecatModelPrivate;
 
+struct _SamplecatFilters {
+	gchar phrase[256];
+	gchar* dir;
+	gchar* category;
+};
+
 struct _SamplecatModel {
 	GObject parent_instance;
 	SamplecatModelPrivate * priv;
 	gint state;
 	gchar* cache_dir;
+	SamplecatFilters filters;
 };
 
 struct _SamplecatModelClass {
@@ -32,9 +42,13 @@ struct _SamplecatModelClass {
 };
 
 
+GType samplecat_filters_get_type (void) G_GNUC_CONST;
+SamplecatFilters* samplecat_filters_dup (const SamplecatFilters* self);
+void samplecat_filters_free (SamplecatFilters* self);
 GType samplecat_model_get_type (void) G_GNUC_CONST;
 SamplecatModel* samplecat_model_new (void);
 SamplecatModel* samplecat_model_construct (GType object_type);
+void samplecat_model_set_search_dir (SamplecatModel* self, gchar* dir);
 
 
 G_END_DECLS

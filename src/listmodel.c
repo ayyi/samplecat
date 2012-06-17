@@ -24,7 +24,6 @@
 
 extern struct _app app;
 extern Application* application;
-extern SamplecatModel* model;
 extern unsigned debug;
 
 static void listmodel__update ();
@@ -41,7 +40,7 @@ listmodel__new()
 		dbg(1, "");
 		listmodel__update_by_rowref(sample->row_ref, what, data);
 	}
-	g_signal_connect((gpointer)model, "sample-changed", G_CALLBACK(sample_changed), NULL);
+	g_signal_connect((gpointer)app.model, "sample-changed", G_CALLBACK(sample_changed), NULL);
 
 #if 0
 	return gtk_list_store_new(NUM_COLS, 
@@ -63,7 +62,7 @@ listmodel__new()
 	 G_TYPE_POINTER    // COL_SAMPLEPTR
 	 );
 #else
-	return samplecat_list_store_new();
+	return (GtkListStore*)samplecat_list_store_new();
 #endif
 }
 
@@ -91,40 +90,43 @@ listmodel__clear()
 	}
 }
 
+
 void
-listmodel__add_result(Sample* result)
+listmodel__add_result(Sample* sample)
 {
+	//TODO finish moving this into ListStore.add()
+
 	if(!app.store) return;
-	g_return_if_fail(result);
+	g_return_if_fail(sample);
 
 #if 1
 	/* these has actualy been checked _before_ here
 	 * but backend may 'inject' mime types. ?!
 	 */
-	if(!result->mimetype){
+	if(!sample->mimetype){
 		dbg(0,"no mimetype given -- this should NOT happen: fix backend");
 		return;
 	}
-	if(mimestring_is_unsupported(result->mimetype)){
-		dbg(0, "unsupported MIME type: %s", result->mimetype);
+	if(mimestring_is_unsupported(sample->mimetype)){
+		dbg(0, "unsupported MIME type: %s", sample->mimetype);
 		return;
 	}
 #endif
 
-	if(!result->sample_rate){
+	if(!sample->sample_rate){
 		// needed w/ tracker backend.
-		sample_get_file_info(result);
+		sample_get_file_info(sample);
 	}
 
-	char samplerate_s[32]; samplerate_format(samplerate_s, result->sample_rate);
-	char length_s[64]; smpte_format(length_s, result->length);
+	char samplerate_s[32]; samplerate_format(samplerate_s, sample->sample_rate);
+	char length_s[64]; smpte_format(length_s, sample->length);
 
 #ifdef USE_AYYI
 	GdkPixbuf* ayyi_icon = NULL;
 
 	//is the file loaded in the current Ayyi song?
 	if(ayyi.got_shm){
-		gchar* fullpath = g_build_filename(result->sample_dir, result->sample_name, NULL);
+		gchar* fullpath = g_build_filename(sample->sample_dir, sample->sample_name, NULL);
 		if(ayyi_song__have_file(fullpath)){
 			dbg(1, "sample is used in current project TODO set icon");
 		} else dbg(2, "sample not used in current project");
@@ -134,49 +136,45 @@ listmodel__add_result(Sample* result)
 
 #define NSTR(X) (X?X:"")
 	//icon (only shown if the sound file is currently available):
-	GdkPixbuf* iconbuf = result->online ? get_iconbuf_from_mimetype(result->mimetype) : NULL;
+	GdkPixbuf* iconbuf = sample->online ? get_iconbuf_from_mimetype(sample->mimetype) : NULL;
 
 	GtkTreeIter iter;
 	gtk_list_store_append(app.store, &iter);
 	gtk_list_store_set(app.store, &iter,
 			COL_ICON,       iconbuf,
-			COL_NAME,       result->sample_name,
-			COL_FNAME,      result->sample_dir,
-			COL_IDX,        result->id,
-			COL_MIMETYPE,   result->mimetype,
-			COL_KEYWORDS,   NSTR(result->keywords), 
-			COL_PEAKLEVEL,  result->peaklevel,
-			COL_OVERVIEW,   result->overview,
+			COL_NAME,       sample->sample_name,
+			COL_FNAME,      sample->sample_dir,
+			COL_IDX,        sample->id,
+			COL_MIMETYPE,   sample->mimetype,
+			COL_KEYWORDS,   NSTR(sample->keywords),
+			COL_PEAKLEVEL,  sample->peaklevel,
+			COL_OVERVIEW,   sample->overview,
 			COL_LENGTH,     length_s,
 			COL_SAMPLERATE, samplerate_s,
-			COL_CHANNELS,   result->channels, 
-			COL_COLOUR,     result->colour_index,
+			COL_CHANNELS,   sample->channels, 
+			COL_COLOUR,     sample->colour_index,
 #ifdef USE_AYYI
 			COL_AYYI_ICON,  ayyi_icon,
 #endif
-			COL_SAMPLEPTR,  result,
+			COL_SAMPLEPTR,  sample,
 			-1);
 
 	GtkTreePath* treepath;
 	if((treepath = gtk_tree_model_get_path(GTK_TREE_MODEL(app.store), &iter))){
-		result->row_ref = gtk_tree_row_reference_new(GTK_TREE_MODEL(app.store), treepath);
+		sample->row_ref = gtk_tree_row_reference_new(GTK_TREE_MODEL(app.store), treepath);
 		gtk_tree_path_free(treepath);
 	}
 
-	if(result->peaklevel==0 && result->row_ref){
+	if(sample->peaklevel==0 && sample->row_ref){
 		dbg(1, "recalucale peak");
-		request_peaklevel(result);
+		request_peaklevel(sample);
 	}
-	if(!result->overview && result->row_ref){
+	if(!sample->overview && sample->row_ref){
 		dbg(1, "regenerate overview");
-		request_overview(result);
+		request_overview(sample);
 	}
-	if((!result->ebur || !strlen(result->ebur)) && result->row_ref){
-		dbg(1, "regenerate ebur128");
-		request_ebur128(result);
-	}
-	sample_ref(result);
 }
+
 
 /* used to update information that was generated in
  * a backgound analysis process */

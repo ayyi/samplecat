@@ -1,5 +1,5 @@
-#ifndef __SAMPLECAT_MAIN_H_
-#define __SAMPLECAT_MAIN_H_
+#ifndef __samplecat_main_h__
+#define __samplecat_main_h__
 
 #include <gtk/gtk.h>
 #include <pthread.h>
@@ -7,6 +7,7 @@
 #include "types.h"
 #include "utils/mime_type.h"
 #include "dir_tree/view_dir_tree.h"
+#include "model.h"
 #include "application.h"
 #ifdef USE_MYSQL
 #include "db/mysql.h"
@@ -60,23 +61,13 @@ enum {
 	MAX_VIEW_OPTIONS
 };
 
-struct _samplecat_model
-{
-	struct {
-		char       phrase[256]; // XXX TODO increase to PATH_MAX
-		char*      dir;
-		gchar*     category;
-
-	} filters;
-};
-
 struct _app
 {
 	gboolean       loaded;
 
 	char*          config_filename;
 	struct _config config;
-	SamplecatModel model;
+	SamplecatModel*model;
 	pthread_t      gui_thread;
 	gboolean       add_recursive;
 	gboolean       loop_playback;
@@ -182,8 +173,6 @@ gboolean    mimetype_is_unsupported(MIME_type*, char* mime_string);
 void        update_dir_node_list();
 
 gint        get_mouseover_row();
-
-void        update_search_dir(gchar* uri);
 
 gboolean    keyword_is_dupe(char* new, char* existing);
 

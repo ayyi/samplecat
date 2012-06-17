@@ -10,6 +10,10 @@
 #include <string.h>
 #include <float.h>
 #include <math.h>
+#include <sample.h>
+#include <listmodel.h>
+#include <support.h>
+#include <overview.h>
 
 
 #define SAMPLECAT_TYPE_LIST_STORE (samplecat_list_store_get_type ())
@@ -19,16 +23,13 @@
 #define SAMPLECAT_IS_LIST_STORE_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), SAMPLECAT_TYPE_LIST_STORE))
 #define SAMPLECAT_LIST_STORE_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), SAMPLECAT_TYPE_LIST_STORE, SamplecatListStoreClass))
 
-typedef struct _SamplecatListStore SamplecatListStore;
-typedef struct _SamplecatListStoreClass SamplecatListStoreClass;
-typedef struct _SamplecatListStorePrivate SamplecatListStorePrivate;
 
-struct _SamplecatListStore {
+struct _SamplecatListStoreX {
 	GtkListStore parent_instance;
 	SamplecatListStorePrivate * priv;
 };
 
-struct _SamplecatListStoreClass {
+struct _SamplecatListStoreClassX {
 	GtkListStoreClass parent_class;
 };
 
@@ -41,6 +42,8 @@ enum  {
 };
 SamplecatListStore* samplecat_list_store_new (void);
 SamplecatListStore* samplecat_list_store_construct (GType object_type);
+void samplecat_list_store_add (SamplecatListStore* self, Sample* sample);
+void samplecat_list_store_do_search (SamplecatListStore* self);
 
 
 SamplecatListStore* samplecat_list_store_construct (GType object_type) {
@@ -72,8 +75,40 @@ SamplecatListStore* samplecat_list_store_new (void) {
 }
 
 
+void samplecat_list_store_add (SamplecatListStore* self, Sample* sample) {
+	gboolean _tmp0_ = FALSE;
+	gboolean _tmp1_ = FALSE;
+	g_return_if_fail (self != NULL);
+	listmodel__add_result (sample);
+	if (!((gboolean) (*sample).ebur)) {
+		_tmp1_ = TRUE;
+	} else {
+		gsize _tmp2_;
+		_tmp2_ = strlen ((const gchar*) (*sample).ebur);
+		_tmp1_ = !((gboolean) _tmp2_);
+	}
+	if (_tmp1_) {
+		_tmp0_ = (gboolean) (*sample).row_ref;
+	} else {
+		_tmp0_ = FALSE;
+	}
+	if (_tmp0_) {
+		dbg (1, "regenerate ebur128");
+		request_ebur128 (sample);
+	}
+	sample_ref (sample);
+}
+
+
+void samplecat_list_store_do_search (SamplecatListStore* self) {
+	g_return_if_fail (self != NULL);
+	g_signal_emit_by_name (self, "content-changed");
+}
+
+
 static void samplecat_list_store_class_init (SamplecatListStoreClass * klass) {
 	samplecat_list_store_parent_class = g_type_class_peek_parent (klass);
+	g_signal_new ("content_changed", SAMPLECAT_TYPE_LIST_STORE, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_VOID__VOID, G_TYPE_NONE, 0);
 }
 
 

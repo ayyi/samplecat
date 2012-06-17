@@ -25,18 +25,9 @@
 #include "sample.h"
 #include "list_view.h"
 #include "utils/ayyi_utils.h"
+#include "src/model.h"
 
 struct _backend backend;
-
-struct _samplecat_model //TODO is a dupe
-{
-	struct {
-		char       phrase[256]; // XXX TODO increase to PATH_MAX
-		char*      dir;
-		gchar*     category;
-
-	} filters;
-};
 SamplecatModel model;
 
 unsigned debug = 1;

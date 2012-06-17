@@ -6,6 +6,7 @@
 
 #include <glib.h>
 #include <gtk/gtk.h>
+#include <sample.h>
 
 G_BEGIN_DECLS
 
@@ -34,6 +35,8 @@ struct _SamplecatListStoreClass {
 GType samplecat_list_store_get_type (void) G_GNUC_CONST;
 SamplecatListStore* samplecat_list_store_new (void);
 SamplecatListStore* samplecat_list_store_construct (GType object_type);
+void samplecat_list_store_add (SamplecatListStore* self, Sample* sample);
+void samplecat_list_store_do_search (SamplecatListStore* self);
 
 
 G_END_DECLS

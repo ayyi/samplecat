@@ -15,10 +15,6 @@
 #include "sample.h"
 
 
-extern struct _app app;
-extern SamplecatModel* model;
-
-
 Sample*
 sample_new()
 {
@@ -152,7 +148,7 @@ sample_refresh(Sample* sample, gboolean force_update)
 			else return;
 
 			if (sample_get_file_info(sample)) {
-				g_signal_emit_by_name (model, "sample-changed", sample, -1, NULL);
+				g_signal_emit_by_name (app.model, "sample-changed", sample, -1, NULL);
 				sample->mtime = mtime;
 				request_peaklevel(sample);
 				request_overview(sample);
@@ -167,7 +163,7 @@ sample_refresh(Sample* sample, gboolean force_update)
 		/* file does not exist */
 		sample->online = 0;
 	}
-	g_signal_emit_by_name (model, "sample-changed", sample, COL_ICON, NULL);
+	g_signal_emit_by_name (app.model, "sample-changed", sample, COL_ICON, NULL);
 }
 
 
@@ -231,7 +227,8 @@ struct find_sample {
 	const char *abspath;
 };
 
-gboolean filter_sample (GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *iter, gpointer data) {
+gboolean filter_sample (GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *iter, gpointer data)
+{
 	struct find_sample *fs = (struct find_sample*) data;
 	Sample *s = sample_get_by_tree_iter(iter);
 	if (!strcmp(s->full_path, fs->abspath)) {
@@ -243,10 +240,12 @@ gboolean filter_sample (GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *ite
 }
 
 Sample*
-sample_get_by_filename(const char *abspath) {
+sample_get_by_filename(const char* abspath)
+{
 	struct find_sample fs;
-	fs.rv=NULL; fs.abspath=abspath;
+	fs.rv = NULL; fs.abspath = abspath;
 	GtkTreeModel* model = GTK_TREE_MODEL(app.store);
 	gtk_tree_model_foreach(model, &filter_sample, &fs);
 	return fs.rv;
 }
+

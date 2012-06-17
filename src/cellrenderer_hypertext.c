@@ -32,7 +32,6 @@
 #include "typedefs.h"
 #include "support.h"
 #include "main.h"
-extern struct _app app;
 
 static void gtk_cell_renderer_hyper_text_get_size (GtkCellRenderer *cell,
 					     GtkWidget       *widget,

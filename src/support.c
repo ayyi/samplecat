@@ -30,7 +30,6 @@
 #define N_(A) A 
 #define gettext(A) A
 
-extern struct _app app;
 extern unsigned debug;
 
 

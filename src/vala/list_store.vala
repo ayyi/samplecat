@@ -1,4 +1,5 @@
 using Config;
+using Posix;
 using GLib;
 using Gdk;
 using Gtk;
@@ -8,6 +9,8 @@ namespace Samplecat
 {
 public class ListStore : Gtk.ListStore
 {
+	public signal void content_changed(); // a new search has been completed.
+
 	public ListStore() {
 		Type types[13] = {
 			typeof(Gdk.Pixbuf), // COL_ICON
@@ -28,6 +31,23 @@ public class ListStore : Gtk.ListStore
 			typeof(void*)       // COL_SAMPLEPTR
 		};
 		set_column_types(types);
+	}
+
+	public void add(/*unowned */Sample* sample)
+	{
+		listmodel__add_result(sample);
+
+		if((!(bool)sample->ebur || !(bool)strlen((string)sample->ebur)) && (bool)sample->row_ref){
+			dbg(1, "regenerate ebur128");
+			request_ebur128(sample);
+		}
+
+		sample.ref();
+	}
+
+	public void do_search()
+	{
+		content_changed();
 	}
 }
 }

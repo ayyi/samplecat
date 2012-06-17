@@ -44,8 +44,9 @@ char * program_name;
 #include "dh_tree.h"
 
 #include "db/db.h"
-#include "main.h"
 #include "model.h"
+#include "main.h"
+#include "list_store.h"
 #include "support.h"
 #include "sample.h"
 #include "overview.h"
@@ -90,7 +91,6 @@ static gboolean   can_use                   (GList*, const char*);
 static gboolean   toggle_recursive_add      (GtkWidget*, gpointer);
 static gboolean   toggle_loop_playback      (GtkWidget*, gpointer);
 static gboolean   on_directory_list_changed ();
-static void      _set_search_dir            (char*);
 static gboolean   dir_tree_update           (gpointer);
 static bool       config_load               ();
 static void       config_new                ();
@@ -101,7 +101,7 @@ void              menu_play_stop            (GtkWidget* widget, gpointer);
 
 struct _app app;
 Application* application = NULL;
-SamplecatModel* model = NULL;
+//SamplecatModel* model = NULL;
 struct _backend backend; 
 struct _palette palette;
 GList* mime_types; // list of MIME_type*
@@ -303,6 +303,10 @@ main(int argc, char** argv)
 
 	printf("%s"PACKAGE_NAME". Version "PACKAGE_VERSION"%s\n", yellow, white);
 
+	type_init();
+	application = application_new();
+	app.model = samplecat_model_new();
+
 	config_load();
 
 	if (app.config.database_backend && can_use(app.backends, app.config.database_backend)) {
@@ -323,19 +327,25 @@ main(int argc, char** argv)
 #endif
 	app.gui_thread = pthread_self();
 
-	type_init();
 	icon_theme_init();
 	pixmaps_init();
-	application = application_new();
-	model = samplecat_model_new();
 	ad_init();
 	set_auditioner();
 	app.store = listmodel__new();
+	if(app.no_gui) console__init();
+
+#if 0
+	void store_content_changed(GtkListStore* store, gpointer data)
+	{
+		PF0;
+	}
+	g_signal_connect(G_OBJECT(app.store), "content-changed", G_CALLBACK(store_content_changed), NULL);
+#endif
 
 	gboolean db_connected = false;
 #ifdef USE_MYSQL
 	if(can_use(app.backends, "mysql")){
-		mysql__init(&app.model, &app.config.mysql);
+		mysql__init(app.model, &app.config.mysql);
 		db_connected = samplecat_set_backend(BACKEND_MYSQL);
 	}
 #endif
@@ -374,7 +384,7 @@ main(int argc, char** argv)
 			if(notes) gtk_widget_hide(notes);
 
 			if(search_pending){
-				do_search(app.args.search ? app.args.search : app.model.filters.phrase, app.model.filters.dir);
+				do_search(app.args.search ? app.args.search : app.model->filters.phrase, app.model->filters.dir);
 			}
 		}
 		if(app.no_gui){
@@ -407,7 +417,6 @@ main(int argc, char** argv)
 	if(!app.no_gui) window_new(); 
 	if(!app.no_gui) app.context_menu = make_context_menu();
 
-	gtk_window_set_title(GTK_WINDOW(app.window), "SampleCat");
 #ifdef __APPLE__
 	GtkWidget *menu_bar;
 	menu_bar = gtk_menu_bar_new();
@@ -415,13 +424,10 @@ main(int argc, char** argv)
 	 * connected to 'gtk_main_quit' by default. so we're fine.
 	 */
 	gtk_osxapplication_set_menu_bar(osxApp, GTK_MENU_SHELL(menu_bar));
-#else
-#include "icons/samplecat.xpm"
-	gtk_window_set_icon(GTK_WINDOW(app.window), gdk_pixbuf_new_from_xpm_data(samplecat_xpm));
 #endif
 
 	if(!backend.pending){ 
-		do_search(app.args.search ? app.args.search : app.model.filters.phrase, app.model.filters.dir);
+		do_search(app.args.search ? app.args.search : app.model->filters.phrase, app.model->filters.dir);
 	}else{
 		search_pending = true;
 	}
@@ -458,17 +464,6 @@ main(int argc, char** argv)
 }
 
 
-void
-update_search_dir(gchar* uri)
-{
-	dbg(0,"..");
-	_set_search_dir(uri);
-
-	const gchar* text = app.search ? gtk_entry_get_text(GTK_ENTRY(app.search)) : "";
-	do_search((gchar*)text, uri);
-}
-
-
 static gboolean
 dir_tree_update(gpointer data)
 {
@@ -483,20 +478,6 @@ dir_tree_update(gpointer data)
 	dh_book_tree_reload((DhBookTree*)app.dir_treeview);
 
 	return IDLE_STOP;
-}
-
-
-static void
-_set_search_dir(char* dir)
-{
-	//this doesnt actually do the search. When calling, follow with do_search() if neccesary.
-
-	//if string is empty, we show all directories?
-
-	g_return_if_fail(dir);
-
-	dbg (1, "dir=%s", dir);
-	app.model.filters.dir = dir;
 }
 
 
@@ -575,11 +556,11 @@ do_search(char* search, char* dir)
 	if(BACKEND_IS_NULL) return;
 	search_pending = false;
 
-	if (search) g_strlcpy(app.model.filters.phrase, search, 256); //the search phrase is now always taken from the model.
-	if (!dir) dir = app.model.filters.dir;
+	if (search) g_strlcpy(app.model->filters.phrase, search, 256); //the search phrase is now always taken from the model.
+	if (!dir) dir = app.model->filters.dir;
 
 	int n_results = 0;
-	if(!backend.search_iter_new(search, dir, app.model.filters.category, &n_results)) {
+	if(!backend.search_iter_new(search, dir, app.model->filters.category, &n_results)) {
 		return;
 	}
 
@@ -591,32 +572,26 @@ do_search(char* search, char* dir)
 	unsigned long* lengths;
 	Sample* result;
 	while((result = backend.search_iter_next(&lengths)) && row_count < MAX_DISPLAY_ROWS){
-		if(app.no_gui){
-			if(!row_count) console__show_result_header();
-			console__show_result(result);
-#ifdef USE_TRACKER
-			if(BACKEND_IS_TRACKER && row_count > 20) break;
-#endif
-		}else{
-			Sample* s = sample_dup(result);
-			listmodel__add_result(s);
-			sample_unref(s);
-		}
+		Sample* s = sample_dup(result);
+		//listmodel__add_result(s);
+		samplecat_list_store_add((SamplecatListStore*)app.store, s);
+		sample_unref(s);
 		row_count++;
 	}
-	if(app.no_gui) console__show_result_footer(row_count);
 
 	backend.search_iter_free();
 
 	if(0 && row_count < MAX_DISPLAY_ROWS){
 		statusbar_print(1, "%i samples found.", row_count);
 	}else if(!row_count){
-		statusbar_print(1, "no samples found. filters: dir=%s", app.model.filters.dir);
+		statusbar_print(1, "no samples found. filters: dir=%s", app.model->filters.dir);
 	}else if (n_results <0) {
 		statusbar_print(1, "showing %i sample(s)", row_count);
 	}else{
 		statusbar_print(1, "showing %i of %i sample(s)", row_count, n_results);
 	}
+
+	samplecat_list_store_do_search((SamplecatListStore*)app.store);
 
 	//treeview_unblock_motion_handler();  //causes a segfault even before it is run ??!!
 }
@@ -905,7 +880,7 @@ add_file(char* path)
 		return false;
 	}
 
-	listmodel__add_result(sample);
+	samplecat_list_store_add((SamplecatListStore*)app.store, sample);
 
 	on_directory_list_changed();
 	sample_unref(sample);
@@ -1337,7 +1312,7 @@ config_load()
 			ADD_CONFIG_KEY (app.config.window_width,     "window_width");
 			ADD_CONFIG_KEY (theme_name,                  "icon_theme");
 			ADD_CONFIG_KEY (app.config.column_widths[0], "col1_width");
-			ADD_CONFIG_KEY (app.model.filters.phrase,    "filter");
+			ADD_CONFIG_KEY (app.model->filters.phrase,   "filter");
 			ADD_CONFIG_KEY (app.config.browse_dir,       "browse_dir");
 			ADD_CONFIG_KEY (app.config.show_player,      "show_player");
 			ADD_CONFIG_KEY (app.config.show_waveform,    "show_waveform");
@@ -1365,7 +1340,7 @@ config_load()
 					if (!loc[k] || strlen(loc[k])==0) strcpy(loc[k], "");
 				}
 			}
-			_set_search_dir(app.config.show_dir);
+			samplecat_model_set_search_dir (app.model, app.config.show_dir);
 
 			app.view_options[SHOW_PLAYER]      = (ViewOption){"Player",      show_player,      strcmp(app.config.show_player, "false")};
 			app.view_options[SHOW_FILEMANAGER] = (ViewOption){"Filemanager", show_filemanager, true};
@@ -1398,7 +1373,7 @@ config_save()
 {
 	if(app.loaded){
 		//update the search directory:
-		g_key_file_set_value(app.key_file, "Samplecat", "show_dir", app.model.filters.dir ? app.model.filters.dir : "");
+		g_key_file_set_value(app.key_file, "Samplecat", "show_dir", app.model->filters.dir ? app.model->filters.dir : "");
 
 		//save window dimensions:
 		gint width, height;
