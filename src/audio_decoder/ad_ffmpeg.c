@@ -12,8 +12,7 @@
 
 #ifdef HAVE_FFMPEG
 
-#include <libavcodec/avcodec.h>
-#include <libavformat/avformat.h>
+#include "ffcompat.h"
 
 typedef struct {
   AVFormatContext* formatContext;
@@ -84,8 +83,8 @@ void *ad_open_ffmpeg(const char *fn, struct adinfo *nfo) {
     free(priv); return(NULL);
   }
 
-  if (av_find_stream_info(priv->formatContext) < 0) {
-    av_close_input_file(priv->formatContext);
+  if (avformat_find_stream_info(priv->formatContext, NULL) < 0) {
+    avformat_close_input(&priv->formatContext);
     dbg(0, "av_find_stream_info failed" );
     free(priv); return(NULL);
   }
@@ -100,7 +99,7 @@ void *ad_open_ffmpeg(const char *fn, struct adinfo *nfo) {
   }
   if (priv->audioStream == -1) {
     dbg(0, "No Audio Stream found in file");
-    av_close_input_file(priv->formatContext);
+    avformat_close_input(&priv->formatContext);
     free(priv); return(NULL);
   }
 
@@ -108,11 +107,11 @@ void *ad_open_ffmpeg(const char *fn, struct adinfo *nfo) {
   priv->codec        = avcodec_find_decoder(priv->codecContext->codec_id);
 
   if (priv->codec == NULL) {
-    av_close_input_file(priv->formatContext);
+    avformat_close_input(&priv->formatContext);
     dbg(0, "Codec not supported by ffmpeg");
     free(priv); return(NULL);
   }
-  if (avcodec_open(priv->codecContext, priv->codec) < 0) {
+  if (avcodec_open2(priv->codecContext, priv->codec, NULL) < 0) {
     dbg(0, "avcodec_open failed" );
     free(priv); return(NULL);
   }
@@ -144,7 +143,7 @@ int ad_close_ffmpeg(void *sf) {
   ffmpeg_audio_decoder *priv = (ffmpeg_audio_decoder*) sf;
   if (!priv) return -1;
   avcodec_close(priv->codecContext);
-  av_close_input_file(priv->formatContext);
+  avformat_close_input(&priv->formatContext);
   free(priv);
   return 0;
 }
@@ -195,9 +194,17 @@ ssize_t ad_read_ffmpeg(void *sf, float* d, size_t len) {
 
       /* decode all chunks in packet */
       int data_size= AVCODEC_MAX_AUDIO_FRAME_SIZE;
-
+#if 0 // TODO  ffcompat.h -- this works but is not optimal (channels may not be planar/interleaved)
+      AVFrame avf; // TODO statically allocate
+      memset(&avf, 0, sizeof(AVFrame)); // not sure if that is needed
+      int got_frame = 0;
+ret = avcodec_decode_audio4(priv->codecContext, &avf, &got_frame, &priv->packet);
+      data_size = avf.linesize[0];
+      memcpy(priv->m_tmpBuffer, avf.data[0], avf.linesize[0] * sizeof(uint8_t));
+#else // this was deprecated in LIBAVCODEC_VERSION_MAJOR 53
       ret = avcodec_decode_audio3(priv->codecContext, 
           priv->m_tmpBuffer, &data_size, &priv->packet);
+#endif
 
       if (ret < 0 || ret > priv->pkt_len) {
 #if 0
@@ -322,9 +329,11 @@ const ad_plugin * get_ffmpeg() {
   static int ffinit = 0;
   if (!ffinit) {
     ffinit=1;
+#if LIBAVFORMAT_VERSION_INT < AV_VERSION_INT(53, 5, 0)
+    avcodec_init();
+#endif
     av_register_all();
     avcodec_register_all();
-    avcodec_init();
     if(0)
       av_log_set_level(AV_LOG_QUIET);
     else 
