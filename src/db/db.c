@@ -32,6 +32,9 @@
 #ifdef USE_SQLITE
 #include "db/sqlite.h"
 #endif
+#ifdef USE_TRACKER
+#include "tracker.h"
+#endif
 #ifdef HAVE_ZLIB
 #include <zlib.h>
 #endif

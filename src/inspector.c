@@ -32,6 +32,7 @@
 #include "inspector.h"
 #include <math.h> // XXX
 #ifdef USE_TRACKER
+  #include "src/db/db.h"
   #include "src/db/tracker.h"
 #endif
 #if (defined HAVE_JACK)
@@ -41,6 +42,7 @@
 extern struct _app app;
 extern SamplecatModel* model;
 extern int debug;
+extern struct _backend backend;
 
 struct _inspector_priv
 {
@@ -351,7 +353,7 @@ inspector_update_from_sample(Application* a, Sample* sample, gpointer user_data)
 			snprintf(mime_string, 64, "%s/%s", mime_type->media_type, mime_type->subtype);
 			if(mimestring_is_unsupported(mime_string)){
 				inspector_clear();
-				gtk_label_set_text(GTK_LABEL(i->name), basename(sample->sample_name));
+				gtk_label_set_text(GTK_LABEL(i->filename), basename(sample->sample_name));
 				return;
 			}
 			if(!sample_get_file_info(sample)){
