@@ -964,6 +964,7 @@ delete_selected_rows()
 				n++;
 
 			} else perr("bad iter!\n");
+			gtk_tree_path_free(path);
 		} else perr("cannot get path from row_ref!\n");
 	}
 	g_list_free(selected_row_refs); //FIXME free the row_refs?

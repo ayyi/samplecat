@@ -379,8 +379,9 @@ listmodel__set_peaklevel(GtkTreeRowReference* row_ref, float level)
 	} else dbg(2, "no path for rowref. row_ref=%p\n", row_ref); //this is not an error. The row may not be part of the current search.
 }
 
+
 void
-listmodel__move_files(GList *list, const gchar *dest_path)
+listmodel__move_files(GList* list, const gchar* dest_path)
 {
 	/* This is called _before_ the files are actually moved!
 	 * file_util_move_simple() which is called afterwards 
@@ -389,23 +390,23 @@ listmodel__move_files(GList *list, const gchar *dest_path)
 	if (!list) return;
 	if (!dest_path) return;
 
-	GList *l = list;
+	GList* l = list;
 	do {
-		const gchar *src_path=l->data;
+		const gchar* src_path=l->data;
 
-		gchar *bn =g_path_get_basename(src_path);
-		gchar *full_path = g_strdup_printf("%s%c%s",dest_path, G_DIR_SEPARATOR, bn);
+		gchar* bn = g_path_get_basename(src_path);
+		gchar* full_path = g_strdup_printf("%s%c%s", dest_path, G_DIR_SEPARATOR, bn);
 		g_free(bn);
 
 		if (src_path) {
 			dbg(0,"move %s -> %s | NEW: %s", src_path, dest_path, full_path);
 			int id = -1;
-			if(backend.file_exists(src_path, &id) && id>0) {
+			if(backend.file_exists(src_path, &id) && id > 0){
 				backend.update_string(id, "filedir", dest_path);
 				backend.update_string(id, "full_path", full_path);
 			}
 
-			Sample *s = sample_get_by_filename(src_path);
+			Sample* s = sample_get_by_filename(src_path);
 			if (s) {
 				GtkTreePath* treepath;
 				free(s->full_path);
@@ -418,11 +419,12 @@ listmodel__move_files(GList *list, const gchar *dest_path)
 					if(gtk_tree_model_get_iter(GTK_TREE_MODEL(app.store), &iter, treepath)){
 						gtk_list_store_set(app.store, &iter, COL_FNAME, s->sample_dir, -1);
 					}
+					gtk_tree_path_free(treepath);
 				}
 			}
 		}
 		g_free(full_path);
-		l=l->next;
+		l = l->next;
 	} while (l);
 }
 

@@ -937,18 +937,23 @@ treeview_get_tags_cell(GtkTreeView *view, guint x, guint y, GtkCellRenderer **ce
 }
 #endif
 
+
 void 
-highlight_playing_by_path (GtkTreePath *path) {
+highlight_playing_by_path (GtkTreePath* path)
+{
 	GtkTreeIter iter;
 	gtk_tree_model_get_iter(GTK_TREE_MODEL(app.store), &iter, path);
 	gtk_list_store_set(GTK_LIST_STORE(app.store), &iter, COL_COLOUR, /*colour*/ PALETTE_SIZE, -1);
 }
 
+
 void 
-highlight_playing_by_ref (GtkTreeRowReference *ref) {
-	GtkTreePath *path;
+highlight_playing_by_ref (GtkTreeRowReference* ref)
+{
+	GtkTreePath* path;
 	if (!ref || !gtk_tree_row_reference_valid(ref)) return;
 	if(!(path = gtk_tree_row_reference_get_path(ref))) return;
 	highlight_playing_by_path(path);
 	gtk_tree_path_free(path);
 }
+

@@ -24,10 +24,15 @@ If you are not a developer it is recomended to use the latest tarball. Building 
 If you are a developer you will want to use the git repository directly. The only difficulty is the use of
 git submodules which are unfortunately not transparent. After cloning the repository, you will have to manually
 get the submodule:
-
+```
 	git submodule init
 	git submodule update
-
+```
+If you subsequently need to update the submodules as part of a git pull:
+```
+	git submodule foreach git pull origin master
+	make clean
+```
 
 known issues:
 -------------

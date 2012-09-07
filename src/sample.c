@@ -214,7 +214,7 @@ sample_get_from_model(GtkTreePath* path)
 Sample*
 sample_get_by_row_ref(GtkTreeRowReference* ref)
 {
-	GtkTreePath *path;
+	GtkTreePath* path;
 	if (!ref || !gtk_tree_row_reference_valid(ref)) return NULL;
 	if(!(path = gtk_tree_row_reference_get_path(ref))) return NULL;
 	Sample* sample = sample_get_from_model(path);

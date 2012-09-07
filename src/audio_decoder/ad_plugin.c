@@ -83,6 +83,9 @@ ssize_t ad_read(void *sf, float* out, size_t len){
 	return d->b->read(d->d, out, len);
 }
 
+/*
+ *  side-effects: allocates buffer
+ */
 ssize_t ad_read_mono_dbl(void *sf, struct adinfo *nfo, double* d, size_t len){
 	int c,f;
 	int chn = nfo->channels;
