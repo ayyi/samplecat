@@ -20,7 +20,6 @@
 #include "overview.h"
 #include "list_store.h"
 #include "listmodel.h"
-#include "inspector.h" //TODO
 
 extern struct _app app;
 extern Application* application;

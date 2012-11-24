@@ -190,7 +190,7 @@ sample_get_file_info(Sample* sample)
 Sample*
 sample_get_by_tree_iter(GtkTreeIter* iter)
 {
-	Sample *sample;
+	Sample* sample;
 	gtk_tree_model_get(GTK_TREE_MODEL(app.store), iter, COL_SAMPLEPTR, &sample, -1);
 	if(sample) sample_ref(sample);
 	return sample;
@@ -199,13 +199,9 @@ sample_get_by_tree_iter(GtkTreeIter* iter)
 Sample*
 sample_get_from_model(GtkTreePath* path)
 {
-#if 1
 	GtkTreeModel* model = GTK_TREE_MODEL(app.store);
-#else
-	GtkTreeModel* model = gtk_tree_view_get_model(GTK_TREE_VIEW(app.view));
-#endif
 	GtkTreeIter iter;
-	gtk_tree_model_get_iter(model, &iter, path);
+	if(!gtk_tree_model_get_iter(model, &iter, path)) return NULL;
 	Sample* sample = sample_get_by_tree_iter(&iter);
 	if (sample && !sample->row_ref) sample->row_ref = gtk_tree_row_reference_new(GTK_TREE_MODEL(app.store), path);
 	return sample;

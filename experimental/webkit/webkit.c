@@ -137,12 +137,7 @@ web_view_on_loaded (WebKitWebView* view, WebKitWebFrame* frame, gpointer user_da
 	dbg(0, "n_results=%i", n_results);
 
 	WebKitDOMElement* script = webkit_dom_document_create_element (document, "script", NULL);
-	webkit_dom_node_set_text_content ( WEBKIT_DOM_NODE (script),
-		//"$('#main').append('<p>jquery hello</p>'); "
-		//"console.log('hello');"
-		//"$('table').dataTable();"
-		"do_table();"
-	, NULL);
+	webkit_dom_node_set_text_content ( WEBKIT_DOM_NODE (script), "do_table();", NULL);
 	webkit_dom_node_append_child (main_node, WEBKIT_DOM_NODE (script), NULL);
 }
 

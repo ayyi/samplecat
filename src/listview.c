@@ -217,9 +217,9 @@ listview__show_db_missing()
 
 
 static gboolean
-listview__on_row_clicked(GtkWidget *widget, GdkEventButton *event, gpointer user_data)
+listview__on_row_clicked(GtkWidget* widget, GdkEventButton* event, gpointer user_data)
 {
-	GtkTreeView *treeview = GTK_TREE_VIEW(app.view);
+	GtkTreeView* treeview = GTK_TREE_VIEW(widget);
 
 	if(event->button == 1){
 		GtkTreePath *path;
@@ -286,10 +286,12 @@ listview__on_row_clicked(GtkWidget *widget, GdkEventButton *event, gpointer user
 				gtk_tree_selection_unselect_all(selection);
 				gtk_tree_selection_select_path(selection, path);
 				gtk_tree_path_free(path);
+
+				listview__on_cursor_change(treeview, NULL);
 			}
 		}
 
-		GtkWidget *context_menu = app.context_menu;
+		GtkWidget* context_menu = app.context_menu;
 		if(context_menu && (GPOINTER_TO_INT(context_menu) > 1024)){
 			//open pop-up menu:
 			gtk_menu_popup(GTK_MENU(context_menu),

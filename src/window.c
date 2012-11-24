@@ -41,6 +41,7 @@
 #include "db/mysql.h"
 #endif
 #include "colour_box.h"
+#include "rotator.h"
 #include "window.h"
 #include "auditioner.h"
 #ifndef __APPLE__
@@ -110,35 +111,35 @@ window_new()
 {
 /*
 GtkWindow
-+--GtkVbox                        app.vbox
-   +--search box
++--GtkVbox                        window.vbox
+   +--GtkHBox search box
    |  +--label
    |  +--text entry
    |
-   +--edit metadata hbox
+   +--GtkHBox edit metadata
    |
    +--GtkAlignment                align1
-   |  +--GtkVPaned
-   |     +--GtkHPaned
-   |     |  +--file manager tree
-   |     |  +--scrollwin
-   |     |     +--treeview file manager
-   |     +--GtkHPaned
-   |        +--vpaned (main left pane)
-   |        |  +-- vpaned
-   |        |  |   +--directory tree
-   |        |  |   +--player control
-   |        |  +--inspector
-   |        | 
-   |        +--vpaned (main right pane)
-   |           +--GtkVBox
-   |              +--GtkLabel
-   |              +--GtkVPaned
-   |                 +--scrollwin
-   |                 |  +--treeview file manager
-   |                 |
-   |                 +--scrollwin (right pane)
-   |                    +--treeview
+   |  +--GtkVPaned main_vpaned
+   |     +--GtkHPaned hpaned
+   |     |  +--GTkVPaned vpaned (main left pane)
+   |     |  |  +--GTkVPaned
+   |     |  |  |   +--directory tree
+   |     |  |  |   +--player control
+   |     |  |  +--inspector
+   |     |  | 
+   |     |  +--GtkVBox rhs_vbox (main right pane)
+   |     |     +--GtkLabel message box
+   |     |     +--GtkScrolledWindow scrollwin
+   |     |        +--GtkTreeView app.view  (main sample list)
+   |     |
+   |     +--GtkHPaned fman_hpaned
+   |        +--fs_tree
+   |        +--scrollwin
+   |           +--file view
+   |
+   +--waveform
+   |
+   +--spectrogram
    |
    +--statusbar hbox
       +--statusbar
@@ -156,8 +157,8 @@ GtkWindow
 	gtk_window_set_icon(GTK_WINDOW(app.window), gdk_pixbuf_new_from_xpm_data(samplecat_xpm));
 #endif
 
-	GtkWidget* vbox = window.vbox = gtk_vbox_new(FALSE, 0);
-	gtk_container_add(GTK_CONTAINER(app.window), vbox);
+	window.vbox = gtk_vbox_new(FALSE, 0);
+	gtk_container_add(GTK_CONTAINER(app.window), window.vbox);
 
 	filter_new();
 	tagshow_selector_new();
@@ -166,7 +167,7 @@ GtkWindow
 	//alignment to give top border to main hpane.
 	GtkWidget* align1 = gtk_alignment_new(0.0, 0.0, 1.0, 1.0);
 	gtk_alignment_set_padding(GTK_ALIGNMENT(align1), 2, 1, 0, 0); //top, bottom, left, right.
-	gtk_box_pack_start(GTK_BOX(vbox), align1, EXPAND_TRUE, TRUE, 0);
+	gtk_box_pack_start(GTK_BOX(window.vbox), align1, EXPAND_TRUE, TRUE, 0);
 
 	//---------
 	GtkWidget* main_vpaned = gtk_vpaned_new();
@@ -197,6 +198,13 @@ GtkWindow
 	listview__new();
 	if(0 && BACKEND_IS_NULL) gtk_widget_set_no_show_all(app.view, true); //dont show main view if no database.
 	gtk_container_add(GTK_CONTAINER(window.scroll), app.view);
+
+#if 0
+	GtkWidget* rotator = rotator_new_with_model(GTK_TREE_MODEL(app.store));
+	gtk_widget_show(rotator);
+	gtk_box_pack_start(GTK_BOX(rhs_vbox), rotator, EXPAND_FALSE, FALSE, 0);
+	gtk_widget_set_size_request(rotator, -1, 100);
+#endif
 
 	dbg(2, "making fileview pane...");
 	void make_fileview_pane()
@@ -276,7 +284,7 @@ GtkWindow
 #endif
 
 	GtkWidget* hbox_statusbar = gtk_hbox_new(FALSE, 0);
-	gtk_box_pack_end(GTK_BOX(vbox), hbox_statusbar, EXPAND_FALSE, FALSE, 0);
+	gtk_box_pack_end(GTK_BOX(window.vbox), hbox_statusbar, EXPAND_FALSE, FALSE, 0);
 
 	GtkWidget* statusbar = app.statusbar = gtk_statusbar_new();
 	//gtk_statusbar_set_has_resize_grip(GTK_STATUSBAR(statusbar), TRUE);	//why does give a warning??????
@@ -634,7 +642,7 @@ filter_new()
 	gtk_box_pack_start(GTK_BOX(window.vbox), hbox, EXPAND_FALSE, FILL_FALSE, 0);
 
 	GtkWidget* label1 = gtk_label_new("Search");
-	gtk_misc_set_padding(GTK_MISC(label1), 5,5);
+	gtk_misc_set_padding(GTK_MISC(label1), 5, 5);
 	gtk_box_pack_start(GTK_BOX(hbox), label1, FALSE, FALSE, 0);
 
 	gboolean on_focus_out(GtkWidget *widget, GdkEventFocus *event, gpointer user_data)
@@ -1000,7 +1008,8 @@ void
 show_waveform(gboolean enable)
 {
 	if(enable && !app.waveform){
-		wf_debug = 0;
+		extern GdkGLContext* window_get_gl_context();
+		waveform_view_set_gl(window_get_gl_context());
 		/*WaveformView* waveform = (WaveformView*)*/(app.waveform = (GtkWidget*)waveform_view_new(NULL));
 		gtk_box_pack_start(GTK_BOX(window.vbox), app.waveform, EXPAND_FALSE, FILL_TRUE, 0);
 		gtk_widget_set_size_request(app.waveform, 100, 96);
@@ -1087,4 +1096,27 @@ k_delete_row(GtkAccelGroup* _, gpointer user_data)
 {
 	delete_selected_rows();
 }
+
+#ifdef USE_OPENGL
+/*   Returns a global GdkGLContext that can be used to share
+ *   OpenGL display lists between multiple drawables with
+ *   dynamic lifetimes.
+ */
+#include <gtk/gtkgl.h>
+GdkGLContext*
+window_get_gl_context()
+{
+	static GdkGLContext* share_list = NULL;
+
+	if(!share_list){
+		GdkGLConfig* const config = gdk_gl_config_new_by_mode(GDK_GL_MODE_RGBA | GDK_GL_MODE_DOUBLE | GDK_GL_MODE_DEPTH);
+		GdkPixmap* const pixmap = gdk_pixmap_new(0, 8, 8, gdk_gl_config_get_depth(config));
+		gdk_pixmap_set_gl_capability(pixmap, config, 0);
+		share_list = gdk_gl_context_new(gdk_pixmap_get_gl_drawable(pixmap), 0, true, GDK_GL_RGBA_TYPE);
+	}
+
+	return share_list;
+}
+#endif
+
 

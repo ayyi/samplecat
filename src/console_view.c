@@ -13,7 +13,7 @@ static void console__show_result_footer (int);
 void console__init()
 {
 #if 0
-	// for this to work, we would have to not add blank rows before populating them.
+	// for this to work, we would have to not add blank rows before populating them which is not possible.
 
 	void store_row_inserted(GtkListStore* store, GtkTreePath* path, GtkTreeIter* iter, gpointer user_data)
 	{
@@ -31,7 +31,7 @@ void console__init()
 	{
 		PF0;
 		GtkTreeIter iter;
-		if(!gtk_tree_model_get_iter_first((GtkTreeModel*)store, &iter)){ gerr ("cannot get iter."); return NULL; }
+		if(!gtk_tree_model_get_iter_first((GtkTreeModel*)store, &iter)){ gerr ("cannot get iter."); return; }
 		int row_count = 0;
 		do {
 			Sample* sample = sample_get_by_tree_iter(&iter);

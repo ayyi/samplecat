@@ -88,6 +88,7 @@ samplecat_SOURCES = \
 	dh_tree.c dh_tree.h \
 	cellrenderer_hypertext.c cellrenderer_hypertext.h \
 	colour_box.c colour_box.h \
+	rotator.c rotator.h \
 	dnd.c dnd.h \
 	observer.c observer.h \
 	support.c support.h \

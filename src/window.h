@@ -10,3 +10,8 @@ void        show_spectrogram      (gboolean enable);
 #endif
 void        show_filemanager      (gboolean enable);
 
+#ifdef USE_OPENGL
+#ifdef __gl_h_
+GdkGLContext* window_get_gl_context();
+#endif
+#endif

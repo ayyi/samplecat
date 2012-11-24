@@ -135,7 +135,7 @@ static const char* const usage =
 	"SampleCat is a a program for cataloguing and auditioning audio samples.\n" 
 	"\n"
 	"Options:\n"
-	"  -a, --add <file>       add these files.\n"
+	"  -a, --add <file(s)>    add these files.\n"
 	"  -b, --backend <name>   select which database type to use.\n"
 	"  -g, --no-gui           run as command line app.\n"
 	"  -h, --help             show this usage information and quit.\n"

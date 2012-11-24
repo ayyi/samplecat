@@ -37,7 +37,6 @@ sometime:
   -check out chickensys samplemanage.
   -check with valgrind. -- needs suppression file for gtk libs
   -how to programmatically enter treeview cell edit mode? (see code)
-  -why segfaults related to tree row_refs - see dir_tree_on_link_selected()  -- possibly fixed already
   -add date to database so we can sort by date and show f-spot style bar chart for years. -- mtime already present in model
   -DnD out of samplecat on OSX to non GTK apps (it works with ardour, but not with OSX-Finder)
   -better meta_data handling and meta-data edit.
