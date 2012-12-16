@@ -17,7 +17,6 @@
 #define EXPAND_FALSE 0
 #define FILL_TRUE 1
 #define FILL_FALSE 0
-#define NON_HOMOGENOUS 0
 #define START_EDITING 1
 #define TIMER_STOP FALSE
 

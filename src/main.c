@@ -99,16 +99,15 @@ static void       menu_delete_row           (GtkMenuItem*, gpointer);
 void              menu_play_stop            (GtkWidget* widget, gpointer);
 
 
-struct _app app;
-Application* application = NULL;
-//SamplecatModel* model = NULL;
-struct _backend backend; 
-struct _palette palette;
-GList* mime_types; // list of MIME_type*
-extern GList* themes; 
+struct _app      app;
+Application*     application = NULL;
+SamplecatBackend backend; 
+struct _palette  palette;
+GList*           mime_types; // list of MIME_type*
+extern GList*    themes; 
 
-unsigned debug = 0;
-static gboolean search_pending = false;
+unsigned         debug = 0;
+static gboolean  search_pending = false;
 
 //strings for console output:
 char white [16];

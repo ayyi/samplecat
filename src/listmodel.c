@@ -18,6 +18,7 @@
 #include "sample.h"
 #include "dnd.h"
 #include "overview.h"
+#include "inspector.h" //FIXME
 #include "list_store.h"
 #include "listmodel.h"
 

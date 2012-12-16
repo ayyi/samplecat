@@ -17,18 +17,6 @@ struct _inspector
 	GtkTreeRowReference* row_ref;
 	GtkWidget*     widget;     //scrollwin
 	GtkWidget*     vbox;
-	GtkWidget*     filename;
-	GtkWidget*     tags;
-	GtkWidget*     tags_ev;    //event box for mouse clicks
-	GtkWidget*     length;
-	GtkWidget*     samplerate;
-	GtkWidget*     channels;
-	GtkWidget*     mimetype;
-	GtkWidget*     level;
-	GtkWidget*     bitrate;
-	GtkWidget*     bitdepth;
-	GtkWidget*     metadata;
-	GtkWidget*     ebur;
 	GtkWidget*     text;
 	GtkTextBuffer* notes;
 	GtkWidget*     edit;
@@ -66,5 +54,8 @@ struct _auditioner {
 	void    (*seek)(double);
 	double  (*status)();
 };
+
+#define HOMOGENOUS 1
+#define NON_HOMOGENOUS 0
 
 #endif

@@ -44,16 +44,14 @@ calc_ebur128(Sample* sample)
 			sample->ebur      = g_strdup_printf("-");
 		else
 			sample->ebur      = g_strdup_printf(
-			"<small><tt>"
-			"Integrated loudness:   %6.1lf LU%s\n"
-			"Loudness range:        %6.1lf LU\n"
-			"Integrated threshold:  %6.1lf LU%s\n"
-			"Range threshold:       %6.1lf LU%s\n"
-			"Range min:             %6.1lf LU%s\n"
-			"Range max:             %6.1lf LU%s\n"
-			"Momentary max:         %6.1lf LU%s\n"
-			"Short term max:        %6.1lf LU%s\n"
-			"</tt></small>"
+			"intgd loudness:%6.1lf LU%s\n"
+			"loudness range:%6.1lf LU\n"
+			"intgd threshold:%6.1lf LU%s\n"
+			"range threshold:%6.1lf LU%s\n"
+			"range min:%6.1lf LU%s\n"
+			"range max:%6.1lf LU%s\n"
+			"momentary max:%6.1lf LU%s\n"
+			"short term max:%6.1lf LU%s\n"
 			, ebur.integrated , ebur.lufs?"FS":""
 			, ebur.range
 			, ebur.integ_thr  , ebur.lufs?"FS":""
