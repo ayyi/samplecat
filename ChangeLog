@@ -1,3 +1,10 @@
+20130102
+-obsolete check for libart removed from configure.ac and debian/control
+
+20121208
+-inspector changed to using a table to make the layout less cluttered.
+-the ebur format has changed, so you will have to refresh samples for them to display properly.
+
 20111123  Robin Gareus  <robin@gareus.org>
 -added JACK autoconnect (audio+midi) to configfile
 -squashed bugs in recent commits (NULL search etc).

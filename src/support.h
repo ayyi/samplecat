@@ -74,7 +74,7 @@ void         draw_cairo_line           (cairo_t*, drect*, double line_width, Gdk
 //GdkPixbuf*   scale_pixbuf_up(GdkPixbuf *src, int max_w, int max_h);
 //GdkPixbuf*   create_spotlight_pixbuf   (GdkPixbuf *src, GdkColor*);
 
-void         colour_get_style_fg       (GdkColor*, int state);
+void         colour_get_style_fg       (GdkColor*, GtkStateType);
 void         colour_get_style_bg       (GdkColor*, int state);
 void         colour_get_style_base     (GdkColor*, int state);
 void         colour_get_style_text     (GdkColor*, int state);

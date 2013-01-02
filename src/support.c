@@ -256,59 +256,49 @@ ensure_config_dir()
 
 
 void
-colour_get_style_fg(GdkColor *color, int state)
+colour_get_style_fg(GdkColor* color, GtkStateType state)
 {
-  //gives the default style foreground colour for the given widget state.
+	//gives the default style foreground colour for the given widget state.
 
-  //GtkStyle *style = NULL;
-  //style = gtk_widget_get_default_style();
-  GtkStyle *style = gtk_widget_get_style(app.window);
-  color->red   = style->fg[state].red;
-  color->green = style->fg[state].green;
-  color->blue  = style->fg[state].blue;
+	GtkStyle* style = gtk_widget_get_style(app.window);
+	color->red   = style->fg[state].red;
+	color->green = style->fg[state].green;
+	color->blue  = style->fg[state].blue;
 }
 
 void
-colour_get_style_bg(GdkColor *color, int state)
+colour_get_style_bg(GdkColor* color, int state)
 {
-  //gives the default style foreground colour for the given widget state.
+	//gives the default style foreground colour for the given widget state.
 
-  GtkWidget *widget = app.window;
-
-  GtkStyle *style = gtk_widget_get_style(widget);
-  //GtkStyle *style = NULL;
-  //style = gtk_widget_get_default_style();
-  color->red   = style->bg[state].red;
-  color->green = style->bg[state].green;
-  color->blue  = style->bg[state].blue;
+	GtkStyle* style = gtk_widget_get_style(app.window);
+	color->red   = style->bg[state].red;
+	color->green = style->bg[state].green;
+	color->blue  = style->bg[state].blue;
 }
 
 
 void
-colour_get_style_base(GdkColor *color, int state)
+colour_get_style_base(GdkColor* color, int state)
 {
-  //gives the default style base colour for the given widget state.
+	//gives the default style base colour for the given widget state.
 
-  GtkWidget *widget = app.window;
-
-  GtkStyle *style = gtk_widget_get_style(widget);
-  color->red   = style->base[state].red;
-  color->green = style->base[state].green;
-  color->blue  = style->base[state].blue;
+	GtkStyle *style = gtk_widget_get_style(app.window);
+	color->red   = style->base[state].red;
+	color->green = style->base[state].green;
+	color->blue  = style->base[state].blue;
 }
 
 
 void
-colour_get_style_text(GdkColor *color, int state)
+colour_get_style_text(GdkColor* color, int state)
 {
-  //gives the default style text colour for the given widget state.
+	//gives the default style text colour for the given widget state.
 
-  GtkWidget *widget = app.window;
-
-  GtkStyle *style = gtk_widget_get_style(widget);
-  color->red   = style->text[state].red;
-  color->green = style->text[state].green;
-  color->blue  = style->text[state].blue;
+	GtkStyle* style = gtk_widget_get_style(app.window);
+	color->red   = style->text[state].red;
+	color->green = style->text[state].green;
+	color->blue  = style->text[state].blue;
 }
 
 

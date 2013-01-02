@@ -26,9 +26,6 @@
 #include "cellrenderer_hypertext.h"
 
 #include <gtk/gtk.h>
-#ifdef OLD
-  #include <libart_lgpl/libart.h>
-#endif
 #include "typedefs.h"
 #include "support.h"
 #include "main.h"
