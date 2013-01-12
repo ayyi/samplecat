@@ -172,6 +172,9 @@ GtkWindow
 	//---------
 	GtkWidget* main_vpaned = gtk_vpaned_new();
 	//gtk_paned_set_position(GTK_PANED(r_vpaned), 300);
+	// default width is too big.
+	// let its size be determined by its parent.
+	gtk_widget_set_size_request(main_vpaned, 20, 20);
 	gtk_container_add(GTK_CONTAINER(align1), main_vpaned);
 
 	GtkWidget* hpaned = gtk_hpaned_new();
@@ -308,6 +311,14 @@ GtkWindow
 	GimpActionGroup* action_group = gimp_action_group_new("Samplecat-window", "Samplecat-window", "gtk-paste", mnemonics, NULL, update_func);
 	make_accels(accel_group, action_group, window_keys, G_N_ELEMENTS(window_keys), NULL);
 	gtk_window_add_accel_group(GTK_WINDOW(app.window), accel_group);
+
+	int width = atoi(app.config.window_width);
+	int height = atoi(app.config.window_height);
+	if(width && height) gtk_window_resize(GTK_WINDOW(app.window), width, height);
+	// note that the window size is also set in the configure callback.
+	// -sometimes setting it here is ignored, sometimes setting it in configure is ignored.
+	// -setting the size in configure is actually too late, as the window is drawn first
+	//  at the wrong size.
 
 	gtk_widget_show_all(app.window);
 
@@ -1087,7 +1098,7 @@ on_layout_changed()
 	}
 
 	/* scroll to current dir in tree-view bottom left */
-	vdtree_set_path(app.dir_treeview2, app.dir_treeview2->path);
+	if(app.dir_treeview2) vdtree_set_path(app.dir_treeview2, app.dir_treeview2->path);
 }
 
 

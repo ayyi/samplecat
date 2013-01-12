@@ -137,7 +137,6 @@ view_details_new(Filer* filer_window)
 	view_details->scroll_win = gtk_scrolled_window_new(NULL, NULL); //adjustments created automatically.
 	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(view_details->scroll_win), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
 	gtk_container_add(GTK_CONTAINER(view_details->scroll_win), (GtkWidget*)view_details);
-	gtk_widget_show(view_details->scroll_win);
 #if 0
 	gtk_range_set_adjustment(GTK_RANGE(filer_window->scrollbar),
 		gtk_tree_view_get_vadjustment(GTK_TREE_VIEW(view_details)));
