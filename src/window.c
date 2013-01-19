@@ -1029,6 +1029,18 @@ show_waveform(gboolean enable)
 	if(app.waveform){
 		show_widget_if(app.waveform, enable);
 		app.inspector->show_waveform = !enable;
+		if(enable){
+			bool show_wave()
+			{
+				Sample* s;
+				if((s = listview__get_first_selected_sample())){
+					waveform_view_load_file((WaveformView*)app.waveform, s->full_path);
+					sample_unref(s);
+				}
+				return IDLE_STOP;
+			}
+			g_idle_add(show_wave, NULL);
+		}
 	}
 }
 #endif
