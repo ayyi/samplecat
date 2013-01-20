@@ -343,7 +343,7 @@ GtkWindow
 #endif
 #ifdef USE_OPENGL
 		if(app.waveform){
-			waveform_view_load_file((WaveformView*)app.waveform, sample->full_path);
+			waveform_view_load_file((WaveformView*)app.waveform, sample->online ? sample->full_path : NULL);
 		}
 #endif
 	}

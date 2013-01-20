@@ -1,6 +1,6 @@
 /*
   This file is part of Samplecat. http://samplecat.orford.org
-  copyright (C) 2007-2012 Tim Orford and others.
+  copyright (C) 2007-2013 Tim Orford and others.
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License version 3
@@ -65,7 +65,7 @@ struct _inspector_priv
 };
 
 static void inspector_clear              ();
-static void inspector_update_from_sample (Application*, Sample*, gpointer);
+static void inspector_update             (Application*, Sample*, gpointer);
 static void hide_fields                  ();
 static void show_fields                  ();
 static bool inspector_on_tags_clicked    (GtkWidget*, GdkEventButton*, gpointer);
@@ -215,7 +215,7 @@ inspector_new()
 	gtk_entry_set_text(GTK_ENTRY(edit), "");
 	g_object_ref(edit); //stops gtk deleting the unparented widget.
 
-	g_signal_connect((gpointer)application, "selection-changed", G_CALLBACK(inspector_update_from_sample), NULL);
+	g_signal_connect((gpointer)application, "selection-changed", G_CALLBACK(inspector_update), NULL);
 
 	return vbox;
 }
@@ -323,7 +323,7 @@ inspector_set_labels(Sample* sample)
 
 
 static void
-inspector_update_from_sample(Application* a, Sample* sample, gpointer user_data)
+inspector_update(Application* a, Sample* sample, gpointer user_data)
 {
 	PF;
 	Inspector* i = app.inspector;
@@ -335,7 +335,7 @@ inspector_update_from_sample(Application* a, Sample* sample, gpointer user_data)
 		return;
 	}
 
-	/* forget previous inspector item */
+	// forget previous inspector item
 	if(i->row_ref) gtk_tree_row_reference_free(i->row_ref);
 	i->row_ref = NULL;
 	i->row_id = 0;
@@ -435,18 +435,14 @@ on_notes_focus_out(GtkWidget *widget, gpointer userdata)
 	gchar* notes = gtk_text_buffer_get_text(textbuf, &start_iter, &end_iter, true);
 	dbg(2, "start=%i end=%i", gtk_text_iter_get_offset(&start_iter), gtk_text_iter_get_offset(&end_iter));
 
-#if 0
-	if (listmodel__update_by_rowref(app.inspector->row_ref, COLX_NOTES, notes)) {
-		statusbar_print(1, "notes updated");
-	} else {
-		dbg(0, "failed to update notes");
-	}
-#else
 	Sample* sample = listview__get_sample_by_rowref(app.inspector->row_ref);
 	if(sample){
-		listmodel__update_sample(sample, COLX_NOTES, notes);
+		if(listmodel__update_sample(sample, COLX_NOTES, notes)){
+			statusbar_print(1, "notes updated");
+		} else {
+			dbg(0, "failed to update notes");
+		}
 	}
-#endif
 	g_free(notes);
 	return FALSE;
 }

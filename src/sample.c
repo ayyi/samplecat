@@ -1,4 +1,21 @@
-#include "../config.h"
+/*
+  This file is part of Samplecat. http://samplecat.orford.org
+  copyright (C) 2007-2013 Tim Orford and others.
+
+  This program is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License version 3
+  as published by the Free Software Foundation.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+*/
+#include "config.h"
 #define __USE_GNU
 #include <stdlib.h>
 #include <string.h>
@@ -7,6 +24,7 @@
 #include "file_manager/rox_support.h" // to_utf8()
 #include "typedefs.h"
 #include "support.h"
+#include "audio_decoder/ad.h"
 #include "main.h"
 
 #include "mimetype.h"
@@ -167,11 +185,16 @@ sample_refresh(Sample* sample, gboolean force_update)
 }
 
 
-// TODO move to audio_analysis/analyzers.c ?! or overview.c
-#include "audio_decoder/ad.h"
 gboolean
 sample_get_file_info(Sample* sample)
 {
+	if(!file_exists(sample->full_path)){
+		if(sample->online){
+			listmodel__update_sample(sample, COL_ICON, (void*)false);
+		}
+		return false;
+	}
+
 	struct adinfo nfo;
 	if (!ad_finfo(sample->full_path, &nfo)) {
 		return false;
@@ -183,9 +206,10 @@ sample_get_file_info(Sample* sample)
 	sample->bit_rate    = nfo.bit_rate;
 	sample->bit_depth   = nfo.bit_depth;
 	sample->meta_data   = nfo.meta_data;
-	//ad_free_nfo(&nfo); // no! retain allocated meta_data 
+	//ad_free_nfo(&nfo); // no, retain allocated meta_data 
 	return true;
 }
+
 
 Sample*
 sample_get_by_tree_iter(GtkTreeIter* iter)
@@ -195,6 +219,7 @@ sample_get_by_tree_iter(GtkTreeIter* iter)
 	if(sample) sample_ref(sample);
 	return sample;
 }
+
 
 Sample*
 sample_get_from_model(GtkTreePath* path)

@@ -38,32 +38,17 @@ listmodel__new()
 	void sample_changed(SamplecatModel* m, Sample* sample, int what, void* data, gpointer user_data)
 	{
 		dbg(1, "");
+		g_return_if_fail(sample);
+
+#if 1 // TODO listmodel__update_sample has better api but functionality appears to be incomplete.
 		listmodel__update_by_rowref(sample->row_ref, what, data);
+#else
+		listmodel__update_sample(sample, what, data);
+#endif
 	}
 	g_signal_connect((gpointer)app.model, "sample-changed", G_CALLBACK(sample_changed), NULL);
 
-#if 0
-	return gtk_list_store_new(NUM_COLS, 
-	 GDK_TYPE_PIXBUF,  // COL_ICON
- #ifdef USE_AYYI
-	 GDK_TYPE_PIXBUF,  // COL_AYYI_ICON
- #endif
-	 G_TYPE_INT,       // COL_IDX
-	 G_TYPE_STRING,    // COL_NAME
-	 G_TYPE_STRING,    // COL_FNAME
-	 G_TYPE_STRING,    // COL_KEYWORDS
-	 GDK_TYPE_PIXBUF,  // COL_OVERVIEW
-	 G_TYPE_STRING,    // COL_LENGTH,
-	 G_TYPE_STRING,    // COL_SAMPLERATE
-	 G_TYPE_INT,       // COL_CHANNELS
-	 G_TYPE_STRING,    // COL_MIMETYPE
-	 G_TYPE_FLOAT,     // COL_PEAKLEVEL
-	 G_TYPE_INT,       // COL_COLOUR
-	 G_TYPE_POINTER    // COL_SAMPLEPTR
-	 );
-#else
 	return (GtkListStore*)samplecat_list_store_new();
-#endif
 }
 
 
@@ -178,30 +163,36 @@ listmodel__add_result(Sample* sample)
 
 /* used to update information that was generated in
  * a backgound analysis process */
-void
+bool
 listmodel__update_sample(Sample* sample, int what, void* data)
 {
+	bool ok = false;
+
 	if(!sample->row_ref || !gtk_tree_row_reference_valid(sample->row_ref)){
 		/* this should never happen  --
 		 * it may if the file is removed again before
 		 * the background-process(es) completed
 		 */
-		dbg(0,"rowref not set");
+		dbg(0, "rowref not set");
 	}
 
 	switch (what) {
+		case COL_ICON:
+			sample->online = (bool)data;
+			listmodel__update_by_rowref(sample->row_ref, what, data);
+			break;
 		case COL_OVERVIEW:
 			if (sample->overview) {
 				guint len;
-				guint8 *blob = pixbuf_to_blob(sample->overview, &len);
-				if (!backend.update_blob(sample->id, "pixbuf", blob, len)) 
+				guint8* blob = pixbuf_to_blob(sample->overview, &len);
+				if ((ok = !backend.update_blob(sample->id, "pixbuf", blob, len)))
 					gwarn("failed to store overview in the database");
 			}
 			if (sample->row_ref)
 				listmodel__set_overview(sample->row_ref, sample->overview);
 			break;
 		case COLX_NOTES:
-			if (!backend.update_string(sample->id, "notes", (char*)data)) {
+			if ((ok = !backend.update_string(sample->id, "notes", (char*)data))) {
 				gwarn("failed to store notes in the database");
 			} else {
 				if (sample->notes) free(sample->notes);
@@ -209,13 +200,13 @@ listmodel__update_sample(Sample* sample, int what, void* data)
 			}
 			break;
 		case COL_PEAKLEVEL:
-			if (!backend.update_float(sample->id, "peaklevel", sample->peaklevel))
+			if ((ok = !backend.update_float(sample->id, "peaklevel", sample->peaklevel)))
 				gwarn("failed to store peaklevel in the database");
 			if (sample->row_ref)
 				listmodel__set_peaklevel(sample->row_ref, sample->peaklevel);
 			break;
 		case COLX_EBUR:
-			if(!backend.update_string(sample->id, "ebur", sample->ebur))
+			if((ok = !backend.update_string(sample->id, "ebur", sample->ebur)))
 				gwarn("failed to store ebu level in the database");
 			break;
 		default:
@@ -226,6 +217,7 @@ listmodel__update_sample(Sample* sample, int what, void* data)
 	if (sample->id == app.inspector->row_id) {
 		inspector_set_labels(sample);
 	}
+	return ok;
 }
 
 /* used when user interactively changes meta-data listview.c/window.c,
@@ -434,25 +426,27 @@ struct find_filename {
 	char *rv;
 };
 
-gboolean
-filter_id (GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *iter, gpointer data) {
-	struct find_filename *ff = (struct find_filename*) data;
-	Sample *s = sample_get_by_tree_iter(iter);
+
+static bool
+filter_id (GtkTreeModel* model, GtkTreePath* path, GtkTreeIter* iter, gpointer data) {
+	struct find_filename* ff = (struct find_filename*) data;
+	Sample* s = sample_get_by_tree_iter(iter);
 	if (s->id == ff->id) {
-		ff->rv=strdup(s->full_path);
+		ff->rv = strdup(s->full_path);
 		sample_unref(s);
-		return TRUE;
+		return true;
 	}
 	sample_unref(s);
-	return FALSE;
+	return false;
 }
+
 
 char*
 listmodel__get_filename_from_id(int id)
 {
 	struct find_filename ff;
-	ff.id=id;
-	ff.rv=NULL;
+	ff.id = id;
+	ff.rv = NULL;
 	GtkTreeModel* model = GTK_TREE_MODEL(app.store);
 	gtk_tree_model_foreach(model, &filter_id, &ff);
 	return ff.rv;

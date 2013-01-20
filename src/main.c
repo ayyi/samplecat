@@ -980,12 +980,12 @@ menu_delete_row(GtkMenuItem* widget, gpointer user_data)
 }
 
 
-/** sync the catalogue row with the filesystem. */
+/** sync the selected catalogue row with the filesystem. */
 static void
-update_rows(GtkWidget *widget, gpointer user_data)
+update_rows(GtkWidget* widget, gpointer user_data)
 {
 	PF;
-	GtkTreeModel *model = GTK_TREE_MODEL(app.store);
+	GtkTreeModel* model = GTK_TREE_MODEL(app.store);
 	gboolean force_update = (GPOINTER_TO_INT(user_data)==2)?true:false; // NOTE - linked to order in _menu_def[]
 
 	GtkTreeSelection* selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(app.view));
@@ -997,13 +997,18 @@ update_rows(GtkWidget *widget, gpointer user_data)
 	for(i=0;i<g_list_length(selectionlist);i++){
 		GtkTreePath* treepath = g_list_nth_data(selectionlist, i);
 		Sample* sample = sample_get_from_model(treepath);
-		if (do_progress(0,0)) break; // TODO: set progress title to "updating"
+		if(do_progress(0, 0)) break; // TODO: set progress title to "updating"
 		sample_refresh(sample, force_update);
 		statusbar_print(1, "online status updated (%s)", sample->online ? "online" : "not online");
 		sample_unref(sample);
 	}
 	hide_progress();
 	//g_list_free(selectionlist);
+#warning TODO selectionlist should be freed.
+	/*
+	g_list_foreach (list, (GFunc) gtk_tree_path_free, NULL);
+	g_list_free (list);
+	*/
 }
 
 
@@ -1060,11 +1065,14 @@ edit_row(GtkWidget* widget, gpointer user_data)
 
 
 static MenuDef _menu_def[] = {
+	{"Play",           G_CALLBACK(menu_play_all),   GTK_STOCK_MEDIA_PLAY,  true},
+	{"Stop Playback",  G_CALLBACK(menu_play_stop),  GTK_STOCK_MEDIA_STOP,  true},
+	{"",                                                                       },
 	{"Delete",         G_CALLBACK(menu_delete_row), GTK_STOCK_DELETE,      true},
 	{"Update",         G_CALLBACK(update_rows),     GTK_STOCK_REFRESH,     true},
+#if 0 // what? is the same as above
 	{"Force Update",   G_CALLBACK(update_rows),     GTK_STOCK_REFRESH,     true},
-	{"Play All",       G_CALLBACK(menu_play_all),   GTK_STOCK_MEDIA_PLAY,  true},
-	{"Stop Playback",  G_CALLBACK(menu_play_stop),  GTK_STOCK_MEDIA_STOP,  true},
+#endif
 	{"Reset Colours",  G_CALLBACK(listview__reset_colours),
 	                                                GTK_STOCK_OK, true},
 	{"Edit tags",      G_CALLBACK(edit_row),        GTK_STOCK_EDIT,        true},

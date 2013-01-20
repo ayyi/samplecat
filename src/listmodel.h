@@ -33,7 +33,7 @@ GtkListStore* listmodel__new                   ();
 void          listmodel__clear                 ();
 void          listmodel__add_result            (Sample*);
 
-void          listmodel__update_sample         (Sample*, int what, void* data);
+bool          listmodel__update_sample         (Sample*, int what, void* data);
 gboolean      listmodel__update_by_tree_iter   (GtkTreeIter*, int what, void* data);
 gboolean      listmodel__update_by_rowref      (GtkTreeRowReference*, int what, void* data);
 
