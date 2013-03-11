@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen" />
+    <link rel="stylesheet" type="text/css" href="stylesheets/pygment_trac.css" media="screen" />
+    <link rel="stylesheet" type="text/css" href="stylesheets/print.css" media="print" />
+
+    <title>Samplecat by ayyi</title>
+  </head>
+
+  <body>
+
+    <header>
+      <div class="container">
+        <h1>Samplecat</h1>
+        <h2>SampleCat is a a program for cataloguing and auditioning audio samples.</h2>
+
+        <section id="downloads">
+          <a href="https://github.com/ayyi/samplecat/zipball/master" class="btn">Download as .zip</a>
+          <a href="https://github.com/ayyi/samplecat/tarball/master" class="btn">Download as .tar.gz</a>
+          <a href="https://github.com/ayyi/samplecat" class="btn btn-github"><span class="icon"></span>View on GitHub</a>
+        </section>
+      </div>
+    </header>
+
+    <div class="container">
+      <section id="main_content">
+        <h1>Samplecat</h1>
+
+<p><a href="http://samplecat.orford.org/">http://samplecat.orford.org/</a></p>
+
+<p>SampleCat is a program for cataloguing and auditioning audio samples.</p>
+
+<p>SampleCat is available under the GNU General Public License and runs mainly on
+GNU/Linux systems. It is written in C and uses the GTK graphics library. 
+MySql and Sqlite can be used for the database.</p>
+
+<p>Currently, most basic functionality is in place and working.</p>
+
+<h2>building</h2>
+
+<p>If you are not a developer it is recommended to use the latest tarball. Building should be entirely standard.</p>
+
+<p>If you are a developer you will want to use the git repository directly. The only difficulty is the use of
+git submodules which are unfortunately not transparent. After cloning the repository, you will have to manually
+get the submodule:</p>
+
+<pre><code>    git submodule init
+    git submodule update
+</code></pre>
+
+<p>If you subsequently need to update the submodules as part of a git pull:</p>
+
+<pre><code>    git submodule foreach git pull origin master
+    make clean
+</code></pre>
+
+<h2>usage</h2>
+
+<ul>
+<li>import files or directories using drag and drop.</li>
+<li>if a file is currently mounted, an icon will be shown in the main table. Select Update on the context menu to refresh its status.</li>
+<li>set tags by 1) selecting Edit Tags on the context menu, 2) double clicking the tag area, 3) enter text in the Edit box at the top
+of the window and hit the "Set Category" button.</li>
+<li>to move a file in the filesystem, drag it from the main list to a directory in the directory tree on the left.</li>
+<li>to rename a file in the filesystem, select it, then click on the name.</li>
+<li>auditioning is started by clicking in the waveform view. Jack ports are not created until auditioning is started for the first time.</li>
+<li>import files into your audio editor using dragndrop.</li>
+<li>apply colour coding by dragging from the colour bar. Right click on the colour bar to change the colour palette.</li>
+</ul>
+      </section>
+    </div>
+
+    
+  </body>
+</html>
