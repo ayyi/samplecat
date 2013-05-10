@@ -113,15 +113,15 @@ do_progress(int cur, int all)
 	pw.tics++;
 #ifndef NOPROGBARWIN
 	if (!pw.win) {
-		pw.win=progress_win_new(app.window, DEFAULT_TEXT);
+		pw.win = progress_win_new(app.window, DEFAULT_TEXT);
 		pw.tics=0;
 	}
 	set_progress(cur, all);
 #endif
-	statusbar_print(2,"referencing files.%s%s",(pw.tics&2)?"..":"",(pw.tics&1)?".":"");
-	int needlock = !pthread_equal(pthread_self(),app.gui_thread);                                                               
+	statusbar_print(2, "referencing files.%s%s", (pw.tics&2)?"..":"", (pw.tics&1)?".":"");
+	int needlock = !pthread_equal(pthread_self(), app.gui_thread);
 	if(needlock) gdk_threads_enter();
-	while (gtk_events_pending ()) gtk_main_iteration ();
+	while (gtk_events_pending()) gtk_main_iteration();
 	if(needlock) gdk_threads_leave();
 	return 0;
 }
@@ -132,9 +132,9 @@ hide_progress()
 	if (pw.win) {
 		gtk_widget_destroy(pw.win);
 	}
-	statusbar_print(2,PACKAGE_NAME". Version "PACKAGE_VERSION);
-	pw.win=NULL;
-	pw.aborted=false;
+	statusbar_print(2, PACKAGE_NAME". Version "PACKAGE_VERSION);
+	pw.win = NULL;
+	pw.aborted = false;
 }
 
 int

@@ -81,15 +81,15 @@ sqlite__connect()
 
 	int table_exists = FALSE;
 
-  int rows,columns;
-  char **table= NULL;
-	char *errmsg= NULL;
+	int rows, columns;
+	char** table = NULL;
+	char* errmsg = NULL;
 	int n = sqlite3_get_table(db, "SELECT name, sql FROM sqlite_master WHERE type='table' AND name='samples';",
-			&table,&rows,&columns,&errmsg);
+			&table, &rows, &columns, &errmsg);
 	if(n==SQLITE_OK && (table != NULL) && (rows==1) && (columns==2)) {
 		if (!strcmp(table[2], "samples")) {
 			dbg(2, "found table 'samples'");
-			table_exists=TRUE;
+			table_exists = TRUE;
 			if (!strstr(table[3], "ebur TEXT")) { 
 				dbg(0, "updating to new model: ebur");
 				int n = sqlite3_exec(db, "ALTER TABLE samples add ebur TEXT;", NULL, NULL, &errmsg);
@@ -131,7 +131,7 @@ sqlite__connect()
 	}
 	if (table) sqlite3_free_table(table);
 	if (errmsg) sqlite3_free(errmsg);
-	errmsg=NULL;
+	errmsg = NULL;
 
 	if (!table_exists) {
 		int n = sqlite3_exec(db, "CREATE TABLE samples ("

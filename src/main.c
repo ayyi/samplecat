@@ -191,6 +191,7 @@ main(int argc, char** argv)
 	g_log_set_handler (NULL, G_LOG_LEVEL_WARNING | G_LOG_LEVEL_CRITICAL | G_LOG_FLAG_FATAL | G_LOG_FLAG_RECURSION, log_handler, NULL);
 	g_log_set_handler ("Gtk", G_LOG_LEVEL_CRITICAL | G_LOG_FLAG_FATAL | G_LOG_FLAG_RECURSION, log_handler, NULL);
 	g_log_set_handler ("Waveform", G_LOG_LEVEL_WARNING | G_LOG_LEVEL_CRITICAL | G_LOG_FLAG_FATAL, log_handler, NULL);
+	g_log_set_handler ("Agl", G_LOG_LEVEL_WARNING | G_LOG_LEVEL_CRITICAL | G_LOG_FLAG_FATAL, log_handler, NULL);
 
 	app_init();
 	memset(&backend, 0, sizeof(struct _backend)); 
@@ -279,7 +280,7 @@ main(int argc, char** argv)
 			case 'V':
 				printf ("%s %s\n\n",basename(argv[0]), PACKAGE_VERSION);
 				printf(
-					"Copyright (C) 2007-2011 Tim Orford\n"
+					"Copyright (C) 2007-2013 Tim Orford\n"
 					"Copyright (C) 2011 Robin Gareus\n"
 					"This is free software; see the source for copying conditions.  There is NO\n"
 					"warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n"
@@ -398,14 +399,14 @@ main(int argc, char** argv)
 
 	if(app.args.add){
 		/* initial import from commandline */
-		do_progress(0,0);
+		do_progress(0, 0);
 		add_file(app.args.add);
 		hide_progress();
 	}
 
 #ifndef DEBUG_NO_THREADS
 	dbg(3, "creating overview thread...");
-	GError *error = NULL;
+	GError* error = NULL;
 	app.msg_queue = g_async_queue_new();
 	if(!g_thread_create(overview_thread, NULL, false, &error)){
 		perr("error creating thread: %s\n", error->message);
@@ -1065,9 +1066,6 @@ edit_row(GtkWidget* widget, gpointer user_data)
 
 
 static MenuDef _menu_def[] = {
-	{"Play",           G_CALLBACK(menu_play_all),   GTK_STOCK_MEDIA_PLAY,  true},
-	{"Stop Playback",  G_CALLBACK(menu_play_stop),  GTK_STOCK_MEDIA_STOP,  true},
-	{"",                                                                       },
 	{"Delete",         G_CALLBACK(menu_delete_row), GTK_STOCK_DELETE,      true},
 	{"Update",         G_CALLBACK(update_rows),     GTK_STOCK_REFRESH,     true},
 #if 0 // what? is the same as above
@@ -1078,6 +1076,9 @@ static MenuDef _menu_def[] = {
 	{"Edit tags",      G_CALLBACK(edit_row),        GTK_STOCK_EDIT,        true},
 	{"Open",           G_CALLBACK(edit_row),        GTK_STOCK_OPEN,       false},
 	{"Open Directory", G_CALLBACK(NULL),            GTK_STOCK_OPEN,        true},
+	{"",                                                                       },
+	{"Play All",       G_CALLBACK(menu_play_all),   GTK_STOCK_MEDIA_PLAY,  true},
+	{"Stop Playback",  G_CALLBACK(menu_play_stop),  GTK_STOCK_MEDIA_STOP,  true},
 	{"",                                                                       },
 	{"View",           G_CALLBACK(NULL),            GTK_STOCK_PREFERENCES, true},
 	{"Prefs",          G_CALLBACK(NULL),            GTK_STOCK_PREFERENCES, true},

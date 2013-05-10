@@ -286,6 +286,8 @@ static void vdtree_popup_destroy_cb(GtkWidget *widget, gpointer data)
 
 static void vdtree_drop_menu_copy_cb(GtkWidget *widget, gpointer data)
 {
+	dbg(0, "FIXME file_util_copy_simple");
+#if 0
 	ViewDirTree *vdt = data;
 	const gchar *path;
 	GList *list;
@@ -293,12 +295,12 @@ static void vdtree_drop_menu_copy_cb(GtkWidget *widget, gpointer data)
 	if (!vdt->drop_fd) return;
 
 	path = vdt->drop_fd->path;
-	list = vdt->drop_list;
 
 	vdt->drop_list = NULL;
+	list = vdt->drop_list;
 
-	dbg(0, "FIXME file_util_copy_simple");
-	//file_util_copy_simple(list, path);
+	file_util_copy_simple(list, path);
+#endif
 }
 
 static void vdtree_drop_menu_move_cb(GtkWidget *widget, gpointer data)
@@ -501,9 +503,11 @@ vdtree_pop_menu_refresh_cb(GtkWidget *widget, gpointer data)
 static GtkWidget*
 vdtree_pop_menu(ViewDirTree *vdt, FileData *fd)
 {
+	/*
 	gint active;
 
 	active = (fd != NULL);
+	*/
 
 	GtkWidget* menu = popup_menu_short_lived();
 	g_signal_connect(G_OBJECT(menu), "destroy",
@@ -1083,12 +1087,6 @@ static void vdtree_add_by_data(ViewDirTree *vdt, FileData *fd, GtkTreeIter *pare
 static gint vdt_filelist_read(ViewDirTree *vdt, const gchar *path, GList **files, GList **dirs)
 {
 	//this fn fools the treeview into thinking that a directory is a root directory by prepending vdt->root_path if neccesary.
-
-	GList *dlist;
-	GList *flist;
-
-	dlist = NULL;
-	flist = NULL;
 
 	gchar *real_path = NULL;
 	if(strstr(path, vdt->root_path) != path) real_path = g_build_filename(vdt->root_path, path, NULL);

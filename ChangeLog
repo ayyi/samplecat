@@ -1,3 +1,12 @@
+20130510
+-fixed default window height
+
+20130120
+-update the online status of a sample if it is known to be offline.
+
+20130119
+-show selected sample when waveform panel opened.
+
 20130102
 -obsolete check for libart removed from configure.ac and debian/control
 

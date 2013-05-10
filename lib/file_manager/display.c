@@ -213,7 +213,7 @@ draw_small_icon(GdkWindow *window, GdkRectangle *area, DirItem *item, MaskedPixm
 	//dbg(0, "selected=%i pixbuf=%p ispixbuf=%i", selected, pixbuf, GDK_IS_PIXBUF(pixbuf));
 	if(!GDK_IS_PIXBUF(pixbuf)) errprintf("%s bad icon pixbuf", __func__);
 
-	dbg(2, "copying pixbuf to drawable... width=%i %i", width, area->y + image_y);
+	dbg(3, "copying pixbuf to drawable... width=%i %i", width, area->y + image_y);
 	gdk_pixbuf_render_to_drawable_alpha(
 			pixbuf,
 			window,                     // destination

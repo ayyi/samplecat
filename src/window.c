@@ -452,12 +452,11 @@ window_on_allocate(GtkWidget *win, GtkAllocation *allocation, gpointer user_data
 	if(!app.view->requisition.width) return;
 
 	if(!done){
-		dbg(2, "app.view->requisition: wid=%i height=%i\n", app.view->requisition.width, app.view->requisition.height);
-		//moved!
-		//gtk_widget_set_size_request(win, app.view->requisition.width + SCROLLBAR_WIDTH_HACK, MIN(app.view->requisition.height, 900));
+		//dbg(2, "app.view->requisition: wid=%i height=%i", app.view->requisition.width, app.view->requisition.height);
+		//setting window size is now done in window_on_configure
 		done = TRUE;
 	}else{
-		//now reduce the request to allow the user to manually make the window smaller.
+		//now reduce the minimum size to allow the user to manually make the window smaller.
 		gtk_widget_set_size_request(win, 100, 100);
 	}
 
@@ -516,7 +515,8 @@ window_on_configure(GtkWidget *widget, GdkEventConfigure *event, gpointer user_d
 		int width = atoi(app.config.window_width);
 		if(!width) width = app.view->requisition.width + SCROLLBAR_WIDTH_HACK;
 		int window_height = atoi(app.config.window_height);
-		if(!window_height) window_height = MIN(app.view->requisition.height, 900);
+		if(!window_height) window_height = 480; //MIN(app.view->requisition.height, 900);  -- ignore the treeview height, is meaningless
+
 		if(width && window_height){
 			dbg(2, "setting size: width=%i height=%i", width, window_height);
 			gtk_window_resize(GTK_WINDOW(app.window), width, window_height);

@@ -1014,7 +1014,6 @@ view_details_init(GTypeInstance *object, gpointer gclass)
 {
 	GtkTreeView *treeview = (GtkTreeView *) object;
 	GtkTreeViewColumn *column;
-	GtkTreeSortable *sortable_list;
 	ViewDetails *view_details = (ViewDetails *) object;
 
 	view_details->items = g_ptr_array_new();
@@ -1031,7 +1030,7 @@ view_details_init(GTypeInstance *object, gpointer gclass)
 
 	/* Sorting */
 	view_details->sort_fn = NULL;
-	sortable_list = GTK_TREE_SORTABLE(object);
+	//GtkTreeSortable* sortable_list = GTK_TREE_SORTABLE(object);
 
 	gtk_tree_view_set_model(treeview, GTK_TREE_MODEL(view_details));
 	/* Do this after set_model, because that can generate this
@@ -1444,13 +1443,11 @@ static void
 view_details_get_iter_at_point(ViewIface *view, ViewIter *iter, GdkWindow *src, int x, int y)
 {
 	ViewDetails *view_details = (ViewDetails *) view;
-	GtkTreeModel *model;
+	//GtkTreeModel *model = gtk_tree_view_get_model(tree);
 	GtkTreeView *tree = (GtkTreeView *) view;
 	GtkTreePath *path = NULL;
 	int i = -1;
 	gint cell_y;
-
-	model = gtk_tree_view_get_model(tree);
 
 	if (gtk_tree_view_get_path_at_pos(tree, x, y + 4, &path, NULL,
 					  NULL, &cell_y))
@@ -1914,7 +1911,6 @@ view_details_dnd_get(GtkWidget* widget, GdkDragContext* context, GtkSelectionDat
 void
 view_details_set_alt_colours(ViewDetails* view, GdkColor* bg, GdkColor* fg)
 {
-	PF;
 	view->alt_bg = *bg;
 	view->alt_fg = *fg;
 	view->use_alt_colours = true;
