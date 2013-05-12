@@ -22,7 +22,11 @@
 #include "progress_dialog.h"
 #include "player_control.h"
 #ifdef USE_OPENGL
+#ifdef USE_LIBASS
+#include "waveform/view_plus.h"
+#else
 #include "waveform/view.h"
+#endif
 #endif
 #ifndef NO_USE_DEVHELP_DIRTREE
 #include "dh_link.h"
@@ -76,6 +80,7 @@ static gboolean   on_dir_tree_link_selected       (GObject*, DhLink*, gpointer);
 static GtkWidget* message_panel__new              ();
 static GtkWidget* left_pane                       ();
 static void       on_layout_changed               ();
+static void       update_waveform_view            (Sample*);
 
 static void       k_delete_row                    (GtkAccelGroup*, gpointer);
 
@@ -342,9 +347,7 @@ GtkWindow
 		}
 #endif
 #ifdef USE_OPENGL
-		if(app.waveform){
-			waveform_view_load_file((WaveformView*)app.waveform, sample->online ? sample->full_path : NULL);
-		}
+		if(app.waveform) update_waveform_view(sample);
 #endif
 	}
 	g_signal_connect((gpointer)application, "selection-changed", G_CALLBACK(window_on_selection_change), NULL);
@@ -1020,8 +1023,13 @@ show_waveform(gboolean enable)
 {
 	if(enable && !app.waveform){
 		extern GdkGLContext* window_get_gl_context();
+#ifdef USE_LIBASS
+		waveform_view_plus_set_gl(window_get_gl_context());
+		app.waveform = (GtkWidget*)waveform_view_plus_new(NULL);
+#else
 		waveform_view_set_gl(window_get_gl_context());
-		/*WaveformView* waveform = (WaveformView*)*/(app.waveform = (GtkWidget*)waveform_view_new(NULL));
+		app.waveform = (GtkWidget*)waveform_view_new(NULL);
+#endif
 		gtk_box_pack_start(GTK_BOX(window.vbox), app.waveform, EXPAND_FALSE, FILL_TRUE, 0);
 		gtk_widget_set_size_request(app.waveform, 100, 96);
 	}
@@ -1034,7 +1042,7 @@ show_waveform(gboolean enable)
 			{
 				Sample* s;
 				if((s = listview__get_first_selected_sample())){
-					waveform_view_load_file((WaveformView*)app.waveform, s->full_path);
+					update_waveform_view(s);
 					sample_unref(s);
 				}
 				return IDLE_STOP;
@@ -1086,6 +1094,33 @@ show_filemanager(gboolean enable)
 {
 	show_widget_if(app.fm_view, enable);
 	show_widget_if(app.dir_treeview2->widget, enable);
+}
+
+
+static void update_waveform_view(Sample* sample)
+{
+#ifdef USE_LIBASS
+	waveform_view_plus_load_file((WaveformViewPlus*)app.waveform, sample->online ? sample->full_path : NULL);
+	dbg(1, "name=%s", sample->sample_name);
+
+	char* ch_str = channels_format(sample->channels);
+	char* level  = gain2dbstring(sample->peaklevel);
+	char length[64]; smpte_format(length, sample->length);
+	char fs_str[32]; samplerate_format(fs_str, sample->sample_rate); strcpy(fs_str + strlen(fs_str), " kHz");
+
+	char text[128];
+	snprintf(text, 128, "%s  %s  %s  %s", length, ch_str, fs_str, level);
+	text[127] = '\0';
+
+	waveform_view_plus_set_colour((WaveformViewPlus*)app.waveform, 0xaaaaaaff, 0xf00000ff, 0x000000bb, 0xffffffbb);
+	waveform_view_plus_set_title((WaveformViewPlus*)app.waveform, sample->sample_name);
+	waveform_view_plus_set_text((WaveformViewPlus*)app.waveform, text);
+
+	g_free(ch_str);
+	g_free(level);
+#else
+	waveform_view_load_file((WaveformView*)app.waveform, sample->online ? sample->full_path : NULL);
+#endif
 }
 
 

@@ -809,7 +809,7 @@ add_file(char* path)
 		statusbar_print(1, "duplicate: not re-adding a file already in db.");
 		gwarn("duplicate file: %s", path);
 		//TODO ask what to do
-		Sample *s = sample_get_by_filename(path);
+		Sample* s = sample_get_by_filename(path);
 		if (s) {
 			sample_refresh(s, false);
 			sample_unref(s);
@@ -825,14 +825,14 @@ add_file(char* path)
 
 	Sample* sample = sample_new_from_filename(path, false);
 	if (!sample) {
-		gwarn("cannot add file: file-type is not supported\n");
+		gwarn("cannot add file: file-type is not supported");
 		statusbar_print(1, "cannot add file: file-type is not supported");
 		return false;
 	}
 
 	if(!sample_get_file_info(sample)){
-		gwarn("cannot add file: reading file info failed\n");
-		statusbar_print(1, "cannot add file: reading file info failed\n");
+		gwarn("cannot add file: reading file info failed");
+		statusbar_print(1, "cannot add file: reading file info failed");
 		sample_unref(sample);
 		return false;
 	}

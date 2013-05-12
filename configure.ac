@@ -377,6 +377,21 @@ AM_CONDITIONAL(ENABLE_FFTW3, test "$enable_fftw" = "yes")
 
 dnl -----------------------------------------------------------------------------
 
+AS_IF([test "$enable_libass" != "no"], [
+	PKG_CHECK_MODULES(LIBASS, libass, [AC_DEFINE(USE_LIBASS, 1, Use libass for text display) enable_libass="yes"],[
+	enable_libass="no"])
+])
+AM_CONDITIONAL(ENABLE_LIBASS, test "$enable_libass" = "yes")
+AC_SUBST(LIBASS_CFLAGS)
+dnl the libass pc file seems to be missing one dir:
+if test "$enable_libass" = "yes"; then
+	LIBASS_CFLAGS=${LIBASS_CFLAGS}" -I/usr/include/ass"
+	LIBASS_LDFLAGS=${LIBASS_LIBS}
+	AC_SUBST(LIBASS_LDFLAGS)
+fi
+
+dnl -----------------------------------------------------------------------------
+
 dnl TODO vala is not needed when compiling from tarball so this should probably be used in conjunction with --enable-maintainer-mode
 
 AS_IF([test "$enable_vala" != "no"], [
@@ -437,6 +452,7 @@ AC_MSG_RESULT([Building zlib:                $enable_zlib])
 AC_MSG_RESULT([Building dnotify support:     $enable_dnotify])
 AC_MSG_RESULT([Building inotify support:     $ac_cv_header_sys_inotify_h])
 AC_MSG_RESULT([Building opengl support:      $enable_opengl])
+AC_MSG_RESULT([Building libass support:      $enable_libass])
 AC_MSG_RESULT([Building ayyi support:        $enable_ayyi])
 AC_MSG_RESULT([])
 

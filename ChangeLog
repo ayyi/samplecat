@@ -1,3 +1,7 @@
+20130512
+-added optional libass dependency for rendering of text overlays.
+-added display of title and metadata to the waveform view.
+
 20130510
 -fixed default window height
 

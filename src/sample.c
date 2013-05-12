@@ -61,10 +61,10 @@ sample_new_from_filename(char* path, gboolean path_alloced)
 		sample_unref(sample);
 		return NULL;
 	}
-	sample->mimetype=g_strdup_printf("%s/%s", mime_type->media_type, mime_type->subtype);
+	sample->mimetype = g_strdup_printf("%s/%s", mime_type->media_type, mime_type->subtype);
 
 	if(mimetype_is_unsupported(mime_type, sample->mimetype)){
-		dbg(0, "file type \"%s\" not supported.\n", sample->mimetype);
+		dbg(1, "file type \"%s\" not supported.", sample->mimetype);
 		sample_unref(sample);
 		return NULL;
 	}

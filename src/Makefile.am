@@ -118,5 +118,6 @@ samplecat_LDADD = \
 	$(GTHREAD_LIBS) \
 	$(FFTW3_LIBS) \
 	$(OPENGL_LDFLAGS) \
+	$(LIBASS_LDFLAGS) \
 	$(ZLIB_LIBS) \
 	$(FFMPEG_LIBS)
