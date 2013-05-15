@@ -7,6 +7,7 @@
     <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen" />
     <link rel="stylesheet" type="text/css" href="stylesheets/pygment_trac.css" media="screen" />
     <link rel="stylesheet" type="text/css" href="stylesheets/print.css" media="print" />
+    <link rel="stylesheet" type="text/css" href="stylesheets/samplecat.css"/>
 
     <title>Samplecat by ayyi</title>
   </head>
@@ -19,8 +20,8 @@
         <h2>SampleCat is a a program for cataloguing and auditioning audio samples.</h2>
 
         <section id="downloads">
-          <a href="https://github.com/ayyi/samplecat/zipball/master" class="btn">Download as .zip</a>
-          <a href="https://github.com/ayyi/samplecat/tarball/master" class="btn">Download as .tar.gz</a>
+          <a href="http://www.orford.org/assets/samplecat-0.2.3.tar.gz" class="btn">Download stable</a>
+          <a href="https://github.com/ayyi/samplecat/tarball/master" class="btn">Download latest snapshot</a>
           <a href="https://github.com/ayyi/samplecat" class="btn btn-github"><span class="icon"></span>View on GitHub</a>
         </section>
       </div>
@@ -28,11 +29,10 @@
 
     <div class="container">
       <section id="main_content">
-        <h1>Samplecat</h1>
 
-<p><a href="http://samplecat.orford.org/">http://samplecat.orford.org/</a></p>
-
-<p>SampleCat is a program for cataloguing and auditioning audio samples.</p>
+<div class="main-img-container" style="float:right; padding:0 0 0 2em; margin-top:-5px;">
+	<img src="images/samplecat4-600.png" class="main-img" alt="samplecat screenshot"/>
+</div>
 
 <p>SampleCat is available under the GNU General Public License and runs mainly on
 GNU/Linux systems. It is written in C and uses the GTK graphics library. 
@@ -40,9 +40,47 @@ MySql and Sqlite can be used for the database.</p>
 
 <p>Currently, most basic functionality is in place and working.</p>
 
+<div class="news">
+	<h2>news</h2>
+	<p>
+	<strong>20130501</strong>: There is now an additional panel showing a larger waveform display.
+	</p>
+
+	<p>
+	<strong>20121212</strong>: The Inspector layout has been tidied up. The EBUR display format had to be changed to accommodate this so you will have to Refresh samples for them to display correctly.
+	</p>
+
+	<p>
+	<strong>20120426</strong>: Version 0.2.3. Added new tarball. This should be used in preference to the github source for the time being. This version is mostly the work of Robin Gareus. Many thanks to him. A <a href="https://github.com/ayyi/Samplecat/blob/master/utils/config_migrate_0.1__0.2">script</a> is available to migrate an existing config file.
+	</p>
+	<p>
+
+	<p>
+	<strong>20110303</strong>: Version 0.1.1.<br/>
+	Added support for the <a href="http://www.ayyi.org/auditioner">Ayyi Auditioner</a> service and deprecated local audio playback. The main immediate advantage of this is resampling.<br />
+	Added 'Play All' menu item.<br />
+	Auditioning of filemanager items is now possible.<br />
+	Added "Add dir to database" menu item to FileManager directory tree.</p>
+	<p><strong>20100610</strong>: Version 0.1.0. Added spectrogram display using the code from <a href="http://www.mega-nerd.com/libsndfile/">libsndfile</a>. Added peak_level property to backends and Inspector.
+	</p>
+</div>
+
+<h2>features</h2>
+<ul>
+	<li>catalogues 'offline' (eg cdrom), as well as 'online' sample files.
+	</li><li>supported filetypes are wav, flac, aiff, sd2, etc, via libsndfile.
+	</li><li>metadata stored: filename, path, samplerate, channels, mimetype, peak level, and a small waveform overview.
+	</li><li>freeform tagging.
+	</li><li>browsing is done by directory, and filtering is on name, path or tag.
+	</li><li>spectrogram display.</li>
+
+	<li>auditioning of samples is possible via JACK.</li>
+	<li>samples can be renamed, moved and copied to other directories.</li>
+</ul>
+
 <h2>building</h2>
 
-<p>If you are not a developer it is recommended to use the latest tarball. Building should be entirely standard.</p>
+<p>If you are not a developer it is recommended to use the stable tarball. Building should be entirely standard (untar, configure, make, make install).</p>
 
 <p>If you are a developer you will want to use the git repository directly. The only difficulty is the use of
 git submodules which are unfortunately not transparent. After cloning the repository, you will have to manually
@@ -58,6 +96,9 @@ get the submodule:</p>
     make clean
 </code></pre>
 
+<p>Dependencies: gtk+2.4, jack, libsndfile, dbus.</p>
+<p>Optional dependencies: mysqlclient, sqlite, tracker-0.9, libwaveform, ayyi_auditioner, fftw, gtkglext, ffmpeg, libass.</p>
+
 <h2>usage</h2>
 
 <ul>
@@ -71,9 +112,16 @@ of the window and hit the "Set Category" button.</li>
 <li>import files into your audio editor using dragndrop.</li>
 <li>apply colour coding by dragging from the colour bar. Right click on the colour bar to change the colour palette.</li>
 </ul>
-      </section>
-    </div>
+
+<h2>limitations</h2>
+<ul>
+	<li>currently, auditioning is stereo only. Files with more than 2 channels cannot be auditioned.</li>
+</ul>
+
+</section>
+</div>
 
     
-  </body>
+</body>
 </html>
+
