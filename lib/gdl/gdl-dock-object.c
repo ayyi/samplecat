@@ -577,7 +577,8 @@ gdl_dock_object_dock (GdlDockObject    *object,
         g_warning (_("Dock operation requested in a non-bound object %p. "
                      "The application might crash"), object);
         
-PF0;    
+	PF;
+
     if (!gdl_dock_object_is_bound (requestor))
         gdl_dock_object_bind (requestor, object->master);
 
@@ -607,7 +608,7 @@ PF0;
     if (position != GDL_DOCK_NONE)
         g_signal_emit (object, gdl_dock_object_signals [DOCK], 0,
                        requestor, position, other_data);
-dbg(0, "done");
+	dbg(1, "done");
 
     g_object_unref (requestor);
     gdl_dock_object_thaw (object);

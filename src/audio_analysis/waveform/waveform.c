@@ -8,6 +8,7 @@
 #include <gdk-pixbuf/gdk-pixdata.h>
 #include <cairo.h>
 
+#include "debug/debug.h"
 #include "typedefs.h"
 #include "support.h"
 #include "main.h"

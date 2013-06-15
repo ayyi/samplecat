@@ -37,6 +37,7 @@
 #include <sys/stat.h>
 #include <gtk/gtk.h>
 
+#include "debug/debug.h"
 #include "utils/fscache.h"
 #include "utils/pixmaps.h"
 #include "xdgmime.h"

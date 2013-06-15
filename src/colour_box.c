@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <gtk/gtk.h>
+#include "debug/debug.h"
 #include "file_manager.h"
 #include <gimp/gimpaction.h>
 #include <gimp/gimpactiongroup.h>

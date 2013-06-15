@@ -1,3 +1,14 @@
+/**
+* +----------------------------------------------------------------------+
+* | This file is part of Samplecat. http://samplecat.orford.org          |
+* | copyright (C) 2007-2013 Tim Orford <tim@orford.org>                  |
+* +----------------------------------------------------------------------+
+* | This program is free software; you can redistribute it and/or modify |
+* | it under the terms of the GNU General Public License version 3       |
+* | as published by the Free Software Foundation.                        |
+* +----------------------------------------------------------------------+
+*
+*/
 #include "config.h"
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -17,6 +28,7 @@
 #include <gtk/gtk.h>
 #include <gdk-pixbuf/gdk-pixdata.h>
 
+#include "debug/debug.h"
 #include "file_manager/file_manager.h"
 #include "dir_tree/typedefs.h"
 #include "dir_tree/ui_fileops.h"
@@ -458,24 +470,24 @@ str_array_join(const char** array, const char* separator)
 
 
 gint
-treecell_get_row(GtkWidget *widget, GdkRectangle *cell_area)
+treecell_get_row(GtkWidget* treeview, GdkRectangle* cell_area)
 {
 	//return the row number for the cell with the given area.
 
-	GtkTreePath *path;
+	GtkTreePath* path;
 	gint x = cell_area->x + 1;
 	gint y = cell_area->y + 1;
 	gint *cell_x = NULL; //not used.
 	gint *cell_y = NULL;
-	if(gtk_tree_view_get_path_at_pos(GTK_TREE_VIEW(app.view), x, y, &path, NULL, cell_x, cell_y)){
+	if(gtk_tree_view_get_path_at_pos(GTK_TREE_VIEW(treeview), x, y, &path, NULL, cell_x, cell_y)){
 		gint *i;
 		i = gtk_tree_path_get_indices(path);
-		printf("treecell_get_row() i[0]=%i.\n", i[0]);
+		dbg(1, "treecell_get_row() i[0]=%i", i[0]);
 		gint row = i[0];
 		gtk_tree_path_free(path);
 		return row;
 	}
-	else warnprintf("treecell_get_row() no row found.\n");
+	else pwarn("no row found.");
 	return 0;
 }
 
@@ -1065,6 +1077,15 @@ show_widget_if(GtkWidget* widget, gboolean show)
 }
 
 
+GtkWidget*
+scrolled_window_new()
+{
+	GtkWidget* scroll = gtk_scrolled_window_new(NULL, NULL); //adjustments created automatically.
+	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
+	return scroll;
+}
+
+
 #include "utils/pixmaps.h"
 #include "file_manager/support.h"
 #include "file_manager/mimetype.h"
@@ -1109,4 +1130,58 @@ pixbuf_to_blob(GdkPixbuf* in, guint *len)
 	if (len) *len = length;
 	return ser;
 }
+
+
+gboolean
+mimestring_is_unsupported(char* mime_string)
+{
+	MIME_type* mime_type = mime_type_lookup(mime_string);
+	return mimetype_is_unsupported(mime_type, mime_string);
+}
+
+
+gboolean
+mimetype_is_unsupported(MIME_type* mime_type, char* mime_string)
+{
+	g_return_val_if_fail(mime_type, true);
+	int i;
+
+	/* XXX - actually ffmpeg can read audio-tracks in video-files,
+	 * application/ogg, application/annodex, application/zip may contain audio
+	 * ...
+	 */
+	char supported[][64] = {
+		"application/ogg",
+		"video/x-theora+ogg"
+	};
+	for(i=0;i<G_N_ELEMENTS(supported);i++){
+		if(!strcmp(mime_string, supported[i])){
+			dbg(2, "mimetype ok: %s", mime_string);
+			return false;
+		}
+	}
+
+	if(strcmp(mime_type->media_type, "audio")){
+		return true;
+	}
+
+	char unsupported[][64] = {
+		"audio/csound", 
+		"audio/midi", 
+		"audio/prs.sid",
+		"audio/telephone-event",
+		"audio/tone",
+		"audio/x-tta", 
+		"audio/x-speex",
+		"audio/x-musepack"
+	};
+	for(i=0;i<G_N_ELEMENTS(unsupported);i++){
+		if(!strcmp(mime_string, unsupported[i])){
+			return true;
+		}
+	}
+	dbg(2, "mimetype ok: %s", mime_string);
+	return false;
+}
+
 

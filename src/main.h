@@ -5,13 +5,9 @@
 #include <pthread.h>
 #include "typedefs.h"
 #include "types.h"
-#include "utils/mime_type.h"
 #include "dir_tree/view_dir_tree.h"
 #include "model.h"
 #include "application.h"
-#ifdef USE_MYSQL
-#include "db/mysql.h"
-#endif
 
 #define EXPAND_TRUE 1
 #define EXPAND_FALSE 0
@@ -20,32 +16,7 @@
 #define START_EDITING 1
 #define TIMER_STOP FALSE
 
-#define PALETTE_SIZE 17
-
 #define MAX_DISPLAY_ROWS 1000
-
-
-struct _config
-{
-	char      database_backend[64];
-#ifdef USE_MYSQL
-	struct _mysql_config mysql;
-#endif
-	char      auditioner[16];
-	char      show_dir[PATH_MAX];
-	char      window_width[8];
-	char      window_height[8];
-	char      colour[PALETTE_SIZE][8];
-	//gboolean  add_recursive; ///< TODO save w/ config ?
-	//gboolean  loop_playback; ///< TODO save w/ config ?
-	char      column_widths[4][8];
-	char      browse_dir[PATH_MAX];
-	char      show_player[8];
-	char      show_waveform[8];
-	char      show_spectrogram[8];
-	char      jack_autoconnect[1024];
-	char      jack_midiconnect[1024];
-};
 
 
 #ifndef __main_c__
@@ -99,11 +70,11 @@ struct _app
 	int            playing_id; ///< database index of the file that is currently playing, or zero if none playing, -1 if playing an external file.
 
 	GtkListStore*  store;
+	LibraryView*   libraryview;
 	Inspector*     inspector;
 	PlayCtrl*      playercontrol;
 	
 	GtkWidget*     window;
-	GtkWidget*     view;
 	GtkWidget*     msg_panel;
 	GtkWidget*     statusbar;
 	GtkWidget*     statusbar2;
@@ -115,19 +86,13 @@ struct _app
 	GtkWidget*     colour_button[PALETTE_SIZE];
 	gboolean       colourbox_dirty;
 
-	GtkCellRenderer*     cell1;          //sample name.
-	GtkCellRenderer*     cell_tags;
-	GtkTreeViewColumn*   col_name;
-	GtkTreeViewColumn*   col_path;
-	GtkTreeViewColumn*   col_pixbuf;
-	GtkTreeViewColumn*   col_tags;
-
 	GtkTreeRowReference* mouseover_row_ref;
 
 	GNode*               dir_tree;
 	GtkWidget*           dir_treeview;
 	ViewDirTree*         dir_treeview2;
 	GtkWidget*           vpaned;        //vertical divider on lhs between the dir_tree and inspector
+	GtkWidget*           pcpaned;
 
 	GtkWidget*           fm_view;
 
@@ -165,9 +130,6 @@ void        delete_selected_rows();
 gboolean    on_overview_done(gpointer sample);
 gboolean    on_peaklevel_done(gpointer sample);
 gboolean    on_ebur128_done(gpointer _sample);
-
-gboolean    mimestring_is_unsupported(char*);
-gboolean    mimetype_is_unsupported(MIME_type*, char* mime_string);
 
 void        update_dir_node_list();
 

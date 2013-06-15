@@ -11,6 +11,7 @@
 
 #include <gtk/gtk.h>
 
+#include "debug/debug.h"
 #include "file_manager/file_manager.h"
 #include "file_manager/support.h"
 #include "src/typedefs.h"

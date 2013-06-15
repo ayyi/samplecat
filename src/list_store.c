@@ -10,8 +10,9 @@
 #include <string.h>
 #include <float.h>
 #include <math.h>
-#include <sample.h>
-#include <listmodel.h>
+#include "debug/debug.h"
+#include "sample.h"
+#include "listmodel.h"
 #include <support.h>
 #include <overview.h>
 

@@ -30,6 +30,7 @@
 #include <math.h>
 #include <pthread.h>
 
+#include "debug/debug.h"
 #include "jack_player.h"
 #include "listview.h"
 #include "support.h"

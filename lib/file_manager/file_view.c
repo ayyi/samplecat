@@ -29,8 +29,9 @@
 #include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
 
-#include "file_manager.h"
+#include "debug/debug.h"
 #include "utils/ayyi_utils.h"
+#include "file_manager.h"
 
 #include "display.h"
 #include "utils/pixmaps.h"

@@ -5,12 +5,11 @@
 #include <gtk/gtk.h>
 #include "typedefs.h"
 #include "utils/ayyi_utils.h"
+#include "utils/mime_type.h"
 
-#define dbg(A, B, ...) debug_printf(__func__, A, B, ##__VA_ARGS__)
 #define perr(A, ...) errprintf2(__func__, A, ##__VA_ARGS__)
 #define pwarn(A, ...) warnprintf2(__func__, A, ##__VA_ARGS__)
 #ifndef __ayyi_h__
-#define PF {if(debug) printf("%s()...\n", __func__);}
 #define PF_DONE printf("%s(): done.\n", __func__);
 #define gwarn(A, ...) g_warning("%s(): "A, __func__, ##__VA_ARGS__);
 #define GERR_WARN if(error){ gwarn("%s", error->message); g_error_free(error); error = NULL; }
@@ -118,8 +117,13 @@ float        gain2db                   (float);
 char*        gain2dbstring             (float);
 
 void         show_widget_if            (GtkWidget*, gboolean);
+GtkWidget*   scrolled_window_new       ();
 
 GdkPixbuf*   get_iconbuf_from_mimetype (char* mimetype);
 
 uint8_t*     pixbuf_to_blob            (GdkPixbuf* in, guint* len);
+
+gboolean    mimestring_is_unsupported(char*);
+gboolean    mimetype_is_unsupported(MIME_type*, char* mime_string);
+
 #endif

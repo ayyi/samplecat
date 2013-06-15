@@ -50,6 +50,10 @@ OPENGL_LDFLAGS = \
 	$(OPENGL_LIBS)
 endif
 
+if ENABLE_GDL
+GDL_LDFLAGS=$(top_srcdir)/lib/gdl/libgdl.a $(XML_LIBS)
+endif
+
 if ENABLE_AYYIDBUS
 AUDITIONER_AYYI = auditioner.c auditioner.h
 endif
@@ -106,6 +110,8 @@ samplecat_LDADD = \
 	$(top_srcdir)/lib/file_manager/libfilemanager.a \
 	$(top_srcdir)/lib/xdgmime/libxdgmime.a \
 	$(top_srcdir)/lib/dir_tree/libdirtree.a \
+	$(top_srcdir)/lib/debug/libdebug.a \
+	$(GDL_LDFLAGS) \
 	gimp/libgimpwidgets.a \
 	db/libsamplecatdb.a \
 	$(SAMPLECAT_LIBS) \

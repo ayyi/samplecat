@@ -24,6 +24,7 @@
 #include <stdlib.h>
 #include <gdk/gdkkeysyms.h>
 #include <gtk/gtk.h>
+#include "debug/debug.h"
 
 #include "typedefs.h"
 #include "support.h"

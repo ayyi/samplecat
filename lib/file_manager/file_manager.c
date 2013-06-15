@@ -28,6 +28,7 @@
 #include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
 
+#include "debug/debug.h"
 #include "utils/ayyi_utils.h"
 #include "utils/mime_type.h"
 #include "file_manager.h"

@@ -21,6 +21,7 @@
 #include <string.h>
 #include <libgen.h>
 #include <gtk/gtk.h>
+#include "debug/debug.h"
 #include "file_manager/rox_support.h" // to_utf8()
 #include "mimetype.h"
 #include "support.h"
@@ -217,6 +218,7 @@ inspector_new()
 
 	g_signal_connect((gpointer)application, "selection-changed", G_CALLBACK(inspector_update), NULL);
 
+	gtk_widget_set_size_request(inspector->widget, 20, 20);
 	return vbox;
 }
 

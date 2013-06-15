@@ -1,3 +1,14 @@
+/**
+* +----------------------------------------------------------------------+
+* | This file is part of Samplecat. http://samplecat.orford.org          |
+* | copyright (C) 2007-2013 Tim Orford <tim@orford.org>                  |
+* +----------------------------------------------------------------------+
+* | This program is free software; you can redistribute it and/or modify |
+* | it under the terms of the GNU General Public License version 3       |
+* | as published by the Free Software Foundation.                        |
+* +----------------------------------------------------------------------+
+*
+*/
 #include "config.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -6,6 +17,11 @@
 #include <string.h>
 #include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
+#ifdef USE_GDL
+#include "gdl/gdl-dock-layout.h"
+#include "gdl/gdl-dock-bar.h"
+#endif
+#include "debug/debug.h"
 #include "file_manager.h"
 #include "file_manager/menu.h"
 #include "dir_tree/view_dir_tree.h"
@@ -68,8 +84,7 @@ static void       window_on_realise               (GtkWidget*, gpointer);
 static void       window_on_size_request          (GtkWidget*, GtkRequisition*, gpointer);
 static void       window_on_allocate              (GtkWidget*, GtkAllocation*, gpointer);
 static gboolean   window_on_configure             (GtkWidget*, GdkEventConfigure*, gpointer);
-static gboolean   filter_new                      ();
-static GtkWidget* scrolled_window_new             ();
+static GtkWidget* filter_new                      ();
 static void       window_on_fileview_row_selected (GtkTreeView*, gpointer);
 static void       on_category_set_clicked         (GtkComboBox*, gpointer);
 static void       menu__add_to_db                 (GtkMenuItem*, gpointer);
@@ -83,14 +98,17 @@ static void       on_layout_changed               ();
 static void       update_waveform_view            (Sample*);
 
 static void       k_delete_row                    (GtkAccelGroup*, gpointer);
+static void       k_save_dock                     (GtkAccelGroup*, gpointer);
 
 struct _window {
-	GtkWidget* vbox;
-	GtkWidget* scroll;
-	GtkWidget* toolbar;
-	GtkWidget* toolbar2;
-	GtkWidget* category;
-	GtkWidget* view_category;
+   GtkWidget* vbox;
+   GtkWidget* dock;
+   GtkWidget* toolbar;
+   GtkWidget* toolbar2;
+   GtkWidget* category;
+   GtkWidget* view_category;
+   GtkWidget* file_man;
+   GtkWidget* dir_tree;
 } window;
 
 struct _accel menu_keys[] = {
@@ -101,7 +119,8 @@ struct _accel menu_keys[] = {
 struct _accel window_keys[] = {
 	{"Quit",           NULL,        {{(char)'q',    GDK_CONTROL_MASK},  {0, 0}}, on_quit,         GINT_TO_POINTER(0)},
 	{"Close",          NULL,        {{(char)'w',    GDK_CONTROL_MASK},  {0, 0}}, on_quit,         GINT_TO_POINTER(0)},
-	{"Delete",         NULL,        {{GDK_Delete,   0               },  {0, 0}}, k_delete_row,    GINT_TO_POINTER(0)},
+	{"Delete",         NULL,        {{GDK_Delete,   0               },  {0, 0}}, k_delete_row,    NULL},
+	{"Save Dock",      NULL,        {{(char)'s',    GDK_CONTROL_MASK},  {0, 0}}, k_save_dock,     NULL},
 };
 
 struct _accel fm_tree_keys[] = {
@@ -111,17 +130,62 @@ struct _accel fm_tree_keys[] = {
 static GtkAccelGroup* accel_group = NULL;
 
 
+const char* preferred_width = "preferred-width";
+const char* preferred_height = "preferred-height";
+
+#ifdef USE_GDL
+#define PACK(widget, position, width, height, id, name, D) \
+	{ \
+	dbg(1, "PACK %s", id); \
+	GtkWidget* dock_item = gdl_dock_item_new (id, name, GDL_DOCK_ITEM_BEH_LOCKED); \
+	gtk_container_add(GTK_CONTAINER(dock_item), widget); \
+	g_object_set(dock_item, preferred_width, width, NULL); \
+	if(height > 0) g_object_set(dock_item, preferred_height, height, NULL); \
+	gdl_dock_add_item(GDL_DOCK(window.dock), GDL_DOCK_ITEM(dock_item), position); \
+	}
+#else
+#define PACK(widget, position, width, height, id, name, D) \
+	if(GTK_IS_BOX(D)) \
+		gtk_box_pack_start(GTK_BOX(D), widget, EXPAND_FALSE, FILL_FALSE, 0); \
+	else \
+		if(!gtk_paned_get_child1(GTK_PANED(D))) gtk_paned_add1(GTK_PANED(D), widget); \
+		else gtk_paned_add2(GTK_PANED(D), widget);
+#endif
+
+
+#ifdef USE_GDL
+#define PACK2(widget, parent, position, id, name, D) \
+	{ \
+	dbg(1, "PACK2 %s", id); \
+	GtkWidget* dock_item = gdl_dock_item_new (id, name, GDL_DOCK_ITEM_BEH_LOCKED); \
+	gtk_container_add(GTK_CONTAINER(dock_item), widget); \
+	g_object_set((GdlDockItem*)parent, "preferred-width", 400, NULL); \
+	g_object_set(dock_item, preferred_width, 210, NULL); \
+	gdl_dock_item_dock_to(GDL_DOCK_ITEM(dock_item), parent, position, -1); \
+	dbg(1, "PACK2: done"); \
+	}
+#else
+#define PACK2(widget, parent, position, id, name, D) \
+	if(GTK_IS_BOX(D)) \
+		gtk_box_pack_start(GTK_BOX(D), widget, EXPAND_FALSE, FILL_FALSE, 0); \
+	else \
+		if(!gtk_paned_get_child1(GTK_PANED(D))) gtk_paned_add1(GTK_PANED(D), widget); \
+		else gtk_paned_add2(GTK_PANED(D), widget);
+#endif
+
+
 gboolean
 window_new()
 {
 /*
 GtkWindow
 +--GtkVbox                        window.vbox
-   +--GtkHBox search box
-   |  +--label
-   |  +--text entry
-   |
-   +--GtkHBox edit metadata
+   +--GtkVBox
+   |  +--GtkHBox search box
+   |  |  +--label
+   |  |  +--text entry
+   |  |
+   |  +--GtkHBox edit metadata
    |
    +--GtkAlignment                align1
    |  +--GtkVPaned main_vpaned
@@ -135,7 +199,7 @@ GtkWindow
    |     |  +--GtkVBox rhs_vbox (main right pane)
    |     |     +--GtkLabel message box
    |     |     +--GtkScrolledWindow scrollwin
-   |     |        +--GtkTreeView app.view  (main sample list)
+   |     |        +--GtkTreeView app.libraryview->widget  (main sample list)
    |     |
    |     +--GtkHPaned fman_hpaned
    |        +--fs_tree
@@ -155,7 +219,7 @@ GtkWindow
 
 	app.window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	gtk_window_set_title(GTK_WINDOW(app.window), "SampleCat");
-	g_signal_connect (G_OBJECT(app.window), "delete_event", G_CALLBACK(on_quit), NULL);
+	g_signal_connect(G_OBJECT(app.window), "delete_event", G_CALLBACK(on_quit), NULL);
 	g_signal_connect(app.window, "destroy", G_CALLBACK(window_on_destroy), NULL);
 
 #ifndef __APPLE__
@@ -165,18 +229,29 @@ GtkWindow
 	window.vbox = gtk_vbox_new(FALSE, 0);
 	gtk_container_add(GTK_CONTAINER(app.window), window.vbox);
 
-	filter_new();
-	tagshow_selector_new();
-	tag_selector_new();
+#ifdef USE_GDL
+	GtkWidget* dock = window.dock = gdl_dock_new();
+
+	/*GdlDockLayout* layout = */gdl_dock_layout_new(GDL_DOCK(dock));
+
+	GtkWidget* dockbar = gdl_dock_bar_new(GDL_DOCK(dock));
+	gdl_dock_bar_set_style(GDL_DOCK_BAR(dockbar), GDL_DOCK_BAR_TEXT);
+
+	gtk_box_pack_start(GTK_BOX(window.vbox), dock, EXPAND_TRUE, TRUE, 0);
+	gtk_box_pack_start(GTK_BOX(window.vbox), dockbar, EXPAND_FALSE, FALSE, 0);
+#endif
+
+	GtkWidget* filter = filter_new();
 
 	//alignment to give top border to main hpane.
 	GtkWidget* align1 = gtk_alignment_new(0.0, 0.0, 1.0, 1.0);
 	gtk_alignment_set_padding(GTK_ALIGNMENT(align1), 2, 1, 0, 0); //top, bottom, left, right.
+#ifndef USE_GDL
 	gtk_box_pack_start(GTK_BOX(window.vbox), align1, EXPAND_TRUE, TRUE, 0);
+#endif
 
 	//---------
 	GtkWidget* main_vpaned = gtk_vpaned_new();
-	//gtk_paned_set_position(GTK_PANED(r_vpaned), 300);
 	// default width is too big.
 	// let its size be determined by its parent.
 	gtk_widget_set_size_request(main_vpaned, 20, 20);
@@ -184,7 +259,6 @@ GtkWindow
 
 	GtkWidget* hpaned = gtk_hpaned_new();
 	gtk_paned_set_position(GTK_PANED(hpaned), 210);
-	//gtk_container_add(GTK_CONTAINER(align1), hpaned);
 	gtk_paned_add1(GTK_PANED(main_vpaned), hpaned);
 
 	GtkWidget* left = left_pane();
@@ -195,17 +269,16 @@ GtkWindow
 
 	gtk_box_pack_start(GTK_BOX(rhs_vbox), message_panel__new(), EXPAND_FALSE, FILL_FALSE, 0);
 
+#ifndef USE_GDL
 	//split the rhs in two:
 	GtkWidget* r_vpaned = gtk_vpaned_new();
 	gtk_paned_set_position(GTK_PANED(r_vpaned), 300);
 	gtk_box_pack_start(GTK_BOX(rhs_vbox), r_vpaned, EXPAND_TRUE, TRUE, 0);
-
-	window.scroll = scrolled_window_new();
-	gtk_paned_add1(GTK_PANED(r_vpaned), window.scroll);
+#endif
 
 	listview__new();
-	if(0 && BACKEND_IS_NULL) gtk_widget_set_no_show_all(app.view, true); //dont show main view if no database.
-	gtk_container_add(GTK_CONTAINER(window.scroll), app.view);
+	if(0 && BACKEND_IS_NULL) gtk_widget_set_no_show_all(app.libraryview->widget, true); //dont show main view if no database.
+	gtk_container_add(GTK_CONTAINER(app.libraryview->scroll), app.libraryview->widget);
 
 #if 0
 	GtkWidget* rotator = rotator_new_with_model(GTK_TREE_MODEL(app.store));
@@ -217,9 +290,8 @@ GtkWindow
 	dbg(2, "making fileview pane...");
 	void make_fileview_pane()
 	{
-		GtkWidget* fman_hpaned = gtk_hpaned_new();
+		GtkWidget* fman_hpaned = window.file_man = gtk_hpaned_new();
 		gtk_paned_set_position(GTK_PANED(fman_hpaned), 210);
-		gtk_paned_add2(GTK_PANED(main_vpaned), fman_hpaned);
 
 		void fman_left(const char* initial_folder)
 		{
@@ -277,6 +349,50 @@ GtkWindow
 	}
 	make_fileview_pane();
 
+	int width = atoi(app.config.window_width);
+	int height = atoi(app.config.window_height);
+	if(width && height) gtk_window_resize(GTK_WINDOW(app.window), width, height);
+	// note that the window size is also set in the configure callback.
+	// -sometimes setting it here is ignored, sometimes setting it in configure is ignored.
+	// -setting the size in configure is actually too late, as the window is drawn first
+	//  at the wrong size.
+	else{
+		// we need an approx size in the case where there is no config file. relative panel sizes will be slightly out.
+		width = 450;
+		height = 600;
+	}
+
+#ifdef USE_GDL
+	typedef struct {
+		int filters;
+		int file;
+		int waveform;
+	} DefaultHeights;
+	DefaultHeights default_heights = {
+		60,
+		150,
+		app.view_options[SHOW_WAVEFORM].value ? 96 : 0,
+	};
+	int left_column_width = 210;
+
+	int library_height = MAX(100, height - default_heights.filters - default_heights.file - default_heights.waveform);
+	dock->requisition.height = 197; // the size must be set directly. using gtk_widget_set_size_request has no imediate effect.
+	int allocation = dock->allocation.height;
+	dock->allocation.height = 197; // nasty hack
+#endif
+	PACK(app.libraryview->scroll, GDL_DOCK_TOP, -1, library_height, "library", "Library", r_vpaned);
+	// this addition sets the dock to be wider than the left column. the height is set to be small so that the height will be determined by the requisition.
+	PACK(filter, GDL_DOCK_TOP, left_column_width + 5, 10, "filters", "Filters", window.vbox);
+#ifdef USE_GDL
+	dock->allocation.height = allocation;
+#else
+	gtk_box_reorder_child((GtkBox*)window.vbox, filter, 0);
+#endif
+	PACK(window.file_man, GDL_DOCK_BOTTOM, 216, default_heights.file, "files", "Files", main_vpaned);
+
+	PACK2(app.inspector->widget, GDL_DOCK_ITEM(gtk_widget_get_parent(app.libraryview->scroll)), GDL_DOCK_LEFT, "inspector", "Inspector", app.vpaned);
+	PACK2(window.dir_tree, GDL_DOCK_ITEM(gtk_widget_get_parent(app.inspector->widget)), GDL_DOCK_TOP, "directories", "Directories", app.pcpaned);
+
 #ifdef USE_OPENGL
 	if(app.view_options[SHOW_WAVEFORM].value){
 		show_waveform(true);
@@ -317,14 +433,6 @@ GtkWindow
 	make_accels(accel_group, action_group, window_keys, G_N_ELEMENTS(window_keys), NULL);
 	gtk_window_add_accel_group(GTK_WINDOW(app.window), accel_group);
 
-	int width = atoi(app.config.window_width);
-	int height = atoi(app.config.window_height);
-	if(width && height) gtk_window_resize(GTK_WINDOW(app.window), width, height);
-	// note that the window size is also set in the configure callback.
-	// -sometimes setting it here is ignored, sometimes setting it in configure is ignored.
-	// -setting the size in configure is actually too late, as the window is drawn first
-	//  at the wrong size.
-
 	gtk_widget_show_all(app.window);
 
 #if (defined HAVE_JACK)
@@ -363,8 +471,8 @@ GtkWindow
 static void
 window_on_realise(GtkWidget* win, gpointer user_data)
 {
-	gtk_tree_view_column_set_resizable(app.col_name, TRUE);
-	gtk_tree_view_column_set_resizable(app.col_path, TRUE);
+	gtk_tree_view_column_set_resizable(app.libraryview->col_name, TRUE);
+	gtk_tree_view_column_set_resizable(app.libraryview->col_path, TRUE);
 	//gtk_tree_view_column_set_sizing(col1, GTK_TREE_VIEW_COLUMN_FIXED);
 }
 
@@ -452,10 +560,10 @@ window_on_allocate(GtkWidget *win, GtkAllocation *allocation, gpointer user_data
 {
 	#define SCROLLBAR_WIDTH_HACK 32
 	static gboolean done = FALSE;
-	if(!app.view->requisition.width) return;
+	if(!app.libraryview->widget->requisition.width) return;
 
 	if(!done){
-		//dbg(2, "app.view->requisition: wid=%i height=%i", app.view->requisition.width, app.view->requisition.height);
+		//dbg(2, "app.libraryview->widget->requisition: wid=%i height=%i", app.libraryview->widget->requisition.width, app.libraryview->widget->requisition.height);
 		//setting window size is now done in window_on_configure
 		done = TRUE;
 	}else{
@@ -496,8 +604,8 @@ window_on_allocate(GtkWidget *win, GtkAllocation *allocation, gpointer user_data
 		//set column colours:
 		dbg(3, "fg_color: %x %x %x", app.fg_colour.red, app.fg_colour.green, app.fg_colour.blue);
 
-		g_object_set(app.cell1, "cell-background-gdk", &app.bg_colour_mod1, "cell-background-set", TRUE, NULL);
-		g_object_set(app.cell1, "foreground-gdk", &app.fg_colour, "foreground-set", TRUE, NULL);
+		g_object_set(app.libraryview->cells.name, "cell-background-gdk", &app.bg_colour_mod1, "cell-background-set", TRUE, NULL);
+		g_object_set(app.libraryview->cells.name, "foreground-gdk", &app.fg_colour, "foreground-set", TRUE, NULL);
 #if 0
 		if(is_similar(&app.bg_colour_mod1, &app.fg_colour, 0xFF)) perr("colours not set properly!");
 #endif
@@ -516,9 +624,9 @@ window_on_configure(GtkWidget *widget, GdkEventConfigure *event, gpointer user_d
 	if(!window_size_set){
 		//take the window size from the config file, or failing that, from the treeview requisition.
 		int width = atoi(app.config.window_width);
-		if(!width) width = app.view->requisition.width + SCROLLBAR_WIDTH_HACK;
+		if(!width) width = app.libraryview->widget->requisition.width + SCROLLBAR_WIDTH_HACK;
 		int window_height = atoi(app.config.window_height);
-		if(!window_height) window_height = 480; //MIN(app.view->requisition.height, 900);  -- ignore the treeview height, is meaningless
+		if(!window_height) window_height = 480; //MIN(app.libraryview->widget->requisition.height, 900);  -- ignore the treeview height, is meaningless
 
 		if(width && window_height){
 			dbg(2, "setting size: width=%i height=%i", width, window_height);
@@ -552,15 +660,14 @@ left_pane()
 {
 	app.vpaned = gtk_vpaned_new();
 
-	GtkWidget* pcpaned = gtk_vpaned_new();
+	GtkWidget* pcpaned = app.pcpaned = gtk_vpaned_new();
 	gtk_paned_add1(GTK_PANED(app.vpaned), pcpaned);
 
 	if(!BACKEND_IS_NULL){
 #ifndef NO_USE_DEVHELP_DIRTREE
 		GtkWidget* tree = _dir_tree_new();
-		GtkWidget* scroll = scrolled_window_new();
-		gtk_container_add((GtkContainer*)scroll, tree);
-		gtk_paned_add1(GTK_PANED(pcpaned), scroll);
+		window.dir_tree = scrolled_window_new();
+		gtk_container_add((GtkContainer*)window.dir_tree, tree);
 		g_signal_connect(tree, "link-selected", G_CALLBACK(on_dir_tree_link_selected), NULL);
 #else
 		GtkWidget* tree = _dir_tree_new();
@@ -608,7 +715,6 @@ left_pane()
 
 	inspector_new();
 	//g_signal_connect(app.inspector->widget, "size-allocate", (gpointer)on_inspector_allocate, NULL);
-	gtk_paned_add2(GTK_PANED(app.vpaned), app.inspector->widget);
 
 	void on_vpaned_allocate(GtkWidget* widget, GtkAllocation* vp_allocation, gpointer user_data)
 	{
@@ -644,22 +750,28 @@ left_pane()
 }
 
 
-static gboolean
+static GtkWidget*
 filter_new()
 {
-	//search box
+	//search box and tagging
 	PF;
 
 	g_return_val_if_fail(app.window, FALSE);
 
-	GtkWidget* hbox = window.toolbar = gtk_hbox_new(FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(window.vbox), hbox, EXPAND_FALSE, FILL_FALSE, 0);
+	GtkWidget* filter_vbox = gtk_vbox_new(NON_HOMOGENOUS, 0);
 
-	GtkWidget* label1 = gtk_label_new("Search");
-	gtk_misc_set_padding(GTK_MISC(label1), 5, 5);
-	gtk_box_pack_start(GTK_BOX(hbox), label1, FALSE, FALSE, 0);
+	//----------------------------------------------------------------------
 
-	gboolean on_focus_out(GtkWidget *widget, GdkEventFocus *event, gpointer user_data)
+	// first row
+
+	GtkWidget* row1 = window.toolbar = gtk_hbox_new(NON_HOMOGENOUS, 0);
+	gtk_box_pack_start(GTK_BOX(filter_vbox), row1, EXPAND_FALSE, FILL_FALSE, 0);
+
+	GtkWidget* label = gtk_label_new("Search");
+	gtk_misc_set_padding(GTK_MISC(label), 5, 5);
+	gtk_box_pack_start(GTK_BOX(row1), label, FALSE, FALSE, 0);
+
+	gboolean on_focus_out(GtkWidget* widget, GdkEventFocus* event, gpointer user_data)
 	{
 		PF;
 		const gchar* text = gtk_entry_get_text(GTK_ENTRY(app.search));
@@ -670,44 +782,40 @@ filter_new()
 		return NOT_HANDLED;
 	}
 
-	GtkWidget *entry = app.search = gtk_entry_new();
+	GtkWidget* entry = app.search = gtk_entry_new();
 	gtk_entry_set_max_length(GTK_ENTRY(entry), 64);
 	gtk_entry_set_text(GTK_ENTRY(entry), app.model->filters.phrase);
-	gtk_box_pack_start(GTK_BOX(hbox), entry, EXPAND_TRUE, TRUE, 0);
+	gtk_box_pack_start(GTK_BOX(row1), entry, EXPAND_TRUE, TRUE, 0);
 	g_signal_connect(G_OBJECT(entry), "focus-out-event", G_CALLBACK(on_focus_out), NULL);
 	gtk_entry_set_activates_default(GTK_ENTRY(entry), TRUE);
 	g_signal_connect(G_OBJECT(entry), "activate", G_CALLBACK(on_focus_out), NULL);
 
 	//----------------------------------------------------------------------
 
-	//second row (metadata edit):
-	GtkWidget* hbox_edit = window.toolbar2 = gtk_hbox_new(FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(window.vbox), hbox_edit, EXPAND_FALSE, FILL_FALSE, 0);
+	//second row (metadata edit)
+
+	GtkWidget* hbox_edit = window.toolbar2 = gtk_hbox_new(NON_HOMOGENOUS, 0);
+	gtk_box_pack_start(GTK_BOX(filter_vbox), hbox_edit, EXPAND_FALSE, FILL_FALSE, 0);
 
 	//left align the label:
 	GtkWidget* align1 = gtk_alignment_new(0.0, 0.5, 0.0, 0.0);
 	gtk_box_pack_start(GTK_BOX(hbox_edit), align1, EXPAND_FALSE, FILL_FALSE, 0);
 
 	GtkWidget* label2 = gtk_label_new("Tag");
-	gtk_misc_set_padding(GTK_MISC(label2), 5,5);
-	gtk_container_add(GTK_CONTAINER(align1), label2);	
+	gtk_misc_set_padding(GTK_MISC(label2), 5, 5);
+	gtk_container_add(GTK_CONTAINER(align1), label2);
 
 	//make the two lhs labels the same width:
 	GtkSizeGroup* size_group = gtk_size_group_new(GTK_SIZE_GROUP_HORIZONTAL);
-	gtk_size_group_add_widget(size_group, label1);
+	gtk_size_group_add_widget(size_group, label);
 	gtk_size_group_add_widget(size_group, align1);
 	
 	colour_box_new(hbox_edit);
-	return TRUE;
-}
 
+	tagshow_selector_new();
+	tag_selector_new();
 
-static GtkWidget*
-scrolled_window_new()
-{
-	GtkWidget* scroll = gtk_scrolled_window_new(NULL, NULL); //adjustments created automatically.
-	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
-	return scroll;
+	return filter_vbox;
 }
 
 
@@ -977,7 +1085,7 @@ on_category_set_clicked(GtkComboBox *widget, gpointer user_data)
 	//selected category?
 	gchar* category = gtk_combo_box_get_active_text(GTK_COMBO_BOX(window.category));
 
-	GtkTreeSelection* selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(app.view));
+	GtkTreeSelection* selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(app.libraryview->widget));
 	GList* selectionlist = gtk_tree_selection_get_selected_rows(selection, NULL);
 	if(!selectionlist){ dbg(0, "no files selected."); statusbar_print(1, "no files selected."); return; }
 
@@ -1030,7 +1138,9 @@ show_waveform(gboolean enable)
 		waveform_view_set_gl(window_get_gl_context());
 		app.waveform = (GtkWidget*)waveform_view_new(NULL);
 #endif
-		gtk_box_pack_start(GTK_BOX(window.vbox), app.waveform, EXPAND_FALSE, FILL_TRUE, 0);
+		//gtk_box_pack_start(GTK_BOX(window.vbox), app.waveform, EXPAND_FALSE, FILL_TRUE, 0);
+		//TODO this used FILL_TRUE but PACK2 uses FILL_FALSE.
+		PACK2(app.waveform, GDL_DOCK_ITEM(gtk_widget_get_parent(window.file_man)), GDL_DOCK_BOTTOM, "waveform", "Waveform", window.vbox);
 		gtk_widget_set_size_request(app.waveform, 100, 96);
 	}
 
@@ -1154,6 +1264,14 @@ k_delete_row(GtkAccelGroup* _, gpointer user_data)
 {
 	delete_selected_rows();
 }
+
+
+static void
+k_save_dock(GtkAccelGroup* _, gpointer user_data)
+{
+	PF0;
+}
+
 
 #ifdef USE_OPENGL
 /*   Returns a global GdkGLContext that can be used to share

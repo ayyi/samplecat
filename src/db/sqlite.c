@@ -4,12 +4,8 @@
 #include <sqlite3.h>
 #include <gtk/gtk.h>
 #include <gdk-pixbuf/gdk-pixdata.h>
+#include "debug/debug.h"
 #include "typedefs.h"
-#include <gimp/gimpaction.h>
-#include <gimp/gimpactiongroup.h>
-
-#include "utils/ayyi_utils.h"
-#include "types.h"
 #include "sample.h"
 #include "db/db.h"
 #include "db/sqlite.h"

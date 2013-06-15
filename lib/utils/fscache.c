@@ -27,6 +27,7 @@
  */
 
 #include <gtk/gtk.h>
+#include "debug/debug.h"
 #include "utils/ayyi_utils.h"
 #include "typedefs.h"
 #include "fscache.h"

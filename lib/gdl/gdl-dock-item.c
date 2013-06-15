@@ -506,10 +506,8 @@ gdl_dock_item_set_property  (GObject      *g_object,
         }
         case PROP_PREFERRED_WIDTH:
             item->_priv->preferred_width = g_value_get_int (value);
-			//dbg(0, "%s: width=%i", GDL_DOCK_OBJECT(item)->name, item->_priv->preferred_width);
             break;
         case PROP_PREFERRED_HEIGHT:
-			//dbg(0, "height=%i", item->_priv->preferred_height);
             item->_priv->preferred_height = g_value_get_int (value);
             break;
         default:
@@ -540,11 +538,9 @@ gdl_dock_item_get_property  (GObject      *g_object,
             g_value_set_boolean (value, !GDL_DOCK_ITEM_NOT_LOCKED (item));
             break;
         case PROP_PREFERRED_WIDTH:
-			//dbg(0, "%s: width=%i", GDL_DOCK_OBJECT(item)->name, item->_priv->preferred_width);
             g_value_set_int (value, item->_priv->preferred_width);
             break;
         case PROP_PREFERRED_HEIGHT:
-			//dbg(0, "height=%i", item->_priv->preferred_height);
             g_value_set_int (value, item->_priv->preferred_height);
             break;
         default:
@@ -1204,7 +1200,7 @@ gdl_dock_item_dock (GdlDockObject    *object,
                     GdlDockPlacement  position,
                     GValue           *other_data)
 {
-PF0;
+	PF;
     GdlDockObject *new_parent = NULL;
     GdlDockObject *parent, *requestor_parent;
     gboolean       add_ourselves_first = FALSE;
@@ -1217,14 +1213,14 @@ PF0;
     parent = gdl_dock_object_get_parent_object (object);
     gdl_dock_item_preferred_size (GDL_DOCK_ITEM (requestor), &req);
     gdl_dock_item_preferred_size (GDL_DOCK_ITEM (object), &object_req);
-dbg(0, "target: height=%i", object_req.height);
+dbg(1, "target: height=%i", object_req.height);
     if (GDL_IS_DOCK_ITEM (parent))
         gdl_dock_item_preferred_size (GDL_DOCK_ITEM (parent), &parent_req);
     else
     {
         parent_req.height = GTK_WIDGET (parent)->allocation.height;
         parent_req.width = GTK_WIDGET (parent)->allocation.width;
-dbg(0, "parent: height=%i %i", parent_req.height, GTK_WIDGET (parent)->requisition.height);
+dbg(1, "parent: height=%i %i", parent_req.height, GTK_WIDGET (parent)->requisition.height);
 		if(!gtk_widget_get_realized((GtkWidget*)parent)) gwarn("using allocation of unrealized widget");
     }
     
@@ -1242,14 +1238,14 @@ dbg(0, "parent: height=%i %i", parent_req.height, GTK_WIDGET (parent)->requisiti
             }
             if (req.height < 2)
             {
-				dbg(0, "req.height _not_ set. using width from object_req: %i", object_req.height);
+				dbg(1, "req.height _not_ set. using width from object_req: %i", object_req.height);
                 req.height = NEW_DOCK_ITEM_RATIO * object_req.height;
                 g_object_set (requestor, "preferred-height", req.height, NULL);
             }
             if (req.width > 1)
                 g_object_set (object, "preferred-width", req.width, NULL);
             if (req.height > 1) {
-                dbg(0, "req.height _is_ set: %i", req.height);
+                dbg(1, "req.height _is_ set: %i", req.height);
                 if(object_req.height - req.height > 0) {
                     g_object_set (object, "preferred-height", object_req.height - req.height, NULL);
                 } else {
@@ -1266,19 +1262,19 @@ dbg(0, "parent: height=%i %i", parent_req.height, GTK_WIDGET (parent)->requisiti
             }
             if (req.width < 2)
             {
-				dbg(0, "req.width _not_ set. using width from object_req: %i", object_req.width);
+				dbg(1, "req.width _not_ set. using width from object_req: %i", object_req.width);
                 req.width = NEW_DOCK_ITEM_RATIO * object_req.width;
                 g_object_set (requestor, "preferred-width", req.width, NULL);
             }
             if (req.height > 1)
                 g_object_set (object, "preferred-height", req.height, NULL);
-            if (req.width > 1) dbg(0, "req.width _is_ set: %i", req.width);
+            if (req.width > 1) dbg(1, "req.width _is_ set: %i", req.width);
             if (req.width > 1)
                 g_object_set (object, "preferred-width",
                           object_req.width - req.width, NULL);
             break;
         case GDL_DOCK_CENTER:
-dbg(0, "CENTER");
+dbg(1, "CENTER");
             if (req.height < 2)
             {
                 req.height = object_req.height;
@@ -1310,7 +1306,7 @@ dbg(0, "CENTER");
         case GDL_DOCK_TOP:
         case GDL_DOCK_BOTTOM:
             /* get a paned style dock object */
-dbg(0, "creating new VPaned: height=%i", object_req.height);
+dbg(1, "creating new VPaned: height=%i", object_req.height);
             new_parent = g_object_new (gdl_dock_object_type_from_nick ("paned"),
                                        "orientation", GTK_ORIENTATION_VERTICAL,
                                        "preferred-width", object_req.width,
@@ -1318,7 +1314,7 @@ dbg(0, "creating new VPaned: height=%i", object_req.height);
                                        NULL);
             add_ourselves_first = (position == GDL_DOCK_BOTTOM);
             if (parent)
-				dbg(0, "GDL_DOCK_TOP/BOTTOM: creating new VPaned: setting height from parent: %i", parent_req.height);
+				dbg(1, "GDL_DOCK_TOP/BOTTOM: creating new VPaned: setting height from parent: %i", parent_req.height);
             if (parent)
                 available_space = parent_req.height;
             pref_size = req.height;
@@ -1334,9 +1330,9 @@ dbg(0, "creating new VPaned: height=%i", object_req.height);
             if(parent)
                 available_space = parent_req.width;
             if(parent)
-				dbg(0, "available_space set from parent_req.width: %i", available_space);
+				dbg(1, "available_space set from parent_req.width: %i", available_space);
             pref_size = req.width;
-dbg(0, "GDL_DOCK_LEFT/RIGHT: pref_size set from req.width");
+dbg(1, "GDL_DOCK_LEFT/RIGHT: pref_size set from req.width");
             break;
         case GDL_DOCK_CENTER:
             /* If the parent is already a DockNotebook, we don't need
@@ -1386,12 +1382,12 @@ dbg(0, "GDL_DOCK_LEFT/RIGHT: pref_size set from req.width");
         if (add_ourselves_first) {
             gtk_container_add (GTK_CONTAINER (new_parent), GTK_WIDGET (object));
             gtk_container_add (GTK_CONTAINER (new_parent), GTK_WIDGET (requestor));
-dbg(0, "new_parent: available_space=%i pref_size=%i", available_space, pref_size);
+dbg(1, "new_parent: available_space=%i pref_size=%i", available_space, pref_size);
             splitpos = available_space - pref_size;
         } else {
             gtk_container_add (GTK_CONTAINER (new_parent), GTK_WIDGET (requestor));
             gtk_container_add (GTK_CONTAINER (new_parent), GTK_WIDGET (object));
-dbg(0, "new_parent: pref_size=%i", pref_size);
+dbg(1, "new_parent: pref_size=%i", pref_size);
             splitpos = pref_size;
         }
 
@@ -1411,12 +1407,12 @@ dbg(0, "new_parent: pref_size=%i", pref_size);
         if (position != GDL_DOCK_CENTER && other_data &&
             G_VALUE_HOLDS (other_data, G_TYPE_UINT)) {
         
-dbg(0, "new_parent: setting split point from OTHER: %u", g_value_get_uint (other_data));
+dbg(1, "new_parent: setting split point from OTHER: %u", g_value_get_uint (other_data));
             g_object_set (G_OBJECT (new_parent),
                           "position", g_value_get_uint (other_data),
                           NULL);
         } else if (splitpos > 0 && splitpos < available_space) {
-dbg(0, "new_parent: splitpos=%i", splitpos);
+dbg(1, "new_parent: splitpos=%i", splitpos);
             g_object_set (G_OBJECT (new_parent), "position", splitpos, NULL);
         }
 		else {

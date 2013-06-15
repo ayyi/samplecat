@@ -1,4 +1,5 @@
 #include <gtk/gtk.h>
+#include "debug/debug.h"
 #include "file_manager/file_manager.h"
 #include "view_dir_tree.h"
 #include "support.h"

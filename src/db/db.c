@@ -24,7 +24,7 @@
 #include <gtk/gtk.h>
 #include <gdk-pixbuf/gdk-pixdata.h>
 #include "typedefs.h"
-#include "utils/ayyi_utils.h"
+#include "debug/debug.h"
 #include "sample.h"
 #ifdef USE_MYSQL
 #include "db/mysql.h"

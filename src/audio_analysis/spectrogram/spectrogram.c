@@ -50,6 +50,7 @@
 #include <gtk/gtk.h>
 #include <glib/gstdio.h>
 
+#include "debug/debug.h"
 #include "typedefs.h"
 #include "support.h"
 

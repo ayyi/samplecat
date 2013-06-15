@@ -35,6 +35,7 @@
 #include <sys/stat.h>
 #include <gtk/gtk.h>
 
+#include "debug/debug.h"
 #include "utils/ayyi_utils.h"
 #include "utils/fscache.h"
 #include "mime_type.h"

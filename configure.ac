@@ -53,6 +53,7 @@ AC_ARG_ENABLE(webkit,   AS_HELP_STRING([--enable-webkit], [build with webkit sup
 AC_ARG_ENABLE(opengl,   AC_HELP_STRING([--disable-opengl], [disable use of OpenGL]),enable_opengl=$enableval,enable_opengl="auto")
 AC_ARG_ENABLE(fftw,     AC_HELP_STRING([--disable-fftw], [disable usage of FFTW ]),enable_fftw=$enableval,enable_fftw="auto")
 AC_ARG_ENABLE(vala,     AC_HELP_STRING([--disable-vala], [disable usage of Vala. Vala is only needed for developers ]), enable_vala=$enableval, enable_vala="auto")
+AC_ARG_ENABLE(dock,     AC_HELP_STRING([--disable-dock], [disable usage of Gdl-dock ]), enable_dock=$enableval, enable_dock="auto")
 
 case $target_os in
 	*darwin*)
@@ -131,7 +132,6 @@ AC_SUBST(GTHREAD_CFLAGS)
 AC_SUBST(GTHREAD_LIBS)
 
 dnl -----------------------------------------------------------------------------
-dnl XXX mysql detection requires some cleanup
 
 if test x$enable_mysql = xno ; then
 	:
@@ -231,8 +231,8 @@ fi
 dnl -----------------------------------------------------------------------------
 
 AS_IF([test "$enable_ayyidbus" != "no"], [
-       PKG_CHECK_MODULES(DBUS, dbus-glib-1, enable_ayyidbus="yes", enable_ayyidbus="no")
-       ])
+	PKG_CHECK_MODULES(DBUS, dbus-glib-1, enable_ayyidbus="yes", enable_ayyidbus="no")
+	])
 AC_SUBST(DBUS_CFLAGS)
 AC_SUBST(DBUS_LIBS)
 if test "$enable_ayyidbus" = "yes"; then
@@ -243,15 +243,15 @@ AM_CONDITIONAL(ENABLE_AYYIDBUS, [test "$enable_ayyidbus" = "yes"])
 dnl -----------------------------------------------------------------------------
 
 AS_IF([test "$enable_ayyi" = "yes"], [
-       PKG_CHECK_MODULES(AYYI, libayyi, AC_DEFINE(USE_AYYI,1,[Use ayyi]), enable_ayyi="no")
-       ])
+	PKG_CHECK_MODULES(AYYI, libayyi, AC_DEFINE(USE_AYYI,1,[Use ayyi]), enable_ayyi="no")
+	])
 AC_SUBST(AYYI_LIBS)
 AM_CONDITIONAL(ENABLE_AYYI, [test "$enable_ayyi" = "yes"])
 
 dnl -----------------------------------------------------------------------------
 
 AS_IF([test "$enable_jack" != "no"], [
-	    PKG_CHECK_MODULES(JACK, jack,enable_jack=yes, enable_jack=no)
+	PKG_CHECK_MODULES(JACK, jack,enable_jack=yes, enable_jack=no)
 	], [true])
 
 AC_SUBST(JACK_CFLAGS)
@@ -331,8 +331,8 @@ AC_SUBST(TRACKER_LIBS)
 dnl -----------------------------------------------------------------------------
 
 AS_IF([test "$enable_sqlite" != "no"],[
-       PKG_CHECK_MODULES(SQLITE, sqlite3, AC_DEFINE(USE_SQLITE, 1, Use sqlite backend) enable_sqlite="yes", enable_sqlite="no")
-       ])
+	PKG_CHECK_MODULES(SQLITE, sqlite3, AC_DEFINE(USE_SQLITE, 1, Use sqlite backend) enable_sqlite="yes", enable_sqlite="no")
+])
 AM_CONDITIONAL(ENABLE_SQLITE, test "$enable_sqlite" = "yes")
 AC_SUBST(SQLITE_CFLAGS)
 AC_SUBST(SQLITE_LIBS)
@@ -340,8 +340,8 @@ AC_SUBST(SQLITE_LIBS)
 dnl -----------------------------------------------------------------------------
 
 AS_IF([test "$enable_mx" = "yes"],
-       [PKG_CHECK_MODULES(MX, mx-1.0, AC_DEFINE(USE_MX, 1, Use mx widget toolkit) enable_mx="yes", enable_mx="no")],
-       [enable_mx="no"]
+	[PKG_CHECK_MODULES(MX, mx-1.0, AC_DEFINE(USE_MX, 1, Use mx widget toolkit) enable_mx="yes", enable_mx="no")],
+	[enable_mx="no"]
 )
 AM_CONDITIONAL(ENABLE_MX, test "$enable_mx" = "yes")
 AC_SUBST(MX_CFLAGS)
@@ -350,8 +350,8 @@ AC_SUBST(MX_LDFLAGS)
 dnl -----------------------------------------------------------------------------
 
 AS_IF([test "$enable_webkit" = "yes"],[
-       PKG_CHECK_MODULES(WEBKIT, webkit-1.0, AC_DEFINE(USE_WEBKIT, 1, Use experimental Webkit interface) enable_webkit="yes", enable_webkit="no")
-       ], [enable_webkit="no"])
+	PKG_CHECK_MODULES(WEBKIT, webkit-1.0, AC_DEFINE(USE_WEBKIT, 1, Use experimental Webkit interface) enable_webkit="yes", enable_webkit="no")
+	], [enable_webkit="no"])
 AM_CONDITIONAL(ENABLE_WEBKIT, test "$enable_webkit" = "yes")
 AC_SUBST(WEBKIT_CFLAGS)
 AC_SUBST(WEBKIT_LDFLAGS)
@@ -359,9 +359,9 @@ AC_SUBST(WEBKIT_LDFLAGS)
 dnl -----------------------------------------------------------------------------
 
 AS_IF([test "$enable_opengl" != "no"], [
-       PKG_CHECK_MODULES(OPENGL, gtkglext-1.0, [AC_DEFINE(USE_OPENGL, 1, Opengl features are enabled)])
-       enable_opengl="yes"
-       ])
+	PKG_CHECK_MODULES(OPENGL, gtkglext-1.0, [AC_DEFINE(USE_OPENGL, 1, Opengl features are enabled)])
+	enable_opengl="yes"
+])
 AC_SUBST(OPENGL_CFLAGS)
 AC_SUBST(OPENGL_LDIBS)
 AM_CONDITIONAL(ENABLE_OPENGL, test "$enable_opengl" = "yes")
@@ -392,6 +392,21 @@ fi
 
 dnl -----------------------------------------------------------------------------
 
+if test "$enable_dock" = "auto"; then
+	enable_dock="yes"
+fi
+if test "$enable_dock" = "yes"; then
+	AC_DEFINE(USE_GDL, 1, Use Gdl-dock)
+fi
+AM_CONDITIONAL(ENABLE_GDL, test "$enable_dock" = "yes")
+AC_SUBST(GDL_CFLAGS)
+
+PKG_CHECK_MODULES(XML, libxml-2.0 >= 2.2.8)
+AC_SUBST(XML_CFLAGS)
+AC_SUBST(XML_LIBS)
+
+dnl -----------------------------------------------------------------------------
+
 dnl TODO vala is not needed when compiling from tarball so this should probably be used in conjunction with --enable-maintainer-mode
 
 AS_IF([test "$enable_vala" != "no"], [
@@ -410,11 +425,13 @@ CFLAGS="$CFLAGS -pipe  -fmessage-length=139 -fdiagnostics-show-location=every-li
 AC_CONFIG_FILES([Makefile])
 AC_CONFIG_FILES([lib/Makefile])
 AC_CONFIG_FILES([lib/utils/Makefile])
+AC_CONFIG_FILES([lib/debug/Makefile])
 AC_CONFIG_FILES([lib/xdgmime/Makefile])
 AC_CONFIG_FILES([lib/file_manager/Makefile])
 AC_CONFIG_FILES([lib/file_manager/filetypes/Makefile])
 AC_CONFIG_FILES([lib/file_manager/vala/Makefile])
 AC_CONFIG_FILES([lib/dir_tree/Makefile])
+AC_CONFIG_FILES([lib/gdl/Makefile])
 AC_CONFIG_FILES([src/Makefile])
 AC_CONFIG_FILES([src/db/Makefile])
 AC_CONFIG_FILES([src/gimp/Makefile])
@@ -454,6 +471,7 @@ AC_MSG_RESULT([Building inotify support:     $ac_cv_header_sys_inotify_h])
 AC_MSG_RESULT([Building opengl support:      $enable_opengl])
 AC_MSG_RESULT([Building libass support:      $enable_libass])
 AC_MSG_RESULT([Building ayyi support:        $enable_ayyi])
+AC_MSG_RESULT([Building dock support:        $enable_dock])
 AC_MSG_RESULT([])
 
 if test "$enable_mx" = "yes" -o "$enable_webkit" = "yes" -o "$enable_sf2" = "yes" -o "$enable_nks" = "yes"; then

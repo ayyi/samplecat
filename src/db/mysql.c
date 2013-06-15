@@ -1,6 +1,6 @@
 /*
   This file is part of Samplecat. http://samplecat.orford.org
-  copyright (C) 2007-2012 Tim Orford and others.
+  copyright (C) 2007-2013 Tim Orford and others.
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License version 3
@@ -25,6 +25,7 @@
 #include <gdk-pixbuf/gdk-pixdata.h>
 #include <mysql/errmsg.h>
 #include "typedefs.h"
+#include "debug/debug.h"
 #include "utils/ayyi_utils.h"
 #include "model.h"
 #include "main.h"

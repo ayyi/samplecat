@@ -11,7 +11,6 @@
 #define dbg(A, B, ...) debug_printf(__func__, A, B, ##__VA_ARGS__)
 #define gerr(A, ...) g_critical("%s(): "A, __func__, ##__VA_ARGS__)
 #define gwarn(A, ...) g_warning("%s(): "A, __func__, ##__VA_ARGS__);
-#define PF {if(debug) printf("%s()...\n", __func__);}
 #define PF0 {printf("%s()...\n", __func__);}
 #define PF2 {if(debug > 1) printf("%s()...\n", __func__);}
 #define PF_DONE printf("%s(): done.\n", __func__);
@@ -23,9 +22,7 @@
 #define IDLE_STOP FALSE
 #define BITS_PER_CHAR_8 8
 
-void        debug_printf             (const char* func, int level, const char* format, ...);
 void        errprintf                (char* fmt, ...);
-void        errprintf2               (const char* func, char *format, ...);
 void        errprintf3               (const char* func, char *format, ...);
 void        warnprintf               (char* format, ...);
 void        warnprintf2              (const char* func, char *format, ...);
@@ -61,8 +58,6 @@ char red      [16] = "\x1b[1;31m";
 char red_r    [16] = "\x1b[30;41m";
 char green    [16] = "\x1b[1;32m";
 char green_r  [16] = "\x1b[30;42m";
-char ayyi_warn[32] = "\x1b[1;33mwarning:\x1b[0;39m";
-char ayyi_err [32] = "\x1b[1;31merror!\x1b[0;39m";
 char go_rhs   [32] = "\x1b[A\x1b[50C"; //go up one line, then goto column 60
 char ok       [32] = " [ \x1b[1;32mok\x1b[0;39m ]";
 char fail     [32] = " [\x1b[1;31mFAIL\x1b[0;39m]";
@@ -80,8 +75,6 @@ extern char red      [16];
 extern char red_r    [16];
 extern char green    [16];
 extern char green_r  [16];
-extern char ayyi_warn[32];
-extern char ayyi_err [32];
 extern char go_rhs   [32];
 extern char ok       [];
 extern char fail     [];

@@ -23,9 +23,10 @@
 //#include <config.h>
 #include <string.h>
 #include <stdint.h>
+#include <gtk/gtk.h>
+#include "debug/debug.h"
 #include "cellrenderer_hypertext.h"
 
-#include <gtk/gtk.h>
 #include "typedefs.h"
 #include "support.h"
 #include "main.h"
@@ -310,7 +311,7 @@ gtk_cell_renderer_hyper_text_render(GtkCellRenderer      *cell,
                                                  //               state = GTK_STATE_NORMAL;
 
 			/*
-        gint row_num = treecell_get_row(widget, cell_area);
+        gint row_num = treecell_get_row(app.libraryview->widget, cell_area);
 		if ( row_num != prev_row_num ) {
 			//printf("gtk_cell_renderer_hyper_text_render() new row (%i)! cell=%p %s\n", row_num, celltext->text, celltext->text);
 

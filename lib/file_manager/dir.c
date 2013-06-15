@@ -57,6 +57,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "debug/debug.h"
 #include "utils/ayyi_utils.h"
 #include "file_manager.h"
 #include "rox_global.h"

@@ -33,6 +33,7 @@
 
 #include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
+#include "debug/debug.h"
 
 #include "file_manager.h"
 #include "utils/fscache.h"
@@ -1987,7 +1988,6 @@ filer_next_thumb_real(GObject *window)
 {
 	Filer *filer_window;
 	gchar	*path;
-	int	done, total;
 
 	filer_window = g_object_get_data(window, "filer_window");
 
@@ -2004,8 +2004,8 @@ filer_next_thumb_real(GObject *window)
 		return FALSE;
 	}
 
-	total = filer_window->max_thumbs;
-	done = total - g_list_length(filer_window->thumb_queue);
+	int total = filer_window->max_thumbs;
+	//int done = total - g_list_length(filer_window->thumb_queue);
 
 	path = (gchar *) filer_window->thumb_queue->data;
 

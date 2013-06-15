@@ -28,6 +28,7 @@
 #include <string.h>
 #include <sys/stat.h>
 
+#include "debug/debug.h"
 #include "utils/ayyi_utils.h"
 #include "file_manager.h"
 

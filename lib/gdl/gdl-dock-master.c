@@ -668,7 +668,6 @@ gdl_dock_master_layout_changed (GdlDockMaster *master)
 static gboolean
 idle_emit_layout_changed (gpointer user_data)
 {
-PF0;
     GdlDockMaster *master = user_data;
 
     g_return_val_if_fail (master && GDL_IS_DOCK_MASTER (master), FALSE);

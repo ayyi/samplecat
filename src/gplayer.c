@@ -8,6 +8,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 
+#include "debug/debug.h"
 #include "typedefs.h"
 #include "support.h"
 #include "sample.h"

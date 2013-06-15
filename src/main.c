@@ -1,11 +1,13 @@
-/*
-
-Samplecat
-
-Copyright (C) Tim Orford 2007-2012
-
-This software is licensed under the GPL. See accompanying file COPYING.
-
+/**
+* +----------------------------------------------------------------------+
+* | This file is part of Samplecat. http://samplecat.orford.org          |
+* | copyright (C) 2007-2013 Tim Orford <tim@orford.org>                  |
+* +----------------------------------------------------------------------+
+* | This program is free software; you can redistribute it and/or modify |
+* | it under the terms of the GNU General Public License version 3       |
+* | as published by the Free Software Foundation.                        |
+* +----------------------------------------------------------------------+
+*
 */
 #define __main_c__
 #include "config.h"
@@ -25,6 +27,7 @@ This software is licensed under the GPL. See accompanying file COPYING.
 char * program_name;
 #endif
 
+#include "debug/debug.h"
 #include "utils/ayyi_utils.h"
 #include "utils/pixmaps.h"
 #ifdef USE_AYYI
@@ -85,7 +88,6 @@ char * program_name;
 
 
 static void       update_rows               (GtkWidget*, gpointer);
-static void       edit_row                  (GtkWidget*, gpointer);
 static GtkWidget* make_context_menu         ();
 static gboolean   can_use                   (GList*, const char*);
 static gboolean   toggle_recursive_add      (GtkWidget*, gpointer);
@@ -188,10 +190,7 @@ main(int argc, char** argv)
 	sprintf(err,    "%serror!%s", red, white);
 	sprintf(warn,   "%swarning:%s", yellow, white);
 
-	g_log_set_handler (NULL, G_LOG_LEVEL_WARNING | G_LOG_LEVEL_CRITICAL | G_LOG_FLAG_FATAL | G_LOG_FLAG_RECURSION, log_handler, NULL);
-	g_log_set_handler ("Gtk", G_LOG_LEVEL_CRITICAL | G_LOG_FLAG_FATAL | G_LOG_FLAG_RECURSION, log_handler, NULL);
-	g_log_set_handler ("Waveform", G_LOG_LEVEL_WARNING | G_LOG_LEVEL_CRITICAL | G_LOG_FLAG_FATAL, log_handler, NULL);
-	g_log_set_handler ("Agl", G_LOG_LEVEL_WARNING | G_LOG_LEVEL_CRITICAL | G_LOG_FLAG_FATAL, log_handler, NULL);
+	g_log_set_default_handler(log_handler, NULL);
 
 	app_init();
 	memset(&backend, 0, sizeof(struct _backend)); 
@@ -742,59 +741,6 @@ update_dir_node_list()
 
 
 gboolean
-mimestring_is_unsupported(char* mime_string)
-{
-	MIME_type* mime_type = mime_type_lookup(mime_string);
-	return mimetype_is_unsupported(mime_type, mime_string);
-}
-
-
-gboolean
-mimetype_is_unsupported(MIME_type* mime_type, char* mime_string)
-{
-	g_return_val_if_fail(mime_type, true);
-	int i;
-
-	/* XXX - actually ffmpeg can read audio-tracks in video-files,
-	 * application/ogg, application/annodex, application/zip may contain audio
-	 * ...
-	 */
-	char supported[][64] = {
-		"application/ogg",
-		"video/x-theora+ogg"
-	};
-	for(i=0;i<G_N_ELEMENTS(supported);i++){
-		if(!strcmp(mime_string, supported[i])){
-			dbg(2, "mimetype ok: %s", mime_string);
-			return false;
-		}
-	}
-
-	if(strcmp(mime_type->media_type, "audio")){
-		return true;
-	}
-
-	char unsupported[][64] = {
-		"audio/csound", 
-		"audio/midi", 
-		"audio/prs.sid",
-		"audio/telephone-event",
-		"audio/tone",
-		"audio/x-tta", 
-		"audio/x-speex",
-		"audio/x-musepack"
-	};
-	for(i=0;i<G_N_ELEMENTS(unsupported);i++){
-		if(!strcmp(mime_string, unsupported[i])){
-			return true;
-		}
-	}
-	dbg(2, "mimetype ok: %s", mime_string);
-	return false;
-}
-
-
-gboolean
 add_file(char* path)
 {
 	/*
@@ -925,9 +871,9 @@ on_ebur128_done(gpointer _sample)
 void
 delete_selected_rows()
 {
-	GtkTreeModel* model = gtk_tree_view_get_model(GTK_TREE_VIEW(app.view));
+	GtkTreeModel* model = gtk_tree_view_get_model(GTK_TREE_VIEW(app.libraryview->widget));
 
-	GtkTreeSelection* selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(app.view));
+	GtkTreeSelection* selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(app.libraryview->widget));
 	GList* selectionlist = gtk_tree_selection_get_selected_rows(selection, &(model));
 	if(!selectionlist){ perr("no files selected?\n"); return; }
 	dbg(1, "%i rows selected.", g_list_length(selectionlist));
@@ -989,7 +935,7 @@ update_rows(GtkWidget* widget, gpointer user_data)
 	GtkTreeModel* model = GTK_TREE_MODEL(app.store);
 	gboolean force_update = (GPOINTER_TO_INT(user_data)==2)?true:false; // NOTE - linked to order in _menu_def[]
 
-	GtkTreeSelection* selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(app.view));
+	GtkTreeSelection* selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(app.libraryview->widget));
 	GList* selectionlist = gtk_tree_selection_get_selected_rows(selection, &(model));
 	if(!selectionlist){ perr("no files selected?\n"); return; }
 	dbg(2, "%i rows selected.", g_list_length(selectionlist));
@@ -1027,61 +973,22 @@ menu_play_stop(GtkWidget* widget, gpointer user_data)
 }
 
 
-static void
-edit_row(GtkWidget* widget, gpointer user_data)
-{
-	//currently this only works for the The tags cell.
-	PF;
-	GtkTreeView* treeview = GTK_TREE_VIEW(app.view);
-
-	GtkTreeSelection* selection = gtk_tree_view_get_selection(treeview);
-	if(!selection){ perr("cannot get selection.\n");/* return;*/ }
-	GtkTreeModel* model = GTK_TREE_MODEL(app.store);
-	GList* selectionlist = gtk_tree_selection_get_selected_rows(selection, &(model));
-	if(!selectionlist){ perr("no files selected?\n"); return; }
-
-	GtkTreePath* treepath;
-	if((treepath = g_list_nth_data(selectionlist, 0))){
-		GtkTreeIter iter;
-		if(gtk_tree_model_get_iter(GTK_TREE_MODEL(app.store), &iter, treepath)){
-			gchar* path_str = gtk_tree_model_get_string_from_iter(GTK_TREE_MODEL(app.store), &iter);
-			dbg(2, "path=%s", path_str);
-
-			GtkTreeViewColumn* focus_column = app.col_tags;
-			GtkCellRenderer*   focus_cell   = app.cell_tags;
-			//g_signal_handlers_block_by_func(app.view, cursor_changed, self);
-			gtk_widget_grab_focus(app.view);
-			gtk_tree_view_set_cursor_on_cell(GTK_TREE_VIEW(app.view), treepath,
-			                                 focus_column, //GtkTreeViewColumn *focus_column - this needs to be set for start_editing to work.
-			                                 focus_cell,   //the cell to be edited.
-			                                 START_EDITING);
-			//g_signal_handlers_unblock_by_func(treeview, cursor_changed, self);
-
-			g_free(path_str);
-		} else perr("cannot get iter.\n");
-		gtk_tree_path_free(treepath);
-	}
-	g_list_free(selectionlist);
-}
-
-
 static MenuDef _menu_def[] = {
-	{"Delete",         G_CALLBACK(menu_delete_row), GTK_STOCK_DELETE,      true},
-	{"Update",         G_CALLBACK(update_rows),     GTK_STOCK_REFRESH,     true},
+	{"Delete",         G_CALLBACK(menu_delete_row),         GTK_STOCK_DELETE,      true},
+	{"Update",         G_CALLBACK(update_rows),             GTK_STOCK_REFRESH,     true},
 #if 0 // what? is the same as above
-	{"Force Update",   G_CALLBACK(update_rows),     GTK_STOCK_REFRESH,     true},
+	{"Force Update",   G_CALLBACK(update_rows),             GTK_STOCK_REFRESH,     true},
 #endif
-	{"Reset Colours",  G_CALLBACK(listview__reset_colours),
-	                                                GTK_STOCK_OK, true},
-	{"Edit tags",      G_CALLBACK(edit_row),        GTK_STOCK_EDIT,        true},
-	{"Open",           G_CALLBACK(edit_row),        GTK_STOCK_OPEN,       false},
-	{"Open Directory", G_CALLBACK(NULL),            GTK_STOCK_OPEN,        true},
+	{"Reset Colours",  G_CALLBACK(listview__reset_colours), GTK_STOCK_OK, true},
+	{"Edit tags",      G_CALLBACK(listview__edit_row),      GTK_STOCK_EDIT,        true},
+	{"Open",           G_CALLBACK(listview__edit_row),      GTK_STOCK_OPEN,       false},
+	{"Open Directory", G_CALLBACK(NULL),                    GTK_STOCK_OPEN,        true},
 	{"",                                                                       },
-	{"Play All",       G_CALLBACK(menu_play_all),   GTK_STOCK_MEDIA_PLAY,  true},
-	{"Stop Playback",  G_CALLBACK(menu_play_stop),  GTK_STOCK_MEDIA_STOP,  true},
+	{"Play All",       G_CALLBACK(menu_play_all),           GTK_STOCK_MEDIA_PLAY,  true},
+	{"Stop Playback",  G_CALLBACK(menu_play_stop),          GTK_STOCK_MEDIA_STOP,  true},
 	{"",                                                                       },
-	{"View",           G_CALLBACK(NULL),            GTK_STOCK_PREFERENCES, true},
-	{"Prefs",          G_CALLBACK(NULL),            GTK_STOCK_PREFERENCES, true},
+	{"View",           G_CALLBACK(NULL),                    GTK_STOCK_PREFERENCES, true},
+	{"Prefs",          G_CALLBACK(NULL),                    GTK_STOCK_PREFERENCES, true},
 };
 
 static GtkWidget*
@@ -1401,7 +1308,7 @@ config_save()
 
 		g_key_file_set_value(app.key_file, "Samplecat", "icon_theme", theme_name);
 
-		GtkTreeViewColumn* column = gtk_tree_view_get_column(GTK_TREE_VIEW(app.view), 1);
+		GtkTreeViewColumn* column = gtk_tree_view_get_column(GTK_TREE_VIEW(app.libraryview->widget), 1);
 		int column_width = gtk_tree_view_column_get_width(column);
 		snprintf(value, 255, "%i", column_width);
 		g_key_file_set_value(app.key_file, "Samplecat", "col1_width", value);
