@@ -734,7 +734,6 @@ dock_cb (GdlDockObject    *object,
          GValue           *other_data,
          gpointer          user_data)
 {
-PF0;
     GdlDockPlacement    pos = GDL_DOCK_NONE;
     GdlDockPlaceholder *ph;
     
@@ -785,7 +784,6 @@ static void
 connect_host (GdlDockPlaceholder *ph,
               GdlDockObject      *new_host)
 {
-PF0;
     if (ph->_priv->host)
         disconnect_host (ph);
     

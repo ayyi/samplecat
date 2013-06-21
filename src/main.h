@@ -91,10 +91,10 @@ struct _app
 	GNode*               dir_tree;
 	GtkWidget*           dir_treeview;
 	ViewDirTree*         dir_treeview2;
-	GtkWidget*           vpaned;        //vertical divider on lhs between the dir_tree and inspector
-	GtkWidget*           pcpaned;
-
 	GtkWidget*           fm_view;
+#ifndef USE_GDL
+	GtkWidget*           vpaned;        //vertical divider on lhs between the dir_tree and inspector
+#endif
 
 	GdkColor             fg_colour;
 	GdkColor             bg_colour;

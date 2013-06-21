@@ -15,6 +15,8 @@ struct _libraryview {
    GtkTreeViewColumn* col_path;
    GtkTreeViewColumn* col_pixbuf;
    GtkTreeViewColumn* col_tags;
+
+   int                selected;
 };
 
 void        listview__new                        ();

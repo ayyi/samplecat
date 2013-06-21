@@ -38,6 +38,7 @@ sample_new()
 	return sample;
 }
 
+
 Sample*
 sample_new_from_filename(char* path, gboolean path_alloced)
 {
@@ -113,6 +114,7 @@ sample_dup(Sample* s)
 	return r;
 }
 
+
 void
 sample_free(Sample* sample)
 {
@@ -131,11 +133,13 @@ sample_free(Sample* sample)
 	g_free(sample);
 }
 
+
 void
 sample_ref(Sample* sample)
 {
 	sample->ref_count++;
 }
+
 
 void
 sample_unref(Sample* sample)

@@ -1,5 +1,5 @@
-#ifndef __HAVE_SAMPLE_H_
-#define __HAVE_SAMPLE_H_
+#ifndef __have_sample_h__
+#define __have_sample_h__
 
 #include <stdlib.h>
 #include <stdint.h>

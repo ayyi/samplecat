@@ -93,7 +93,8 @@ static void       menu__play                      (GtkMenuItem*, gpointer);
 static void       make_menu_actions               (struct _accel[], int, void (*add_to_menu)(GtkAction*));
 static gboolean   on_dir_tree_link_selected       (GObject*, DhLink*, gpointer);
 static GtkWidget* message_panel__new              ();
-static GtkWidget* left_pane                       ();
+static GtkWidget* dir_panel_new                   ();
+static GtkWidget* left_pane2                      ();
 static void       on_layout_changed               ();
 static void       update_waveform_view            (Sample*);
 
@@ -257,19 +258,35 @@ GtkWindow
 	gtk_widget_set_size_request(main_vpaned, 20, 20);
 	gtk_container_add(GTK_CONTAINER(align1), main_vpaned);
 
+#ifndef USE_GDL
 	GtkWidget* hpaned = gtk_hpaned_new();
 	gtk_paned_set_position(GTK_PANED(hpaned), 210);
 	gtk_paned_add1(GTK_PANED(main_vpaned), hpaned);
 
-	GtkWidget* left = left_pane();
+	GtkWidget* left = app.vpaned = gtk_vpaned_new();
 	gtk_paned_add1(GTK_PANED(hpaned), left);
+
+	GtkWidget* pcpaned = gtk_vpaned_new();
+	gtk_paned_add1(GTK_PANED(app.vpaned), pcpaned);
+#endif
+
+	GtkWidget* dir_tree = dir_panel_new();
+	left_pane2();
+#ifdef USE_GDL
+#warning TODO player
+#else
+	if (app.auditioner->status && app.auditioner->seek) 
+		gtk_paned_add2(GTK_PANED(pcpaned), app.playercontrol->widget);
+#endif
+
+#ifndef USE_GDL
+	gtk_paned_add1(GTK_PANED(pcpaned), dir_tree);
 
 	GtkWidget* rhs_vbox = gtk_vbox_new(NON_HOMOGENOUS, 0);
 	gtk_paned_add2(GTK_PANED(hpaned), rhs_vbox);
 
 	gtk_box_pack_start(GTK_BOX(rhs_vbox), message_panel__new(), EXPAND_FALSE, FILL_FALSE, 0);
 
-#ifndef USE_GDL
 	//split the rhs in two:
 	GtkWidget* r_vpaned = gtk_vpaned_new();
 	gtk_paned_set_position(GTK_PANED(r_vpaned), 300);
@@ -391,7 +408,7 @@ GtkWindow
 	PACK(window.file_man, GDL_DOCK_BOTTOM, 216, default_heights.file, "files", "Files", main_vpaned);
 
 	PACK2(app.inspector->widget, GDL_DOCK_ITEM(gtk_widget_get_parent(app.libraryview->scroll)), GDL_DOCK_LEFT, "inspector", "Inspector", app.vpaned);
-	PACK2(window.dir_tree, GDL_DOCK_ITEM(gtk_widget_get_parent(app.inspector->widget)), GDL_DOCK_TOP, "directories", "Directories", app.pcpaned);
+	PACK2(window.dir_tree, GDL_DOCK_ITEM(gtk_widget_get_parent(app.inspector->widget)), GDL_DOCK_TOP, "directories", "Directories", pcpaned);
 
 #ifdef USE_OPENGL
 	if(app.view_options[SHOW_WAVEFORM].value){
@@ -656,24 +673,20 @@ window_on_destroy(GtkWidget* widget, gpointer user_data)
 
 
 static GtkWidget*
-left_pane()
+dir_panel_new()
 {
-	app.vpaned = gtk_vpaned_new();
-
-	GtkWidget* pcpaned = app.pcpaned = gtk_vpaned_new();
-	gtk_paned_add1(GTK_PANED(app.vpaned), pcpaned);
+	GtkWidget* widget = NULL;
 
 	if(!BACKEND_IS_NULL){
 #ifndef NO_USE_DEVHELP_DIRTREE
 		GtkWidget* tree = _dir_tree_new();
-		window.dir_tree = scrolled_window_new();
+		widget = window.dir_tree = scrolled_window_new();
 		gtk_container_add((GtkContainer*)window.dir_tree, tree);
 		g_signal_connect(tree, "link-selected", G_CALLBACK(on_dir_tree_link_selected), NULL);
 #else
 		GtkWidget* tree = _dir_tree_new();
-		GtkWidget* scroll = scrolled_window_new();
-		gtk_container_add((GtkContainer*)scroll, tree);
-		gtk_paned_add1(GTK_PANED(pcpaned), scroll);
+		widget = scrolled_window_new();
+		gtk_container_add((GtkContainer*)widget, tree);
 #endif
 	}
 
@@ -684,11 +697,17 @@ left_pane()
 		GtkWidget* tree = dir_list->widget;
 	}
 	gint expand = TRUE;
-	ViewDirTree *dir_list = vdtree_new(app.home_dir, expand);
-	GtkWidget* tree = dir_list->widget;
-	gtk_paned_add1(GTK_PANED(pcpaned), tree);
+	ViewDirTree* dir_list = vdtree_new(app.home_dir, expand);
+	widget = dir_list->widget;
 #endif
 
+	return widget;
+}
+
+
+static GtkWidget*
+left_pane2()
+{
 	/*
 	void on_inspector_allocate(GtkWidget* widget, GtkAllocation* allocation, gpointer user_data)
 	{
@@ -710,12 +729,11 @@ left_pane()
 	player_control_new();
 	if(!app.view_options[SHOW_PLAYER].value)
 		gtk_widget_set_no_show_all(app.playercontrol->widget, true);
-	if (app.auditioner->status && app.auditioner->seek) 
-		gtk_paned_add2(GTK_PANED(pcpaned), app.playercontrol->widget);
 
 	inspector_new();
 	//g_signal_connect(app.inspector->widget, "size-allocate", (gpointer)on_inspector_allocate, NULL);
 
+#ifndef USE_GDL
 	void on_vpaned_allocate(GtkWidget* widget, GtkAllocation* vp_allocation, gpointer user_data)
 	{
 		static int previous_height = 0;
@@ -746,7 +764,8 @@ left_pane()
 	}
 
 	g_signal_connect(app.vpaned, "size-allocate", (gpointer)on_vpaned_allocate, NULL);
-	return app.vpaned;
+#endif
+	return NULL;
 }
 
 
@@ -1034,7 +1053,7 @@ menu__play(GtkMenuItem* menuitem, gpointer user_data)
 static void
 make_menu_actions(struct _accel keys[], int count, void (*add_to_menu)(GtkAction*))
 {
-	//takes the raw definitions and creates actions and optionally menu items for them.
+	// take the raw definitions and create actions and (optionally) menu items for them.
 
 	GtkActionGroup* group = gtk_action_group_new("File Manager");
 	accel_group = gtk_accel_group_new();
@@ -1080,7 +1099,8 @@ on_dir_tree_link_selected(GObject *ignored, DhLink *link, gpointer data)
 static void
 on_category_set_clicked(GtkComboBox *widget, gpointer user_data)
 {
-	//add selected category to selected samples.
+	// add selected category to selected samples.
+
 	PF;
 	//selected category?
 	gchar* category = gtk_combo_box_get_active_text(GTK_COMBO_BOX(window.category));
@@ -1239,6 +1259,7 @@ on_layout_changed()
 {
 	//what is the height of the inspector?
 
+#ifndef USE_GDL
 	if(app.inspector){
 		GtkWidget* widget;
 		if((widget = app.inspector->widget)){
@@ -1253,6 +1274,7 @@ on_layout_changed()
 			}
 		}
 	}
+#endif
 
 	/* scroll to current dir in tree-view bottom left */
 	if(app.dir_treeview2) vdtree_set_path(app.dir_treeview2, app.dir_treeview2->path);
