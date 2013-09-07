@@ -1,3 +1,12 @@
+20130908
+-Makefile change to link to libtransition.
+
+20130621
+-dont emit "selection-changed" signal unless the selection really has changed.
+
+20130614
+-initial addition of gdl-dock.
+
 20130512
 -added optional libass dependency for rendering of text overlays.
 -added display of title and metadata to the waveform view.

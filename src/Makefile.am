@@ -47,6 +47,7 @@ OPENGL_SRC = gl_spectrogram_view.c gl_spectrogram_view.h
 OPENGL_LDFLAGS = \
 	$(top_srcdir)/lib/waveform/waveform/.libs/libwaveform.a \
 	$(top_srcdir)/lib/waveform/agl/.libs/libagl.a \
+	$(top_srcdir)/lib/waveform/transition/.libs/libtransition.a \
 	$(OPENGL_LIBS)
 endif
 
