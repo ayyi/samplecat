@@ -176,7 +176,7 @@ void gplayer_play_all() {
 		dbg(2, "%s", result->sample_name);
 		return FALSE; //continue
 	}
-	gtk_tree_model_foreach(GTK_TREE_MODEL(app.store), foreach_func, NULL);
+	gtk_tree_model_foreach(GTK_TREE_MODEL(app->store), foreach_func, NULL);
 	if(play_queue) play_next();
 }
 

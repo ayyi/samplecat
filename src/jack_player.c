@@ -41,8 +41,6 @@
 #include "ladspa_proc.h"
 #include "audio_decoder/ad.h"
 
-extern struct _app app;
-
 #ifdef HAVE_JACK
 
 #ifdef __APPLE__  /* weak linking on OSX */
@@ -257,7 +255,7 @@ update_playposition (int64_t decoder_position, float varispeed) {
 #else
 	const int64_t latency = floor(jack_ringbuffer_read_space(rb)/m_channels);
 #endif
-	if (!app.loop_playback || decoder_position>latency)
+	if (!app->loop_playback || decoder_position>latency)
 		play_position = decoder_position - latency;
 	else
 		play_position = m_frames+decoder_position-latency;
@@ -293,7 +291,7 @@ void *jack_player_thread(void *unused){
 #endif
 
 	int ladspaerr=0;
-	if (m_use_effect && app.enable_effect) {
+	if (m_use_effect && app->enable_effect) {
 		int i;
 		for(i=0;i<m_channels;i++) {
 			ladspaerr|= ladspah_init(myplugin[i], m_use_effect, m_effectno, 
@@ -305,7 +303,7 @@ void *jack_player_thread(void *unused){
 	} else {
 		ladspaerr=1;
 	}
-	app.effect_enabled = ladspaerr?false:true; // read-only for GUI
+	app->effect_enabled = ladspaerr?false:true; // read-only for GUI
 
 	size_t rbchunk = nframes_r * m_channels * sizeof(float);
 	play_position =0;
@@ -321,12 +319,12 @@ void *jack_player_thread(void *unused){
 		if (rv>0) decoder_position+=rv/m_channels;
 
 #ifdef JACK_MIDI
-		const float pp[3] = {app.effect_param[0], app.effect_param[1]+midi_note, app.effect_param[2]+midi_octave};
+		const float pp[3] = {app->effect_param[0], app->effect_param[1]+midi_note, app->effect_param[2]+midi_octave};
 #else
-		const float pp[3] = {app.effect_param[0], app.effect_param[1], app.effect_param[2]};
+		const float pp[3] = {app->effect_param[0], app->effect_param[1], app->effect_param[2]};
 #endif
 #if (defined ENABLE_RESAMPLING) && (defined VARISPEED)
-		const float varispeed = app.playback_speed;
+		const float varispeed = app->playback_speed;
 #if 0
 		/* note: libsamplerate slowly approaches a new sample-rate slowly
 		 * src_set_ratio() allow for immediate updates at loss of quality */
@@ -360,7 +358,7 @@ void *jack_player_thread(void *unused){
 #else
 					src_data.output_frames = floorf((float)(rv / m_channels)*m_fResampleRatio);
 #endif
-					src_data.end_of_input=app.loop_playback?0:1;
+					src_data.end_of_input = app->loop_playback ? 0 : 1;
 					src_process(src_state, &src_data);
 					bufptr = smpbuf;
 					rv = src_data.output_frames_gen * m_channels;
@@ -374,7 +372,7 @@ void *jack_player_thread(void *unused){
 				}
 				jack_ringbuffer_write(rb, (char *) bufptr, rv *  sizeof(float));
 			}
-			if (app.loop_playback) {
+			if (app->loop_playback) {
 				ad_seek(myplayer, 0);
 				decoder_position=0;
 #ifdef ENABLE_RESAMPLING
@@ -461,7 +459,7 @@ void *jack_player_thread(void *unused){
 
 	/** END OF PLAYBACK **/
 #if (defined ENABLE_RESAMPLING) && (defined VARISPEED)
-	const float varispeed = app.playback_speed;
+	const float varispeed = app->playback_speed;
 #else
 	const float varispeed = 1.0;
 #endif
@@ -475,7 +473,7 @@ void *jack_player_thread(void *unused){
 		}
 		thread_run=0;
 		player_active=0;
-		app.effect_enabled = false;
+		app->effect_enabled = false;
 		int i;
 		for(i=0;i<m_channels;i++) {
 			ladspah_deinit(myplugin[i]);
@@ -548,7 +546,7 @@ void JACKaudiooutputinit(void *sf, int channels, int samplerate, int64_t frames)
 	}
 
 #if (defined ENABLE_RESAMPLING) && !(defined VARISPEED)
-	m_fResampleRatio *= app.playback_speed; ///< fixed speed change. <1.0: speed-up, > 1.0: slow-down
+	m_fResampleRatio *= app->playback_speed; ///< fixed speed change. <1.0: speed-up, > 1.0: slow-down
 #endif
 
 	thread_run = 1;
@@ -556,7 +554,7 @@ void JACKaudiooutputinit(void *sf, int channels, int samplerate, int64_t frames)
 	sched_yield();
 
 #if 1
-	char *jack_autoconnect = app.config.jack_autoconnect;
+	char *jack_autoconnect = app->config.jack_autoconnect;
 	if(!jack_autoconnect || strlen(jack_autoconnect)<1) {
 		jack_autoconnect = (char*) "system:playback_";
 	} else if(!strncmp(jack_autoconnect,"DISABLE", 7)) {
@@ -611,7 +609,7 @@ void JACKclose() {
 	if (myplayer) ad_close(myplayer);
 	myplayer=NULL;
 	myplugin=NULL;
-	app.playing_id = 0;
+	app->playing_id = 0;
 };
 
 void JACKconnect() {
@@ -639,7 +637,7 @@ void JACKconnect() {
 	jack_activate(j_client);
 
 #ifdef JACK_MIDI
-	char *jack_midiconnect = app.config.jack_midiconnect;
+	char *jack_midiconnect = app->config.jack_midiconnect;
 	if(!jack_midiconnect || strlen(jack_midiconnect)<1) {
 		jack_midiconnect = NULL;
 	} else if(!strncmp(jack_midiconnect,"DISABLE", 7)) {
@@ -688,7 +686,7 @@ void jplay__disconnect() {
 int
 jplay__play_pathX(const char* path, int reset_pitch)
 {
-	if(app.playing_id) jplay__stop(); //stop any previous playback.
+	if(app->playing_id) jplay__stop(); //stop any previous playback.
 	if(myplayer) jplay__stop();
 
 #ifdef JACK_MIDI
@@ -703,8 +701,8 @@ jplay__play_pathX(const char* path, int reset_pitch)
 	if (!sf) return -1;
 	seek_request = -1.0;
 	JACKaudiooutputinit(sf, nfo.channels, nfo.sample_rate, nfo.frames);
-	app.playing_id = -1; // ID of filer-inspector (non imported sample)
-	if(app.view_options[SHOW_PLAYER].value) show_player(true);
+	app->playing_id = -1; // ID of filer-inspector (non imported sample)
+	if(app->view_options[SHOW_PLAYER].value) show_player(true);
 	ad_free_nfo(&nfo);
 	return 0;
 }
@@ -720,14 +718,14 @@ jplay__play(Sample* sample)
 {
 	if(!sample->id){ perr("bad arg: id=0\n"); return; }
 	if (jplay__play_pathX(sample->full_path, 1)) return;
-	app.playing_id = sample->id;
-	if(app.view_options[SHOW_PLAYER].value) show_player(true);
+	app->playing_id = sample->id;
+	if(app->view_options[SHOW_PLAYER].value) show_player(true);
 }
 
 void
 jplay__toggle(Sample* sample)
 {
-	if(app.playing_id || myplayer) jplay__stop();
+	if(app->playing_id || myplayer) jplay__stop();
 	else jplay__play(sample);
 }
 
@@ -765,7 +763,7 @@ jplay__play_next() {
 void
 jplay__play_selected() {
 	dbg(0, "...");
-	Sample *sample = sample_get_by_row_ref(app.inspector->row_ref);
+	Sample *sample = sample_get_by_row_ref(app->inspector->row_ref);
 	if (!sample) {
 		dbg(0, "no sample selected. not starting playback");
 		return;
@@ -775,8 +773,8 @@ jplay__play_selected() {
 	/* jplay__play(s); - no reset midi pitch */
 	if(!sample->id){ perr("bad arg: id=0\n"); return; }
 	if (jplay__play_pathX(sample->full_path, 0)) return;
-	app.playing_id = sample->id;
-	if(app.view_options[SHOW_PLAYER].value) show_player(true);
+	app->playing_id = sample->id;
+	if(app->view_options[SHOW_PLAYER].value) show_player(true);
 	/* jplay__play(s); */
 
 	sample_unref(sample);
@@ -797,12 +795,12 @@ jplay__play_all() {
 		dbg(2, "%s", result->sample_name);
 		return FALSE; //continue
 	}
-	gtk_tree_model_foreach(GTK_TREE_MODEL(app.store), foreach_func, NULL);
+	gtk_tree_model_foreach(GTK_TREE_MODEL(app->store), foreach_func, NULL);
 	if(play_queue) jplay__play_next();
 }
 
 void jplay__seek (double pos) {
-	if(!app.playing_id) return;
+	if(!app->playing_id) return;
 	if(!myplayer) return;
 	seek_request = pos;
 }
@@ -817,7 +815,7 @@ int jplay__pause (int on) {
 }
 
 double jplay__getposition() {
-	if(!app.playing_id) return -1;
+	if(!app->playing_id) return -1;
 	if(seek_request != -1.0) return -2;
 	if(!myplayer) return -1;
 	if(m_frames<1) return -1;

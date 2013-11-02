@@ -1,46 +1,36 @@
+/**
+* +----------------------------------------------------------------------+
+* | This file is part of Samplecat. http://samplecat.orford.org          |
+* | copyright (C) 2007-2013 Tim Orford <tim@orford.org>                  |
+* +----------------------------------------------------------------------+
+* | This program is free software; you can redistribute it and/or modify |
+* | it under the terms of the GNU General Public License version 3       |
+* | as published by the Free Software Foundation.                        |
+* +----------------------------------------------------------------------+
+*
+* This file is partially based on vala/application.vala but is manually synced.
+*
+*/
+#include "config.h"
+#include <stdio.h>
+#include <string.h>
 #include <glib.h>
 #include <glib-object.h>
-#include <config.h>
 #include <sample.h>
-
-
-#define TYPE_APPLICATION (application_get_type ())
-#define APPLICATION(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), TYPE_APPLICATION, Application))
-#define APPLICATION_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST ((klass), TYPE_APPLICATION, ApplicationClass))
-#define IS_APPLICATION(obj) (G_TYPE_CHECK_INSTANCE_TYPE ((obj), TYPE_APPLICATION))
-#define IS_APPLICATION_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), TYPE_APPLICATION))
-#define APPLICATION_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), TYPE_APPLICATION, ApplicationClass))
-
-typedef struct _Application Application;
-typedef struct _ApplicationClass ApplicationClass;
-typedef struct _ApplicationPrivate ApplicationPrivate;
-
-struct _Application {
-	GObject parent_instance;
-	ApplicationPrivate * priv;
-	gint state;
-	gchar* cache_dir;
-};
-
-struct _ApplicationClass {
-	GObjectClass parent_class;
-};
-
+#include "application.h"
 
 static gpointer application_parent_class = NULL;
 
-GType application_get_type (void) G_GNUC_CONST;
 enum  {
 	APPLICATION_DUMMY_PROPERTY
 };
-Application* application_new (void);
-Application* application_construct (GType object_type);
-void application_emit_icon_theme_changed (Application* self, const gchar* s);
-static GObject * application_constructor (GType type, guint n_construct_properties, GObjectConstructParam * construct_properties);
-static void application_finalize (GObject* obj);
+static GObject* application_constructor (GType, guint n_construct_properties, GObjectConstructParam*);
+static void     application_finalize    (GObject*);
 
 
-Application* application_construct (GType object_type) {
+Application*
+application_construct (GType object_type)
+{
 	Application * self = NULL;
 	const gchar* _tmp0_ = NULL;
 	gchar* _tmp1_ = NULL;
@@ -53,28 +43,52 @@ Application* application_construct (GType object_type) {
 }
 
 
-Application* application_new (void) {
-	return application_construct (TYPE_APPLICATION);
+Application*
+application_new ()
+{
+	Application* app = application_construct (TYPE_APPLICATION);
+
+	int i; for(i=0;i<PALETTE_SIZE;i++) app->colour_button[i] = NULL;
+	app->colourbox_dirty = true;
+
+	memset(app->config.colour, 0, PALETTE_SIZE * 8);
+
+	app->config_filename = g_strdup_printf("%s/.config/" PACKAGE "/" PACKAGE, g_get_home_dir());
+
+#if (defined HAVE_JACK)
+	app->enable_effect = true;
+	app->link_speed_pitch = true;
+	app->effect_param[0] = 0.0; /* cent transpose [-100 .. 100] */
+	app->effect_param[1] = 0.0; /* semitone transpose [-12 .. 12] */
+	app->effect_param[2] = 0.0; /* octave [-3 .. 3] */
+	app->playback_speed = 1.0;
+#endif
+
+	return app;
 }
 
 
-void application_emit_icon_theme_changed (Application* self, const gchar* s) {
+void
+application_emit_icon_theme_changed (Application* self, const gchar* s)
+{
 	g_return_if_fail (self != NULL);
 	g_return_if_fail (s != NULL);
 	g_signal_emit_by_name (self, "icon-theme", s);
 }
 
 
-static GObject * application_constructor (GType type, guint n_construct_properties, GObjectConstructParam * construct_properties) {
-	GObject * obj;
-	GObjectClass * parent_class;
-	parent_class = G_OBJECT_CLASS (application_parent_class);
-	obj = parent_class->constructor (type, n_construct_properties, construct_properties);
+static GObject*
+application_constructor (GType type, guint n_construct_properties, GObjectConstructParam* construct_properties)
+{
+	GObjectClass* parent_class = G_OBJECT_CLASS (application_parent_class);
+	GObject* obj = parent_class->constructor (type, n_construct_properties, construct_properties);
 	return obj;
 }
 
 
-static void application_class_init (ApplicationClass * klass) {
+static void
+application_class_init (ApplicationClass* klass)
+{
 	application_parent_class = g_type_class_peek_parent (klass);
 	G_OBJECT_CLASS (klass)->constructor = application_constructor;
 	G_OBJECT_CLASS (klass)->finalize = application_finalize;
@@ -83,17 +97,23 @@ static void application_class_init (ApplicationClass * klass) {
 }
 
 
-static void application_instance_init (Application * self) {
+static void
+application_instance_init (Application* self)
+{
 	self->state = 0;
 }
 
 
-static void application_finalize (GObject* obj) {
+static void
+application_finalize (GObject* obj)
+{
 	G_OBJECT_CLASS (application_parent_class)->finalize (obj);
 }
 
 
-GType application_get_type (void) {
+GType
+application_get_type ()
+{
 	static volatile gsize application_type_id__volatile = 0;
 	if (g_once_init_enter (&application_type_id__volatile)) {
 		static const GTypeInfo g_define_type_info = { sizeof (ApplicationClass), (GBaseInitFunc) NULL, (GBaseFinalizeFunc) NULL, (GClassInitFunc) application_class_init, (GClassFinalizeFunc) NULL, NULL, sizeof (Application), 0, (GInstanceInitFunc) application_instance_init, NULL };
@@ -103,6 +123,5 @@ GType application_get_type (void) {
 	}
 	return application_type_id__volatile;
 }
-
 
 

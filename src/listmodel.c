@@ -34,8 +34,6 @@
 #include "list_store.h"
 #include "listmodel.h"
 
-extern struct _app app;
-extern Application* application;
 extern unsigned debug;
 
 static void listmodel__update ();
@@ -45,7 +43,7 @@ GtkListStore*
 listmodel__new()
 {
 	void icon_theme_changed(Application* application, char* theme, gpointer data){ listmodel__update(); }
-	g_signal_connect((gpointer)application, "icon-theme", G_CALLBACK(icon_theme_changed), NULL);
+	g_signal_connect((gpointer)app, "icon-theme", G_CALLBACK(icon_theme_changed), NULL);
 
 	void sample_changed(SamplecatModel* m, Sample* sample, int what, void* data, gpointer user_data)
 	{
@@ -58,7 +56,7 @@ listmodel__new()
 		listmodel__update_sample(sample, what, data);
 #endif
 	}
-	g_signal_connect((gpointer)app.model, "sample-changed", G_CALLBACK(sample_changed), NULL);
+	g_signal_connect((gpointer)app->model, "sample-changed", G_CALLBACK(sample_changed), NULL);
 
 	return (GtkListStore*)samplecat_list_store_new();
 }
@@ -76,12 +74,12 @@ listmodel__clear()
 {
 	PF;
 	GtkTreeIter iter;
-	while(gtk_tree_model_get_iter_first(GTK_TREE_MODEL(app.store), &iter)){
+	while(gtk_tree_model_get_iter_first(GTK_TREE_MODEL(app->store), &iter)){
 		GdkPixbuf* pixbuf = NULL;
 		Sample* sample = NULL;
-		gtk_tree_model_get(GTK_TREE_MODEL(app.store), &iter, COL_OVERVIEW, &pixbuf, -1);
-		gtk_tree_model_get(GTK_TREE_MODEL(app.store), &iter, COL_SAMPLEPTR, &sample, -1);
-		gtk_list_store_remove(app.store, &iter);
+		gtk_tree_model_get(GTK_TREE_MODEL(app->store), &iter, COL_OVERVIEW, &pixbuf, -1);
+		gtk_tree_model_get(GTK_TREE_MODEL(app->store), &iter, COL_SAMPLEPTR, &sample, -1);
+		gtk_list_store_remove(app->store, &iter);
 		if(pixbuf) g_object_unref(pixbuf);
 		if(sample) sample_unref(sample);
 	}
@@ -93,7 +91,7 @@ listmodel__add_result(Sample* sample)
 {
 	//TODO finish moving this into ListStore.add()
 
-	if(!app.store) return;
+	if(!app->store) return;
 	g_return_if_fail(sample);
 
 #if 1
@@ -136,8 +134,8 @@ listmodel__add_result(Sample* sample)
 	GdkPixbuf* iconbuf = sample->online ? get_iconbuf_from_mimetype(sample->mimetype) : NULL;
 
 	GtkTreeIter iter;
-	gtk_list_store_append(app.store, &iter);
-	gtk_list_store_set(app.store, &iter,
+	gtk_list_store_append(app->store, &iter);
+	gtk_list_store_set(app->store, &iter,
 			COL_ICON,       iconbuf,
 			COL_NAME,       sample->sample_name,
 			COL_FNAME,      sample->sample_dir,
@@ -157,8 +155,8 @@ listmodel__add_result(Sample* sample)
 			-1);
 
 	GtkTreePath* treepath;
-	if((treepath = gtk_tree_model_get_path(GTK_TREE_MODEL(app.store), &iter))){
-		sample->row_ref = gtk_tree_row_reference_new(GTK_TREE_MODEL(app.store), treepath);
+	if((treepath = gtk_tree_model_get_path(GTK_TREE_MODEL(app->store), &iter))){
+		sample->row_ref = gtk_tree_row_reference_new(GTK_TREE_MODEL(app->store), treepath);
 		gtk_tree_path_free(treepath);
 	}
 
@@ -226,7 +224,7 @@ listmodel__update_sample(Sample* sample, int what, void* data)
 			break;
 	}
 
-	if (sample->id == app.inspector->row_id) {
+	if (sample->id == app->inspector->row_id) {
 		inspector_set_labels(sample);
 	}
 	return ok;
@@ -241,7 +239,7 @@ listmodel__update_by_tree_iter(GtkTreeIter* iter, int what, void* data)
 {
 	gboolean rv = true;
 	Sample* s = NULL;
-	gtk_tree_model_get(GTK_TREE_MODEL(app.store), iter, COL_SAMPLEPTR, &s, -1);
+	gtk_tree_model_get(GTK_TREE_MODEL(app->store), iter, COL_SAMPLEPTR, &s, -1);
 	if (!s) {
 		// THIS SHOULD NEVER HAPPEN!
 		dbg(0, "FIXME: no sample data in list model!");
@@ -264,7 +262,7 @@ listmodel__update_by_tree_iter(GtkTreeIter* iter, int what, void* data)
 					if (!mime_type->image) dbg(0, "no icon.");
 					iconbuf = mime_type->image->sm_pixbuf;
 				}
-				gtk_list_store_set(app.store, iter, COL_ICON, iconbuf, -1);
+				gtk_list_store_set(app->store, iter, COL_ICON, iconbuf, -1);
 			}
 			break;
 		case COL_KEYWORDS:
@@ -273,7 +271,7 @@ listmodel__update_by_tree_iter(GtkTreeIter* iter, int what, void* data)
 					gwarn("failed to store keywords in the database");
 					rv = false;
 				} else {
-					gtk_list_store_set(app.store, iter, COL_KEYWORDS, (char*)data, -1);
+					gtk_list_store_set(app->store, iter, COL_KEYWORDS, (char*)data, -1);
 					if (s->keywords) free(s->keywords);
 					s->keywords=strdup((char*)data);
 				}
@@ -286,7 +284,7 @@ listmodel__update_by_tree_iter(GtkTreeIter* iter, int what, void* data)
 					gwarn("failed to store colour in the database");
 					rv = false;
 				} else {
-					gtk_list_store_set(app.store, iter, COL_COLOUR, colour_index, -1);
+					gtk_list_store_set(app->store, iter, COL_COLOUR, colour_index, -1);
 					s->colour_index = colour_index;
 				}
 			}
@@ -307,7 +305,7 @@ listmodel__update_by_tree_iter(GtkTreeIter* iter, int what, void* data)
 				} else {
 					char samplerate_s[32]; samplerate_format(samplerate_s, s->sample_rate);
 					char length_s[64]; smpte_format(length_s, s->length);
-					gtk_list_store_set(app.store, iter, 
+					gtk_list_store_set(app->store, iter, 
 							COL_CHANNELS, s->channels,
 							COL_SAMPLERATE, samplerate_s,
 							COL_LENGTH, length_s,
@@ -321,7 +319,7 @@ listmodel__update_by_tree_iter(GtkTreeIter* iter, int what, void* data)
 			break;
 	}
 
-	if (s->id == app.inspector->row_id) {
+	if (s->id == app->inspector->row_id) {
 		inspector_set_labels(s);
 	}
 	sample_unref(s);
@@ -346,7 +344,7 @@ listmodel__update_by_rowref(GtkTreeRowReference* row_ref, int what, void* data)
 	}
 
 	GtkTreeIter iter;
-	gtk_tree_model_get_iter(GTK_TREE_MODEL(app.store), &iter, path);
+	gtk_tree_model_get_iter(GTK_TREE_MODEL(app->store), &iter, path);
 	gtk_tree_path_free(path);
 	return listmodel__update_by_tree_iter(&iter, what, data);
 }
@@ -358,9 +356,9 @@ listmodel__set_overview(GtkTreeRowReference* row_ref, GdkPixbuf* pixbuf)
 	GtkTreePath* treepath;
 	if((treepath = gtk_tree_row_reference_get_path(row_ref))){ //it's possible the row may no longer be visible.
 		GtkTreeIter iter;
-		if(gtk_tree_model_get_iter(GTK_TREE_MODEL(app.store), &iter, treepath)){
+		if(gtk_tree_model_get_iter(GTK_TREE_MODEL(app->store), &iter, treepath)){
 			if(GDK_IS_PIXBUF(pixbuf)){
-				gtk_list_store_set(app.store, &iter, COL_OVERVIEW, pixbuf, -1);
+				gtk_list_store_set(app->store, &iter, COL_OVERVIEW, pixbuf, -1);
 			}else perr("pixbuf is not a pixbuf.\n");
 
 		}else perr("failed to get row iter. row_ref=%p\n", row_ref);
@@ -375,8 +373,8 @@ listmodel__set_peaklevel(GtkTreeRowReference* row_ref, float level)
 	GtkTreePath* treepath;
 	if((treepath = gtk_tree_row_reference_get_path(row_ref))){ //it's possible the row may no longer be visible.
 		GtkTreeIter iter;
-		if(gtk_tree_model_get_iter(GTK_TREE_MODEL(app.store), &iter, treepath)){
-			gtk_list_store_set(app.store, &iter, COL_PEAKLEVEL, level, -1);
+		if(gtk_tree_model_get_iter(GTK_TREE_MODEL(app->store), &iter, treepath)){
+			gtk_list_store_set(app->store, &iter, COL_PEAKLEVEL, level, -1);
 
 		}else perr("failed to get row iter. row_ref=%p\n", row_ref);
 		gtk_tree_path_free(treepath);
@@ -420,8 +418,8 @@ listmodel__move_files(GList* list, const gchar* dest_path)
 				//it's possible the row may no longer be visible:
 				if((treepath = gtk_tree_row_reference_get_path(s->row_ref))){
 					GtkTreeIter iter;
-					if(gtk_tree_model_get_iter(GTK_TREE_MODEL(app.store), &iter, treepath)){
-						gtk_list_store_set(app.store, &iter, COL_FNAME, s->sample_dir, -1);
+					if(gtk_tree_model_get_iter(GTK_TREE_MODEL(app->store), &iter, treepath)){
+						gtk_list_store_set(app->store, &iter, COL_FNAME, s->sample_dir, -1);
 					}
 					gtk_tree_path_free(treepath);
 				}
@@ -459,7 +457,7 @@ listmodel__get_filename_from_id(int id)
 	struct find_filename ff;
 	ff.id = id;
 	ff.rv = NULL;
-	GtkTreeModel* model = GTK_TREE_MODEL(app.store);
+	GtkTreeModel* model = GTK_TREE_MODEL(app->store);
 	gtk_tree_model_foreach(model, &filter_id, &ff);
 	return ff.rv;
 }

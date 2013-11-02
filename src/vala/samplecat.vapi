@@ -26,13 +26,13 @@ namespace Samplecat {
 		_filters filters;
 	}
 
-	public struct _app
+	public struct Application
 	{
 		public _samplecat_model* model;
 	}
 
-	[CCode(cname = "app", cheader_filename = "main.h")]
-	_app app;
+	[CCode(cname = "app", cheader_filename = "application.h")]
+	Application* app;
 
 	[CCode(cname = "listmodel__add_result", cheader_filename = "listmodel.h")]
 	public void listmodel__add_result(Sample* sample);

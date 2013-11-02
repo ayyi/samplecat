@@ -1472,7 +1472,7 @@ rotator_init (Rotator* tree_view)
 		PF0;
 	}
 
-	g_signal_connect((gpointer)application, "selection-changed", G_CALLBACK(rotator_on_selection_change), NULL);
+	g_signal_connect((gpointer)app, "selection-changed", G_CALLBACK(rotator_on_selection_change), NULL);
 }
 
 

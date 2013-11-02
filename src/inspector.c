@@ -40,7 +40,6 @@
 
 #define N_EBUR_ROWS 8
 
-extern struct _app      app;
 extern SamplecatModel*  model;
 //extern SamplecatBackend backend;
 extern int              debug;
@@ -81,9 +80,9 @@ inspector_new()
 {
 	// detailed information on a single sample. LHS of main window.
 
-	g_return_val_if_fail(!app.inspector, NULL);
+	g_return_val_if_fail(!app->inspector, NULL);
 
-	Inspector* inspector = app.inspector = g_new0(Inspector, 1);
+	Inspector* inspector = app->inspector = g_new0(Inspector, 1);
 	InspectorPriv* i = inspector->priv = g_new0(InspectorPriv, 1);
 	inspector->min_height = 200; // more like preferred height, as the box can be smaller if there is no room for it.
 	inspector->show_waveform = true;
@@ -216,7 +215,7 @@ inspector_new()
 	gtk_entry_set_text(GTK_ENTRY(edit), "");
 	g_object_ref(edit); //stops gtk deleting the unparented widget.
 
-	g_signal_connect((gpointer)application, "selection-changed", G_CALLBACK(inspector_update), NULL);
+	g_signal_connect((gpointer)app, "selection-changed", G_CALLBACK(inspector_update), NULL);
 
 	gtk_widget_set_size_request(inspector->widget, 20, 20);
 	return vbox;
@@ -235,7 +234,7 @@ inspector_free(Inspector* inspector)
 void
 inspector_set_labels(Sample* sample)
 {
-	Inspector* i = app.inspector;
+	Inspector* i = app->inspector;
 	if(!i) return;
 	g_return_if_fail(sample);
 	InspectorPriv* i_ = i->priv;
@@ -318,7 +317,7 @@ inspector_set_labels(Sample* sample)
 		gtk_widget_hide(GTK_WIDGET(i_->tags));
 	}
 
-	if (app.auditioner->status && app.auditioner->status() != -1.0 && app.view_options[SHOW_PLAYER].value){
+	if (app->auditioner->status && app->auditioner->status() != -1.0 && app->view_options[SHOW_PLAYER].value){
 		show_player(true); // show/hide player
 	}
 }
@@ -328,7 +327,7 @@ static void
 inspector_update(Application* a, Sample* sample, gpointer user_data)
 {
 	PF;
-	Inspector* i = app.inspector;
+	Inspector* i = app->inspector;
 	if(!i) return;
 
 	if(!sample){
@@ -378,7 +377,7 @@ inspector_update(Application* a, Sample* sample, gpointer user_data)
 static void
 inspector_clear()
 {
-	Inspector* i = app.inspector;
+	Inspector* i = app->inspector;
 	if(!i) return;
 
 	hide_fields();
@@ -389,8 +388,8 @@ inspector_clear()
 static void
 hide_fields()
 {
-	InspectorPriv* i = app.inspector->priv;
-	GtkWidget* fields[] = {i->filename, i->tags, i->length, i->samplerate, i->channels, i->mimetype, i->table, i->level, app.inspector->text, i->bitdepth, i->bitrate, i->metadata};
+	InspectorPriv* i = app->inspector->priv;
+	GtkWidget* fields[] = {i->filename, i->tags, i->length, i->samplerate, i->channels, i->mimetype, i->table, i->level, app->inspector->text, i->bitdepth, i->bitrate, i->metadata};
 	int f = 0; for(;f<G_N_ELEMENTS(fields);f++){
 		gtk_widget_hide(GTK_WIDGET(fields[f]));
 	}
@@ -400,8 +399,8 @@ hide_fields()
 static void
 show_fields()
 {
-	InspectorPriv* i = app.inspector->priv;
-	GtkWidget* fields[] = {i->filename, i->tags, i->length, i->samplerate, i->channels, i->mimetype, i->table, i->level, app.inspector->text, i->bitdepth, i->bitrate, i->metadata};
+	InspectorPriv* i = app->inspector->priv;
+	GtkWidget* fields[] = {i->filename, i->tags, i->length, i->samplerate, i->channels, i->mimetype, i->table, i->level, app->inspector->text, i->bitdepth, i->bitrate, i->metadata};
 	int f = 0; for(;f<G_N_ELEMENTS(fields);f++){
 		gtk_widget_show(GTK_WIDGET(fields[f]));
 	}
@@ -437,7 +436,7 @@ on_notes_focus_out(GtkWidget *widget, gpointer userdata)
 	gchar* notes = gtk_text_buffer_get_text(textbuf, &start_iter, &end_iter, true);
 	dbg(2, "start=%i end=%i", gtk_text_iter_get_offset(&start_iter), gtk_text_iter_get_offset(&end_iter));
 
-	Sample* sample = listview__get_sample_by_rowref(app.inspector->row_ref);
+	Sample* sample = listview__get_sample_by_rowref(app->inspector->row_ref);
 	if(sample){
 		if(listmodel__update_sample(sample, COLX_NOTES, notes)){
 			statusbar_print(1, "notes updated");
@@ -481,36 +480,36 @@ tag_edit_start(int _)
 	*/
 
 	PF;
-	InspectorPriv* i = app.inspector->priv;
+	InspectorPriv* i = app->inspector->priv;
 
 	static gulong handler1 = 0; // the edit box "focus_out" handler.
 	//static gulong handler2 = 0; // the edit box RETURN key trap.
 
 	GtkWidget* parent = i->tags_ev;
 	GtkWidget* label  = i->tags;
-	GtkWidget* edit   = app.inspector->edit;
+	GtkWidget* edit   = app->inspector->edit;
 
-	if(!GTK_IS_WIDGET(app.inspector->edit)){ perr("edit widget missing.\n"); return;}
+	if(!GTK_IS_WIDGET(app->inspector->edit)){ perr("edit widget missing.\n"); return;}
 	if(!GTK_IS_WIDGET(label))              { perr("label widget is missing.\n"); return;}
 
-	Sample* s = sample_get_by_row_ref(app.inspector->row_ref);
+	Sample* s = sample_get_by_row_ref(app->inspector->row_ref);
 	if (!s) {
 		dbg(0,"sample not found");
 	} else {
 		//show the rename widget:
-		gtk_entry_set_text(GTK_ENTRY(app.inspector->edit), s->keywords?s->keywords:"");
+		gtk_entry_set_text(GTK_ENTRY(app->inspector->edit), s->keywords?s->keywords:"");
 		sample_unref(s);
 	}
 	g_object_ref(label); //stops gtk deleting the widget.
 	gtk_container_remove(GTK_CONTAINER(parent), label);
-	gtk_container_add   (GTK_CONTAINER(parent), app.inspector->edit);
+	gtk_container_add   (GTK_CONTAINER(parent), app->inspector->edit);
 	gtk_widget_show(edit);
 
 	//our focus-out could be improved by properly focussing other widgets when clicked on (widgets that dont catch events?).
 
 	if(handler1) g_signal_handler_disconnect((gpointer)edit, handler1);
 
-	handler1 = g_signal_connect((gpointer)app.inspector->edit, "focus-out-event", G_CALLBACK(tag_edit_stop), GINT_TO_POINTER(0));
+	handler1 = g_signal_connect((gpointer)app->inspector->edit, "focus-out-event", G_CALLBACK(tag_edit_stop), GINT_TO_POINTER(0));
 
 	/*
 	if(handler2) g_signal_handler_disconnect((gpointer)arrange->wrename, handler2);
@@ -519,7 +518,7 @@ tag_edit_start(int _)
 	*/
 
 	//grab_focus allows us to start typing imediately. It also selects the whole string.
-	gtk_widget_grab_focus(GTK_WIDGET(app.inspector->edit));
+	gtk_widget_grab_focus(GTK_WIDGET(app->inspector->edit));
 }
 
 
@@ -541,8 +540,8 @@ tag_edit_stop(GtkWidget *widget, GdkEventCrossing *event, gpointer user_data)
   //if(busy){"track_label_edit_stop(): busy!\n"; return;} //only run once at a time!
   //busy = true;
 
-	InspectorPriv* i = app.inspector->priv;
-	GtkWidget* edit = app.inspector->edit;
+	InspectorPriv* i = app->inspector->priv;
+	GtkWidget* edit = app->inspector->edit;
 	GtkWidget* parent = i->tags_ev;
 
   //g_signal_handler_disconnect((gpointer)edit, handler_id);
@@ -567,7 +566,7 @@ tag_edit_stop(GtkWidget *widget, GdkEventCrossing *event, gpointer user_data)
 	//update the data:
 	//update the string for the channel that the current track is using:
 	//int ch = track_get_ch_idx(tnum);
-	row_set_tags_from_id(app.inspector->row_id, app.inspector->row_ref, (void*)newtxt);
+	row_set_tags_from_id(app->inspector->row_id, app->inspector->row_ref, (void*)newtxt);
 
 	//swap back to the normal label:
 	gtk_container_remove(GTK_CONTAINER(parent), edit);

@@ -277,7 +277,7 @@ gtk_cell_renderer_hyper_text_render(GtkCellRenderer      *cell,
   /*
   gint tx;
   gint ty;
-  gtk_tree_view_widget_to_tree_coords(app.view, cell_area->x, cell_area->y, &tx, &ty);
+  gtk_tree_view_widget_to_tree_coords(app->view, cell_area->x, cell_area->y, &tx, &ty);
   printf("gtk_cell_renderer_hyper_text_render(): y=%i.\n", ty);
   */
 
@@ -292,8 +292,8 @@ gtk_cell_renderer_hyper_text_render(GtkCellRenderer      *cell,
   gtk_cell_renderer_hyper_text_get_size(cell, widget, cell_area, &x_offset, &y_offset, NULL, NULL);
 
   /*
-  if((app.mouse_x > cell_area->x) && (app.mouse_x < (cell_area->x + cell_area->width)) && (app.mouse_y > cell_area->y) && (app.mouse_y < (cell_area->y + cell_area->height))){
-    //printf("gtk_cell_renderer_hyper_text_render(): x=%i y=%i\n", app.mouse_x, app.mouse_y);
+  if((app->mouse_x > cell_area->x) && (app->mouse_x < (cell_area->x + cell_area->width)) && (app->mouse_y > cell_area->y) && (app->mouse_y < (cell_area->y + cell_area->height))){
+    //printf("gtk_cell_renderer_hyper_text_render(): x=%i y=%i\n", app->mouse_x, app->mouse_y);
     //pango_layout_set_markup(layout, "<b>important</b>", -1);
     printf("gtk_cell_renderer_hyper_text_render(): inside cell!\n");
   }
@@ -311,7 +311,7 @@ gtk_cell_renderer_hyper_text_render(GtkCellRenderer      *cell,
                                                  //               state = GTK_STATE_NORMAL;
 
 			/*
-        gint row_num = treecell_get_row(app.libraryview->widget, cell_area);
+        gint row_num = treecell_get_row(app->libraryview->widget, cell_area);
 		if ( row_num != prev_row_num ) {
 			//printf("gtk_cell_renderer_hyper_text_render() new row (%i)! cell=%p %s\n", row_num, celltext->text, celltext->text);
 
@@ -319,10 +319,10 @@ gtk_cell_renderer_hyper_text_render(GtkCellRenderer      *cell,
 			gchar path_string[256];
 			snprintf(path_string, 256, "%i", prev_row_num);
 			GtkTreeIter iter;
-			if(gtk_tree_model_get_iter_from_string(GTK_TREE_MODEL(app.store), &iter, path_string)){
+			if(gtk_tree_model_get_iter_from_string(GTK_TREE_MODEL(app->store), &iter, path_string)){
 			  snprintf(path_string, 256, "<u>o</u>ld %i", prev_row_num);
 			  //4 = COL_KEYWORDS
-			  gtk_list_store_set(app.store, &iter, 4, path_string, -1); //FIXME its the _attributes_ we need to reset.
+			  gtk_list_store_set(app->store, &iter, 4, path_string, -1); //FIXME its the _attributes_ we need to reset.
 
 			  //this will affect ALL rows!?
 			  g_object_set(cell, "attributes", NULL, NULL);
@@ -332,7 +332,7 @@ gtk_cell_renderer_hyper_text_render(GtkCellRenderer      *cell,
         prev_row_num = row_num;
 			*/
 
-		if(app.mouse_x < (cell_area->x + cell_area->width)){ 
+		if(app->mouse_x < (cell_area->x + cell_area->width)){ 
 
 			if(strlen(celltext->text)){
 				g_strstrip(celltext->text);

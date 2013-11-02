@@ -11,7 +11,7 @@
 #include "debug/debug.h"
 #include "typedefs.h"
 #include "support.h"
-#include "main.h"
+#include "application.h"
 #include "sample.h"
 
 #include "audio_decoder/ad.h"
@@ -48,7 +48,7 @@ make_overview(Sample* sample)
 	dbg(1, "NEW OVERVIEW");
 
 	GdkPixbuf* pixbuf = gdk_pixbuf_new(GDK_COLORSPACE_RGB, HAS_ALPHA_TRUE, BITS_PER_CHAR_8, OVERVIEW_WIDTH, OVERVIEW_HEIGHT);
-	pixbuf_clear(pixbuf, &app.bg_colour);
+	pixbuf_clear(pixbuf, &app->bg_colour);
 
 	cairo_format_t format;
 	if (gdk_pixbuf_get_n_channels(pixbuf) == 3) format = CAIRO_FORMAT_RGB24; else format = CAIRO_FORMAT_ARGB32;
@@ -58,7 +58,7 @@ make_overview(Sample* sample)
 
 	if (1) {
 		drect pts = {0, OVERVIEW_HEIGHT/2, OVERVIEW_WIDTH, OVERVIEW_HEIGHT/2 + 1};
-		draw_cairo_line(cr, &pts, 1.0, &app.base_colour);
+		draw_cairo_line(cr, &pts, 1.0, &app->base_colour);
 	}
 	cairo_set_line_width (cr, 1.0);
 
@@ -91,7 +91,7 @@ make_overview(Sample* sample)
 		max = rint(max * OVERVIEW_HEIGHT/2.0);
 
 		drect pts = {x, OVERVIEW_HEIGHT/2 - min, x, OVERVIEW_HEIGHT/2 - max};
-		draw_cairo_line(cr, &pts, 1.0, &app.text_colour);
+		draw_cairo_line(cr, &pts, 1.0, &app->text_colour);
 
 		x++;
 	}

@@ -25,18 +25,17 @@
 #include "progress_dialog.h"
 #include "dnd.h"
 
-extern struct _app app;
 extern unsigned debug;
 
 
 void
 dnd_setup()
 {
-  gtk_drag_dest_set(app.window, GTK_DEST_DEFAULT_ALL,
-                        dnd_file_drag_types,       //const GtkTargetEntry *targets,
-                        dnd_file_drag_types_count,    //gint n_targets,
-                        (GdkDragAction)(GDK_ACTION_MOVE | GDK_ACTION_COPY));
-  g_signal_connect(G_OBJECT(app.window), "drag-data-received", G_CALLBACK(drag_received), NULL);
+	gtk_drag_dest_set(app->window, GTK_DEST_DEFAULT_ALL,
+	                  dnd_file_drag_types,          // const GtkTargetEntry *targets,
+	                  dnd_file_drag_types_count,    // gint n_targets,
+	                  (GdkDragAction)(GDK_ACTION_MOVE | GDK_ACTION_COPY));
+	g_signal_connect(G_OBJECT(app->window), "drag-data-received", G_CALLBACK(drag_received), NULL);
 }
 
 
@@ -53,7 +52,7 @@ drag_received(GtkWidget *widget, GdkDragContext *drag_context, gint x, gint y,
   if(g_str_has_prefix((char*)data->data, "colour:")){
 
     if(get_mouseover_row() > -1)
-    //if(widget==app.libraryview->widget)
+    //if(widget==app->libraryview->widget)
     {
       dbg(1, "treeview!");
     }
@@ -65,21 +64,21 @@ drag_received(GtkWidget *widget, GdkDragContext *drag_context, gint x, gint y,
     GtkTreePath* path;
     GtkTreeIter iter;
     gint tx, treeview_top;
-    gdk_window_get_position(app.libraryview->widget->window, &tx, &treeview_top);
+    gdk_window_get_position(app->libraryview->widget->window, &tx, &treeview_top);
     dbg(2, "treeview_top=%i", y);
 
 #ifdef HAVE_GTK_2_12
     gint bx, by;
-    gtk_tree_view_convert_widget_to_bin_window_coords(GTK_TREE_VIEW(app.libraryview->widget), x, y - treeview_top, &bx, &by);
+    gtk_tree_view_convert_widget_to_bin_window_coords(GTK_TREE_VIEW(app->libraryview->widget), x, y - treeview_top, &bx, &by);
     dbg(2, "note: gtk2.12 coords: %dx%d => %dx%d", x,y,bx,by);
 #else
     gint by = y - treeview_top - 20;
 #endif
 
-    if(gtk_tree_view_get_path_at_pos(GTK_TREE_VIEW(app.libraryview->widget), x, by, &path, NULL, NULL, NULL)){
+    if(gtk_tree_view_get_path_at_pos(GTK_TREE_VIEW(app->libraryview->widget), x, by, &path, NULL, NULL, NULL)){
 
-      gtk_tree_model_get_iter(GTK_TREE_MODEL(app.store), &iter, path);
-      gchar* path_str = gtk_tree_model_get_string_from_iter(GTK_TREE_MODEL(app.store), &iter);
+      gtk_tree_model_get_iter(GTK_TREE_MODEL(app->store), &iter, path);
+      gchar* path_str = gtk_tree_model_get_string_from_iter(GTK_TREE_MODEL(app->store), &iter);
       dbg(2, "path=%s y=%i final_y=%i", path_str, y, y - treeview_top);
 
       listview__item_set_colour(path, colour_index);

@@ -20,7 +20,6 @@
 
 #define HEX_ESCAPE '%'
 
-extern struct _app app;
 extern unsigned debug;
 
 static const char* action_leaf = NULL;

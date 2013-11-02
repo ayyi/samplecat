@@ -18,7 +18,6 @@
 
 void file_manager__update_all();
 
-extern struct _app app;
 extern int debug;
 
 

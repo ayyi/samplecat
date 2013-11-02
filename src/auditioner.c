@@ -36,8 +36,6 @@ typedef struct
 #define DBUS_APP_PATH            "/org/ayyi/auditioner/daemon"
 #define DBUS_INTERFACE           "org.ayyi.auditioner.Daemon"
 
-extern struct _app app;
-
 static AyyiConnection *adbus;
 
 int auditioner_check() {
@@ -151,7 +149,7 @@ auditioner_play_all()
 		return FALSE; //continue
 	}
 
-	gtk_tree_model_foreach(GTK_TREE_MODEL(app.store), foreach_func, NULL);
+	gtk_tree_model_foreach(GTK_TREE_MODEL(app->store), foreach_func, NULL);
 
 	if(play_queue) play_next();
 }

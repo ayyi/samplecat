@@ -113,13 +113,13 @@ do_progress(int cur, int all)
 	pw.tics++;
 #ifndef NOPROGBARWIN
 	if (!pw.win) {
-		pw.win = progress_win_new(app.window, DEFAULT_TEXT);
+		pw.win = progress_win_new(app->window, DEFAULT_TEXT);
 		pw.tics=0;
 	}
 	set_progress(cur, all);
 #endif
 	statusbar_print(2, "referencing files.%s%s", (pw.tics&2)?"..":"", (pw.tics&1)?".":"");
-	int needlock = !pthread_equal(pthread_self(), app.gui_thread);
+	int needlock = !pthread_equal(pthread_self(), app->gui_thread);
 	if(needlock) gdk_threads_enter();
 	while (gtk_events_pending()) gtk_main_iteration();
 	if(needlock) gdk_threads_leave();
@@ -141,7 +141,7 @@ int
 do_progress_question(gchar *msg /* TODO: question-ID, config, options */ )
 {
 	if (!pw.win) {
-		pw.win=progress_win_new(app.window, DEFAULT_TEXT);
+		pw.win = progress_win_new(app->window, DEFAULT_TEXT);
 	}
 
 	/* TODO 
@@ -160,15 +160,15 @@ do_progress_question(gchar *msg /* TODO: question-ID, config, options */ )
 	// add radio or checkboxes (choose file, action, options)
 	// add [YES|NO|OK]  buttons
 
-	pw.btn=0;
-	if (btnoption&1) gtk_widget_show(pw.btn_ok);
-	if (btnoption&2) gtk_widget_show(pw.btn_no);
-	if (btnoption&3) gtk_widget_show(pw.btn_yes);
+	pw.btn = 0;
+	if (btnoption & 1) gtk_widget_show(pw.btn_ok);
+	if (btnoption & 2) gtk_widget_show(pw.btn_no);
+	if (btnoption & 3) gtk_widget_show(pw.btn_yes);
 
 	/* Wait for decision */
 	gtk_window_set_modal(GTK_WINDOW(pw.win), true);
-	while (pw.win && pw.btn==0 && !pw.aborted) {
-		int needlock = !pthread_equal(pthread_self(),app.gui_thread);                                                               
+	while (pw.win && pw.btn == 0 && !pw.aborted) {
+		int needlock = !pthread_equal(pthread_self(), app->gui_thread);
 		if(needlock) gdk_threads_enter();
 		while (gtk_events_pending ()) gtk_main_iteration ();
 		if(needlock) gdk_threads_leave();
@@ -188,7 +188,7 @@ do_progress_question(gchar *msg /* TODO: question-ID, config, options */ )
 	gtk_label_set_text(GTK_LABEL(pw.label), DEFAULT_TEXT);
 #ifdef NOPROGBARWIN
 	gtk_widget_destroy(pw.win);
-	pw.win=NULL;
+	pw.win = NULL;
 #endif
 	
 	// return decision 

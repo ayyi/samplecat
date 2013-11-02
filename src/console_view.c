@@ -24,7 +24,7 @@ void console__init()
 			sample_unref(sample);
 		}
 	}
-	g_signal_connect(G_OBJECT(app.store), "row-inserted", G_CALLBACK(store_row_inserted), NULL);
+	g_signal_connect(G_OBJECT(app->store), "row-inserted", G_CALLBACK(store_row_inserted), NULL);
 #endif
 
 	void store_content_changed(GtkListStore* store, gpointer data)
@@ -44,14 +44,14 @@ void console__init()
 
 		console__show_result_footer(row_count);
 	}
-	g_signal_connect(G_OBJECT(app.store), "content-changed", G_CALLBACK(store_content_changed), NULL);
+	g_signal_connect(G_OBJECT(app->store), "content-changed", G_CALLBACK(store_content_changed), NULL);
 }
 
 
 void
 console__show_result_header()
 {
-	printf("filters: text='%s' dir=%s\n", app.model->filters.phrase, strlen(app.model->filters.dir) ? app.model->filters.dir : "<all directories>");
+	printf("filters: text='%s' dir=%s\n", app->model->filters.phrase, strlen(app->model->filters.dir) ? app->model->filters.dir : "<all directories>");
 
 	printf("  name                 directory                            length ch rate mimetype\n");
 }

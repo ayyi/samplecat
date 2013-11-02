@@ -6,8 +6,9 @@
 #include <glib-object.h>
 #include <string.h>
 #include <config.h>
-#include <main.h>
+#include <application.h>
 #include <sample.h>
+#include "model.h"
 
 
 #define SAMPLECAT_TYPE_FILTERS (samplecat_filters_get_type ())
@@ -100,7 +101,7 @@ SamplecatModel* samplecat_model_new (void) {
 
 void samplecat_model_set_search_dir (SamplecatModel* self, gchar* dir) {
 	g_return_if_fail (self != NULL);
-	(*app.model).filters.dir = dir;
+	(*(*app).model).filters.dir = dir;
 }
 
 

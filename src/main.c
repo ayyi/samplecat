@@ -56,6 +56,7 @@ char * program_name;
 #include "cellrenderer_hypertext.h"
 #include "listview.h"
 #include "window.h"
+#include "colour_box.h"
 #include "inspector.h"
 #include "progress_dialog.h"
 #include "player_control.h"
@@ -98,11 +99,10 @@ static bool       config_load               ();
 static void       config_new                ();
 static bool       config_save               ();
 static void       menu_delete_row           (GtkMenuItem*, gpointer);
-void              menu_play_stop            (GtkWidget* widget, gpointer);
+void              menu_play_stop            (GtkWidget*, gpointer);
 
 
-struct _app      app;
-Application*     application = NULL;
+Application*     app = NULL;
 SamplecatBackend backend; 
 struct _palette  palette;
 GList*           mime_types; // list of MIME_type*
@@ -133,7 +133,7 @@ static const char* const short_options = "b:gv:s:a:p:hV";
 
 static const char* const usage =
 	"Usage: %s [OPTION]\n\n"
-	"SampleCat is a a program for cataloguing and auditioning audio samples.\n" 
+	"SampleCat is a program for cataloguing and auditioning audio samples.\n" 
 	"\n"
 	"Options:\n"
 	"  -a, --add <file(s)>    add these files.\n"
@@ -150,30 +150,8 @@ static const char* const usage =
 	"$HOME/.config/samplecat/\n"
 	"\n"
 	"Report bugs to <tim@orford.org>.\n"
-	"Website and manual: <http://samplecat.orford.org/>\n"
+	"Website and manual: <http://ayyi.github.io/samplecat/>\n"
 	"\n";
-
-void
-app_init()
-{
-	memset(&app, 0, sizeof(app));
-
-	int i; for(i=0;i<PALETTE_SIZE;i++) app.colour_button[i] = NULL;
-	app.colourbox_dirty = true;
-	memset(app.config.colour, 0, PALETTE_SIZE * 8);
-
-	app.config_filename = g_strdup_printf("%s/.config/" PACKAGE "/" PACKAGE, g_get_home_dir());
-
-#if (defined HAVE_JACK)
-	app.enable_effect = true;
-	app.link_speed_pitch = true;
-	app.effect_param[0] = 0.0; /* cent transpose [-100 .. 100] */
-	app.effect_param[1] = 0.0; /* semitone transpose [-12 .. 12] */
-	app.effect_param[2] = 0.0; /* octave [-3 .. 3] */
-	app.playback_speed = 1.0;
-#endif
-}
-
 
 int 
 main(int argc, char** argv)
@@ -192,10 +170,15 @@ main(int argc, char** argv)
 
 	g_log_set_default_handler(log_handler, NULL);
 
-	app_init();
+	if (!g_thread_supported()) g_thread_init(NULL);
+	gdk_threads_init();
+	gtk_init_check(&argc, &argv);
+
+	app = application_new();
+	colour_box_init();
 	memset(&backend, 0, sizeof(struct _backend)); 
 
-#define ADD_BACKEND(A) app.backends = g_list_append(app.backends, A)
+#define ADD_BACKEND(A) app->backends = g_list_append(app->backends, A)
 
 #ifdef USE_MYSQL
 	ADD_BACKEND("mysql");
@@ -207,7 +190,7 @@ main(int argc, char** argv)
 	ADD_BACKEND("tracker");
 #endif
 
-#define ADD_PLAYER(A) app.players = g_list_append(app.players, A)
+#define ADD_PLAYER(A) app->players = g_list_append(app->players, A)
 
 #ifdef HAVE_JACK
 	ADD_PLAYER("jack");
@@ -235,14 +218,14 @@ main(int argc, char** argv)
 			case 'b':
 				//if a particular backend is requested, and is available, reduce the backend list to just this one.
 				dbg(1, "backend '%s' requested.", optarg);
-				if(can_use(app.backends, optarg)){
-					list_clear(app.backends);
+				if(can_use(app->backends, optarg)){
+					list_clear(app->backends);
 					ADD_BACKEND(optarg);
-					dbg(1, "n_backends=%i", g_list_length(app.backends));
+					dbg(1, "n_backends=%i", g_list_length(app->backends));
 				}
 				else{
 					warnprintf("requested backend not available: '%s'\navailable backends:\n", optarg);
-					GList* l = app.backends;
+					GList* l = app->backends;
 					for(;l;l=l->next){
 						printf("  %s\n", (char*)l->data);
 					}
@@ -250,19 +233,19 @@ main(int argc, char** argv)
 				}
 				break;
 			case 'p':
-				if(can_use(app.players, optarg)){
-					list_clear(app.players);
+				if(can_use(app->players, optarg)){
+					list_clear(app->players);
 					ADD_PLAYER(optarg);
 					player_opt=true;
 				} else{
 					warnprintf("requested player is not available: '%s'\navailable backends:\n", optarg);
-					GList* l = app.players;
+					GList* l = app->players;
 					for(;l;l=l->next) printf("  %s\n", (char*)l->data);
 					exit(EXIT_FAILURE);
 				}
 				break;
 			case 'g':
-				app.no_gui = true;
+				app->no_gui = true;
 				break;
 			case 'h':
 				printf(usage, basename(argv[0]));
@@ -270,11 +253,11 @@ main(int argc, char** argv)
 				break;
 			case 's':
 				printf("search=%s\n", optarg);
-				app.args.search = g_strdup(optarg);
+				app->args.search = g_strdup(optarg);
 				break;
 			case 'a':
 				printf("add=%s\n", optarg);
-				app.args.add = g_strdup(optarg);
+				app->args.add = g_strdup(optarg);
 				break;
 			case 'V':
 				printf ("%s %s\n\n",basename(argv[0]), PACKAGE_VERSION);
@@ -295,28 +278,22 @@ main(int argc, char** argv)
 		}
 	}
 
-	if (!g_thread_supported())
-		g_thread_init(NULL);
-	gdk_threads_init();
-	gtk_init_check(&argc, &argv);
-
 	printf("%s"PACKAGE_NAME". Version "PACKAGE_VERSION"%s\n", yellow, white);
 
 	type_init();
-	application = application_new();
-	app.model = samplecat_model_new();
+	app->model = samplecat_model_new();
 
 	config_load();
 
-	if (app.config.database_backend && can_use(app.backends, app.config.database_backend)) {
-		list_clear(app.backends);
-		ADD_BACKEND(app.config.database_backend);
+	if (app->config.database_backend && can_use(app->backends, app->config.database_backend)) {
+		list_clear(app->backends);
+		ADD_BACKEND(app->config.database_backend);
 	}
 
-	if (!player_opt && app.config.auditioner) {
-		if(can_use(app.players, app.config.auditioner)){
-			list_clear(app.players);
-			ADD_PLAYER(app.config.auditioner);
+	if (!player_opt && app->config.auditioner) {
+		if(can_use(app->players, app->config.auditioner)){
+			list_clear(app->players);
+			ADD_PLAYER(app->config.auditioner);
 		}
 	}
 
@@ -324,32 +301,32 @@ main(int argc, char** argv)
 	GtkOSXApplication *osxApp = (GtkOSXApplication*) 
 	g_object_new(GTK_TYPE_OSX_APPLICATION, NULL);
 #endif
-	app.gui_thread = pthread_self();
+	app->gui_thread = pthread_self();
 
 	icon_theme_init();
 	pixmaps_init();
 	ad_init();
 	set_auditioner();
-	app.store = listmodel__new();
-	if(app.no_gui) console__init();
+	app->store = listmodel__new();
+	if(app->no_gui) console__init();
 
 #if 0
 	void store_content_changed(GtkListStore* store, gpointer data)
 	{
 		PF0;
 	}
-	g_signal_connect(G_OBJECT(app.store), "content-changed", G_CALLBACK(store_content_changed), NULL);
+	g_signal_connect(G_OBJECT(app->store), "content-changed", G_CALLBACK(store_content_changed), NULL);
 #endif
 
 	gboolean db_connected = false;
 #ifdef USE_MYSQL
-	if(can_use(app.backends, "mysql")){
-		mysql__init(app.model, &app.config.mysql);
+	if(can_use(app->backends, "mysql")){
+		mysql__init(app->model, &app->config.mysql);
 		db_connected = samplecat_set_backend(BACKEND_MYSQL);
 	}
 #endif
 #ifdef USE_SQLITE
-	if(!db_connected && can_use(app.backends, "sqlite") && ensure_config_dir()){
+	if(!db_connected && can_use(app->backends, "sqlite") && ensure_config_dir()){
 		if(sqlite__connect()){
 			db_connected = samplecat_set_backend(BACKEND_SQLITE);
 		}
@@ -364,14 +341,14 @@ main(int argc, char** argv)
 	}
 
 #ifdef USE_TRACKER
-	if(BACKEND_IS_NULL && can_use(app.backends, "tracker")){
+	if(BACKEND_IS_NULL && can_use(app->backends, "tracker")){
 		void on_tracker_init()
 		{
 			dbg(2, "...");
 			samplecat_set_backend(BACKEND_TRACKER);
 
 			//hide unsupported inspector notes
-			GtkWidget* notes = app.inspector->text;
+			GtkWidget* notes = app->inspector->text;
 #if 1 
 			// may not work -- it could re-appear ?! show_fields()??
 			if(notes) gtk_widget_hide(notes);
@@ -383,10 +360,10 @@ main(int argc, char** argv)
 			if(notes) gtk_widget_hide(notes);
 
 			if(search_pending){
-				do_search(app.args.search ? app.args.search : app.model->filters.phrase, app.model->filters.dir);
+				do_search(app->args.search ? app->args.search : app->model->filters.phrase, app->model->filters.dir);
 			}
 		}
-		if(app.no_gui){
+		if(app->no_gui){
 			tracker__init(on_tracker_init);
 		}
 		else {
@@ -396,25 +373,25 @@ main(int argc, char** argv)
 	}
 #endif
 
-	if(app.args.add){
+	if(app->args.add){
 		/* initial import from commandline */
 		do_progress(0, 0);
-		add_file(app.args.add);
+		add_file(app->args.add);
 		hide_progress();
 	}
 
 #ifndef DEBUG_NO_THREADS
 	dbg(3, "creating overview thread...");
 	GError* error = NULL;
-	app.msg_queue = g_async_queue_new();
+	app->msg_queue = g_async_queue_new();
 	if(!g_thread_create(overview_thread, NULL, false, &error)){
 		perr("error creating thread: %s\n", error->message);
 		g_error_free(error);
 	}
 #endif
 
-	if(!app.no_gui) window_new(); 
-	if(!app.no_gui) app.context_menu = make_context_menu();
+	if(!app->no_gui) window_new(); 
+	if(!app->no_gui) app->context_menu = make_context_menu();
 
 #ifdef __APPLE__
 	GtkWidget *menu_bar;
@@ -426,14 +403,14 @@ main(int argc, char** argv)
 #endif
 
 	if(!backend.pending){ 
-		do_search(app.args.search ? app.args.search : app.model->filters.phrase, app.model->filters.dir);
+		do_search(app->args.search ? app->args.search : app->model->filters.phrase, app->model->filters.dir);
 	}else{
 		search_pending = true;
 	}
 
-	if(app.no_gui) exit(EXIT_SUCCESS);
+	if(app->no_gui) exit(EXIT_SUCCESS);
 
-	app.auditioner->connect();
+	app->auditioner->connect();
 
 #ifdef USE_AYYI
 	ayyi_client_init();
@@ -441,12 +418,12 @@ main(int argc, char** argv)
 #endif
 
 #ifdef USE_TRACKER
-	if(!app.no_gui && BACKEND_IS_NULL) g_idle_add((GSourceFunc)tracker__init, NULL);
+	if(!app->no_gui && BACKEND_IS_NULL) g_idle_add((GSourceFunc)tracker__init, NULL);
 #else
 	//if(BACKEND_IS_NULL) listview__show_db_missing();
 #endif
 
-	app.loaded = true;
+	app->loaded = true;
 	dbg(1, "loaded");
 	message_panel__add_msg("hello", GTK_STOCK_INFO);
 	statusbar_print(2, PACKAGE_NAME". Version "PACKAGE_VERSION);
@@ -457,7 +434,7 @@ main(int argc, char** argv)
 	gtk_main();
 
 	menu_play_stop(NULL,NULL);
-	app.auditioner->disconnect();
+	app->auditioner->disconnect();
 
 	exit(EXIT_SUCCESS);
 }
@@ -474,7 +451,7 @@ dir_tree_update(gpointer data)
 	*/
 	update_dir_node_list();
 
-	dh_book_tree_reload((DhBookTree*)app.dir_treeview);
+	dh_book_tree_reload((DhBookTree*)app->dir_treeview);
 
 	return IDLE_STOP;
 }
@@ -487,9 +464,9 @@ get_mouseover_row()
 	gint row_num = -1;
 	GtkTreePath* path;
 	GtkTreeIter iter;
-	if((app.mouseover_row_ref && (path = gtk_tree_row_reference_get_path(app.mouseover_row_ref)))){
-		gtk_tree_model_get_iter(GTK_TREE_MODEL(app.store), &iter, path);
-		gchar* path_str = gtk_tree_model_get_string_from_iter(GTK_TREE_MODEL(app.store), &iter);
+	if((app->mouseover_row_ref && (path = gtk_tree_row_reference_get_path(app->mouseover_row_ref)))){
+		gtk_tree_model_get_iter(GTK_TREE_MODEL(app->store), &iter, path);
+		gchar* path_str = gtk_tree_model_get_string_from_iter(GTK_TREE_MODEL(app->store), &iter);
 		row_num = atoi(path_str);
 
 		g_free(path_str);
@@ -531,7 +508,7 @@ add_dir(const char* path, int* added_count)
 				statusbar_print(1, "%i files added", *added_count);
 			}
 			// IS_DIR
-			else if(app.add_recursive){
+			else if(app->add_recursive){
 				add_dir(filepath, added_count);
 			}
 		}
@@ -555,11 +532,11 @@ do_search(char* search, char* dir)
 	if(BACKEND_IS_NULL) return;
 	search_pending = false;
 
-	if (search) g_strlcpy(app.model->filters.phrase, search, 256); //the search phrase is now always taken from the model.
-	if (!dir) dir = app.model->filters.dir;
+	if (search) g_strlcpy(app->model->filters.phrase, search, 256); //the search phrase is now always taken from the model.
+	if (!dir) dir = app->model->filters.dir;
 
 	int n_results = 0;
-	if(!backend.search_iter_new(search, dir, app.model->filters.category, &n_results)) {
+	if(!backend.search_iter_new(search, dir, app->model->filters.category, &n_results)) {
 		return;
 	}
 
@@ -573,7 +550,7 @@ do_search(char* search, char* dir)
 	while((result = backend.search_iter_next(&lengths)) && row_count < MAX_DISPLAY_ROWS){
 		Sample* s = sample_dup(result);
 		//listmodel__add_result(s);
-		samplecat_list_store_add((SamplecatListStore*)app.store, s);
+		samplecat_list_store_add((SamplecatListStore*)app->store, s);
 		sample_unref(s);
 		row_count++;
 	}
@@ -583,14 +560,14 @@ do_search(char* search, char* dir)
 	if(0 && row_count < MAX_DISPLAY_ROWS){
 		statusbar_print(1, "%i samples found.", row_count);
 	}else if(!row_count){
-		statusbar_print(1, "no samples found. filters: dir=%s", app.model->filters.dir);
+		statusbar_print(1, "no samples found. filters: dir=%s", app->model->filters.dir);
 	}else if (n_results <0) {
 		statusbar_print(1, "showing %i sample(s)", row_count);
 	}else{
 		statusbar_print(1, "showing %i of %i sample(s)", row_count, n_results);
 	}
 
-	samplecat_list_store_do_search((SamplecatListStore*)app.store);
+	samplecat_list_store_do_search((SamplecatListStore*)app->store);
 
 	//treeview_unblock_motion_handler();  //causes a segfault even before it is run ??!!
 }
@@ -613,7 +590,7 @@ create_nodes_for_path(gchar** path)
 		return a;
 	}
 
-	GNode* node = app.dir_tree;
+	GNode* node = app->dir_tree;
 	int i; for(i=0;path[i];i++){
 		if(strlen(path[i])){
 			//dbg(0, "  testing %s ...", path[i]);
@@ -661,12 +638,12 @@ update_dir_node_list()
 
 	backend.dir_iter_new();
 
-	if(app.dir_tree) g_node_destroy(app.dir_tree);
-	app.dir_tree = g_node_new(NULL);
+	if(app->dir_tree) g_node_destroy(app->dir_tree);
+	app->dir_tree = g_node_new(NULL);
 
 	DhLink* link = dh_link_new(DH_LINK_TYPE_PAGE, "all directories", "");
 	GNode* leaf = g_node_new(link);
-	g_node_insert(app.dir_tree, -1, leaf);
+	g_node_insert(app->dir_tree, -1, leaf);
 
 	GNode* lookup_node_by_path(gchar** path)
 	{
@@ -709,7 +686,7 @@ update_dir_node_list()
 		struct _closure* c = g_new0(struct _closure, 1);
 		c->path = path;
 
-		g_node_traverse(app.dir_tree, G_IN_ORDER, G_TRAVERSE_ALL, 64, traverse_func, c);
+		g_node_traverse(app->dir_tree, G_IN_ORDER, G_TRAVERSE_ALL, 64, traverse_func, c);
 		GNode* ret = c->insert_at;
 		g_free(c);
 		return ret;
@@ -735,7 +712,7 @@ update_dir_node_list()
 	}
 
 	backend.dir_iter_free();
-	dbg(2, "size=%i", g_node_n_children(app.dir_tree));
+	dbg(2, "size=%i", g_node_n_children(app->dir_tree));
 }
 
 
@@ -826,7 +803,7 @@ add_file(char* path)
 		return false;
 	}
 
-	samplecat_list_store_add((SamplecatListStore*)app.store, sample);
+	samplecat_list_store_add((SamplecatListStore*)app->store, sample);
 
 	on_directory_list_changed();
 	sample_unref(sample);
@@ -871,9 +848,9 @@ on_ebur128_done(gpointer _sample)
 void
 delete_selected_rows()
 {
-	GtkTreeModel* model = gtk_tree_view_get_model(GTK_TREE_VIEW(app.libraryview->widget));
+	GtkTreeModel* model = gtk_tree_view_get_model(GTK_TREE_VIEW(app->libraryview->widget));
 
-	GtkTreeSelection* selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(app.libraryview->widget));
+	GtkTreeSelection* selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(app->libraryview->widget));
 	GList* selectionlist = gtk_tree_selection_get_selected_rows(selection, &(model));
 	if(!selectionlist){ perr("no files selected?\n"); return; }
 	dbg(1, "%i rows selected.", g_list_length(selectionlist));
@@ -885,7 +862,7 @@ delete_selected_rows()
 	for(;l;l=l->next){
 		GtkTreePath* treepath_selection = l->data;
 
-		GtkTreeRowReference* row_ref = gtk_tree_row_reference_new(GTK_TREE_MODEL(app.store), treepath_selection);
+		GtkTreeRowReference* row_ref = gtk_tree_row_reference_new(GTK_TREE_MODEL(app->store), treepath_selection);
 		selected_row_refs = g_list_prepend(selected_row_refs, row_ref);
 	}
 	g_list_free(selectionlist);
@@ -906,7 +883,7 @@ delete_selected_rows()
 				if(!backend.remove(id)) return;
 
 				//update the store:
-				gtk_list_store_remove(app.store, &iter);
+				gtk_list_store_remove(app->store, &iter);
 				n++;
 
 			} else perr("bad iter!\n");
@@ -932,10 +909,10 @@ static void
 update_rows(GtkWidget* widget, gpointer user_data)
 {
 	PF;
-	GtkTreeModel* model = GTK_TREE_MODEL(app.store);
+	GtkTreeModel* model = GTK_TREE_MODEL(app->store);
 	gboolean force_update = (GPOINTER_TO_INT(user_data)==2)?true:false; // NOTE - linked to order in _menu_def[]
 
-	GtkTreeSelection* selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(app.libraryview->widget));
+	GtkTreeSelection* selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(app->libraryview->widget));
 	GList* selectionlist = gtk_tree_selection_get_selected_rows(selection, &(model));
 	if(!selectionlist){ perr("no files selected?\n"); return; }
 	dbg(2, "%i rows selected.", g_list_length(selectionlist));
@@ -962,14 +939,14 @@ update_rows(GtkWidget* widget, gpointer user_data)
 static void
 menu_play_all(GtkWidget* widget, gpointer user_data)
 {
-	app.auditioner->play_all();
+	app->auditioner->play_all();
 }
 
 
 void
 menu_play_stop(GtkWidget* widget, gpointer user_data)
 {
-	app.auditioner->stop();
+	app->auditioner->stop();
 }
 
 
@@ -1033,7 +1010,7 @@ make_context_menu()
 		}
 
 		int i; for(i=0;i<MAX_VIEW_OPTIONS;i++){
-			ViewOption* option = &app.view_options[i];
+			ViewOption* option = &app->view_options[i];
 			GtkWidget* menu_item = gtk_check_menu_item_new_with_mnemonic(option->name);
 			gtk_menu_shell_append(GTK_MENU_SHELL(sub), menu_item);
 			gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menu_item), option->value);
@@ -1045,13 +1022,13 @@ make_context_menu()
 
 	GtkWidget* menu_item = gtk_check_menu_item_new_with_mnemonic("Add Recursively");
 	gtk_menu_shell_append(GTK_MENU_SHELL(sub), menu_item);
-	gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menu_item), app.add_recursive);
+	gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menu_item), app->add_recursive);
 	g_signal_connect(G_OBJECT(menu_item), "activate", G_CALLBACK(toggle_recursive_add), NULL);
 
-	if (app.auditioner->seek) {
+	if (app->auditioner->seek) {
 		menu_item = gtk_check_menu_item_new_with_mnemonic("Loop Playback");
 		gtk_menu_shell_append(GTK_MENU_SHELL(sub), menu_item);
-		gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menu_item), app.loop_playback);
+		gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menu_item), app->loop_playback);
 		g_signal_connect(G_OBJECT(menu_item), "activate", G_CALLBACK(toggle_loop_playback), NULL);
 	}
 
@@ -1168,7 +1145,7 @@ static gboolean
 toggle_loop_playback(GtkWidget *widget, gpointer user_data)
 {
 	PF;
-	if(app.loop_playback) app.loop_playback = false; else app.loop_playback = true;
+	if(app->loop_playback) app->loop_playback = false; else app->loop_playback = true;
 	return false;
 }
 
@@ -1177,7 +1154,7 @@ static gboolean
 toggle_recursive_add(GtkWidget *widget, gpointer user_data)
 {
 	PF;
-	if(app.add_recursive) app.add_recursive = false; else app.add_recursive = true;
+	if(app->add_recursive) app->add_recursive = false; else app->add_recursive = true;
 	return false;
 }
 
@@ -1187,21 +1164,21 @@ static bool
 config_load()
 {
 #ifdef USE_MYSQL
-	strcpy(app.config.mysql.name, "samplecat");
+	strcpy(app->config.mysql.name, "samplecat");
 #endif
-	strcpy(app.config.show_dir, "");
+	strcpy(app->config.show_dir, "");
 
 	int i;
 	for (i=0;i<PALETTE_SIZE;i++) {
 		//currently these are overridden anyway
-		snprintf(app.config.colour[i], 7, "%s", "000000");
+		snprintf(app->config.colour[i], 7, "%s", "000000");
 	}
 
 	GError* error = NULL;
-	app.key_file = g_key_file_new();
-	if(g_key_file_load_from_file(app.key_file, app.config_filename, G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS, &error)){
+	app->key_file = g_key_file_new();
+	if(g_key_file_load_from_file(app->key_file, app->config_filename, G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS, &error)){
 		p_(1, "config loaded.");
-		gchar* groupname = g_key_file_get_start_group(app.key_file);
+		gchar* groupname = g_key_file_get_start_group(app->key_file);
 		dbg (2, "group=%s.", groupname);
 		if(!strcmp(groupname, "Samplecat")){
 #define num_keys (18)
@@ -1216,36 +1193,36 @@ config_load()
 			size_t siz[num_keys+(PALETTE_SIZE-1)];
 
 			i=0;
-			ADD_CONFIG_KEY (app.config.database_backend, "database_backend");
+			ADD_CONFIG_KEY (app->config.database_backend, "database_backend");
 #ifdef USE_MYSQL
-			ADD_CONFIG_KEY (app.config.mysql.host,       "mysql_host");
-			ADD_CONFIG_KEY (app.config.mysql.user,       "mysql_user");
-			ADD_CONFIG_KEY (app.config.mysql.pass,       "mysql_pass");
-			ADD_CONFIG_KEY (app.config.mysql.name,       "mysql_name");
+			ADD_CONFIG_KEY (app->config.mysql.host,       "mysql_host");
+			ADD_CONFIG_KEY (app->config.mysql.user,       "mysql_user");
+			ADD_CONFIG_KEY (app->config.mysql.pass,       "mysql_pass");
+			ADD_CONFIG_KEY (app->config.mysql.name,       "mysql_name");
 #endif
-			ADD_CONFIG_KEY (app.config.show_dir,         "show_dir");
-			ADD_CONFIG_KEY (app.config.window_height,    "window_height");
-			ADD_CONFIG_KEY (app.config.window_width,     "window_width");
-			ADD_CONFIG_KEY (theme_name,                  "icon_theme");
-			ADD_CONFIG_KEY (app.config.column_widths[0], "col1_width");
-			ADD_CONFIG_KEY (app.model->filters.phrase,   "filter");
-			ADD_CONFIG_KEY (app.config.browse_dir,       "browse_dir");
-			ADD_CONFIG_KEY (app.config.show_player,      "show_player");
-			ADD_CONFIG_KEY (app.config.show_waveform,    "show_waveform");
-			ADD_CONFIG_KEY (app.config.show_spectrogram, "show_spectrogram");
-			ADD_CONFIG_KEY (app.config.auditioner,       "auditioner");
-			ADD_CONFIG_KEY (app.config.jack_autoconnect, "jack_autoconnect");
-			ADD_CONFIG_KEY (app.config.jack_midiconnect, "jack_midiconnect");
+			ADD_CONFIG_KEY (app->config.show_dir,         "show_dir");
+			ADD_CONFIG_KEY (app->config.window_height,    "window_height");
+			ADD_CONFIG_KEY (app->config.window_width,     "window_width");
+			ADD_CONFIG_KEY (theme_name,                   "icon_theme");
+			ADD_CONFIG_KEY (app->config.column_widths[0], "col1_width");
+			ADD_CONFIG_KEY (app->model->filters.phrase,   "filter");
+			ADD_CONFIG_KEY (app->config.browse_dir,       "browse_dir");
+			ADD_CONFIG_KEY (app->config.show_player,      "show_player");
+			ADD_CONFIG_KEY (app->config.show_waveform,    "show_waveform");
+			ADD_CONFIG_KEY (app->config.show_spectrogram, "show_spectrogram");
+			ADD_CONFIG_KEY (app->config.auditioner,       "auditioner");
+			ADD_CONFIG_KEY (app->config.jack_autoconnect, "jack_autoconnect");
+			ADD_CONFIG_KEY (app->config.jack_midiconnect, "jack_midiconnect");
 
 			int k;
 			for (k=0;k<PALETTE_SIZE-1;k++) {
 				char tmp[16]; snprintf(tmp, 16, "colorkey%02d", k+1);
-				ADD_CONFIG_KEY(app.config.colour[k+1], tmp)
+				ADD_CONFIG_KEY(app->config.colour[k+1], tmp)
 			}
 
 			for(k=0;k<(num_keys+PALETTE_SIZE-1);k++){
 				gchar* keyval;
-				if((keyval = g_key_file_get_string(app.key_file, groupname, keys[k], &error))){
+				if((keyval = g_key_file_get_string(app->key_file, groupname, keys[k], &error))){
 					size_t keylen = siz[k];
 					snprintf(loc[k], keylen, "%s", keyval); loc[k][keylen-1] = '\0';
 					dbg(2, "%s=%s", keys[k], keyval);
@@ -1256,12 +1233,12 @@ config_load()
 					if (!loc[k] || strlen(loc[k])==0) strcpy(loc[k], "");
 				}
 			}
-			samplecat_model_set_search_dir (app.model, app.config.show_dir);
+			samplecat_model_set_search_dir (app->model, app->config.show_dir);
 
-			app.view_options[SHOW_PLAYER]      = (ViewOption){"Player",      show_player,      strcmp(app.config.show_player, "false")};
-			app.view_options[SHOW_FILEMANAGER] = (ViewOption){"Filemanager", show_filemanager, true};
-			app.view_options[SHOW_WAVEFORM]    = (ViewOption){"Waveform",    show_waveform,    !strcmp(app.config.show_waveform, "true")};
-			app.view_options[SHOW_SPECTROGRAM] = (ViewOption){"Spectrogram", show_spectrogram, !strcmp(app.config.show_spectrogram, "true")};
+			app->view_options[SHOW_PLAYER]      = (ViewOption){"Player",      show_player,      strcmp(app->config.show_player, "false")};
+			app->view_options[SHOW_FILEMANAGER] = (ViewOption){"Filemanager", show_filemanager, true};
+			app->view_options[SHOW_WAVEFORM]    = (ViewOption){"Waveform",    show_waveform,    !strcmp(app->config.show_waveform, "true")};
+			app->view_options[SHOW_SPECTROGRAM] = (ViewOption){"Spectrogram", show_spectrogram, !strcmp(app->config.show_spectrogram, "true")};
 		}
 		else{ pwarn("cannot find Samplecat key group.\n"); return false; }
 		g_free(groupname);
@@ -1275,8 +1252,8 @@ config_load()
 	}
 
 	for (i=0;i<PALETTE_SIZE;i++) {
-		if (strcmp(app.config.colour[i], "000000")) {
-			app.colourbox_dirty = false;
+		if (strcmp(app->config.colour[i], "000000")) {
+			app->colourbox_dirty = false;
 			break;
 		}
 	}
@@ -1287,57 +1264,57 @@ config_load()
 static bool
 config_save()
 {
-	if(app.loaded){
+	if(app->loaded){
 		//update the search directory:
-		g_key_file_set_value(app.key_file, "Samplecat", "show_dir", app.model->filters.dir ? app.model->filters.dir : "");
+		g_key_file_set_value(app->key_file, "Samplecat", "show_dir", app->model->filters.dir ? app->model->filters.dir : "");
 
 		//save window dimensions:
 		gint width, height;
 		char value[256];
-		if(app.window && GTK_WIDGET_REALIZED(app.window)){
-			gtk_window_get_size(GTK_WINDOW(app.window), &width, &height);
+		if(app->window && GTK_WIDGET_REALIZED(app->window)){
+			gtk_window_get_size(GTK_WINDOW(app->window), &width, &height);
 		} else {
 			dbg (0, "couldnt get window size...", "");
-			width  = MIN(atoi(app.config.window_width),  2048); //FIXME ?
-			height = MIN(atoi(app.config.window_height), 2048);
+			width  = MIN(atoi(app->config.window_width),  2048); //FIXME ?
+			height = MIN(atoi(app->config.window_height), 2048);
 		}
 		snprintf(value, 255, "%i", width);
-		g_key_file_set_value(app.key_file, "Samplecat", "window_width", value);
+		g_key_file_set_value(app->key_file, "Samplecat", "window_width", value);
 		snprintf(value, 255, "%i", height);
-		g_key_file_set_value(app.key_file, "Samplecat", "window_height", value);
+		g_key_file_set_value(app->key_file, "Samplecat", "window_height", value);
 
-		g_key_file_set_value(app.key_file, "Samplecat", "icon_theme", theme_name);
+		g_key_file_set_value(app->key_file, "Samplecat", "icon_theme", theme_name);
 
-		GtkTreeViewColumn* column = gtk_tree_view_get_column(GTK_TREE_VIEW(app.libraryview->widget), 1);
+		GtkTreeViewColumn* column = gtk_tree_view_get_column(GTK_TREE_VIEW(app->libraryview->widget), 1);
 		int column_width = gtk_tree_view_column_get_width(column);
 		snprintf(value, 255, "%i", column_width);
-		g_key_file_set_value(app.key_file, "Samplecat", "col1_width", value);
+		g_key_file_set_value(app->key_file, "Samplecat", "col1_width", value);
 
-		g_key_file_set_value(app.key_file, "Samplecat", "col1_height", value);
+		g_key_file_set_value(app->key_file, "Samplecat", "col1_height", value);
 
-		g_key_file_set_value(app.key_file, "Samplecat", "filter", gtk_entry_get_text(GTK_ENTRY(app.search)));
+		g_key_file_set_value(app->key_file, "Samplecat", "filter", gtk_entry_get_text(GTK_ENTRY(app->search)));
 
 		AyyiLibfilemanager* fm = file_manager__get_signaller();
 		struct _Filer* f = fm->file_window;
 		if(f){
-			g_key_file_set_value(app.key_file, "Samplecat", "browse_dir", f->real_path);
+			g_key_file_set_value(app->key_file, "Samplecat", "browse_dir", f->real_path);
 		}
 
-		g_key_file_set_value(app.key_file, "Samplecat", "show_player", app.view_options[SHOW_PLAYER].value ? "true" : "false");
-		g_key_file_set_value(app.key_file, "Samplecat", "show_waveform", app.view_options[SHOW_WAVEFORM].value ? "true" : "false");
-		g_key_file_set_value(app.key_file, "Samplecat", "show_spectrogram", app.view_options[SHOW_SPECTROGRAM].value ? "true" : "false");
+		g_key_file_set_value(app->key_file, "Samplecat", "show_player", app->view_options[SHOW_PLAYER].value ? "true" : "false");
+		g_key_file_set_value(app->key_file, "Samplecat", "show_waveform", app->view_options[SHOW_WAVEFORM].value ? "true" : "false");
+		g_key_file_set_value(app->key_file, "Samplecat", "show_spectrogram", app->view_options[SHOW_SPECTROGRAM].value ? "true" : "false");
 
 		int i;
 		for (i=1;i<PALETTE_SIZE;i++) {
 			char keyname[32];
 			snprintf(keyname,32, "colorkey%02d", i);
-			g_key_file_set_value(app.key_file, "Samplecat", keyname, app.config.colour[i]);
+			g_key_file_set_value(app->key_file, "Samplecat", keyname, app->config.colour[i]);
 		}
 	}
 
 	GError* error = NULL;
 	gsize length;
-	gchar* string = g_key_file_to_data(app.key_file, &length, &error);
+	gchar* string = g_key_file_to_data(app->key_file, &length, &error);
 	if(error){
 		dbg (0, "error saving config file: %s", error->message);
 		g_error_free(error);
@@ -1346,14 +1323,14 @@ config_save()
 	if(ensure_config_dir()){
 
 		FILE* fp;
-		if(!(fp = fopen(app.config_filename, "w"))){
-			errprintf("cannot open config file for writing (%s).\n", app.config_filename);
-			statusbar_print(1, "cannot open config file for writing (%s).", app.config_filename);
+		if(!(fp = fopen(app->config_filename, "w"))){
+			errprintf("cannot open config file for writing (%s).\n", app->config_filename);
+			statusbar_print(1, "cannot open config file for writing (%s).", app->config_filename);
 			return false;
 		}
 		if(fprintf(fp, "%s", string) < 0){
-			errprintf("error writing data to config file (%s).\n", app.config_filename);
-			statusbar_print(1, "error writing data to config file (%s).", app.config_filename);
+			errprintf("error writing data to config file (%s).\n", app->config_filename);
+			statusbar_print(1, "error writing data to config file (%s).", app->config_filename);
 		}
 		fclose(fp);
 	}
@@ -1383,14 +1360,14 @@ config_new()
 		"jack_midiconnect=DISABLED\n"
 		);
 
-	if(!g_key_file_load_from_data(app.key_file, data, strlen(data), G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS, &error)){
+	if(!g_key_file_load_from_data(app->key_file, data, strlen(data), G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS, &error)){
 		perr("error creating new key_file from data. %s\n", error->message);
 		g_error_free(error);
 		error = NULL;
 		return;
 	}
 
-	printf("A default config file has been created. Please enter your database details in '%s'.\n", app.config_filename);
+	printf("A default config file has been created. Please enter your database details in '%s'.\n", app->config_filename);
 }
 
 
@@ -1400,10 +1377,10 @@ on_quit(GtkMenuItem* menuitem, gpointer user_data)
 	int exit_code = GPOINTER_TO_INT(user_data);
 	if(exit_code > 1) exit_code = 0; //ignore invalid exit code.
 
-	if(app.loaded) config_save();
+	if(app->loaded) config_save();
 
 	menu_play_stop(NULL,NULL);
-	app.auditioner->disconnect();
+	app->auditioner->disconnect();
 
 	if (backend.disconnect) backend.disconnect();
 
@@ -1491,27 +1468,27 @@ set_auditioner() /* tentative - WIP */
 
 	gboolean connected = false;
 #ifdef HAVE_JACK
-	if(!connected && can_use(app.players, "jack")){
-		app.auditioner = & a_jack;
-		if (!app.auditioner->check()) {
+	if(!connected && can_use(app->players, "jack")){
+		app->auditioner = & a_jack;
+		if (!app->auditioner->check()) {
 			connected = true;
 			printf("JACK playback.\n");
 		}
 	}
 #endif
 #ifdef HAVE_AYYIDBUS
-	if(!connected && can_use(app.players, "ayyi")){
-		app.auditioner = & a_ayyidbus;
-		if (!app.auditioner->check()) {
+	if(!connected && can_use(app->players, "ayyi")){
+		app->auditioner = & a_ayyidbus;
+		if (!app->auditioner->check()) {
 			connected = true;
 			printf("ayyi_audition.\n");
 		}
 	}
 #endif
 #ifdef HAVE_GPLAYER
-	if(!connected && can_use(app.players, "cli")){
-		app.auditioner = & a_gplayer;
-		if (!app.auditioner->check()) {
+	if(!connected && can_use(app->players, "cli")){
+		app->auditioner = & a_gplayer;
+		if (!app->auditioner->check()) {
 			connected = true;
 			printf("using CLI player.\n");
 		}
@@ -1519,7 +1496,7 @@ set_auditioner() /* tentative - WIP */
 #endif
 	if (!connected) {
 		printf("no playback support.\n");
-		app.auditioner = & a_null;
+		app->auditioner = & a_null;
 	}
 }
 

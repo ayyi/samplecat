@@ -33,7 +33,6 @@
 #include "audio_decoder/ad.h"
 #include "audio_analysis/waveform/waveform.h"
 
-extern struct _app app;
 extern unsigned debug;
 
 static GList* msg_list = NULL;
@@ -84,16 +83,16 @@ overview_thread(gpointer data)
 
 	dbg(1, "new overview thread.");
 
-	if(!app.msg_queue){ perr("no msg_queue!\n"); return NULL; }
+	if(!app->msg_queue){ perr("no msg_queue!\n"); return NULL; }
 
-	g_async_queue_ref(app.msg_queue);
+	g_async_queue_ref(app->msg_queue);
 
 	gboolean worker_timeout(gpointer data)
 	{
 
 		//check for new work
-		while(g_async_queue_length(app.msg_queue)){
-			struct _message* message = g_async_queue_pop(app.msg_queue); // blocks
+		while(g_async_queue_length(app->msg_queue)){
+			struct _message* message = g_async_queue_pop(app->msg_queue); // blocks
 			msg_list = g_list_append(msg_list, message);
 			dbg(2, "new message! %p", message);
 		}
@@ -137,7 +136,7 @@ overview_thread(gpointer data)
 void
 request_overview(Sample* sample)
 {
-	if(!app.msg_queue) return;
+	if(!app->msg_queue) return;
 
 	struct _message* message = g_new0(struct _message, 1);
 	message->type = MSG_TYPE_OVERVIEW;
@@ -145,13 +144,13 @@ request_overview(Sample* sample)
 
 	dbg(2, "sending message: sample=%p filename=%s", sample, sample->full_path);
 	sample_ref(sample);
-	g_async_queue_push(app.msg_queue, message); //notify the overview thread.
+	g_async_queue_push(app->msg_queue, message); //notify the overview thread.
 }
 
 void
 request_peaklevel(Sample* sample)
 {
-	if(!app.msg_queue) return;
+	if(!app->msg_queue) return;
 
 	struct _message* message = g_new0(struct _message, 1);
 	message->type = MSG_TYPE_PEAKLEVEL;
@@ -159,13 +158,13 @@ request_peaklevel(Sample* sample)
 
 	dbg(2, "sending message: sample=%p filename=%s", sample, sample->full_path);
 	sample_ref(sample);
-	g_async_queue_push(app.msg_queue, message);
+	g_async_queue_push(app->msg_queue, message);
 }
 
 void
 request_ebur128(Sample* sample)
 {
-	if(!app.msg_queue) return;
+	if(!app->msg_queue) return;
 
 	struct _message* message = g_new0(struct _message, 1);
 	message->type = MSG_TYPE_EBUR128;
@@ -173,5 +172,5 @@ request_ebur128(Sample* sample)
 
 	dbg(2, "sending message: sample=%p filename=%s", sample, sample->full_path);
 	sample_ref(sample);
-	g_async_queue_push(app.msg_queue, message);
+	g_async_queue_push(app->msg_queue, message);
 }

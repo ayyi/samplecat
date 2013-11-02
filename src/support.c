@@ -272,7 +272,7 @@ colour_get_style_fg(GdkColor* color, GtkStateType state)
 {
 	//gives the default style foreground colour for the given widget state.
 
-	GtkStyle* style = gtk_widget_get_style(app.window);
+	GtkStyle* style = gtk_widget_get_style(app->window);
 	color->red   = style->fg[state].red;
 	color->green = style->fg[state].green;
 	color->blue  = style->fg[state].blue;
@@ -283,7 +283,7 @@ colour_get_style_bg(GdkColor* color, int state)
 {
 	//gives the default style foreground colour for the given widget state.
 
-	GtkStyle* style = gtk_widget_get_style(app.window);
+	GtkStyle* style = gtk_widget_get_style(app->window);
 	color->red   = style->bg[state].red;
 	color->green = style->bg[state].green;
 	color->blue  = style->bg[state].blue;
@@ -295,7 +295,7 @@ colour_get_style_base(GdkColor* color, int state)
 {
 	//gives the default style base colour for the given widget state.
 
-	GtkStyle *style = gtk_widget_get_style(app.window);
+	GtkStyle *style = gtk_widget_get_style(app->window);
 	color->red   = style->base[state].red;
 	color->green = style->base[state].green;
 	color->blue  = style->base[state].blue;
@@ -307,7 +307,7 @@ colour_get_style_text(GdkColor* color, int state)
 {
 	//gives the default style text colour for the given widget state.
 
-	GtkStyle* style = gtk_widget_get_style(app.window);
+	GtkStyle* style = gtk_widget_get_style(app->window);
 	color->red   = style->text[state].red;
 	color->green = style->text[state].green;
 	color->blue  = style->text[state].blue;
@@ -507,8 +507,8 @@ statusbar_print(int n, char* fmt, ...)
 	if(debug) printf("%s\n", s);
 
 	GtkWidget *statusbar = NULL;
-	if     (n==1) statusbar = app.statusbar;
-	else if(n==2) statusbar = app.statusbar2;
+	if     (n==1) statusbar = app->statusbar;
+	else if(n==2) statusbar = app->statusbar2;
 	else { perr("bad statusbar index (%i)\n", n); n=1; }
 
 	if(!statusbar) return; //window may not be open.

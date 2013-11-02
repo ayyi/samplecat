@@ -144,7 +144,7 @@ on_theme_select(GtkMenuItem* menuitem, gpointer user_data)
 
 	if(debug) print_icon_list();
 	set_icon_theme();
-	application_emit_icon_theme_changed(application, name);
+	application_emit_icon_theme_changed(app, name);
 }
 
 

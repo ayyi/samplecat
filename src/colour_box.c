@@ -1,8 +1,20 @@
+/**
+* +----------------------------------------------------------------------+
+* | This file is part of Samplecat. http://samplecat.orford.org          |
+* | copyright (C) 2007-2013 Tim Orford <tim@orford.org>                  |
+* +----------------------------------------------------------------------+
+* | This program is free software; you can redistribute it and/or modify |
+* | it under the terms of the GNU General Public License version 3       |
+* | as published by the Free Software Foundation.                        |
+* +----------------------------------------------------------------------+
+*
+*/
 #include "config.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+#include <math.h>
 #include <gtk/gtk.h>
 #include "debug/debug.h"
 #include "file_manager.h"
@@ -15,7 +27,6 @@
 #include "dnd.h"
 #include "colour_box.h"
 
-extern struct _app app;
 extern Filer       filer;
 extern unsigned    debug;
 static GtkWidget*  clicked_widget = NULL;
@@ -35,13 +46,19 @@ static MenuDef _menu_def[] = {
 };
 
 
+void
+colour_box_init()
+{
+}
+
+
 GtkWidget*
 colour_box_new(GtkWidget* parent)
 {
 	GtkWidget* e;
 	int i;
 	for(i=PALETTE_SIZE-1;i>=0;i--){
-		e = app.colour_button[i] = gtk_event_box_new();
+		e = app->colour_button[i] = gtk_event_box_new();
 		gtk_container_set_border_width(GTK_CONTAINER(e),1);
 
 		gtk_drag_source_set(e, GDK_BUTTON1_MASK | GDK_BUTTON2_MASK, dnd_file_drag_types, dnd_file_drag_types_count, GDK_ACTION_COPY | GDK_ACTION_MOVE | GDK_ACTION_LINK);
@@ -69,17 +86,17 @@ colour_box_update()
 	GdkColor colour;
 	char colour_string[16];
 	for(i=PALETTE_SIZE-1;i>=0;i--){
-		GtkWidget* widget = app.colour_button[i];
-		if(app.colour_button[i] && strlen(app.config.colour[i])){
-			snprintf(colour_string, 16, "#%s", app.config.colour[i]);
+		GtkWidget* widget = app->colour_button[i];
+		if(app->colour_button[i] && strlen(app->config.colour[i])){
+			snprintf(colour_string, 16, "#%s", app->config.colour[i]);
 			if(!gdk_color_parse(colour_string, &colour)){
 				warnprintf("%s(): %i: parsing of colour string failed. %s\n", __func__, i, colour_string);
 				continue;
 			}
 			dbg(2, "%i colour: %x %x %x", i, colour.red, colour.green, colour.blue);
 
-			//if(colour.red != app.colour_button[i]->style->bg[GTK_STATE_NORMAL].red) 
-				gtk_widget_modify_bg(app.colour_button[i], GTK_STATE_NORMAL, &colour);
+			//if(colour.red != app->colour_button[i]->style->bg[GTK_STATE_NORMAL].red) 
+				gtk_widget_modify_bg(app->colour_button[i], GTK_STATE_NORMAL, &colour);
 
 			gtk_widget_show(widget);
 		}
@@ -97,8 +114,8 @@ colour_box__exists(GdkColor* colour)
 	char string[8];
 	int i;
 	for(i=0;i<PALETTE_SIZE;i++){
-		if(strlen(app.config.colour[i])){
-			snprintf(string, 8, "#%s", app.config.colour[i]);
+		if(strlen(app->config.colour[i])){
+			snprintf(string, 8, "#%s", app->config.colour[i]);
 			if(!gdk_color_parse(string, &existing_colour)) warnprintf("%s(): parsing of colour string failed (%s).\n", __func__, string);
 			if(is_similar(colour, &existing_colour, 0x10)) return true;
 		}
@@ -124,7 +141,7 @@ colour_box_add(GdkColor* colour)
 	//only add a colour if a similar colour isnt already there.
 	if(colour_box__exists(colour)){ dbg(2, "dup colour - not adding..."); return false; }
 #endif
-	hexstring_from_gdkcolor(app.config.colour[slot++], colour);
+	hexstring_from_gdkcolor(app->config.colour[slot++], colour);
 	return true;
 }
 
@@ -133,9 +150,9 @@ static void
 colour_box__set_colour(int i, GdkColor* colour)
 {
 	g_return_if_fail(i < PALETTE_SIZE);
-	g_return_if_fail(app.colour_button[i]);
-	hexstring_from_gdkcolor(app.config.colour[i], colour);
-	gtk_widget_modify_bg(app.colour_button[i], GTK_STATE_NORMAL, colour);
+	g_return_if_fail(app->colour_button[i]);
+	hexstring_from_gdkcolor(app->config.colour[i], colour);
+	gtk_widget_modify_bg(app->colour_button[i], GTK_STATE_NORMAL, colour);
 }
 
 
@@ -205,7 +222,7 @@ static int
 colour_box__lookup_idx(GtkWidget* widget)
 {
 	int i; for(i=0;i<PALETTE_SIZE;i++){
-		if(app.colour_button[i] == widget) return i;
+		if(app->colour_button[i] == widget) return i;
 	}
 	return -1;
 }
@@ -247,7 +264,7 @@ menu__open_selector(GtkMenuItem* menuitem, gpointer user_data)
 	GtkWidget* sel = gtk_color_selection_new();
 #if 1
 	int box_idx = colour_box__lookup_idx(clicked_widget);
-	GtkStyle *curstyle = gtk_widget_get_style(app.colour_button[box_idx]);
+	GtkStyle *curstyle = gtk_widget_get_style(app->colour_button[box_idx]);
 	gtk_color_selection_set_current_color(GTK_COLOR_SELECTION(sel), &curstyle->bg[GTK_STATE_NORMAL]);
 #endif
 	GtkWidget* b = gtk_button_new_with_label("Ok");
@@ -257,6 +274,77 @@ menu__open_selector(GtkMenuItem* menuitem, gpointer user_data)
 	g_signal_connect (G_OBJECT(b), "clicked", G_CALLBACK(on_ok), user_data);
 	g_signal_connect (G_OBJECT(b), "destroy", G_CALLBACK(on_destroy), user_data);
 	g_signal_connect (G_OBJECT(sel), "color-changed", G_CALLBACK(on_colour_change), user_data);
+}
+
+
+void
+colour_box_colourise()
+{
+	GdkColor colour;
+#if 0 // tim
+	//put the style colours into the palette:
+	if(colour_darker (&colour, &app->fg_colour)) colour_box_add(&colour);
+	colour_box_add(&app->fg_colour);
+	if(colour_lighter(&colour, &app->fg_colour)) colour_box_add(&colour);
+	colour_box_add(&app->bg_colour);
+	colour_box_add(&app->base_colour);
+	colour_box_add(&app->text_colour);
+
+	if(colour_darker (&colour, &app->base_colour)) colour_box_add(&colour);
+	if(colour_lighter(&colour, &app->base_colour)) colour_box_add(&colour);
+	if(colour_lighter(&colour, &colour)         ) colour_box_add(&colour);
+
+	colour_get_style_base(&colour, GTK_STATE_SELECTED);
+	if(colour_lighter(&colour, &colour)) colour_box_add(&colour);
+	if(colour_lighter(&colour, &colour)) colour_box_add(&colour);
+	if(colour_lighter(&colour, &colour)) colour_box_add(&colour);
+
+	//add greys:
+	gdk_color_parse("#555555", &colour);
+	colour_box_add(&colour);
+	if(colour_lighter(&colour, &colour)) colour_box_add(&colour);
+	if(colour_lighter(&colour, &colour)) colour_box_add(&colour);
+	if(colour_lighter(&colour, &colour)) colour_box_add(&colour);
+#else // tom
+	float hue (float m1, float m2, float h) {
+		if (h<0)   { h = h+1.0; }
+		if (h>1)   { h = h-1.0; }
+		if (h*6<1) { return m1+(m2-m1)*h*6.0; }
+		if (h*2<1) { return m2; }
+		if (h*3<2) { return m1+(m2-m1)*((2/3.0)-h)*6.0; }
+		return m1;
+	}
+
+	void hsl2rgb (float h, float s, float l, GdkColor *c) {
+		float mr, mg, mb, m1, m2;
+		if (s == 0.0) { mr = mg = mb = l; }
+		else {
+			if (l<=0.5) { m2 = l*(s+1.0); }
+			else        { m2 = l+s-(l*s); }
+			m1 = l*2.0 - m2;
+			mr = hue(m1, m2, (h+(1/3.0)));
+			mg = hue(m1, m2, h);
+			mb = hue(m1, m2, (h-(1/3.0)));
+		}
+		c->red   = rintf(65536.0*mr);
+		c->green = rintf(65536.0*mg);
+		c->blue  = rintf(65536.0*mb);
+	}
+
+#define LUMSHIFT (0)
+	colour_box_add(&app->bg_colour); // "transparent" - none
+	int i;
+	for (i=0;i<PALETTE_SIZE-1;i++) {
+		float h, s, l; 
+		l=1.0; h = (float)i / ((float)PALETTE_SIZE-1.0);
+		s=(i%2)?.6:.9; 
+		l=0.3 + ((i+LUMSHIFT)%4)/6.0; /* 0.3 .. 0.8 */
+		hsl2rgb(h, s, l, &colour);
+		if (!colour_box_add(&colour)) {
+			fprintf(stderr, "WTF %d\n", i);
+		}
+	}
+#endif
 }
 
 
