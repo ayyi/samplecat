@@ -49,12 +49,15 @@ player_control_new()
 
 	GtkWidget* top = pc->widget = gtk_scrolled_window_new(NULL, NULL);
 	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(top), GTK_POLICY_NEVER, GTK_POLICY_NEVER);
+	gtk_widget_set_size_request(pc->widget, -1, 40);
 
 	GtkWidget* vbox = gtk_vbox_new(FALSE, 0);
 	gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(top), vbox);
 
+#ifndef USE_GDL
 	GtkWidget* label1 = gtk_label_new("Player Control");
 	gtk_box_pack_start(GTK_BOX(vbox), label1, EXPAND_FALSE, FILL_TRUE, 0);
+#endif
 
 #define BORDERMARGIN (2)
 #define MarginLeft (5)
@@ -65,7 +68,7 @@ player_control_new()
 		gtk_alignment_set_padding(GTK_ALIGNMENT(align9), 0, 0, MarginLeft-BORDERMARGIN, 0);
 		gtk_box_pack_start(GTK_BOX(vbox), align9, EXPAND_FALSE, FILL_FALSE, 0);
 
-		GtkWidget *slider = pc->slider1 = gtk_hscale_new_with_range(0.0,1.0,1.0/(float)OVERVIEW_WIDTH);
+		GtkWidget* slider = pc->slider1 = gtk_hscale_new_with_range(0.0,1.0,1.0/(float)OVERVIEW_WIDTH);
 		gtk_widget_set_size_request(slider, OVERVIEW_WIDTH+BORDERMARGIN+BORDERMARGIN, -1);
 		gtk_widget_set_tooltip_text(slider, "playhead position / seek");
 		gtk_scale_set_draw_value(GTK_SCALE(slider), false);
@@ -216,7 +219,7 @@ gboolean update_slider (gpointer data) {
 	if ( gtk_widget_get_sensitive(app->playercontrol->slider2)
 			&& (!app->enable_effect || !app->effect_enabled)) {
 		/* Note: app->effect_enabled is set by player thread 
-		 * and not yet up-to-date in show_player() */
+		 * and not yet up-to-date in player_control_on_show_hide() */
 		gtk_widget_set_sensitive(app->playercontrol->slider2, false);
 	}
 
@@ -246,15 +249,15 @@ gboolean update_slider (gpointer data) {
 
 
 void
-show_player(gboolean enable)
+player_control_on_show_hide(gboolean enable)
 {
 	//TODO should be split into 2 fns, one to hide show whole panel, other to hide show the slider.
 
-	gboolean visible = gtk_widget_get_visible(app->playercontrol->widget);
-	show_widget_if(app->playercontrol->widget, enable);
 	if(!enable){
 		return;
 	}
+
+	gboolean visible = gtk_widget_get_visible(app->playercontrol->widget);
 
 	static guint id = 0;
 	static GSource* source = NULL;

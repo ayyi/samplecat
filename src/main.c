@@ -425,7 +425,9 @@ main(int argc, char** argv)
 
 	app->loaded = true;
 	dbg(1, "loaded");
+#ifndef USE_GDL
 	message_panel__add_msg("hello", GTK_STOCK_INFO);
+#endif
 	statusbar_print(2, PACKAGE_NAME". Version "PACKAGE_VERSION);
 
 #ifdef __APPLE__

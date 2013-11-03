@@ -9,6 +9,7 @@ void        show_waveform         (gboolean enable);
 void        show_spectrogram      (gboolean enable);
 #endif
 void        show_filemanager      (gboolean enable);
+void        show_player           (gboolean enable);
 
 #ifdef USE_OPENGL
 #ifdef __gl_h_

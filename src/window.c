@@ -254,6 +254,7 @@ GtkWindow
 #endif
 
 	//---------
+
 	GtkWidget* main_vpaned = gtk_vpaned_new();
 	// default width is too big.
 	// let its size be determined by its parent.
@@ -272,21 +273,10 @@ GtkWindow
 	gtk_paned_add1(GTK_PANED(app->vpaned), pcpaned);
 #endif
 
-#ifndef USE_GDL
-	GtkWidget* dir_tree =
-#endif
-		dir_panel_new();
+	window.dir_tree = dir_panel_new();
 	left_pane2();
-#ifdef USE_GDL
-#warning TODO player
-#else
-	if (app->auditioner->status && app->auditioner->seek) 
-		gtk_paned_add2(GTK_PANED(pcpaned), app->playercontrol->widget);
-#endif
 
 #ifndef USE_GDL
-	gtk_paned_add1(GTK_PANED(pcpaned), dir_tree);
-
 	GtkWidget* rhs_vbox = gtk_vbox_new(NON_HOMOGENOUS, 0);
 	gtk_paned_add2(GTK_PANED(hpaned), rhs_vbox);
 
@@ -414,6 +404,10 @@ GtkWindow
 
 	PACK2(app->inspector->widget, GDL_DOCK_ITEM(gtk_widget_get_parent(app->libraryview->scroll)), GDL_DOCK_LEFT, "inspector", "Inspector", app->vpaned);
 	PACK2(window.dir_tree, GDL_DOCK_ITEM(gtk_widget_get_parent(app->inspector->widget)), GDL_DOCK_TOP, "directories", "Directories", pcpaned);
+
+	if (app->auditioner->status && app->auditioner->seek){
+		PACK2(app->playercontrol->widget, GDL_DOCK_ITEM(gtk_widget_get_parent(app->inspector->widget)), GDL_DOCK_BOTTOM, "player", "Player", pcpaned);
+	}
 
 #ifdef USE_OPENGL
 	if(app->view_options[SHOW_WAVEFORM].value){
@@ -1101,7 +1095,11 @@ show_waveform(gboolean enable)
 	}
 
 	if(app->waveform){
+#ifdef USE_GDL
+		show_widget_if((GtkWidget*)gdl_dock_get_item_by_name(GDL_DOCK(window.dock), "waveform"), enable);
+#else
 		show_widget_if(app->waveform, enable);
+#endif
 		app->inspector->show_waveform = !enable;
 		if(enable){
 			bool show_wave()
@@ -1146,8 +1144,7 @@ show_spectrogram(gboolean enable)
 	}
 
 	if(app->spectrogram){
-		if(enable) gtk_widget_show(app->spectrogram);
-		else gtk_widget_hide(app->spectrogram);
+		show_widget_if(app->spectrogram, enable);
 	}
 
 	on_layout_changed();
@@ -1196,6 +1193,19 @@ show_filemanager(gboolean enable)
 	show_widget_if(app->fm_view, enable);
 	show_widget_if(app->dir_treeview2->widget, enable);
 #endif
+}
+
+
+void
+show_player(gboolean enable)
+{
+#ifdef USE_GDL
+	show_widget_if((GtkWidget*)gdl_dock_get_item_by_name(GDL_DOCK(window.dock), "player"), enable);
+#else
+	show_widget_if(app->playercontrol->widget, enable);
+#endif
+
+	player_control_on_show_hide(enable);
 }
 
 

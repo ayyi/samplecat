@@ -29,6 +29,7 @@
 #include "mimetype.h"
 #include "sample.h"
 #include "listview.h"
+#include "window.h"
 #include "inspector.h"
 #ifdef USE_TRACKER
   #include "src/db/db.h"
@@ -230,7 +231,6 @@ inspector_free(Inspector* inspector)
 }
 
 
-#include "player_control.h" // temporary, as player_control should probably be outside the Inspector.
 void
 inspector_set_labels(Sample* sample)
 {

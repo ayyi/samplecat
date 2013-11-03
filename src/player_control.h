@@ -1,8 +1,8 @@
-#ifndef __SOUNDCAT_PLAYER_CONTROL_H_
-#define __SOUNDCAT_PLAYER_CONTROL_H_
+#ifndef __samplecat_player_control_h__
+#define __samplecat_player_control_h__
 #include <gtk/gtk.h>
 
-GtkWidget* player_control_new ();
-void       show_player        (gboolean);
+GtkWidget* player_control_new          ();
+void       player_control_on_show_hide (gboolean);
 
 #endif
