@@ -13,7 +13,7 @@
 
 #include <gtk/gtk.h>
 
-#include "utils/ayyi_utils.h"
+#include "debug/debug.h"
 #include "file_manager/support.h"
 #include "rox_global.h"
 #include "rox_support.h"

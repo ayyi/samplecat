@@ -40,7 +40,7 @@ warnprintf(char* format, ...)
 
 
 void 
-warnprintf2(const char* func, char *format, ...)
+warnprintf2(const char* func, char* format, ...)
 {
 	// print a warning string, then pass arguments on to vprintf.
 
@@ -54,7 +54,7 @@ warnprintf2(const char* func, char *format, ...)
 
 
 void
-errprintf(char *format, ...)
+errprintf(char* format, ...)
 {
 	// print an error string, then pass arguments on to vprintf.
 
@@ -68,16 +68,15 @@ errprintf(char *format, ...)
 
 
 void
-errprintf2(const char* func, char *format, ...)
+errprintf2(const char* func, char* format, ...)
 {
-  // print an error string, then pass arguments on to vprintf.
+	// print an error string, then pass arguments on to vprintf.
 
-  printf("%s %s(): ", ayyi_err, func);
+	printf("%s %s(): ", ayyi_err, func);
 
-  va_list argp;           //points to each unnamed arg in turn
-  va_start(argp, format); //make ap (arg pointer) point to 1st unnamed arg
-  vprintf(format, argp);
-  va_end(argp);           //clean up
+	va_list argp;           //points to each unnamed arg in turn
+	va_start(argp, format); //make ap (arg pointer) point to 1st unnamed arg
+	vprintf(format, argp);
+	va_end(argp);           //clean up
 }
-
 

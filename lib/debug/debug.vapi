@@ -7,3 +7,6 @@
 
 public int _debug_;
 
+[CCode(cname = "dbg", cheader_filename = "debug/debug.h")]
+public void dbg(int n, char* format);
+

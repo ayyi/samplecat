@@ -26,7 +26,6 @@
 #include <mysql/errmsg.h>
 #include "typedefs.h"
 #include "debug/debug.h"
-#include "utils/ayyi_utils.h"
 #include "model.h"
 #include "main.h"
 #include "sample.h"

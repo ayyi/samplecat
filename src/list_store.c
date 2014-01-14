@@ -12,7 +12,7 @@
 #include <math.h>
 #include <sample.h>
 #include <listmodel.h>
-#include <support.h>
+#include <debug/debug.h>
 #include <overview.h>
 
 

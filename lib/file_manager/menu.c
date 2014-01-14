@@ -15,7 +15,6 @@
 #include "file_manager/file_manager.h"
 #include "file_manager/support.h"
 #include "src/typedefs.h"
-#include "utils/ayyi_utils.h"
 #include "rox_global.h"
 #include "dir.h"
 #include "display.h"

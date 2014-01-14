@@ -8,24 +8,11 @@
 #define false FALSE
 #endif
 
-#define dbg(A, B, ...) debug_printf(__func__, A, B, ##__VA_ARGS__)
-#define gerr(A, ...) g_critical("%s(): "A, __func__, ##__VA_ARGS__)
-#define gwarn(A, ...) g_warning("%s(): "A, __func__, ##__VA_ARGS__);
-#define PF0 {printf("%s()...\n", __func__);}
-#define PF2 {if(debug > 1) printf("%s()...\n", __func__);}
-#define PF_DONE printf("%s(): done.\n", __func__);
-#define P_GERR if(error){ gerr("%s\n", error->message); g_error_free(error); error = NULL; }
-#define GERR_INFO if(error){ printf("%s\n", error->message); g_error_free(error); error = NULL; }
-#define GERR_WARN if(error){ gwarn("%s", error->message); g_error_free(error); error = NULL; }
 #define UNDERLINE printf("-----------------------------------------------------\n")
 #define call(FN, A, ...) if(FN) (FN)(A, ##__VA_ARGS__)
 #define IDLE_STOP FALSE
 #define BITS_PER_CHAR_8 8
 
-void        errprintf                (char* fmt, ...);
-void        errprintf3               (const char* func, char *format, ...);
-void        warnprintf               (char* format, ...);
-void        warnprintf2              (const char* func, char *format, ...);
 void        warn_gerror              (const char* msg, GError**);
 void        info_gerror              (const char* msg, GError**);
 

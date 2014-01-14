@@ -36,8 +36,8 @@
 #include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
 
+#include "debug/debug.h"
 #include "file_manager.h"
-#include "utils/ayyi_utils.h"
 #include "rox_global.h"
 
 #define display_dirs_first TRUE

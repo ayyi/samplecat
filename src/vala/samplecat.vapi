@@ -39,7 +39,4 @@ namespace Samplecat {
 
 	[CCode(cname = "request_ebur128", cheader_filename = "overview.h")]
 	void        request_ebur128        (Sample* sample);
-
-	[CCode(cname = "dbg", cheader_filename = "support.h")]
-	public void dbg(int n, char* format);
 }

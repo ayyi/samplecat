@@ -13,24 +13,6 @@ extern unsigned debug;
 
 
 void
-errprintf3(const char* func, char *format, ...)
-{
-  //fn prints an error string, then passes arguments on to vprintf.
-
-  printf("%s %s(): ", ayyi_err, func); //move to log_handler
-
-  char str[256];
-
-  va_list argp;           //points to each unnamed arg in turn
-  va_start(argp, format); //make ap (arg pointer) point to 1st unnamed arg
-  vsprintf(str, format, argp);
-  va_end(argp);           //clean up
-
-  g_critical("%s", str);
-}
-
-
-void
 warn_gerror(const char* msg, GError** error)
 {
 	//print and free the GEerror
