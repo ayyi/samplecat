@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
-* | This file is part of Samplecat. http://samplecat.orford.org          |
-* | copyright (C) 2007-2013 Tim Orford <tim@orford.org>                  |
+* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
+* | copyright (C) 2007-2014 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -45,10 +45,11 @@ struct _Application
    ApplicationPrivate*  priv;
    gint                 state;
    gboolean             loaded;
-   gchar*               cache_dir;
 
+   const char*          cache_dir;
+   const char*          config_dir;
    char*                config_filename;
-   struct _config       config;
+   Config               config;
    SamplecatModel*      model;
 
    pthread_t            gui_thread;
@@ -136,6 +137,7 @@ GType        application_get_type                () G_GNUC_CONST;
 Application* application_new                     ();
 Application* application_construct               (GType);
 void         application_emit_icon_theme_changed (Application*, const gchar*);
+void         application_quit                    (Application*);
 
 
 G_END_DECLS

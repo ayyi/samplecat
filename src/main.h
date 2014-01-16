@@ -22,12 +22,6 @@
 extern struct _backend backend;
 #endif
 
-struct _palette {
-	guint red[8];
-	guint grn[8];
-	guint blu[8];
-};
-
 void        do_search(char* search, char* dir);
 
 gboolean    new_search(GtkWidget*, gpointer userdata);

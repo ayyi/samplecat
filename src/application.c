@@ -31,15 +31,11 @@ static void     application_finalize    (GObject*);
 Application*
 application_construct (GType object_type)
 {
-	Application * self = NULL;
-	const gchar* _tmp0_ = NULL;
-	gchar* _tmp1_ = NULL;
-	self = (Application*) g_object_new (object_type, NULL);
-	self->state = 1;
-	_tmp0_ = g_get_home_dir ();
-	_tmp1_ = g_build_filename (_tmp0_, ".config", PACKAGE, "cache", NULL, NULL);
-	self->cache_dir = _tmp1_;
-	return self;
+	Application* app = g_object_new (object_type, NULL);
+	app->state = 1;
+	app->cache_dir = g_build_filename (g_get_home_dir(), ".config", PACKAGE, "cache", NULL);
+	app->config_dir = g_build_filename (g_get_home_dir(), ".config", PACKAGE, NULL);
+	return app;
 }
 
 
@@ -94,6 +90,7 @@ application_class_init (ApplicationClass* klass)
 	G_OBJECT_CLASS (klass)->finalize = application_finalize;
 	g_signal_new ("icon_theme", TYPE_APPLICATION, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_VOID__STRING, G_TYPE_NONE, 1, G_TYPE_STRING);
 	g_signal_new ("selection_changed", TYPE_APPLICATION, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_VOID__POINTER, G_TYPE_NONE, 1, G_TYPE_POINTER);
+	g_signal_new ("on_quit", TYPE_APPLICATION, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_VOID__VOID, G_TYPE_NONE, 0);
 }
 
 
@@ -122,6 +119,13 @@ application_get_type ()
 		g_once_init_leave (&application_type_id__volatile, application_type_id);
 	}
 	return application_type_id__volatile;
+}
+
+
+void
+application_quit(Application* app)
+{
+	g_signal_emit_by_name (app, "on-quit");
 }
 
 

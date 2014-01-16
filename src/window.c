@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
-* | This file is part of Samplecat. http://samplecat.orford.org          |
-* | copyright (C) 2007-2013 Tim Orford <tim@orford.org>                  |
+* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
+* | copyright (C) 2007-2014 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -102,16 +102,22 @@ static void       update_waveform_view            (Sample*);
 
 static void       k_delete_row                    (GtkAccelGroup*, gpointer);
 static void       k_save_dock                     (GtkAccelGroup*, gpointer);
+#ifdef USE_GDL
+static void       window_save_dock                ();
+#endif
 
 struct _window {
-   GtkWidget* vbox;
-   GtkWidget* dock;
-   GtkWidget* toolbar;
-   GtkWidget* toolbar2;
-   GtkWidget* category;
-   GtkWidget* view_category;
-   GtkWidget* file_man;
-   GtkWidget* dir_tree;
+   GtkWidget*     vbox;
+   GtkWidget*     dock;
+#ifdef USE_GDL
+   GdlDockLayout* layout;
+#endif
+   GtkWidget*     toolbar;
+   GtkWidget*     toolbar2;
+   GtkWidget*     category;
+   GtkWidget*     view_category;
+   GtkWidget*     file_man;
+   GtkWidget*     dir_tree;
 } window;
 
 struct _accel menu_keys[] = {
@@ -235,7 +241,7 @@ GtkWindow
 #ifdef USE_GDL
 	GtkWidget* dock = window.dock = gdl_dock_new();
 
-	/*GdlDockLayout* layout = */gdl_dock_layout_new(GDL_DOCK(dock));
+	window.layout =	gdl_dock_layout_new(GDL_DOCK(dock));
 
 	GtkWidget* dockbar = gdl_dock_bar_new(GDL_DOCK(dock));
 	gdl_dock_bar_set_style(GDL_DOCK_BAR(dockbar), GDL_DOCK_BAR_TEXT);
@@ -476,6 +482,14 @@ GtkWindow
 	}
 	g_signal_connect((gpointer)app, "selection-changed", G_CALLBACK(window_on_selection_change), NULL);
 
+#ifdef USE_GDL
+	void window_on_quit(Application* a, gpointer user_data)
+	{
+		window_save_dock();
+	}
+	g_signal_connect((gpointer)app, "on-quit", G_CALLBACK(window_on_quit), NULL);
+#endif
+
 	dnd_setup();
 
 	on_layout_changed();
@@ -501,7 +515,7 @@ window_on_size_request(GtkWidget* widget, GtkRequisition* req, gpointer user_dat
 
 
 static void
-window_on_allocate(GtkWidget *win, GtkAllocation *allocation, gpointer user_data)
+window_on_allocate(GtkWidget* win, GtkAllocation* allocation, gpointer user_data)
 {
 	#define SCROLLBAR_WIDTH_HACK 32
 	static gboolean done = FALSE;
@@ -563,7 +577,7 @@ window_on_allocate(GtkWidget *win, GtkAllocation *allocation, gpointer user_data
 
 
 static gboolean
-window_on_configure(GtkWidget *widget, GdkEventConfigure *event, gpointer user_data)
+window_on_configure(GtkWidget* widget, GdkEventConfigure* event, gpointer user_data)
 {
 	static gboolean window_size_set = FALSE;
 	if(!window_size_set){
@@ -1275,6 +1289,22 @@ k_save_dock(GtkAccelGroup* _, gpointer user_data)
 {
 	PF0;
 }
+
+
+#ifdef USE_GDL
+static void
+window_save_dock()
+{
+	PF0;
+
+	g_return_if_fail(window.layout);
+
+	char* filename = g_build_filename(app->config_dir, "layout.xml", NULL);
+	if(gdl_dock_layout_save_to_file(window.layout, filename)){
+	}
+	g_free(filename);
+}
+#endif
 
 
 #ifdef USE_OPENGL

@@ -8,7 +8,6 @@ all:
 	@sed -i -e "s/^struct _SamplecatListStore /struct _SamplecatListStoreX /" list_store.c
 	@sed -i -e "s/^struct _SamplecatListStoreClass /struct _SamplecatListStoreClassX /" list_store.c
 	mv list_store.c list_store.h ..
-	valac -C -H application.h $(packages) --pkg samplecat --vapidir=. application.vala
 	valac -C -H model.h $(packages) --pkg samplecat --pkg debug --vapidir=. --vapidir=../../lib/debug model.vala
 	@sed -i -e "/model.h/d" model.c
 	@sed -i -e "/typedef struct _SamplecatModel SamplecatModel/d" model.h
@@ -20,3 +19,5 @@ all:
 	valac -C -H gl_spectrogram_view.h --pkg gtk+-2.0 --pkg gl --pkg glu --pkg gtkglext-1.0 --pkg gmodule-2.0 gl_spectrogram_view.vala
 	mv gl_spectrogram_view.c gl_spectrogram_view.h ..
 
+application.c: application.vala
+	valac -C -H application.h $(packages) --pkg samplecat --vapidir=. application.vala

@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
-* | This file is part of Samplecat. http://samplecat.orford.org          |
-* | copyright (C) 2007-2013 Tim Orford <tim@orford.org>                  |
+* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
+* | copyright (C) 2007-2014 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -104,7 +104,7 @@ void              menu_play_stop            (GtkWidget*, gpointer);
 
 Application*     app = NULL;
 SamplecatBackend backend; 
-struct _palette  palette;
+Palette          palette;
 GList*           mime_types; // list of MIME_type*
 extern GList*    themes; 
 
@@ -394,7 +394,7 @@ main(int argc, char** argv)
 	if(!app->no_gui) app->context_menu = make_context_menu();
 
 #ifdef __APPLE__
-	GtkWidget *menu_bar;
+	GtkWidget* menu_bar;
 	menu_bar = gtk_menu_bar_new();
 	/* Note: the default OSX menu bar already includes a 'quit' entry 
 	 * connected to 'gtk_main_quit' by default. so we're fine.
@@ -1335,6 +1335,8 @@ config_save()
 			statusbar_print(1, "error writing data to config file (%s).", app->config_filename);
 		}
 		fclose(fp);
+
+		application_quit(app);
 	}
 	else errprintf("cannot create config directory.");
 	g_free(string);
@@ -1347,7 +1349,7 @@ config_new()
 {
 	//g_key_file_has_group(GKeyFile *key_file, const gchar *group_name);
 
-	GError *error = NULL;
+	GError* error = NULL;
 	char data[256 * 256];
 	sprintf(data, "# this is the default config file for the Samplecat application.\n# pls enter your database details.\n"
 		"[Samplecat]\n"

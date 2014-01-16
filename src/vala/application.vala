@@ -10,6 +10,7 @@ public class Application : GLib.Object
 
 	public signal void icon_theme(string s);
 	public signal void selection_changed(Sample* sample);
+	public signal void on_quit();
 
 	construct
 	{

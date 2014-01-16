@@ -40,6 +40,8 @@ typedef struct _auditioner        Auditioner;
 typedef struct _view_option       ViewOption;
 typedef struct _SamplecatModel    SamplecatModel;
 typedef struct _backend           SamplecatBackend;
+typedef struct _palette           Palette;
+typedef struct _config            Config;
 
 #ifndef __file_manager_h__
 typedef struct _GimpActionGroup    GimpActionGroup;
