@@ -145,7 +145,7 @@ player_control_new()
 #endif /* LADSPA-rubberband/VARISPEED */
 	}
 
-	return vbox;
+	return top;
 }
 
 

@@ -16,11 +16,15 @@ public extern void get_spectrogram_with_target (char* path, SpectrogramReady on_
 public extern void cancel_spectrogram          (char* path);
  
 public class GlSpectrogram : Gtk.DrawingArea {
+	public static GlSpectrogram instance;
+	public static GLContext glcontext;
+
 	private string _filename;
 	private Gdk.Pixbuf* pixbuf = null;
 	private bool gl_init_done = false;
 	private GL.GLuint Textures[2];
-	public static GlSpectrogram instance;
+	private const double near = 10.0;
+	private const double far = -100.0;
 
 	public GlSpectrogram ()
 	{
@@ -30,15 +34,19 @@ public class GlSpectrogram : Gtk.DrawingArea {
 		set_size_request (200, 100);
 
 		var glconfig = new GLConfig.by_mode (GLConfigMode.RGB | GLConfigMode.DOUBLE);
-		WidgetGL.set_gl_capability (this, glconfig, null, true, GLRenderType.RGBA_TYPE);
+		WidgetGL.set_gl_capability (this, glconfig, glcontext, true, GLRenderType.RGBA_TYPE);
 
 		instance = this;
 	}
 
+	public static void set_gl_context(GLContext _glcontext)
+	{
+		glcontext = _glcontext;
+	}
+
 	private void load_texture()
 	{
-		//print("load_texture...\n");
-		GLContext glcontext = WidgetGL.get_gl_context(this);
+		//print("GlSpectrogram.load_texture...\n");
 		GLDrawable gldrawable = WidgetGL.get_gl_drawable(this);
 
 		if (!gldrawable.gl_begin(glcontext)) print("gl context error!\n");
@@ -47,7 +55,7 @@ public class GlSpectrogram : Gtk.DrawingArea {
 		glBindTexture(GL_TEXTURE_2D, Textures[0]);
 
 		Gdk.Pixbuf* scaled = pixbuf->scale_simple(256, 256, Gdk.InterpType.BILINEAR);
-		//print("load_texture: %ix%ix%i\n", scaled->get_width(), scaled->get_height(), scaled->get_n_channels());
+		//print("GlSpectrogram.load_texture: %ix%ix%i\n", scaled->get_width(), scaled->get_height(), scaled->get_n_channels());
 
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -64,7 +72,6 @@ public class GlSpectrogram : Gtk.DrawingArea {
 
 	public override bool configure_event (EventConfigure event)
 	{
-		GLContext glcontext = WidgetGL.get_gl_context(this);
 		GLDrawable gldrawable = WidgetGL.get_gl_drawable(this);
 
 		if (!gldrawable.gl_begin(glcontext)) return false;
@@ -72,7 +79,6 @@ public class GlSpectrogram : Gtk.DrawingArea {
 		glViewport(0, 0, (GLsizei)allocation.width, (GLsizei)allocation.height);
 
 		if(!gl_init_done){
-			//print("GlSpectrogram: texture init...\n");
 			glGenTextures(1, Textures);
 			glEnable(GL_TEXTURE_2D);
 			glBindTexture(GL_TEXTURE_2D, Textures[0]);
@@ -86,32 +92,24 @@ public class GlSpectrogram : Gtk.DrawingArea {
 
 	public override bool expose_event (Gdk.EventExpose event)
 	{
-		//stdout.printf("expose: x=%i width=%i height=%i\n", event.area.x, event.area.width, event.area.height);
-		/*
-		var cr = Gdk.cairo_create (this.window);
-
-		cr.rectangle (event.area.x, event.area.y, event.area.width, event.area.height);
-		cr.clip ();
-
-		draw (cr);
-		*/
-
-		GLContext glcontext = WidgetGL.get_gl_context (this);
 		GLDrawable gldrawable = WidgetGL.get_gl_drawable (this);
 
 		if (!gldrawable.gl_begin (glcontext)) return false;
 
+		set_projection(); // has to be done on each expose when using shared context.
+
 		glClearColor (0.0f, 0.0f, 0.0f, 1.0f);
 		glClear (GL_COLOR_BUFFER_BIT);
 
-		int x = -1;
-		int top = 1;
-		int botm = -1;
+		double x = 0.0;
+		double w = allocation.width;
+		double top = allocation.height;
+		double botm = 0.0;
 		glBegin(GL_QUADS);
-		glTexCoord2d(0.0, 0.0); glVertex2d(x+0.0, top);
-		glTexCoord2d(1.0, 0.0); glVertex2d(x+2.0, top);
-		glTexCoord2d(1.0, 1.0); glVertex2d(x+2.0, botm);
-		glTexCoord2d(0.0, 1.0); glVertex2d(x+0.0, botm);
+		glTexCoord2d(0.0, 0.0); glVertex2d(x,     top);
+		glTexCoord2d(1.0, 0.0); glVertex2d(x + w, top);
+		glTexCoord2d(1.0, 1.0); glVertex2d(x + w, botm);
+		glTexCoord2d(0.0, 1.0); glVertex2d(x,     botm);
 		glEnd();
 
 		if (gldrawable.is_double_buffered ())
@@ -123,6 +121,20 @@ public class GlSpectrogram : Gtk.DrawingArea {
 		return true;
 	}
 
+	private void set_projection()
+	{
+		glViewport(0, 0, (GLsizei)allocation.width, (GLsizei)allocation.height);
+		glMatrixMode((GL.GLenum)GL_PROJECTION);
+		glLoadIdentity();
+
+		double left = 0.0;
+		double right = allocation.width;
+		double top   = allocation.height;
+		double bottom = 0.0;
+		glOrtho (left, right, bottom, top, near, far);
+	}
+
+	/*
 	public override bool button_press_event (Gdk.EventButton event) {
 		return false;
 	}
@@ -134,12 +146,12 @@ public class GlSpectrogram : Gtk.DrawingArea {
 	public override bool motion_notify_event (Gdk.EventMotion event) {
 		return false;
 	}
+	*/
 
 	/*
 	private bool on_configure_event (Widget widget, EventConfigure event)
 	{
-		stdout.printf("on_configure_event");
-		GLContext glcontext = WidgetGL.get_gl_context (widget);
+		print("on_configure_event\n");
 		GLDrawable gldrawable = WidgetGL.get_gl_drawable (widget);
 
 		if (!gldrawable.gl_begin (glcontext)) return false;
@@ -153,12 +165,12 @@ public class GlSpectrogram : Gtk.DrawingArea {
 
 	public void set_file(char* filename)
 	{
+		//print("GlSpectrogram.set_file: %s\n", (string)filename);
 		_filename = ((string*)filename)->dup();
 
 		cancel_spectrogram(null);
 
 		get_spectrogram_with_target(filename, (filename, _pixbuf, b) => {
-			//stdout.printf("set_file: got callback!\n");
 			if((bool)_pixbuf){
 				if((bool)pixbuf) pixbuf->unref();
 				pixbuf = _pixbuf;
@@ -168,10 +180,12 @@ public class GlSpectrogram : Gtk.DrawingArea {
 		}, null);
 	}
 
-	/*
+#if 0
 	public override void realize ()
 	{
-		stdout.printf("realize");
+		print("GlSpectrogram.realize\n");
+
+		/*
 		this.set_flags (Gtk.WidgetFlags.REALIZED);
 
 		var attrs = Gdk.WindowAttr ();
@@ -187,57 +201,14 @@ public class GlSpectrogram : Gtk.DrawingArea {
 
 		this.style.set_background (this.window, Gtk.StateType.NORMAL);
 		this.window.move_resize (this.allocation.x, this.allocation.y, this.allocation.width, this.allocation.height);
+		*/
+		base.realize();
 	}
 
 	public override void unrealize ()
 	{
-		this.window.set_user_data (null);
+		base.unrealize();
 	}
-
-	public override void size_request (out Gtk.Requisition requisition)
-	{
-		requisition.width = 10;
-		requisition.height = 80;
-
-		Gtk.WidgetFlags flags = this.get_flags();
-		if((flags & Gtk.WidgetFlags.REALIZED) != 0){
-			//cr = Gdk.cairo_create (this.window);
-		}
-	}
-
-	public override void size_allocate (Gdk.Rectangle allocation)
-	{
-		this.allocation = (Gtk.Allocation)allocation;
-
-		if ((this.get_flags () & Gtk.WidgetFlags.REALIZED) == 0) return;
-		this.window.move_resize (this.allocation.x, this.allocation.y, this.allocation.width, this.allocation.height);
-	}
-	*/
-
-	/*
-	public override bool expose_event (Gdk.EventExpose event)
-	{
-		if(pixbuf == null) return true;
-		//copy the bitmap onto the window:
-
-		//int depth = ((Gdk.Drawable)this.window).get_depth();
-		int width = this.allocation.width;
-		//int width = 640;
-		int height = this.allocation.height;
-		//int height = 640;
-		//stdout.printf("depth=%i stride=%i\n", depth, width * 3);
-
-		Gdk.Pixbuf* scaled = pixbuf->scale_simple(this.allocation.width, this.allocation.height, Gdk.InterpType.BILINEAR);
-		uchar* image = scaled->get_pixels();
-		//stdout.printf("expose: pixbuf: %ix%i\n", scaled->get_width(), scaled->get_height());
-
-		//TODO use gdk_draw_pixbuf?
-		Gdk.draw_rgb_image(this.window, this.style.fg_gc[Gtk.StateType.NORMAL],
-		                   0, 0, width, height,
-		                   Gdk.RgbDither.MAX, (uchar[])image, scaled->get_rowstride());
-
-		return true;
-	}
-	*/
+#endif
 }
 

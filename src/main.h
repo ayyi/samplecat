@@ -8,12 +8,7 @@
 #include "model.h"
 #include "application.h"
 
-#define EXPAND_TRUE 1
-#define EXPAND_FALSE 0
-#define FILL_TRUE 1
-#define FILL_FALSE 0
 #define START_EDITING 1
-#define TIMER_STOP FALSE
 
 #define MAX_DISPLAY_ROWS 1000
 
@@ -35,10 +30,6 @@ gboolean    on_peaklevel_done(gpointer sample);
 gboolean    on_ebur128_done(gpointer _sample);
 
 void        update_dir_node_list();
-
-gint        get_mouseover_row();
-
-gboolean    keyword_is_dupe(char* new, char* existing);
 
 void        on_quit(GtkMenuItem*, gpointer user_data);
 

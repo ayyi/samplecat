@@ -8,9 +8,10 @@ public class Application : GLib.Object
 	public int state = 0;
 	public char* cache_dir;
 
-	public signal void icon_theme(string s);
 	public signal void selection_changed(Sample* sample);
 	public signal void on_quit();
+	public signal void theme_changed();
+	public signal void icon_theme(string s);
 
 	construct
 	{

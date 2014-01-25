@@ -186,7 +186,7 @@ int ladspah_init(LadSpa* p, const char* dll, const int plugin, int samplerate, s
 		return -1;
 	}
 
-	printf("LADSPA: %s - '%s' by '%s'\n", p->l_desc->Label, p->l_desc->Name, p->l_desc->Maker);
+	if (verbose) printf("LADSPA: %s - '%s' by '%s'\n", p->l_desc->Label, p->l_desc->Name, p->l_desc->Maker);
 
 	// prepare buffers
 	p->inbuf  = calloc(max_nframes, sizeof(LADSPA_Data));

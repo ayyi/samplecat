@@ -12,6 +12,7 @@
 #ifndef __application_h__
 #define __application_h__
 
+#include "config.h"
 #include <glib.h>
 #include <glib-object.h>
 #include "types.h"
@@ -35,7 +36,9 @@ enum {
 	SHOW_PLAYER = 0,
 	SHOW_FILEMANAGER,
 	SHOW_WAVEFORM,
+#ifdef HAVE_FFTW3
 	SHOW_SPECTROGRAM,
+#endif
 	MAX_VIEW_OPTIONS
 };
 
@@ -94,22 +97,14 @@ struct _Application
    GtkWidget*           statusbar2;
    GtkWidget*           search;
    GtkWidget*           context_menu;
-   GtkWidget*           waveform;
    GtkWidget*           spectrogram;
 
-   GtkWidget*           colour_button[PALETTE_SIZE];
    gboolean             colourbox_dirty;
-
-   GtkTreeRowReference* mouseover_row_ref;
 
    GNode*               dir_tree;
    GtkWidget*           dir_treeview;
    ViewDirTree*         dir_treeview2;
    GtkWidget*           fm_view;
-
-#ifndef USE_GDL
-   GtkWidget*           vpaned;        //vertical divider on lhs between the dir_tree and inspector
-#endif
 
    GdkColor             fg_colour;
    GdkColor             bg_colour;

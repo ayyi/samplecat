@@ -101,6 +101,8 @@ GdlDockObject *gdl_dock_master_get_controller   (GdlDockMaster *master);
 void           gdl_dock_master_set_controller   (GdlDockMaster *master,
                                                  GdlDockObject *new_controller);
 
+void           gdl_dock_print_recursive         (GdlDockMaster *master);
+
 G_END_DECLS
 
 #endif /* __GDL_DOCK_MASTER_H__ */

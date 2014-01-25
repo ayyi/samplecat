@@ -16,10 +16,11 @@ struct _libraryview {
    GtkTreeViewColumn* col_pixbuf;
    GtkTreeViewColumn* col_tags;
 
-   int                selected;
+   int                  selected;
+   GtkTreeRowReference* mouseover_row_ref;
 };
 
-void        listview__new                        ();
+GtkWidget*  listview__new                        ();
 void        listview__show_db_missing            ();
 gboolean    listview__item_set_colour            (GtkTreePath*, unsigned colour);
 void        listview__add_item                   ();
@@ -33,7 +34,8 @@ void        listview__edit_row                   (GtkWidget*, gpointer);
 void        highlight_playing_by_path            (GtkTreePath*);
 void        highlight_playing_by_ref             (GtkTreeRowReference*);
 
-void        treeview_block_motion_handler        ();
-void        treeview_unblock_motion_handler      ();
+void        listview__block_motion_handler       ();
+gint        listview__get_mouseover_row          ();
+
 
 #endif

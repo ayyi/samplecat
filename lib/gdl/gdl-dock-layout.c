@@ -34,6 +34,8 @@
 #include "gdl-tools.h"
 #include "gdl-dock-placeholder.h"
 
+#include "../layouts/layout_ui.c"
+
 
 /* ----- Private variables ----- */
 
@@ -103,6 +105,8 @@ static xmlNodePtr gdl_dock_layout_find_layout   (GdlDockLayout      *layout,
                                                  const gchar        *name);
 
 static void     gdl_dock_layout_build_models    (GdlDockLayout      *layout);
+
+static void     gdl_dock_layout_build_tree      (GdlDockLayout      *layout, GdlDockLayoutUIData* ui_data, GtkWidget*);
 
 
 /* ----- Private implementation ----- */
@@ -410,8 +414,7 @@ update_layouts_model (GdlDockLayout *layout)
 /* ------- UI functions & callbacks ------ */
 
 static void 
-load_layout_cb (GtkWidget *w,
-                gpointer   data)
+load_button_on_click (GtkWidget *w, gpointer data)
 {
     GdlDockLayoutUIData *ui_data = (GdlDockLayoutUIData *) data;
 
@@ -454,7 +457,7 @@ delete_layout_cb (GtkWidget *w, gpointer data)
 }
 
 static void
-show_toggled_cb (GtkCellRendererToggle *renderer,
+show_item_toggled_cb (GtkCellRendererToggle *renderer,
                  gchar                 *path_str,
                  gpointer               data)
 {
@@ -556,13 +559,10 @@ load_interface ()
     GError* error = NULL;
 
     /* load ui */
-    gui_file = g_build_filename (GDL_UIDIR, LAYOUT_UI_FILE, NULL);
     gui = gtk_builder_new();
-    gtk_builder_add_from_file (gui, gui_file, &error);
-    g_free (gui_file);
+    gtk_builder_add_from_string (gui, layout_ui, -1, &error);
     if (error) {
-        g_warning (_("Could not load layout user interface file '%s'"), 
-                   LAYOUT_UI_FILE);
+        g_warning (_("Could not load layout user interface file")); 
         g_object_unref (gui);
         g_error_free (error);
         return NULL;
@@ -600,6 +600,13 @@ gdl_dock_layout_construct_items_ui (GdlDockLayout *layout)
     ui_data->locked_check = GTK_WIDGET (gtk_builder_get_object (gui, "locked_check"));
     items_list = GTK_WIDGET (gtk_builder_get_object(gui, "items_list"));
 
+    {
+        gdl_dock_layout_build_tree(layout, ui_data, GTK_WIDGET (gtk_builder_get_object(gui, "layouts_list")));
+
+        g_signal_connect (GTK_WIDGET (gtk_builder_get_object(gui, "load_button")), "clicked", (GCallback) load_button_on_click, ui_data);
+        g_signal_connect (GTK_WIDGET (gtk_builder_get_object(gui, "delete_button")), "clicked", (GCallback) delete_layout_cb, ui_data);
+    }
+
     /* locked check connections */
     g_signal_connect (ui_data->locked_check, "toggled",
                       (GCallback) all_locked_toggled_cb, ui_data);
@@ -617,7 +624,7 @@ gdl_dock_layout_construct_items_ui (GdlDockLayout *layout)
     /* construct list views */
     renderer = gtk_cell_renderer_toggle_new ();
     g_signal_connect (renderer, "toggled", 
-                      G_CALLBACK (show_toggled_cb), ui_data);
+                      G_CALLBACK (show_item_toggled_cb), ui_data);
     column = gtk_tree_view_column_new_with_attributes (_("Visible"),
                                                        renderer,
                                                        "active", COLUMN_SHOW,
@@ -671,66 +678,27 @@ cell_edited_cb (GtkCellRendererText *cell,
     gtk_tree_path_free (path);
 }
 
-static GtkWidget *
-gdl_dock_layout_construct_layouts_ui (GdlDockLayout *layout)
+static void
+gdl_dock_layout_build_tree(GdlDockLayout *layout, GdlDockLayoutUIData* ui_data, GtkWidget* layouts_view)
 {
-    GtkBuilder          *gui;
-    GtkWidget           *container;
-    GtkWidget           *layouts_list;
-    GtkCellRenderer     *renderer;
-    GtkTreeViewColumn   *column;
-    GtkWidget           *load_button;
-    GtkWidget           *delete_button;
+	GtkCellRenderer     *renderer;
+	GtkTreeViewColumn   *column;
 
-    GdlDockLayoutUIData *ui_data;
-    
-    /* load the interface if it wasn't provided */
-    gui = load_interface ();
-    
-    if (!gui)
-        return NULL;
-    
-    /* get the container */
-    container = GTK_WIDGET (gtk_builder_get_object(gui, "layouts_vbox"));
+	ui_data->layout = layout;
+	g_object_add_weak_pointer (G_OBJECT (layout), (gpointer *) &ui_data->layout);
+	
+	gtk_tree_view_set_model (GTK_TREE_VIEW (layouts_view), GTK_TREE_MODEL (layout->_priv->layouts_model));
 
-    ui_data = g_new0 (GdlDockLayoutUIData, 1);
-    ui_data->layout = layout;
-    g_object_add_weak_pointer (G_OBJECT (layout),
-                               (gpointer *) &ui_data->layout);
-    g_object_set_data (G_OBJECT (container), "ui-data", ui_data);
-    
-    /* get ui widget references */
-    layouts_list = GTK_WIDGET (gtk_builder_get_object(gui, "layouts_list"));
+	/* construct list views */
+	renderer = gtk_cell_renderer_text_new ();
+	//g_signal_connect (G_OBJECT (renderer), "edited", G_CALLBACK (cell_edited_cb), ui_data);
+	column = gtk_tree_view_column_new_with_attributes (_("Name"), renderer,
+													   "text", COLUMN_NAME,
+													   "editable", COLUMN_EDITABLE,
+													   NULL);
+	gtk_tree_view_append_column (GTK_TREE_VIEW(layouts_view), column);
 
-    /* set models */
-    gtk_tree_view_set_model (GTK_TREE_VIEW (layouts_list),
-                             GTK_TREE_MODEL (layout->_priv->layouts_model));
-
-    /* construct list views */
-    renderer = gtk_cell_renderer_text_new ();
-    g_signal_connect (G_OBJECT (renderer), "edited",
-                      G_CALLBACK (cell_edited_cb), ui_data);
-    column = gtk_tree_view_column_new_with_attributes (_("Name"), renderer,
-                                                       "text", COLUMN_NAME,
-                                                       "editable", COLUMN_EDITABLE,
-                                                       NULL);
-    gtk_tree_view_append_column (GTK_TREE_VIEW (layouts_list), column);
-
-    ui_data->selection = gtk_tree_view_get_selection (GTK_TREE_VIEW (layouts_list));
-
-    /* connect signals */
-    load_button = GTK_WIDGET (gtk_builder_get_object(gui, "load_button"));
-    delete_button = GTK_WIDGET (gtk_builder_get_object(gui, "delete_button"));
-
-    g_signal_connect (load_button, "clicked", (GCallback) load_layout_cb, ui_data);
-    g_signal_connect (delete_button, "clicked", (GCallback) delete_layout_cb, ui_data);
-    
-
-    g_signal_connect (container, "destroy", (GCallback) layout_ui_destroyed, NULL);
-
-    g_object_unref (gui);
-
-    return container;
+	ui_data->selection = gtk_tree_view_get_selection (GTK_TREE_VIEW (layouts_view));
 }
 
 /* ----- Save & Load layout functions --------- */
@@ -759,6 +727,7 @@ gdl_dock_layout_setup_object (GdlDockMaster *master,
     if (object_name && strlen ((char*)object_name) > 0) {
         /* the object must already be bound to the master */
         object = gdl_dock_master_get_object (master, (char*)object_name);
+        dbg(1, "object_name=%s object=%p", object_name, object);
 
         xmlFree (object_name);
         object_type = object ? G_TYPE_FROM_INSTANCE (object) : G_TYPE_NONE;
@@ -1164,7 +1133,9 @@ gdl_dock_layout_attach (GdlDockLayout *layout,
 *
 * Loads the layout with the given name to the memory.
 * This will set #GdlDockLayout:dirty to %TRUE.
-* 
+*
+* *** This fn is badly named. Would be better if it was called "gdl_dock_layout_activate_layout"
+*
 * See also gdl_dock_layout_load_from_file()
 * Returns: %TRUE if layout successfully loaded else %FALSE
 */
@@ -1294,7 +1265,14 @@ gdl_dock_layout_run_manager (GdlDockLayout *layout)
         return;
 
     dialog = gdl_dock_layout_construct_items_ui (layout);
-    
+
+    void on_dialogue_response(GtkDialog *dialog, gint response_id, gpointer user_data)
+    {
+        gtk_widget_hide((GtkWidget*)dialog); // hiding the widget causes the main loop to return to normal
+    }
+
+    g_signal_connect(dialog, "response", (GCallback)on_dialogue_response, NULL);
+   
     gtk_dialog_run (GTK_DIALOG (dialog));
 
     gtk_widget_destroy (dialog);
@@ -1326,22 +1304,52 @@ gdl_dock_layout_load_from_file (GdlDockLayout *layout,
 
     /* FIXME: cannot open symlinks */
     if (g_file_test (filename, G_FILE_TEST_IS_REGULAR)) {
-dbg(0, "have file...");
         layout->_priv->doc = xmlParseFile (filename);
         if (layout->_priv->doc) {
             xmlNodePtr root = layout->_priv->doc->children;
             /* minimum validation: test the root element */
             if (root && !strcmp ((char*)root->name, ROOT_ELEMENT)) {
                 update_layouts_model (layout);
-dbg(0, "loaded");
                 retval = TRUE;
             } else {
                 xmlFreeDoc (layout->_priv->doc);
                 layout->_priv->doc = NULL;
-            }		
+            }
         }
-		else dbg(0, "xml parsed failed");
+        else dbg(0, "xml parsed failed");
     }
+
+    return retval;
+}
+
+gboolean
+gdl_dock_layout_load_from_string (GdlDockLayout *layout,
+                                  const gchar *str)
+{
+    g_return_if_fail(str);
+
+    gboolean retval = FALSE;
+
+    if (layout->_priv->doc) {
+        xmlFreeDoc (layout->_priv->doc);
+        layout->_priv->doc = NULL;
+        layout->dirty = FALSE;
+        g_object_notify (G_OBJECT (layout), "dirty");
+    }
+
+    layout->_priv->doc = xmlParseMemory(str, strlen(str));
+    if (layout->_priv->doc) {
+        xmlNodePtr root = layout->_priv->doc->children;
+        /* minimum validation: test the root element */
+        if (root && !strcmp ((char*)root->name, ROOT_ELEMENT)) {
+            update_layouts_model (layout);
+            retval = TRUE;
+        } else {
+            xmlFreeDoc (layout->_priv->doc);
+            layout->_priv->doc = NULL;
+        }
+    }
+    else dbg(0, "xml parsed failed");
 
     return retval;
 }
@@ -1429,13 +1437,3 @@ gdl_dock_layout_get_layouts (GdlDockLayout *layout,
     return retval;
 }
 
-GtkWidget *
-gdl_dock_layout_get_layouts_ui (GdlDockLayout *layout)
-{
-    GtkWidget *ui;
-
-    g_return_val_if_fail (layout != NULL, NULL);
-    ui = gdl_dock_layout_construct_layouts_ui (layout);
-
-    return ui;
-}

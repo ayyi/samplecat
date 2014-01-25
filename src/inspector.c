@@ -189,7 +189,7 @@ inspector_new()
 
 	// notes box:
 
-	GtkWidget *text1 = inspector->text = gtk_text_view_new();
+	GtkWidget* text1 = inspector->text = gtk_text_view_new();
 	inspector->notes = gtk_text_view_get_buffer(GTK_TEXT_VIEW(text1));
 	gtk_text_view_set_accepts_tab(GTK_TEXT_VIEW(text1), FALSE);
 #ifdef USE_TRACKER
@@ -219,7 +219,8 @@ inspector_new()
 	g_signal_connect((gpointer)app, "selection-changed", G_CALLBACK(inspector_update), NULL);
 
 	gtk_widget_set_size_request(inspector->widget, 20, 20);
-	return vbox;
+
+	return scroll;
 }
 
 

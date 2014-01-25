@@ -1,0 +1,22 @@
+#!/bin/bash
+
+in=layout.ui
+out=layout_ui.c
+
+echo "making layout_ui..."
+
+function build {
+	echo "" > $out
+	echo "const char* layout_ui = \" \\" >> $out
+	cpp -P $in | sed -e "s/$/ \\\/" | sed -e "s/\"/\\\\\"/g" >> $out
+	echo "\";" >> $out
+}
+
+if [[ -s $out ]]; then
+	#output file already exists, check age
+	if [[ ! $in -nt $out ]]; then
+		exit
+	fi
+fi
+build
+

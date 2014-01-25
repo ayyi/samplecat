@@ -30,16 +30,17 @@ void console__init()
 
 	void store_content_changed(GtkListStore* store, gpointer data)
 	{
-		PF0;
+		PF;
 		GtkTreeIter iter;
 		if(!gtk_tree_model_get_iter_first((GtkTreeModel*)store, &iter)){ gerr ("cannot get iter."); return; }
 		int row_count = 0;
 		do {
-			Sample* sample = sample_get_by_tree_iter(&iter);
-			if(sample){
-				console__show_result(sample);
-				sample_unref(sample);
-				row_count++;
+			if(++row_count < 100){
+				Sample* sample = sample_get_by_tree_iter(&iter);
+				if(sample){
+					console__show_result(sample);
+					sample_unref(sample);
+				}
 			}
 		} while (gtk_tree_model_iter_next((GtkTreeModel*)store, &iter));
 

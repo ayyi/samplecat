@@ -51,7 +51,7 @@ drag_received(GtkWidget *widget, GdkDragContext *drag_context, gint x, gint y,
 
   if(g_str_has_prefix((char*)data->data, "colour:")){
 
-    if(get_mouseover_row() > -1)
+    if(listview__get_mouseover_row() > -1)
     //if(widget==app->libraryview->widget)
     {
       dbg(1, "treeview!");

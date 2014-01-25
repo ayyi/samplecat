@@ -1119,7 +1119,7 @@ pixbuf_to_blob(GdkPixbuf* in, guint *len)
 	unsigned char* dst= malloc(dsize*sizeof(char));
 	int rv = compress(dst, &dsize, (const unsigned char *)ser, length);
 	if(rv == Z_OK) {
-		dbg(0, "compressed pixbuf %d -> %d", length, dsize);
+		dbg(1, "compressed pixbuf %d -> %d", length, dsize);
 		if (len) *len = dsize;
 		free(ser);
 		return dst;
@@ -1184,4 +1184,73 @@ mimetype_is_unsupported(MIME_type* mime_type, char* mime_string)
 	return false;
 }
 
+
+gboolean
+keyword_is_dupe(const char* new, const char* existing)
+{
+	//return true if the word 'new' is contained in the 'existing' string.
+
+	if(!existing) return false;
+
+	//FIXME make case insensitive.
+	//gint g_ascii_strncasecmp(const gchar *s1, const gchar *s2, gsize n);
+	//gchar*      g_utf8_casefold(const gchar *str, gssize len);
+
+	gboolean found = false;
+
+	//split the existing keyword string into separate words.
+	gchar** split = g_strsplit(existing, " ", 0);
+	int word_index = 0;
+	while(split[word_index]){
+		if(!strcmp(split[word_index], new)){
+			dbg(1, "'%s' already in string '%s'", new, existing);
+			found = true;
+			break;
+		}
+		word_index++;
+	}
+
+	g_strfreev(split);
+	return found;
+}
+
+
+#if 0
+void
+print_widget_tree(GtkWidget* widget)
+{
+	UNDERLINE;
+	g_return_if_fail(widget);
+	void print_children(GtkWidget* widget, int* depth)
+	{
+		if(GTK_IS_CONTAINER(widget)){
+			GList* children = gtk_container_get_children(GTK_CONTAINER(widget));
+			GList* l = children;
+			for(;l;l=l->next){
+				GtkWidget* child = l->data;
+				char indent[128];
+				snprintf(indent, 127, "%%%is%%s %%s %%p\n", *depth * 3);
+				printf(indent, " ", G_OBJECT_CLASS_NAME(G_OBJECT_GET_CLASS(child)), gtk_widget_get_name(child), child);
+				if(GTK_IS_CONTAINER(widget)){
+					(*depth)++;
+					print_children(child, depth);
+					(*depth)--;
+				}
+			}
+			g_list_free(children);
+		}
+	}
+
+	int depth = 0;
+	if(GTK_IS_CONTAINER(widget)){
+		int n_children = g_list_length(gtk_container_get_children(GTK_CONTAINER(widget)));
+		if(n_children){
+			print_children(widget, &depth);
+		}
+		else dbg(0, "is empty container: %s %s", G_OBJECT_CLASS_NAME(G_OBJECT_GET_CLASS(widget)), gtk_widget_get_name(widget));
+	}
+	else dbg(0, "widget has no children. %i x %i %i", widget->allocation.width, widget->allocation.height, gtk_widget_get_visible(widget));
+	UNDERLINE;
+}
+#endif
 

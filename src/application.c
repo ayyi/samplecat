@@ -19,6 +19,8 @@
 #include <sample.h>
 #include "application.h"
 
+extern void colour_box_init();
+
 static gpointer application_parent_class = NULL;
 
 enum  {
@@ -44,7 +46,7 @@ application_new ()
 {
 	Application* app = application_construct (TYPE_APPLICATION);
 
-	int i; for(i=0;i<PALETTE_SIZE;i++) app->colour_button[i] = NULL;
+	colour_box_init();
 	app->colourbox_dirty = true;
 
 	memset(app->config.colour, 0, PALETTE_SIZE * 8);
@@ -91,6 +93,7 @@ application_class_init (ApplicationClass* klass)
 	g_signal_new ("icon_theme", TYPE_APPLICATION, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_VOID__STRING, G_TYPE_NONE, 1, G_TYPE_STRING);
 	g_signal_new ("selection_changed", TYPE_APPLICATION, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_VOID__POINTER, G_TYPE_NONE, 1, G_TYPE_POINTER);
 	g_signal_new ("on_quit", TYPE_APPLICATION, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_VOID__VOID, G_TYPE_NONE, 0);
+	g_signal_new ("theme_changed", TYPE_APPLICATION, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_VOID__VOID, G_TYPE_NONE, 0);
 }
 
 

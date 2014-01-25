@@ -31,6 +31,7 @@ extern Filer       filer;
 extern unsigned    debug;
 static GtkWidget*  clicked_widget = NULL;
 
+static void        colour_box_update               ();
 //static gboolean    colour_box__exists              (GdkColor*);
 static void        colour_box__set_colour          (int, GdkColor*);
 static gboolean    colour_box__on_event            (GtkWidget*, GdkEvent*, gpointer);
@@ -45,10 +46,13 @@ static MenuDef _menu_def[] = {
     {"Select Colour", G_CALLBACK(menu__open_selector), GTK_STOCK_SELECT_COLOR},
 };
 
+GtkWidget* colour_button[PALETTE_SIZE];
+
 
 void
 colour_box_init()
 {
+	int i; for(i=0;i<PALETTE_SIZE;i++) colour_button[i] = NULL;
 }
 
 
@@ -58,7 +62,7 @@ colour_box_new(GtkWidget* parent)
 	GtkWidget* e;
 	int i;
 	for(i=PALETTE_SIZE-1;i>=0;i--){
-		e = app->colour_button[i] = gtk_event_box_new();
+		e = colour_button[i] = gtk_event_box_new();
 		gtk_container_set_border_width(GTK_CONTAINER(e),1);
 
 		gtk_drag_source_set(e, GDK_BUTTON1_MASK | GDK_BUTTON2_MASK, dnd_file_drag_types, dnd_file_drag_types_count, GDK_ACTION_COPY | GDK_ACTION_MOVE | GDK_ACTION_LINK);
@@ -74,11 +78,24 @@ colour_box_new(GtkWidget* parent)
 	}
 	if(!self.menu) self.menu = colour_box__make_context_menu();
 
+	void _on_theme_change(Application* a, gpointer _){ colour_box_update(); }
+	g_signal_connect((gpointer)app, "theme-changed", G_CALLBACK(_on_theme_change), NULL);
+
+	if(gtk_widget_get_realized(app->window))
+		colour_box_update();
+	else{
+		void window_on_realise(GtkWidget* win, gpointer user_data)
+		{
+			colour_box_update();
+		}
+		g_signal_connect(G_OBJECT(app->window), "realize", G_CALLBACK(window_on_realise), NULL);
+	}
+
 	return e;
 }
 
 
-void
+static void
 colour_box_update()
 {
 	//show the current palette colours in the colour_box
@@ -86,8 +103,8 @@ colour_box_update()
 	GdkColor colour;
 	char colour_string[16];
 	for(i=PALETTE_SIZE-1;i>=0;i--){
-		GtkWidget* widget = app->colour_button[i];
-		if(app->colour_button[i] && strlen(app->config.colour[i])){
+		GtkWidget* widget = colour_button[i];
+		if(colour_button[i] && strlen(app->config.colour[i])){
 			snprintf(colour_string, 16, "#%s", app->config.colour[i]);
 			if(!gdk_color_parse(colour_string, &colour)){
 				warnprintf("%s(): %i: parsing of colour string failed. %s\n", __func__, i, colour_string);
@@ -95,14 +112,15 @@ colour_box_update()
 			}
 			dbg(2, "%i colour: %x %x %x", i, colour.red, colour.green, colour.blue);
 
-			//if(colour.red != app->colour_button[i]->style->bg[GTK_STATE_NORMAL].red) 
-				gtk_widget_modify_bg(app->colour_button[i], GTK_STATE_NORMAL, &colour);
+			//if(colour.red != colour_button[i]->style->bg[GTK_STATE_NORMAL].red) 
+				gtk_widget_modify_bg(colour_button[i], GTK_STATE_NORMAL, &colour);
 
 			gtk_widget_show(widget);
 		}
 		else gtk_widget_hide(widget);
 	}
 }
+
 
 #if NEVER
 static gboolean
@@ -150,9 +168,9 @@ static void
 colour_box__set_colour(int i, GdkColor* colour)
 {
 	g_return_if_fail(i < PALETTE_SIZE);
-	g_return_if_fail(app->colour_button[i]);
+	g_return_if_fail(colour_button[i]);
 	hexstring_from_gdkcolor(app->config.colour[i], colour);
-	gtk_widget_modify_bg(app->colour_button[i], GTK_STATE_NORMAL, colour);
+	gtk_widget_modify_bg(colour_button[i], GTK_STATE_NORMAL, colour);
 }
 
 
@@ -222,7 +240,7 @@ static int
 colour_box__lookup_idx(GtkWidget* widget)
 {
 	int i; for(i=0;i<PALETTE_SIZE;i++){
-		if(app->colour_button[i] == widget) return i;
+		if(colour_button[i] == widget) return i;
 	}
 	return -1;
 }
@@ -264,7 +282,7 @@ menu__open_selector(GtkMenuItem* menuitem, gpointer user_data)
 	GtkWidget* sel = gtk_color_selection_new();
 #if 1
 	int box_idx = colour_box__lookup_idx(clicked_widget);
-	GtkStyle *curstyle = gtk_widget_get_style(app->colour_button[box_idx]);
+	GtkStyle *curstyle = gtk_widget_get_style(colour_button[box_idx]);
 	gtk_color_selection_set_current_color(GTK_COLOR_SELECTION(sel), &curstyle->bg[GTK_STATE_NORMAL]);
 #endif
 	GtkWidget* b = gtk_button_new_with_label("Ok");

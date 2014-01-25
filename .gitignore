@@ -2,7 +2,9 @@
 *.o
 *.a
 *.swp
+*.bak
 *~
+*.real
 src/samplecat
 configure
 Makefile
@@ -19,3 +21,7 @@ cscope.*
 ltmain.sh
 libtool
 .libs
+layouts/layout_ui.c
+layouts/layouts.c
+src/vala/application.c
+src/vala/application.h

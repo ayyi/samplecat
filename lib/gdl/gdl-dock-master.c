@@ -28,6 +28,7 @@
 
 #include "gdl-i18n.h"
 
+#include "gdl/debug.h"
 #include "gdl-tools.h"
 #include "gdl-dock-master.h"
 #include "gdl-dock.h"
@@ -485,7 +486,7 @@ gdl_dock_master_drag_motion (GdlDockItem *item,
         gdk_window_get_user_data (window, (gpointer) &widget);
         if (GTK_IS_WIDGET (widget)) {
             while (widget && (!GDL_IS_DOCK (widget) || 
-	           GDL_DOCK_OBJECT_GET_MASTER (widget) != master))
+                GDL_DOCK_OBJECT_GET_MASTER (widget) != master))
                 widget = widget->parent;
             if (widget) {
                 gint win_w, win_h;
@@ -990,3 +991,55 @@ gdl_dock_master_set_switcher_style (GdlDockMaster *master,
     gdl_dock_master_foreach (master, (GFunc) set_switcher_style_foreach,
                              GINT_TO_POINTER (switcher_style));
 }
+
+
+//--------------------------------------------------------------------------
+
+int gdl_debug = 2;
+int indent = 0;
+
+void
+gdl_debug_printf(const char* func, int level, const char* format, ...)
+{
+    va_list args;
+
+    va_start(args, format);
+    if (level <= gdl_debug) {
+        fprintf(stderr, "%s(): ", func);
+        vfprintf(stderr, format, args);
+        fprintf(stderr, "\n");
+    }
+    va_end(args);
+}
+
+static int rec_depth = 0;
+
+static void 
+gdl_dock_layout_foreach_object_print (GdlDockObject *object, gpointer user_data)
+{
+    char* name  = object->name;
+
+    char f[64];
+    sprintf(f, "  %%%is %%i %%s\n", rec_depth);
+    printf(f, "", rec_depth, name ? name : "");
+    
+    g_return_if_fail (object != NULL && GDL_IS_DOCK_OBJECT (object));
+
+    /* recurse the object if appropiate */
+    rec_depth++;
+    if (gdl_dock_object_is_compound (object)) {
+        gtk_container_foreach (GTK_CONTAINER (object),
+                               (GtkCallback) gdl_dock_layout_foreach_object_print,
+                               //(gpointer) &info_child);
+                               NULL);
+    }
+    rec_depth--;
+}
+
+void
+gdl_dock_print_recursive(GdlDockMaster *master)
+{
+    cdbg(0, "...");
+    gdl_dock_master_foreach_toplevel (master, TRUE, (GFunc) gdl_dock_layout_foreach_object_print, NULL);
+}
+

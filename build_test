@@ -1,0 +1,76 @@
+#!/bin/bash
+#
+# build with each configure option
+#
+# TODO:
+#      this is valid is bash: [ ${i} -eq 0 ] && { echo "hello" ; return 0; }  <-- we should use this construct!
+package=samplecat
+version=0.2.4
+tarball=${package}-${version}.tar.gz
+tmpdir=/tmp/${package}_build
+declare -i n_tests_complete;
+
+SETCOLOR_GREEN="echo -en \\033[1;32m"
+SETCOLOR_YELLOW="echo -en \\033[1;32m"
+SETCOLOR_FAILURE="echo -en \\033[1;31m"
+SETCOLOR_NORMAL="echo -en \\033[0;39m"
+
+function get_tarball {
+	make dist
+	cp $tarball $tmpdir;
+}
+
+function get_tarball1 {
+	if [[ ! -f $tarball ]]; then
+		if `wget http://ayyi.org/files/$tarball`; then
+			echo "wget exit status non-zero ?"
+			:
+		else
+			echo "wget exit status 0 ?"
+			exit;
+		fi;
+	fi;
+}
+
+mkdir -p ${tmpdir};
+
+function compile {
+	echo ""
+	${SETCOLOR_YELLOW}; echo "compile: "$1; ${SETCOLOR_NORMAL};
+	./configure $1 && \
+	make clean && \
+	make
+	exit_status=$?
+	if [ ${exit_status} -ne 0 ]; then
+		${SETCOLOR_FAILURE}; echo -en "fail!"; ${SETCOLOR_NORMAL}; echo $1;
+		abort="true"
+	else
+		n_tests_complete=$n_tests_complete+1
+		echo "ok"
+	fi
+	return $exit_status
+}
+
+#TODO script carries on if configure fails
+
+get_tarball && \
+	cd ${tmpdir} && \
+	echo "got tarball. extracting..." && \
+	echo "" && \
+	tar xf $tarball && \
+	cd ${package}-${version} && \
+	echo "" && \
+	compile && \
+	compile --enable-debug && \
+	compile --disable-mysql && \
+	compile --disable-ffmpeg && \
+	compile --disable-gplayer && \
+	compile --disable-jack && \
+	compile --disable-ayyidbus && \
+	compile --enable-ayyi && \
+	compile --disable-fftw && \
+	compile --disable-dnotify && \
+	echo "" && \
+	${SETCOLOR_YELLOW} && echo "all builds completed successfully" && ${SETCOLOR_NORMAL};
+	echo "complete="$n_tests_complete
+

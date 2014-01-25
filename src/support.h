@@ -15,6 +15,7 @@
 #define GERR_WARN if(error){ gwarn("%s", error->message); g_error_free(error); error = NULL; }
 #endif
 #define g_error_clear(E) { if(E){ g_error_free(E); E = NULL; }}
+#define g_error_free0(E) (g_error_free(E), E = NULL)
 #define list_clear(L) g_list_free(L); L = NULL;
 #define call(FN, A, ...) if(FN) (FN)(A, ##__VA_ARGS__)
 
@@ -22,8 +23,13 @@
 #define HAS_ALPHA_TRUE 1
 #define IDLE_STOP FALSE
 #define TIMER_CONTINUE TRUE
+#define TIMER_STOP FALSE
 #define HANDLED TRUE
 #define NOT_HANDLED FALSE
+#define EXPAND_TRUE 1
+#define EXPAND_FALSE 0
+#define FILL_TRUE 1
+#define FILL_FALSE 0
 
 typedef struct _rect {
   double x1;
@@ -123,7 +129,13 @@ GdkPixbuf*   get_iconbuf_from_mimetype (char* mimetype);
 
 uint8_t*     pixbuf_to_blob            (GdkPixbuf* in, guint* len);
 
-gboolean    mimestring_is_unsupported(char*);
-gboolean    mimetype_is_unsupported(MIME_type*, char* mime_string);
+gboolean     mimestring_is_unsupported (char*);
+gboolean     mimetype_is_unsupported   (MIME_type*, char* mime_string);
+
+gboolean     keyword_is_dupe           (const char* new, const char* existing);
+
+#if 0
+void         print_widget_tree         (GtkWidget*);
+#endif
 
 #endif

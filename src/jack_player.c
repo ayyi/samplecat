@@ -345,7 +345,6 @@ void *jack_player_thread(void *unused){
 		if (rv != nframes * m_channels) {
 			dbg(1, "end of file.");
 			if (rv>0) {
-				dbg(0, "handle short end.");
 #ifdef ENABLE_RESAMPLING
 # ifdef VARISPEED
 				if (1) 

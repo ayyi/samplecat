@@ -42,6 +42,7 @@ typedef struct _SamplecatModel    SamplecatModel;
 typedef struct _backend           SamplecatBackend;
 typedef struct _palette           Palette;
 typedef struct _config            Config;
+typedef struct _accel             Accel;
 
 #ifndef __file_manager_h__
 typedef struct _GimpActionGroup    GimpActionGroup;

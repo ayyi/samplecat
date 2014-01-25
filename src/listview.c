@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
-* | This file is part of Samplecat. http://samplecat.orford.org          |
-* | copyright (C) 2007-2013 Tim Orford <tim@orford.org>                  |
+* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
+* | copyright (C) 2007-2014 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -35,8 +35,10 @@
 
 static gboolean     listview__on_row_clicked          (GtkWidget*, GdkEventButton*, gpointer);
 static void         listview__on_cursor_change        (GtkTreeView*, gpointer);
+static void         listview__on_store_changed        (GtkListStore*, gpointer);
 static void         listview__dnd_get                 (GtkWidget*, GdkDragContext*, GtkSelectionData*, guint info, guint time, gpointer);
 static gint         listview__drag_received           (GtkWidget*, GdkDragContext*, gint x, gint y, GtkSelectionData*, guint info, guint time, gpointer);
+static void         listview__on_realise              (GtkWidget*, gpointer);
 static gboolean     listview__on_motion               (GtkWidget*, GdkEventMotion*, gpointer);
 static void         listview__on_keywords_edited      (GtkCellRendererText*, gchar* path_string, gchar* new_text, gpointer);
 static void         listview__path_cell_data          (GtkTreeViewColumn*, GtkCellRenderer*, GtkTreeModel*, GtkTreeIter*, gpointer);
@@ -44,6 +46,7 @@ static void         listview__tag_cell_data           (GtkTreeViewColumn*, GtkCe
 static void         listview__cell_data_bg            (GtkTreeViewColumn*, GtkCellRenderer*, GtkTreeModel*, GtkTreeIter*, gpointer);
 static gboolean     listview__get_first_selected_iter (GtkTreeIter*);
 static GtkTreePath* listview__get_first_selected_path ();
+static void         listview__unblock_motion_handler  ();
 #if NEVER
 static void         cell_bg_lighter                   (GtkTreeViewColumn*, GtkCellRenderer*, GtkTreeModel*, GtkTreeIter*);
 static int          listview__path_get_id             (GtkTreePath*);
@@ -51,7 +54,7 @@ static gboolean     treeview_get_tags_cell            (GtkTreeView*, guint x, gu
 #endif
 
 
-void
+GtkWidget*
 listview__new()
 {
 	//the main pane. A treeview with a list of samples.
@@ -61,6 +64,8 @@ listview__new()
 	lv->scroll = scrolled_window_new();
 
 	GtkWidget* view = app->libraryview->widget = gtk_tree_view_new_with_model(GTK_TREE_MODEL(app->store));
+	gtk_container_add(GTK_CONTAINER(lv->scroll), view);
+	g_signal_connect(view, "realize", G_CALLBACK(listview__on_realise), NULL);
 	g_signal_connect(view, "motion-notify-event", (GCallback)listview__on_motion, NULL);
 	g_signal_connect(view, "drag-data-received", G_CALLBACK(listview__drag_received), NULL); //currently the window traps this before we get here.
 	g_signal_connect(view, "drag-motion", G_CALLBACK(drag_motion), NULL);
@@ -193,6 +198,7 @@ listview__new()
 
 	g_signal_connect((gpointer)view, "button-press-event", G_CALLBACK(listview__on_row_clicked), NULL);
 	g_signal_connect((gpointer)view, "cursor-changed", G_CALLBACK(listview__on_cursor_change), NULL);
+	g_signal_connect(G_OBJECT(app->store), "content-changed", G_CALLBACK(listview__on_store_changed), NULL);
 
 #if 0
 	void on_unrealize(GtkWidget* widget, gpointer user_data)
@@ -201,6 +207,17 @@ listview__new()
 	}
 	g_signal_connect((gpointer)view, "unrealize", G_CALLBACK(on_unrealize), NULL);
 #endif
+
+	return lv->scroll;
+}
+
+
+static void
+listview__on_realise(GtkWidget* widget, gpointer user_data)
+{
+	gtk_tree_view_column_set_resizable(app->libraryview->col_name, true);
+	gtk_tree_view_column_set_resizable(app->libraryview->col_path, true);
+	//gtk_tree_view_column_set_sizing(col1, GTK_TREE_VIEW_COLUMN_FIXED);
 }
 
 
@@ -337,6 +354,15 @@ listview__on_cursor_change(GtkTreeView* widget, gpointer user_data)
 		}
 		sample_unref(s);
 	}
+}
+
+
+static void
+listview__on_store_changed(GtkListStore* store, gpointer data)
+{
+	PF;
+
+	listview__unblock_motion_handler();
 }
 
 
@@ -508,46 +534,42 @@ listview__drag_received(GtkWidget *widget, GdkDragContext *drag_context, gint x,
 
 
 void
-treeview_block_motion_handler()
+listview__block_motion_handler()
 {
-	if(app->libraryview->widget){
-		gulong id1 = g_signal_handler_find(app->libraryview->widget,
-							   G_SIGNAL_MATCH_FUNC, // | G_SIGNAL_MATCH_DATA,
-							   0,//arrange->hzoom_handler,   //guint signal_id      ?handler_id?
-							   0,        //GQuark detail
-							   0,        //GClosure *closure
-							   listview__on_motion, //callback
-							   NULL);    //data
+	LibraryView* view = app->libraryview;
+	if(view && view->widget){
+		gulong id1 = g_signal_handler_find(view->widget, G_SIGNAL_MATCH_FUNC, 0, 0, 0, listview__on_motion, NULL);
 		if(id1) g_signal_handler_block(app->libraryview->widget, id1);
-		else warnprintf("%s(): failed to find handler.\n", __func__);
+		else pwarn("failed to find handler.");
 
-		gtk_tree_row_reference_free(app->mouseover_row_ref);
-		app->mouseover_row_ref = NULL;
+		gtk_tree_row_reference_free(view->mouseover_row_ref);
+		view->mouseover_row_ref = NULL;
 	}
 }
 
 
-void
-treeview_unblock_motion_handler()
+static void
+listview__unblock_motion_handler()
 {
+	LibraryView* view = app->libraryview;
+	g_return_if_fail(view && view->widget);
 	PF;
-	if(app->libraryview->widget){
-		gulong id1 = g_signal_handler_find(app->libraryview->widget,
-							   G_SIGNAL_MATCH_FUNC, // | G_SIGNAL_MATCH_DATA,
-							   0,        //guint signal_id
-							   0,        //GQuark detail
-							   0,        //GClosure *closure
-							   listview__on_motion, //callback
-							   NULL);    //data
-		if(id1) g_signal_handler_unblock(app->libraryview->widget, id1);
-		else warnprintf("%s(): failed to find handler.\n", __func__);
+	if(view->widget){
+		gulong id1 = g_signal_handler_find(view->widget, G_SIGNAL_MATCH_FUNC, 0, 0, 0, listview__on_motion, NULL);
+		if(id1) g_signal_handler_unblock(view->widget, id1);
+		else gwarn("failed to find handler.");
 	}
 }
 
 
 static gboolean
-listview__on_motion(GtkWidget *widget, GdkEventMotion *event, gpointer user_data)
+listview__on_motion(GtkWidget* widget, GdkEventMotion* event, gpointer user_data)
 {
+	// set mouse-over styling for links
+	// TODO should be done by the renderer not by modifying the store. currently causing segfaults.
+#if 0
+	LibraryView* view = app->libraryview;
+
 	//static gint prev_row_num = 0;
 	static GtkTreeRowReference* prev_row_ref = NULL;
 	static gchar prev_text[256] = "";
@@ -593,7 +615,7 @@ listview__on_motion(GtkWidget *widget, GdkEventMotion *event, gpointer user_data
 				//if(prev_path && (path != prev_path))
 				if(prev_path && (atoi(path_str) != atoi(prev_path_str)))
 				{
-					dbg(0, "new row! path=%p (%s) prev_path=%p (%s)", path, path_str, prev_path, prev_path_str);
+					dbg(1, "new row! path=%p (%s) prev_path=%p (%s)", path, path_str, prev_path, prev_path_str);
 
 					//restore text to previous row:
 					gtk_list_store_set(app->store, &prev_iter, COL_KEYWORDS, prev_text, -1);
@@ -601,7 +623,7 @@ listview__on_motion(GtkWidget *widget, GdkEventMotion *event, gpointer user_data
 					//store original text:
 					gchar* txt;
 					gtk_tree_model_get(GTK_TREE_MODEL(app->store), &iter, COL_KEYWORDS, &txt, -1);
-					dbg(0, "text=%s", prev_text);
+					dbg(1, "text=%s", prev_text);
 					snprintf(prev_text, 256, "%s", txt);
 					g_free(txt);
 
@@ -668,8 +690,8 @@ listview__on_motion(GtkWidget *widget, GdkEventMotion *event, gpointer user_data
 		gtk_tree_path_free(path);
 	}
 
-	dbg(2, "setting rowref=%p", prev_row_ref);
-	app->mouseover_row_ref = prev_row_ref;
+	view->mouseover_row_ref = prev_row_ref;
+#endif
 	return false;
 }
 
@@ -772,17 +794,17 @@ listview__tag_cell_data(GtkTreeViewColumn* tree_column, GtkCellRenderer* cell, G
 
 	//----------------------
 
+	if(!gtk_widget_get_realized (app->libraryview->widget)) return;
+
 	GtkCellRendererText* celltext = (GtkCellRendererText*)cell;
 	GtkCellRendererHyperText* hypercell = (GtkCellRendererHyperText*)cell;
 	GtkTreePath* path = gtk_tree_model_get_path(GTK_TREE_MODEL(app->store), iter);
 	GdkRectangle cellrect;
 
-	gint mouse_row_num = get_mouseover_row();
+	gint mouse_row_num = listview__get_mouseover_row();
 
 	gchar* path_str = gtk_tree_model_get_string_from_iter(GTK_TREE_MODEL(app->store), iter);
 	gint cell_row_num = atoi(path_str);
-
-	//----------------------
 
 	//get the coords for this cell:
 	gtk_tree_view_get_cell_area(GTK_TREE_VIEW(app->libraryview->widget), path, tree_column, &cellrect);
@@ -999,6 +1021,26 @@ treeview_get_tags_cell(GtkTreeView *view, guint x, guint y, GtkCellRenderer **ce
 	return false; // not found
 }
 #endif
+
+
+gint
+listview__get_mouseover_row()
+{
+	//get the row number the mouse is currently over from the stored row_reference.
+	LibraryView* view = app->libraryview;
+	gint row_num = -1;
+	GtkTreePath* path;
+	GtkTreeIter iter;
+	if((view->mouseover_row_ref && (path = gtk_tree_row_reference_get_path(view->mouseover_row_ref)))){
+		gtk_tree_model_get_iter(GTK_TREE_MODEL(app->store), &iter, path);
+		gchar* path_str = gtk_tree_model_get_string_from_iter(GTK_TREE_MODEL(app->store), &iter);
+		row_num = atoi(path_str);
+
+		g_free(path_str);
+		gtk_tree_path_free(path);
+	}
+	return row_num;
+}
 
 
 void 

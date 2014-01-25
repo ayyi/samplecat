@@ -1,0 +1,77 @@
+<?xml version="1.0"?>
+<dock-layout>
+	<layout name="__default__">
+		<dock name="__dock_1" floating="no" width="-1" height="-1" floatx="0" floaty="0">
+			<paned orientation="vertical" locked="no" position="67">
+				<item name="Filters" orientation="vertical" locked="yes"/>
+				<paned orientation="vertical" locked="no" position="561">
+					<paned orientation="horizontal" locked="no" position="253">
+						<paned orientation="vertical" locked="no" position="162">
+							<item name="Directories" orientation="vertical" locked="no"/>
+							<item name="Inspector" orientation="vertical" locked="no"/>
+						</paned>
+						<notebook orientation="vertical" locked="no" page="0">
+							<item name="Library" orientation="vertical" locked="yes"/>
+							<item name="Filemanager" orientation="vertical" locked="no"/>
+						</notebook>
+						</paned>
+						<item name="Waveform" orientation="vertical" locked="no"/>
+				</paned>
+			</paned>
+		</dock>
+	</layout>
+	<layout name="Default">
+		<dock name="__dock_1" floating="no" width="-1" height="-1" floatx="0" floaty="0">
+			<paned orientation="vertical" locked="no" position="67">
+				<item name="Filters" orientation="vertical" locked="yes"/>
+				<paned orientation="vertical" locked="no" position="561">
+					<paned orientation="horizontal" locked="no" position="253">
+						<paned orientation="vertical" locked="no" position="162">
+							<item name="Directories" orientation="vertical" locked="no"/>
+							<item name="Inspector" orientation="vertical" locked="no"/>
+						</paned>
+						<notebook orientation="vertical" locked="no" page="0">
+							<item name="Library" orientation="vertical" locked="yes"/>
+							<item name="Filemanager" orientation="vertical" locked="no"/>
+						</notebook>
+						</paned>
+						<item name="Waveform" orientation="vertical" locked="no"/>
+				</paned>
+			</paned>
+		</dock>
+	</layout>
+	<layout name="Minimal">
+		<dock name="__dock_1" floating="no" width="-1" height="-1" floatx="0" floaty="0">
+			<paned orientation="vertical" locked="no" position="62">
+				<item name="Filters" orientation="vertical" locked="yes"/>
+				<item name="Library" orientation="vertical" locked="yes"/>
+			</paned>
+		</dock>
+	</layout>
+	<layout name="All">
+		<dock name="__dock_1" floating="no" width="-1" height="-1" floatx="0" floaty="0">
+			<paned orientation="vertical" locked="no" position="67">
+				<item name="Filters" orientation="vertical" locked="yes"/>
+				<paned orientation="vertical" locked="no" position="439">
+					<paned orientation="horizontal" locked="no" position="253">
+						<paned orientation="vertical" locked="no" position="126">
+							<item name="Directories" orientation="vertical" locked="no"/>
+							<paned orientation="vertical" locked="no" position="129">
+								<item name="Inspector" orientation="vertical" locked="no"/>
+								<item name="Player" orientation="vertical" locked="no"/>
+							</paned>
+						</paned>
+						<notebook orientation="vertical" locked="no" page="0">
+							<item name="Library" orientation="vertical" locked="yes"/>
+							<item name="Filemanager" orientation="vertical" locked="no"/>
+						</notebook>
+					</paned>
+					<paned orientation="vertical" locked="no" position="121">
+						<item name="Spectrogram" orientation="vertical" locked="no"/>
+						<item name="Waveform" orientation="vertical" locked="no"/>
+					</paned>
+				</paned>
+			</paned>
+		</dock>
+	</layout>
+</dock-layout>

@@ -37,7 +37,8 @@ libgdl_headers = \
 	gdl-dock-item-grip.h \
 	gdl-dock-layout.h \
 	gdl-dock-bar.h \
-	gdl-dock-placeholder.h
+	gdl-dock-placeholder.h \
+	debug.h
 	
 libgdl_a_SOURCES = \
 	$(libgdl_headers) \

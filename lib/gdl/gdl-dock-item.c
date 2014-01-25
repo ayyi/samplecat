@@ -1213,15 +1213,13 @@ gdl_dock_item_dock (GdlDockObject    *object,
     parent = gdl_dock_object_get_parent_object (object);
     gdl_dock_item_preferred_size (GDL_DOCK_ITEM (requestor), &req);
     gdl_dock_item_preferred_size (GDL_DOCK_ITEM (object), &object_req);
-dbg(1, "target: height=%i", object_req.height);
     if (GDL_IS_DOCK_ITEM (parent))
         gdl_dock_item_preferred_size (GDL_DOCK_ITEM (parent), &parent_req);
     else
     {
         parent_req.height = GTK_WIDGET (parent)->allocation.height;
         parent_req.width = GTK_WIDGET (parent)->allocation.width;
-dbg(1, "parent: height=%i %i", parent_req.height, GTK_WIDGET (parent)->requisition.height);
-		if(!gtk_widget_get_realized((GtkWidget*)parent)) gwarn("using allocation of unrealized widget");
+		if(!gtk_widget_get_realized((GtkWidget*)parent) && _debug_) gwarn("using allocation of unrealized widget");
     }
     
     /* If preferred size is not set on the requestor (perhaps a new item),
@@ -1415,7 +1413,7 @@ dbg(1, "new_parent: setting split point from OTHER: %u", g_value_get_uint (other
 dbg(1, "new_parent: splitpos=%i", splitpos);
             g_object_set (G_OBJECT (new_parent), "position", splitpos, NULL);
         }
-		else {
+		else if(_debug_) {
 			gwarn("%s. not setting split point! object too big? splitpos=%i available_space=%i", position == GDL_DOCK_LEFT ? "GDL_DOCK_LEFT" : position == GDL_DOCK_TOP ? "GDL_DOCK_TOP" : "other", splitpos, available_space);
 			gwarn("... parent=%s (%s)", GDL_DOCK_OBJECT(parent)->name ? GDL_DOCK_OBJECT(parent)->name : "<unnamed>", G_OBJECT_CLASS_NAME(G_OBJECT_GET_CLASS(parent)));
 			gwarn("... new_parent=%s (%s)", GDL_DOCK_OBJECT(new_parent)->name ? GDL_DOCK_OBJECT(new_parent)->name : "<unnamed>", G_OBJECT_CLASS_NAME(G_OBJECT_GET_CLASS(new_parent)));
@@ -1649,6 +1647,8 @@ gdl_dock_item_new (const gchar         *name,
                    const gchar         *long_name,
                    GdlDockItemBehavior  behavior)
 {
+	dbg(1, "%s", name);
+
     GdlDockItem *item;
 
     item = GDL_DOCK_ITEM (g_object_new (GDL_TYPE_DOCK_ITEM, 

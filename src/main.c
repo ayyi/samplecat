@@ -145,9 +145,21 @@ static const char* const usage =
 	"  -v, --verbose <level>  show more information.\n"
 	"  -V, --version          print version and exit.\n"
 	"\n"
+	"Keyboard shortcuts:\n"
+	"  a      add file to library\n"
+	"  DEL    delete library item\n"
+	"  p      play\n"
+	"  CTL-l  open layout manager\n"
+	"  CTL-q  quit\n"
+	"  CTL-w  quit\n"
+	"  +      waveform zoom in\n"
+	"  -      waveform zoom out\n"
+	"  LEFT   waveform scroll left\n"
+	"  RIGHT  waveform scroll right\n"
+	"\n"
 	"Files:\n"
-	"samplecat stores configuration and caches data in\n"
-	"$HOME/.config/samplecat/\n"
+	"  samplecat stores configuration and caches data in\n"
+	"  $HOME/.config/samplecat/\n"
 	"\n"
 	"Report bugs to <tim@orford.org>.\n"
 	"Website and manual: <http://ayyi.github.io/samplecat/>\n"
@@ -262,7 +274,7 @@ main(int argc, char** argv)
 			case 'V':
 				printf ("%s %s\n\n",basename(argv[0]), PACKAGE_VERSION);
 				printf(
-					"Copyright (C) 2007-2013 Tim Orford\n"
+					"Copyright (C) 2007-2014 Tim Orford\n"
 					"Copyright (C) 2011 Robin Gareus\n"
 					"This is free software; see the source for copying conditions.  There is NO\n"
 					"warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n"
@@ -459,25 +471,6 @@ dir_tree_update(gpointer data)
 }
 
 
-gint
-get_mouseover_row()
-{
-	//get the row number the mouse is currently over from the stored row_reference.
-	gint row_num = -1;
-	GtkTreePath* path;
-	GtkTreeIter iter;
-	if((app->mouseover_row_ref && (path = gtk_tree_row_reference_get_path(app->mouseover_row_ref)))){
-		gtk_tree_model_get_iter(GTK_TREE_MODEL(app->store), &iter, path);
-		gchar* path_str = gtk_tree_model_get_string_from_iter(GTK_TREE_MODEL(app->store), &iter);
-		row_num = atoi(path_str);
-
-		g_free(path_str);
-		gtk_tree_path_free(path);
-	}
-	return row_num;
-}
-
-
 void
 file_selector()
 {
@@ -542,7 +535,8 @@ do_search(char* search, char* dir)
 		return;
 	}
 
-	treeview_block_motion_handler(); //dont know exactly why but this prevents a segfault.
+	if(app->libraryview)
+		listview__block_motion_handler(); // TODO make private to listview.
 
 	listmodel__clear();
 
@@ -570,8 +564,6 @@ do_search(char* search, char* dir)
 	}
 
 	samplecat_list_store_do_search((SamplecatListStore*)app->store);
-
-	//treeview_unblock_motion_handler();  //causes a segfault even before it is run ??!!
 }
 
 
@@ -1100,36 +1092,6 @@ treeview_get_cell(GtkTreeView *view, guint x, guint y, GtkCellRenderer **cell)
 #endif
 
 
-gboolean
-keyword_is_dupe(char* new, char* existing)
-{
-	//return true if the word 'new' is contained in the 'existing' string.
-
-	if(!existing) return false;
-
-	//FIXME make case insensitive.
-	//gint g_ascii_strncasecmp(const gchar *s1, const gchar *s2, gsize n);
-	//gchar*      g_utf8_casefold(const gchar *str, gssize len);
-
-	gboolean found = false;
-
-	//split the existing keyword string into separate words.
-	gchar** split = g_strsplit(existing, " ", 0);
-	int word_index = 0;
-	while(split[word_index]){
-		if(!strcmp(split[word_index], new)){
-			dbg(1, "'%s' already in string '%s'", new, existing);
-			found = true;
-			break;
-		}
-		word_index++;
-	}
-
-	g_strfreev(split);
-	return found;
-}
-
-
 static gboolean
 on_directory_list_changed()
 {
@@ -1144,7 +1106,7 @@ on_directory_list_changed()
 
 
 static gboolean
-toggle_loop_playback(GtkWidget *widget, gpointer user_data)
+toggle_loop_playback(GtkWidget* widget, gpointer user_data)
 {
 	PF;
 	if(app->loop_playback) app->loop_playback = false; else app->loop_playback = true;
@@ -1153,7 +1115,7 @@ toggle_loop_playback(GtkWidget *widget, gpointer user_data)
 
 
 static gboolean
-toggle_recursive_add(GtkWidget *widget, gpointer user_data)
+toggle_recursive_add(GtkWidget* widget, gpointer user_data)
 {
 	PF;
 	if(app->add_recursive) app->add_recursive = false; else app->add_recursive = true;
@@ -1240,7 +1202,9 @@ config_load()
 			app->view_options[SHOW_PLAYER]      = (ViewOption){"Player",      show_player,      strcmp(app->config.show_player, "false")};
 			app->view_options[SHOW_FILEMANAGER] = (ViewOption){"Filemanager", show_filemanager, true};
 			app->view_options[SHOW_WAVEFORM]    = (ViewOption){"Waveform",    show_waveform,    !strcmp(app->config.show_waveform, "true")};
+#ifdef HAVE_FFTW3
 			app->view_options[SHOW_SPECTROGRAM] = (ViewOption){"Spectrogram", show_spectrogram, !strcmp(app->config.show_spectrogram, "true")};
+#endif
 		}
 		else{ pwarn("cannot find Samplecat key group.\n"); return false; }
 		g_free(groupname);
@@ -1297,14 +1261,18 @@ config_save()
 		g_key_file_set_value(app->key_file, "Samplecat", "filter", gtk_entry_get_text(GTK_ENTRY(app->search)));
 
 		AyyiLibfilemanager* fm = file_manager__get_signaller();
-		struct _Filer* f = fm->file_window;
-		if(f){
-			g_key_file_set_value(app->key_file, "Samplecat", "browse_dir", f->real_path);
+		if(fm){
+			struct _Filer* f = fm->file_window;
+			if(f){
+				g_key_file_set_value(app->key_file, "Samplecat", "browse_dir", f->real_path);
+			}
 		}
 
 		g_key_file_set_value(app->key_file, "Samplecat", "show_player", app->view_options[SHOW_PLAYER].value ? "true" : "false");
 		g_key_file_set_value(app->key_file, "Samplecat", "show_waveform", app->view_options[SHOW_WAVEFORM].value ? "true" : "false");
+#ifdef HAVE_FFTW3
 		g_key_file_set_value(app->key_file, "Samplecat", "show_spectrogram", app->view_options[SHOW_SPECTROGRAM].value ? "true" : "false");
+#endif
 
 		int i;
 		for (i=1;i<PALETTE_SIZE;i++) {

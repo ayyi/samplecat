@@ -36,14 +36,18 @@ endif
 AD_SRC = audio_decoder/ad.h audio_decoder/ad_plugin.h audio_decoder/ad_plugin.c \
 	audio_decoder/ad_soundfile.c \
 	audio_decoder/ad_flac.c \
-	audio_decoder/ad_ffmpeg.c
+	audio_decoder/ad_ffmpeg.c \
+	audio_decoder/ffcompat.h
 
 if ENABLE_FFTW3
 FFT_SRC = spectrogram_widget.c spectrogram_widget.h
+FFT_ANANALYSERS_SRC = \
+	audio_analysis/spectrogram/spectrogram.c audio_analysis/spectrogram/spectrogram.h \
+	audio_analysis/spectrogram/sndfile_window.c audio_analysis/spectrogram/sndfile_window.h
+OPENGL_SRC = gl_spectrogram_view.c gl_spectrogram_view.h
 endif
 
 if ENABLE_OPENGL
-OPENGL_SRC = gl_spectrogram_view.c gl_spectrogram_view.h
 OPENGL_LDFLAGS = \
 	$(top_srcdir)/lib/waveform/waveform/.libs/libwaveform.a \
 	$(top_srcdir)/lib/waveform/agl/.libs/libagl.a \
@@ -68,8 +72,7 @@ AUDITIONER_JACK = jack_player.c jack_player.h ladspa_proc.c ladspa_proc.h
 endif
 
 AUDIOANALYSERS_SRC = \
-	audio_analysis/spectrogram/spectrogram.c audio_analysis/spectrogram/spectrogram.h \
-	audio_analysis/spectrogram/sndfile_window.c audio_analysis/spectrogram/sndfile_window.h \
+	$(FFT_ANANALYSERS_SRC) \
 	audio_analysis/meter/peak.c audio_analysis/meter/peak.h \
 	audio_analysis/waveform/waveform.c audio_analysis/waveform/waveform.h \
 	audio_analysis/ebumeter/ebur128.cc audio_analysis/ebumeter/ebur128.h \
