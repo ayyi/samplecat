@@ -108,7 +108,6 @@ Palette          palette;
 GList*           mime_types; // list of MIME_type*
 extern GList*    themes; 
 
-unsigned         debug = 0;
 static gboolean  search_pending = false;
 
 //strings for console output:
@@ -222,9 +221,9 @@ main(int argc, char** argv)
 			case 'v':
 				printf("using debug level: %s\n", optarg);
 				int d = atoi(optarg);
-				if(d<0 || d>5) { gwarn ("bad arg. debug=%i", d); } else debug = d;
+				if(d<0 || d>5) { gwarn ("bad arg. debug=%i", d); } else _debug_ = d;
 				#ifdef USE_AYYI
-				ayyi.debug = debug;
+				ayyi.debug = _debug_;
 				#endif
 				break;
 			case 'b':

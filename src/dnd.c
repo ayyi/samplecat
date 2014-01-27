@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
-* | This file is part of Samplecat. http://samplecat.orford.org          |
-* | copyright (C) 2007-2013 Tim Orford <tim@orford.org>                  |
+* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
+* | copyright (C) 2007-2014 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -24,8 +24,6 @@
 #include "listview.h"
 #include "progress_dialog.h"
 #include "dnd.h"
-
-extern unsigned debug;
 
 
 void

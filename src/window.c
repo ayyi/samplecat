@@ -73,7 +73,6 @@
 #include "../layouts/layouts.c"
 
 extern Filer filer;
-extern unsigned debug;
  
 extern void       view_details_dnd_get            (GtkWidget*, GdkDragContext*, GtkSelectionData*, guint info, guint time, gpointer data);
 
@@ -1020,6 +1019,7 @@ window_on_fileview_row_selected(GtkTreeView* treeview, gpointer user_data)
 
 	Sample* s = sample_new_from_filename(full_path, true);
 	if(s){
+		s->online = true;
 		g_signal_emit_by_name (app, "selection-changed", s, NULL);
 		sample_unref(s);
 	}
@@ -1232,7 +1232,7 @@ show_waveform(gboolean enable)
 		timer = g_timeout_add(500, redisplay, view);
 	}
 
-	void _on_selection_change(Application* a, Sample* sample, gpointer _c)
+	void _waveform_on_selection_change(Application* a, Sample* sample, gpointer _c)
 	{
 		PF;
 		g_return_if_fail(window.waveform);
@@ -1254,7 +1254,7 @@ show_waveform(gboolean enable)
 		gtk_widget_set_size_request(window.waveform, 100, 96);
 #endif
 
-		c->selection_handler = g_signal_connect((gpointer)app, "selection-changed", G_CALLBACK(_on_selection_change), c);
+		c->selection_handler = g_signal_connect((gpointer)app, "selection-changed", G_CALLBACK(_waveform_on_selection_change), c);
 		g_signal_connect((gpointer)window.waveform, "realize", G_CALLBACK(on_waveform_view_realise), NULL);
 	}
 

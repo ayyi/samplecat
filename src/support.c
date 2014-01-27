@@ -42,8 +42,6 @@
 #define N_(A) A 
 #define gettext(A) A
 
-extern unsigned debug;
-
 
 void
 log_handler(const gchar* log_domain, GLogLevelFlags log_level, const gchar* message, gpointer user_data)
@@ -67,7 +65,7 @@ p_(int level, const char* format, ...)
 {
 	va_list argp;
 	va_start(argp, format);
-	if (level <= debug) {
+	if (level <= _debug_) {
 		gchar* s = g_strdup_vprintf(format, argp);
 		fprintf(stdout, "%s\n", s);
 		g_free(s);
@@ -504,7 +502,7 @@ statusbar_print(int n, char* fmt, ...)
 	vsnprintf(s, 127, fmt, argp);
 	va_end(argp);
 
-	if(debug) printf("%s\n", s);
+	if(_debug_) printf("%s\n", s);
 
 	GtkWidget *statusbar = NULL;
 	if     (n==1) statusbar = app->statusbar;

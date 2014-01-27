@@ -27,8 +27,6 @@
 #include "dnd.h"
 #include "colour_box.h"
 
-extern Filer       filer;
-extern unsigned    debug;
 static GtkWidget*  clicked_widget = NULL;
 
 static void        colour_box_update               ();
@@ -151,7 +149,7 @@ colour_box_add(GdkColor* colour)
 
 	//char d[32]; hexstring_from_gdkcolor(d, colour); dbg(0, " %i: %s", slot, d);
 
-	if(slot >= PALETTE_SIZE){ if(debug) warnprintf("%s(): colour_box full.\n", __func__); return false; }
+	if(slot >= PALETTE_SIZE){ if(_debug_) warnprintf("%s(): colour_box full.\n", __func__); return false; }
 #if 0 /* don't try to be smarter than the user -- 
        * This can screw up the order or user-configured colours 
 			 * if they're too similar.

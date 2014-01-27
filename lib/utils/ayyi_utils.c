@@ -1,3 +1,14 @@
+/**
+* +----------------------------------------------------------------------+
+* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
+* | copyright (C) 2007-2014 Tim Orford <tim@orford.org>                  |
+* +----------------------------------------------------------------------+
+* | This program is free software; you can redistribute it and/or modify |
+* | it under the terms of the GNU General Public License version 3       |
+* | as published by the Free Software Foundation.                        |
+* +----------------------------------------------------------------------+
+*
+*/
 #define __ayyi_utils_c__
 #include <stdio.h>
 #include <string.h>
@@ -8,8 +19,6 @@
 
 #include "debug/debug.h"
 #include "ayyi_utils.h"
-
-extern unsigned debug;
 
 
 void
@@ -85,7 +94,7 @@ get_dirlist(const char* path)
 		}
 		g_dir_close(dir);
 	}else{
-		if(debug > 1) gwarn ("cannot open directory. %s", error->message);
+		if(_debug_ > 1) gwarn ("cannot open directory. %s", error->message);
 		g_error_free(error);
 		error = NULL;
 	}

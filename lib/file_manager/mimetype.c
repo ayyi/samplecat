@@ -45,8 +45,6 @@
 #include "utils/mime_type.h"
 #include "file_manager/file_manager.h"
 
-extern unsigned debug;
-
 #define TYPE_NS "http://www.freedesktop.org/standards/shared-mime-info"
 enum {SET_MEDIA, SET_TYPE};
 
@@ -241,7 +239,7 @@ MIME_type *type_get_type(const guchar *path)
 MIME_type*
 type_from_path(const char *path)
 {
-	if(debug > 1) printf("type_from_path()...\n");
+	if(_debug_ > 1) printf("type_from_path()...\n");
 
 	/* Check for extended attribute first */
 	/*

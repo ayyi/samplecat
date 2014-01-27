@@ -58,8 +58,6 @@
 #include "audio_analysis/spectrogram/sndfile_window.h"
 #include "main.h"
 
-extern unsigned debug;
-
 typedef void (*SpectrogramReady)(const char* filename, GdkPixbuf*, gpointer);
 typedef void (*SpectrogramReadyTarget)(const char* filename, GdkPixbuf*, gpointer, void* target);
 
@@ -445,7 +443,7 @@ fft_thread(gpointer data)
 			gboolean do_callback(gpointer _render)
 			{
 				RENDER* render = _render;
-				if(debug && !render->pixbuf) gwarn("no pixbuf.");
+				if(_debug_ && !render->pixbuf) gwarn("no pixbuf.");
 
 				render->callback(render->sndfilepath, render->pixbuf, render->user_data);
 

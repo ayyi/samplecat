@@ -62,8 +62,6 @@ enum {
 
 MYSQL mysql = {{NULL}, NULL, NULL};
 
-extern unsigned debug;
-
 static gboolean is_connected = FALSE;
 static SamplecatModel* model = NULL;
 static struct _mysql_config* config = NULL;
@@ -189,7 +187,7 @@ mysql__connect()
 		}
 		return false;
 	}
-	if(debug) printf("MySQL Server Version is %s\n", mysql_get_server_info(&mysql));
+	if(_debug_) printf("MySQL Server Version is %s\n", mysql_get_server_info(&mysql));
 
 	if(mysql_select_db(&mysql, config->name)){
 		errprintf("Failed to connect to Database: %s\n", mysql_error(&mysql));

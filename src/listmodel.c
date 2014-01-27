@@ -34,8 +34,6 @@
 #include "list_store.h"
 #include "listmodel.h"
 
-extern unsigned debug;
-
 static void listmodel__update ();
 
 

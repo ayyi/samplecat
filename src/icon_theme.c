@@ -43,7 +43,6 @@
 
 GList* themes = NULL; 
 char theme_name[64] = "Amaranth";
-extern unsigned debug;
 extern GtkIconTheme* icon_theme;
 extern Application* application;
 
@@ -61,7 +60,7 @@ icon_theme_init()
 	//icon_theme = gtk_icon_theme_get_default();
 	set_icon_theme();
 
-	if(debug){
+	if(_debug_){
 		gint n_elements;
 		gchar** path[64];
 		gtk_icon_theme_get_search_path(icon_theme, path, &n_elements);
@@ -142,7 +141,7 @@ on_theme_select(GtkMenuItem* menuitem, gpointer user_data)
 
 	if(name && strlen(name)) strncpy(theme_name, name, 64);
 
-	if(debug) print_icon_list();
+	if(_debug_) print_icon_list();
 	set_icon_theme();
 	application_emit_icon_theme_changed(app, name);
 }

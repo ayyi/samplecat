@@ -33,8 +33,6 @@
 #include "audio_decoder/ad.h"
 #include "audio_analysis/waveform/waveform.h"
 
-extern unsigned debug;
-
 static GList* msg_list = NULL;
 
 // TODO move to audio_analysis/analyzers.c ?!
