@@ -1,7 +1,8 @@
 namespace Samplecat {
-	[CCode(cname = "Sample", cprefix = "sample_", cheader_filename = "sample.h")]
-	public struct Sample
-	{
+
+	[Compact]
+	[CCode (cname = "Sample", cprefix = "sample_", cheader_filename = "sample.h", ref_function = "sample_ref", unref_function = "sample_unref")]
+	public class Sample {
 		public int          id;
 		public int          ref_count;
 		public Gtk.TreeRowReference* row_ref;
@@ -11,9 +12,9 @@ namespace Samplecat {
 		public char*        notes;
 		public char*        mimetype;
 
-		public void         ref        ();
+		public void         unref ();
+		public void         ref   ();
 	}
-	public void        sample_unref (Sample* sample);
 
 	public struct _filters {
 			char*     phrase;
@@ -21,11 +22,13 @@ namespace Samplecat {
 			char*     category;
 	}
 
+	[CCode (cname = "SamplecatModel")]
 	public struct _samplecat_model
 	{
 		_filters filters;
 	}
 
+	[CCode (cname = "Application")]
 	public struct Application
 	{
 		public _samplecat_model* model;

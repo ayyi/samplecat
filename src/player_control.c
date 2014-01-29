@@ -259,9 +259,11 @@ player_control_on_show_hide(gboolean enable)
 
 	gboolean visible = gtk_widget_get_visible(app->playercontrol->widget);
 
+#ifdef HAVE_JACK
 	static guint id = 0;
 	static GSource* source = NULL;
 	int updateinterval = 50; /* ms */
+#endif
 	if (!app->auditioner->status) return;
 	if (!app->auditioner->playpause) return;
 
@@ -288,7 +290,9 @@ player_control_on_show_hide(gboolean enable)
 	} else {
 		/* hide player */
 		gtk_widget_hide(app->playercontrol->slider1);
+#ifdef HAVE_JACK
 		updateinterval = 250; // we still need to catch EOF.
+#endif
 	}
 
 #ifdef HAVE_JACK

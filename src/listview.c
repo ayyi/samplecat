@@ -46,6 +46,7 @@ static void         listview__tag_cell_data           (GtkTreeViewColumn*, GtkCe
 static void         listview__cell_data_bg            (GtkTreeViewColumn*, GtkCellRenderer*, GtkTreeModel*, GtkTreeIter*, gpointer);
 static gboolean     listview__get_first_selected_iter (GtkTreeIter*);
 static GtkTreePath* listview__get_first_selected_path ();
+static Sample*      listview__get_first_selected_sample();
 static void         listview__unblock_motion_handler  ();
 #if NEVER
 static void         cell_bg_lighter                   (GtkTreeViewColumn*, GtkCellRenderer*, GtkTreeModel*, GtkTreeIter*);
@@ -350,7 +351,7 @@ listview__on_cursor_change(GtkTreeView* widget, gpointer user_data)
 	if((s = listview__get_first_selected_sample())){
 		if(s->id != app->libraryview->selected){
 			app->libraryview->selected = s->id;
-			g_signal_emit_by_name (app, "selection-changed", s, NULL);
+			samplecat_model_set_selection (app->model, s);
 		}
 		sample_unref(s);
 	}
@@ -434,7 +435,7 @@ listview__get_first_selected_path()
 /**
  * @return: Sample* -- must be sample_unref() after use.
  */
-Sample*
+static Sample*
 listview__get_first_selected_sample()
 {
 	GtkTreePath* path = listview__get_first_selected_path();

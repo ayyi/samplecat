@@ -24,7 +24,6 @@ GtkWidget*  listview__new                        ();
 void        listview__show_db_missing            ();
 gboolean    listview__item_set_colour            (GtkTreePath*, unsigned colour);
 void        listview__add_item                   ();
-Sample*     listview__get_first_selected_sample  ();
 gchar*      listview__get_first_selected_filename();
 gchar*      listview__get_first_selected_filepath();
 Sample*     listview__get_sample_by_rowref       (GtkTreeRowReference*);

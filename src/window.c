@@ -461,7 +461,7 @@ GtkWindow
 
 	gtk_widget_show_all(app->window);
 
-	void window_on_selection_change(Application* a, Sample* sample, gpointer user_data)
+	void window_on_selection_change(SamplecatModel* m, Sample* sample, gpointer user_data)
 	{
 		PF;
 #ifdef HAVE_FFTW3
@@ -474,7 +474,7 @@ GtkWindow
 		}
 #endif
 	}
-	g_signal_connect((gpointer)app, "selection-changed", G_CALLBACK(window_on_selection_change), NULL);
+	g_signal_connect((gpointer)app->model, "selection-changed", G_CALLBACK(window_on_selection_change), NULL);
 
 #ifdef USE_GDL
 	void window_on_quit(Application* a, gpointer user_data)
@@ -1020,7 +1020,7 @@ window_on_fileview_row_selected(GtkTreeView* treeview, gpointer user_data)
 	Sample* s = sample_new_from_filename(full_path, true);
 	if(s){
 		s->online = true;
-		g_signal_emit_by_name (app, "selection-changed", s, NULL);
+		samplecat_model_set_selection (app->model, s);
 		sample_unref(s);
 	}
 }
@@ -1232,7 +1232,7 @@ show_waveform(gboolean enable)
 		timer = g_timeout_add(500, redisplay, view);
 	}
 
-	void _waveform_on_selection_change(Application* a, Sample* sample, gpointer _c)
+	void _waveform_on_selection_change(SamplecatModel* m, Sample* sample, gpointer _c)
 	{
 		PF;
 		g_return_if_fail(window.waveform);
@@ -1254,7 +1254,7 @@ show_waveform(gboolean enable)
 		gtk_widget_set_size_request(window.waveform, 100, 96);
 #endif
 
-		c->selection_handler = g_signal_connect((gpointer)app, "selection-changed", G_CALLBACK(_waveform_on_selection_change), c);
+		c->selection_handler = g_signal_connect((gpointer)app->model, "selection-changed", G_CALLBACK(_waveform_on_selection_change), c);
 		g_signal_connect((gpointer)window.waveform, "realize", G_CALLBACK(on_waveform_view_realise), NULL);
 	}
 
@@ -1269,9 +1269,8 @@ show_waveform(gboolean enable)
 			bool show_wave()
 			{
 				Sample* s;
-				if((s = listview__get_first_selected_sample())){
+				if((s = app->model->selection)){
 					update_waveform_view(s);
-					sample_unref(s);
 				}
 				return IDLE_STOP;
 			}

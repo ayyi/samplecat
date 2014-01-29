@@ -66,7 +66,7 @@ struct _inspector_priv
 };
 
 static void inspector_clear              ();
-static void inspector_update             (Application*, Sample*, gpointer);
+static void inspector_update             (SamplecatModel*, Sample*, gpointer);
 static void hide_fields                  ();
 static void show_fields                  ();
 static bool inspector_on_tags_clicked    (GtkWidget*, GdkEventButton*, gpointer);
@@ -216,7 +216,7 @@ inspector_new()
 	gtk_entry_set_text(GTK_ENTRY(edit), "");
 	g_object_ref(edit); //stops gtk deleting the unparented widget.
 
-	g_signal_connect((gpointer)app, "selection-changed", G_CALLBACK(inspector_update), NULL);
+	g_signal_connect((gpointer)app->model, "selection-changed", G_CALLBACK(inspector_update), NULL);
 
 	gtk_widget_set_size_request(inspector->widget, 20, 20);
 
@@ -325,7 +325,7 @@ inspector_set_labels(Sample* sample)
 
 
 static void
-inspector_update(Application* a, Sample* sample, gpointer user_data)
+inspector_update(SamplecatModel* m, Sample* sample, gpointer user_data)
 {
 	PF;
 	Inspector* i = app->inspector;

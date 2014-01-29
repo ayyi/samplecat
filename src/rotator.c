@@ -1466,12 +1466,12 @@ rotator_init (Rotator* tree_view)
 	gtk_widget_set_gl_capability((GtkWidget*)widget, glconfig, window_get_gl_context(), 1, GDK_GL_RGBA_TYPE);
 #endif
 
-	void rotator_on_selection_change(Application* a, Sample* sample, gpointer user_data)
+	void rotator_on_selection_change(SamplecatModel* m, Sample* sample, gpointer user_data)
 	{
 		PF0;
 	}
 
-	g_signal_connect((gpointer)app, "selection-changed", G_CALLBACK(rotator_on_selection_change), NULL);
+	g_signal_connect((gpointer)app->model, "selection-changed", G_CALLBACK(rotator_on_selection_change), NULL);
 }
 
 

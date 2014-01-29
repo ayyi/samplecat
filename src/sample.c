@@ -118,8 +118,8 @@ sample_dup(Sample* s)
 void
 sample_free(Sample* sample)
 {
-	if(sample->ref_count >0) {
-		dbg(0, "WARNING: freeing sample w/ refcount:%d", sample->ref_count);
+	if(sample->ref_count > 0) {
+		gwarn("freeing sample with refcount: %d", sample->ref_count);
 	}
 	if(sample->row_ref) gtk_tree_row_reference_free(sample->row_ref);
 	if(sample->sample_name) g_free(sample->sample_name);
