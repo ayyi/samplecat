@@ -72,7 +72,8 @@
 
 #include "../layouts/layouts.c"
 
-extern Filer filer;
+extern Filer      filer;
+extern GList*     themes; 
  
 extern void       view_details_dnd_get            (GtkWidget*, GdkDragContext*, GtkSelectionData*, guint info, guint time, gpointer data);
 
@@ -106,6 +107,7 @@ static void       k_show_layout_manager           (GtkAccelGroup*, gpointer);
 static void       window_load_layout              ();
 static void       window_save_layout              ();
 #endif
+static GtkWidget* make_context_menu               ();
 
 struct _window {
    GtkWidget*     vbox;
@@ -149,6 +151,9 @@ typedef struct {
    NewPanelFn* new;
    GtkWidget*  widget;
    GtkWidget*  dock_item;
+
+   GtkWidget*  menu_item;
+   gulong      handler;
 } Panel_;
 
 Panel_ panels[] = {
@@ -163,6 +168,11 @@ Panel_ panels[] = {
    {"Spectrogram", spectrogram_new},
 #endif
 };
+
+#ifdef USE_GDL
+static Panel_*    panel_lookup                    (GdlDockObject*);
+static int        panel_lookup_index              (GdlDockObject*);
+#endif
 
 Accel menu_keys[] = {
 	{"Add to database",NULL,        {{(char)'a',    0               },  {0, 0}}, menu__add_to_db,       GINT_TO_POINTER(0)},
@@ -381,37 +391,35 @@ GtkWindow
 		for(;l;l=l->next){
 			GdlDockObject* object = l->data;
 			GdlDockItem* item = l->data;
-			GtkContainer* container = &object->container;
-			GtkWidget* parent = gtk_widget_get_parent((GtkWidget*)container);
-			bool active = !!parent;
+			bool active = gdl_dock_item_is_active(item);
 			//dbg(0, "  %s child=%p visible=%i active=%i", object->name, item->child, item->child ? gtk_widget_get_visible(item->child) : 0, active);
 			if(active && !item->child){
 				dbg(1, "   must load: %s", object->name);
-				int i;for(i=0;i<PANEL_TYPE_MAX;i++){
+				int i = panel_lookup_index(object);
+				if(i > -1){
 					Panel_* panel = &panels[i];
-					if(!strcmp(object->name, panel->name)){
-						if(panel->widget){ gwarn("%s: panel already loaded", panel->name); }
-						else {
-							gtk_container_add(GTK_CONTAINER(item), panel->widget = panel->new());
-							switch(i){
+					if(panel->widget){ gwarn("%s: panel already loaded", panel->name); }
+					else {
+						gtk_container_add(GTK_CONTAINER(item), panel->widget = panel->new());
+						switch(i){
 #ifdef HAVE_FFTW3
-								case PANEL_TYPE_SPECTROGRAM:
-									show_spectrogram(true);
-									break;
+							case PANEL_TYPE_SPECTROGRAM:
+								show_spectrogram(true);
+								break;
 #endif
-								case PANEL_TYPE_WAVEFORM:
-									show_waveform(true);
-									break;
-								// TODO PANEL_TYPE_PLAYER ?
-							}
-							gtk_widget_show_all(panel->widget); // just testing. 
+							case PANEL_TYPE_WAVEFORM:
+								show_waveform(true);
+								break;
+							// TODO PANEL_TYPE_PLAYER ?
 						}
-						break;
+						gtk_widget_show_all(panel->widget); // just testing. 
 					}
 				}
 			}
 		}
 		g_list_free(items);
+
+		g_signal_emit_by_name (app, "layout-changed");
 	}
 	g_signal_connect(G_OBJECT(((GdlDockObject*)window.dock)->master), "layout-changed", G_CALLBACK(_on_layout_changed), NULL);
 
@@ -487,6 +495,8 @@ GtkWindow
 	dnd_setup();
 
 	window_on_layout_changed();
+
+	if(!app->no_gui) app->context_menu = make_context_menu();
 
 	return TRUE;
 }
@@ -601,12 +611,15 @@ window_on_configure(GtkWidget* widget, GdkEventConfigure* event, gpointer user_d
 */
 		}
 
+#ifdef USE_GDL
 		window_load_layout();
+#endif
 
 		if(app->view_options[SHOW_PLAYER].value && panels[PANEL_TYPE_PLAYER].widget){
 			show_player(true);
 		}
 
+#ifdef USE_GDL
 		bool window_activate_layout(gpointer data)
 		{
 			PF;
@@ -620,6 +633,7 @@ window_on_configure(GtkWidget* widget, GdkEventConfigure* event, gpointer user_d
 			return TIMER_STOP;
 		}
 		window_activate_layout(NULL);
+#endif
 	}
 
 	return false;
@@ -1264,7 +1278,7 @@ show_waveform(gboolean enable)
 #else
 		show_widget_if(window.waveform, enable);
 #endif
-		app->inspector->show_waveform = !enable;
+		if(app->inspector) app->inspector->show_waveform = !enable;
 		if(enable){
 			bool show_wave()
 			{
@@ -1575,3 +1589,243 @@ window_get_gl_context()
 }
 #endif
 
+
+static GtkWidget*
+make_context_menu()
+{
+	void menu_delete_row(GtkMenuItem* widget, gpointer user_data)
+	{
+		delete_selected_rows();
+	}
+
+	/** sync the selected catalogue row with the filesystem. */
+	void
+	menu_update_rows(GtkWidget* widget, gpointer user_data)
+	{
+		PF;
+		GtkTreeModel* model = GTK_TREE_MODEL(app->store);
+		gboolean force_update = (GPOINTER_TO_INT(user_data)==2) ? true : false; // NOTE - linked to order in _menu_def[]
+
+		GtkTreeSelection* selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(app->libraryview->widget));
+		GList* selectionlist = gtk_tree_selection_get_selected_rows(selection, &(model));
+		if(!selectionlist){ perr("no files selected?\n"); return; }
+		dbg(2, "%i rows selected.", g_list_length(selectionlist));
+
+		int i;
+		for(i=0;i<g_list_length(selectionlist);i++){
+			GtkTreePath* treepath = g_list_nth_data(selectionlist, i);
+			Sample* sample = sample_get_from_model(treepath);
+			if(do_progress(0, 0)) break; // TODO: set progress title to "updating"
+			sample_refresh(sample, force_update);
+			statusbar_print(1, "online status updated (%s)", sample->online ? "online" : "not online");
+			sample_unref(sample);
+		}
+		hide_progress();
+		//g_list_free(selectionlist);
+#warning TODO selectionlist should be freed.
+		/*
+		g_list_foreach (list, (GFunc) gtk_tree_path_free, NULL);
+		g_list_free (list);
+		*/
+	}
+
+	void menu_play_all(GtkWidget* widget, gpointer user_data)
+	{
+		app->auditioner->play_all();
+	}
+
+	void menu_play_stop(GtkWidget* widget, gpointer user_data)
+	{
+		app->auditioner->stop();
+	}
+
+	void
+	toggle_loop_playback(GtkMenuItem* widget, gpointer user_data)
+	{
+		PF;
+		if(app->loop_playback) app->loop_playback = false; else app->loop_playback = true;
+	}
+
+	void toggle_recursive_add(GtkMenuItem* widget, gpointer user_data)
+	{
+		PF;
+		if(app->add_recursive) app->add_recursive = false; else app->add_recursive = true;
+	}
+
+	MenuDef _menu_def[] = {
+		{"Delete",         G_CALLBACK(menu_delete_row),         GTK_STOCK_DELETE,      true},
+		{"Update",         G_CALLBACK(menu_update_rows),        GTK_STOCK_REFRESH,     true},
+	#if 0 // what? is the same as above
+		{"Force Update",   G_CALLBACK(update_rows),             GTK_STOCK_REFRESH,     true},
+	#endif
+		{"Reset Colours",  G_CALLBACK(listview__reset_colours), GTK_STOCK_OK,          true},
+		{"Edit tags",      G_CALLBACK(listview__edit_row),      GTK_STOCK_EDIT,        true},
+		{"Open",           G_CALLBACK(listview__edit_row),      GTK_STOCK_OPEN,       false},
+		{"Open Directory", G_CALLBACK(NULL),                    GTK_STOCK_OPEN,        true},
+		{"",                                                                               },
+		{"Play All",       G_CALLBACK(menu_play_all),           GTK_STOCK_MEDIA_PLAY,  true},
+		{"Stop Playback",  G_CALLBACK(menu_play_stop),          GTK_STOCK_MEDIA_STOP,  true},
+		{"",                                                                               },
+		{"View",           G_CALLBACK(NULL),                    GTK_STOCK_PREFERENCES, true},
+		{"Prefs",          G_CALLBACK(NULL),                    GTK_STOCK_PREFERENCES, true},
+	};
+
+	GtkWidget* menu = gtk_menu_new();
+
+	add_menu_items_from_defn(menu, _menu_def, G_N_ELEMENTS(_menu_def));
+
+	GList* menu_items = gtk_container_get_children((GtkContainer*)menu);
+
+	GtkWidget* prefs = g_list_last(menu_items)->data;
+
+	GtkWidget* sub = gtk_menu_new();
+	gtk_menu_item_set_submenu(GTK_MENU_ITEM(prefs), sub);
+
+	{
+		GList* last = g_list_last(menu_items);
+		GList* prev = last->prev;
+		GtkWidget* view = prev->data;
+
+		GtkWidget* sub = gtk_menu_new();
+		gtk_menu_item_set_submenu(GTK_MENU_ITEM(view), sub);
+
+#ifdef USE_GDL
+		void set_view_state(GtkMenuItem* item, Panel_* panel, bool visible)
+		{
+			if(panel->handler){
+				g_signal_handler_block(item, panel->handler);
+				gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(item), visible);
+				g_signal_handler_unblock(item, panel->handler);
+			}
+			dbg(2, "value=%i", visible);
+		}
+
+		void toggle_view(GtkMenuItem* menu_item, gpointer _panel_type)
+		{
+			PF;
+			Panel_* panel = &panels[GPOINTER_TO_INT(_panel_type)];
+			GdlDockItem* item = (GdlDockItem*)panel->dock_item;
+			if(gdl_dock_item_is_active(item)) gdl_dock_item_hide_item(item); else gdl_dock_item_show_item(item);
+		}
+#else
+		void set_view_toggle_state(GtkMenuItem* item, ViewOption* option)
+		{
+			option->value = !option->value;
+			gulong sig_id = g_signal_handler_find(item, G_SIGNAL_MATCH_FUNC, 0, 0, 0, option->on_toggle, NULL);
+			if(sig_id){
+				g_signal_handler_block(item, sig_id);
+				gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(item), option->value);
+				g_signal_handler_unblock(item, sig_id);
+			}
+		}
+
+		void toggle_view(GtkMenuItem* item, gpointer _option)
+		{
+			PF;
+			ViewOption* option = (ViewOption*)_option;
+			option->on_toggle(option->value = gtk_check_menu_item_get_active(GTK_CHECK_MENU_ITEM(item)));
+		}
+#endif
+
+#ifdef USE_GDL
+		int i; for(i=0;i<PANEL_TYPE_MAX;i++){
+			Panel_* option = &panels[i];
+#else
+		int i; for(i=0;i<MAX_VIEW_OPTIONS;i++){
+			ViewOption* option = &app->view_options[i];
+#endif
+			GtkWidget* menu_item = gtk_check_menu_item_new_with_mnemonic(option->name);
+			gtk_menu_shell_append(GTK_MENU_SHELL(sub), menu_item);
+#ifdef USE_GDL
+			option->menu_item = menu_item;
+			gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menu_item), false); // TODO can leave til later
+			option->handler = g_signal_connect(G_OBJECT(menu_item), "activate", G_CALLBACK(toggle_view), GINT_TO_POINTER(i));
+#else
+			gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menu_item), option->value);
+			option->value = !option->value; //toggle before it gets toggled back.
+			set_view_toggle_state((GtkMenuItem*)menu_item, option);
+			g_signal_connect(G_OBJECT(menu_item), "activate", G_CALLBACK(toggle_view), option);
+#endif
+		}
+
+#ifdef USE_GDL
+		void _window_on_layout_changed(GObject* object, gpointer user_data)
+		{
+			dbg(0, "%i", GPOINTER_TO_INT(user_data));
+			//GdlDock* dock = window_get_dock();
+			GList* items = gdl_dock_get_named_items((GdlDock*)window.dock);
+			GList* l = items;
+			for(;l;l=l->next){
+				GdlDockObject* object = l->data;
+				GdlDockItem* item = l->data;
+				/*
+				int i;for(i=0;i<PANEL_TYPE_MAX;i++){
+					Panel_* panel = &panels[i];
+					if(!strcmp(object->name, panel->name)){
+						//dbg(0, "found %p %p", object, panel);  -- they are not the same
+						set_view_state((GtkMenuItem*)panel->menu_item, panel, gdl_dock_item_is_active(item));
+					}
+				}
+				*/
+				Panel_* panel = NULL;
+				if((panel = panel_lookup(object))){
+					set_view_state((GtkMenuItem*)panel->menu_item, panel, gdl_dock_item_is_active(item));
+				}
+			}
+		}
+		Idle* idle = idle_new(_window_on_layout_changed, GINT_TO_POINTER(5));
+		g_signal_connect(G_OBJECT(((GdlDockObject*)window.dock)->master), "layout-changed", (GCallback)idle->run, idle);
+#endif
+	}
+
+	GtkWidget* menu_item = gtk_check_menu_item_new_with_mnemonic("Add Recursively");
+	gtk_menu_shell_append(GTK_MENU_SHELL(sub), menu_item);
+	gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menu_item), app->add_recursive);
+	g_signal_connect(G_OBJECT(menu_item), "activate", G_CALLBACK(toggle_recursive_add), NULL);
+
+	if (app->auditioner->seek) {
+		menu_item = gtk_check_menu_item_new_with_mnemonic("Loop Playback");
+		gtk_menu_shell_append(GTK_MENU_SHELL(sub), menu_item);
+		gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menu_item), app->loop_playback);
+		g_signal_connect(G_OBJECT(menu_item), "activate", G_CALLBACK(toggle_loop_playback), NULL);
+	}
+
+	if(themes){
+		GtkWidget* theme_menu = gtk_menu_item_new_with_label("Icon Themes");
+		gtk_container_add(GTK_CONTAINER(sub), theme_menu);
+
+		GtkWidget* sub_menu = themes->data;
+		gtk_menu_item_set_submenu(GTK_MENU_ITEM(theme_menu), sub_menu);
+	}
+
+	gtk_widget_show_all(menu);
+	return menu;
+}
+
+
+#ifdef USE_GDL
+static Panel_*
+panel_lookup(GdlDockObject* dock_object)
+{
+	int i;for(i=0;i<PANEL_TYPE_MAX;i++){
+		Panel_* panel = &panels[i];
+		if(dock_object == (GdlDockObject*)panel->dock_item){
+			return panel;
+		}
+	}
+	return NULL;
+}
+
+
+static int
+panel_lookup_index(GdlDockObject* dock_object)
+{
+	int i;for(i=0;i<PANEL_TYPE_MAX;i++){
+		Panel_* panel = &panels[i];
+		if(dock_object == (GdlDockObject*)panel->dock_item){
+			return i;
+		}
+	}
+	return -1;
+}
+#endif

@@ -182,6 +182,8 @@ void        gdl_dock_item_set_default_position (GdlDockItem      *item,
 void        gdl_dock_item_preferred_size       (GdlDockItem      *item,
                                                 GtkRequisition   *req);
 
+gboolean    gdl_dock_item_is_active            (GdlDockItem* item);
+
 
 G_END_DECLS
 

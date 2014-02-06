@@ -1213,6 +1213,45 @@ keyword_is_dupe(const char* new, const char* existing)
 }
 
 
+/*
+ *  This Idle object wraps a signal handler such that it is called in an idle callback.
+ *  It will only be called once even if there are multiple emissions in quick succession.
+ *  Currently will only work for signals with no additional args.
+ */
+Idle*
+idle_new(ObjectCallback fn, gpointer user_data)
+{
+	bool run(gpointer _idle)
+	{
+		Idle* idle = _idle;
+		idle->fn(idle->object, idle->user_data);
+		idle->id = 0;
+		return IDLE_STOP;
+	}
+
+	void queue(GObject* object, gpointer _idle)
+	{
+		Idle* idle = _idle;
+		idle->object = object;
+		if(!idle->id) idle->id = g_idle_add(run, idle);
+	}
+
+	Idle* idle = g_new0(Idle, 1);
+	idle->fn = fn;
+	idle->user_data = user_data;
+	idle->run = queue;
+	return idle;
+}
+
+
+void
+idle_free(Idle* idle)
+{
+	if(idle->id) g_source_remove(idle->id);
+	g_free(idle);
+}
+
+
 #if 0
 void
 print_widget_tree(GtkWidget* widget)

@@ -1,19 +1,13 @@
-/*
-  This file is part of Samplecat. http://samplecat.orford.org
-  copyright (C) 2007-2013 Tim Orford and others.
-
-  This program is free software; you can redistribute it and/or modify
-  it under the terms of the GNU General Public License version 3
-  as published by the Free Software Foundation.
-
-  This program is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License
-  along with this program; if not, write to the Free Software
-  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+/**
+* +----------------------------------------------------------------------+
+* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
+* | copyright (C) 2007-2014 Tim Orford <tim@orford.org>                  |
+* +----------------------------------------------------------------------+
+* | This program is free software; you can redistribute it and/or modify |
+* | it under the terms of the GNU General Public License version 3       |
+* | as published by the Free Software Foundation.                        |
+* +----------------------------------------------------------------------+
+*
 */
 #include "config.h"
 #include <stdio.h>
@@ -42,7 +36,6 @@
 #define N_EBUR_ROWS 8
 
 extern SamplecatModel*  model;
-//extern SamplecatBackend backend;
 extern int              debug;
 
 struct _inspector_priv
@@ -219,6 +212,15 @@ inspector_new()
 	g_signal_connect((gpointer)app->model, "selection-changed", G_CALLBACK(inspector_update), NULL);
 
 	gtk_widget_set_size_request(inspector->widget, 20, 20);
+
+#ifdef USE_GDL
+	void _inspector_on_layout_changed(GObject* object, gpointer user_data)
+	{
+	}
+
+	Idle* idle = idle_new(_inspector_on_layout_changed, GINT_TO_POINTER(6));
+	g_signal_connect(app, "layout-changed", (GCallback)idle->run, idle);
+#endif
 
 	return scroll;
 }

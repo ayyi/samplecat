@@ -2182,3 +2182,13 @@ gdl_dock_param_import_gtk_orientation (const GValue *src,
         dst->data [0].v_int = GTK_ORIENTATION_VERTICAL;
 }
 
+
+gboolean
+gdl_dock_item_is_active(GdlDockItem* item)
+{
+	GdlDockObject* object = (GdlDockObject*)item;
+	GtkContainer* container = &object->container;
+	GtkWidget* parent = gtk_widget_get_parent((GtkWidget*)container);
+	return !!parent;
+}
+

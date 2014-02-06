@@ -8,7 +8,8 @@ pkgconfigdir = $(libdir)/pkgconfig
 # help2man -N -l -n "cataloguing and auditioning audio samples" -o samplecat.1 ./src/samplecat
 man_MANS = samplecat.1
 
-build_test:
+.PHONY: dummy
+build_test: dummy
 	./build_test
 
 EXTRA_DIST = samplecat.1 icons/samplecat.xpm samples.sql

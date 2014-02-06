@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
-* | This file is part of Samplecat. http://samplecat.orford.org          |
-* | copyright (C) 2007-2013 Tim Orford <tim@orford.org>                  |
+* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
+* | copyright (C) 2007-2014 Tim Orford <tim@orford.org>                  |
 * | copyright (C) 2011 Robin Gareus <robin@gareus.org>                   |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
@@ -25,7 +25,6 @@
 #endif
 
 
-void         menu_play_stop       (GtkWidget*, gpointer user_data); //defined in main.c
 static void  cb_playpause         (GtkToggleButton*, gpointer user_data);
 
 static guint slider1sigid;
@@ -83,7 +82,8 @@ player_control_new()
 
 	GtkWidget* pb1 = gtk_button_new_with_label("stop");
 	gtk_box_pack_start(GTK_BOX(hbox2), pb1, EXPAND_TRUE, FILL_TRUE, 0);
-	g_signal_connect((gpointer)pb1, "clicked", G_CALLBACK(menu_play_stop), NULL);
+	void _stop(GtkButton* button, gpointer _) { app->auditioner->stop(); }
+	g_signal_connect((gpointer)pb1, "clicked", G_CALLBACK(_stop), NULL);
 
 	if (app->auditioner->playpause) {
 		GtkWidget* pb0 = pc->pbpause = gtk_toggle_button_new_with_label("pause");

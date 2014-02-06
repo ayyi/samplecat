@@ -130,4 +130,5 @@ samplecat_LDADD = \
 	$(OPENGL_LDFLAGS) \
 	$(LIBASS_LDFLAGS) \
 	$(ZLIB_LIBS) \
-	$(FFMPEG_LIBS)
+	$(FFMPEG_LIBS) \
+	-ldl

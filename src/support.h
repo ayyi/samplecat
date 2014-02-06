@@ -134,6 +134,19 @@ gboolean     mimetype_is_unsupported   (MIME_type*, char* mime_string);
 
 gboolean     keyword_is_dupe           (const char* new, const char* existing);
 
+typedef void (*ObjectCallback)         (GObject*, gpointer);
+
+typedef struct {
+   guint          id;
+   GObject*       object;
+   ObjectCallback fn;
+   gpointer       user_data;
+   ObjectCallback run;
+} Idle;
+
+Idle*        idle_new                  (ObjectCallback, gpointer);
+void         idle_free                 (Idle*);
+
 #if 0
 void         print_widget_tree         (GtkWidget*);
 #endif
