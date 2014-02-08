@@ -496,8 +496,6 @@ GtkWindow
 
 	window_on_layout_changed();
 
-	if(!app->no_gui) app->context_menu = make_context_menu();
-
 	return TRUE;
 }
 
@@ -633,6 +631,8 @@ window_on_configure(GtkWidget* widget, GdkEventConfigure* event, gpointer user_d
 			return TIMER_STOP;
 		}
 		window_activate_layout(NULL);
+
+		app->context_menu = make_context_menu();
 #endif
 	}
 
@@ -1445,9 +1445,9 @@ update_waveform_view(Sample* sample)
 static void
 window_on_layout_changed()
 {
+#ifndef USE_GDL
 	//what is the height of the inspector?
 
-#ifndef USE_GDL
 	if(app->inspector){
 		GtkWidget* widget;
 		if((widget = app->inspector->widget)){
@@ -1464,7 +1464,7 @@ window_on_layout_changed()
 	}
 #endif
 
-	/* scroll to current dir in tree-view bottom left */
+	// scroll to current dir in the directory list
 	if(app->dir_treeview2) vdtree_set_path(app->dir_treeview2, app->dir_treeview2->path);
 }
 
@@ -1667,6 +1667,7 @@ make_context_menu()
 		{"Stop Playback",  G_CALLBACK(menu_play_stop),          GTK_STOCK_MEDIA_STOP,  true},
 		{"",                                                                               },
 		{"View",           G_CALLBACK(NULL),                    GTK_STOCK_PREFERENCES, true},
+		{"Layouts",        G_CALLBACK(NULL),                    GTK_STOCK_PROPERTIES,  true},
 		{"Prefs",          G_CALLBACK(NULL),                    GTK_STOCK_PREFERENCES, true},
 	};
 
@@ -1675,16 +1676,13 @@ make_context_menu()
 	add_menu_items_from_defn(menu, _menu_def, G_N_ELEMENTS(_menu_def));
 
 	GList* menu_items = gtk_container_get_children((GtkContainer*)menu);
-
-	GtkWidget* prefs = g_list_last(menu_items)->data;
+	GList* last = g_list_last(menu_items);
 
 	GtkWidget* sub = gtk_menu_new();
-	gtk_menu_item_set_submenu(GTK_MENU_ITEM(prefs), sub);
+	gtk_menu_item_set_submenu(GTK_MENU_ITEM(last->data), sub);
 
 	{
-		GList* last = g_list_last(menu_items);
-		GList* prev = last->prev;
-		GtkWidget* view = prev->data;
+		GtkWidget* view = last->prev->prev->data;
 
 		GtkWidget* sub = gtk_menu_new();
 		gtk_menu_item_set_submenu(GTK_MENU_ITEM(view), sub);
@@ -1749,31 +1747,61 @@ make_context_menu()
 		}
 
 #ifdef USE_GDL
+		void add_item(GtkMenuShell* parent, const char* name, GCallback callback, gpointer user_data)
+		{
+			GtkWidget* item = gtk_menu_item_new_with_label(name);
+			gtk_container_add(GTK_CONTAINER(parent), item);
+			if(callback) g_signal_connect(G_OBJECT(item), "activate", G_CALLBACK(callback), user_data);
+		}
+
+		{
+			static const char* current_layout = "__default__";
+
+			GtkWidget* layouts_menu = last->prev->data;
+			static GtkWidget* sub; sub = gtk_menu_new();
+			gtk_menu_item_set_submenu(GTK_MENU_ITEM(layouts_menu), sub);
+
+			void layout_activate(GtkMenuItem* item, gpointer _)
+			{
+				gdl_dock_layout_load_layout(window.layout, current_layout = gtk_menu_item_get_label(item));
+
+				GList* menu_items = gtk_container_get_children((GtkContainer*)sub);
+				gtk_widget_set_sensitive(g_list_last(menu_items)->data, true); // enable the Save menu
+				g_list_free(menu_items);
+
+				statusbar_print(1, "Layout %s loaded", current_layout);
+			}
+
+			void layout_save(GtkMenuItem* item, gpointer _)
+			{
+				// will not be saved to disk until quit.
+				gdl_dock_layout_save_layout (window.layout, current_layout);
+				statusbar_print(1, "Layout %s saved", current_layout);
+			}
+
+			GList* layouts = gdl_dock_layout_get_layouts (window.layout, false);
+			GList* l = layouts;
+			for(;l;l=l->next) add_item(GTK_MENU_SHELL(sub), l->data, (GCallback)layout_activate, NULL);
+			g_list_free(layouts);
+
+			gtk_menu_shell_append (GTK_MENU_SHELL(sub), gtk_separator_menu_item_new());
+
+			add_menu_items_from_defn(sub, (MenuDef[]){{"Save", (GCallback)layout_save, GTK_STOCK_SAVE, false}}, 1);
+		}
+
 		void _window_on_layout_changed(GObject* object, gpointer user_data)
 		{
-			dbg(0, "%i", GPOINTER_TO_INT(user_data));
-			//GdlDock* dock = window_get_dock();
 			GList* items = gdl_dock_get_named_items((GdlDock*)window.dock);
 			GList* l = items;
 			for(;l;l=l->next){
-				GdlDockObject* object = l->data;
 				GdlDockItem* item = l->data;
-				/*
-				int i;for(i=0;i<PANEL_TYPE_MAX;i++){
-					Panel_* panel = &panels[i];
-					if(!strcmp(object->name, panel->name)){
-						//dbg(0, "found %p %p", object, panel);  -- they are not the same
-						set_view_state((GtkMenuItem*)panel->menu_item, panel, gdl_dock_item_is_active(item));
-					}
-				}
-				*/
 				Panel_* panel = NULL;
-				if((panel = panel_lookup(object))){
+				if((panel = panel_lookup((GdlDockObject*)item))){
 					set_view_state((GtkMenuItem*)panel->menu_item, panel, gdl_dock_item_is_active(item));
 				}
 			}
 		}
-		Idle* idle = idle_new(_window_on_layout_changed, GINT_TO_POINTER(5));
+		Idle* idle = idle_new(_window_on_layout_changed, NULL);
 		g_signal_connect(G_OBJECT(((GdlDockObject*)window.dock)->master), "layout-changed", (GCallback)idle->run, idle);
 #endif
 	}
@@ -1799,6 +1827,7 @@ make_context_menu()
 	}
 
 	gtk_widget_show_all(menu);
+	g_list_free(menu_items);
 	return menu;
 }
 
