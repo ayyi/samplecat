@@ -44,7 +44,6 @@ char * program_name;
 #endif
 #include "mimetype.h"
 #include "dh_link.h"
-#include "dh_tree.h"
 
 #include "db/db.h"
 #include "model.h"
@@ -73,11 +72,6 @@ char * program_name;
   #include "gplayer.h"
 #endif
 #include "console_view.h"
-#ifdef USE_GQVIEW_1_DIRTREE
-  #include "filelist.h"
-  #include "view_dir_list.h"
-  #include "view_dir_tree.h"
-#endif
 
 #include "audio_decoder/ad.h"
 
@@ -89,8 +83,6 @@ char * program_name;
 
 
 static gboolean   can_use                   (GList*, const char*);
-static gboolean   on_directory_list_changed ();
-static gboolean   dir_tree_update           (gpointer);
 static bool       config_load               ();
 static void       config_new                ();
 static bool       config_save               ();
@@ -178,6 +170,8 @@ main(int argc, char** argv)
 	if (!g_thread_supported()) g_thread_init(NULL);
 	gdk_threads_init();
 	gtk_init_check(&argc, &argv);
+
+	printf("%s"PACKAGE_NAME". Version "PACKAGE_VERSION"%s\n", yellow, white);
 
 	app = application_new();
 	colour_box_init();
@@ -283,10 +277,7 @@ main(int argc, char** argv)
 		}
 	}
 
-	printf("%s"PACKAGE_NAME". Version "PACKAGE_VERSION"%s\n", yellow, white);
-
 	type_init();
-	app->model = samplecat_model_new();
 
 	config_load();
 
@@ -315,18 +306,10 @@ main(int argc, char** argv)
 	app->store = listmodel__new();
 	if(app->no_gui) console__init();
 
-#if 0
-	void store_content_changed(GtkListStore* store, gpointer data)
-	{
-		PF0;
-	}
-	g_signal_connect(G_OBJECT(app->store), "content-changed", G_CALLBACK(store_content_changed), NULL);
-#endif
-
 	gboolean db_connected = false;
 #ifdef USE_MYSQL
+	mysql__init(app->model, &app->config.mysql);
 	if(can_use(app->backends, "mysql")){
-		mysql__init(app->model, &app->config.mysql);
 		db_connected = samplecat_set_backend(BACKEND_MYSQL);
 	}
 #endif
@@ -365,7 +348,8 @@ main(int argc, char** argv)
 			if(notes) gtk_widget_hide(notes);
 
 			if(search_pending){
-				do_search(app->args.search ? app->args.search : app->model->filters.phrase, app->model->filters.dir);
+				do_search();
+				search_pending = false;
 			}
 		}
 		if(app->no_gui){
@@ -381,7 +365,7 @@ main(int argc, char** argv)
 	if(app->args.add){
 		/* initial import from commandline */
 		do_progress(0, 0);
-		add_file(app->args.add);
+		application_add_file(app->args.add);
 		hide_progress();
 	}
 
@@ -407,7 +391,8 @@ main(int argc, char** argv)
 #endif
 
 	if(!backend.pending){ 
-		do_search(app->args.search ? app->args.search : app->model->filters.phrase, app->model->filters.dir);
+		do_search();
+		search_pending = false;
 	}else{
 		search_pending = true;
 	}
@@ -446,23 +431,6 @@ main(int argc, char** argv)
 }
 
 
-static gboolean
-dir_tree_update(gpointer data)
-{
-	/*
-	refresh the directory tree. Called from an idle.
-
-	note: destroying the whole node tree is wasteful - can we just make modifications to it?
-
-	*/
-	update_dir_node_list();
-
-	dh_book_tree_reload((DhBookTree*)app->dir_treeview);
-
-	return IDLE_STOP;
-}
-
-
 void
 file_selector()
 {
@@ -491,7 +459,7 @@ add_dir(const char* path, int* added_count)
 			if (do_progress(0,0)) break;
 
 			if(!g_file_test(filepath, G_FILE_TEST_IS_DIR)){
-				if(add_file(filepath)) (*added_count)++;
+				if(application_add_file(filepath)) (*added_count)++;
 				statusbar_print(1, "%i files added", *added_count);
 			}
 			// IS_DIR
@@ -509,21 +477,16 @@ add_dir(const char* path, int* added_count)
 }
 
 /**
- * fill the display with the results for the given search phrase.
+ * fill the display with the results matching the current set of filters.
  */
 void
-do_search(char* search, char* dir)
+do_search()
 {
 	PF;
 
 	if(BACKEND_IS_NULL) return;
-	search_pending = false;
 
-	if (search) g_strlcpy(app->model->filters.phrase, search, 256); //the search phrase is now always taken from the model.
-	if (!dir) dir = app->model->filters.dir;
-
-	int n_results = 0;
-	if(!backend.search_iter_new(search, dir, app->model->filters.category, &n_results)) {
+	if(!backend.search_iter_new(app->model->filters.dir->value, app->model->filters.category->value, NULL)) {
 		return;
 	}
 
@@ -545,255 +508,9 @@ do_search(char* search, char* dir)
 
 	backend.search_iter_free();
 
-	if(0 && row_count < MAX_DISPLAY_ROWS){
-		statusbar_print(1, "%i samples found.", row_count);
-	}else if(!row_count){
-		statusbar_print(1, "no samples found. filters: dir=%s", app->model->filters.dir);
-	}else if (n_results <0) {
-		statusbar_print(1, "showing %i sample(s)", row_count);
-	}else{
-		statusbar_print(1, "showing %i of %i sample(s)", row_count, n_results);
-	}
+	((SamplecatListStore*)app->store)->row_count = row_count;
 
 	samplecat_list_store_do_search((SamplecatListStore*)app->store);
-}
-
-
-static void
-create_nodes_for_path(gchar** path)
-{
-	gchar* make_uri(gchar** path, int n)
-	{
-		//result must be freed by caller
-
-		gchar* a = NULL;
-		int k; for(k=0;k<=n;k++){
-			gchar* b = g_strjoin("/", a, path[k], NULL);
-			if(a) g_free(a);
-			a = b;
-		}
-		dbg(2, "uri=%s", a);
-		return a;
-	}
-
-	GNode* node = app->dir_tree;
-	int i; for(i=0;path[i];i++){
-		if(strlen(path[i])){
-			//dbg(0, "  testing %s ...", path[i]);
-			gboolean found = false;
-			GNode* n = g_node_first_child(node);
-			if(n) do {
-				DhLink* link = n->data;
-				if(link){
-					//dbg(0, "  %s / %s", path[i], link->name);
-					if(!strcmp(link->name, path[i])){
-						//dbg(0, "    found. node=%p", n);
-						node = n;
-						found = true;
-						break;
-					}
-				}
-			} while ((n = g_node_next_sibling(n)));
-
-			if(!found){
-				dbg(2, "  not found. inserting... (%s)", path[i]);
-				gchar* uri = make_uri(path, i);
-				if(strcmp(uri, g_get_home_dir())){
-					DhLink* l = dh_link_new(DH_LINK_TYPE_PAGE, path[i], uri);
-					GNode* leaf = g_node_new(l);
-
-					gint position = -1; //end
-					g_node_insert(node, position, leaf);
-					node = leaf;
-				}
-				if (uri) g_free(uri);
-			}
-		}
-	}
-}
-
-
-void
-update_dir_node_list()
-{
-	/*
-	builds a node list of directories listed in the latest database result.
-	*/
-
-	if(BACKEND_IS_NULL) return;
-
-	backend.dir_iter_new();
-
-	if(app->dir_tree) g_node_destroy(app->dir_tree);
-	app->dir_tree = g_node_new(NULL);
-
-	DhLink* link = dh_link_new(DH_LINK_TYPE_PAGE, "all directories", "");
-	GNode* leaf = g_node_new(link);
-	g_node_insert(app->dir_tree, -1, leaf);
-
-	GNode* lookup_node_by_path(gchar** path)
-	{
-		//find a node containing the given path
-
-		//dbg(0, "path=%s", path[0]);
-		struct _closure {
-			gchar** path;
-			GNode*  insert_at;
-		};
-		gboolean traverse_func(GNode *node, gpointer data)
-		{
-			//test if the given node is a match for the closure path.
-
-			DhLink* link = node->data;
-			struct _closure* c = data;
-			gchar** path = c->path;
-			//dbg(0, "%s", link ? link->name : NULL);
-			if(link){
-				c->insert_at = node;
-				//dbg(0, "%s 0=%s", link->name, path[0]);
-				gchar** v = g_strsplit(link->name, "/", 64);
-				int i; for(i=0;v[i];i++){
-					if(strlen(v[i])){
-						if(!strcmp(v[i], path[i])){
-							//dbg(0, "found! %s at depth %i", v[i], i);
-							//dbg(0, " %s", v[i]);
-						}else{
-							//dbg(0, "no match. failed at %i: %s", i, path[i]);
-							c->insert_at = NULL;
-							break;
-						}
-					}
-				}
-				g_strfreev(v);
-			}
-			return false; //continue
-		}
-
-		struct _closure* c = g_new0(struct _closure, 1);
-		c->path = path;
-
-		g_node_traverse(app->dir_tree, G_IN_ORDER, G_TRAVERSE_ALL, 64, traverse_func, c);
-		GNode* ret = c->insert_at;
-		g_free(c);
-		return ret;
-	}
-
-	char* u;
-	while((u = backend.dir_iter_next())){
-
-		dbg(2, "%s", u);
-		gchar** v = g_strsplit(u, "/", 64);
-		int i = 0;
-		while(v[i]){
-			//dbg(0, "%s", v[i]);
-			i++;
-		}
-		GNode* node = lookup_node_by_path(v);
-		if(node){
-			dbg(3, "node found. not adding.");
-		}else{
-			create_nodes_for_path(v);
-		}
-		g_strfreev(v);
-	}
-
-	backend.dir_iter_free();
-	dbg(2, "size=%i", g_node_n_children(app->dir_tree));
-}
-
-
-
-gboolean
-add_file(char* path)
-{
-	/*
-	uri must be "unescaped" before calling this fn. Method string must be removed.
-	*/
-
-#if 1
-	/* check if file already exists in the store
-	 * -> don't add it again
-	 */
-	if(backend.file_exists(path, NULL)) {
-		statusbar_print(1, "duplicate: not re-adding a file already in db.");
-		gwarn("duplicate file: %s", path);
-		//TODO ask what to do
-		Sample* s = sample_get_by_filename(path);
-		if (s) {
-			sample_refresh(s, false);
-			sample_unref(s);
-		} else {
-			dbg(0, "Sample found in DB but not in model.");
-		}
-		return false;
-	}
-#endif
-
-	dbg(1, "%s", path);
-	if(BACKEND_IS_NULL) return false;
-
-	Sample* sample = sample_new_from_filename(path, false);
-	if (!sample) {
-		gwarn("cannot add file: file-type is not supported");
-		statusbar_print(1, "cannot add file: file-type is not supported");
-		return false;
-	}
-
-	if(!sample_get_file_info(sample)){
-		gwarn("cannot add file: reading file info failed");
-		statusbar_print(1, "cannot add file: reading file info failed");
-		sample_unref(sample);
-		return false;
-	}
-#if 1
-	/* check if /same/ file already exists w/ different path */
-	GList* existing;
-	if((existing = backend.filter_by_audio(sample))) {
-		GList* l = existing; int i;
-#ifdef INTERACTIVE_IMPORT
-		GString* note = g_string_new("Similar or identical file(s) already present in database:\n");
-#endif
-		for(i=1;l;l=l->next, i++){
-			/* TODO :prompt user: ask to delete one of the files
-			 * - import/update the remaining file(s)
-			 */
-			dbg(0, "found similar or identical file: %s", l->data);
-#ifdef INTERACTIVE_IMPORT
-			if (i < 10)
-				g_string_append_printf(note, "%d: '%s'\n", i, (char*) l->data);
-#endif
-		}
-#ifdef INTERACTIVE_IMPORT
-		if (i>9)
-			g_string_append_printf(note, "..\n and %d more.", i - 9);
-		g_string_append_printf(note, "Add this file: '%s' ?", sample->full_path);
-		if (do_progress_question(note->str) != 1) {
-			// 0, aborted: -> whole add_file loop is aborted on next do_progress() call.
-			// 1, OK
-			// 2, cancled: -> only this file is skipped
-			sample_unref(sample);
-			g_string_free(note, true);
-			return false;
-		}
-		g_string_free(note, true);
-		g_list_foreach(existing, (GFunc)g_free, NULL);
-		g_list_free(existing);
-#endif /* END interactive import */
-	}
-#endif /* END check for similar files on import */
-
-	sample->online=1;
-	sample->id = backend.insert(sample);
-	if (sample->id < 0) {
-		sample_unref(sample);
-		return false;
-	}
-
-	samplecat_list_store_add((SamplecatListStore*)app->store, sample);
-
-	on_directory_list_changed();
-	sample_unref(sample);
-	return true;
 }
 
 
@@ -866,9 +583,8 @@ delete_selected_rows()
 				int id;
 				gtk_tree_model_get(model, &iter, COL_NAME, &fname, COL_IDX, &id, -1);
 
-				if(!backend.remove(id)) return;
+				if(!samplecat_model_remove(app->model, id)) return;
 
-				//update the store:
 				gtk_list_store_remove(app->store, &iter);
 				n++;
 
@@ -879,7 +595,6 @@ delete_selected_rows()
 	g_list_free(selected_row_refs); //FIXME free the row_refs?
 
 	statusbar_print(1, "%i rows deleted", n);
-	on_directory_list_changed();
 }
 
 
@@ -936,19 +651,6 @@ treeview_get_cell(GtkTreeView *view, guint x, guint y, GtkCellRenderer **cell)
 #endif
 
 
-static gboolean
-on_directory_list_changed()
-{
-	/*
-	the database has been modified, the directory list may have changed.
-	Update all directory views. Atm there is only one.
-	*/
-
-	g_idle_add(dir_tree_update, NULL);
-	return false;
-}
-
-
 extern char theme_name[64];
 
 static bool
@@ -972,7 +674,7 @@ config_load()
 		gchar* groupname = g_key_file_get_start_group(app->key_file);
 		dbg (2, "group=%s.", groupname);
 		if(!strcmp(groupname, "Samplecat")){
-#define num_keys (18)
+#define num_keys (16)
 #define ADD_CONFIG_KEY(VAR, NAME) \
 			strcpy(keys[i], NAME); \
 			loc[i] = VAR; \
@@ -991,12 +693,10 @@ config_load()
 			ADD_CONFIG_KEY (app->config.mysql.pass,       "mysql_pass");
 			ADD_CONFIG_KEY (app->config.mysql.name,       "mysql_name");
 #endif
-			ADD_CONFIG_KEY (app->config.show_dir,         "show_dir");
 			ADD_CONFIG_KEY (app->config.window_height,    "window_height");
 			ADD_CONFIG_KEY (app->config.window_width,     "window_width");
 			ADD_CONFIG_KEY (theme_name,                   "icon_theme");
 			ADD_CONFIG_KEY (app->config.column_widths[0], "col1_width");
-			ADD_CONFIG_KEY (app->model->filters.phrase,   "filter");
 			ADD_CONFIG_KEY (app->config.browse_dir,       "browse_dir");
 			ADD_CONFIG_KEY (app->config.show_player,      "show_player");
 			ADD_CONFIG_KEY (app->config.show_waveform,    "show_waveform");
@@ -1011,11 +711,13 @@ config_load()
 				ADD_CONFIG_KEY(app->config.colour[k+1], tmp)
 			}
 
+			gchar* keyval;
 			for(k=0;k<(num_keys+PALETTE_SIZE-1);k++){
-				gchar* keyval;
 				if((keyval = g_key_file_get_string(app->key_file, groupname, keys[k], &error))){
-					size_t keylen = siz[k];
-					snprintf(loc[k], keylen, "%s", keyval); loc[k][keylen-1] = '\0';
+					if(loc[k]){
+						size_t keylen = siz[k];
+						snprintf(loc[k], keylen, "%s", keyval); loc[k][keylen-1] = '\0';
+					}
 					dbg(2, "%s=%s", keys[k], keyval);
 					g_free(keyval);
 				}else{
@@ -1024,13 +726,21 @@ config_load()
 					if (!loc[k] || strlen(loc[k])==0) strcpy(loc[k], "");
 				}
 			}
-			samplecat_model_set_search_dir (app->model, app->config.show_dir);
 
+			if((keyval = g_key_file_get_string(app->key_file, groupname, "show_dir", &error))){
+				samplecat_model_set_search_dir (app->model, app->config.show_dir);
+			}
+			if((keyval = g_key_file_get_string(app->key_file, groupname, "filter", &error))){
+				app->model->filters.search->value = g_strdup(keyval);
+			}
+
+#ifndef USE_GDL
 			app->view_options[SHOW_PLAYER]      = (ViewOption){"Player",      show_player,      strcmp(app->config.show_player, "false")};
 			app->view_options[SHOW_FILEMANAGER] = (ViewOption){"Filemanager", show_filemanager, true};
 			app->view_options[SHOW_WAVEFORM]    = (ViewOption){"Waveform",    show_waveform,    !strcmp(app->config.show_waveform, "true")};
 #ifdef HAVE_FFTW3
 			app->view_options[SHOW_SPECTROGRAM] = (ViewOption){"Spectrogram", show_spectrogram, !strcmp(app->config.show_spectrogram, "true")};
+#endif
 #endif
 		}
 		else{ pwarn("cannot find Samplecat key group.\n"); return false; }
@@ -1059,7 +769,7 @@ config_save()
 {
 	if(app->loaded){
 		//update the search directory:
-		g_key_file_set_value(app->key_file, "Samplecat", "show_dir", app->model->filters.dir ? app->model->filters.dir : "");
+		g_key_file_set_value(app->key_file, "Samplecat", "show_dir", app->model->filters.dir->value ? app->model->filters.dir->value : "");
 
 		//save window dimensions:
 		gint width, height;
@@ -1095,10 +805,12 @@ config_save()
 			}
 		}
 
+#ifndef USE_GDL
 		g_key_file_set_value(app->key_file, "Samplecat", "show_player", app->view_options[SHOW_PLAYER].value ? "true" : "false");
 		g_key_file_set_value(app->key_file, "Samplecat", "show_waveform", app->view_options[SHOW_WAVEFORM].value ? "true" : "false");
 #ifdef HAVE_FFTW3
 		g_key_file_set_value(app->key_file, "Samplecat", "show_spectrogram", app->view_options[SHOW_SPECTROGRAM].value ? "true" : "false");
+#endif
 #endif
 
 		int i;

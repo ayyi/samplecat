@@ -275,10 +275,6 @@ get_hit_count (GPtrArray* out_array, GError* error, gpointer user_data)
 			break;
 		}
 	}
-
-/*
-	do_search (gsearch, gsearch->search_term, TRUE, 0);
-*/
 }
 #endif
 

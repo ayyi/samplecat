@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://samplecat.orford.org          |
-* | copyright (C) 2007-2013 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2014 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -20,6 +20,8 @@ namespace Samplecat
 {
 public class ListStore : Gtk.ListStore
 {
+	public int row_count = 0;
+
 	public signal void content_changed(); // a new search has been completed.
 
 	public ListStore() {
@@ -53,7 +55,7 @@ public class ListStore : Gtk.ListStore
 			request_ebur128(sample);
 		}
 
-		sample.ref();
+		sample->ref();
 	}
 
 	public void do_search()

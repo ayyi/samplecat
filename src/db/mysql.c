@@ -1,19 +1,13 @@
-/*
-  This file is part of Samplecat. http://samplecat.orford.org
-  copyright (C) 2007-2013 Tim Orford and others.
-
-  This program is free software; you can redistribute it and/or modify
-  it under the terms of the GNU General Public License version 3
-  as published by the Free Software Foundation.
-
-  This program is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License
-  along with this program; if not, write to the Free Software
-  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+/**
+* +----------------------------------------------------------------------+
+* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
+* | copyright (C) 2007-2014 Tim Orford <tim@orford.org> and others       |
+* +----------------------------------------------------------------------+
+* | This program is free software; you can redistribute it and/or modify |
+* | it under the terms of the GNU General Public License version 3       |
+* | as published by the Free Software Foundation.                        |
+* +----------------------------------------------------------------------+
+*
 */
 #define _GNU_SOURCE
 #include "config.h"
@@ -62,6 +56,7 @@ enum {
 
 MYSQL mysql = {{NULL}, NULL, NULL};
 
+static SamplecatBackend* db = NULL;
 static gboolean is_connected = FALSE;
 static SamplecatModel* model = NULL;
 static struct _mysql_config* config = NULL;
@@ -80,7 +75,7 @@ static gboolean  mysql__update_int       (int id, const char*, const long int);
 static gboolean  mysql__update_float     (int id, const char*, float);
 static gboolean  mysql__update_blob      (int id, const char*, const guint8*, const guint);
 
-static gboolean  mysql__search_iter_new  (char* search, char* dir, const char* category, int* n_results);
+static gboolean  mysql__search_iter_new  (char* dir, const char* category, int* n_results);
 static Sample*   mysql__search_iter_next_(unsigned long** lengths);
 static void      mysql__search_iter_free ();
 
@@ -92,7 +87,7 @@ static void      mysql__dir_iter_free    ();
 static int  mysql__exec_sql (const char* sql);
 static void clear_result    ();
 
-#define MYSQL_ESCAPE(VAR,STR) \
+#define MYSQL_ESCAPE(VAR, STR) \
 	char *VAR; if (!(STR) || strlen(STR)==0) {VAR=calloc(1,sizeof(char));} else { \
 		int sl=strlen(STR);\
 		VAR = malloc((sl*2+1)*sizeof(char)); \
@@ -137,6 +132,8 @@ mysql__init(SamplecatModel* _model, void* _config)
 void
 mysql__set_as_backend(SamplecatBackend* backend)
 {
+	db = backend;
+
 	backend->init             = mysql__init;
 
 	backend->search_iter_new  = mysql__search_iter_new;
@@ -180,10 +177,6 @@ mysql__connect()
 			warnprintf("cannot connect to database: MYSQL server not online.\n");
 		}else{
 			warnprintf("cannot connect to mysql database: %s\n", mysql_error(&mysql));
-			//currently this won't be displayed, as the window is not yet opened.
-#if 0
-			statusbar_print(1, "cannot connect to mysql database: %s\n", mysql_error(&mysql));
-#endif
 		}
 		return false;
 	}
@@ -287,12 +280,15 @@ int
 mysql__insert(Sample* sample)
 {
 	int id = 0;
+
+	char* _metadata = sample_get_metadata_str(sample);
+
 	MYSQL_ESCAPE(full_path,   sample->full_path);
 	MYSQL_ESCAPE(sample_name, sample->sample_name);
 	MYSQL_ESCAPE(sample_dir,  sample->sample_dir);
 	MYSQL_ESCAPE(mimetype,    sample->mimetype);
 	MYSQL_ESCAPE(ebur,        sample->ebur);
-	MYSQL_ESCAPE(meta_data,   sample->meta_data);
+	MYSQL_ESCAPE(meta_data,   _metadata);
 
 	gchar* sql = g_strdup_printf(
 		"INSERT INTO samples(full_path,filename,filedir,length,sample_rate,channels,online,mimetype,ebur,peaklevel,colour,mtime,frames,bit_rate,bit_depth,meta_data) "
@@ -318,6 +314,7 @@ mysql__insert(Sample* sample)
 	free(mimetype);
 	free(ebur);
 	free(meta_data);
+	if(_metadata) g_free(_metadata);
 	return id;
 }
 
@@ -464,7 +461,7 @@ mysql__filter_by_audio(Sample *s)
 
 
 static gboolean
-mysql__search_iter_new(char* X, char* dir, const char* category, int* n_results)
+mysql__search_iter_new(char* dir, const char* category, int* n_results)
 {
 	//return TRUE on success.
 
@@ -475,7 +472,7 @@ mysql__search_iter_new(char* X, char* dir, const char* category, int* n_results)
 	if(search_result) gwarn("previous query not free'd?");
 
 	GString* q = g_string_new("SELECT * FROM samples WHERE 1 ");
-	const char* search = model->filters.phrase;
+	const char* search = model->filters.search->value;
 	if(search && strlen(search)) {
 #if 0
 		g_string_append_printf(q, "AND (filename LIKE '%%%s%%' OR filedir LIKE '%%%s%%' OR keywords LIKE '%%%s%%') ", search, search, search);
@@ -510,7 +507,7 @@ mysql__search_iter_new(char* X, char* dir, const char* category, int* n_results)
 #endif
 		free(esc);
 	}
-	if(model->filters.category) {
+	if(model->filters.category->value) {
 		MYSQL_ESCAPE(esc, category);
 		g_string_append_printf(q, "AND keywords LIKE '%%%s%%' ", esc);
 		free(esc);
@@ -534,6 +531,7 @@ mysql__search_iter_new(char* X, char* dir, const char* category, int* n_results)
 		if(n_results){
 			uint32_t tot_rows = (uint32_t)mysql_affected_rows(&mysql);
 			*n_results = tot_rows;
+			db->n_results = tot_rows;
 		}
 	}
 
@@ -607,8 +605,8 @@ mysql__search_iter_next_(unsigned long** lengths)
 	result.mtime       = get_int(row, MYSQL_MTIME);
 	result.bit_depth   = get_int(row, MYSQL_BITDEPTH);
 	result.bit_rate    = get_int(row, MYSQL_BITRATE);
-	result.meta_data   = row[MYSQL_METADATA];
 	result.frames      = get_int(row, MYSQL_FRAMES); 
+	sample_set_metadata(&result, row[MYSQL_METADATA]);
 	return &result;
 }
 

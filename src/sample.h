@@ -20,9 +20,9 @@ struct _sample
 	int64_t      length;        //milliseconds
 	int64_t      frames;        //total number of frames (eg a frame for 16bit stereo is 4 bytes).
 	unsigned int channels;
-	int          bit_depth;     // yet unused
-	int          bit_rate;      // yet unused
-	char *       meta_data;     // yet unused
+	int          bit_depth;
+	int          bit_rate;
+	GPtrArray*   meta_data;
 	float        peaklevel;
 	int          colour_index;
 
@@ -69,9 +69,11 @@ Sample*     sample_get_by_filename   (const char* abspath);
 
 void        sample_ref               (Sample*);
 void        sample_unref             (Sample*);
-void        sample_free              (Sample*);
 
-void        sample_refresh           (Sample*, gboolean force_update);
-gboolean    sample_get_file_info     (Sample*);
+void        sample_refresh           (Sample*, bool force_update);
+bool        sample_get_file_info     (Sample*);
+
+char*       sample_get_metadata_str  (Sample*);
+void        sample_set_metadata      (Sample*, const char*);
 
 #endif

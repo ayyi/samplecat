@@ -648,7 +648,7 @@ view_details_button_press(GtkWidget* widget, GdkEventButton* ev)
 			gtk_window_set_focus((GtkWindow*)gtk_widget_get_toplevel(widget), widget);
 		}
 		//return without calling parent so that selection is not changed.
-		return FALSE;
+		return TRUE; // must be handled so that global pop-ups are not also opened.
 	}
 
 	//if (ev->window != gtk_tree_view_get_bin_window(treeview))

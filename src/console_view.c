@@ -53,7 +53,7 @@ void console__init()
 void
 console__show_result_header()
 {
-	printf("filters: text='%s' dir=%s\n", app->model->filters.phrase, strlen(app->model->filters.dir) ? app->model->filters.dir : "<all directories>");
+	printf("filters: text='%s' dir=%s\n", app->model->filters.search->value, strlen(app->model->filters.dir->value) ? app->model->filters.dir->value : "<all directories>");
 
 	printf("  name                 directory                            length ch rate mimetype\n");
 }

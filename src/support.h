@@ -18,6 +18,7 @@
 #define g_error_free0(E) (g_error_free(E), E = NULL)
 #define list_clear(L) g_list_free(L); L = NULL;
 #define call(FN, A, ...) if(FN) (FN)(A, ##__VA_ARGS__)
+#define g_free0(A) (A = (g_free(A), NULL))
 
 #define HAS_ALPHA_FALSE 0
 #define HAS_ALPHA_TRUE 1

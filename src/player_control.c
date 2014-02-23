@@ -18,7 +18,8 @@
 #include <math.h>
 
 #include "support.h"
-#include "main.h"
+#include "application.h"
+#include "model.h"
 
 #if (defined HAVE_JACK)
   #include "jack_player.h"
@@ -269,7 +270,7 @@ player_control_on_show_hide(gboolean enable)
 
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(app->playercontrol->pbpause), (app->auditioner->playpause(-2)==1)?true:false);
 
-	if (app->playing_id == app->inspector->row_id) {
+	if (app->model->selection && (app->playing_id == app->model->selection->id)) {
 		if(!visible){
 			gtk_widget_set_no_show_all(app->playercontrol->widget, false);
 			gtk_widget_show_all(app->playercontrol->widget);

@@ -3,7 +3,7 @@
 	<layout name="__default__">
 		<dock name="__dock_1" floating="no" width="-1" height="-1" floatx="0" floaty="0">
 			<paned orientation="vertical" locked="no" position="67">
-				<item name="Filters" orientation="vertical" locked="yes"/>
+				<item name="Search" orientation="vertical" locked="yes"/>
 				<paned orientation="vertical" locked="no" position="561">
 					<paned orientation="horizontal" locked="no" position="253">
 						<paned orientation="vertical" locked="no" position="162">
@@ -23,7 +23,7 @@
 	<layout name="Default">
 		<dock name="__dock_1" floating="no" width="-1" height="-1" floatx="0" floaty="0">
 			<paned orientation="vertical" locked="no" position="67">
-				<item name="Filters" orientation="vertical" locked="yes"/>
+				<item name="Search" orientation="vertical" locked="yes"/>
 				<paned orientation="vertical" locked="no" position="561">
 					<paned orientation="horizontal" locked="no" position="253">
 						<paned orientation="vertical" locked="no" position="162">
@@ -43,7 +43,7 @@
 	<layout name="Minimal">
 		<dock name="__dock_1" floating="no" width="-1" height="-1" floatx="0" floaty="0">
 			<paned orientation="vertical" locked="no" position="62">
-				<item name="Filters" orientation="vertical" locked="yes"/>
+				<item name="Search" orientation="vertical" locked="yes"/>
 				<item name="Library" orientation="vertical" locked="yes"/>
 			</paned>
 		</dock>
@@ -51,7 +51,7 @@
 	<layout name="All">
 		<dock name="__dock_1" floating="no" width="-1" height="-1" floatx="0" floaty="0">
 			<paned orientation="vertical" locked="no" position="67">
-				<item name="Filters" orientation="vertical" locked="yes"/>
+				<item name="Search" orientation="vertical" locked="yes"/>
 				<paned orientation="vertical" locked="no" position="439">
 					<paned orientation="horizontal" locked="no" position="253">
 						<paned orientation="vertical" locked="no" position="126">

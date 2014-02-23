@@ -1,3 +1,14 @@
+/**
+* +----------------------------------------------------------------------+
+* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
+* | copyright (C) 2007-2014 Tim Orford <tim@orford.org> and others       |
+* +----------------------------------------------------------------------+
+* | This program is free software; you can redistribute it and/or modify |
+* | it under the terms of the GNU General Public License version 3       |
+* | as published by the Free Software Foundation.                        |
+* +----------------------------------------------------------------------+
+*
+*/
 #include "../../config.h"
 #include <stdio.h>
 #include <string.h>
@@ -7,12 +18,23 @@
 #include "debug/debug.h"
 #include "typedefs.h"
 #include "sample.h"
+#include "model.h"
 #include "db/db.h"
 #include "db/sqlite.h"
 
+extern SamplecatBackend backend;
+
+static gboolean sqlite__search_iter_new  (char* dir, const char* category, int* n_results);
+static Sample*  sqlite__search_iter_next (unsigned long** lengths);
+static void     sqlite__search_iter_free ();
+
+static void     sqlite__dir_iter_new     ();
+static char*    sqlite__dir_iter_next    ();
+static void     sqlite__dir_iter_free    ();
+
 static sqlite3* db;
 sqlite3_stmt* ppStmt = NULL;
-extern int debug;
+static SamplecatModel* model = NULL;
 #define MAX_LEN 256 //temp!
 
 #define pwarn(A, ...) warnprintf2(__func__, A, ##__VA_ARGS__)
@@ -42,6 +64,28 @@ enum {
 	COLUMN_METADATA,
 };
 
+
+void
+sqlite__init(SamplecatModel* _model, void* _config)
+{
+	model = _model;
+	//config = _config;
+}
+
+
+void
+sqlite__set_as_backend(SamplecatBackend* backend)
+{
+	backend->init             = sqlite__init;
+
+	backend->search_iter_new  = sqlite__search_iter_new;
+	backend->search_iter_next = sqlite__search_iter_next;
+	backend->search_iter_free = sqlite__search_iter_free;
+
+	backend->dir_iter_new     = sqlite__dir_iter_new;
+	backend->dir_iter_next    = sqlite__dir_iter_next;
+	backend->dir_iter_free    = sqlite__dir_iter_free;
+}
 
 void
 sqlite__create_db()
@@ -186,6 +230,8 @@ sqlite__insert(Sample* sample)
 	char* errMsg = 0;
 	sqlite3_int64 idx = -1;
 
+	char* metadata = sample_get_metadata_str(sample);
+
 	char* sql = sqlite3_mprintf(
 		"INSERT INTO samples(full_path,filename,filedir,length,sample_rate,channels,online,mimetype,ebur,peaklevel,colour,mtime,frames,bit_rate,bit_depth,meta_data) "
 		"VALUES ('%q','%q','%q',%"PRIi64",'%i','%i','%i','%q','%q','%f','%i','%lu',%"PRIi64",'%i','%i','%q')",
@@ -195,7 +241,7 @@ sqlite__insert(Sample* sample)
 		sample->ebur?sample->ebur:"", 
 		sample->peaklevel, sample->colour_index, (unsigned long) sample->mtime,
 		sample->frames, sample->bit_rate, sample->bit_depth,
-		sample->meta_data?sample->meta_data:""
+		metadata ? metadata : ""
 	);
 
 	if(sqlite3_exec(db, sql, NULL, NULL, &errMsg) != SQLITE_OK){
@@ -205,6 +251,7 @@ sqlite__insert(Sample* sample)
 		idx = sqlite3_last_insert_rowid(db);
 	}
 
+	if(metadata) g_free(metadata);
 	sqlite3_free(sql);
 	return (int)idx;
 }
@@ -337,8 +384,8 @@ sqlite__filter_by_audio(Sample *s)
 
 
 
-gboolean
-sqlite__search_iter_new(char* search, char* dir, const char* category, int* n_results)
+static gboolean
+sqlite__search_iter_new(char* dir, const char* category, int* n_results)
 {
 	PF;
 	static int count = 0;
@@ -356,6 +403,7 @@ sqlite__search_iter_new(char* search, char* dir, const char* category, int* n_re
 	gboolean ok = true;
 
 	char* where = sqlite3_mprintf("%s", "");
+	const char* search = model->filters.search->value;
 	if(search && strlen(search)){
 #if 0
 		char* where2 = sqlite3_mprintf("%s AND (filename LIKE '%%%q%%' OR filedir LIKE '%%%q%%' OR keywords LIKE '%%%q%%') ", where, search, search, search);
@@ -363,9 +411,9 @@ sqlite__search_iter_new(char* search, char* dir, const char* category, int* n_re
 		char* where2a = NULL;
 		char* sd = strdup(search);
 		char* s  = sd;
-		char *tok;
+		char* tok;
 		while ((tok = strtok(s, " _")) != 0) {
-			char *tmp = sqlite3_mprintf("%s %s (filename LIKE '%%%q%%' OR filedir LIKE '%%%q%%' OR keywords LIKE '%%%q%%') ",
+			char* tmp = sqlite3_mprintf("%s %s (filename LIKE '%%%q%%' OR filedir LIKE '%%%q%%' OR keywords LIKE '%%%q%%') ",
 					where2a?where2a:"", where2a?"AND":"",
 					tok, tok, tok);
 			if (where2a) sqlite3_free(where2a);
@@ -408,10 +456,9 @@ sqlite__search_iter_new(char* search, char* dir, const char* category, int* n_re
 	int n = sqlite3_prepare_v2(db, sql, -1, &ppStmt, NULL);
 	if(n == SQLITE_OK && ppStmt){
 		count = 0;
-		if(n_results){
-			select_count(where);
-			*n_results = count;
-		}
+		select_count(where);
+		if(n_results) *n_results = count;
+		backend.n_results = count;
 	}
 	else{
 		gwarn("failed to create prepared statement. sql=%s", sql);
@@ -423,7 +470,7 @@ sqlite__search_iter_new(char* search, char* dir, const char* category, int* n_re
 }
 
 
-Sample*
+static Sample*
 sqlite__search_iter_next(unsigned long** lengths)
 {
 
@@ -460,8 +507,8 @@ sqlite__search_iter_next(unsigned long** lengths)
 	result.mtime       = (unsigned long) sqlite3_column_int(ppStmt, COLUMN_MTIME);
 	result.bit_depth   = sqlite3_column_int(ppStmt, COLUMN_BITDEPTH);
 	result.bit_rate    = sqlite3_column_int(ppStmt, COLUMN_BITRATE);
-	result.meta_data   = (char*)sqlite3_column_text(ppStmt, COLUMN_METADATA);
 	result.overview    = pixbuf;
+	sample_set_metadata(&result, (char*)sqlite3_column_text(ppStmt, COLUMN_METADATA));
 
 	/* backwards compat. */
 	if (!result.full_path) {
@@ -481,7 +528,7 @@ sqlite__search_iter_next(unsigned long** lengths)
 }
 
 
-void
+static void
 sqlite__search_iter_free()
 {
 	sqlite3_finalize(ppStmt);
@@ -489,7 +536,7 @@ sqlite__search_iter_free()
 }
 
 
-void
+static void
 sqlite__dir_iter_new()
 {
 	#define SQLITE_DIR_LIST_QRY "SELECT DISTINCT filedir FROM samples ORDER BY filedir"
@@ -511,7 +558,7 @@ sqlite__dir_iter_new()
 }
 
 
-char*
+static char*
 sqlite__dir_iter_next()
 {
 	int n = sqlite3_step(ppStmt);
@@ -522,7 +569,7 @@ sqlite__dir_iter_next()
 }
 
 
-void
+static void
 sqlite__dir_iter_free()
 {
 	sqlite3_finalize(ppStmt);

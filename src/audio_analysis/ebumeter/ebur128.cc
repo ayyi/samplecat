@@ -24,6 +24,7 @@
 #include <getopt.h>
 #include <stdio.h>
 #include <math.h>
+#include "debug/debug.h"
 #include "ebu_r128_proc.h"
 #include "ebur128.h"
 
@@ -47,7 +48,7 @@ static int ebur128proc (const char *fn, struct ebur128 *ebr) {
 	}
 
 	if (!(sf=ad_open(fn, &nfo))) {
-		fprintf (stderr, "Can't open input file '%s'.\n", fn);
+		if(_debug_) fprintf (stderr, "Can't open input file '%s'.\n", fn);
 		return 1;
 	}
 

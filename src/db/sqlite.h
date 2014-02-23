@@ -1,6 +1,8 @@
 
 #define BACKEND_IS_SQLITE (backend.search_iter_new == sqlite__search_iter_new)
 
+void     sqlite__set_as_backend   (SamplecatBackend*);
+
 int      sqlite__connect          ();
 void     sqlite__disconnect       ();
 
@@ -24,10 +26,3 @@ gboolean sqlite__update_online    (int id, gboolean, time_t);
 gboolean sqlite__update_peaklevel (int id, float);
 #endif
 
-gboolean sqlite__search_iter_new  (char* search, char* dir, const char* category, int* n_results);
-Sample * sqlite__search_iter_next (unsigned long** lengths);
-void     sqlite__search_iter_free ();
-
-void     sqlite__dir_iter_new     ();
-char*    sqlite__dir_iter_next    ();
-void     sqlite__dir_iter_free    ();

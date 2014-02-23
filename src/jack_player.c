@@ -36,7 +36,7 @@
 #include "support.h"
 #include "application.h"
 #include "window.h"
-#include "inspector.h"
+#include "model.h"
 #include "player_control.h"
 #include "sample.h"
 #include "ladspa_proc.h"
@@ -702,7 +702,9 @@ jplay__play_pathX(const char* path, int reset_pitch)
 	seek_request = -1.0;
 	JACKaudiooutputinit(sf, nfo.channels, nfo.sample_rate, nfo.frames);
 	app->playing_id = -1; // ID of filer-inspector (non imported sample)
+#ifndef USE_GDL
 	if(app->view_options[SHOW_PLAYER].value) show_player(true);
+#endif
 	ad_free_nfo(&nfo);
 	return 0;
 }
@@ -719,7 +721,9 @@ jplay__play(Sample* sample)
 	if(!sample->id){ perr("bad arg: id=0\n"); return; }
 	if (jplay__play_pathX(sample->full_path, 1)) return;
 	app->playing_id = sample->id;
+#ifndef USE_GDL
 	if(app->view_options[SHOW_PLAYER].value) show_player(true);
+#endif
 }
 
 void
@@ -763,7 +767,7 @@ jplay__play_next() {
 void
 jplay__play_selected() {
 	dbg(0, "...");
-	Sample *sample = sample_get_by_row_ref(app->inspector->row_ref);
+	Sample* sample = app->model->selection;
 	if (!sample) {
 		dbg(0, "no sample selected. not starting playback");
 		return;
@@ -774,7 +778,9 @@ jplay__play_selected() {
 	if(!sample->id){ perr("bad arg: id=0\n"); return; }
 	if (jplay__play_pathX(sample->full_path, 0)) return;
 	app->playing_id = sample->id;
+#ifndef USE_GDL
 	if(app->view_options[SHOW_PLAYER].value) show_player(true);
+#endif
 	/* jplay__play(s); */
 
 	sample_unref(sample);

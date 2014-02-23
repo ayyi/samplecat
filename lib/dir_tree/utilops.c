@@ -5,8 +5,9 @@
 #include "support.h"
 #include "gqview.h"
 #include "ui_fileops.h"
-#include "observer.h"
 #include "utilops.h"
+
+static void observer__files_moved(GList* file_list, const char* dest);
 
 typedef struct _FileDataMult FileDataMult;
 struct _FileDataMult
@@ -388,3 +389,26 @@ void file_util_move_simple(GList *list, const gchar *dest_path)
 
     file_util_move_multiple(file_data_multiple_new(list, dest_path, FALSE));
 }
+
+static void
+observer__files_moved(GList* file_list, const char* dest)
+{
+	PF;
+	GList* l = file_list;
+	for(;l;l=l->next){
+		dbg(0, "%s", l->data);
+	}
+
+	char msg[256];
+	if(g_list_length(file_list) > 1){
+		snprintf(msg, 255, "%i files moved.", g_list_length(file_list));
+	}else{
+		snprintf(msg, 255, "file: '%s' moved.", (char*)file_list->data);
+	}
+	statusbar_print(1, msg);
+
+	//FIXME
+	//db_update_path(const char* old_path, const char* new_path);
+}
+
+

@@ -72,12 +72,14 @@ struct _Application
       char*             add;
    }                    args;
 
+#ifndef USE_GDL
    struct _view_option {
       char*             name;
       void              (*on_toggle)(gboolean);
       gboolean          value;
       GtkWidget*        menu_item;
    }                    view_options[MAX_VIEW_OPTIONS];
+#endif
 
    GKeyFile*            key_file;               // config file data.
 
@@ -126,13 +128,16 @@ struct _ApplicationClass
 
 #ifndef __main_c__
 extern Application*     app;
+extern SamplecatBackend backend;
 #endif
+
 
 GType        application_get_type                () G_GNUC_CONST;
 Application* application_new                     ();
 Application* application_construct               (GType);
 void         application_emit_icon_theme_changed (Application*, const gchar*);
 void         application_quit                    (Application*);
+bool         application_add_file                (const char* path);
 
 
 G_END_DECLS

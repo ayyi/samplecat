@@ -35,6 +35,17 @@
 #include "gdl-dock-master.h"
 #include "libgdltypebuiltins.h"
 
+/**
+ * SECTION:gdl-dock-placeholder
+ * @title: GdlDockPlaceHolder
+ * @short_description: A widget marking a docking place.
+ * @see_also:
+ * @stability: Unstable
+ *
+ * A dock placeholder is a widget allowing to keep track of a docking place.
+ * Unfortunately, all the details of the initial goal have been forgotten and
+ * the code has still some issues.
+ */
 
 #undef PLACEHOLDER_DEBUG
 
@@ -539,6 +550,20 @@ gdl_dock_placeholder_present (GdlDockObject *object,
 
 /* ----- Public interface ----- */ 
 								   
+/**
+ * gdl_dock_placeholder_new:
+ * @name: Unique name for identifying the dock object.
+ * @object: Corresponding #GdlDockObject
+ * @position: The position to dock a new item in @object
+ * @sticky: %TRUE if the placeholder move with the @object
+ * 
+ * Creates a new dock placeholder at @object place. This is a kind of marker
+ * allowing you to dock new items later at this place. It is not completely
+ * working though.
+ * 
+ * Returns: The newly created placeholder.
+ */
+
 GtkWidget * 
 gdl_dock_placeholder_new (const gchar     *name,
                           GdlDockObject    *object,

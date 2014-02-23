@@ -92,16 +92,17 @@ samplecat_SOURCES = \
 	player_control.c player_control.h \
 	sample.c sample.h \
 	overview.c overview.h \
+	directories.c directories.h \
 	dh_link.c dh_link.h \
 	dh_tree.c dh_tree.h \
 	cellrenderer_hypertext.c cellrenderer_hypertext.h \
 	colour_box.c colour_box.h \
 	rotator.c rotator.h \
 	dnd.c dnd.h \
-	observer.c observer.h \
 	support.c support.h \
 	console_view.c console_view.h \
 	icon_theme.c icon_theme.h \
+	table.c table.h \
 	$(AUDIOANALYSERS_SRC) \
 	$(AD_SRC) \
 	$(FFT_SRC) \

@@ -16,7 +16,12 @@
 #include <string.h>
 #include <glib.h>
 #include <glib-object.h>
+#include "debug/debug.h"
 #include <sample.h>
+#include "support.h"
+#include "model.h"
+#include "db/db.h"
+#include "list_store.h"
 #include "application.h"
 
 extern void colour_box_init();
@@ -61,6 +66,24 @@ application_new ()
 	app->effect_param[2] = 0.0; /* octave [-3 .. 3] */
 	app->playback_speed = 1.0;
 #endif
+
+	app->model = samplecat_model_new();
+
+	samplecat_model_add_filter (app->model, app->model->filters.search   = samplecat_filter_new("search"));
+	samplecat_model_add_filter (app->model, app->model->filters.dir      = samplecat_filter_new("directory"));
+	samplecat_model_add_filter (app->model, app->model->filters.category = samplecat_filter_new("category"));
+
+	void on_filter_changed(GObject* _filter, gpointer user_data)
+	{
+		//SamplecatFilter* filter = (SamplecatFilter*)_filter;
+		extern void do_search(); // TODO
+		do_search();
+	}
+
+	GList* l = app->model->filters_;
+	for(;l;l=l->next){
+		g_signal_connect((SamplecatFilter*)l->data, "changed", G_CALLBACK(on_filter_changed), NULL);
+	}
 
 	return app;
 }
@@ -129,6 +152,101 @@ void
 application_quit(Application* app)
 {
 	g_signal_emit_by_name (app, "on-quit");
+}
+
+
+gboolean
+application_add_file(const char* path)
+{
+	/*
+	 *  uri must be "unescaped" before calling this fn. Method string must be removed.
+	 */
+
+#if 1
+	/* check if file already exists in the store
+	 * -> don't add it again
+	 */
+	if(backend.file_exists(path, NULL)) {
+		statusbar_print(1, "duplicate: not re-adding a file already in db.");
+		gwarn("duplicate file: %s", path);
+		//TODO ask what to do
+		Sample* s = sample_get_by_filename(path);
+		if (s) {
+			sample_refresh(s, false);
+			sample_unref(s);
+		} else {
+			dbg(1, "sample found in db but not in model.");
+		}
+		return false;
+	}
+#endif
+
+	dbg(1, "%s", path);
+	if(BACKEND_IS_NULL) return false;
+
+	Sample* sample = sample_new_from_filename((char*)path, false);
+	if (!sample) {
+		if (_debug_) gwarn("cannot add file: file-type is not supported");
+		statusbar_print(1, "cannot add file: file-type is not supported");
+		return false;
+	}
+
+	if(!sample_get_file_info(sample)){
+		gwarn("cannot add file: reading file info failed");
+		statusbar_print(1, "cannot add file: reading file info failed");
+		sample_unref(sample);
+		return false;
+	}
+#if 1
+	/* check if /same/ file already exists w/ different path */
+	GList* existing;
+	if((existing = backend.filter_by_audio(sample))) {
+		GList* l = existing; int i;
+#ifdef INTERACTIVE_IMPORT
+		GString* note = g_string_new("Similar or identical file(s) already present in database:\n");
+#endif
+		for(i=1;l;l=l->next, i++){
+			/* TODO :prompt user: ask to delete one of the files
+			 * - import/update the remaining file(s)
+			 */
+			dbg(0, "found similar or identical file: %s", l->data);
+#ifdef INTERACTIVE_IMPORT
+			if (i < 10)
+				g_string_append_printf(note, "%d: '%s'\n", i, (char*) l->data);
+#endif
+		}
+#ifdef INTERACTIVE_IMPORT
+		if (i > 9)
+			g_string_append_printf(note, "..\n and %d more.", i - 9);
+		g_string_append_printf(note, "Add this file: '%s' ?", sample->full_path);
+		if (do_progress_question(note->str) != 1) {
+			// 0, aborted: -> whole add_file loop is aborted on next do_progress() call.
+			// 1, OK
+			// 2, cancled: -> only this file is skipped
+			sample_unref(sample);
+			g_string_free(note, true);
+			return false;
+		}
+		g_string_free(note, true);
+		g_list_foreach(existing, (GFunc)g_free, NULL);
+		g_list_free(existing);
+#endif /* END interactive import */
+	}
+#endif /* END check for similar files on import */
+
+	sample->online = 1;
+	sample->id = backend.insert(sample);
+	if (sample->id < 0) {
+		sample_unref(sample);
+		return false;
+	}
+
+	samplecat_list_store_add((SamplecatListStore*)app->store, sample);
+
+	samplecat_model_add(app->model);
+
+	sample_unref(sample);
+	return true;
 }
 
 

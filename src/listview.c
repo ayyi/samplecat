@@ -260,8 +260,9 @@ listview__on_row_clicked(GtkWidget* widget, GdkEventButton* event, gpointer user
 {
 	GtkTreeView* treeview = GTK_TREE_VIEW(widget);
 
-	if(event->button == 1){
-		GtkTreePath *path;
+	switch(event->button){
+	  case 1:
+		;GtkTreePath* path;
 		if(gtk_tree_view_get_path_at_pos(GTK_TREE_VIEW(app->libraryview->widget), (gint)event->x, (gint)event->y, &path, NULL, NULL, NULL)){
 
 			//auditioning:
@@ -303,18 +304,16 @@ listview__on_row_clicked(GtkWidget* widget, GdkEventButton* event, gpointer user
 
 					if(tags && strlen(tags)){
 						gtk_entry_set_text(GTK_ENTRY(app->search), tags);
-						strncpy(app->model->filters.phrase, tags, 255);
-						do_search(tags, NULL);
+						samplecat_filter_set_value(app->model->filters.search, g_strdup(tags));
 					}
 				}
 			}
 			gtk_tree_path_free(path);
 		}
 		return NOT_HANDLED;
-	}
 
-	//popup menu:
-	if(event->button == 3){
+	  //popup menu:
+	  case 3:
 		dbg (2, "right button press!");
 
 		//if one or no rows selected, select one:
@@ -330,16 +329,18 @@ listview__on_row_clicked(GtkWidget* widget, GdkEventButton* event, gpointer user
 			}
 		}
 
-		GtkWidget* context_menu = app->context_menu;
-		if(context_menu && (GPOINTER_TO_INT(context_menu) > 1024)){
-			//open pop-up menu:
-			gtk_menu_popup(GTK_MENU(context_menu),
+		if(app->context_menu){
+			gtk_menu_popup(GTK_MENU(app->context_menu),
                            NULL, NULL,  //parents
                            NULL, NULL,  //fn and data used to position the menu.
                            event->button, event->time);
 		}
-		return true;
-	} else return false;
+		return HANDLED;
+
+	  default:
+		break;
+	}
+	return NOT_HANDLED;
 }
 
 

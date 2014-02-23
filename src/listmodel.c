@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
-* | This file is part of Samplecat. http://samplecat.orford.org          |
-* | copyright (C) 2007-2013 Tim Orford <tim@orford.org>                  |
+* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
+* | copyright (C) 2007-2014 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -28,9 +28,7 @@
 #include "main.h"
 #include "application.h"
 #include "sample.h"
-#include "dnd.h"
 #include "overview.h"
-#include "inspector.h" //FIXME
 #include "list_store.h"
 #include "listmodel.h"
 
@@ -43,19 +41,6 @@ listmodel__new()
 	void icon_theme_changed(Application* application, char* theme, gpointer data){ listmodel__update(); }
 	g_signal_connect((gpointer)app, "icon-theme", G_CALLBACK(icon_theme_changed), NULL);
 
-	void sample_changed(SamplecatModel* m, Sample* sample, int what, void* data, gpointer user_data)
-	{
-		dbg(1, "");
-		g_return_if_fail(sample);
-
-#if 1 // TODO listmodel__update_sample has better api but functionality appears to be incomplete.
-		listmodel__update_by_rowref(sample->row_ref, what, data);
-#else
-		listmodel__update_sample(sample, what, data);
-#endif
-	}
-	g_signal_connect((gpointer)app->model, "sample-changed", G_CALLBACK(sample_changed), NULL);
-
 	return (GtkListStore*)samplecat_list_store_new();
 }
 
@@ -63,7 +48,7 @@ listmodel__new()
 static void
 listmodel__update()
 {
-	do_search(NULL, NULL);
+	do_search();
 }
 
 
@@ -81,6 +66,8 @@ listmodel__clear()
 		if(pixbuf) g_object_unref(pixbuf);
 		if(sample) sample_unref(sample);
 	}
+
+	((SamplecatListStore*)app->store)->row_count = 0;
 }
 
 
@@ -177,11 +164,10 @@ listmodel__update_sample(Sample* sample, int what, void* data)
 	bool ok = false;
 
 	if(!sample->row_ref || !gtk_tree_row_reference_valid(sample->row_ref)){
-		/* this should never happen  --
-		 * it may if the file is removed again before
-		 * the background-process(es) completed
+		/* this can happen if the file is removed before the background-process(es) completed
+		 * or the view has changed.
 		 */
-		dbg(0, "rowref not set");
+		dbg(1, "rowref not set");
 	}
 
 	switch (what) {
@@ -200,10 +186,10 @@ listmodel__update_sample(Sample* sample, int what, void* data)
 				listmodel__set_overview(sample->row_ref, sample->overview);
 			break;
 		case COLX_NOTES:
-			if ((ok = !backend.update_string(sample->id, "notes", (char*)data))) {
+			if (!(ok = backend.update_string(sample->id, "notes", (char*)data))) {
 				gwarn("failed to store notes in the database");
 			} else {
-				if (sample->notes) free(sample->notes);
+				if (sample->notes) g_free(sample->notes);
 				sample->notes = strdup((char*)data);
 			}
 			break;
@@ -222,9 +208,8 @@ listmodel__update_sample(Sample* sample, int what, void* data)
 			break;
 	}
 
-	if (sample->id == app->inspector->row_id) {
-		inspector_set_labels(sample);
-	}
+	g_signal_emit_by_name (app->model, "sample-changed", sample, -1, NULL);
+
 	return ok;
 }
 
@@ -289,6 +274,8 @@ listmodel__update_by_tree_iter(GtkTreeIter* iter, int what, void* data)
 			break;
 		case -1: // update basic info from sample_get_file_info()
 			{
+				char* metadata = sample_get_metadata_str(s);
+
 				gboolean ok = true;
 				ok&=backend.update_int(s->id, "channels", s->channels);
 				ok&=backend.update_int(s->id, "sample_rate", s->sample_rate);
@@ -296,7 +283,7 @@ listmodel__update_by_tree_iter(GtkTreeIter* iter, int what, void* data)
 				ok&=backend.update_int(s->id, "frames", s->frames);
 				ok&=backend.update_int(s->id, "bit_rate", s->bit_rate);
 				ok&=backend.update_int(s->id, "bit_depth", s->bit_depth);
-				ok&=backend.update_string(s->id, "meta_data", s->meta_data);
+				ok&=backend.update_string(s->id, "meta_data", metadata);
 				if (!ok) {
 					gwarn("failed to store basic-info in the database");
 					rv = false;
@@ -310,6 +297,7 @@ listmodel__update_by_tree_iter(GtkTreeIter* iter, int what, void* data)
 							-1);
 					dbg(1, "file info updated.");
 				}
+				if(metadata) g_free(metadata);
 			}
 			break;
 		default:
@@ -317,9 +305,8 @@ listmodel__update_by_tree_iter(GtkTreeIter* iter, int what, void* data)
 			break;
 	}
 
-	if (s->id == app->inspector->row_id) {
-		inspector_set_labels(s);
-	}
+	g_signal_emit_by_name (app->model, "sample-changed", s, -1, NULL);
+
 	sample_unref(s);
 	return rv;
 }

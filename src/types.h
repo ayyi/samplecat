@@ -49,21 +49,6 @@ struct _menu_def
 	gboolean             sensitive;
 };
 
-struct _inspector
-{
-	unsigned       row_id;
-	GtkTreeRowReference* row_ref;
-	GtkWidget*     widget;     //scrollwin
-	GtkWidget*     vbox;
-	GtkWidget*     text;
-	GtkTextBuffer* notes;
-	GtkWidget*     edit;
-	int            min_height;
-	int            user_height;
-	gboolean       show_waveform;
-	InspectorPriv* priv;
-};
-
 struct _playctrl
 {
 	GtkWidget*     widget;

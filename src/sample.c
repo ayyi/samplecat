@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
-* | This file is part of Samplecat. http://samplecat.orford.org          |
-* | copyright (C) 2007-2013 Tim Orford <tim@orford.org>                  |
+* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
+* | copyright (C) 2007-2014 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -26,6 +26,8 @@
 #include "overview.h"
 #include "listview.h"
 #include "sample.h"
+
+static void sample_free (Sample*);
 
 
 Sample*
@@ -84,11 +86,10 @@ sample_new_from_filename(char* path, gboolean path_alloced)
 Sample*
 sample_dup(Sample* s)
 {
-	Sample* r = g_new0(struct _sample, 1);
-	memset(r,0, sizeof(Sample));
+	Sample* r = g_new0(Sample, 1);
 
-  r->id           = s->id;
-  r->ref_count    = 0;
+	r->id           = s->id;
+	r->ref_count    = 0;
 	r->sample_rate  = s->sample_rate;
 	r->length       = s->length;
 	r->frames       = s->frames;
@@ -107,15 +108,15 @@ sample_dup(Sample* s)
 	DUPSTR(ebur)
 	DUPSTR(notes)
 	DUPSTR(mimetype)
-	DUPSTR(meta_data)
+	r->meta_data = s->meta_data ? g_ptr_array_ref(s->meta_data) : NULL;
 
-	if (s->overview) r->overview=gdk_pixbuf_copy(s->overview);
+	if (s->overview) r->overview = gdk_pixbuf_copy(s->overview);
 	sample_ref(r);
 	return r;
 }
 
 
-void
+static void
 sample_free(Sample* sample)
 {
 	if(sample->ref_count > 0) {
@@ -128,7 +129,7 @@ sample_free(Sample* sample)
 	if(sample->ebur) g_free(sample->ebur);
 	if(sample->notes) g_free(sample->notes);
 	if(sample->sample_dir) g_free(sample->sample_dir);
-	if(sample->meta_data) g_free(sample->meta_data);
+	if(sample->meta_data) g_ptr_array_unref(sample->meta_data);
 	//if(sample->overview) g_free(sample->overview); // check how to free that!
 	g_free(sample);
 }
@@ -187,6 +188,8 @@ sample_refresh(Sample* sample, gboolean force_update)
 gboolean
 sample_get_file_info(Sample* sample)
 {
+	// ownership of allocated memory (ie the meta_data) is transferred to the caller.
+
 	if(!file_exists(sample->full_path)){
 		if(sample->online){
 			listmodel__update_sample(sample, COL_ICON, (void*)false);
@@ -205,7 +208,6 @@ sample_get_file_info(Sample* sample)
 	sample->bit_rate    = nfo.bit_rate;
 	sample->bit_depth   = nfo.bit_depth;
 	sample->meta_data   = nfo.meta_data;
-	//ad_free_nfo(&nfo); // no, retain allocated meta_data 
 	return true;
 }
 
@@ -231,6 +233,7 @@ sample_get_from_model(GtkTreePath* path)
 	return sample;
 }
 
+
 Sample*
 sample_get_by_row_ref(GtkTreeRowReference* ref)
 {
@@ -242,30 +245,70 @@ sample_get_by_row_ref(GtkTreeRowReference* ref)
 	return sample;
 }
 
-struct find_sample {
-	Sample *rv;
-	const char *abspath;
-};
-
-gboolean filter_sample (GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *iter, gpointer data)
-{
-	struct find_sample *fs = (struct find_sample*) data;
-	Sample *s = sample_get_by_tree_iter(iter);
-	if (!strcmp(s->full_path, fs->abspath)) {
-		fs->rv=s;
-		return TRUE;
-	}
-	sample_unref(s);
-	return FALSE;
-}
 
 Sample*
 sample_get_by_filename(const char* abspath)
 {
+	struct find_sample {
+		Sample*     rv;
+		const char* abspath;
+	};
+
+	bool filter_sample (GtkTreeModel* model, GtkTreePath* path, GtkTreeIter* iter, gpointer data)
+	{
+		struct find_sample* fs = (struct find_sample*) data;
+		Sample* s = sample_get_by_tree_iter(iter);
+		if (!strcmp(s->full_path, fs->abspath)) {
+			fs->rv=s;
+			return TRUE;
+		}
+		sample_unref(s);
+		return FALSE;
+	}
+
 	struct find_sample fs;
 	fs.rv = NULL; fs.abspath = abspath;
 	GtkTreeModel* model = GTK_TREE_MODEL(app->store);
 	gtk_tree_model_foreach(model, &filter_sample, &fs);
+
 	return fs.rv;
 }
+
+
+/*
+ *   Result must be g_free'd.
+ */
+char*
+sample_get_metadata_str(Sample* sample)
+{
+	if(!sample->meta_data) return NULL;
+
+	char** items = g_malloc0(sample->meta_data->len / 2 + 1);
+	char** data = (char**)sample->meta_data->pdata;
+	int i; for(i=0;i<sample->meta_data->len;i+=2)
+		items[i] = g_strdup_printf("%s:%s", data[i], data[i+1]);
+	char* str = g_strjoinv("\n", items);
+	dbg(0, "str=%s", str);
+	g_strfreev(items);
+
+	return str;
+}
+
+
+void
+sample_set_metadata(Sample* sample, const char* str)
+{
+	if(sample->meta_data) g_ptr_array_unref(sample->meta_data);
+	sample->meta_data = g_ptr_array_new_full(32, g_free);
+
+	gchar** items = g_strsplit(str, "\n", 32);
+	int i; for(i=0;i<g_strv_length(items);i++){
+		gchar** split = g_strsplit(items[i], ":", 2);
+		g_ptr_array_add(sample->meta_data, g_strdup(split[0]));
+		g_ptr_array_add(sample->meta_data, g_strdup(split[1]));
+		g_strfreev(split);
+	}
+	g_strfreev(items);
+}
+
 

@@ -37,38 +37,82 @@ typedef struct {
 } ffmpeg_audio_decoder;
 
 
+static gboolean
+ad_metadata_array_set_tag_postion(GPtrArray* tags, const char* tag_name, int pos)
+{
+	// move a metadata item up (can only be up) to the specified position.
+	// returns true if the tag was found.
+
+	if((tags->len < 4) || (pos >= tags->len - 2)) return false;
+	pos *= 2;
+
+	char** data = (char**)tags->pdata;
+	int i; for(i=pos;i<tags->len;i+=2){
+		if(!strcmp(data[i], tag_name)){
+			const char* artist[] = {data[i], (const char*)data[i+1]};
+
+			int j; for(j=i;j>=pos;j-=2){
+				data[j    ] = data[j - 2    ];
+				data[j + 1] = data[j - 2 + 1];
+			}
+			data[pos    ] = (char*)artist[0];
+			data[pos + 1] = (char*)artist[1];
+
+			return true;
+		}
+	}
+	return false;
+}
+
+
 int ad_info_ffmpeg(void *sf, struct adinfo *nfo) {
-  ffmpeg_audio_decoder *priv = (ffmpeg_audio_decoder*) sf;
-  if (!priv) return -1;
-  if (nfo) {
-    nfo->sample_rate = priv->samplerate;
-    nfo->channels    = priv->channels;
-    nfo->frames      = priv->length;
-    if (nfo->sample_rate==0) return -1;
-    nfo->length      = (nfo->frames * 1000) / nfo->sample_rate;
-    nfo->bit_rate    = priv->formatContext->bit_rate;
-    nfo->bit_depth   = 0;
-    nfo->meta_data   = NULL;
+	ffmpeg_audio_decoder *priv = (ffmpeg_audio_decoder*) sf;
+	if (!priv) return -1;
+	if (nfo) {
+		nfo->sample_rate = priv->samplerate;
+		nfo->channels    = priv->channels;
+		nfo->frames      = priv->length;
+		if (!nfo->sample_rate) return -1;
+		nfo->length      = (nfo->frames * 1000) / nfo->sample_rate;
+		nfo->bit_rate    = priv->formatContext->bit_rate;
+		nfo->bit_depth   = 0;
+		nfo->meta_data   = NULL;
+
+		GPtrArray* tags = g_ptr_array_new_full(32, g_free);
 
 		AVDictionaryEntry *tag = NULL;
 		// Tags in container
 		while ((tag = av_dict_get(priv->formatContext->metadata, "", tag, AV_DICT_IGNORE_SUFFIX))) {
 			dbg(2, "FTAG: %s=%s", tag->key, tag->value);
-			char * tmp = g_strdup_printf("%s%s<i>%s</i>:%s", nfo->meta_data?nfo->meta_data:"",nfo->meta_data?"\n":"", tag->key, tag->value);
-			if (nfo->meta_data) g_free(nfo->meta_data);
-			nfo->meta_data = tmp;
+			g_ptr_array_add(tags, g_utf8_strdown(tag->key, -1));
+			g_ptr_array_add(tags, g_strdup(tag->value));
 		}
 		// Tags in stream
-		tag=NULL;
+		tag = NULL;
 		AVStream *stream = priv->formatContext->streams[priv->audioStream];
 		while ((tag = av_dict_get(stream->metadata, "", tag, AV_DICT_IGNORE_SUFFIX))) {
 			dbg(2, "STAG: %s=%s", tag->key, tag->value);
-			char * tmp = g_strdup_printf("%s%s<i>%s</i>:%s", nfo->meta_data?nfo->meta_data:"",nfo->meta_data?"\n":"", tag->key, tag->value);
-			if (nfo->meta_data) g_free(nfo->meta_data);
-			nfo->meta_data = tmp;
+			g_ptr_array_add(tags, g_utf8_strdown(tag->key, -1));
+			g_ptr_array_add(tags, g_strdup(tag->value));
 		}
-  }
-  return 0;
+
+		while ((tag = av_dict_get(stream->metadata, "", tag, AV_DICT_IGNORE_SUFFIX))) {
+			g_ptr_array_add(tags, g_utf8_strdown(tag->key, -1));
+			g_ptr_array_add(tags, g_strdup(tag->value));
+		}
+
+		if(tags->len){
+
+			// sort tags
+			char* order[] = {"artist", "title", "album", "track", "date"};
+			int p = 0;
+			int i; for(i=0;i<G_N_ELEMENTS(order);i++) if(ad_metadata_array_set_tag_postion(tags, order[i], p)) p++;
+
+			nfo->meta_data = tags;
+		}else
+			g_ptr_array_free(tags, true);
+	}
+	return 0;
 }
 
 void *ad_open_ffmpeg(const char *fn, struct adinfo *nfo) {
@@ -80,13 +124,13 @@ void *ad_open_ffmpeg(const char *fn, struct adinfo *nfo) {
   priv->packet.size=0; priv->packet.data=NULL;
 
   if (avformat_open_input(&priv->formatContext, fn, NULL, NULL) <0) {
-    dbg(0, "ffmpeg is unable to open file '%s'.", fn);
+    dbg(1, "ffmpeg is unable to open file '%s'.", fn);
     free(priv); return(NULL);
   }
 
   if (avformat_find_stream_info(priv->formatContext, NULL) < 0) {
     avformat_close_input(&priv->formatContext);
-    dbg(0, "av_find_stream_info failed" );
+    dbg(1, "av_find_stream_info failed" );
     free(priv); return(NULL);
   }
 
@@ -99,7 +143,7 @@ void *ad_open_ffmpeg(const char *fn, struct adinfo *nfo) {
     }
   }
   if (priv->audioStream == -1) {
-    dbg(0, "No Audio Stream found in file");
+    dbg(1, "No Audio Stream found in file");
     avformat_close_input(&priv->formatContext);
     free(priv); return(NULL);
   }
@@ -109,11 +153,11 @@ void *ad_open_ffmpeg(const char *fn, struct adinfo *nfo) {
 
   if (priv->codec == NULL) {
     avformat_close_input(&priv->formatContext);
-    dbg(0, "Codec not supported by ffmpeg");
+    dbg(1, "Codec not supported by ffmpeg");
     free(priv); return(NULL);
   }
   if (avcodec_open2(priv->codecContext, priv->codec, NULL) < 0) {
-    dbg(0, "avcodec_open failed" );
+    dbg(1, "avcodec_open failed" );
     free(priv); return(NULL);
   }
 
@@ -129,7 +173,7 @@ void *ad_open_ffmpeg(const char *fn, struct adinfo *nfo) {
   priv->length     = (int64_t)( len * priv->samplerate / AV_TIME_BASE );
 
   if (ad_info_ffmpeg((void*)priv, nfo)) {
-    dbg(0, "invalid file info (sample-rate==0)");
+    dbg(1, "invalid file info (sample-rate==0)");
     free(priv); return(NULL);
   }
 
@@ -166,7 +210,7 @@ ssize_t ad_read_ffmpeg(void *sf, float* d, size_t len) {
   int written = 0;
   int ret = 0;
   while (ret >= 0 && written < frames) {
-    dbg(3,"loop: %i/%i (bl:%lu)",written, frames, priv->m_tmpBufferLen );
+    dbg(3, "loop: %i/%i (bl:%lu)",written, frames, priv->m_tmpBufferLen );
     if (priv->seek_frame == 0 && priv->m_tmpBufferLen > 0 ) {
       int s = MIN(priv->m_tmpBufferLen / priv->channels, frames - written );
       int16_to_float(priv->m_tmpBufferStart, d, priv->channels, s , written);
@@ -183,7 +227,7 @@ ssize_t ad_read_ffmpeg(void *sf, float* d, size_t len) {
       if (!priv->pkt_ptr || priv->pkt_len <1 ) {
         if (priv->packet.data) av_free_packet(&priv->packet);
         ret = av_read_frame(priv->formatContext, &priv->packet);
-        if (ret<0) { dbg(0, "reached end of file."); break; }
+        if (ret<0) { dbg(1, "reached end of file."); break; }
         priv->pkt_len = priv->packet.size;
         priv->pkt_ptr = priv->packet.data;
       }

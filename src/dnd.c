@@ -118,7 +118,7 @@ drag_received(GtkWidget *widget, GdkDragContext *drag_context, gint x, gint y,
 
         if (do_progress(0,0)) break;
         if(is_dir(uri)) add_dir(uri, &added_count);
-        else if(add_file(uri)) added_count++;
+        else if(application_add_file(uri)) added_count++;
 
         g_free(uri_unescaped);
       }

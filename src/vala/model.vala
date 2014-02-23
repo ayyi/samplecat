@@ -17,20 +17,65 @@ using Samplecat;
 namespace Samplecat
 {
 
+public class Filter
+{
+	public char*  name;
+	public string value;
+
+	public signal void changed();
+
+	public Filter(char* _name)
+	{
+		name = _name;
+	}
+
+	public void set_value(char* val)
+	{
+		value = (string)val;
+		changed();
+	}
+}
+
 public struct Filters
 {
-	char       phrase[256]; // XXX TODO increase to PATH_MAX
-	char*      dir;
-	char*      category;
+	Filter*    search;
+	Filter*    dir;
+	Filter*    category;
+}
+
+public class Idle
+{
+	uint id = 0;
+	SourceFunc fn;
+
+	public Idle(SourceFunc _fn)
+	{
+		fn = _fn;
+	}
+
+	public void queue()
+	{
+		if(!(bool)id){
+			id = GLib.Idle.add(() => {
+				fn();
+				id = 0;
+				return false;
+			});
+		}
+	}
 }
 
 public class Model : GLib.Object
 {
 	public int state = 0;
-	public char* cache_dir;
+	public char* cache_dir; // this belongs in Application?
 	public Filters filters;
+	public GLib.List<Filter*> filters_;
 	public Sample* selection;
 
+	private Idle idle;
+
+	public signal void dir_list_changed();
 	public signal void selection_changed(Sample* sample);
 	public signal void sample_changed(Sample* sample, int what, void* data);
 
@@ -42,16 +87,34 @@ public class Model : GLib.Object
 	{
 		state = 1; //dummy
 		cache_dir = Path.build_filename(Environment.get_home_dir(), ".config", PACKAGE, "cache", null);
-//		filters.phrase[0] = '\0';
+
+		idle = new Idle(() => {
+			dir_list_changed();
+			return false;
+		});
+	}
+
+	public bool add()
+	{
+		// TODO actually add something
+
+		idle.queue();
+
+		return true;
+	}
+
+	public bool remove(int id)
+	{
+		idle.queue();
+
+		return Backend.remove(id);
 	}
 
 	public void set_search_dir(char* dir)
 	{
-		//this doesnt actually do the search. When calling, follow with do_search() if neccesary.
+		//if string is empty, all directories are shown
 
-		//if string is empty, we show all directories?
-
-		app.model->filters.dir = dir;
+		filters.dir->set_value(dir);
 	}
 
 	public void set_selection(Sample* sample)
@@ -64,6 +127,11 @@ public class Model : GLib.Object
 
 			selection_changed(selection);
 		}
+	}
+
+	public void add_filter(Filter* filter)
+	{
+		filters_.prepend(filter);
 	}
 }
 }

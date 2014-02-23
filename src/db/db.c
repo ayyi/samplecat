@@ -1,19 +1,13 @@
-/*
-  This file is part of Samplecat. http://samplecat.orford.org
-  copyright (C) 2007-2012 Tim Orford and others.
-
-  This program is free software; you can redistribute it and/or modify
-  it under the terms of the GNU General Public License version 3
-  as published by the Free Software Foundation.
-
-  This program is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License
-  along with this program; if not, write to the Free Software
-  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+/**
+* +----------------------------------------------------------------------+
+* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
+* | copyright (C) 2007-2014 Tim Orford <tim@orford.org> and others       |
+* +----------------------------------------------------------------------+
+* | This program is free software; you can redistribute it and/or modify |
+* | it under the terms of the GNU General Public License version 3       |
+* | as published by the Free Software Foundation.                        |
+* +----------------------------------------------------------------------+
+*
 */
 #define _GNU_SOURCE
 #include "config.h"
@@ -25,6 +19,7 @@
 #include <gdk-pixbuf/gdk-pixdata.h>
 #include "typedefs.h"
 #include "debug/debug.h"
+#include "application.h"
 #include "sample.h"
 #ifdef USE_MYSQL
 #include "db/mysql.h"
@@ -61,13 +56,7 @@ samplecat_set_backend(BackendType type)
 			break;
 		case BACKEND_SQLITE:
 			#ifdef USE_SQLITE
-			backend.search_iter_new  = sqlite__search_iter_new;
-			backend.search_iter_next = sqlite__search_iter_next;
-			backend.search_iter_free = sqlite__search_iter_free;
-
-			backend.dir_iter_new     = sqlite__dir_iter_new;
-			backend.dir_iter_next    = sqlite__dir_iter_next;
-			backend.dir_iter_free    = sqlite__dir_iter_free;
+			sqlite__set_as_backend(&backend);
 
 			backend.insert           = sqlite__insert;
 			backend.remove           = sqlite__delete_row;
@@ -111,6 +100,13 @@ samplecat_set_backend(BackendType type)
 		default:
 			break;
 	}
+	backend.init(app->model,
+#ifdef USE_MYSQL
+		&app->config.mysql
+#else
+		NULL
+#endif
+	);
 	return true;
 }
 

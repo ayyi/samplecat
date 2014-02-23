@@ -9,23 +9,11 @@
 * +----------------------------------------------------------------------+
 *
 */
-#ifndef __inspector_h__
-#define __inspector_h__
+#ifndef __directories_h__
+#define __directories_h__
 #include <gtk/gtk.h>
 #include "typedefs.h"
 
-GtkWidget* inspector_new                  ();
-void       inspector_free                 (Inspector*);
-
-struct _inspector
-{
-	GtkWidget*     widget;     //scrollwin
-	gboolean       show_waveform;
-	int            preferred_height;
-#ifndef USE_GDL
-	int            user_height;
-#endif
-	InspectorPriv* priv;
-};
+GtkWidget* dir_panel_new();
 
 #endif

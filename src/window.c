@@ -25,7 +25,6 @@
 #include "debug/debug.h"
 #include "file_manager.h"
 #include "file_manager/menu.h"
-#include "dir_tree/view_dir_tree.h"
 #include "gimp/gimpaction.h"
 #include "gimp/gimpactiongroup.h"
 #include "typedefs.h"
@@ -46,21 +45,12 @@
 #include "waveform/view.h"
 #endif
 #endif
-#ifndef NO_USE_DEVHELP_DIRTREE
-#include "dh_link.h"
-#include "dh_tree.h"
-#else
-#include "dir_tree.h"
-#endif
 #ifdef HAVE_FFTW3
 #ifdef USE_OPENGL
 #include "gl_spectrogram_view.h"
 #else
 #include "spectrogram_widget.h"
 #endif
-#endif
-#ifdef USE_MYSQL
-#include "db/mysql.h"
 #endif
 #include "colour_box.h"
 #include "rotator.h"
@@ -74,6 +64,7 @@
 
 extern Filer      filer;
 extern GList*     themes; 
+extern SamplecatBackend backend;
  
 extern void       view_details_dnd_get            (GtkWidget*, GdkDragContext*, GtkSelectionData*, guint info, guint time, gpointer data);
 
@@ -91,7 +82,6 @@ static void       menu__add_to_db                 (GtkMenuItem*, gpointer);
 static void       menu__add_dir_to_db             (GtkMenuItem*, gpointer);
 static void       menu__play                      (GtkMenuItem*, gpointer);
 static void       make_menu_actions               (struct _accel[], int, void (*add_to_menu)(GtkAction*));
-static gboolean   on_dir_tree_link_selected       (GObject*, DhLink*, gpointer);
 #ifndef USE_GDL
 static GtkWidget* message_panel__new              ();
 #endif
@@ -130,6 +120,7 @@ struct _window {
 
 typedef enum {
    PANEL_TYPE_LIBRARY,
+   PANEL_TYPE_SEARCH,
    PANEL_TYPE_FILTERS,
    PANEL_TYPE_INSPECTOR,
    PANEL_TYPE_DIRECTORIES,
@@ -144,7 +135,8 @@ typedef enum {
 
 typedef GtkWidget* (NewPanelFn)();
 
-static NewPanelFn spectrogram_new, waveform_panel_new, filter_new, make_fileview_pane, dir_panel_new;
+static NewPanelFn spectrogram_new, waveform_panel_new, search_new, filters_new, make_fileview_pane;
+extern NewPanelFn dir_panel_new;
 
 typedef struct {
    char        name[16];
@@ -158,7 +150,8 @@ typedef struct {
 
 Panel_ panels[] = {
    {"Library",     listview__new},
-   {"Filters",     filter_new},
+   {"Search",      search_new},
+   {"Filters",     filters_new},
    {"Inspector",   inspector_new},
    {"Directories", dir_panel_new},
    {"Filemanager", make_fileview_pane},
@@ -197,17 +190,7 @@ static GtkAccelGroup* accel_group = NULL;
 const char* preferred_width = "preferred-width";
 const char* preferred_height = "preferred-height";
 
-#ifdef USE_GDL
-#define PACK(widget, position, width, height, id, name, D) \
-	{ \
-	dbg(1, "PACK %s", id); \
-	GtkWidget* dock_item = gdl_dock_item_new (id, name, GDL_DOCK_ITEM_BEH_LOCKED); \
-	gtk_container_add(GTK_CONTAINER(dock_item), widget); \
-	g_object_set(dock_item, preferred_width, width, NULL); \
-	if(height > 0) g_object_set(dock_item, preferred_height, height, NULL); \
-	gdl_dock_add_item(GDL_DOCK(window.dock), GDL_DOCK_ITEM(dock_item), position); \
-	}
-#else
+#ifndef USE_GDL
 #define PACK(widget, position, width, height, id, name, D) \
 	if(GTK_IS_BOX(D)) \
 		gtk_box_pack_start(GTK_BOX(D), widget, EXPAND_FALSE, FILL_FALSE, 0); \
@@ -287,7 +270,7 @@ GtkWindow
 	gtk_container_add(GTK_CONTAINER(app->window), window.vbox);
 
 #ifndef USE_GDL
-	GtkWidget* filter = filter_new();
+	GtkWidget* filter = search_new();
 
 	//alignment to give top border to main hpane.
 	GtkWidget* align1 = gtk_alignment_new(0.0, 0.0, 1.0, 1.0);
@@ -341,7 +324,7 @@ GtkWindow
 	//int library_height = MAX(100, height - default_heights.filters - default_heights.file - default_heights.waveform);
 	PACK(app->libraryview->scroll, GDL_DOCK_TOP, -1, library_height, "library", "Library", r_vpaned);
 	// this addition sets the dock to be wider than the left column. the height is set to be small so that the height will be determined by the requisition.
-	PACK(filter, GDL_DOCK_TOP, left_column_width + 5, 10, "filters", "Filters", window.vbox);
+	PACK(filter, GDL_DOCK_TOP, left_column_width + 5, 10, "search", "Search", window.vbox);
 
 	gtk_box_reorder_child((GtkBox*)window.vbox, filter, 0);
 
@@ -402,6 +385,10 @@ GtkWindow
 					else {
 						gtk_container_add(GTK_CONTAINER(item), panel->widget = panel->new());
 						switch(i){
+							case PANEL_TYPE_SEARCH:
+																											dbg(0, "setting resize... TODO");
+								g_object_set(item, "resize", false, NULL); // unfortunately gdl-dock does not make any use of this property.
+								break;
 #ifdef HAVE_FFTW3
 							case PANEL_TYPE_SPECTROGRAM:
 								show_spectrogram(true);
@@ -431,12 +418,12 @@ GtkWindow
 	}
 #endif
 
+#ifndef USE_GDL
 #ifdef HAVE_FFTW3
 	if(app->view_options[SHOW_SPECTROGRAM].value){
 		show_spectrogram(true);
-
-		//gtk_widget_set_no_show_all(app->spectrogram, true);
 	}
+#endif
 #endif
 
 	{
@@ -492,11 +479,43 @@ GtkWindow
 	g_signal_connect((gpointer)app, "on-quit", G_CALLBACK(window_on_quit), NULL);
 #endif
 
+	void store_content_changed(GtkListStore* store, gpointer data)
+	{
+		int n_results = backend.n_results;
+		int row_count = ((SamplecatListStore*)store)->row_count;
+
+		if(0 && row_count < MAX_DISPLAY_ROWS){
+			statusbar_print(1, "%i samples found.", row_count);
+		}else if(!row_count){
+			statusbar_print(1, "no samples found. filters: dir=%s", app->model->filters.dir->value);
+		}else if (n_results < 0) {
+			statusbar_print(1, "showing %i sample(s)", row_count);
+		}else{
+			statusbar_print(1, "showing %i of %i sample(s)", row_count, n_results);
+		}
+	}
+	g_signal_connect(G_OBJECT(app->store), "content-changed", G_CALLBACK(store_content_changed), NULL);
+
 	dnd_setup();
 
 	window_on_layout_changed();
 
-	return TRUE;
+	bool window_on_clicked(GtkWidget* widget, GdkEventButton* event, gpointer user_data)
+	{
+		if(event->button == 3){
+			if(app->context_menu){
+				gtk_menu_popup(GTK_MENU(app->context_menu),
+				               NULL, NULL,  // parents
+				               NULL, NULL,  // fn and data used to position the menu.
+				               event->button, event->time);
+				return HANDLED;
+			}
+		}
+		return NOT_HANDLED;
+	}
+	g_signal_connect((gpointer)app->window, "button-press-event", G_CALLBACK(window_on_clicked), NULL);
+
+	return true;
 }
 
 
@@ -589,7 +608,12 @@ window_on_configure(GtkWidget* widget, GdkEventConfigure* event, gpointer user_d
 	if(!window_size_set){
 		//take the window size from the config file, or failing that, from the treeview requisition.
 		int width = atoi(app->config.window_width);
+#ifdef USE_GDL
+		// panels not yet created, so widget requisition cannot be used.
+		if(!width) width = 640;
+#else
 		if(!width) width = app->libraryview->widget->requisition.width + SCROLLBAR_WIDTH_HACK;
+#endif
 		int window_height = atoi(app->config.window_height);
 		if(!window_height) window_height = 480; //MIN(app->libraryview->widget->requisition.height, 900);  -- ignore the treeview height, is meaningless
 
@@ -611,11 +635,11 @@ window_on_configure(GtkWidget* widget, GdkEventConfigure* event, gpointer user_d
 
 #ifdef USE_GDL
 		window_load_layout();
-#endif
-
+#else
 		if(app->view_options[SHOW_PLAYER].value && panels[PANEL_TYPE_PLAYER].widget){
 			show_player(true);
 		}
+#endif
 
 #ifdef USE_GDL
 		bool window_activate_layout(gpointer data)
@@ -631,9 +655,8 @@ window_on_configure(GtkWidget* widget, GdkEventConfigure* event, gpointer user_d
 			return TIMER_STOP;
 		}
 		window_activate_layout(NULL);
-
-		app->context_menu = make_context_menu();
 #endif
+		app->context_menu = make_context_menu();
 	}
 
 	return false;
@@ -711,54 +734,6 @@ make_fileview_pane()
 }
 
 
-static GtkWidget*
-dir_panel_new()
-{
-	GtkWidget* widget = NULL;
-
-	GtkWidget* _dir_tree_new()
-	{
-		//data:
-		update_dir_node_list();
-
-		//view:
-	#ifndef NO_USE_DEVHELP_DIRTREE
-		app->dir_treeview = dh_book_tree_new(&app->dir_tree);
-	#else
-		app->dir_treeview = dir_tree_new(&app->dir_tree);
-	#endif
-
-		return app->dir_treeview;
-	}
-
-	if(!BACKEND_IS_NULL){
-#ifndef NO_USE_DEVHELP_DIRTREE
-		GtkWidget* tree = _dir_tree_new();
-		widget = window.dir_tree = scrolled_window_new();
-		gtk_container_add((GtkContainer*)window.dir_tree, tree);
-		g_signal_connect(tree, "link-selected", G_CALLBACK(on_dir_tree_link_selected), NULL);
-#else
-		GtkWidget* tree = _dir_tree_new();
-		widget = scrolled_window_new();
-		gtk_container_add((GtkContainer*)widget, tree);
-#endif
-	}
-
-	//alternative dir tree:
-#ifdef USE_NICE_GQVIEW_CLIST_TREE
-	if(false){
-		ViewDirList* dir_list = vdlist_new(app->home_dir);
-		GtkWidget* tree = dir_list->widget;
-	}
-	gint expand = TRUE;
-	ViewDirTree* dir_list = vdtree_new(app->home_dir, expand);
-	widget = dir_list->widget;
-#endif
-
-	return widget;
-}
-
-
 #ifndef USE_GDL
 static void
 left_pane2()
@@ -824,7 +799,7 @@ left_pane2()
 
 
 static GtkWidget*
-filter_new()
+search_new()
 {
 	//search box and tagging
 	PF;
@@ -848,20 +823,26 @@ filter_new()
 	{
 		PF;
 		const gchar* text = gtk_entry_get_text(GTK_ENTRY(app->search));
-		if(strcmp(text, app->model->filters.phrase)){
-			strncpy(app->model->filters.phrase, text, 255);
-			do_search(app->model->filters.phrase, app->model->filters.dir);
+		if(!app->model->filters.search->value || strcmp(text, app->model->filters.search->value)){
+			samplecat_filter_set_value(app->model->filters.search, g_strdup(text));
 		}
 		return NOT_HANDLED;
 	}
 
+	SamplecatFilter* filter = app->model->filters.search;
 	GtkWidget* entry = app->search = gtk_entry_new();
 	gtk_entry_set_max_length(GTK_ENTRY(entry), 64);
-	gtk_entry_set_text(GTK_ENTRY(entry), app->model->filters.phrase);
+	if(filter->value) gtk_entry_set_text(GTK_ENTRY(entry), filter->value);
 	gtk_box_pack_start(GTK_BOX(row1), entry, EXPAND_TRUE, TRUE, 0);
 	g_signal_connect(G_OBJECT(entry), "focus-out-event", G_CALLBACK(on_focus_out), NULL);
 	gtk_entry_set_activates_default(GTK_ENTRY(entry), TRUE);
 	g_signal_connect(G_OBJECT(entry), "activate", G_CALLBACK(on_focus_out), NULL);
+
+	void on_search_filter_changed(GObject* _filter, gpointer _entry)
+	{
+		gtk_entry_set_text(GTK_ENTRY(_entry), ((SamplecatFilter*)_filter)->value);
+	}
+	g_signal_connect(filter, "changed", G_CALLBACK(on_search_filter_changed), entry);
 
 	//----------------------------------------------------------------------
 
@@ -889,6 +870,62 @@ filter_new()
 	tag_selector_new();
 
 	return filter_vbox;
+}
+
+
+#warning TODO buttons are too wide when a long filter setting is active.
+static GtkWidget*
+filters_new()
+{
+	static GHashTable* buttons; buttons = g_hash_table_new(NULL, NULL);
+
+	GtkWidget* hbox = gtk_hbox_new(FALSE, 2);
+
+	GList* l = app->model->filters_;
+	for(;l;l=l->next){
+		SamplecatFilter* filter = l->data;
+		dbg(2, "  %s %s", filter->name, filter->value);
+
+		char* text = g_strdup_printf("%s: %s", filter->name, filter->value ? filter->value : "");
+		GtkWidget* button = gtk_button_new_with_label(text);
+		g_free(text);
+		gtk_box_pack_start(GTK_BOX(hbox), button, EXPAND_FALSE, FALSE, 0);
+		gtk_widget_set_no_show_all(button, !(filter->value && strlen(filter->value)));
+
+		GtkWidget* icon = gtk_image_new_from_stock(GTK_STOCK_CLOSE, GTK_ICON_SIZE_MENU);
+		gtk_misc_set_padding((GtkMisc*)icon, 4, 0);
+		gtk_button_set_image(GTK_BUTTON(button), icon);
+		gtk_widget_set(button, "image-position", GTK_POS_RIGHT, NULL);
+
+		g_hash_table_insert(buttons, filter, button);
+
+		void on_filter_button_clicked(GtkButton* button, gpointer _filter)
+		{
+			samplecat_filter_set_value((SamplecatFilter*)_filter, "");
+		}
+
+		g_signal_connect(button, "clicked", G_CALLBACK(on_filter_button_clicked), filter);
+
+		void set_label(SamplecatFilter* filter, GtkWidget* button)
+		{
+			if(button){
+				char* text = g_strdup_printf("%s: %s", filter->name, filter->value);
+				gtk_button_set_label((GtkButton*)button, text);
+				g_free(text);
+				show_widget_if(button, filter->value && strlen(filter->value));
+			}
+		}
+
+		void on_filter_changed(GObject* _filter, gpointer user_data)
+		{
+			SamplecatFilter* filter = (SamplecatFilter*)_filter;
+			dbg(1, "filter=%s value=%s", filter->name, filter->value);
+			set_label(filter, g_hash_table_lookup(buttons, filter));
+		}
+
+		g_signal_connect(filter, "changed", G_CALLBACK(on_filter_changed), NULL);
+	}
+	return hbox;
 }
 
 
@@ -982,14 +1019,9 @@ tagshow_selector_new()
 		//update the sample list with the new view-category.
 		PF;
 
-		if (app->model->filters.category){ g_free(app->model->filters.category); app->model->filters.category = NULL; }
 		char* category = gtk_combo_box_get_active_text(GTK_COMBO_BOX(window.view_category));
-		if (strcmp(category, ALL_CATEGORIES)){
-			app->model->filters.category = category;
-		}
-		else g_free(category);
-
-		do_search(app->model->filters.phrase, app->model->filters.dir);
+		if (!strcmp(category, ALL_CATEGORIES)) g_free0(category);
+		samplecat_filter_set_value(app->model->filters.category, category);
 	}
 	g_signal_connect(combo, "changed", G_CALLBACK(on_view_category_changed), NULL);
 
@@ -1052,7 +1084,7 @@ menu__add_to_db(GtkMenuItem* menuitem, gpointer user_data)
 		if(view_get_selected(filer.view, &iter)){
 			gchar* filepath = g_build_filename(filer.real_path, item->leafname, NULL);
 			if(do_progress(0, 0)) break;
-			add_file(filepath);
+			application_add_file(filepath);
 			g_free(filepath);
 		}
 	}
@@ -1120,24 +1152,8 @@ make_menu_actions(struct _accel keys[], int count, void (*add_to_menu)(GtkAction
 }
 
 
-static gboolean
-on_dir_tree_link_selected(GObject *ignored, DhLink *link, gpointer data)
-{
-	g_return_val_if_fail(link, false);
-
-	dbg(1, "dir=%s", link->uri);
-
-	samplecat_model_set_search_dir (app->model, link->uri);
-
-	const gchar* text = app->search ? gtk_entry_get_text(GTK_ENTRY(app->search)) : "";
-	do_search((gchar*)text, link->uri);
-
-	return FALSE;
-}
-
-
 static void
-on_category_set_clicked(GtkComboBox *widget, gpointer user_data)
+on_category_set_clicked(GtkComboBox* widget, gpointer user_data)
 {
 	// add selected category to selected samples.
 
@@ -1147,12 +1163,12 @@ on_category_set_clicked(GtkComboBox *widget, gpointer user_data)
 
 	GtkTreeSelection* selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(app->libraryview->widget));
 	GList* selectionlist = gtk_tree_selection_get_selected_rows(selection, NULL);
-	if(!selectionlist){ dbg(0, "no files selected."); statusbar_print(1, "no files selected."); return; }
+	if(!selectionlist){ statusbar_print(1, "no files selected."); return; }
 
 	int i;
 	GtkTreeIter iter;
 	for(i=0;i<g_list_length(selectionlist);i++){
-		GtkTreePath *treepath_selection = g_list_nth_data(selectionlist, i);
+		GtkTreePath* treepath_selection = g_list_nth_data(selectionlist, i);
 
 		if(gtk_tree_model_get_iter(GTK_TREE_MODEL(app->store), &iter, treepath_selection)){
 			gchar* fname; gchar* tags;
@@ -1170,8 +1186,9 @@ on_category_set_clicked(GtkComboBox *widget, gpointer user_data)
 					g_strstrip(tags_new);//trim
 
 					listmodel__update_by_tree_iter(&iter, COL_KEYWORDS, (void*)tags_new);
+
+					statusbar_print(1, "category set");
 				}else{
-					dbg(1, "keyword is a dupe - not applying.");
 					statusbar_print(1, "ignoring duplicate keyword.");
 				}
 			}
@@ -1231,12 +1248,17 @@ show_waveform(gboolean enable)
 
 		bool redisplay(gpointer _view)
 		{
+
+#ifdef USE_GDL
+			if(gdl_dock_item_is_active((GdlDockItem*)panels[PANEL_TYPE_WAVEFORM].dock_item)){
+#else
 #ifdef USE_LIBASS
 			WaveformViewPlus* view = (WaveformViewPlus*)_view;
 #else
 			WaveformView* view = (WaveformView*)_view;
 #endif
 			if(!view->waveform && app->view_options[SHOW_WAVEFORM].value){
+#endif
 				show_waveform(true);
 			}
 			timer = 0;
@@ -1454,9 +1476,9 @@ window_on_layout_changed()
 			int tot_height = window.vpaned->allocation.height;
 			int max_auto_height = tot_height / 2;
 			dbg(1, "inspector_height=%i tot=%i", widget->allocation.height, tot_height);
-			if(widget->allocation.height < app->inspector->min_height
+			if(widget->allocation.height < app->inspector->preferred_height
 					&& widget->allocation.height < max_auto_height){
-				int inspector_height = MIN(max_auto_height, app->inspector->min_height);
+				int inspector_height = MIN(max_auto_height, app->inspector->preferred_height);
 				dbg(1, "setting height : %i/%i", tot_height - inspector_height, inspector_height);
 				gtk_paned_set_position(GTK_PANED(window.vpaned), tot_height - inspector_height);
 			}
@@ -1603,12 +1625,11 @@ make_context_menu()
 	menu_update_rows(GtkWidget* widget, gpointer user_data)
 	{
 		PF;
-		GtkTreeModel* model = GTK_TREE_MODEL(app->store);
-		gboolean force_update = (GPOINTER_TO_INT(user_data)==2) ? true : false; // NOTE - linked to order in _menu_def[]
+		gboolean force_update = true; //(GPOINTER_TO_INT(user_data)==2) ? true : false; // NOTE - linked to order in _menu_def[]
 
 		GtkTreeSelection* selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(app->libraryview->widget));
-		GList* selectionlist = gtk_tree_selection_get_selected_rows(selection, &(model));
-		if(!selectionlist){ perr("no files selected?\n"); return; }
+		GList* selectionlist = gtk_tree_selection_get_selected_rows(selection, NULL);
+		if(!selectionlist) return;
 		dbg(2, "%i rows selected.", g_list_length(selectionlist));
 
 		int i;
@@ -1621,12 +1642,7 @@ make_context_menu()
 			sample_unref(sample);
 		}
 		hide_progress();
-		//g_list_free(selectionlist);
-#warning TODO selectionlist should be freed.
-		/*
-		g_list_foreach (list, (GFunc) gtk_tree_path_free, NULL);
-		g_list_free (list);
-		*/
+		g_list_free(selectionlist);
 	}
 
 	void menu_play_all(GtkWidget* widget, gpointer user_data)
@@ -1655,7 +1671,7 @@ make_context_menu()
 	MenuDef _menu_def[] = {
 		{"Delete",         G_CALLBACK(menu_delete_row),         GTK_STOCK_DELETE,      true},
 		{"Update",         G_CALLBACK(menu_update_rows),        GTK_STOCK_REFRESH,     true},
-	#if 0 // what? is the same as above
+	#if 0 // force is now the default update. Is there a use case for 2 choices?
 		{"Force Update",   G_CALLBACK(update_rows),             GTK_STOCK_REFRESH,     true},
 	#endif
 		{"Reset Colours",  G_CALLBACK(listview__reset_colours), GTK_STOCK_OK,          true},
@@ -1667,7 +1683,9 @@ make_context_menu()
 		{"Stop Playback",  G_CALLBACK(menu_play_stop),          GTK_STOCK_MEDIA_STOP,  true},
 		{"",                                                                               },
 		{"View",           G_CALLBACK(NULL),                    GTK_STOCK_PREFERENCES, true},
+	#ifdef USE_GDL
 		{"Layouts",        G_CALLBACK(NULL),                    GTK_STOCK_PROPERTIES,  true},
+	#endif
 		{"Prefs",          G_CALLBACK(NULL),                    GTK_STOCK_PREFERENCES, true},
 	};
 
@@ -1682,7 +1700,11 @@ make_context_menu()
 	gtk_menu_item_set_submenu(GTK_MENU_ITEM(last->data), sub);
 
 	{
+#ifdef USE_GDL
 		GtkWidget* view = last->prev->prev->data;
+#else
+		GtkWidget* view = last->prev->data;
+#endif
 
 		GtkWidget* sub = gtk_menu_new();
 		gtk_menu_item_set_submenu(GTK_MENU_ITEM(view), sub);
@@ -1781,7 +1803,10 @@ make_context_menu()
 
 			GList* layouts = gdl_dock_layout_get_layouts (window.layout, false);
 			GList* l = layouts;
-			for(;l;l=l->next) add_item(GTK_MENU_SHELL(sub), l->data, (GCallback)layout_activate, NULL);
+			for(;l;l=l->next){
+				add_item(GTK_MENU_SHELL(sub), l->data, (GCallback)layout_activate, NULL);
+				g_free(l->data);
+			}
 			g_list_free(layouts);
 
 			gtk_menu_shell_append (GTK_MENU_SHELL(sub), gtk_separator_menu_item_new());

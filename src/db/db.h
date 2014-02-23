@@ -12,7 +12,7 @@ struct _backend
 
 	void             (*init)             (SamplecatModel*, void* config);
 
-	gboolean         (*search_iter_new)  (char* search, char* dir, const char* category, int* n_results);
+	gboolean         (*search_iter_new)  (char* dir, const char* category, int* n_results);
 	Sample*          (*search_iter_next) (unsigned long**);
 	void             (*search_iter_free) ();
 
@@ -31,6 +31,8 @@ struct _backend
 	gboolean         (*update_blob)      (int, const char*, const guint8*, const guint);
 
 	void             (*disconnect)       ();
+
+	int              n_results;
 };
 
 #define BACKEND_IS_NULL (backend.search_iter_new == NULL)

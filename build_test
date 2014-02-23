@@ -63,6 +63,7 @@ get_tarball && \
 	compile && \
 	compile --enable-debug && \
 	compile --disable-mysql && \
+	compile --disable-dock && \
 	compile --disable-ffmpeg && \
 	compile --disable-gplayer && \
 	compile --disable-jack && \

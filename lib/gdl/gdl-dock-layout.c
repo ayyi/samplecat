@@ -1381,7 +1381,8 @@ gdl_dock_layout_save_to_file (GdlDockLayout *layout,
 
     file_handle = fopen (filename, "w");
     if (file_handle) {
-        bytes = xmlDocDump (file_handle, layout->_priv->doc);
+        //bytes = xmlDocDump (file_handle, layout->_priv->doc);
+		bytes = xmlDocFormatDump (file_handle, layout->_priv->doc, 1); // upstream commit af2f60bcf8abfc9c56c781dbb3f3541b0532ca23 2013
         if (bytes >= 0) {
             layout->dirty = FALSE;
             g_object_notify (G_OBJECT (layout), "dirty");
@@ -1407,6 +1408,18 @@ gdl_dock_layout_is_dirty (GdlDockLayout *layout)
 
     return layout->dirty;
 };
+
+/**
+ * gdl_dock_layout_get_layouts:
+ * @layout: The layout item.
+ * @include_default: %TRUE to include the default layout.
+ *
+ * Get the list of layout names including or not the default layout.
+ *
+ * Returns: (element-type utf8) (transfer full): a #GList list
+ *  holding the layout names. You must first free each element in the list
+ *  with g_free(), then free the list itself with g_list_free().
+ */
 
 GList *
 gdl_dock_layout_get_layouts (GdlDockLayout *layout,

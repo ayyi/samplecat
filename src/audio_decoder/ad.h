@@ -2,15 +2,16 @@
 #define __AD_H__
 #include <unistd.h>
 #include <stdint.h>
+#include <glib.h>
 
 struct adinfo {
-	unsigned int sample_rate;
-	unsigned int channels;
-	int64_t length; //milliseconds
-	int64_t frames; //total number of frames (eg a frame for 16bit stereo is 4 bytes).
-	int     bit_rate;
-	int     bit_depth;
-	char *  meta_data;
+   unsigned int sample_rate;
+   unsigned int channels;
+   int64_t      length;       // milliseconds
+   int64_t      frames;       // total number of frames (eg a frame for 16bit stereo is 4 bytes).
+   int          bit_rate;
+   int          bit_depth;
+   GPtrArray*   meta_data;
 };
 
 /* global init function - register codecs */

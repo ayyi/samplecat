@@ -24,7 +24,6 @@
 #include "sample.h"
 #include "listview.h"
 #include "window.h"
-#include "inspector.h"
 #ifdef USE_TRACKER
   #include "src/db/db.h"
   #include "src/db/tracker.h"
@@ -33,13 +32,36 @@
   #include "jack_player.h"
 #endif
 
+#define USE_SIMPLE_TABLE
+#ifdef USE_SIMPLE_TABLE
+#include "table.h"
+#define gtk_table_new simple_table_new
+#define gtk_table_attach simple_table_attach
+#define gtk_table_get_size simple_table_get_size
+#define gtk_table_resize simple_table_resize
+#undef GTK_TABLE
+#define GTK_TABLE GTK_SIMPLE_TABLE
+#endif
+
+#include "inspector.h"
+
 #define N_EBUR_ROWS 8
+#define MARGIN_LEFT 5
 
 extern SamplecatModel*  model;
 extern int              debug;
 
+typedef struct
+{
+    GtkWidget*     first_child;
+    int            start;
+    int            n;
+} RowRange;
+
 struct _inspector_priv
 {
+	unsigned       row_id;
+
 	GtkWidget*     name;
 	GtkWidget*     image;
 	GtkWidget*     table;
@@ -55,18 +77,24 @@ struct _inspector_priv
 	GtkWidget*     bitrate;
 	GtkWidget*     bitdepth;
 	GtkWidget*     ebur0;     // first ebur item
-	GtkWidget*     metadata;
+	RowRange       meta;
+	GtkWidget*     vbox;
+	GtkWidget*     text;
+	GtkTextBuffer* notes;
+	GtkWidget*     edit;
+	GtkTreeRowReference* row_ref; // TODO remove
 };
 
 static void inspector_clear              ();
 static void inspector_update             (SamplecatModel*, Sample*, gpointer);
+static void inspector_set_labels         (Sample*);
 static void hide_fields                  ();
 static void show_fields                  ();
 static bool inspector_on_tags_clicked    (GtkWidget*, GdkEventButton*, gpointer);
 static bool on_notes_focus_out           (GtkWidget*, gpointer);
-static void inspector_on_notes_insert    (GtkTextView*, gchar* arg1, gpointer);
 static void tag_edit_start               (int);
 static void tag_edit_stop                (GtkWidget*, GdkEventCrossing*, gpointer);
+static void inspector_remove_rows        (int, int);
 
 
 GtkWidget*
@@ -78,25 +106,32 @@ inspector_new()
 
 	Inspector* inspector = app->inspector = g_new0(Inspector, 1);
 	InspectorPriv* i = inspector->priv = g_new0(InspectorPriv, 1);
-	inspector->min_height = 200; // more like preferred height, as the box can be smaller if there is no room for it.
+	inspector->preferred_height = 200;
 	inspector->show_waveform = true;
 
-	int margin_left = 5;
-
 	GtkWidget* scroll = inspector->widget = gtk_scrolled_window_new(NULL, NULL);
-	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll), GTK_POLICY_NEVER, GTK_POLICY_NEVER);
+	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
 
-	GtkWidget* vbox = inspector->vbox = gtk_vbox_new(FALSE, 0);
-	gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(scroll), vbox);
+	i->vbox = gtk_vbox_new(false, 0);
+	gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(scroll), i->vbox);
+
+	GtkWidget* label_new(const char* text)
+	{
+		GtkWidget* label = gtk_label_new(text);
+		gtk_misc_set_alignment(GTK_MISC(label), 0.0, 0.5);
+		gtk_widget_set_sensitive(label, false);
+		return label;
+	}
 
 	//left align the label:
 	GtkWidget* align1 = gtk_alignment_new(0.0, 0.5, 0.0, 0.0);
-	gtk_box_pack_start(GTK_BOX(vbox), align1, EXPAND_FALSE, FILL_FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(i->vbox), align1, EXPAND_FALSE, FILL_FALSE, 0);
 
 	// sample name:
-	GtkWidget* label1 = inspector->priv->name = gtk_label_new("");
-	gtk_misc_set_padding(GTK_MISC(label1), margin_left, 5);
-	gtk_container_add(GTK_CONTAINER(align1), label1);	
+	GtkWidget* label1 = i->name = label_new("");
+	gtk_label_set_ellipsize((GtkLabel*)label1, PANGO_ELLIPSIZE_MIDDLE);
+	gtk_misc_set_padding(GTK_MISC(i->name), MARGIN_LEFT, 5);
+	gtk_container_add(GTK_CONTAINER(align1), i->name);	
 
 	PangoFontDescription* pangofont = pango_font_description_from_string("Sans-Serif 18");
 	gtk_widget_modify_font(label1, pangofont);
@@ -106,8 +141,8 @@ inspector_new()
 
 	i->image = gtk_image_new_from_pixbuf(NULL);
 	gtk_misc_set_alignment(GTK_MISC(i->image), 0.0, 0.5);
-	gtk_misc_set_padding(GTK_MISC(i->image), margin_left, 2);
-	gtk_box_pack_start(GTK_BOX(vbox), i->image, EXPAND_FALSE, FILL_FALSE, 0);
+	gtk_misc_set_padding(GTK_MISC(i->image), MARGIN_LEFT, 2);
+	gtk_box_pack_start(GTK_BOX(i->vbox), i->image, EXPAND_FALSE, FILL_FALSE, 0);
 
 	struct _rows {
 		char*       description;
@@ -126,16 +161,16 @@ inspector_new()
 	};
 	int n_rows = G_N_ELEMENTS(rows);
 
-	GtkWidget* table = i->table = gtk_table_new(2, n_rows + N_EBUR_ROWS, HOMOGENOUS);
+	GtkWidget* table = i->table = gtk_table_new(n_rows/* + N_EBUR_ROWS*/ + 1, 3, HOMOGENOUS);
 
 	int s = 0;
 	//first two rows are special case - colspan=2
 
-	GtkWidget* label = i->filename = gtk_label_new("Filename");
-	gtk_misc_set_alignment(GTK_MISC(label), 0.0, 0.5);
-	gtk_misc_set_padding(GTK_MISC(label), margin_left, 0);
-	gtk_widget_set_size_request(label, 20, -1);
-	gtk_table_attach(GTK_TABLE(table), label, 0, 2, s, s+1, GTK_FILL, GTK_FILL, 0, 0);
+	GtkWidget* label = i->filename = label_new("Filename");
+	gtk_misc_set_padding(GTK_MISC(label), MARGIN_LEFT, 0);
+
+	gtk_label_set_ellipsize((GtkLabel*)i->filename, PANGO_ELLIPSIZE_MIDDLE);
+	gtk_table_attach(GTK_TABLE(table), label, 0, 3, s, s+1, GTK_FILL, GTK_FILL, 0, 0);
 	s++;
 
 	{
@@ -143,73 +178,64 @@ inspector_new()
 		i->tags_ev = gtk_event_box_new ();
 		g_signal_connect((gpointer)i->tags_ev, "button-release-event", G_CALLBACK(inspector_on_tags_clicked), NULL);
 
-		GtkWidget* label = i->tags = gtk_label_new("Tags");
-		gtk_misc_set_padding(GTK_MISC(label), margin_left, 0);
-		gtk_misc_set_alignment(GTK_MISC(label), 0.0, 0.5);
+		GtkWidget* label = i->tags = label_new("Tags");
+		gtk_misc_set_padding(GTK_MISC(label), MARGIN_LEFT, 0);
 		gtk_container_add(GTK_CONTAINER(i->tags_ev), label);
 		gtk_table_attach(GTK_TABLE(table), i->tags_ev, 0, 2, s, s+1, GTK_FILL, GTK_FILL, 0, 0);
 		s++;
 	}
 
 	for(;s<n_rows;s++){
-		GtkWidget* label = gtk_label_new(rows[s].description);
-		gtk_misc_set_padding(GTK_MISC(label), margin_left, 0);
-		gtk_misc_set_alignment(GTK_MISC(label), 0.0, 0.5);
-		gtk_table_attach(GTK_TABLE(table), label, 0, 1, s, s+1, GTK_FILL/* | GTK_EXPAND*/, GTK_FILL, 0, 0);
+		GtkWidget* label = label_new(rows[s].description);
+		gtk_misc_set_padding(GTK_MISC(label), MARGIN_LEFT, 0);
+		gtk_table_attach(GTK_TABLE(table), label, 0, 1, s+1, s+2, GTK_FILL, GTK_FILL, 0, 0);
 
-		label = *rows[s].widget = gtk_label_new("");
-		gtk_misc_set_alignment(GTK_MISC(label), 0.0, 0.5);
-		gtk_table_attach(GTK_TABLE(table), label, 1, 2, s, (s)+1, GTK_FILL/* | GTK_EXPAND*/, GTK_FILL, 0, 0);
+		label = *rows[s].widget = label_new("");
+		gtk_table_attach(GTK_TABLE(table), label, 1, 2, s+1, s+2, GTK_FILL, GTK_FILL, 0, 0);
 	}
 
-	GtkWidget* ebur_rows[N_EBUR_ROWS];
-	int r; for(r=s;r<N_EBUR_ROWS+s;r++){
-		GtkWidget* row00 = ebur_rows[r - s] = gtk_label_new("");
-		gtk_misc_set_alignment(GTK_MISC(row00), 0.0, 0.5);
-		gtk_misc_set_padding(GTK_MISC(row00), margin_left, 0);
-		gtk_table_attach(GTK_TABLE(table), row00, 0, 1, r, r+1, GTK_FILL, GTK_FILL, 0, 0);
-		GtkWidget* row01 = gtk_label_new("");
-		gtk_misc_set_alignment(GTK_MISC(row01), 0.0, 0.5);
-		gtk_table_attach(GTK_TABLE(table), row01, 1, 2, r, r+1, GTK_FILL, GTK_FILL, 0, 0);
-	}
-	gtk_box_pack_start(GTK_BOX(vbox), table, EXPAND_FALSE, FILL_FALSE, 0);
-	i->ebur0 = ebur_rows[0];
+	gtk_box_pack_start(GTK_BOX(i->vbox), table, EXPAND_FALSE, FILL_FALSE, 0);
 
-	GtkWidget* label11 = i->metadata = gtk_label_new("Meta-Data");
-	gtk_misc_set_padding(GTK_MISC(label11), margin_left, 2);
-	gtk_misc_set_alignment(GTK_MISC(label11), 0.0, 0.5);
-	gtk_box_pack_start(GTK_BOX(vbox), label11, EXPAND_FALSE, FILL_FALSE, 0);
+	{
+		// notes box:
 
-	// notes box:
+		i->text = gtk_text_view_new();
+		i->notes = gtk_text_view_get_buffer(GTK_TEXT_VIEW(i->text));
+		gtk_text_view_set_accepts_tab(GTK_TEXT_VIEW(i->text), false);
+		gtk_widget_set_sensitive(i->text, false);
 
-	GtkWidget* text1 = inspector->text = gtk_text_view_new();
-	inspector->notes = gtk_text_view_get_buffer(GTK_TEXT_VIEW(text1));
-	gtk_text_view_set_accepts_tab(GTK_TEXT_VIEW(text1), FALSE);
 #ifdef USE_TRACKER
-	if(BACKEND_IS_TRACKER){
-		gtk_widget_set_no_show_all(text1, true);
-	}
+		if(BACKEND_IS_TRACKER){
+			gtk_widget_set_no_show_all(i->text, true);
+		}
 #endif
-	g_signal_connect(G_OBJECT(text1), "focus-out-event", G_CALLBACK(on_notes_focus_out), NULL);
-	g_signal_connect(G_OBJECT(text1), "insert-at-cursor", G_CALLBACK(inspector_on_notes_insert), NULL);
-	gtk_box_pack_start(GTK_BOX(vbox), text1, FALSE, TRUE, 2);
+		g_signal_connect(G_OBJECT(i->text), "focus-out-event", G_CALLBACK(on_notes_focus_out), NULL);
+		gtk_box_pack_start(GTK_BOX(i->vbox), i->text, false, true, 2);
 
-	GValue gval = {0,};
-	g_value_init(&gval, G_TYPE_CHAR);
-	g_value_set_char(&gval, margin_left);
-	g_object_set_property(G_OBJECT(text1), "border-width", &gval);
+		GValue gval = {0,};
+		g_value_init(&gval, G_TYPE_CHAR);
+		g_value_set_char(&gval, MARGIN_LEFT);
+		g_object_set_property(G_OBJECT(i->text), "border-width", &gval);
 
-	gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(text1), GTK_WRAP_WORD_CHAR);
-	gtk_text_view_set_pixels_above_lines(GTK_TEXT_VIEW(text1), 5);
-	gtk_text_view_set_pixels_below_lines(GTK_TEXT_VIEW(text1), 5);
+		gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(i->text), GTK_WRAP_WORD_CHAR);
+		gtk_text_view_set_pixels_above_lines(GTK_TEXT_VIEW(i->text), 5);
+		gtk_text_view_set_pixels_below_lines(GTK_TEXT_VIEW(i->text), 5);
+	}
 
 	//invisible edit widget:
-	GtkWidget* edit = inspector->edit = gtk_entry_new();
+	GtkWidget* edit = i->edit = gtk_entry_new();
 	gtk_entry_set_max_length(GTK_ENTRY(edit), 64);
 	gtk_entry_set_text(GTK_ENTRY(edit), "");
-	g_object_ref(edit); //stops gtk deleting the unparented widget.
+	g_object_ref(edit); // stops gtk deleting the unparented widget.
 
 	g_signal_connect((gpointer)app->model, "selection-changed", G_CALLBACK(inspector_update), NULL);
+
+	void sample_changed(SamplecatModel* m, Sample* sample, int what, void* data, gpointer user_data)
+	{
+		if (sample->id == app->inspector->priv->row_id)
+			inspector_update(m, sample, NULL);
+	}
+	g_signal_connect((gpointer)app->model, "sample-changed", G_CALLBACK(sample_changed), NULL);
 
 	gtk_widget_set_size_request(inspector->widget, 20, 20);
 
@@ -218,9 +244,17 @@ inspector_new()
 	{
 	}
 
-	Idle* idle = idle_new(_inspector_on_layout_changed, GINT_TO_POINTER(6));
+	Idle* idle = idle_new(_inspector_on_layout_changed, NULL);
 	g_signal_connect(app, "layout-changed", (GCallback)idle->run, idle);
 #endif
+
+	void inspector_on_allocate(GtkWidget* win, GtkAllocation* allocation, gpointer user_data)
+	{
+		InspectorPriv* i = app->inspector->priv;
+		gtk_widget_set_size_request(i->filename, allocation->width -2, -1);
+		gtk_widget_set_size_request(i->name, allocation->width -2, -1);
+	}
+	g_signal_connect(G_OBJECT(scroll), "size-allocate", G_CALLBACK(inspector_on_allocate), NULL);
 
 	return scroll;
 }
@@ -234,13 +268,142 @@ inspector_free(Inspector* inspector)
 }
 
 
-void
+static void
+inspector_add_ebu_cells()
+{
+	Inspector* inspector = app->inspector;
+	InspectorPriv* i = inspector->priv;
+
+	#define SPACER_ROW 1
+	guint s = GTK_TABLE(i->table)->nrows;
+	gtk_table_resize(GTK_TABLE(i->table), s + SPACER_ROW + N_EBUR_ROWS, 3);
+
+	GtkWidget* ebur_rows[N_EBUR_ROWS];
+	int r; for(r=s+SPACER_ROW;r<N_EBUR_ROWS+s+SPACER_ROW;r++){
+		GtkWidget* row00 = ebur_rows[r - s - SPACER_ROW] = gtk_label_new("");
+		gtk_misc_set_alignment(GTK_MISC(row00), 0.0, 0.5);
+		gtk_misc_set_padding(GTK_MISC(row00), MARGIN_LEFT, 0);
+		gtk_table_attach(GTK_TABLE(i->table), row00, 0, 1, r, r+1, GTK_FILL, GTK_FILL, 0, 0);
+
+		GtkWidget* row01 = gtk_label_new("");
+		gtk_misc_set_alignment(GTK_MISC(row01), 1.0, 0.5);
+		gtk_table_attach(GTK_TABLE(i->table), row01, 1, 2, r, r+1, GTK_FILL, GTK_FILL, 0, 0);
+	}
+	i->ebur0 = ebur_rows[0];
+	i->meta.start = r + SPACER_ROW;
+	gtk_widget_show_all(i->table);
+}
+
+
+static void
+inspector_add_meta_cells(GPtrArray* meta_data)
+{
+	Inspector* inspector = app->inspector;
+	InspectorPriv* i = inspector->priv;
+
+	if(!meta_data) return;
+
+	int rows_needed = meta_data->len / 2;
+	int n_to_add = rows_needed - i->meta.n;
+
+	if(n_to_add > 0){
+		GtkWidget* meta_rows[n_to_add];
+		int r; for(r=i->meta.start+i->meta.n;r<i->meta.start+meta_data->len/2;r++){
+			GtkWidget* row00 = meta_rows[r - i->meta.start - i->meta.n] = gtk_label_new("");
+			gtk_misc_set_alignment(GTK_MISC(row00), 0.0, 0.5);
+			gtk_misc_set_padding(GTK_MISC(row00), MARGIN_LEFT, 0);
+			gtk_table_attach(GTK_TABLE(i->table), row00, 0, 1, r, r+1, GTK_FILL, GTK_FILL, 0, 0);
+
+			GtkWidget* row01 = gtk_label_new("");
+			gtk_misc_set_alignment(GTK_MISC(row01), 0.0, 0.5);
+			gtk_label_set_ellipsize((GtkLabel*)row01, PANGO_ELLIPSIZE_END);
+			gtk_table_attach(GTK_TABLE(i->table), row01, 1, 2, r, r+1, GTK_FILL, GTK_FILL, 0, 0);
+		}
+		if(!i->meta.first_child) i->meta.first_child = meta_rows[0];
+	}else if(n_to_add < 0){
+		inspector_remove_rows(i->meta.start + meta_data->len / 2, -n_to_add);
+	}
+
+	i->meta.n = meta_data->len / 2;
+	gtk_widget_show_all(i->table);
+}
+
+
+static void
+inspector_remove_rows(int n_rows, int n_to_remove)
+{
+	// remove rows from the end of the table
+
+	Inspector* inspector = app->inspector;
+	InspectorPriv* i = inspector->priv;
+
+	GList* rows = gtk_container_get_children(GTK_CONTAINER(i->table));
+	GList* l = rows; int r = 0;
+	for(;l && r < n_to_remove;l=l->next, r++){
+		GtkWidget* child = l->data;
+		gtk_widget_destroy(child);
+		l = l->next, child = l->data;
+		gtk_widget_destroy(child);
+	}
+
+	gtk_table_resize(GTK_TABLE(i->table), n_rows, 3);
+
+	g_list_free(rows);
+}
+
+
+static void
+inspector_remove_ebu_cells()
+{
+	PF0;
+	Inspector* inspector = app->inspector;
+	InspectorPriv* i = inspector->priv;
+
+	guint s = 0;
+	GList* rows = g_list_reverse(gtk_container_get_children(GTK_CONTAINER(i->table)));
+	GList* l = rows; int r = 0;
+	for(;l;l=l->next, r++){
+		if((GtkWidget*)l->data == i->ebur0) break;
+		s++;
+	}
+	s = s / 2;
+	for(r=0;l && r<N_EBUR_ROWS;l=l->next, r++){
+		GtkWidget* child = l->data;
+		gtk_widget_destroy(child);
+		l = l->next, child = l->data;
+		gtk_widget_destroy(child);
+	}
+
+	i->ebur0 = NULL;
+
+	gtk_table_resize(GTK_TABLE(i->table), s, 3);
+
+	g_list_free(rows);
+}
+
+
+static void
 inspector_set_labels(Sample* sample)
 {
-	Inspector* i = app->inspector;
-	if(!i) return;
+	Inspector* inspector = app->inspector;
+	if(!inspector) return;
 	g_return_if_fail(sample);
-	InspectorPriv* i_ = i->priv;
+	InspectorPriv* i = inspector->priv;
+
+	{
+		gtk_widget_set_sensitive(i->name, true);
+		gtk_widget_set_sensitive(i->tags, true);
+		gtk_widget_set_sensitive(i->filename, true);
+		gtk_widget_set_sensitive(i->text, true);
+
+		GList* children = gtk_container_get_children(GTK_CONTAINER(i->table));
+		GList* l = children;
+		for(;l;l=l->next){
+			GtkWidget* child = l->data;
+			gtk_widget_set_sensitive(child, true);
+		}
+		g_list_free(children);
+	}
 
 	char* ch_str = channels_format(sample->channels);
 	char* level  = gain2dbstring(sample->peaklevel);
@@ -253,51 +416,74 @@ inspector_set_labels(Sample* sample)
 
 	char* keywords = (sample->keywords && strlen(sample->keywords)) ? sample->keywords : "<no tags>";
 
-	gtk_label_set_text(GTK_LABEL(i_->name),       sample->sample_name);
-	gtk_label_set_text(GTK_LABEL(i_->filename),   to_utf8(sample->full_path));
-	gtk_label_set_text(GTK_LABEL(i_->tags),       keywords);
-	gtk_label_set_text(GTK_LABEL(i_->length),     length);
-	gtk_label_set_text(GTK_LABEL(i_->frames),     frames);
-	gtk_label_set_text(GTK_LABEL(i_->samplerate), fs_str);
-	gtk_label_set_text(GTK_LABEL(i_->channels),   ch_str);
-	gtk_label_set_text(GTK_LABEL(i_->mimetype),   sample->mimetype);
-	gtk_label_set_text(GTK_LABEL(i_->level),      level);
-	gtk_label_set_text(GTK_LABEL(i_->bitrate),    bitrate);
-	gtk_label_set_text(GTK_LABEL(i_->bitdepth),   bitdepth);
-	gtk_label_set_markup(GTK_LABEL(i_->metadata), sample->meta_data?sample->meta_data:"");
-	gtk_text_buffer_set_text(i->notes,           sample->notes?sample->notes:"", -1);
+	gtk_label_set_text(GTK_LABEL(i->name),       sample->sample_name);
+	gtk_label_set_text(GTK_LABEL(i->filename),   to_utf8(sample->full_path));
+	gtk_label_set_text(GTK_LABEL(i->tags),       keywords);
+	gtk_label_set_text(GTK_LABEL(i->length),     length);
+	gtk_label_set_text(GTK_LABEL(i->frames),     frames);
+	gtk_label_set_text(GTK_LABEL(i->samplerate), fs_str);
+	gtk_label_set_text(GTK_LABEL(i->channels),   ch_str);
+	gtk_label_set_text(GTK_LABEL(i->mimetype),   sample->mimetype);
+	gtk_label_set_text(GTK_LABEL(i->level),      level);
+	gtk_label_set_text(GTK_LABEL(i->bitrate),    bitrate);
+	gtk_label_set_text(GTK_LABEL(i->bitdepth),   bitdepth);
+	gtk_text_buffer_set_text(i->notes,           sample->notes ? sample->notes : "", -1);
 
 	char* ebu = sample->ebur ? sample->ebur : "";
-	if(ebu && strlen(ebu)){
-		gchar** lines = g_strsplit(ebu, "\n", N_EBUR_ROWS);
+	if(ebu && strlen(ebu) > 1){
+		if(!i->ebur0) inspector_add_ebu_cells();
+	} else{
+		if(i->ebur0) inspector_remove_ebu_cells();
+	}
 
-		GList* rows = g_list_reverse(gtk_container_get_children(GTK_CONTAINER(i_->table)));
-		GList* l = rows; int i = 0;
-		for(;l;l=l->next, i++){
-			if((GtkWidget*)l->data == i_->ebur0) break;
+	inspector_add_meta_cells(sample->meta_data);
+
+	GList* rows = g_list_reverse(gtk_container_get_children(GTK_CONTAINER(i->table)));
+	GList* l = rows; int r = 0;
+
+	if(ebu && strlen(ebu) > 1){
+
+		gchar** lines = g_strsplit(ebu, "\n", N_EBUR_ROWS + 1);
+
+		for(;l;l=l->next, r++){
+			if((GtkWidget*)l->data == i->ebur0) break;
 		}
-		for(i=0;l && i<N_EBUR_ROWS;l=l->next, i++){
+		for(r=0;l && r<N_EBUR_ROWS;l=l->next, r++){
 			GtkWidget* child = l->data;
-			char* line = lines[i];
+			char* line = lines[r];
 			if(!line) break;
 			gchar** c = g_strsplit(line, ":", 2);
 			gtk_label_set_text(GTK_LABEL(child), c[0]);
 			l = l->next, child = l->data;
 			gtk_label_set_text(GTK_LABEL(child), c[1]);
+
+			g_free(c); // free the array but not the array contents.
 		}
 		g_strfreev(lines);
-		g_list_free(rows);
 	}
 
-	if (i->show_waveform) {
-		if (sample->overview) {
-			gtk_image_set_from_pixbuf(GTK_IMAGE(i_->image), sample->overview);
-		} else {
-			gtk_image_clear(GTK_IMAGE(i_->image));
+	if(sample->meta_data){
+		char** meta_data = (char**)sample->meta_data->pdata;
+
+		for(r=0;l && r<sample->meta_data->len/2;l=l->next, r++){
+			GtkWidget* child = l->data;
+			gtk_label_set_markup(GTK_LABEL(child), meta_data[2*r]); // markup used for backwards compatibility. previous format contained italic tags.
+			l = l->next, child = l->data;
+			gtk_label_set_text(GTK_LABEL(child), meta_data[2*r+1]);
 		}
-		gtk_widget_show(i_->image);
+	}
+
+	g_list_free(rows);
+
+	if (inspector->show_waveform) {
+		if (sample->overview) {
+			gtk_image_set_from_pixbuf(GTK_IMAGE(i->image), sample->overview);
+		} else {
+			gtk_image_clear(GTK_IMAGE(i->image));
+		}
+		gtk_widget_show(i->image);
 	} else {
-		gtk_widget_hide(i_->image);
+		gtk_widget_hide(i->image);
 	}
 
 	show_fields();
@@ -317,12 +503,14 @@ inspector_set_labels(Sample* sample)
 		i->row_ref = NULL;
 		/* can not edit tags or notes w/o reference */
 		gtk_widget_hide(GTK_WIDGET(i->text));
-		gtk_widget_hide(GTK_WIDGET(i_->tags));
+		gtk_widget_hide(GTK_WIDGET(i->tags));
 	}
 
+#ifndef USE_GDL
 	if (app->auditioner->status && app->auditioner->status() != -1.0 && app->view_options[SHOW_PLAYER].value){
 		show_player(true); // show/hide player
 	}
+#endif
 }
 
 
@@ -332,6 +520,7 @@ inspector_update(SamplecatModel* m, Sample* sample, gpointer user_data)
 	PF;
 	Inspector* i = app->inspector;
 	if(!i) return;
+	InspectorPriv* i_ = i->priv;
 
 	if(!sample){
 		inspector_clear();
@@ -340,9 +529,9 @@ inspector_update(SamplecatModel* m, Sample* sample, gpointer user_data)
 	}
 
 	// forget previous inspector item
-	if(i->row_ref) gtk_tree_row_reference_free(i->row_ref);
-	i->row_ref = NULL;
-	i->row_id = 0;
+	if(i_->row_ref) gtk_tree_row_reference_free(i_->row_ref);
+	i_->row_ref = NULL;
+	i_->row_id = 0;
 
 	#ifdef USE_TRACKER
 	if(BACKEND_IS_TRACKER){
@@ -368,7 +557,7 @@ inspector_update(SamplecatModel* m, Sample* sample, gpointer user_data)
 	// - check if file is already in DB -> load sample-info
 	// - check if file is an audio-file -> read basic info directly from file
 	// - else just display the base-name in the inspector..
-	if(sample_get_file_info(sample)){
+	if(sample->id || sample_get_file_info(sample)){
 		inspector_set_labels(sample);
 	} else {
 		inspector_clear();
@@ -392,7 +581,7 @@ static void
 hide_fields()
 {
 	InspectorPriv* i = app->inspector->priv;
-	GtkWidget* fields[] = {i->filename, i->tags, i->length, i->samplerate, i->channels, i->mimetype, i->table, i->level, app->inspector->text, i->bitdepth, i->bitrate, i->metadata};
+	GtkWidget* fields[] = {i->filename, i->tags, i->length, i->samplerate, i->channels, i->mimetype, i->table, i->level, i->text, i->bitdepth, i->bitrate};
 	int f = 0; for(;f<G_N_ELEMENTS(fields);f++){
 		gtk_widget_hide(GTK_WIDGET(fields[f]));
 	}
@@ -403,7 +592,7 @@ static void
 show_fields()
 {
 	InspectorPriv* i = app->inspector->priv;
-	GtkWidget* fields[] = {i->filename, i->tags, i->length, i->samplerate, i->channels, i->mimetype, i->table, i->level, app->inspector->text, i->bitdepth, i->bitrate, i->metadata};
+	GtkWidget* fields[] = {i->filename, i->tags, i->length, i->samplerate, i->channels, i->mimetype, i->table, i->level, i->text, i->bitdepth, i->bitrate};
 	int f = 0; for(;f<G_N_ELEMENTS(fields);f++){
 		gtk_widget_show(GTK_WIDGET(fields[f]));
 	}
@@ -414,22 +603,17 @@ show_fields()
 static gboolean
 inspector_on_tags_clicked(GtkWidget *widget, GdkEventButton *event, gpointer user_data)
 {
-	if(event->button == 3) return FALSE;
+	if(event->button == 3) return false;
 	tag_edit_start(0);
-	return TRUE;
-}
-
-
-static void
-inspector_on_notes_insert(GtkTextView *textview, gchar *arg1, gpointer user_data)
-{
-	dbg(0, "...");
+	return true;
 }
 
 
 static gboolean
 on_notes_focus_out(GtkWidget *widget, gpointer userdata)
 {
+	InspectorPriv* i = app->inspector->priv;
+
 	GtkTextBuffer* textbuf = gtk_text_view_get_buffer(GTK_TEXT_VIEW(widget));
 	g_return_val_if_fail(textbuf, false);
 
@@ -437,30 +621,29 @@ on_notes_focus_out(GtkWidget *widget, gpointer userdata)
 	gtk_text_buffer_get_start_iter(textbuf,  &start_iter);
 	gtk_text_buffer_get_end_iter  (textbuf,  &end_iter);
 	gchar* notes = gtk_text_buffer_get_text(textbuf, &start_iter, &end_iter, true);
-	dbg(2, "start=%i end=%i", gtk_text_iter_get_offset(&start_iter), gtk_text_iter_get_offset(&end_iter));
 
-	Sample* sample = listview__get_sample_by_rowref(app->inspector->row_ref);
-	if(sample){
-		if(listmodel__update_sample(sample, COLX_NOTES, notes)){
-			statusbar_print(1, "notes updated");
-		} else {
-			dbg(0, "failed to update notes");
-		}
+	Sample* sample = app->model->selection;
+	if(sample && (sample->id == i->row_id) && (!sample->notes || strcmp(notes, sample->notes))){
+		statusbar_print(1,
+			listmodel__update_sample(sample, COLX_NOTES, notes)
+				? "notes updated"
+				: "failed to update notes");
 	}
 	g_free(notes);
-	return FALSE;
+	return false;
 }
 
 
 gboolean
 row_set_tags_from_id(int id, GtkTreeRowReference* row_ref, const char* tags_new)
 {
-	if(!id){ perr("bad arg: id (%i)\n", id); return false; }
+	g_return_val_if_fail(id, false);
 	g_return_val_if_fail(row_ref, false);
-	dbg(0, "id=%i", id);
+
+	dbg(1, "id=%i", id);
 
 	if(!listmodel__update_by_rowref(row_ref, COL_KEYWORDS, (void*)tags_new)) {
-		statusbar_print(1, "database error. keywords not updated");
+		statusbar_print(1, "failed to update keywords");
 		return false;
 	}
 	return true;
@@ -490,29 +673,29 @@ tag_edit_start(int _)
 
 	GtkWidget* parent = i->tags_ev;
 	GtkWidget* label  = i->tags;
-	GtkWidget* edit   = app->inspector->edit;
+	GtkWidget* edit   = i->edit;
 
-	if(!GTK_IS_WIDGET(app->inspector->edit)){ perr("edit widget missing.\n"); return;}
-	if(!GTK_IS_WIDGET(label))              { perr("label widget is missing.\n"); return;}
+	if(!GTK_IS_WIDGET(edit)) { perr("edit widget missing.\n"); return;}
+	if(!GTK_IS_WIDGET(label)) { perr("label widget is missing.\n"); return;}
 
-	Sample* s = sample_get_by_row_ref(app->inspector->row_ref);
+	Sample* s = sample_get_by_row_ref(i->row_ref);
 	if (!s) {
 		dbg(0,"sample not found");
 	} else {
 		//show the rename widget:
-		gtk_entry_set_text(GTK_ENTRY(app->inspector->edit), s->keywords?s->keywords:"");
+		gtk_entry_set_text(GTK_ENTRY(i->edit), s->keywords?s->keywords:"");
 		sample_unref(s);
 	}
 	g_object_ref(label); //stops gtk deleting the widget.
 	gtk_container_remove(GTK_CONTAINER(parent), label);
-	gtk_container_add   (GTK_CONTAINER(parent), app->inspector->edit);
+	gtk_container_add   (GTK_CONTAINER(parent), edit);
 	gtk_widget_show(edit);
 
 	//our focus-out could be improved by properly focussing other widgets when clicked on (widgets that dont catch events?).
 
 	if(handler1) g_signal_handler_disconnect((gpointer)edit, handler1);
 
-	handler1 = g_signal_connect((gpointer)app->inspector->edit, "focus-out-event", G_CALLBACK(tag_edit_stop), GINT_TO_POINTER(0));
+	handler1 = g_signal_connect((gpointer)edit, "focus-out-event", G_CALLBACK(tag_edit_stop), GINT_TO_POINTER(0));
 
 	/*
 	if(handler2) g_signal_handler_disconnect((gpointer)arrange->wrename, handler2);
@@ -521,55 +704,43 @@ tag_edit_start(int _)
 	*/
 
 	//grab_focus allows us to start typing imediately. It also selects the whole string.
-	gtk_widget_grab_focus(GTK_WIDGET(app->inspector->edit));
+	gtk_widget_grab_focus(GTK_WIDGET(edit));
 }
 
 
 static void
 tag_edit_stop(GtkWidget *widget, GdkEventCrossing *event, gpointer user_data)
 {
-  /*
-  tidy up widgets and notify core of label change.
-  called following a focus-out-event for the gtkEntry renaming widget.
-  -track number should correspond to the one being edited...???
+	/*
+	tidy up widgets and notify core of label change.
+	called following a focus-out-event for the gtkEntry renaming widget.
+	-track number should correspond to the one being edited...???
 
-  warning! if called incorrectly, this fn can cause mysterious segfaults!!
-  Is it something to do with multiple focus-out events? This function causes the
-  rename widget to lose focus, it can run a 2nd time before completing the first: segfault!
-  Currently it works ok if focus is removed before calling.
-  */
+	warning: if called incorrectly, this fn can cause mysterious segfaults.
+	Is it something to do with multiple focus-out events? This function causes the
+	rename widget to lose focus, it can run a 2nd time before completing the first: segfault!
+	Currently it works ok if focus is removed before calling.
+	*/
 
-  //static gboolean busy = false;
-  //if(busy){"track_label_edit_stop(): busy!\n"; return;} //only run once at a time!
-  //busy = true;
+	//static gboolean busy = false;
+	//if(busy){"track_label_edit_stop(): busy!\n"; return;} //only run once at a time!
+	//busy = true;
 
 	InspectorPriv* i = app->inspector->priv;
-	GtkWidget* edit = app->inspector->edit;
+	GtkWidget* edit = i->edit;
 	GtkWidget* parent = i->tags_ev;
 
-  //g_signal_handler_disconnect((gpointer)edit, handler_id);
-  
-  //printf("track_label_edit_stop(): wrename_parent=%p.\n", arrange->wrename->parent);
-  //printf("track_label_edit_stop(): label_parent  =%p.\n", trkA[tnum]->wlabel);
-  
-  //printf("w:%p is_widget: %i\n", trkA[tnum]->wlabel, GTK_IS_WIDGET(trkA[tnum]->wlabel));
+	//g_signal_handler_disconnect((gpointer)edit, handler_id);
 
-  //make sure the rename widget is being shown:
-  /*
-  if(edit->parent != parent){printf(
-    "tags_edit_stop(): info: entry widget not in correct container! trk probably changed. parent=%p\n",
-	   							arrange->wrename->parent); }
-  */
-	   
 	//change the text in the label:
-	const char * newtxt = gtk_entry_get_text(GTK_ENTRY(edit));
+	const char* newtxt = gtk_entry_get_text(GTK_ENTRY(edit));
 	const char* keywords = (newtxt && strlen(newtxt)) ? newtxt : "<no tags>";
 	gtk_label_set_text(GTK_LABEL(i->tags), keywords);
 
 	//update the data:
 	//update the string for the channel that the current track is using:
 	//int ch = track_get_ch_idx(tnum);
-	row_set_tags_from_id(app->inspector->row_id, app->inspector->row_ref, (void*)newtxt);
+	row_set_tags_from_id(i->row_id, i->row_ref, (void*)newtxt);
 
 	//swap back to the normal label:
 	gtk_container_remove(GTK_CONTAINER(parent), edit);
@@ -581,3 +752,4 @@ tag_edit_stop(GtkWidget *widget, GdkEventCrossing *event, gpointer user_data)
 	dbg(0, "finished.");
 	//busy = false;
 }
+

@@ -504,7 +504,7 @@ statusbar_print(int n, char* fmt, ...)
 
 	if(_debug_) printf("%s\n", s);
 
-	GtkWidget *statusbar = NULL;
+	GtkWidget* statusbar = NULL;
 	if     (n==1) statusbar = app->statusbar;
 	else if(n==2) statusbar = app->statusbar2;
 	else { perr("bad statusbar index (%i)\n", n); n=1; }
@@ -1217,6 +1217,8 @@ keyword_is_dupe(const char* new, const char* existing)
  *  This Idle object wraps a signal handler such that it is called in an idle callback.
  *  It will only be called once even if there are multiple emissions in quick succession.
  *  Currently will only work for signals with no additional args.
+ *
+ *  It is probably not useful other for use with signals.
  */
 Idle*
 idle_new(ObjectCallback fn, gpointer user_data)

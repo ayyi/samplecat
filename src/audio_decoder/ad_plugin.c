@@ -123,7 +123,7 @@ void ad_clear_nfo(struct adinfo *nfo) {
 }
 
 void ad_free_nfo(struct adinfo *nfo) {
-	if (nfo->meta_data) free(nfo->meta_data);
+	if (nfo->meta_data) g_ptr_array_unref(nfo->meta_data);
 }
 
 void dump_nfo(int dbglvl, struct adinfo *nfo) {
@@ -134,5 +134,14 @@ void dump_nfo(int dbglvl, struct adinfo *nfo) {
 	dbg(dbglvl, "bit_rate:    %d", nfo->bit_rate);
 	dbg(dbglvl, "bit_depth:   %d", nfo->bit_depth);
 	dbg(dbglvl, "channels:    %u", nfo->channels);
-	dbg(dbglvl, "meta-data:   %s", nfo->meta_data?nfo->meta_data:"-");
+
+	if(nfo->meta_data){
+		dbg(dbglvl, "meta-data:");
+
+		char** data = (char**)nfo->meta_data->pdata;
+		int i; for(i=0;i<nfo->meta_data->len;i+=2){
+			dbg(0, "  %s: %s", data[i], data[i+1]);
+		}
+	}
 }
+

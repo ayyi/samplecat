@@ -37,7 +37,6 @@
 #include "debug/debug.h"
 #include "file_manager/file_manager.h"
 #include "support.h"
-#include "observer.h"
 #include "application.h"
 #include "icon_theme.h"
 
