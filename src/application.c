@@ -24,6 +24,16 @@
 #include "list_store.h"
 #include "application.h"
 
+#ifdef HAVE_AYYIDBUS
+  #include "auditioner.h"
+#endif
+#ifdef HAVE_JACK
+  #include "jack_player.h"
+#endif
+#ifdef HAVE_GPLAYER
+  #include "gplayer.h"
+#endif
+
 extern void colour_box_init();
 
 static gpointer application_parent_class = NULL;
@@ -31,8 +41,9 @@ static gpointer application_parent_class = NULL;
 enum  {
 	APPLICATION_DUMMY_PROPERTY
 };
-static GObject* application_constructor (GType, guint n_construct_properties, GObjectConstructParam*);
-static void     application_finalize    (GObject*);
+static GObject* application_constructor    (GType, guint n_construct_properties, GObjectConstructParam*);
+static void     application_finalize       (GObject*);
+static void     application_set_auditioner ();
 
 
 Application*
@@ -85,6 +96,8 @@ application_new ()
 		g_signal_connect((SamplecatFilter*)l->data, "changed", G_CALLBACK(on_filter_changed), NULL);
 	}
 
+	application_set_auditioner();
+
 	return app;
 }
 
@@ -117,6 +130,7 @@ application_class_init (ApplicationClass* klass)
 	g_signal_new ("on_quit", TYPE_APPLICATION, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_VOID__VOID, G_TYPE_NONE, 0);
 	g_signal_new ("theme_changed", TYPE_APPLICATION, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_VOID__VOID, G_TYPE_NONE, 0);
 	g_signal_new ("layout_changed", TYPE_APPLICATION, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_VOID__VOID, G_TYPE_NONE, 0);
+	g_signal_new ("audio_ready", TYPE_APPLICATION, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_VOID__VOID, G_TYPE_NONE, 0);
 }
 
 
@@ -152,6 +166,147 @@ void
 application_quit(Application* app)
 {
 	g_signal_emit_by_name (app, "on-quit");
+}
+
+
+gboolean
+application_can_use (GList* l, const char* d)
+{
+	for(;l;l=l->next){
+		if(!strcmp(l->data, d)){
+			return true;
+		}
+	}
+	return false;
+}
+
+
+int  auditioner_nullC() {return 0;}
+void auditioner_null() {;}
+void auditioner_nullP(const char* p) {;}
+void auditioner_nullS(Sample* s) {;}
+
+static void
+_set_auditioner() /* tentative - WIP */
+{
+	printf("auditioner backend: "); fflush(stdout);
+	const static Auditioner a_null = {
+		&auditioner_nullC,
+		&auditioner_null,
+		&auditioner_null,
+		&auditioner_nullP,
+		&auditioner_nullS,
+		&auditioner_nullS,
+		&auditioner_null,
+		&auditioner_null,
+		NULL, NULL, NULL, NULL
+	};
+#ifdef HAVE_JACK
+  const static Auditioner a_jack = {
+		&jplay__check,
+		&jplay__connect,
+		&jplay__disconnect,
+		&jplay__play_path,
+		&jplay__play,
+		&jplay__toggle,
+		&jplay__play_all,
+		&jplay__stop,
+		&jplay__play_selected,
+		&jplay__pause,
+		&jplay__seek,
+		&jplay__getposition
+	};
+#endif
+#ifdef HAVE_AYYIDBUS
+	const static Auditioner a_ayyidbus = {
+		&auditioner_check,
+		&auditioner_connect,
+		&auditioner_disconnect,
+		&auditioner_play_path,
+		&auditioner_play,
+		&auditioner_toggle,
+		&auditioner_play_all,
+		&auditioner_stop,
+		NULL,
+		NULL,
+		NULL,
+		NULL
+	};
+#endif
+#ifdef HAVE_GPLAYER
+	const static Auditioner a_gplayer = {
+		&gplayer_check,
+		&gplayer_connect,
+		&gplayer_disconnect,
+		&gplayer_play_path,
+		&gplayer_play,
+		&gplayer_toggle,
+		&gplayer_play_all,
+		&gplayer_stop,
+		NULL,
+		NULL,
+		NULL,
+		NULL
+	};
+#endif
+
+	gboolean connected = false;
+#ifdef HAVE_JACK
+	if(!connected && application_can_use(app->players, "jack")){
+		app->auditioner = & a_jack;
+		if (!app->auditioner->check()) {
+			connected = true;
+			printf("JACK playback.\n");
+		}
+	}
+#endif
+#ifdef HAVE_AYYIDBUS
+	if(!connected && application_can_use(app->players, "ayyi")){
+		app->auditioner = & a_ayyidbus;
+		if (!app->auditioner->check()) {
+			connected = true;
+			printf("ayyi_audition.\n");
+		}
+	}
+#endif
+#ifdef HAVE_GPLAYER
+	if(!connected && application_can_use(app->players, "cli")){
+		app->auditioner = & a_gplayer;
+		if (!app->auditioner->check()) {
+			connected = true;
+			printf("using CLI player.\n");
+		}
+	}
+#endif
+	if (!connected) {
+		printf("no playback support.\n");
+		app->auditioner = & a_null;
+	}
+}
+
+
+static void
+application_set_auditioner()
+{
+	// The gui is allowed to load before connecting the audio.
+	// Connecting the audio can sometimes be very slow.
+
+	// TODO starting jack blocks the gui so this needs to be moved to another thread.
+
+	void set_auditioner_on_connected(gpointer _)
+	{
+		g_signal_emit_by_name (app, "audio-ready");
+	}
+
+	bool set_auditioner_on_idle(gpointer data)
+	{
+		_set_auditioner();
+
+		app->auditioner->connect(set_auditioner_on_connected, data);
+
+		return IDLE_STOP;
+	}
+	g_idle_add_full(G_PRIORITY_LOW, set_auditioner_on_idle, NULL, NULL);
 }
 
 

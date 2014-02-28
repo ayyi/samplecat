@@ -332,7 +332,7 @@ GtkWindow
 
 	gtk_paned_add1(GTK_PANED(pcpaned), window.dir_tree);
 
-	if (app->auditioner->status && app->auditioner->seek){
+	if (app->auditioner && app->auditioner->status && app->auditioner->seek){
 		gtk_paned_add2(GTK_PANED(pcpaned), app->playercontrol->widget);
 	}
 
@@ -1679,8 +1679,8 @@ make_context_menu()
 		{"Open",           G_CALLBACK(listview__edit_row),      GTK_STOCK_OPEN,       false},
 		{"Open Directory", G_CALLBACK(NULL),                    GTK_STOCK_OPEN,        true},
 		{"",                                                                               },
-		{"Play All",       G_CALLBACK(menu_play_all),           GTK_STOCK_MEDIA_PLAY,  true},
-		{"Stop Playback",  G_CALLBACK(menu_play_stop),          GTK_STOCK_MEDIA_STOP,  true},
+		{"Play All",       G_CALLBACK(menu_play_all),           GTK_STOCK_MEDIA_PLAY, false},
+		{"Stop Playback",  G_CALLBACK(menu_play_stop),          GTK_STOCK_MEDIA_STOP, false},
 		{"",                                                                               },
 		{"View",           G_CALLBACK(NULL),                    GTK_STOCK_PREFERENCES, true},
 	#ifdef USE_GDL
@@ -1689,12 +1689,22 @@ make_context_menu()
 		{"Prefs",          G_CALLBACK(NULL),                    GTK_STOCK_PREFERENCES, true},
 	};
 
+	static struct
+	{
+		GtkWidget* play_all;
+		GtkWidget* stop_playback;
+		GtkWidget* loop_playback;
+	} widgets;
+
 	GtkWidget* menu = gtk_menu_new();
 
 	add_menu_items_from_defn(menu, _menu_def, G_N_ELEMENTS(_menu_def));
 
 	GList* menu_items = gtk_container_get_children((GtkContainer*)menu);
 	GList* last = g_list_last(menu_items);
+
+	widgets.play_all = g_list_nth_data(menu_items, 7);
+	widgets.stop_playback = g_list_nth_data(menu_items, 8);
 
 	GtkWidget* sub = gtk_menu_new();
 	gtk_menu_item_set_submenu(GTK_MENU_ITEM(last->data), sub);
@@ -1836,12 +1846,11 @@ make_context_menu()
 	gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menu_item), app->add_recursive);
 	g_signal_connect(G_OBJECT(menu_item), "activate", G_CALLBACK(toggle_recursive_add), NULL);
 
-	if (app->auditioner->seek) {
-		menu_item = gtk_check_menu_item_new_with_mnemonic("Loop Playback");
-		gtk_menu_shell_append(GTK_MENU_SHELL(sub), menu_item);
-		gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menu_item), app->loop_playback);
-		g_signal_connect(G_OBJECT(menu_item), "activate", G_CALLBACK(toggle_loop_playback), NULL);
-	}
+	widgets.loop_playback = menu_item = gtk_check_menu_item_new_with_mnemonic("Loop Playback");
+	gtk_menu_shell_append(GTK_MENU_SHELL(sub), menu_item);
+	gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menu_item), app->loop_playback);
+	g_signal_connect(G_OBJECT(menu_item), "activate", G_CALLBACK(toggle_loop_playback), NULL);
+	gtk_widget_set_no_show_all(menu_item, true);
 
 	if(themes){
 		GtkWidget* theme_menu = gtk_menu_item_new_with_label("Icon Themes");
@@ -1850,6 +1859,16 @@ make_context_menu()
 		GtkWidget* sub_menu = themes->data;
 		gtk_menu_item_set_submenu(GTK_MENU_ITEM(theme_menu), sub_menu);
 	}
+
+	void menu_on_audio_ready(GObject* _app, gpointer _)
+	{
+		gtk_widget_set_sensitive(widgets.play_all, true);
+		gtk_widget_set_sensitive(widgets.stop_playback, true);
+		if (app->auditioner->seek) {
+			gtk_widget_show(widgets.loop_playback);
+		}
+	}
+	g_signal_connect(app, "audio-ready", (GCallback)menu_on_audio_ready, NULL);
 
 	gtk_widget_show_all(menu);
 	g_list_free(menu_items);

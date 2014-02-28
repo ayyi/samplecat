@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
-* | This file is part of Samplecat. http://samplecat.orford.org          |
-* | copyright (C) 2007-2013 Tim Orford <tim@orford.org>                  |
+* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
+* | copyright (C) 2007-2014 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -23,7 +23,7 @@
 #include "typedefs.h"
 #include "support.h"
 #include "sample.h"
-#include "main.h"
+#include "application.h"
 #include "auditioner.h"
 #include "listview.h"
 
@@ -38,18 +38,24 @@ typedef struct
 
 static AyyiConnection *adbus;
 
-int auditioner_check() {
-	// TODO: check if service is available.
-	// start `ayyi_auditioner` if possible and re-check.
-	return 0; /*OK*/
-}
+
 void
-auditioner_connect()
+auditioner_connect(Callback callback, gpointer user_data)
 {
 	adbus = g_new0(AyyiConnection, 1);
 
-	gboolean _auditioner_connect(gpointer _)
+	typedef struct {
+		Callback callback;
+		gpointer user_data;
+	} C;
+	C* c = g_new(C, 1);
+	c->callback = callback;
+	c->user_data = user_data;
+
+	gboolean _auditioner_connect(gpointer user_data)
 	{
+		C* c = user_data;
+
 		GError* error = NULL;
 		DBusGConnection* auditioner = dbus_g_bus_get(DBUS_BUS_SESSION, &error);
 		if(!auditioner){ 
@@ -63,14 +69,25 @@ auditioner_connect()
 
 		dbus_g_proxy_add_signal(adbus->proxy, "PlaybackStopped", G_TYPE_INVALID);                                                             
 
+		c->callback(c->user_data);
+
+		g_free(c);
 		return IDLE_STOP;
 	}
-	g_idle_add(_auditioner_connect, NULL);
+	g_idle_add(_auditioner_connect, c);
 }
 
+
 void
-auditioner_disconnect() {
-	;
+auditioner_disconnect()
+{
+}
+
+
+int auditioner_check() {
+	// TODO: check if service is available.
+	// start `ayyi_auditioner` if possible and re-check.
+	return 0; /*OK*/
 }
 
 

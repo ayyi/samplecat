@@ -16,6 +16,7 @@
 #include <string.h>
 #include <gtk/gtk.h>
 #include <math.h>
+#include <debug/debug.h>
 
 #include "support.h"
 #include "application.h"
@@ -25,11 +26,12 @@
   #include "jack_player.h"
 #endif
 
+static void  pc_add_widgets       ();
 
 static void  cb_playpause         (GtkToggleButton*, gpointer user_data);
 
 static guint slider1sigid;
-static void  slider_value_changed (GtkRange*, gpointer  user_data);
+static void  slider_value_changed (GtkRange*, gpointer user_data);
 
 #if (defined ENABLE_LADSPA)
 static guint slider2sigid, slider3sigid;
@@ -51,8 +53,28 @@ player_control_new()
 	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(top), GTK_POLICY_NEVER, GTK_POLICY_NEVER);
 	gtk_widget_set_size_request(pc->widget, -1, 40);
 
+	void pc_on_audio_ready(GObject* _app, gpointer _)
+	{
+		pc_add_widgets();
+	}
+
+	if(app->auditioner){
+		pc_on_audio_ready((GObject*)app, NULL);
+	}else{
+		g_signal_connect(app, "audio-ready", (GCallback)pc_on_audio_ready, NULL);
+	}
+
+	return top;
+}
+
+
+static void
+pc_add_widgets()
+{
+	PlayCtrl* pc = app->playercontrol;
+
 	GtkWidget* vbox = gtk_vbox_new(FALSE, 0);
-	gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(top), vbox);
+	gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(pc->widget), vbox);
 
 #ifndef USE_GDL
 	GtkWidget* label1 = gtk_label_new("Player Control");
@@ -145,8 +167,6 @@ player_control_new()
 	slider3sigid = g_signal_connect((gpointer)slider3, "value-changed", G_CALLBACK(speed_value_changed), slider2);
 #endif /* LADSPA-rubberband/VARISPEED */
 	}
-
-	return top;
 }
 
 
@@ -265,7 +285,7 @@ player_control_on_show_hide(gboolean enable)
 	static GSource* source = NULL;
 	int updateinterval = 50; /* ms */
 #endif
-	if (!app->auditioner->status) return;
+	if (!app->auditioner || !app->auditioner->status) return;
 	if (!app->auditioner->playpause) return;
 
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(app->playercontrol->pbpause), (app->auditioner->playpause(-2)==1)?true:false);

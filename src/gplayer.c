@@ -180,7 +180,11 @@ void gplayer_play_all() {
 	if(play_queue) play_next();
 }
 
-void gplayer_connect() {;}
+void gplayer_connect(Callback callback, gpointer user_data)
+{
+	callback(user_data);
+}
+
 void gplayer_disconnect() {;}
 
 void gplayer_stop() {

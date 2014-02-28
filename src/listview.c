@@ -272,25 +272,26 @@ listview__on_row_clicked(GtkWidget* widget, GdkEventButton* event, gpointer user
 
 				//overview column:
 				dbg(2, "overview. column rect: %i %i %i %i", rect.x, rect.y, rect.width, rect.height);
+				if(app->auditioner){
+					Sample* sample = sample_get_from_model(path);
 
-				Sample* sample = sample_get_from_model(path);
-
-				if(sample->id != app->playing_id){
-					if(app->playing_id){
-						//a sample was previously played, and it wasnt this one
-						app->auditioner->play(sample);
-					}else{
+					if(sample->id != app->playing_id){
+						if(app->playing_id){
+							//a sample was previously played, and it wasnt this one
+							app->auditioner->play(sample);
+						}else{
+							app->auditioner->toggle(sample);
+						}
+						app->playing_id = sample->id;
+					}
+					else {
 						app->auditioner->toggle(sample);
 					}
-					app->playing_id = sample->id;
-				}
-				else {
-					app->auditioner->toggle(sample);
-				}
 #if 1 /* highlight played items - until new search or user resets it via menu. */
-				highlight_playing_by_path(path);
+					highlight_playing_by_path(path);
 #endif
-				sample_unref(sample);
+					sample_unref(sample);
+				}
 			}else{
 				gtk_tree_view_get_cell_area(treeview, path, app->libraryview->col_tags, &rect);
 				if(((gint)event->x > rect.x) && ((gint)event->x < (rect.x + rect.width))){
@@ -298,7 +299,7 @@ listview__on_row_clicked(GtkWidget* widget, GdkEventButton* event, gpointer user
 					GtkTreeIter iter;
 					GtkTreeModel* model = gtk_tree_view_get_model(GTK_TREE_VIEW(app->libraryview->widget));
 					gtk_tree_model_get_iter(model, &iter, path);
-					gchar *tags;
+					gchar* tags;
 					int id;
 					gtk_tree_model_get(model, &iter, /*COL_FNAME, &fpath, COL_NAME, &fname, */COL_KEYWORDS, &tags, COL_IDX, &id, -1);
 

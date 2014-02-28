@@ -616,8 +616,8 @@ void JACKconnect() {
 	j_client = jack_client_open("samplecat", (jack_options_t) 0, NULL);
 
 	if(!j_client) {
-			dbg(0, "could not connect to JACK.");
-			return;
+		dbg(0, "could not connect to JACK.");
+		return;
 	}
 
 	jack_on_shutdown(j_client, jack_shutdown_callback, NULL);
@@ -626,8 +626,8 @@ void JACKconnect() {
 #ifdef JACK_MIDI
 	jack_midi_port = jack_port_register(j_client, "Midi in", JACK_DEFAULT_MIDI_TYPE, JackPortIsInput , 0);
 	if (jack_midi_port == NULL) {
-    dbg(0, "can't register jack-midi-port\n");
-  }
+		 dbg(0, "can't register jack-midi-port\n");
+	}
 
 	midi_thread_run = 1;
 	pthread_create(&midi_thread_id, NULL, jack_midi_thread, NULL);
@@ -646,7 +646,7 @@ void JACKconnect() {
 	if(jack_midiconnect) {
 		dbg(1, "MIDI autoconnect '%s' -> '%s'", jack_midiconnect, jack_port_name(jack_midi_port));
 		if(jack_connect(j_client, jack_midiconnect, jack_port_name(jack_midi_port))) {
-				dbg(0, "Auto-connect jack midi port failed.");
+			dbg(0, "Auto-connect jack midi port failed.");
 		}
 	}
 #endif
@@ -675,8 +675,9 @@ void JACKdisconnect() {
 
 /* SampleCat API */
 
-void jplay__connect() {
+void jplay__connect(Callback callback, gpointer user_data) {
 	JACKconnect();
+	callback(user_data);
 }
 
 void jplay__disconnect() {

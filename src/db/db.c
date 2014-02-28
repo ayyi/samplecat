@@ -21,6 +21,7 @@
 #include "debug/debug.h"
 #include "application.h"
 #include "sample.h"
+#include "support.h"
 #ifdef USE_MYSQL
 #include "db/mysql.h"
 #endif
@@ -36,6 +37,28 @@
 #include "db/db.h"
 
 extern SamplecatBackend backend;
+
+
+gboolean
+db_connect()
+{
+	gboolean db_connected = false;
+#ifdef USE_MYSQL
+	mysql__init(app->model, &app->config.mysql);
+	if(application_can_use(app->backends, "mysql")){
+		db_connected = samplecat_set_backend(BACKEND_MYSQL);
+	}
+#endif
+#ifdef USE_SQLITE
+	if(!db_connected && application_can_use(app->backends, "sqlite") && ensure_config_dir()){
+		if(sqlite__connect()){
+			db_connected = samplecat_set_backend(BACKEND_SQLITE);
+		}
+	}
+#endif
+
+	return db_connected;
+}
 
 
 gboolean

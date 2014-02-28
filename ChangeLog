@@ -1,3 +1,6 @@
+20140227
+-delay starting the audio until after the gui is finished loading.
+
 20140223
 -rationalised handling of filters, and added Filters panel.
 -improved inspector layout, particularly for meta-data,

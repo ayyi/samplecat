@@ -137,6 +137,7 @@ Application* application_new                     ();
 Application* application_construct               (GType);
 void         application_emit_icon_theme_changed (Application*, const gchar*);
 void         application_quit                    (Application*);
+bool         application_can_use                 (GList*, const char*);
 bool         application_add_file                (const char* path);
 
 

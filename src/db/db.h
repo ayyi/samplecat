@@ -37,6 +37,7 @@ struct _backend
 
 #define BACKEND_IS_NULL (backend.search_iter_new == NULL)
 
+gboolean   db_connect             ();
 gboolean   samplecat_set_backend  (BackendType);
 
 GdkPixbuf* blob_to_pixbuf         (const unsigned char* blob, guint len);

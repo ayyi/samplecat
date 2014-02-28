@@ -4,7 +4,7 @@
 #include "typedefs.h"
 
 int  gplayer_check();
-void gplayer_connect();
+void gplayer_connect(Callback, gpointer);
 void gplayer_disconnect();
 void gplayer_play(Sample*);
 void gplayer_play_path(const char*);

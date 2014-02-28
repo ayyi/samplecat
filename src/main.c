@@ -47,7 +47,6 @@ char * program_name;
 
 #include "db/db.h"
 #include "model.h"
-#include "main.h"
 #include "list_store.h"
 #include "support.h"
 #include "sample.h"
@@ -62,30 +61,18 @@ char * program_name;
 #include "dnd.h"
 #include "icon_theme.h"
 #include "application.h"
-#ifdef HAVE_AYYIDBUS
-  #include "auditioner.h"
-#endif
-#ifdef HAVE_JACK
-  #include "jack_player.h"
-#endif
-#ifdef HAVE_GPLAYER
-  #include "gplayer.h"
-#endif
 #include "console_view.h"
-
 #include "audio_decoder/ad.h"
 
-#ifdef USE_SQLITE
-  #include "db/sqlite.h"
-#endif
+#include "main.h"
 
 #undef DEBUG_NO_THREADS
 
 
-static gboolean   can_use                   (GList*, const char*);
 static bool       config_load               ();
 static void       config_new                ();
 static bool       config_save               ();
+
 void              menu_play_stop            (GtkWidget*, gpointer);
 
 
@@ -217,7 +204,7 @@ main(int argc, char** argv)
 			case 'b':
 				//if a particular backend is requested, and is available, reduce the backend list to just this one.
 				dbg(1, "backend '%s' requested.", optarg);
-				if(can_use(app->backends, optarg)){
+				if(application_can_use(app->backends, optarg)){
 					list_clear(app->backends);
 					ADD_BACKEND(optarg);
 					dbg(1, "n_backends=%i", g_list_length(app->backends));
@@ -232,7 +219,7 @@ main(int argc, char** argv)
 				}
 				break;
 			case 'p':
-				if(can_use(app->players, optarg)){
+				if(application_can_use(app->players, optarg)){
 					list_clear(app->players);
 					ADD_PLAYER(optarg);
 					player_opt=true;
@@ -281,20 +268,20 @@ main(int argc, char** argv)
 
 	config_load();
 
-	if (app->config.database_backend && can_use(app->backends, app->config.database_backend)) {
+	if (app->config.database_backend && application_can_use(app->backends, app->config.database_backend)) {
 		list_clear(app->backends);
 		ADD_BACKEND(app->config.database_backend);
 	}
 
 	if (!player_opt && app->config.auditioner) {
-		if(can_use(app->players, app->config.auditioner)){
+		if(application_can_use(app->players, app->config.auditioner)){
 			list_clear(app->players);
 			ADD_PLAYER(app->config.auditioner);
 		}
 	}
 
 #ifdef __APPLE__
-	GtkOSXApplication *osxApp = (GtkOSXApplication*) 
+	GtkOSXApplication* osxApp = (GtkOSXApplication*) 
 	g_object_new(GTK_TYPE_OSX_APPLICATION, NULL);
 #endif
 	app->gui_thread = pthread_self();
@@ -302,26 +289,11 @@ main(int argc, char** argv)
 	icon_theme_init();
 	pixmaps_init();
 	ad_init();
-	set_auditioner();
 	app->store = listmodel__new();
 	if(app->no_gui) console__init();
 
-	gboolean db_connected = false;
-#ifdef USE_MYSQL
-	mysql__init(app->model, &app->config.mysql);
-	if(can_use(app->backends, "mysql")){
-		db_connected = samplecat_set_backend(BACKEND_MYSQL);
-	}
-#endif
-#ifdef USE_SQLITE
-	if(!db_connected && can_use(app->backends, "sqlite") && ensure_config_dir()){
-		if(sqlite__connect()){
-			db_connected = samplecat_set_backend(BACKEND_SQLITE);
-		}
-	}
-#endif
 
-	if (!db_connected) {
+	if (!db_connect()) {
 		g_warning("cannot connect to any database.\n");
 #ifdef QUIT_WITHOUT_DB
 		on_quit(NULL, GINT_TO_POINTER(EXIT_FAILURE));
@@ -329,7 +301,7 @@ main(int argc, char** argv)
 	}
 
 #ifdef USE_TRACKER
-	if(BACKEND_IS_NULL && can_use(app->backends, "tracker")){
+	if(BACKEND_IS_NULL && application_can_use(app->backends, "tracker")){
 		void on_tracker_init()
 		{
 			dbg(2, "...");
@@ -398,8 +370,6 @@ main(int argc, char** argv)
 	}
 
 	if(app->no_gui) exit(EXIT_SUCCESS);
-
-	app->auditioner->connect();
 
 #ifdef USE_AYYI
 	ayyi_client_init();
@@ -905,122 +875,6 @@ on_quit(GtkMenuItem* menuitem, gpointer user_data)
 
 	dbg (1, "done.");
 	exit(exit_code);
-}
-
-
-int  auditioner_nullC() {return 0;}
-void auditioner_null() {;}
-void auditioner_nullP(const char *p) {;}
-void auditioner_nullS(Sample *s) {;}
-
-void
-set_auditioner() /* tentative - WIP */
-{
-	printf("auditioner backend: "); fflush(stdout);
-	const static Auditioner a_null = {
-		&auditioner_nullC,
-		&auditioner_null,
-		&auditioner_null,
-		&auditioner_nullP,
-		&auditioner_nullS,
-		&auditioner_nullS,
-		&auditioner_null,
-		&auditioner_null,
-		NULL, NULL, NULL, NULL
-	};
-#ifdef HAVE_JACK
-  const static Auditioner a_jack = {
-		&jplay__check,
-		&jplay__connect,
-		&jplay__disconnect,
-		&jplay__play_path,
-		&jplay__play,
-		&jplay__toggle,
-		&jplay__play_all,
-		&jplay__stop,
-		&jplay__play_selected,
-		&jplay__pause,
-		&jplay__seek,
-		&jplay__getposition
-	};
-#endif
-#ifdef HAVE_AYYIDBUS
-	const static Auditioner a_ayyidbus = {
-		&auditioner_check,
-		&auditioner_connect,
-		&auditioner_disconnect,
-		&auditioner_play_path,
-		&auditioner_play,
-		&auditioner_toggle,
-		&auditioner_play_all,
-		&auditioner_stop,
-		NULL,
-		NULL,
-		NULL,
-		NULL
-	};
-#endif
-#ifdef HAVE_GPLAYER
-	const static Auditioner a_gplayer = {
-		&gplayer_check,
-		&gplayer_connect,
-		&gplayer_disconnect,
-		&gplayer_play_path,
-		&gplayer_play,
-		&gplayer_toggle,
-		&gplayer_play_all,
-		&gplayer_stop,
-		NULL,
-		NULL,
-		NULL,
-		NULL
-	};
-#endif
-
-	gboolean connected = false;
-#ifdef HAVE_JACK
-	if(!connected && can_use(app->players, "jack")){
-		app->auditioner = & a_jack;
-		if (!app->auditioner->check()) {
-			connected = true;
-			printf("JACK playback.\n");
-		}
-	}
-#endif
-#ifdef HAVE_AYYIDBUS
-	if(!connected && can_use(app->players, "ayyi")){
-		app->auditioner = & a_ayyidbus;
-		if (!app->auditioner->check()) {
-			connected = true;
-			printf("ayyi_audition.\n");
-		}
-	}
-#endif
-#ifdef HAVE_GPLAYER
-	if(!connected && can_use(app->players, "cli")){
-		app->auditioner = & a_gplayer;
-		if (!app->auditioner->check()) {
-			connected = true;
-			printf("using CLI player.\n");
-		}
-	}
-#endif
-	if (!connected) {
-		printf("no playback support.\n");
-		app->auditioner = & a_null;
-	}
-}
-
-
-static gboolean
-can_use (GList* l, const char* d)
-{
-	for(;l;l=l->next){
-		if(!strcmp(l->data, d)){
-			return true;
-		}
-	}
-	return false;
 }
 
 

@@ -26,6 +26,4 @@ gboolean    on_ebur128_done(gpointer _sample);
 
 void        on_quit(GtkMenuItem*, gpointer user_data);
 
-void        set_auditioner();
-
 #endif

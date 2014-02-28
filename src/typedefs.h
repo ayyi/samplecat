@@ -45,8 +45,10 @@ typedef struct _config            Config;
 typedef struct _accel             Accel;
 
 #ifndef __file_manager_h__
-typedef struct _GimpActionGroup    GimpActionGroup;
+typedef struct _GimpActionGroup   GimpActionGroup;
 #endif
+
+typedef void   (*Callback)       (gpointer);
 
 #ifndef true
   #define true TRUE

@@ -33,7 +33,7 @@ int jplay__check();
 /** stop playback - if active */
 void     jplay__stop       ();
 
-void     jplay__connect    ();
+void     jplay__connect    (Callback, gpointer);
 void     jplay__disconnect ();
 /**
  * look up path from sample and play it
