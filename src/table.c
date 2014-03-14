@@ -291,7 +291,6 @@ simple_table_set_property (GObject      *object,
       simple_table_set_col_spacings (table, g_value_get_uint (value));
       break;
     case PROP_HOMOGENEOUS:
-      simple_table_set_homogeneous (table, g_value_get_boolean (value));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -747,41 +746,6 @@ simple_table_get_default_col_spacing (GtkSimpleTable *table)
   g_return_val_if_fail (GTK_IS_SIMPLE_TABLE (table), 0);
 
   return table->column_spacing;
-}
-
-void
-simple_table_set_homogeneous (GtkSimpleTable *table,
-			   gboolean  homogeneous)
-{
-  g_return_if_fail (GTK_IS_SIMPLE_TABLE (table));
-
-  homogeneous = (homogeneous != 0);
-  if (homogeneous != table->homogeneous)
-    {
-      table->homogeneous = homogeneous;
-      
-      if (GTK_WIDGET_VISIBLE (table))
-	gtk_widget_queue_resize (GTK_WIDGET (table));
-
-      g_object_notify (G_OBJECT (table), "homogeneous");
-    }
-}
-
-/**
- * simple_table_get_homogeneous:
- * @table: a #GtkSimpleTable
- *
- * Returns whether the table cells are all constrained to the same
- * width and height. (See simple_table_set_homogenous ())
- *
- * Return value: %TRUE if the cells are all constrained to the same size
- **/
-gboolean
-simple_table_get_homogeneous (GtkSimpleTable *table)
-{
-  g_return_val_if_fail (GTK_IS_SIMPLE_TABLE (table), false);
-
-  return table->homogeneous;
 }
 
 /**
@@ -1421,6 +1385,19 @@ simple_table_size_allocate_pass2 (GtkSimpleTable *table)
 			//dbg(0, "%i: %i-%i requisition=%i allocation.width=%i", child->top_attach, child->left_attach, child->right_attach, child_requisition.width, allocation.width);
 		}
 		c++;
+	}
+}
+
+
+void
+simple_table_print(GtkSimpleTable* table)
+{
+	PF0;
+
+	GList* l = table->children;
+	for (;l;l=l->next){
+		GtkSimpleTableChild* child = l->data;
+      	dbg(0, "  row=%i", child->top_attach);
 	}
 }
 

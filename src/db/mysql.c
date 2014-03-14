@@ -26,9 +26,6 @@
 #include "db/db.h"
 #include "db/mysql.h"
 
-#define pwarn(A, ...) warnprintf2(__func__, A, ##__VA_ARGS__)
-#define perr(A, ...) errprintf2(__func__, A, ##__VA_ARGS__)
-
 //mysql table layout (database column numbers):
 enum {
   MYSQL_ID = 0,
@@ -59,7 +56,7 @@ MYSQL mysql = {{NULL}, NULL, NULL};
 static SamplecatBackend* db = NULL;
 static gboolean is_connected = FALSE;
 static SamplecatModel* model = NULL;
-static struct _mysql_config* config = NULL;
+static DbConfig* config = NULL;
 static MYSQL_RES *dir_iter_result = NULL;
 static MYSQL_RES *search_result = NULL;
 static Sample result;

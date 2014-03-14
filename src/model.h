@@ -82,6 +82,7 @@ struct _SamplecatModel {
 	SamplecatModelPrivate * priv;
 	gint state;
 	gchar* cache_dir;
+	GList* backends;
 	SamplecatFilters filters;
 	GList* filters_;
 	Sample* selection;
@@ -123,6 +124,9 @@ gboolean samplecat_model_remove (SamplecatModel* self, gint id);
 void samplecat_model_set_search_dir (SamplecatModel* self, gchar* dir);
 void samplecat_model_set_selection (SamplecatModel* self, Sample* sample);
 void samplecat_model_add_filter (SamplecatModel* self, SamplecatFilter* filter);
+void samplecat_model_refresh_sample (SamplecatModel* self, Sample* sample, gboolean force_update);
+gboolean samplecat_model_update_sample (SamplecatModel* self, Sample* sample, gint prop, void* val);
+gchar* samplecat_model_print_col_name (guint prop_type);
 
 
 G_END_DECLS

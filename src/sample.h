@@ -47,7 +47,7 @@ Sample*     sample_new               ();
 Sample*     sample_new_from_filename (char* path, gboolean path_alloced);
 Sample*     sample_dup               (Sample*);
 
-/** return a reference to the existing sample  in the tree
+/** return a reference to the existing sample in the tree.
  * implies sample_ref() 
  * @return needs to be sample_unref();
  */
@@ -70,7 +70,6 @@ Sample*     sample_get_by_filename   (const char* abspath);
 void        sample_ref               (Sample*);
 void        sample_unref             (Sample*);
 
-void        sample_refresh           (Sample*, bool force_update);
 bool        sample_get_file_info     (Sample*);
 
 char*       sample_get_metadata_str  (Sample*);

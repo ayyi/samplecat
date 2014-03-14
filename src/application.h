@@ -83,7 +83,6 @@ struct _Application
 
    GKeyFile*            key_file;               // config file data.
 
-   GList*               backends;
    GList*               players;
 
    int                  playing_id;             ///< database index of the file that is currently playing, or zero if none playing, -1 if playing an external file.
@@ -97,11 +96,7 @@ struct _Application
    GtkWidget*           msg_panel;
    GtkWidget*           statusbar;
    GtkWidget*           statusbar2;
-   GtkWidget*           search;
    GtkWidget*           context_menu;
-   GtkWidget*           spectrogram;
-
-   gboolean             colourbox_dirty;
 
    GNode*               dir_tree;
    GtkWidget*           dir_treeview;
@@ -113,8 +108,6 @@ struct _Application
    GdkColor             bg_colour_mod1;
    GdkColor             base_colour;
    GdkColor             text_colour;
-
-   GAsyncQueue*         msg_queue;
 
    //nasty!
    gint                 mouse_x;
@@ -137,7 +130,6 @@ Application* application_new                     ();
 Application* application_construct               (GType);
 void         application_emit_icon_theme_changed (Application*, const gchar*);
 void         application_quit                    (Application*);
-bool         application_can_use                 (GList*, const char*);
 bool         application_add_file                (const char* path);
 
 

@@ -88,11 +88,11 @@ static int ebur128proc (const char *fn, struct ebur128 *ebr) {
 		if (k < 1) break;
 		k=k/nchan;
 		if (nchan > 1) {
-	    float *p = inpb;
-	    for (i = 0; i < k; i++) {
+			float *p = inpb;
+			for (i = 0; i < k; i++) {
 				data [0][i] = *p++;
 				data [1][i] = *p++;
-	    }
+			}
 		}
 		Proc.process (k, data);
 	}

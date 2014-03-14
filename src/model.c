@@ -8,6 +8,14 @@
 #include <sample.h>
 #include <config.h>
 #include <db/db.h>
+#include <samplecat/support.h>
+#include <time.h>
+#include <overview.h>
+#include <debug/debug.h>
+#include <listmodel.h>
+#include <gdk-pixbuf/gdk-pixbuf.h>
+#include <support.h>
+#include <stdlib.h>
 #include <gobject/gvaluecollector.h>
 #include <application.h>
 
@@ -52,6 +60,7 @@ typedef struct _SamplecatModelClass SamplecatModelClass;
 typedef struct _SamplecatModelPrivate SamplecatModelPrivate;
 #define _g_list_free0(var) ((var == NULL) ? NULL : (var = (g_list_free (var), NULL)))
 #define _samplecat_idle_unref0(var) ((var == NULL) ? NULL : (var = (samplecat_idle_unref (var), NULL)))
+#define _sample_unref0(var) ((var == NULL) ? NULL : (var = (sample_unref (var), NULL)))
 
 struct _SamplecatFilter {
 	GTypeInstance parent_instance;
@@ -103,6 +112,7 @@ struct _SamplecatModel {
 	SamplecatModelPrivate * priv;
 	gint state;
 	gchar* cache_dir;
+	GList* backends;
 	SamplecatFilters filters;
 	GList* filters_;
 	Sample* selection;
@@ -120,6 +130,8 @@ struct _SamplecatModelPrivate {
 static gpointer samplecat_filter_parent_class = NULL;
 static gpointer samplecat_idle_parent_class = NULL;
 static gpointer samplecat_model_parent_class = NULL;
+static gchar samplecat_model_unk[32];
+static gchar samplecat_model_unk[32] = {0};
 
 gpointer samplecat_filter_ref (gpointer instance);
 void samplecat_filter_unref (gpointer instance);
@@ -169,6 +181,9 @@ gboolean samplecat_model_remove (SamplecatModel* self, gint id);
 void samplecat_model_set_search_dir (SamplecatModel* self, gchar* dir);
 void samplecat_model_set_selection (SamplecatModel* self, Sample* sample);
 void samplecat_model_add_filter (SamplecatModel* self, SamplecatFilter* filter);
+void samplecat_model_refresh_sample (SamplecatModel* self, Sample* sample, gboolean force_update);
+gboolean samplecat_model_update_sample (SamplecatModel* self, Sample* sample, gint prop, void* val);
+gchar* samplecat_model_print_col_name (guint prop_type);
 static void g_cclosure_user_marshal_VOID__POINTER_INT_POINTER (GClosure * closure, GValue * return_value, guint n_param_values, const GValue * param_values, gpointer invocation_hint, gpointer marshal_data);
 static GObject * samplecat_model_constructor (GType type, guint n_construct_properties, GObjectConstructParam * construct_properties);
 static void samplecat_model_finalize (GObject* obj);
@@ -718,6 +733,532 @@ void samplecat_model_add_filter (SamplecatModel* self, SamplecatFilter* filter) 
 }
 
 
+void samplecat_model_refresh_sample (SamplecatModel* self, Sample* sample, gboolean force_update) {
+	Sample* _tmp0_;
+	gboolean _tmp1_;
+	gboolean online;
+	Sample* _tmp2_;
+	gchar* _tmp3_;
+	time_t _tmp4_ = 0;
+	time_t mtime;
+	time_t _tmp5_;
+	Sample* _tmp28_;
+	gboolean _tmp29_;
+	gboolean _tmp30_;
+	g_return_if_fail (self != NULL);
+	_tmp0_ = sample;
+	_tmp1_ = _tmp0_->online;
+	online = _tmp1_;
+	_tmp2_ = sample;
+	_tmp3_ = _tmp2_->full_path;
+	_tmp4_ = file_mtime (_tmp3_);
+	mtime = _tmp4_;
+	_tmp5_ = mtime;
+	if (_tmp5_ > ((time_t) 0)) {
+		gboolean _tmp6_ = FALSE;
+		Sample* _tmp7_;
+		time_t _tmp8_;
+		time_t _tmp9_;
+		gboolean _tmp11_;
+		Sample* _tmp24_;
+		time_t _tmp25_;
+		Sample* _tmp26_;
+		_tmp7_ = sample;
+		_tmp8_ = _tmp7_->mtime;
+		_tmp9_ = mtime;
+		if (_tmp8_ < _tmp9_) {
+			_tmp6_ = TRUE;
+		} else {
+			gboolean _tmp10_;
+			_tmp10_ = force_update;
+			_tmp6_ = _tmp10_;
+		}
+		_tmp11_ = _tmp6_;
+		if (_tmp11_) {
+			Sample* _tmp12_;
+			gchar* _tmp13_;
+			Sample* _tmp14_;
+			Sample* test;
+			Sample* _tmp15_;
+			Sample* _tmp16_;
+			gboolean _tmp17_ = FALSE;
+			_tmp12_ = sample;
+			_tmp13_ = _tmp12_->full_path;
+			_tmp14_ = sample_new_from_filename (_tmp13_, FALSE);
+			test = _tmp14_;
+			_tmp15_ = test;
+			if (!((gboolean) _tmp15_)) {
+				_sample_unref0 (test);
+				return;
+			}
+			_tmp16_ = sample;
+			_tmp17_ = sample_get_file_info (_tmp16_);
+			if (_tmp17_) {
+				Sample* _tmp18_;
+				time_t _tmp19_;
+				Sample* _tmp20_;
+				Sample* _tmp21_;
+				Sample* _tmp22_;
+				Sample* _tmp23_;
+				_tmp18_ = sample;
+				_tmp19_ = mtime;
+				_tmp18_->mtime = _tmp19_;
+				_tmp20_ = sample;
+				g_signal_emit_by_name (self, "sample-changed", _tmp20_, -1, NULL);
+				_tmp21_ = sample;
+				request_peaklevel (_tmp21_);
+				_tmp22_ = sample;
+				request_overview (_tmp22_);
+				_tmp23_ = sample;
+				request_ebur128 (_tmp23_);
+			} else {
+				dbg (0, "full update - reading file info failed!");
+			}
+			_sample_unref0 (test);
+		}
+		_tmp24_ = sample;
+		_tmp25_ = mtime;
+		_tmp24_->mtime = _tmp25_;
+		_tmp26_ = sample;
+		_tmp26_->online = TRUE;
+	} else {
+		Sample* _tmp27_;
+		_tmp27_ = sample;
+		_tmp27_->online = FALSE;
+	}
+	_tmp28_ = sample;
+	_tmp29_ = _tmp28_->online;
+	_tmp30_ = online;
+	if (_tmp29_ != _tmp30_) {
+		Sample* _tmp31_;
+		_tmp31_ = sample;
+		samplecat_model_update_sample (self, _tmp31_, (gint) COL_ICON, NULL);
+	}
+}
+
+
+gboolean samplecat_model_update_sample (SamplecatModel* self, Sample* sample, gint prop, void* val) {
+	gboolean result = FALSE;
+	gboolean ok;
+	gint _tmp0_;
+	gboolean _tmp105_;
+	g_return_val_if_fail (self != NULL, FALSE);
+	ok = FALSE;
+	_tmp0_ = prop;
+	switch (_tmp0_) {
+		case COL_ICON:
+		{
+			gint _tmp1_ = 0;
+			Sample* _tmp2_;
+			gboolean _tmp3_;
+			Sample* _tmp4_;
+			gint _tmp5_;
+			gint _tmp6_;
+			gboolean _tmp7_ = FALSE;
+			_tmp2_ = sample;
+			_tmp3_ = _tmp2_->online;
+			if (_tmp3_) {
+				_tmp1_ = 1;
+			} else {
+				_tmp1_ = 0;
+			}
+			_tmp4_ = sample;
+			_tmp5_ = _tmp4_->id;
+			_tmp6_ = _tmp1_;
+			_tmp7_ = backend.update_int (_tmp5_, "online", (guint) _tmp6_);
+			if (_tmp7_) {
+				Sample* _tmp8_;
+				gint _tmp9_;
+				Sample* _tmp10_;
+				time_t _tmp11_;
+				gboolean _tmp12_ = FALSE;
+				_tmp8_ = sample;
+				_tmp9_ = _tmp8_->id;
+				_tmp10_ = sample;
+				_tmp11_ = _tmp10_->mtime;
+				_tmp12_ = backend.update_int (_tmp9_, "mtime", (guint) _tmp11_);
+				ok = _tmp12_;
+			}
+			break;
+		}
+		case COL_KEYWORDS:
+		{
+			Sample* _tmp13_;
+			gint _tmp14_;
+			void* _tmp15_;
+			gboolean _tmp16_ = FALSE;
+			gboolean _tmp17_;
+			_tmp13_ = sample;
+			_tmp14_ = _tmp13_->id;
+			_tmp15_ = val;
+			_tmp16_ = backend.update_string (_tmp14_, "keywords", (gchar*) _tmp15_);
+			ok = _tmp16_;
+			_tmp17_ = ok;
+			if (_tmp17_) {
+				Sample* _tmp18_;
+				void* _tmp19_;
+				gchar* _tmp20_;
+				_tmp18_ = sample;
+				_tmp19_ = val;
+				_tmp20_ = g_strdup ((const gchar*) _tmp19_);
+				_g_free0 (_tmp18_->keywords);
+				_tmp18_->keywords = _tmp20_;
+			}
+			break;
+		}
+		case COL_OVERVIEW:
+		{
+			Sample* _tmp21_;
+			GdkPixbuf* _tmp22_;
+			_tmp21_ = sample;
+			_tmp22_ = _tmp21_->overview;
+			if ((gboolean) _tmp22_) {
+				guint len = 0U;
+				Sample* _tmp23_;
+				GdkPixbuf* _tmp24_;
+				guint _tmp25_ = 0U;
+				guint8* _tmp26_ = NULL;
+				guint8* blob;
+				Sample* _tmp27_;
+				gint _tmp28_;
+				guint8* _tmp29_;
+				guint _tmp30_;
+				gboolean _tmp31_ = FALSE;
+				_tmp23_ = sample;
+				_tmp24_ = _tmp23_->overview;
+				_tmp26_ = pixbuf_to_blob (_tmp24_, &_tmp25_);
+				len = _tmp25_;
+				blob = _tmp26_;
+				_tmp27_ = sample;
+				_tmp28_ = _tmp27_->id;
+				_tmp29_ = blob;
+				_tmp30_ = len;
+				_tmp31_ = backend.update_blob (_tmp28_, "pixbuf", _tmp29_, _tmp30_);
+				ok = _tmp31_;
+			}
+			break;
+		}
+		case COL_COLOUR:
+		{
+			void* _tmp32_;
+			guint colour_index;
+			Sample* _tmp33_;
+			gint _tmp34_;
+			guint _tmp35_;
+			gboolean _tmp36_ = FALSE;
+			gboolean _tmp37_;
+			_tmp32_ = val;
+			colour_index = *((guint*) _tmp32_);
+			_tmp33_ = sample;
+			_tmp34_ = _tmp33_->id;
+			_tmp35_ = colour_index;
+			_tmp36_ = backend.update_int (_tmp34_, "colour", _tmp35_);
+			ok = _tmp36_;
+			_tmp37_ = ok;
+			if (_tmp37_) {
+				Sample* _tmp38_;
+				guint _tmp39_;
+				_tmp38_ = sample;
+				_tmp39_ = colour_index;
+				_tmp38_->colour_index = (gint) _tmp39_;
+			}
+			break;
+		}
+		case COL_PEAKLEVEL:
+		{
+			Sample* _tmp40_;
+			gint _tmp41_;
+			Sample* _tmp42_;
+			gfloat _tmp43_;
+			gboolean _tmp44_ = FALSE;
+			gboolean _tmp45_;
+			_tmp40_ = sample;
+			_tmp41_ = _tmp40_->id;
+			_tmp42_ = sample;
+			_tmp43_ = _tmp42_->peaklevel;
+			_tmp44_ = backend.update_float (_tmp41_, "peaklevel", _tmp43_);
+			ok = _tmp44_;
+			_tmp45_ = ok;
+			if (_tmp45_) {
+			}
+			break;
+		}
+		case COL_X_NOTES:
+		{
+			Sample* _tmp46_;
+			gint _tmp47_;
+			void* _tmp48_;
+			gboolean _tmp49_ = FALSE;
+			gboolean _tmp50_;
+			_tmp46_ = sample;
+			_tmp47_ = _tmp46_->id;
+			_tmp48_ = val;
+			_tmp49_ = backend.update_string (_tmp47_, "notes", (gchar*) _tmp48_);
+			ok = _tmp49_;
+			_tmp50_ = ok;
+			if (_tmp50_) {
+				Sample* _tmp51_;
+				void* _tmp52_;
+				gchar* _tmp53_;
+				_tmp51_ = sample;
+				_tmp52_ = val;
+				_tmp53_ = g_strdup ((const gchar*) _tmp52_);
+				_g_free0 (_tmp51_->notes);
+				_tmp51_->notes = _tmp53_;
+			}
+			break;
+		}
+		case COL_X_EBUR:
+		{
+			Sample* _tmp54_;
+			gint _tmp55_;
+			Sample* _tmp56_;
+			gchar* _tmp57_;
+			gboolean _tmp58_ = FALSE;
+			_tmp54_ = sample;
+			_tmp55_ = _tmp54_->id;
+			_tmp56_ = sample;
+			_tmp57_ = _tmp56_->ebur;
+			_tmp58_ = backend.update_string (_tmp55_, "ebur", _tmp57_);
+			ok = _tmp58_;
+			break;
+		}
+		case -1:
+		{
+			Sample* _tmp59_;
+			gchar* _tmp60_ = NULL;
+			gchar* metadata;
+			gboolean _tmp61_;
+			Sample* _tmp62_;
+			gint _tmp63_;
+			Sample* _tmp64_;
+			guint _tmp65_;
+			gboolean _tmp66_ = FALSE;
+			gboolean _tmp67_;
+			Sample* _tmp68_;
+			gint _tmp69_;
+			Sample* _tmp70_;
+			guint _tmp71_;
+			gboolean _tmp72_ = FALSE;
+			gboolean _tmp73_;
+			Sample* _tmp74_;
+			gint _tmp75_;
+			Sample* _tmp76_;
+			gint64 _tmp77_;
+			gboolean _tmp78_ = FALSE;
+			gboolean _tmp79_;
+			Sample* _tmp80_;
+			gint _tmp81_;
+			Sample* _tmp82_;
+			gint64 _tmp83_;
+			gboolean _tmp84_ = FALSE;
+			gboolean _tmp85_;
+			Sample* _tmp86_;
+			gint _tmp87_;
+			Sample* _tmp88_;
+			gint _tmp89_;
+			gboolean _tmp90_ = FALSE;
+			gboolean _tmp91_;
+			Sample* _tmp92_;
+			gint _tmp93_;
+			Sample* _tmp94_;
+			gint _tmp95_;
+			gboolean _tmp96_ = FALSE;
+			gboolean _tmp97_;
+			Sample* _tmp98_;
+			gint _tmp99_;
+			gchar* _tmp100_;
+			gboolean _tmp101_ = FALSE;
+			gchar* _tmp102_;
+			_tmp59_ = sample;
+			_tmp60_ = sample_get_metadata_str (_tmp59_);
+			metadata = _tmp60_;
+			ok = TRUE;
+			_tmp61_ = ok;
+			_tmp62_ = sample;
+			_tmp63_ = _tmp62_->id;
+			_tmp64_ = sample;
+			_tmp65_ = _tmp64_->channels;
+			_tmp66_ = backend.update_int (_tmp63_, "channels", _tmp65_);
+			ok = _tmp61_ & _tmp66_;
+			_tmp67_ = ok;
+			_tmp68_ = sample;
+			_tmp69_ = _tmp68_->id;
+			_tmp70_ = sample;
+			_tmp71_ = _tmp70_->sample_rate;
+			_tmp72_ = backend.update_int (_tmp69_, "sample_rate", _tmp71_);
+			ok = _tmp67_ & _tmp72_;
+			_tmp73_ = ok;
+			_tmp74_ = sample;
+			_tmp75_ = _tmp74_->id;
+			_tmp76_ = sample;
+			_tmp77_ = _tmp76_->length;
+			_tmp78_ = backend.update_int (_tmp75_, "length", (guint) _tmp77_);
+			ok = _tmp73_ & _tmp78_;
+			_tmp79_ = ok;
+			_tmp80_ = sample;
+			_tmp81_ = _tmp80_->id;
+			_tmp82_ = sample;
+			_tmp83_ = _tmp82_->frames;
+			_tmp84_ = backend.update_int (_tmp81_, "frames", (guint) _tmp83_);
+			ok = _tmp79_ & _tmp84_;
+			_tmp85_ = ok;
+			_tmp86_ = sample;
+			_tmp87_ = _tmp86_->id;
+			_tmp88_ = sample;
+			_tmp89_ = _tmp88_->bit_rate;
+			_tmp90_ = backend.update_int (_tmp87_, "bit_rate", (guint) _tmp89_);
+			ok = _tmp85_ & _tmp90_;
+			_tmp91_ = ok;
+			_tmp92_ = sample;
+			_tmp93_ = _tmp92_->id;
+			_tmp94_ = sample;
+			_tmp95_ = _tmp94_->bit_depth;
+			_tmp96_ = backend.update_int (_tmp93_, "bit_depth", (guint) _tmp95_);
+			ok = _tmp91_ & _tmp96_;
+			_tmp97_ = ok;
+			_tmp98_ = sample;
+			_tmp99_ = _tmp98_->id;
+			_tmp100_ = metadata;
+			_tmp101_ = backend.update_string (_tmp99_, "meta_data", _tmp100_);
+			ok = _tmp97_ & _tmp101_;
+			_tmp102_ = metadata;
+			if ((gboolean) _tmp102_) {
+				GDestroyNotify _tmp103_;
+				gchar* _tmp104_;
+				_tmp103_ = g_free;
+				_tmp104_ = metadata;
+				_tmp103_ (_tmp104_);
+			}
+			break;
+		}
+		default:
+		{
+			warnprintf2 ("model.update_sample", "unhandled property", NULL);
+			break;
+		}
+	}
+	_tmp105_ = ok;
+	if (_tmp105_) {
+		Sample* _tmp106_;
+		gint _tmp107_;
+		void* _tmp108_;
+		_tmp106_ = sample;
+		_tmp107_ = prop;
+		_tmp108_ = val;
+		g_signal_emit_by_name (self, "sample-changed", _tmp106_, _tmp107_, _tmp108_);
+	} else {
+		gint _tmp109_;
+		gchar* _tmp110_ = NULL;
+		_tmp109_ = prop;
+		_tmp110_ = samplecat_model_print_col_name ((guint) _tmp109_);
+		warnprintf2 ("model.update_sample", "database update failed for %s", _tmp110_, NULL);
+	}
+	result = ok;
+	return result;
+}
+
+
+gchar* samplecat_model_print_col_name (guint prop_type) {
+	gchar* result = NULL;
+	guint _tmp0_;
+	_tmp0_ = prop_type;
+	switch (_tmp0_) {
+		case COL_ICON:
+		{
+			result = "ICON";
+			return result;
+		}
+		case COL_IDX:
+		{
+			result = "IDX";
+			return result;
+		}
+		case COL_NAME:
+		{
+			result = "NAME";
+			return result;
+		}
+		case COL_FNAME:
+		{
+			result = "FILENAME";
+			return result;
+		}
+		case COL_KEYWORDS:
+		{
+			result = "KEYWORDS";
+			return result;
+		}
+		case COL_OVERVIEW:
+		{
+			result = "OVERVIEW";
+			return result;
+		}
+		case COL_LENGTH:
+		{
+			result = "LENGTH";
+			return result;
+		}
+		case COL_SAMPLERATE:
+		{
+			result = "SAMPLERATE";
+			return result;
+		}
+		case COL_CHANNELS:
+		{
+			result = "CHANNELS";
+			return result;
+		}
+		case COL_MIMETYPE:
+		{
+			result = "MIMETYPE";
+			return result;
+		}
+		case COL_PEAKLEVEL:
+		{
+			result = "PEAKLEVEL";
+			return result;
+		}
+		case COL_COLOUR:
+		{
+			result = "COLOUR";
+			return result;
+		}
+		case COL_SAMPLEPTR:
+		{
+			result = "SAMPLEPTR";
+			return result;
+		}
+		case COL_X_EBUR:
+		{
+			result = "X_EBUR";
+			return result;
+		}
+		case COL_X_NOTES:
+		{
+			result = "X_NOTES";
+			return result;
+		}
+		default:
+		{
+			guint _tmp1_;
+			gchar* _tmp2_ = NULL;
+			gchar* a;
+			const gchar* _tmp3_;
+			_tmp1_ = prop_type;
+			_tmp2_ = g_strdup_printf ("UNKNOWN PROPERTY (%u)", _tmp1_);
+			a = _tmp2_;
+			_tmp3_ = a;
+			memcpy (samplecat_model_unk, _tmp3_, (gsize) 31);
+			_g_free0 (a);
+			break;
+		}
+	}
+	result = samplecat_model_unk;
+	return result;
+}
+
+
 static void g_cclosure_user_marshal_VOID__POINTER_INT_POINTER (GClosure * closure, GValue * return_value, guint n_param_values, const GValue * param_values, gpointer invocation_hint, gpointer marshal_data) {
 	typedef void (*GMarshalFunc_VOID__POINTER_INT_POINTER) (gpointer data1, gpointer arg_1, gint arg_2, gpointer arg_3, gpointer data2);
 	register GMarshalFunc_VOID__POINTER_INT_POINTER callback;
@@ -769,6 +1310,7 @@ static void samplecat_model_instance_init (SamplecatModel * self) {
 static void samplecat_model_finalize (GObject* obj) {
 	SamplecatModel * self;
 	self = G_TYPE_CHECK_INSTANCE_CAST (obj, SAMPLECAT_TYPE_MODEL, SamplecatModel);
+	_g_list_free0 (self->backends);
 	_g_list_free0 (self->filters_);
 	_samplecat_idle_unref0 (self->priv->idle);
 	G_OBJECT_CLASS (samplecat_model_parent_class)->finalize (obj);

@@ -17,6 +17,7 @@ struct _message
 	Sample* sample;
 };
 
+void        overview_thread_init   (SamplecatModel*);
 gpointer    overview_thread        (gpointer data);
 void        request_overview       (Sample*);
 void        request_peaklevel      (Sample*);

@@ -2,19 +2,8 @@
 #define BACKEND_IS_SQLITE (backend.search_iter_new == sqlite__search_iter_new)
 
 void     sqlite__set_as_backend   (SamplecatBackend*);
-
 int      sqlite__connect          ();
-void     sqlite__disconnect       ();
-
-int      sqlite__insert           (Sample*);
-gboolean sqlite__delete_row       (int id);
-gboolean sqlite__file_exists      (const char*, int *id);
-GList *  sqlite__filter_by_audio  (Sample *s);
-
-gboolean sqlite__update_string    (int id, const char*, const char*);
-gboolean sqlite__update_int       (int id, const char*, const long int);
-gboolean sqlite__update_float     (int id, const char*, const float);
-gboolean sqlite__update_blob      (int id, const char*, const guint8*, const guint);
+GList*   sqlite__filter_by_audio  (Sample *s);
 
 #if 1 // deprecate soon
 gboolean sqlite__update_colour    (int id, int colour);

@@ -20,10 +20,6 @@ gboolean    new_search(GtkWidget*, gpointer userdata);
 void        add_dir(const char* path, int* added_count);
 void        delete_selected_rows();
 
-gboolean    on_overview_done(gpointer sample);
-gboolean    on_peaklevel_done(gpointer sample);
-gboolean    on_ebur128_done(gpointer _sample);
-
 void        on_quit(GtkMenuItem*, gpointer user_data);
 
 #endif

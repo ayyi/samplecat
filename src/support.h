@@ -1,17 +1,15 @@
-#ifndef __SUPPORT_H_
-#define __SUPPORT_H_
+#ifndef __support_h__
+#define __support_h__
 
 #include <stdint.h>
 #include <gtk/gtk.h>
 #include "typedefs.h"
 #include "utils/ayyi_utils.h"
 #include "utils/mime_type.h"
+#include "samplecat/support.h"
 
-#define perr(A, ...) errprintf2(__func__, A, ##__VA_ARGS__)
-#define pwarn(A, ...) warnprintf2(__func__, A, ##__VA_ARGS__)
 #ifndef __ayyi_h__
 #define PF_DONE printf("%s(): done.\n", __func__);
-#define gwarn(A, ...) g_warning("%s(): "A, __func__, ##__VA_ARGS__);
 #define GERR_WARN if(error){ gwarn("%s", error->message); g_error_free(error); error = NULL; }
 #endif
 #define g_error_clear(E) { if(E){ g_error_free(E); E = NULL; }}
@@ -20,8 +18,6 @@
 #define call(FN, A, ...) if(FN) (FN)(A, ##__VA_ARGS__)
 #define g_free0(A) (A = (g_free(A), NULL))
 
-#define HAS_ALPHA_FALSE 0
-#define HAS_ALPHA_TRUE 1
 #define IDLE_STOP FALSE
 #define TIMER_CONTINUE TRUE
 #define TIMER_STOP FALSE
@@ -50,7 +46,6 @@ struct _accel {
 	gpointer      user_data;
 };
 
-void         log_handler               (const gchar* log_domain, GLogLevelFlags, const gchar* message, gpointer);
 void         p_                        (int level, const char* format, ...);
 
 void         samplerate_format         (char*, int samplerate);
@@ -61,12 +56,6 @@ gchar*       channels_format           (int);
 void         smpte_format              (char*, int64_t);
 //gint         strcmp2(gconstpointer a, gconstpointer b);
 //GPtrArray*   list_dir(const guchar *path);
-gboolean     file_exists               (const char*);
-time_t       file_mtime                (const char *path);
-gboolean     is_dir                    (const char*);
-gboolean     dir_is_empty              (const char*);
-void         file_extension            (const char*, char* extn);
-gboolean     ensure_config_dir         ();
 
 //-----------------------------------------------------------------
 
@@ -84,7 +73,6 @@ void         colour_get_style_fg       (GdkColor*, GtkStateType);
 void         colour_get_style_bg       (GdkColor*, int state);
 void         colour_get_style_base     (GdkColor*, int state);
 void         colour_get_style_text     (GdkColor*, int state);
-void         colour_get_float          (GdkColor*, float* r, float* g, float* b, const unsigned char alpha);
 gchar*       gdkcolor_get_hexstring    (GdkColor*);
 void         hexstring_from_gdkcolor   (char* hexstring, GdkColor*);
 void         color_rgba_to_gdk         (GdkColor*, uint32_t rgba);
@@ -127,11 +115,6 @@ void         show_widget_if            (GtkWidget*, gboolean);
 GtkWidget*   scrolled_window_new       ();
 
 GdkPixbuf*   get_iconbuf_from_mimetype (char* mimetype);
-
-uint8_t*     pixbuf_to_blob            (GdkPixbuf* in, guint* len);
-
-gboolean     mimestring_is_unsupported (char*);
-gboolean     mimetype_is_unsupported   (MIME_type*, char* mime_string);
 
 gboolean     keyword_is_dupe           (const char* new, const char* existing);
 

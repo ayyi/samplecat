@@ -303,6 +303,9 @@ inspector_add_meta_cells(GPtrArray* meta_data)
 
 	if(!meta_data) return;
 
+	// currently we are not able to add ebu cells after metadata cells so they must be added first.
+	if(!i->meta.start) inspector_add_ebu_cells();
+
 	int rows_needed = meta_data->len / 2;
 	int n_to_add = rows_needed - i->meta.n;
 
@@ -465,6 +468,10 @@ inspector_set_labels(Sample* sample)
 	if(sample->meta_data){
 		char** meta_data = (char**)sample->meta_data->pdata;
 
+		for(;l;l=l->next, r++){
+			if((GtkWidget*)l->data == i->meta.first_child) break;
+		}
+
 		for(r=0;l && r<sample->meta_data->len/2;l=l->next, r++){
 			GtkWidget* child = l->data;
 			gtk_label_set_markup(GTK_LABEL(child), meta_data[2*r]); // markup used for backwards compatibility. previous format contained italic tags.
@@ -601,7 +608,7 @@ show_fields()
 
 /** a single click on the Tags label puts us into edit mode.*/
 static gboolean
-inspector_on_tags_clicked(GtkWidget *widget, GdkEventButton *event, gpointer user_data)
+inspector_on_tags_clicked(GtkWidget* widget, GdkEventButton* event, gpointer user_data)
 {
 	if(event->button == 3) return false;
 	tag_edit_start(0);
@@ -610,7 +617,7 @@ inspector_on_tags_clicked(GtkWidget *widget, GdkEventButton *event, gpointer use
 
 
 static gboolean
-on_notes_focus_out(GtkWidget *widget, gpointer userdata)
+on_notes_focus_out(GtkWidget* widget, gpointer userdata)
 {
 	InspectorPriv* i = app->inspector->priv;
 
@@ -625,28 +632,12 @@ on_notes_focus_out(GtkWidget *widget, gpointer userdata)
 	Sample* sample = app->model->selection;
 	if(sample && (sample->id == i->row_id) && (!sample->notes || strcmp(notes, sample->notes))){
 		statusbar_print(1,
-			listmodel__update_sample(sample, COLX_NOTES, notes)
+			samplecat_model_update_sample (app->model, sample, COL_X_NOTES, notes)
 				? "notes updated"
 				: "failed to update notes");
 	}
 	g_free(notes);
 	return false;
-}
-
-
-gboolean
-row_set_tags_from_id(int id, GtkTreeRowReference* row_ref, const char* tags_new)
-{
-	g_return_val_if_fail(id, false);
-	g_return_val_if_fail(row_ref, false);
-
-	dbg(1, "id=%i", id);
-
-	if(!listmodel__update_by_rowref(row_ref, COL_KEYWORDS, (void*)tags_new)) {
-		statusbar_print(1, "failed to update keywords");
-		return false;
-	}
-	return true;
 }
 
 
@@ -695,6 +686,7 @@ tag_edit_start(int _)
 
 	if(handler1) g_signal_handler_disconnect((gpointer)edit, handler1);
 
+#warning handle ENTER
 	handler1 = g_signal_connect((gpointer)edit, "focus-out-event", G_CALLBACK(tag_edit_stop), GINT_TO_POINTER(0));
 
 	/*
@@ -709,7 +701,7 @@ tag_edit_start(int _)
 
 
 static void
-tag_edit_stop(GtkWidget *widget, GdkEventCrossing *event, gpointer user_data)
+tag_edit_stop(GtkWidget* widget, GdkEventCrossing* event, gpointer user_data)
 {
 	/*
 	tidy up widgets and notify core of label change.
@@ -722,34 +714,37 @@ tag_edit_stop(GtkWidget *widget, GdkEventCrossing *event, gpointer user_data)
 	Currently it works ok if focus is removed before calling.
 	*/
 
-	//static gboolean busy = false;
-	//if(busy){"track_label_edit_stop(): busy!\n"; return;} //only run once at a time!
-	//busy = true;
-
 	InspectorPriv* i = app->inspector->priv;
 	GtkWidget* edit = i->edit;
 	GtkWidget* parent = i->tags_ev;
 
-	//g_signal_handler_disconnect((gpointer)edit, handler_id);
+	bool row_set_tags_from_id(int id, GtkTreeRowReference* row_ref, const char* tags_new)
+	{
+		g_return_val_if_fail(id, false);
+		g_return_val_if_fail(row_ref, false);
+		bool ok = false;
 
-	//change the text in the label:
-	const char* newtxt = gtk_entry_get_text(GTK_ENTRY(edit));
-	const char* keywords = (newtxt && strlen(newtxt)) ? newtxt : "<no tags>";
-	gtk_label_set_text(GTK_LABEL(i->tags), keywords);
+		dbg(1, "id=%i", id);
+
+		Sample* sample = sample_get_by_row_ref(row_ref);
+		g_return_val_if_fail(sample, false);
+		if((ok = samplecat_model_update_sample (app->model, sample, COL_KEYWORDS, (void*)tags_new))){
+			statusbar_print(1, "keywords updated");
+		}else{
+			statusbar_print(1, "failed to update keywords");
+		}
+		sample_unref(sample);
+		return ok;
+	}
 
 	//update the data:
-	//update the string for the channel that the current track is using:
-	//int ch = track_get_ch_idx(tnum);
-	row_set_tags_from_id(i->row_id, i->row_ref, (void*)newtxt);
+	row_set_tags_from_id(i->row_id, i->row_ref, gtk_entry_get_text(GTK_ENTRY(edit)));
 
 	//swap back to the normal label:
 	gtk_container_remove(GTK_CONTAINER(parent), edit);
-	//gtk_container_remove(GTK_CONTAINER(arrange->wrename->parent), arrange->wrename);
-	//printf("track_label_edit_stop(): wrename unparented.\n");
 
 	gtk_container_add(GTK_CONTAINER(parent), i->tags);
 	g_object_unref(i->tags); //remove 'artificial' ref added in edit_start.
 	dbg(0, "finished.");
-	//busy = false;
 }
 

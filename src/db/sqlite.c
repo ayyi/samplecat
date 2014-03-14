@@ -16,15 +16,17 @@
 #include <gtk/gtk.h>
 #include <gdk-pixbuf/gdk-pixdata.h>
 #include "debug/debug.h"
-#include "typedefs.h"
 #include "sample.h"
+#include "support.h"
 #include "model.h"
 #include "db/db.h"
 #include "db/sqlite.h"
 
 extern SamplecatBackend backend;
 
-static gboolean sqlite__search_iter_new  (char* dir, const char* category, int* n_results);
+static void     sqlite__disconnect       ();
+
+static bool     sqlite__search_iter_new  (char* dir, const char* category, int* n_results);
 static Sample*  sqlite__search_iter_next (unsigned long** lengths);
 static void     sqlite__search_iter_free ();
 
@@ -32,13 +34,19 @@ static void     sqlite__dir_iter_new     ();
 static char*    sqlite__dir_iter_next    ();
 static void     sqlite__dir_iter_free    ();
 
+static bool     sqlite__update_string    (int id, const char*, const char*);
+static bool     sqlite__update_int       (int id, const char*, const long int);
+static bool     sqlite__update_float     (int id, const char*, const float);
+static bool     sqlite__update_blob      (int id, const char*, const guint8*, const guint);
+
+static int      sqlite__insert           (Sample*);
+static bool     sqlite__delete_row       (int id);
+static bool     sqlite__file_exists      (const char*, int *id);
+
 static sqlite3* db;
 sqlite3_stmt* ppStmt = NULL;
 static SamplecatModel* model = NULL;
 #define MAX_LEN 256 //temp!
-
-#define pwarn(A, ...) warnprintf2(__func__, A, ##__VA_ARGS__)
-#define perr(A, ...) errprintf2(__func__, A, ##__VA_ARGS__)
 
 enum {
 	COLUMN_ID,
@@ -85,6 +93,18 @@ sqlite__set_as_backend(SamplecatBackend* backend)
 	backend->dir_iter_new     = sqlite__dir_iter_new;
 	backend->dir_iter_next    = sqlite__dir_iter_next;
 	backend->dir_iter_free    = sqlite__dir_iter_free;
+
+	backend->update_string    = sqlite__update_string;
+	backend->update_float     = sqlite__update_float;
+	backend->update_int       = sqlite__update_int;
+	backend->update_blob      = sqlite__update_blob;
+
+	backend->insert           = sqlite__insert;
+	backend->remove           = sqlite__delete_row;
+	backend->file_exists      = sqlite__file_exists;
+	backend->filter_by_audio  = sqlite__filter_by_audio;
+
+	backend->disconnect       = sqlite__disconnect;
 }
 
 void
@@ -99,8 +119,12 @@ sqlite__connect()
 	PF;
 	int rc;
 
+	if(!ensure_config_dir()){
+		return false;
+	}
+
 	char* db_name = g_strdup_printf("%s/.config/" PACKAGE "/" PACKAGE ".sqlite", g_get_home_dir());
-	rc = sqlite3_open(db_name, &db); //if the file doesnt exist, it be created.
+	rc = sqlite3_open(db_name, &db); //if the file doesnt exist, it will be created.
 	if (rc) {
 		fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
 		fprintf(stderr, "file=%s", db_name);
@@ -217,14 +241,14 @@ sqlite__connect()
 }
 
 
-void
+static void
 sqlite__disconnect()
 {
 	sqlite3_close(db);
 }
 
 
-int
+static int
 sqlite__insert(Sample* sample)
 {
 	char* errMsg = 0;
@@ -256,6 +280,7 @@ sqlite__insert(Sample* sample)
 	return (int)idx;
 }
 
+
 gboolean
 sqlite__execwrap(char *sql)
 {
@@ -271,33 +296,35 @@ sqlite__execwrap(char *sql)
 	return ok;
 }
 
-gboolean
+
+static bool
 sqlite__delete_row(int id)
 {
 	return sqlite__execwrap(sqlite3_mprintf("DELETE FROM samples WHERE id=%i", id));
 }
 
-gboolean
+static bool
 sqlite__update_string(int id, const char* key, const char* value)
 {
 	return sqlite__execwrap(sqlite3_mprintf("UPDATE samples SET %s='%q' WHERE id=%u", key, value?value:"", id));
 }
 
-gboolean
+static bool
 sqlite__update_int(int id, const char* key, const long int value)
 {
 	return sqlite__execwrap(sqlite3_mprintf("UPDATE samples SET %s=%li WHERE id=%i", key, value, id));
 }
 
-gboolean
+static bool
 sqlite__update_float(int id, const char* key, const float value)
 {
 	return sqlite__execwrap(sqlite3_mprintf("UPDATE samples SET %s=%f WHERE id=%i", key, value, id));
 }
 
-gboolean
-sqlite__update_blob (int id, const char* key, const guint8* d, const guint len) {
-	gboolean ok =true;
+static bool
+sqlite__update_blob (int id, const char* key, const guint8* d, const guint len)
+{
+	gboolean ok = true;
 	sqlite3_stmt* ppStmt = NULL;
 
 	char* sql = sqlite3_mprintf("UPDATE samples SET %s=? WHERE id=%u", key, id);
@@ -312,24 +339,24 @@ sqlite__update_blob (int id, const char* key, const guint8* d, const guint len) 
 	while ((rc = sqlite3_step(ppStmt)) == SQLITE_ROW) { ; }
 	if(rc != SQLITE_DONE) { 
 		pwarn("step: code=%i error=%s\n", rc, sqlite3_errmsg(db));
-		ok=true;
+		ok = true;
 	}
 	if((rc = sqlite3_finalize(ppStmt)) != SQLITE_OK){
 		pwarn("finalize error: %s", sqlite3_errmsg(db));
-		ok=false;
+		ok = false;
 	}
 	sqlite3_free(sql);
 	return ok;
 }
 
 
-gboolean
+static bool
 sqlite__file_exists(const char* path, int *id)
 {
 	PF;
 	gboolean ok =false;
-  int rows,columns;
-  char **table = NULL;
+	int rows,columns;
+	char **table = NULL;
 	char *errmsg= NULL;
 	char* sql = sqlite3_mprintf("SELECT id FROM samples WHERE full_path='%q'", path);
 	int rc = sqlite3_get_table(db, sql, &table,&rows,&columns,&errmsg);
@@ -343,7 +370,8 @@ sqlite__file_exists(const char* path, int *id)
 	return ok;
 }
 
-GList *
+
+GList*
 sqlite__filter_by_audio(Sample *s) 
 {
 	GList *rv = NULL;
@@ -364,8 +392,8 @@ sqlite__filter_by_audio(Sample *s)
 	g_string_append_printf(sql, ";");
 	dbg(2,"%s",sql->str);
 
-  int rows,columns;
-  char **table= NULL;
+	int rows,columns;
+	char **table= NULL;
 	char *errmsg= NULL;
 	int n = sqlite3_get_table(db, sql->str, &table,&rows,&columns,&errmsg);
 	if(n!=SQLITE_OK || (table == NULL) || (rows<1) || (columns!=1)) {

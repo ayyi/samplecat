@@ -29,9 +29,8 @@
 #include "dnd.h"
 #include "cellrenderer_hypertext.h"
 #include "overview.h"
-#include "listview.h"
-#include "inspector.h"
 #include "auditioner.h"
+#include "listview.h"
 
 static gboolean     listview__on_row_clicked          (GtkWidget*, GdkEventButton*, gpointer);
 static void         listview__on_cursor_change        (GtkTreeView*, gpointer);
@@ -304,7 +303,6 @@ listview__on_row_clicked(GtkWidget* widget, GdkEventButton* event, gpointer user
 					gtk_tree_model_get(model, &iter, /*COL_FNAME, &fpath, COL_NAME, &fname, */COL_KEYWORDS, &tags, COL_IDX, &id, -1);
 
 					if(tags && strlen(tags)){
-						gtk_entry_set_text(GTK_ENTRY(app->search), tags);
 						samplecat_filter_set_value(app->model->filters.search, g_strdup(tags));
 					}
 				}
@@ -369,22 +367,6 @@ listview__on_store_changed(GtkListStore* store, gpointer data)
 }
 
 
-gboolean
-listview__item_set_colour(GtkTreePath* path, unsigned colour_index)
-{
-	g_return_val_if_fail(path, false);
-	GtkTreeIter iter;
-	gtk_tree_model_get_iter(GTK_TREE_MODEL(app->store), &iter, path);
-
-	if(!listmodel__update_by_tree_iter(&iter, COL_COLOUR, (void*)&colour_index)) {
-		statusbar_print(1, "error! colour not updated");
-		return false;
-	}
-	statusbar_print(1, "colour updated");
-	return true;
-}
-
-
 static gboolean
 listview__get_first_selected_iter(GtkTreeIter* iter)
 {
@@ -404,10 +386,11 @@ listview__get_first_selected_iter(GtkTreeIter* iter)
 	return false;
 }
 
+
 void
 listview__reset_colours()
 {
-	gboolean reset_colours (GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *iter, gpointer data) {
+	gboolean reset_colours (GtkTreeModel* model, GtkTreePath* path, GtkTreeIter* iter, gpointer data) {
 		Sample *s = sample_get_by_tree_iter(iter);
 		gtk_list_store_set(app->store, iter, COL_COLOUR, s->colour_index, -1);
 		sample_unref(s);
@@ -417,6 +400,7 @@ listview__reset_colours()
 	GtkTreeModel* model = GTK_TREE_MODEL(app->store);
 	gtk_tree_model_foreach(model, &reset_colours, NULL);
 }
+
 
 static GtkTreePath*
 listview__get_first_selected_path()
@@ -739,27 +723,27 @@ listview__edit_row(GtkWidget* widget, gpointer user_data)
 
 /**the keywords column has been edited. Update the database to reflect the new text.  */
 static void
-listview__on_keywords_edited(GtkCellRendererText *cell, gchar *path_string, gchar *new_text, gpointer user_data)
+listview__on_keywords_edited(GtkCellRendererText* cell, gchar* path_string, gchar* new_text, gpointer user_data)
 {
 	PF;
 	GtkTreeIter iter;
 	int idx;
-	gchar *filename;
+	gchar* filename;
+	Sample* sample;
 	GtkTreeModel* store = GTK_TREE_MODEL(app->store);
 	GtkTreePath* path = gtk_tree_path_new_from_string(path_string);
 	gtk_tree_model_get_iter(store, &iter, path);
-	gtk_tree_model_get(store, &iter, COL_IDX, &idx, COL_NAME, &filename, -1);
+	gtk_tree_model_get(store, &iter, COL_SAMPLEPTR, &sample, COL_IDX, &idx, COL_NAME, &filename, -1);
 	dbg(1, "filename=%s idx=%i", filename, idx);
 	gtk_tree_path_free(path);
 
-	//convert to lowercase:
-	//gchar* lower = g_ascii_strdown(new_text, -1);
-	//g_free(lower);
-
-	if(listmodel__update_by_tree_iter(&iter, COL_KEYWORDS, (void*)new_text)) {
+	sample_ref(sample);
+	if(samplecat_model_update_sample (app->model, sample, COL_KEYWORDS, (void*)new_text)){
 		statusbar_print(1, "keywords updated");
+	}else{
+		statusbar_print(1, "failed to update keywords");
 	}
-	else statusbar_print(1, "database error! keywords not updated");
+	sample_unref(sample);
 }
 
 
@@ -855,7 +839,7 @@ listview__tag_cell_data(GtkTreeViewColumn* tree_column, GtkCellRenderer* cell, G
 
 				pango_layout_line_index_to_x(layout_line, char_index, trailing, &char_pos);
 				if(char_pos/PANGO_SCALE > mouse_cell_x){
-					dbg(0, "word=%i\n", word_index);
+					dbg(1, "word=%i\n", word_index);
 
 					snprintf(word, 256, "<u>%s</u> ", split[word_index]);
 					g_strlcat(formatted, word, 256);
@@ -873,7 +857,7 @@ listview__tag_cell_data(GtkTreeViewColumn* tree_column, GtkCellRenderer* cell, G
 
 				word_index++;
 			}
-			dbg(0, "joined: %s\n", formatted);
+			dbg(1, "joined: %s\n", formatted);
 
 			g_object_unref(layout);
 

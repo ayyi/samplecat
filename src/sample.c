@@ -17,12 +17,13 @@
 #include "debug/debug.h"
 #include "file_manager/file_manager.h"
 #include "file_manager/rox_support.h" // to_utf8()
+#include "samplecat/support.h"
 #include "types.h"
 #include "support.h"
 #include "audio_decoder/ad.h"
 #include "main.h"
 
-#include "mimetype.h"
+#include "file_manager/mimetype.h"
 #include "overview.h"
 #include "listview.h"
 #include "sample.h"
@@ -51,7 +52,7 @@ sample_new_from_filename(char* path, gboolean path_alloced)
 	}
 
 	Sample* sample = sample_new();
-	sample->full_path = path_alloced?path:g_strdup(path);
+	sample->full_path = path_alloced ? path : g_strdup(path);
 
 	MIME_type* mime_type = type_from_path(path);
 	if (!mime_type) {
@@ -151,40 +152,6 @@ sample_unref(Sample* sample)
 }
 
 
-void
-sample_refresh(Sample* sample, gboolean force_update)
-{
-	time_t mtime = file_mtime(sample->full_path);
-	if(mtime > 0){
-		if (sample->mtime < mtime || force_update) {
-			/* file may have changed - FULL UPDATE */
-			dbg(0, "file modified: full update: %s", sample->full_path);
-
-			// re-check mime-type
-			Sample* test = sample_new_from_filename(sample->full_path, false);
-			if (test) sample_unref(test);
-			else return;
-
-			if (sample_get_file_info(sample)) {
-				g_signal_emit_by_name (app->model, "sample-changed", sample, -1, NULL);
-				sample->mtime = mtime;
-				request_peaklevel(sample);
-				request_overview(sample);
-				request_ebur128(sample);
-			} else {
-				dbg(0, "full update - reading file info failed!");
-			}
-		}
-		sample->mtime = mtime;
-		sample->online = 1;
-	}else{
-		/* file does not exist */
-		sample->online = 0;
-	}
-	g_signal_emit_by_name (app->model, "sample-changed", sample, COL_ICON, NULL);
-}
-
-
 gboolean
 sample_get_file_info(Sample* sample)
 {
@@ -192,7 +159,7 @@ sample_get_file_info(Sample* sample)
 
 	if(!file_exists(sample->full_path)){
 		if(sample->online){
-			listmodel__update_sample(sample, COL_ICON, (void*)false);
+			samplecat_model_update_sample (app->model, sample, COL_ICON, NULL);
 		}
 		return false;
 	}
@@ -208,6 +175,7 @@ sample_get_file_info(Sample* sample)
 	sample->bit_rate    = nfo.bit_rate;
 	sample->bit_depth   = nfo.bit_depth;
 	sample->meta_data   = nfo.meta_data;
+
 	return true;
 }
 
@@ -288,7 +256,6 @@ sample_get_metadata_str(Sample* sample)
 	int i; for(i=0;i<sample->meta_data->len;i+=2)
 		items[i] = g_strdup_printf("%s:%s", data[i], data[i+1]);
 	char* str = g_strjoinv("\n", items);
-	dbg(0, "str=%s", str);
 	g_strfreev(items);
 
 	return str;

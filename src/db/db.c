@@ -19,9 +19,9 @@
 #include <gdk-pixbuf/gdk-pixdata.h>
 #include "typedefs.h"
 #include "debug/debug.h"
-#include "application.h"
 #include "sample.h"
 #include "support.h"
+#include "model.h"
 #ifdef USE_MYSQL
 #include "db/mysql.h"
 #endif
@@ -37,6 +37,16 @@
 #include "db/db.h"
 
 extern SamplecatBackend backend;
+static SamplecatModel* model = NULL;
+static DbConfig* mysql_config;
+
+
+void
+db_init(SamplecatModel* _model, DbConfig* _mysql)
+{
+	model = _model;
+	mysql_config = _mysql;
+}
 
 
 gboolean
@@ -44,13 +54,13 @@ db_connect()
 {
 	gboolean db_connected = false;
 #ifdef USE_MYSQL
-	mysql__init(app->model, &app->config.mysql);
-	if(application_can_use(app->backends, "mysql")){
+	mysql__init(model, mysql_config);
+	if(can_use(model->backends, "mysql")){
 		db_connected = samplecat_set_backend(BACKEND_MYSQL);
 	}
 #endif
 #ifdef USE_SQLITE
-	if(!db_connected && application_can_use(app->backends, "sqlite") && ensure_config_dir()){
+	if(!db_connected && can_use(model->backends, "sqlite")){
 		if(sqlite__connect()){
 			db_connected = samplecat_set_backend(BACKEND_SQLITE);
 		}
@@ -80,18 +90,6 @@ samplecat_set_backend(BackendType type)
 		case BACKEND_SQLITE:
 			#ifdef USE_SQLITE
 			sqlite__set_as_backend(&backend);
-
-			backend.insert           = sqlite__insert;
-			backend.remove           = sqlite__delete_row;
-			backend.file_exists      = sqlite__file_exists;
-			backend.filter_by_audio  = sqlite__filter_by_audio;
-
-			backend.update_string    = sqlite__update_string;
-			backend.update_float     = sqlite__update_float;
-			backend.update_int       = sqlite__update_int;
-			backend.update_blob      = sqlite__update_blob;
-
-			backend.disconnect       = sqlite__disconnect;
 
 			printf("backend is sqlite.\n");
 			#endif
@@ -123,9 +121,9 @@ samplecat_set_backend(BackendType type)
 		default:
 			break;
 	}
-	backend.init(app->model,
+	backend.init(model,
 #ifdef USE_MYSQL
-		&app->config.mysql
+		mysql_config
 #else
 		NULL
 #endif

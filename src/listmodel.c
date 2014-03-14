@@ -32,7 +32,11 @@
 #include "list_store.h"
 #include "listmodel.h"
 
-static void listmodel__update ();
+static void  listmodel__update              ();
+static bool _listmodel__update_by_rowref    (GtkTreeRowReference*, int, void*);
+static void _listmodel__update_by_tree_iter (GtkTreeIter*, int, void*);
+static void  listmodel__set_overview        (GtkTreeRowReference*, GdkPixbuf*);
+static void  listmodel__set_peaklevel       (GtkTreeRowReference*, float);
 
 
 GtkListStore*
@@ -40,6 +44,74 @@ listmodel__new()
 {
 	void icon_theme_changed(Application* application, char* theme, gpointer data){ listmodel__update(); }
 	g_signal_connect((gpointer)app, "icon-theme", G_CALLBACK(icon_theme_changed), NULL);
+
+	void listmodel__sample_changed(SamplecatModel* m, Sample* sample, int prop, void* val, gpointer user_data)
+	{
+		dbg(1, "prop=%i %s", prop, samplecat_model_print_col_name(prop));
+		switch(prop){
+			case COL_ICON: // online/offline, mtime
+				{
+					GdkPixbuf* iconbuf = NULL;
+					if (sample->online) {
+						MIME_type* mime_type = mime_type_lookup(sample->mimetype);
+						type_to_icon(mime_type);
+						if (!mime_type->image) dbg(0, "no icon.");
+						iconbuf = mime_type->image->sm_pixbuf;
+					}
+					//gtk_list_store_set(app->store, iter, COL_ICON, iconbuf, -1);
+					_listmodel__update_by_rowref (sample->row_ref, prop, iconbuf);
+				}
+				break;
+			case COL_KEYWORDS:
+				if(sample->row_ref){
+					_listmodel__update_by_rowref (sample->row_ref, prop, val);
+					//gtk_list_store_set(app->store, iter, COL_KEYWORDS, (char*)val, -1);
+				}
+				break;
+			case COL_OVERVIEW:
+				if (sample->row_ref)
+					listmodel__set_overview(sample->row_ref, sample->overview);
+				break;
+			case COL_COLOUR:
+				_listmodel__update_by_rowref (sample->row_ref, prop, val);
+				break;
+			case COL_PEAKLEVEL:
+				if (sample->row_ref) listmodel__set_peaklevel(sample->row_ref, sample->peaklevel);
+				break;
+			case COL_X_EBUR:
+			case COL_X_NOTES:
+				// nothing to do.
+				break;
+			case -1:
+				{
+					// TODO set other props too ?
+
+					//char* metadata = sample_get_metadata_str(s);
+
+					GtkTreePath* path = gtk_tree_row_reference_get_path(sample->row_ref);
+					g_return_if_fail(path);
+
+					GtkTreeIter iter;
+					gtk_tree_model_get_iter(GTK_TREE_MODEL(app->store), &iter, path);
+					gtk_tree_path_free(path);
+
+					char samplerate_s[32]; samplerate_format(samplerate_s, sample->sample_rate);
+					char length_s[64]; smpte_format(length_s, sample->length);
+					gtk_list_store_set((GtkListStore*)app->store, &iter, 
+							COL_CHANNELS, sample->channels,
+							COL_SAMPLERATE, samplerate_s,
+							COL_LENGTH, length_s,
+							-1);
+					dbg(1, "file info updated.");
+					//if(metadata) g_free(metadata);
+				}
+				break;
+			default:
+				dbg(0, "property not handled");
+				break;
+		}
+	}
+	g_signal_connect((gpointer)app->model, "sample-changed", G_CALLBACK(listmodel__sample_changed), NULL);
 
 	return (GtkListStore*)samplecat_list_store_new();
 }
@@ -146,7 +218,7 @@ listmodel__add_result(Sample* sample)
 	}
 
 	if(sample->peaklevel==0 && sample->row_ref){
-		dbg(1, "recalucale peak");
+		dbg(1, "recalculate peak");
 		request_peaklevel(sample);
 	}
 	if(!sample->overview && sample->row_ref){
@@ -156,186 +228,43 @@ listmodel__add_result(Sample* sample)
 }
 
 
-/* used to update information that was generated in
- * a backgound analysis process */
-bool
-listmodel__update_sample(Sample* sample, int what, void* data)
+static void
+_listmodel__update_by_tree_iter(GtkTreeIter* iter, int what, void* data)
 {
-	bool ok = false;
-
-	if(!sample->row_ref || !gtk_tree_row_reference_valid(sample->row_ref)){
-		/* this can happen if the file is removed before the background-process(es) completed
-		 * or the view has changed.
-		 */
-		dbg(1, "rowref not set");
-	}
-
 	switch (what) {
 		case COL_ICON:
-			sample->online = (bool)data;
-			listmodel__update_by_rowref(sample->row_ref, what, data);
-			break;
-		case COL_OVERVIEW:
-			if (sample->overview) {
-				guint len;
-				guint8* blob = pixbuf_to_blob(sample->overview, &len);
-				if ((ok = !backend.update_blob(sample->id, "pixbuf", blob, len)))
-					gwarn("failed to store overview in the database");
-			}
-			if (sample->row_ref)
-				listmodel__set_overview(sample->row_ref, sample->overview);
-			break;
-		case COLX_NOTES:
-			if (!(ok = backend.update_string(sample->id, "notes", (char*)data))) {
-				gwarn("failed to store notes in the database");
-			} else {
-				if (sample->notes) g_free(sample->notes);
-				sample->notes = strdup((char*)data);
-			}
-			break;
-		case COL_PEAKLEVEL:
-			if ((ok = !backend.update_float(sample->id, "peaklevel", sample->peaklevel)))
-				gwarn("failed to store peaklevel in the database");
-			if (sample->row_ref)
-				listmodel__set_peaklevel(sample->row_ref, sample->peaklevel);
-			break;
-		case COLX_EBUR:
-			if((ok = !backend.update_string(sample->id, "ebur", sample->ebur)))
-				gwarn("failed to store ebu level in the database");
-			break;
-		default:
-			dbg(0,"update for this type is not yet implemented"); 
-			break;
-	}
-
-	g_signal_emit_by_name (app->model, "sample-changed", sample, -1, NULL);
-
-	return ok;
-}
-
-/* used when user interactively changes meta-data listview.c/window.c,
- * or when modifying meta-data in the inspector.c (wrapped by
- * listmodel__update_by_rowref() below.
- * Also used when user invokes an 'update' command - main.c */
-gboolean
-listmodel__update_by_tree_iter(GtkTreeIter* iter, int what, void* data)
-{
-	gboolean rv = true;
-	Sample* s = NULL;
-	gtk_tree_model_get(GTK_TREE_MODEL(app->store), iter, COL_SAMPLEPTR, &s, -1);
-	if (!s) {
-		// THIS SHOULD NEVER HAPPEN!
-		dbg(0, "FIXME: no sample data in list model!");
-		return false;
-	}
-	sample_ref(s);
-
-	switch (what) {
-		case COL_ICON: // online/offline, mtime
-			{
-				gboolean online = s->online;
-				if (!backend.update_int(s->id, "online", online?1:0))
-					gwarn("failed to store online-info in the database");
-				if(!backend.update_int(s->id, "mtime", (unsigned long) s->mtime))
-					gwarn("failed to store file mtime in the database");
-				GdkPixbuf* iconbuf = NULL;
-				if (online) {
-					MIME_type* mime_type = mime_type_lookup(s->mimetype);
-					type_to_icon(mime_type);
-					if (!mime_type->image) dbg(0, "no icon.");
-					iconbuf = mime_type->image->sm_pixbuf;
-				}
-				gtk_list_store_set(app->store, iter, COL_ICON, iconbuf, -1);
-			}
+			gtk_list_store_set(app->store, iter, COL_ICON, data, -1);
 			break;
 		case COL_KEYWORDS:
-			{
-				if(!backend.update_string(s->id, "keywords", (char*)data)) {
-					gwarn("failed to store keywords in the database");
-					rv = false;
-				} else {
-					gtk_list_store_set(app->store, iter, COL_KEYWORDS, (char*)data, -1);
-					if (s->keywords) free(s->keywords);
-					s->keywords=strdup((char*)data);
-				}
-			}
+			dbg(0, "val=%s", (char*)data);
+			gtk_list_store_set(app->store, iter, COL_KEYWORDS, (char*)data, -1);
 			break;
 		case COL_COLOUR:
-			{
-				unsigned int colour_index = *((unsigned int*)data);
-				if(!backend.update_int(s->id, "colour", colour_index)) {
-					gwarn("failed to store colour in the database");
-					rv = false;
-				} else {
-					gtk_list_store_set(app->store, iter, COL_COLOUR, colour_index, -1);
-					s->colour_index = colour_index;
-				}
-			}
-			break;
-		case -1: // update basic info from sample_get_file_info()
-			{
-				char* metadata = sample_get_metadata_str(s);
-
-				gboolean ok = true;
-				ok&=backend.update_int(s->id, "channels", s->channels);
-				ok&=backend.update_int(s->id, "sample_rate", s->sample_rate);
-				ok&=backend.update_int(s->id, "length", s->length);
-				ok&=backend.update_int(s->id, "frames", s->frames);
-				ok&=backend.update_int(s->id, "bit_rate", s->bit_rate);
-				ok&=backend.update_int(s->id, "bit_depth", s->bit_depth);
-				ok&=backend.update_string(s->id, "meta_data", metadata);
-				if (!ok) {
-					gwarn("failed to store basic-info in the database");
-					rv = false;
-				} else {
-					char samplerate_s[32]; samplerate_format(samplerate_s, s->sample_rate);
-					char length_s[64]; smpte_format(length_s, s->length);
-					gtk_list_store_set(app->store, iter, 
-							COL_CHANNELS, s->channels,
-							COL_SAMPLERATE, samplerate_s,
-							COL_LENGTH, length_s,
-							-1);
-					dbg(1, "file info updated.");
-				}
-				if(metadata) g_free(metadata);
-			}
+			gtk_list_store_set(app->store, iter, what, *((guint*)data), -1);
 			break;
 		default:
-			dbg(0,"update for this type is not yet implemented"); 
+			dbg(0, "update for this type is not yet implemented"); 
 			break;
 	}
-
-	g_signal_emit_by_name (app->model, "sample-changed", s, -1, NULL);
-
-	sample_unref(s);
-	return rv;
 }
 
 
-gboolean
-listmodel__update_by_rowref(GtkTreeRowReference* row_ref, int what, void* data)
+static gboolean
+_listmodel__update_by_rowref(GtkTreeRowReference* row_ref, int what, void* data)
 {
-	// used by the inspector..
-	GtkTreePath* path;
-	if(!(path = gtk_tree_row_reference_get_path(row_ref))) {
-		/* this SHOULD never happen:
-		 * it was possible before the inspector hid 
-		 * internal meta-data for non sample, file-system files.
-		 * The latter do not have a Sample -> row_ref.
-		 * code may still buggy wrt that.
-		 */
-		perr("FIXME: cannot get row by refernce\n");
-		return false;
-	}
+	GtkTreePath* path = gtk_tree_row_reference_get_path(row_ref);
+	g_return_val_if_fail(path, false);
 
 	GtkTreeIter iter;
 	gtk_tree_model_get_iter(GTK_TREE_MODEL(app->store), &iter, path);
 	gtk_tree_path_free(path);
-	return listmodel__update_by_tree_iter(&iter, what, data);
+	_listmodel__update_by_tree_iter(&iter, what, data);
+
+	return true;
 }
 
 
-void
+static void
 listmodel__set_overview(GtkTreeRowReference* row_ref, GdkPixbuf* pixbuf)
 {
 	GtkTreePath* treepath;
@@ -352,7 +281,7 @@ listmodel__set_overview(GtkTreeRowReference* row_ref, GdkPixbuf* pixbuf)
 }
 
 
-void
+static void
 listmodel__set_peaklevel(GtkTreeRowReference* row_ref, float level)
 {
 	GtkTreePath* treepath;

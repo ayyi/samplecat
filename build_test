@@ -42,7 +42,7 @@ function compile {
 	make
 	exit_status=$?
 	if [ ${exit_status} -ne 0 ]; then
-		${SETCOLOR_FAILURE}; echo -en "fail!"; ${SETCOLOR_NORMAL}; echo $1;
+		${SETCOLOR_FAILURE}; echo -en "fail! "; ${SETCOLOR_NORMAL}; echo $1;
 		abort="true"
 	else
 		n_tests_complete=$n_tests_complete+1
@@ -71,6 +71,8 @@ get_tarball && \
 	compile --enable-ayyi && \
 	compile --disable-fftw && \
 	compile --disable-dnotify && \
+	compile --enable-webkit && \
+	compile --enable-mx && \
 	echo "" && \
 	${SETCOLOR_YELLOW} && echo "all builds completed successfully" && ${SETCOLOR_NORMAL};
 	echo "complete="$n_tests_complete

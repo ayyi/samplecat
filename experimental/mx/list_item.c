@@ -17,6 +17,7 @@
 */
 
 #include "config.h"
+#include "debug/debug.h"
 #include "list_item.h"
 #include "utils/ayyi_utils.h"
 

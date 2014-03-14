@@ -161,10 +161,12 @@ main(int argc, char** argv)
 	printf("%s"PACKAGE_NAME". Version "PACKAGE_VERSION"%s\n", yellow, white);
 
 	app = application_new();
+	SamplecatModel* model = app->model;
+
 	colour_box_init();
 	memset(&backend, 0, sizeof(struct _backend)); 
 
-#define ADD_BACKEND(A) app->backends = g_list_append(app->backends, A)
+#define ADD_BACKEND(A) model->backends = g_list_append(model->backends, A)
 
 #ifdef USE_MYSQL
 	ADD_BACKEND("mysql");
@@ -204,14 +206,14 @@ main(int argc, char** argv)
 			case 'b':
 				//if a particular backend is requested, and is available, reduce the backend list to just this one.
 				dbg(1, "backend '%s' requested.", optarg);
-				if(application_can_use(app->backends, optarg)){
-					list_clear(app->backends);
+				if(can_use(model->backends, optarg)){
+					list_clear(model->backends);
 					ADD_BACKEND(optarg);
-					dbg(1, "n_backends=%i", g_list_length(app->backends));
+					dbg(1, "n_backends=%i", g_list_length(model->backends));
 				}
 				else{
 					warnprintf("requested backend not available: '%s'\navailable backends:\n", optarg);
-					GList* l = app->backends;
+					GList* l = model->backends;
 					for(;l;l=l->next){
 						printf("  %s\n", (char*)l->data);
 					}
@@ -219,7 +221,7 @@ main(int argc, char** argv)
 				}
 				break;
 			case 'p':
-				if(application_can_use(app->players, optarg)){
+				if(can_use(app->players, optarg)){
 					list_clear(app->players);
 					ADD_PLAYER(optarg);
 					player_opt=true;
@@ -268,13 +270,21 @@ main(int argc, char** argv)
 
 	config_load();
 
-	if (app->config.database_backend && application_can_use(app->backends, app->config.database_backend)) {
-		list_clear(app->backends);
+	db_init(app->model,
+#ifdef USE_MYSQL
+		&app->config.mysql
+#else
+		NULL
+#endif
+	);
+
+	if (app->config.database_backend && can_use(model->backends, app->config.database_backend)) {
+		list_clear(model->backends);
 		ADD_BACKEND(app->config.database_backend);
 	}
 
 	if (!player_opt && app->config.auditioner) {
-		if(application_can_use(app->players, app->config.auditioner)){
+		if(can_use(app->players, app->config.auditioner)){
 			list_clear(app->players);
 			ADD_PLAYER(app->config.auditioner);
 		}
@@ -301,7 +311,7 @@ main(int argc, char** argv)
 	}
 
 #ifdef USE_TRACKER
-	if(BACKEND_IS_NULL && application_can_use(app->backends, "tracker")){
+	if(BACKEND_IS_NULL && can_use(model->backends, "tracker")){
 		void on_tracker_init()
 		{
 			dbg(2, "...");
@@ -342,13 +352,7 @@ main(int argc, char** argv)
 	}
 
 #ifndef DEBUG_NO_THREADS
-	dbg(3, "creating overview thread...");
-	GError* error = NULL;
-	app->msg_queue = g_async_queue_new();
-	if(!g_thread_create(overview_thread, NULL, false, &error)){
-		perr("error creating thread: %s\n", error->message);
-		g_error_free(error);
-	}
+	overview_thread_init(app->model);
 #endif
 
 	if(!app->no_gui) window_new(); 
@@ -484,40 +488,6 @@ do_search()
 }
 
 
-gboolean
-on_overview_done(gpointer _sample)
-{
-	PF;
-	Sample* sample = _sample;
-	g_return_val_if_fail(sample, false);
-	if(!sample->overview){ dbg(1, "overview creation failed (no pixbuf).\n"); return false; }
-	listmodel__update_sample(sample, COL_OVERVIEW, NULL);
-	sample_unref(sample);
-	return IDLE_STOP;
-}
-
-
-gboolean
-on_peaklevel_done(gpointer _sample)
-{
-	Sample* sample = _sample;
-	dbg(1, "peaklevel=%.2f id=%i", sample->peaklevel, sample->id);
-	listmodel__update_sample(sample, COL_PEAKLEVEL, NULL);
-	sample_unref(sample);
-	return IDLE_STOP;
-}
-
-
-gboolean
-on_ebur128_done(gpointer _sample)
-{
-	Sample* sample = _sample;
-	listmodel__update_sample(sample, COLX_EBUR, NULL);
-	sample_unref(sample);
-	return IDLE_STOP;
-}
-
-
 void
 delete_selected_rows()
 {
@@ -644,7 +614,11 @@ config_load()
 		gchar* groupname = g_key_file_get_start_group(app->key_file);
 		dbg (2, "group=%s.", groupname);
 		if(!strcmp(groupname, "Samplecat")){
+#ifdef USE_MYSQL
 #define num_keys (16)
+#else
+#define num_keys (12)
+#endif
 #define ADD_CONFIG_KEY(VAR, NAME) \
 			strcpy(keys[i], NAME); \
 			loc[i] = VAR; \
@@ -724,12 +698,7 @@ config_load()
 		return false;
 	}
 
-	for (i=0;i<PALETTE_SIZE;i++) {
-		if (strcmp(app->config.colour[i], "000000")) {
-			app->colourbox_dirty = false;
-			break;
-		}
-	}
+	g_signal_emit_by_name (app, "config-loaded");
 	return true;
 }
 
@@ -765,7 +734,7 @@ config_save()
 
 		g_key_file_set_value(app->key_file, "Samplecat", "col1_height", value);
 
-		g_key_file_set_value(app->key_file, "Samplecat", "filter", gtk_entry_get_text(GTK_ENTRY(app->search)));
+		g_key_file_set_value(app->key_file, "Samplecat", "filter", app->model->filters.search->value);
 
 		AyyiLibfilemanager* fm = file_manager__get_signaller();
 		if(fm){

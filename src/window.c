@@ -107,11 +107,13 @@ struct _window {
 #endif
    GtkWidget*     toolbar;
    GtkWidget*     toolbar2;
+   GtkWidget*     search;
    GtkWidget*     category;
    GtkWidget*     view_category;
    GtkWidget*     file_man;
    GtkWidget*     dir_tree;
    GtkWidget*     waveform;
+   GtkWidget*     spectrogram;
 #ifndef USE_GDL
    GtkWidget*     vpaned;        //vertical divider on lhs between the dir_tree and inspector
 #endif
@@ -460,11 +462,11 @@ GtkWindow
 	{
 		PF;
 #ifdef HAVE_FFTW3
-		if(app->spectrogram){
+		if(window.spectrogram){
 #ifdef USE_OPENGL
-			gl_spectrogram_set_file((GlSpectrogram*)app->spectrogram, sample->full_path);
+			gl_spectrogram_set_file((GlSpectrogram*)window.spectrogram, sample->full_path);
 #else
-			spectrogram_widget_set_file ((SpectrogramWidget*)app->spectrogram, sample->full_path);
+			spectrogram_widget_set_file ((SpectrogramWidget*)window.spectrogram, sample->full_path);
 #endif
 		}
 #endif
@@ -569,11 +571,6 @@ window_on_allocate(GtkWidget* win, GtkAllocation* allocation, gpointer user_data
 		colour_get_style_text(&app->text_colour, GTK_STATE_NORMAL);
 
 		hexstring_from_gdkcolor(app->config.colour[0], &app->bg_colour);
-
-		if(app->colourbox_dirty){
-			colour_box_colourise();
-			app->colourbox_dirty = false;
-		}
 
 		//make modifier colours:
 		colour_get_style_bg(&app->bg_colour_mod1, GTK_STATE_NORMAL);
@@ -822,7 +819,7 @@ search_new()
 	gboolean on_focus_out(GtkWidget* widget, GdkEventFocus* event, gpointer user_data)
 	{
 		PF;
-		const gchar* text = gtk_entry_get_text(GTK_ENTRY(app->search));
+		const gchar* text = gtk_entry_get_text(GTK_ENTRY(window.search));
 		if(!app->model->filters.search->value || strcmp(text, app->model->filters.search->value)){
 			samplecat_filter_set_value(app->model->filters.search, g_strdup(text));
 		}
@@ -830,7 +827,7 @@ search_new()
 	}
 
 	SamplecatFilter* filter = app->model->filters.search;
-	GtkWidget* entry = app->search = gtk_entry_new();
+	GtkWidget* entry = window.search = gtk_entry_new();
 	gtk_entry_set_max_length(GTK_ENTRY(entry), 64);
 	if(filter->value) gtk_entry_set_text(GTK_ENTRY(entry), filter->value);
 	gtk_box_pack_start(GTK_BOX(row1), entry, EXPAND_TRUE, TRUE, 0);
@@ -1173,21 +1170,23 @@ on_category_set_clicked(GtkComboBox* widget, gpointer user_data)
 		if(gtk_tree_model_get_iter(GTK_TREE_MODEL(app->store), &iter, treepath_selection)){
 			gchar* fname; gchar* tags;
 			int id;
-			gtk_tree_model_get(GTK_TREE_MODEL(app->store), &iter, COL_NAME, &fname, COL_KEYWORDS, &tags, COL_IDX, &id, -1);
+			Sample* sample;
+			gtk_tree_model_get(GTK_TREE_MODEL(app->store), &iter, COL_SAMPLEPTR, &sample, COL_NAME, &fname, COL_KEYWORDS, &tags, COL_IDX, &id, -1);
 			dbg(1, "id=%i name=%s", id, fname);
 
-			if(!strcmp(category, "no categories"))
-				listmodel__update_by_tree_iter(&iter, COL_KEYWORDS, "");
-			else{
-
+			if(!strcmp(category, "no categories")){
+				if(samplecat_model_update_sample(app->model, sample, COL_KEYWORDS, "")){
+				}
+			}else{
 				if(!keyword_is_dupe(category, tags)){
 					char tags_new[1024];
 					snprintf(tags_new, 1024, "%s %s", tags ? tags : "", category);
-					g_strstrip(tags_new);//trim
+					g_strstrip(tags_new); // trim
 
-					listmodel__update_by_tree_iter(&iter, COL_KEYWORDS, (void*)tags_new);
+					if(samplecat_model_update_sample(app->model, sample, COL_KEYWORDS, (void*)tags_new)){
+						statusbar_print(1, "category set");
+					}
 
-					statusbar_print(1, "category set");
 				}else{
 					statusbar_print(1, "ignoring duplicate keyword.");
 				}
@@ -1335,32 +1334,32 @@ spectrogram_new()
 void
 show_spectrogram(gboolean enable)
 {
-	if(enable && !app->spectrogram){
+	if(enable && !window.spectrogram){
 #ifdef USE_GDL
-		app->spectrogram = panels[PANEL_TYPE_SPECTROGRAM].widget;
+		window.spectrogram = panels[PANEL_TYPE_SPECTROGRAM].widget;
 #else
 		gl_spectrogram_set_gl_context(window_get_gl_context());
-		app->spectrogram = panels[PANEL_TYPE_SPECTROGRAM].new();
+		window.spectrogram = panels[PANEL_TYPE_SPECTROGRAM].new();
 #ifdef USE_OPENGL
-		gtk_widget_set_size_request(app->spectrogram, 100, 100);
+		gtk_widget_set_size_request(window.spectrogram, 100, 100);
 #endif
-		gtk_box_pack_start(GTK_BOX(window.vbox), app->spectrogram, EXPAND_TRUE, FILL_TRUE, 0);
+		gtk_box_pack_start(GTK_BOX(window.vbox), window.spectrogram, EXPAND_TRUE, FILL_TRUE, 0);
 #endif
 
 		gchar* filename = listview__get_first_selected_filepath();
 		if(filename){
 			dbg(1, "file=%s", filename);
 #ifdef USE_OPENGL
-			gl_spectrogram_set_file((GlSpectrogram*)app->spectrogram, filename);
+			gl_spectrogram_set_file((GlSpectrogram*)window.spectrogram, filename);
 #else
-			spectrogram_widget_set_file((SpectrogramWidget*)app->spectrogram, filename);
+			spectrogram_widget_set_file((SpectrogramWidget*)window.spectrogram, filename);
 #endif
 			g_free(filename);
 		}
 	}
 
-	if(app->spectrogram){
-		show_widget_if(app->spectrogram, enable);
+	if(window.spectrogram){
+		show_widget_if(window.spectrogram, enable);
 	}
 
 	window_on_layout_changed();
@@ -1637,7 +1636,7 @@ make_context_menu()
 			GtkTreePath* treepath = g_list_nth_data(selectionlist, i);
 			Sample* sample = sample_get_from_model(treepath);
 			if(do_progress(0, 0)) break; // TODO: set progress title to "updating"
-			sample_refresh(sample, force_update);
+			samplecat_model_refresh_sample (app->model, sample, force_update);
 			statusbar_print(1, "online status updated (%s)", sample->online ? "online" : "not online");
 			sample_unref(sample);
 		}

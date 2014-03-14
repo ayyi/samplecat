@@ -1,5 +1,17 @@
-#ifndef __SAMPLECAT_TYPEDEFS_H_
-#define __SAMPLECAT_TYPEDEFS_H_
+/**
+* +----------------------------------------------------------------------+
+* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
+* | copyright (C) 2007-2014 Tim Orford <tim@orford.org>                  |
+* +----------------------------------------------------------------------+
+* | This program is free software; you can redistribute it and/or modify |
+* | it under the terms of the GNU General Public License version 3       |
+* | as published by the Free Software Foundation.                        |
+* +----------------------------------------------------------------------+
+*
+*/
+#ifndef __typedefs_h__
+#define __typedefs_h__
+#include "samplecat/typedefs.h"
 
 #define OVERVIEW_WIDTH (200)
 #define OVERVIEW_HEIGHT (20)
@@ -43,23 +55,12 @@ typedef struct _backend           SamplecatBackend;
 typedef struct _palette           Palette;
 typedef struct _config            Config;
 typedef struct _accel             Accel;
+typedef struct _db_config         DbConfig;
 
 #ifndef __file_manager_h__
 typedef struct _GimpActionGroup   GimpActionGroup;
 #endif
 
 typedef void   (*Callback)       (gpointer);
-
-#ifndef true
-  #define true TRUE
-#endif
-
-#ifndef false
-  #define false FALSE
-#endif
-
-#ifndef bool
-  #define bool gboolean
-#endif
 
 #endif

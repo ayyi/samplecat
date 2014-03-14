@@ -23,7 +23,7 @@ struct _config
 {
 	char      database_backend[64];
 #ifdef USE_MYSQL
-	struct _mysql_config mysql;
+	DbConfig  mysql;
 #endif
 	char      auditioner[16];
 	char      show_dir[PATH_MAX];

@@ -1,25 +1,18 @@
-/*
-  This file is part of Samplecat. http://samplecat.orford.org
-  copyright (C) 2007-2012 Tim Orford and others.
-
-  This program is free software; you can redistribute it and/or modify
-  it under the terms of the GNU General Public License version 3
-  as published by the Free Software Foundation.
-
-  This program is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License
-  along with this program; if not, write to the Free Software
-  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+/**
+* +----------------------------------------------------------------------+
+* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
+* | copyright (C) 2007-2014 Tim Orford <tim@orford.org>                  |
+* +----------------------------------------------------------------------+
+* | This program is free software; you can redistribute it and/or modify |
+* | it under the terms of the GNU General Public License version 3       |
+* | as published by the Free Software Foundation.                        |
+* +----------------------------------------------------------------------+
+*
 */
-
-//#define USE_MYSQL
 #include "config.h"
 #include <string.h>
 #include <mx/mx.h>
+#include "debug/debug.h"
 #include "src/typedefs.h"
 #include "db/db.h"
 #include "sample.h"
@@ -28,7 +21,10 @@
 #include "src/model.h"
 
 struct _backend backend;
-SamplecatModel model;
+SamplecatModel* model = NULL;
+
+typedef struct _Application Application;
+Application* app = NULL;
 
 unsigned debug = 1;
 
@@ -42,8 +38,15 @@ main (int argc, char **argv)
 
 	MxApplication* app = mx_application_new (&argc, &argv, "Test PathBar", 0);
 
+	model = samplecat_model_new();
+
+	samplecat_model_add_filter (model, model->filters.search   = samplecat_filter_new("search"));
+	samplecat_model_add_filter (model, model->filters.dir      = samplecat_filter_new("directory"));
+	samplecat_model_add_filter (model, model->filters.category = samplecat_filter_new("category"));
+
 	#define MAX_DISPLAY_ROWS 20
-	mysql__init(&model, &(SamplecatMysqlConfig){
+#ifdef USE_MYSQL
+	mysql__init(model, &(SamplecatMysqlConfig){
 		"localhost",
 		"samplecat",
 		"samplecat",
@@ -52,6 +55,7 @@ main (int argc, char **argv)
 	if(samplecat_set_backend(BACKEND_MYSQL)){
 		//g_strlcpy(model.filters.phrase, "909", 256);
 	}
+#endif
 
 	GError* error = NULL;
 	MxStyle* style = mx_style_get_default();
@@ -79,10 +83,10 @@ main (int argc, char **argv)
 	ClutterActor* scroll_view = mx_scroll_view_new ();
 	mx_scroll_view_set_scroll_policy(MX_SCROLL_VIEW(scroll_view), MX_SCROLL_POLICY_VERTICAL);
 
-	ClutterModel* list_model = sample_list_model_new(&model);
+	ClutterModel* list_model = sample_list_model_new(model);
 
 	int n_results = 0;
-	if(!backend.search_iter_new("", "", "", &n_results)){
+	if(!backend.search_iter_new("", "", &n_results)){
 	}
 	unsigned long* lengths;
 	Sample* result;

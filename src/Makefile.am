@@ -116,6 +116,7 @@ samplecat_LDADD = \
 	$(top_srcdir)/lib/xdgmime/libxdgmime.a \
 	$(top_srcdir)/lib/dir_tree/libdirtree.a \
 	$(top_srcdir)/lib/debug/libdebug.a \
+	$(top_srcdir)/lib/samplecat/libsamplecat.a \
 	$(GDL_LDFLAGS) \
 	gimp/libgimpwidgets.a \
 	db/libsamplecatdb.a \

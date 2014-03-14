@@ -1,22 +1,17 @@
-/*
-  This file is part of Samplecat. http://samplecat.orford.org
-  copyright (C) 2007-2012 Tim Orford and others.
-
-  This program is free software; you can redistribute it and/or modify
-  it under the terms of the GNU General Public License version 3
-  as published by the Free Software Foundation.
-
-  This program is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License
-  along with this program; if not, write to the Free Software
-  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+/**
+* +----------------------------------------------------------------------+
+* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
+* | copyright (C) 2007-2014 Tim Orford <tim@orford.org>                  |
+* +----------------------------------------------------------------------+
+* | This program is free software; you can redistribute it and/or modify |
+* | it under the terms of the GNU General Public License version 3       |
+* | as published by the Free Software Foundation.                        |
+* +----------------------------------------------------------------------+
+*
 */
 #include "config.h"
 #include <webkit/webkit.h>
+#include <debug/debug.h>
 #include "src/typedefs.h"
 #include "db/db.h"
 #include "sample.h"
@@ -25,19 +20,11 @@
 #include "util.h"
 #include "utils/ayyi_utils.h"
 
-struct _samplecat_model //TODO is a dupe
-{
-	struct {
-		char       phrase[256]; // XXX TODO increase to PATH_MAX
-		char*      dir;
-		gchar*     category;
-
-	} filters;
-};
-SamplecatModel model;
+SamplecatModel* model = NULL;
 
 struct _backend backend; 
-unsigned debug = 0;
+typedef struct _Application Application;
+Application*     app = NULL;
 
 #define HTML_DIR "html/"
 #define MAX_DISPLAY_ROWS 20
@@ -55,7 +42,7 @@ plugins_clicked_cb (WebKitDOMEventTarget* target, WebKitDOMEvent* event, gpointe
 #endif
 
 static void
-build_about (WebKitDOMNode *about_node)
+build_about (WebKitDOMNode* about_node)
 {
 	WebKitDOMElement* icon = webkit_dom_document_create_element (document, "img", NULL);
 	//webkit_dom_element_set_attribute (icon, "src", "/usr/share/icons/Faenza/apps/32/audiobook.png", NULL);
@@ -101,18 +88,21 @@ web_view_on_loaded (WebKitWebView* view, WebKitWebFrame* frame, gpointer user_da
 	webkit_dom_node_append_child (WEBKIT_DOM_NODE(tr0), WEBKIT_DOM_NODE (th), NULL);
 	webkit_dom_node_set_text_content (WEBKIT_DOM_NODE (th), g_strdup("length"), NULL);
 
-	mysql__init(&model, &(SamplecatMysqlConfig){
+#ifdef USE_MYSQL
+	mysql__init(model, &(SamplecatMysqlConfig){
 		"localhost",
 		"samplecat",
 		"samplecat",
 		"samplecat",
 	});
 	if(samplecat_set_backend(BACKEND_MYSQL)){
-		//g_strlcpy(model.filters.phrase, "909", 256);
 	}
+#endif
+
+	model->filters.search->value = g_strdup("909");
 
 	int n_results = 0;
-	if(!backend.search_iter_new("909", "", "", &n_results)){
+	if(!backend.search_iter_new("", "", &n_results)){
 	}
 	unsigned long* lengths;
 	Sample* result;
@@ -139,6 +129,20 @@ web_view_on_loaded (WebKitWebView* view, WebKitWebFrame* frame, gpointer user_da
 	WebKitDOMElement* script = webkit_dom_document_create_element (document, "script", NULL);
 	webkit_dom_node_set_text_content ( WEBKIT_DOM_NODE (script), "do_table();", NULL);
 	webkit_dom_node_append_child (main_node, WEBKIT_DOM_NODE (script), NULL);
+
+	bool on_navigation_requested(WebKitWebView* web_view, WebKitWebFrame* frame, WebKitNetworkRequest* request, WebKitWebNavigationAction* action, WebKitWebPolicyDecision* decision, gpointer user_data)
+	{
+		const gchar* uri = webkit_network_request_get_uri(request);
+		if(!strcmp(uri, "file:///search")){
+			// search button was pressed
+			dbg(0, "TODO carry out new search.");
+			webkit_web_policy_decision_ignore(decision);
+			return true;
+		}
+		dbg(0, "unhandled click. request=%s", uri);
+		return false; // use default behaviour
+	}
+	g_signal_connect(view, "navigation-policy-decision-requested", (GCallback)on_navigation_requested, NULL);
 }
 
 
@@ -154,6 +158,12 @@ main (gint argc, gchar** argv)
 {
 	gtk_init (&argc, &argv);
 	memset(&backend, 0, sizeof(struct _backend));
+
+	model = samplecat_model_new();
+
+	samplecat_model_add_filter (model, model->filters.search   = samplecat_filter_new("search"));
+	samplecat_model_add_filter (model, model->filters.dir      = samplecat_filter_new("directory"));
+	samplecat_model_add_filter (model, model->filters.category = samplecat_filter_new("category"));
 
 	gchar* cwd = g_get_current_dir();
 	gchar* html_path = g_build_filename(cwd, HTML_DIR "index.html", NULL);

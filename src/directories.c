@@ -54,7 +54,9 @@ dir_panel_new()
 		return app->dir_treeview;
 	}
 
-	if(!BACKEND_IS_NULL){
+#if 0
+	if(!BACKEND_IS_NULL){ // why ?
+#endif
 #ifndef NO_USE_DEVHELP_DIRTREE
 		GtkWidget* tree = _dir_tree_new();
 		widget = dir_tree = scrolled_window_new();
@@ -73,7 +75,9 @@ dir_panel_new()
 		widget = scrolled_window_new();
 		gtk_container_add((GtkContainer*)widget, tree);
 #endif
+#if 0
 	}
+#endif
 
 	//alternative dir tree:
 #ifdef USE_NICE_GQVIEW_CLIST_TREE

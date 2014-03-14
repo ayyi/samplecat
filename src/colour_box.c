@@ -45,12 +45,14 @@ static MenuDef _menu_def[] = {
 };
 
 GtkWidget* colour_button[PALETTE_SIZE];
+gboolean   colourbox_dirty;
 
 
 void
 colour_box_init()
 {
 	int i; for(i=0;i<PALETTE_SIZE;i++) colour_button[i] = NULL;
+	colourbox_dirty = true;
 }
 
 
@@ -79,6 +81,17 @@ colour_box_new(GtkWidget* parent)
 	void _on_theme_change(Application* a, gpointer _){ colour_box_update(); }
 	g_signal_connect((gpointer)app, "theme-changed", G_CALLBACK(_on_theme_change), NULL);
 
+	void _config_loaded(Application* a, gpointer _)
+	{
+		int i; for (i=0;i<PALETTE_SIZE;i++) {
+			if (strcmp(app->config.colour[i], "000000")) {
+				colourbox_dirty = false;
+				break;
+			}
+		}
+	}
+	g_signal_connect((gpointer)app, "config-loaded", G_CALLBACK(_config_loaded), NULL);
+
 	if(gtk_widget_get_realized(app->window))
 		colour_box_update();
 	else{
@@ -88,6 +101,16 @@ colour_box_new(GtkWidget* parent)
 		}
 		g_signal_connect(G_OBJECT(app->window), "realize", G_CALLBACK(window_on_realise), NULL);
 	}
+
+	//TODO use theme-changed instead?
+	void window_on_allocate(GtkWidget* win, GtkAllocation* allocation, gpointer user_data)
+	{
+		if(colourbox_dirty){
+			colour_box_colourise();
+			colourbox_dirty = false;
+		}
+	}
+	g_signal_connect(G_OBJECT(app->window), "size-allocate", G_CALLBACK(window_on_allocate), NULL);
 
 	return e;
 }

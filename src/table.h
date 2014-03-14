@@ -95,31 +95,22 @@ struct _GtkSimpleTableRowCol
 };
 
 
-GType	   simple_table_get_type	    (void) G_GNUC_CONST;
-GtkWidget* simple_table_new	            (guint rows, guint columns, gboolean homogeneous);
-void	   simple_table_resize	        (GtkSimpleTable*, guint rows, guint columns);
-void	   simple_table_attach	        (GtkSimpleTable*, GtkWidget* child, guint left_attach, guint right_attach, guint top_attach, guint bottom_attach, GtkAttachOptions xoptions, GtkAttachOptions yoptions, guint xpadding, guint ypadding);
-void	   simple_table_attach_defaults (GtkSimpleTable*, GtkWidget* widget, guint left_attach, guint right_attach, guint top_attach, guint bottom_attach);
-void	   simple_table_set_row_spacing  (GtkSimpleTable	       *table,
-				       guint		row,
-				       guint		spacing);
-guint      simple_table_get_row_spacing  (GtkSimpleTable        *table,
-				       guint            row);
-void	   simple_table_set_col_spacing  (GtkSimpleTable	       *table,
-				       guint		column,
-				       guint		spacing);
-guint      simple_table_get_col_spacing  (GtkSimpleTable        *table,
-				       guint            column);
-void	   simple_table_set_row_spacings (GtkSimpleTable	       *table,
-				       guint		spacing);
-guint      simple_table_get_default_row_spacing (GtkSimpleTable        *table);
-void	   simple_table_set_col_spacings (GtkSimpleTable	       *table,
-				       guint		spacing);
-guint      simple_table_get_default_col_spacing (GtkSimpleTable        *table);
-void	   simple_table_set_homogeneous  (GtkSimpleTable	       *table,
-				       gboolean		homogeneous);
-gboolean   simple_table_get_homogeneous  (GtkSimpleTable        *table);
-void       simple_table_get_size         (GtkSimpleTable*, guint* rows, guint* columns);
+GType      simple_table_get_type                (void) G_GNUC_CONST;
+GtkWidget* simple_table_new                     (guint rows, guint columns, gboolean homogeneous);
+void       simple_table_resize                  (GtkSimpleTable*, guint rows, guint columns);
+void       simple_table_attach                  (GtkSimpleTable*, GtkWidget* child, guint left, guint right, guint top, guint bottom, GtkAttachOptions, GtkAttachOptions, guint xpadding, guint ypadding);
+void       simple_table_attach_defaults         (GtkSimpleTable*, GtkWidget*, guint left_attach, guint right_attach, guint top_attach, guint bottom_attach);
+void       simple_table_set_row_spacing         (GtkSimpleTable*, guint row, guint spacing);
+guint      simple_table_get_row_spacing         (GtkSimpleTable*, guint row);
+void       simple_table_set_col_spacing         (GtkSimpleTable*, guint column, guint spacing);
+guint      simple_table_get_col_spacing         (GtkSimpleTable*, guint column);
+void       simple_table_set_row_spacings        (GtkSimpleTable*, guint spacing);
+guint      simple_table_get_default_row_spacing (GtkSimpleTable*);
+void       simple_table_set_col_spacings        (GtkSimpleTable*, guint spacing);
+guint      simple_table_get_default_col_spacing (GtkSimpleTable*);
+void       simple_table_get_size                (GtkSimpleTable*, guint* rows, guint* columns);
+
+void       simple_table_print                   (GtkSimpleTable*);
 
 
 G_END_DECLS

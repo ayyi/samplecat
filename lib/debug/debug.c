@@ -80,3 +80,20 @@ errprintf2(const char* func, char* format, ...)
 	va_end(argp);           //clean up
 }
 
+
+void
+log_handler(const gchar* log_domain, GLogLevelFlags log_level, const gchar* message, gpointer user_data)
+{
+	switch(log_level){
+		case G_LOG_LEVEL_CRITICAL:
+			printf("%s %s\n", ayyi_err, message);
+			break;
+		case G_LOG_LEVEL_WARNING:
+			printf("%s %s\n", ayyi_warn, message);
+			break;
+		default:
+			printf("log_handler(): level=%i %s\n", log_level, message);
+			break;
+	}
+}
+

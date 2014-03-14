@@ -25,21 +25,15 @@ enum
   COL_SAMPLEPTR,
   NUM_COLS, ///< end of columns in the store
   // these are NOT in the store but in the sample-struct (COL_SAMPLEPTR)
-  COLX_EBUR,
-  COLX_NOTES
+  COL_X_EBUR,
+  COL_X_NOTES
 };
 
 GtkListStore* listmodel__new                   ();
 void          listmodel__clear                 ();
 void          listmodel__add_result            (Sample*);
 
-bool          listmodel__update_sample         (Sample*, int what, void* data);
-gboolean      listmodel__update_by_tree_iter   (GtkTreeIter*, int what, void* data);
-gboolean      listmodel__update_by_rowref      (GtkTreeRowReference*, int what, void* data);
-
 char*         listmodel__get_filename_from_id  (int);
 void          listmodel__move_files            (GList*, const gchar* dest_path);
 
-void          listmodel__set_overview          (GtkTreeRowReference*, GdkPixbuf*);
-void          listmodel__set_peaklevel         (GtkTreeRowReference*, float);
 #endif

@@ -63,7 +63,6 @@ application_new ()
 	Application* app = application_construct (TYPE_APPLICATION);
 
 	colour_box_init();
-	app->colourbox_dirty = true;
 
 	memset(app->config.colour, 0, PALETTE_SIZE * 8);
 
@@ -126,6 +125,7 @@ application_class_init (ApplicationClass* klass)
 	application_parent_class = g_type_class_peek_parent (klass);
 	G_OBJECT_CLASS (klass)->constructor = application_constructor;
 	G_OBJECT_CLASS (klass)->finalize = application_finalize;
+	g_signal_new ("config_loaded", TYPE_APPLICATION, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_VOID__VOID, G_TYPE_NONE, 0);
 	g_signal_new ("icon_theme", TYPE_APPLICATION, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_VOID__STRING, G_TYPE_NONE, 1, G_TYPE_STRING);
 	g_signal_new ("on_quit", TYPE_APPLICATION, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_VOID__VOID, G_TYPE_NONE, 0);
 	g_signal_new ("theme_changed", TYPE_APPLICATION, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_VOID__VOID, G_TYPE_NONE, 0);
@@ -166,18 +166,6 @@ void
 application_quit(Application* app)
 {
 	g_signal_emit_by_name (app, "on-quit");
-}
-
-
-gboolean
-application_can_use (GList* l, const char* d)
-{
-	for(;l;l=l->next){
-		if(!strcmp(l->data, d)){
-			return true;
-		}
-	}
-	return false;
 }
 
 
@@ -252,7 +240,7 @@ _set_auditioner() /* tentative - WIP */
 
 	gboolean connected = false;
 #ifdef HAVE_JACK
-	if(!connected && application_can_use(app->players, "jack")){
+	if(!connected && can_use(app->players, "jack")){
 		app->auditioner = & a_jack;
 		if (!app->auditioner->check()) {
 			connected = true;
@@ -261,7 +249,7 @@ _set_auditioner() /* tentative - WIP */
 	}
 #endif
 #ifdef HAVE_AYYIDBUS
-	if(!connected && application_can_use(app->players, "ayyi")){
+	if(!connected && can_use(app->players, "ayyi")){
 		app->auditioner = & a_ayyidbus;
 		if (!app->auditioner->check()) {
 			connected = true;
@@ -270,7 +258,7 @@ _set_auditioner() /* tentative - WIP */
 	}
 #endif
 #ifdef HAVE_GPLAYER
-	if(!connected && application_can_use(app->players, "cli")){
+	if(!connected && can_use(app->players, "cli")){
 		app->auditioner = & a_gplayer;
 		if (!app->auditioner->check()) {
 			connected = true;
@@ -327,7 +315,8 @@ application_add_file(const char* path)
 		//TODO ask what to do
 		Sample* s = sample_get_by_filename(path);
 		if (s) {
-			sample_refresh(s, false);
+			//sample_refresh(s, false);
+			samplecat_model_refresh_sample (app->model, s, false);
 			sample_unref(s);
 		} else {
 			dbg(1, "sample found in db but not in model.");
