@@ -34,11 +34,11 @@
 #include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
 #include <GL/gl.h>
+#include "debug/debug.h"
 #include "agl/utils.h"
 #include "waveform/waveform.h"
 #include "waveform/actor.h"
 
-//#include "support.h"
 #include "application.h"
 #include "listmodel.h"
 #include "rotator.h"
