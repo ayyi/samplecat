@@ -14602,7 +14602,7 @@ set_position(WaveformActor* actor, int j)
 {
 	#define Y_FACTOR 0.0f //0.5f //currently set to zero to simplify changing stack order
 
-	if(actor) wf_actor_allocate(actor, &(WfRectangle){
+	if(actor) wf_actor_set_rect(actor, &(WfRectangle){
 		40.0,
 		((float)j) * GL_HEIGHT * Y_FACTOR / 4 + 10.0f,
 		GL_WIDTH * zoom,

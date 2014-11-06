@@ -358,7 +358,7 @@ inspector_remove_rows(int n_rows, int n_to_remove)
 static void
 inspector_remove_ebu_cells()
 {
-	PF0;
+	PF;
 	Inspector* inspector = app->inspector;
 	InspectorPriv* i = inspector->priv;
 
