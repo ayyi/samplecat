@@ -1,3 +1,3 @@
 [submodule "lib/waveform"]
 	path = lib/waveform
-	url = git://github.com/ayyi/libwaveform.git
+	url = https://github.com/ayyi/libwaveform.git
