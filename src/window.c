@@ -388,7 +388,7 @@ GtkWindow
 						gtk_container_add(GTK_CONTAINER(item), panel->widget = panel->new());
 						switch(i){
 							case PANEL_TYPE_SEARCH:
-																											dbg(0, "setting resize... TODO");
+																											dbg(1, "setting resize... TODO");
 								g_object_set(item, "resize", false, NULL); // unfortunately gdl-dock does not make any use of this property.
 								break;
 #ifdef HAVE_FFTW3
@@ -1081,7 +1081,8 @@ menu__add_to_db(GtkMenuItem* menuitem, gpointer user_data)
 		if(view_get_selected(filer.view, &iter)){
 			gchar* filepath = g_build_filename(filer.real_path, item->leafname, NULL);
 			if(do_progress(0, 0)) break;
-			application_add_file(filepath);
+			ScanResults results = {0,};
+			application_add_file(filepath, &results);
 			g_free(filepath);
 		}
 	}
@@ -1096,8 +1097,8 @@ menu__add_dir_to_db(GtkMenuItem* menuitem, gpointer user_data)
 	const char* path = vdtree_get_selected(app->dir_treeview2);
 	dbg(1, "path=%s", path);
 	if(path){
-		int n_added = 0;
-		add_dir(path, &n_added);
+		ScanResults results = {0,};
+		application_scan(path, &results);
 		hide_progress();
 	}
 }

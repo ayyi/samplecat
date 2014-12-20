@@ -18,6 +18,8 @@
 #include "types.h"
 #include "dir_tree/view_dir_tree.h"
 
+#define MAX_DISPLAY_ROWS 1000
+
 G_BEGIN_DECLS
 
 
@@ -46,7 +48,10 @@ struct _Application
 {
    GObject              parent_instance;
    ApplicationPrivate*  priv;
-   gint                 state;
+   enum {
+      NONE = 0,
+      SCANNING,
+   }                    state;
    gboolean             loaded;
 
    const char*          cache_dir;
@@ -130,7 +135,10 @@ Application* application_new                     ();
 Application* application_construct               (GType);
 void         application_emit_icon_theme_changed (Application*, const gchar*);
 void         application_quit                    (Application*);
-bool         application_add_file                (const char* path);
+void         application_search                  ();
+void         application_scan                    (const char* path, ScanResults*);
+bool         application_add_file                (const char* path, ScanResults*);
+void         application_add_dir                 (const char* path, ScanResults*);
 
 
 G_END_DECLS

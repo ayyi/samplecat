@@ -391,6 +391,8 @@ statusbar_print(int n, char* fmt, ...)
 
 	if(_debug_) printf("%s\n", s);
 
+	if(n ==1 && app->no_gui) printf("%s\n", s);
+
 	GtkWidget* statusbar = NULL;
 	if     (n==1) statusbar = app->statusbar;
 	else if(n==2) statusbar = app->statusbar2;
@@ -767,6 +769,15 @@ str_replace(const gchar* string, const gchar* search, const gchar* replacement)
 	g_strfreev (arr);
 
 	return str;
+}
+
+
+char*
+remove_trailing_slash(char* path)
+{
+	size_t len = strlen(path);
+	if((len > 0) && (path[len-1] == '/')) path[len-1] = '\0';
+	return path;
 }
 
 

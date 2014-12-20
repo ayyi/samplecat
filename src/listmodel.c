@@ -120,7 +120,7 @@ listmodel__new()
 static void
 listmodel__update()
 {
-	do_search();
+	application_search();
 }
 
 
@@ -236,7 +236,7 @@ _listmodel__update_by_tree_iter(GtkTreeIter* iter, int what, void* data)
 			gtk_list_store_set(app->store, iter, COL_ICON, data, -1);
 			break;
 		case COL_KEYWORDS:
-			dbg(0, "val=%s", (char*)data);
+			dbg(1, "val=%s", (char*)data);
 			gtk_list_store_set(app->store, iter, COL_KEYWORDS, (char*)data, -1);
 			break;
 		case COL_COLOUR:

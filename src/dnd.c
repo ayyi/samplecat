@@ -22,7 +22,6 @@
 #include "typedefs.h"
 #include "support.h"
 #include "application.h"
-#include "main.h"
 #include "model.h"
 #include "listview.h"
 #include "progress_dialog.h"
@@ -99,7 +98,7 @@ drag_received(GtkWidget* widget, GdkDragContext* drag_context, gint x, gint y, G
     GList* list = uri_list_to_glist((char*)data->data);
     if(g_list_length(list) < 1) pwarn("drag drop: uri list parsing found no uri's.\n");
     int i = 0;
-    int added_count = 0;
+    ScanResults result = {0,};
     GList* l = list;
 #ifdef __APPLE__
     gdk_threads_enter();
@@ -120,9 +119,9 @@ drag_received(GtkWidget* widget, GdkDragContext* drag_context, gint x, gint y, G
 
         char* uri = (strstr(uri_unescaped, "///") == uri_unescaped) ? uri_unescaped + 2 : uri_unescaped;
 
-        if (do_progress(0,0)) break;
-        if(is_dir(uri)) add_dir(uri, &added_count);
-        else if(application_add_file(uri)) added_count++;
+        if(do_progress(0,0)) break;
+        if(is_dir(uri)) application_add_dir(uri, &result);
+        else application_add_file(uri, &result);
 
         g_free(uri_unescaped);
       }
@@ -134,7 +133,7 @@ drag_received(GtkWidget* widget, GdkDragContext* drag_context, gint x, gint y, G
     gdk_threads_leave();
 #endif
 
-    statusbar_print(1, "import complete. %i files added", added_count);
+    statusbar_print(1, "import complete. %i files added", result.n_added);
 
     uri_list_free(list);
   }

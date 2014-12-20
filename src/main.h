@@ -10,14 +10,9 @@
 
 #define START_EDITING 1
 
-#define MAX_DISPLAY_ROWS 1000
-
-
-void        do_search();
 
 gboolean    new_search(GtkWidget*, gpointer userdata);
 
-void        add_dir(const char* path, int* added_count);
 void        delete_selected_rows();
 
 void        on_quit(GtkMenuItem*, gpointer user_data);

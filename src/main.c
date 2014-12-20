@@ -69,12 +69,9 @@ char * program_name;
 #undef DEBUG_NO_THREADS
 
 
-static bool       config_load               ();
-static void       config_new                ();
-static bool       config_save               ();
-
-void              menu_play_stop            (GtkWidget*, gpointer);
-
+static bool      config_load  ();
+static void      config_new   ();
+static bool      config_save  ();
 
 Application*     app = NULL;
 SamplecatBackend backend; 
@@ -108,7 +105,7 @@ static const char* const usage =
 	"SampleCat is a program for cataloguing and auditioning audio samples.\n" 
 	"\n"
 	"Options:\n"
-	"  -a, --add <file(s)>    add these files.\n"
+	"  -a, --add <file(s)>    add these files/directories.\n"
 	"  -b, --backend <name>   select which database type to use.\n"
 	"  -g, --no-gui           run as command line app.\n"
 	"  -h, --help             show this usage information and quit.\n"
@@ -154,7 +151,9 @@ main(int argc, char** argv)
 
 	g_log_set_default_handler(log_handler, NULL);
 
+#ifndef HAVE_GTK_2_12
 	if (!g_thread_supported()) g_thread_init(NULL);
+#endif
 	gdk_threads_init();
 	gtk_init_check(&argc, &argv);
 
@@ -224,7 +223,7 @@ main(int argc, char** argv)
 				if(can_use(app->players, optarg)){
 					list_clear(app->players);
 					ADD_PLAYER(optarg);
-					player_opt=true;
+					player_opt = true;
 				} else{
 					warnprintf("requested player is not available: '%s'\navailable backends:\n", optarg);
 					GList* l = app->players;
@@ -244,8 +243,8 @@ main(int argc, char** argv)
 				app->args.search = g_strdup(optarg);
 				break;
 			case 'a':
-				printf("add=%s\n", optarg);
-				app->args.add = g_strdup(optarg);
+				dbg(1, "add=%s", optarg);
+				app->args.add = remove_trailing_slash(g_strdup(optarg));
 				break;
 			case 'V':
 				printf ("%s %s\n\n",basename(argv[0]), PACKAGE_VERSION);
@@ -330,7 +329,7 @@ main(int argc, char** argv)
 			if(notes) gtk_widget_hide(notes);
 
 			if(search_pending){
-				do_search();
+				application_search();
 				search_pending = false;
 			}
 		}
@@ -347,7 +346,14 @@ main(int argc, char** argv)
 	if(app->args.add){
 		/* initial import from commandline */
 		do_progress(0, 0);
-		application_add_file(app->args.add);
+		ScanResults results = {0,};
+		if(g_file_test(app->args.add, G_FILE_TEST_IS_DIR)){
+			if(app->no_gui) app->add_recursive = true; // TODO take from config
+			application_scan(app->args.add, &results);
+		}else{
+			printf("Adding file: %s\n", app->args.add);
+			application_add_file(app->args.add, &results);
+		}
 		hide_progress();
 	}
 
@@ -367,7 +373,7 @@ main(int argc, char** argv)
 #endif
 
 	if(!backend.pending){ 
-		do_search();
+		application_search();
 		search_pending = false;
 	}else{
 		search_pending = true;
@@ -402,89 +408,6 @@ main(int argc, char** argv)
 	app->auditioner->disconnect();
 
 	exit(EXIT_SUCCESS);
-}
-
-
-void
-file_selector()
-{
-	//GtkWidget*  gtk_file_selection_new("Select files to add");
-}
-
-
-void
-add_dir(const char* path, int* added_count)
-{
-	/*
-	scan the directory and try and add any files we find.
-	
-	*/
-	PF;
-
-	char filepath[PATH_MAX];
-	G_CONST_RETURN gchar *file;
-	GError* error = NULL;
-	GDir* dir;
-	if((dir = g_dir_open(path, 0, &error))){
-		while((file = g_dir_read_name(dir))){
-			if(file[0]=='.') continue;
-			snprintf(filepath, PATH_MAX, "%s%c%s", path, G_DIR_SEPARATOR, file);
-			filepath[PATH_MAX-1]='\0';
-			if (do_progress(0,0)) break;
-
-			if(!g_file_test(filepath, G_FILE_TEST_IS_DIR)){
-				if(application_add_file(filepath)) (*added_count)++;
-				statusbar_print(1, "%i files added", *added_count);
-			}
-			// IS_DIR
-			else if(app->add_recursive){
-				add_dir(filepath, added_count);
-			}
-		}
-		//hide_progress(); ///no: keep window open until last recursion.
-		g_dir_close(dir);
-	}else{
-		perr("cannot open directory. %s\n", error->message);
-		g_error_free(error);
-		error = NULL;
-	}
-}
-
-/**
- * fill the display with the results matching the current set of filters.
- */
-void
-do_search()
-{
-	PF;
-
-	if(BACKEND_IS_NULL) return;
-
-	if(!backend.search_iter_new(app->model->filters.dir->value, app->model->filters.category->value, NULL)) {
-		return;
-	}
-
-	if(app->libraryview)
-		listview__block_motion_handler(); // TODO make private to listview.
-
-	listmodel__clear();
-
-	int row_count = 0;
-	unsigned long* lengths;
-	Sample* result;
-	while((result = backend.search_iter_next(&lengths)) && row_count < MAX_DISPLAY_ROWS){
-		Sample* s = sample_dup(result);
-		//listmodel__add_result(s);
-		samplecat_list_store_add((SamplecatListStore*)app->store, s);
-		sample_unref(s);
-		row_count++;
-	}
-
-	backend.search_iter_free();
-
-	((SamplecatListStore*)app->store)->row_count = row_count;
-
-	samplecat_list_store_do_search((SamplecatListStore*)app->store);
 }
 
 

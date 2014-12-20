@@ -9,11 +9,10 @@
 #include "samplecat/support.h"
 
 #ifndef __ayyi_h__
-#define PF_DONE printf("%s(): done.\n", __func__);
-#define GERR_WARN if(error){ gwarn("%s", error->message); g_error_free(error); error = NULL; }
-#endif
 #define g_error_clear(E) { if(E){ g_error_free(E); E = NULL; }}
 #define g_error_free0(E) (g_error_free(E), E = NULL)
+#define PF_DONE printf("%s(): done.\n", __func__);
+#endif
 #define list_clear(L) g_list_free(L); L = NULL;
 #define call(FN, A, ...) if(FN) (FN)(A, ##__VA_ARGS__)
 #define g_free0(A) (A = (g_free(A), NULL))
@@ -102,6 +101,7 @@ gchar*       gimp_strip_uline          (const gchar* str);
 gchar*       gimp_get_accel_string     (guint key, GdkModifierType modifiers);
 
 gchar*       str_replace               (const gchar* string, const gchar* search, const gchar* replace);
+char*        remove_trailing_slash     (char* path);
 
 GList*       uri_list_to_glist         (const char* uri_list);
 void         uri_list_free             (GList*);
@@ -116,7 +116,7 @@ GtkWidget*   scrolled_window_new       ();
 
 GdkPixbuf*   get_iconbuf_from_mimetype (char* mimetype);
 
-gboolean     keyword_is_dupe           (const char* new, const char* existing);
+gboolean     keyword_is_dupe           (const char* keyword, const char* existing);
 
 typedef void (*ObjectCallback)         (GObject*, gpointer);
 

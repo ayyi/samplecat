@@ -1,3 +1,14 @@
+/**
+* +----------------------------------------------------------------------+
+* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
+* | copyright (C) 2007-2014 Tim Orford <tim@orford.org>                  |
+* +----------------------------------------------------------------------+
+* | This program is free software; you can redistribute it and/or modify |
+* | it under the terms of the GNU General Public License version 3       |
+* | as published by the Free Software Foundation.                        |
+* +----------------------------------------------------------------------+
+*
+*/
 #include "config.h"
 #include <stdio.h>
 #include <string.h>
@@ -46,7 +57,9 @@ void console__init()
 
 		console__show_result_footer(row_count);
 	}
-	g_signal_connect(G_OBJECT(app->store), "content-changed", G_CALLBACK(store_content_changed), NULL);
+
+	if(!app->args.add)
+		g_signal_connect(G_OBJECT(app->store), "content-changed", G_CALLBACK(store_content_changed), NULL);
 }
 
 
@@ -62,17 +75,22 @@ console__show_result_header()
 void
 console__show_result(Sample* result)
 {
+	int w = get_terminal_width();
+
 	#define DIR_MAX (35)
 	char dir[DIR_MAX];
 	strncpy(dir, dir_format(result->sample_dir), DIR_MAX-1);
 	dir[DIR_MAX-1] = '\0';
 
 	#define SNAME_MAX (20)
-	char name[SNAME_MAX];
-	strncpy(name, result->sample_name, SNAME_MAX-1);
-	name[SNAME_MAX-1] = '\0';
+	int max = SNAME_MAX + (w > 100 ? 10 : 0);
+	char name[max];
+	g_strlcpy(name, result->sample_name, max);
 
-	printf("  %-20s %-35s %7"PRIi64" %d %5d %s\n", name, dir, result->length, result->channels, result->sample_rate, result->mimetype);
+	char format[256] = {0,};
+	snprintf(format, 255, "  %%-%is %%-35s %%7"PRIi64" %%d %%5d %%s\n", max);
+
+	printf(format, name, dir, result->length, result->channels, result->sample_rate, result->mimetype);
 }
 
 
@@ -82,17 +100,3 @@ console__show_result_footer(int row_count)
 	printf("total %i samples found.\n", row_count);
 }
 
-#ifdef NEVER
-#include <sys/ioctl.h>
-static int
-get_terminal_width()
-{
-	struct winsize ws;
-
-	if(ioctl(1, TIOCGWINSZ, (void *)&ws) != 0) printf("ioctl failed\n");
-
-	dbg(1, "terminal width = %d\n", ws.ws_col);
-
-	return ws.ws_col;
-}
-#endif

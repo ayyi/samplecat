@@ -23,9 +23,8 @@ This software is licensed under the GPL. See accompanying file COPYING.
 #include "lib/file_manager/mimetype.h"
 #include "listmodel.h"
 #include "src/types.h"
+#include "application.h"
 #include "db/tracker.h"
-
-extern int debug;
 
 //static void tracker__on_dbus_timeout();
 static void       clear_result              ();
@@ -101,7 +100,6 @@ str_in_array (const gchar *str, gchar **array)
 }
 
 
-#define MAX_DISPLAY_ROWS 1000 //FIXME also defined in main.h
 gboolean
 tracker__search_iter_new(char* search, char* dir, const char* category, int* n_results)
 {

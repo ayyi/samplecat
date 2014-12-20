@@ -1,3 +1,10 @@
+20141219
+-fixed memory corruption bug in metadata extraction.
+-improved command line audio file scanning.
+
+20141214
+-fix for missing submodules in github tarballs.
+
 20140227
 -delay starting the audio until after the gui is finished loading.
 

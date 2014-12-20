@@ -143,9 +143,10 @@ mimetype_is_unsupported(MIME_type* mime_type, char* mime_string)
 		"audio/prs.sid",
 		"audio/telephone-event",
 		"audio/tone",
-		"audio/x-tta", 
+		//"audio/x-tta", 
 		"audio/x-speex",
-		"audio/x-musepack"
+		"audio/x-musepack",
+		"audio/x-mpegurl",
 	};
 	for(i=0;i<G_N_ELEMENTS(unsupported);i++){
 		if(!strcmp(mime_string, unsupported[i])){

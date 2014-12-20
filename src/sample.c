@@ -47,7 +47,7 @@ sample_new_from_filename(char* path, gboolean path_alloced)
 {
 	if (!file_exists(path)) {
 		perr("file not found: %s\n", path);
-		if (path_alloced) free(path);
+		if (path_alloced) g_free(path);
 		return NULL;
 	}
 
@@ -71,12 +71,12 @@ sample_new_from_filename(char* path, gboolean path_alloced)
 	sample->mtime = file_mtime(path);
 
 	if(!sample->sample_name){
-		gchar *bn =g_path_get_basename(sample->full_path);
+		gchar* bn = g_path_get_basename(sample->full_path);
 		sample->sample_name= to_utf8(bn);
 		g_free(bn);
 	}
 	if(!sample->sample_dir){
-		gchar *dn = g_path_get_dirname(sample->full_path);
+		gchar* dn = g_path_get_dirname(sample->full_path);
 		sample->sample_dir = to_utf8(dn);
 		g_free(dn);
 	}
@@ -101,7 +101,7 @@ sample_dup(Sample* s)
 	r->colour_index = s->colour_index;
 	r->online       = s->online;
 	r->mtime        = s->mtime;
-#define DUPSTR(P) if (s->P) r->P=strdup(s->P);
+#define DUPSTR(P) if (s->P) r->P = strdup(s->P);
 	DUPSTR(sample_dir)
 	DUPSTR(sample_name)
 	DUPSTR(full_path)
@@ -152,7 +152,7 @@ sample_unref(Sample* sample)
 }
 
 
-gboolean
+bool
 sample_get_file_info(Sample* sample)
 {
 	// ownership of allocated memory (ie the meta_data) is transferred to the caller.
@@ -251,13 +251,16 @@ sample_get_metadata_str(Sample* sample)
 {
 	if(!sample->meta_data) return NULL;
 
-	char** items = g_malloc0(sample->meta_data->len / 2 + 1);
+	GPtrArray* array = g_ptr_array_new();
 	char** data = (char**)sample->meta_data->pdata;
-	int i; for(i=0;i<sample->meta_data->len;i+=2)
-		items[i] = g_strdup_printf("%s:%s", data[i], data[i+1]);
+	int i; for(i=0;i<sample->meta_data->len;i+=2){
+		g_ptr_array_add(array, g_strdup_printf("%s:%s", data[i], data[i+1]));
+	}
+	g_ptr_array_add(array, NULL);
+
+	gchar** items = (gchar**)g_ptr_array_free(array, false);
 	char* str = g_strjoinv("\n", items);
 	g_strfreev(items);
-
 	return str;
 }
 

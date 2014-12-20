@@ -56,6 +56,7 @@ typedef struct _palette           Palette;
 typedef struct _config            Config;
 typedef struct _accel             Accel;
 typedef struct _db_config         DbConfig;
+typedef struct _ScanResults       ScanResults;
 
 #ifndef __file_manager_h__
 typedef struct _GimpActionGroup   GimpActionGroup;

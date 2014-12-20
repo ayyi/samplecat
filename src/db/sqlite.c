@@ -353,7 +353,7 @@ sqlite__update_blob (int id, const char* key, const guint8* d, const guint len)
 static bool
 sqlite__file_exists(const char* path, int *id)
 {
-	PF;
+	PF2;
 	gboolean ok =false;
 	int rows,columns;
 	char **table = NULL;

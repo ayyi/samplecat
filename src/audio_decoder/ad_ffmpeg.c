@@ -161,12 +161,12 @@ void *ad_open_ffmpeg(const char *fn, struct adinfo *nfo) {
     free(priv); return(NULL);
   }
 
-  dbg(2, "ffmpeg - audio tics: %i/%i [sec]",priv->formatContext->streams[priv->audioStream]->time_base.num,priv->formatContext->streams[priv->audioStream]->time_base.den);
+  dbg(2, "ffmpeg - audio tics: %i/%i [sec]", priv->formatContext->streams[priv->audioStream]->time_base.num, priv->formatContext->streams[priv->audioStream]->time_base.den);
 
   int64_t len = priv->formatContext->duration - priv->formatContext->start_time;
 
-  priv->formatContext->flags|=AVFMT_FLAG_GENPTS;
-  priv->formatContext->flags|=AVFMT_FLAG_IGNIDX;
+  priv->formatContext->flags |= AVFMT_FLAG_GENPTS;
+  priv->formatContext->flags |= AVFMT_FLAG_IGNIDX;
 
   priv->samplerate = priv->codecContext->sample_rate;
   priv->channels   = priv->codecContext->channels ;
@@ -227,7 +227,7 @@ ssize_t ad_read_ffmpeg(void *sf, float* d, size_t len) {
       if (!priv->pkt_ptr || priv->pkt_len <1 ) {
         if (priv->packet.data) av_free_packet(&priv->packet);
         ret = av_read_frame(priv->formatContext, &priv->packet);
-        if (ret<0) { dbg(1, "reached end of file."); break; }
+        if (ret < 0) { dbg(2, "reached end of file."); break; }
         priv->pkt_len = priv->packet.size;
         priv->pkt_ptr = priv->packet.data;
       }
@@ -379,10 +379,7 @@ const ad_plugin * get_ffmpeg() {
 #endif
     av_register_all();
     avcodec_register_all();
-    if(0)
-      av_log_set_level(AV_LOG_QUIET);
-    else 
-      av_log_set_level(AV_LOG_VERBOSE);
+    av_log_set_level(_debug_ ? AV_LOG_VERBOSE : AV_LOG_QUIET);
   }
 #endif
   return &ad_ffmpeg;
