@@ -10,7 +10,7 @@
 #include <db/db.h>
 #include <samplecat/support.h>
 #include <time.h>
-#include <overview.h>
+#include <worker.h>
 #include <debug/debug.h>
 #include <listmodel.h>
 #include <gdk-pixbuf/gdk-pixbuf.h>

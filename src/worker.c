@@ -27,10 +27,15 @@
 #include "sample.h"
 #include "model.h"
 #include "listmodel.h"
-#include "overview.h"
-
 #include "audio_decoder/ad.h"
 #include "audio_analysis/waveform/waveform.h"
+#include "worker.h"
+
+typedef struct
+{
+	enum MsgType type;
+	Sample*      sample;
+} Message;
 
 typedef struct
 {
@@ -42,6 +47,8 @@ static GList*          msg_list = NULL;
 static GAsyncQueue*    msg_queue = NULL;
 static SamplecatModel* model = NULL;
 
+static gpointer worker_thread (gpointer data);
+
 static bool   on_overview_done  (gpointer);
 static bool   on_peaklevel_done (gpointer);
 static bool   on_ebur128_done   (gpointer);
@@ -52,7 +59,6 @@ static double calc_signal_max (Sample* sample) {
 	return ad_maxsignal(sample->full_path);
 }
 
-#include "audio_decoder/ad.h"
 #include "audio_analysis/ebumeter/ebur128.h"
 static bool
 calc_ebur128(Sample* sample)
@@ -86,29 +92,38 @@ calc_ebur128(Sample* sample)
 
 
 void
-overview_thread_init(SamplecatModel* _model)
+worker_thread_init(SamplecatModel* _model)
 {
 	dbg(3, "creating overview thread...");
 	model = _model;
 
 	GError* error = NULL;
 	msg_queue = g_async_queue_new();
-	if(!g_thread_create(overview_thread, NULL, false, &error)){
+	if(!g_thread_create(worker_thread, NULL, false, &error)){
 		perr("error creating thread: %s\n", error->message);
 		g_error_free(error);
 	}
 }
 
 
-gpointer
-overview_thread(gpointer data)
+static bool
+print_progress(gpointer user_data)
+{
+	int n = GPOINTER_TO_INT(user_data);
+	if(n) statusbar_print(2, "updating %i items...", n);
+	else statusbar_print(2, "");
+
+	return G_SOURCE_REMOVE;
+}
+
+
+static gpointer
+worker_thread(gpointer data)
 {
 	//TODO consider replacing the main loop with a blocking call on the async queue,
 	//(g_async_queue_pop) waiting for messages.
 
 	dbg(1, "new overview thread.");
-
-	if(!msg_queue){ perr("no msg_queue!\n"); return NULL; }
 
 	g_async_queue_ref(msg_queue);
 
@@ -117,13 +132,13 @@ overview_thread(gpointer data)
 
 		//check for new work
 		while(g_async_queue_length(msg_queue)){
-			struct _message* message = g_async_queue_pop(msg_queue); // blocks
+			Message* message = g_async_queue_pop(msg_queue); // blocks
 			msg_list = g_list_append(msg_list, message);
 			dbg(2, "new message! %p", message);
 		}
 
 		while(msg_list != NULL){
-			struct _message* message = g_list_first(msg_list)->data;
+			Message* message = g_list_first(msg_list)->data;
 			msg_list = g_list_remove(msg_list, message);
 
 			Sample* sample = message->sample;
@@ -143,6 +158,8 @@ overview_thread(gpointer data)
 				g_idle_add(on_ebur128_done, result);
 			}
 
+			g_idle_add(print_progress, GINT_TO_POINTER(g_list_length(msg_list)));
+
 			g_free(message);
 		}
 
@@ -160,18 +177,28 @@ overview_thread(gpointer data)
 }
 
 
+static Message*
+new_message(enum MsgType type, Sample* sample)
+{
+	Message* message = g_new0(Message, 1);
+	message->type = type;
+	message->sample = sample_ref(sample);
+	return message;
+}
+
+
 void
 request_overview(Sample* sample)
 {
 	if(!msg_queue) return;
 
-	struct _message* message = g_new0(struct _message, 1);
+	Message* message = g_new0(Message, 1);
 	message->type = MSG_TYPE_OVERVIEW;
 	message->sample = sample;
 
-	dbg(2, "sending message: sample=%p filename=%s", sample, sample->full_path);
+	dbg(2, "sample=%p filename=%s", sample, sample->full_path);
 	sample_ref(sample);
-	g_async_queue_push(msg_queue, message); //notify the overview thread.
+	g_async_queue_push(msg_queue, message);
 }
 
 
@@ -180,11 +207,11 @@ request_peaklevel(Sample* sample)
 {
 	if(!msg_queue) return;
 
-	struct _message* message = g_new0(struct _message, 1);
+	Message* message = g_new0(Message, 1);
 	message->type = MSG_TYPE_PEAKLEVEL;
 	message->sample = sample;
 
-	dbg(2, "sending message: sample=%p filename=%s", sample, sample->full_path);
+	dbg(2, "sample=%p filename=%s", sample, sample->full_path);
 	sample_ref(sample);
 	g_async_queue_push(msg_queue, message);
 }
@@ -195,13 +222,9 @@ request_ebur128(Sample* sample)
 {
 	if(!msg_queue) return;
 
-	struct _message* message = g_new0(struct _message, 1);
-	message->type = MSG_TYPE_EBUR128;
-	message->sample = sample;
+	dbg(2, "sample=%p filename=%s", sample, sample->full_path);
 
-	dbg(2, "sending message: sample=%p filename=%s", sample, sample->full_path);
-	sample_ref(sample);
-	g_async_queue_push(msg_queue, message);
+	g_async_queue_push(msg_queue, new_message(MSG_TYPE_EBUR128, sample));
 }
 
 
@@ -217,7 +240,8 @@ on_overview_done(gpointer _sample)
 		dbg(1, "overview creation failed (no pixbuf).");
 	}
 	sample_unref(sample);
-	return IDLE_STOP;
+
+	return G_SOURCE_REMOVE;
 }
 
 
@@ -228,7 +252,7 @@ on_peaklevel_done(gpointer _sample)
 	dbg(1, "peaklevel=%.2f id=%i", sample->peaklevel, sample->id);
 	samplecat_model_update_sample (model, sample, COL_PEAKLEVEL, NULL);
 	sample_unref(sample);
-	return IDLE_STOP;
+	return G_SOURCE_REMOVE;
 }
 
 
@@ -239,7 +263,7 @@ on_ebur128_done(gpointer _result)
 	if(result->success) samplecat_model_update_sample (model, result->sample, COL_X_EBUR, NULL);
 	sample_unref(result->sample);
 	g_free(result);
-	return IDLE_STOP;
+	return G_SOURCE_REMOVE;
 }
 
 

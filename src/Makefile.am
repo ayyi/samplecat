@@ -91,7 +91,7 @@ samplecat_SOURCES = \
 	inspector.c inspector.h \
 	player_control.c player_control.h \
 	sample.c sample.h \
-	overview.c overview.h \
+	worker.c worker.h \
 	directories.c directories.h \
 	dh_link.c dh_link.h \
 	dh_tree.c dh_tree.h \

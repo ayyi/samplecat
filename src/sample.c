@@ -24,7 +24,7 @@
 #include "main.h"
 
 #include "file_manager/mimetype.h"
-#include "overview.h"
+#include "worker.h"
 #include "listview.h"
 #include "sample.h"
 
@@ -136,10 +136,12 @@ sample_free(Sample* sample)
 }
 
 
-void
+Sample*
 sample_ref(Sample* sample)
 {
 	sample->ref_count++;
+
+	return sample;
 }
 
 

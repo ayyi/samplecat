@@ -50,7 +50,7 @@ char * program_name;
 #include "list_store.h"
 #include "support.h"
 #include "sample.h"
-#include "overview.h"
+#include "worker.h"
 #include "cellrenderer_hypertext.h"
 #include "listview.h"
 #include "window.h"
@@ -358,7 +358,7 @@ main(int argc, char** argv)
 	}
 
 #ifndef DEBUG_NO_THREADS
-	overview_thread_init(app->model);
+	worker_thread_init(app->model);
 #endif
 
 	if(!app->no_gui) window_new(); 

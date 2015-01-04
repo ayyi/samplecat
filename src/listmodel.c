@@ -28,7 +28,7 @@
 #include "main.h"
 #include "application.h"
 #include "sample.h"
-#include "overview.h"
+#include "worker.h"
 #include "list_store.h"
 #include "listmodel.h"
 

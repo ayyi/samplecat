@@ -28,7 +28,7 @@
 #include "sample.h"
 #include "dnd.h"
 #include "cellrenderer_hypertext.h"
-#include "overview.h"
+#include "worker.h"
 #include "auditioner.h"
 #include "listview.h"
 

@@ -13,7 +13,7 @@
 #include <sample.h>
 #include <listmodel.h>
 #include <debug/debug.h>
-#include <overview.h>
+#include <worker.h>
 
 
 #define SAMPLECAT_TYPE_LIST_STORE (samplecat_list_store_get_type ())

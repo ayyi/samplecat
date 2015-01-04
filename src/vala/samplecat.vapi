@@ -9,11 +9,11 @@ namespace Samplecat {
 		public bool         get_file_info();
 		public char*        get_metadata_str();
 
-		[CCode (cname = "request_overview", cheader_filename = "overview.h")]
+		[CCode (cname = "request_overview", cheader_filename = "worker.h")]
 		public void         request_overview  ();
-		[CCode (cname = "request_peaklevel", cheader_filename = "overview.h")]
+		[CCode (cname = "request_peaklevel", cheader_filename = "worker.h")]
 		public void         request_peaklevel ();
-		[CCode (cname = "request_ebur128", cheader_filename = "overview.h")]
+		[CCode (cname = "request_ebur128", cheader_filename = "worker.h")]
 		public void         request_ebur128   ();
 
 		public int          id;
@@ -76,7 +76,7 @@ namespace Samplecat {
 	[CCode(cname = "listmodel__add_result", cheader_filename = "listmodel.h")]
 	public void listmodel__add_result(Sample* sample);
 
-	[CCode(cname = "request_ebur128", cheader_filename = "overview.h")]
+	[CCode(cname = "request_ebur128", cheader_filename = "worker.h")]
 	void        request_ebur128        (Sample* sample);
 
 	[CCode(cprefix = "COL_", cheader_filename = "listmodel.h")]
