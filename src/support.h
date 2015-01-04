@@ -17,7 +17,6 @@
 #define call(FN, A, ...) if(FN) (FN)(A, ##__VA_ARGS__)
 #define g_free0(A) (A = (g_free(A), NULL))
 
-#define IDLE_STOP FALSE
 #define TIMER_CONTINUE TRUE
 #define TIMER_STOP FALSE
 #define HANDLED TRUE

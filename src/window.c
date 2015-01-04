@@ -1308,7 +1308,7 @@ show_waveform(gboolean enable)
 				if((s = app->model->selection)){
 					update_waveform_view(s);
 				}
-				return IDLE_STOP;
+				return G_SOURCE_REMOVE;
 			}
 			g_idle_add(show_wave, NULL);
 		}

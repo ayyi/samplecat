@@ -61,7 +61,7 @@ tracker__init(gpointer callback)
 		//tracker_disconnect (tc); //FIXME we dont disconnect!
 	}
 	else pwarn("cant connect to tracker daemon.");
-	return IDLE_STOP;
+	return G_SOURCE_REMOVE;
 }
 
 

@@ -10,7 +10,6 @@
 
 #define UNDERLINE printf("-----------------------------------------------------\n")
 #define call(FN, A, ...) if(FN) (FN)(A, ##__VA_ARGS__)
-#define IDLE_STOP FALSE
 #define BITS_PER_CHAR_8 8
 
 void        warn_gerror              (const char* msg, GError**);

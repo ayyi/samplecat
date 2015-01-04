@@ -72,7 +72,7 @@ auditioner_connect(Callback callback, gpointer user_data)
 		c->callback(c->user_data);
 
 		g_free(c);
-		return IDLE_STOP;
+		return G_SOURCE_REMOVE;
 	}
 	g_idle_add(_auditioner_connect, c);
 }

@@ -67,7 +67,7 @@ file_manager__init()
 	pixmaps_init();
 	dir_init();
 
-	gboolean _load_plugins(gpointer user_data){ file_manager__load_plugins(); return IDLE_STOP; }
+	gboolean _load_plugins(gpointer user_data){ file_manager__load_plugins(); return G_SOURCE_REMOVE; }
 	g_idle_add(_load_plugins, NULL);
 
 	initialised = TRUE;

@@ -1043,7 +1043,7 @@ idle_new(ObjectCallback fn, gpointer user_data)
 		Idle* idle = _idle;
 		idle->fn(idle->object, idle->user_data);
 		idle->id = 0;
-		return IDLE_STOP;
+		return G_SOURCE_REMOVE;
 	}
 
 	void queue(GObject* object, gpointer _idle)

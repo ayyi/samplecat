@@ -1973,7 +1973,7 @@ rotator_realize (GtkWidget* widget)
 	{
 		GtkWidget* view = _view;
 		Rotator* rotator = GTK_ROTATOR (view);
-		g_return_val_if_fail(view, IDLE_STOP);
+		g_return_val_if_fail(view, G_SOURCE_REMOVE);
 		//if(!canvas_init_done){
 			//waveform_view_init_drawable(view);
 			on_canvas_realise(view, NULL);
@@ -1983,7 +1983,7 @@ rotator_realize (GtkWidget* widget)
 
 			gtk_widget_queue_draw(view); //testing.
 		//}
-		return IDLE_STOP;
+		return G_SOURCE_REMOVE;
 	}
 	g_idle_add(waveform_view_load_new_on_idle, widget);
 }

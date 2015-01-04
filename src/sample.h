@@ -67,7 +67,7 @@ Sample*     sample_get_by_row_ref    (GtkTreeRowReference*);
 
 Sample*     sample_get_by_filename   (const char* abspath);
 
-void        sample_ref               (Sample*);
+Sample*     sample_ref               (Sample*);
 void        sample_unref             (Sample*);
 
 bool        sample_get_file_info     (Sample*);

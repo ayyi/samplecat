@@ -295,7 +295,7 @@ application_set_auditioner(Application* a)
 
 		app->auditioner->connect(set_auditioner_on_connected, data);
 
-		return IDLE_STOP;
+		return G_SOURCE_REMOVE;
 	}
 
 	if(!a->no_gui) // TODO too early for this flag to be set ?
