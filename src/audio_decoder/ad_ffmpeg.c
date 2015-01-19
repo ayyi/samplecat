@@ -102,7 +102,6 @@ int ad_info_ffmpeg(void *sf, struct adinfo *nfo) {
 		}
 
 		if(tags->len){
-
 			// sort tags
 			char* order[] = {"artist", "title", "album", "track", "date"};
 			int p = 0;
@@ -123,14 +122,14 @@ void *ad_open_ffmpeg(const char *fn, struct adinfo *nfo) {
   priv->decoder_clock=priv->output_clock=priv->seek_frame=0; 
   priv->packet.size=0; priv->packet.data=NULL;
 
-  if (avformat_open_input(&priv->formatContext, fn, NULL, NULL) <0) {
+  if (avformat_open_input(&priv->formatContext, fn, NULL, NULL) < 0) {
     dbg(1, "ffmpeg is unable to open file '%s'.", fn);
     free(priv); return(NULL);
   }
 
   if (avformat_find_stream_info(priv->formatContext, NULL) < 0) {
     avformat_close_input(&priv->formatContext);
-    dbg(1, "av_find_stream_info failed" );
+    dbg(1, "av_find_stream_info failed");
     free(priv); return(NULL);
   }
 
@@ -169,17 +168,17 @@ void *ad_open_ffmpeg(const char *fn, struct adinfo *nfo) {
   priv->formatContext->flags |= AVFMT_FLAG_IGNIDX;
 
   priv->samplerate = priv->codecContext->sample_rate;
-  priv->channels   = priv->codecContext->channels ;
-  priv->length     = (int64_t)( len * priv->samplerate / AV_TIME_BASE );
+  priv->channels   = priv->codecContext->channels;
+  priv->length     = (int64_t)(len * priv->samplerate / AV_TIME_BASE);
 
   if (ad_info_ffmpeg((void*)priv, nfo)) {
     dbg(1, "invalid file info (sample-rate==0)");
     free(priv); return(NULL);
   }
 
-  dbg(1, "ffmpeg - %s", fn);
+  dbg(2, "ffmpeg - %s", fn);
   if (nfo) 
-    dbg(1, "ffmpeg - sr:%i c:%i d:%"PRIi64" f:%"PRIi64, nfo->sample_rate, nfo->channels, nfo->length, nfo->frames);
+    dbg(2, "ffmpeg - sr:%i c:%i d:%"PRIi64" f:%"PRIi64, nfo->sample_rate, nfo->channels, nfo->length, nfo->frames);
 
   return (void*) priv;
 }
@@ -224,7 +223,7 @@ ssize_t ad_read_ffmpeg(void *sf, float* d, size_t len) {
       priv->m_tmpBufferStart = priv->m_tmpBuffer;
       priv->m_tmpBufferLen = 0;
 
-      if (!priv->pkt_ptr || priv->pkt_len <1 ) {
+      if (!priv->pkt_ptr || priv->pkt_len < 1) {
         if (priv->packet.data) av_free_packet(&priv->packet);
         ret = av_read_frame(priv->formatContext, &priv->packet);
         if (ret < 0) { dbg(2, "reached end of file."); break; }
@@ -247,8 +246,7 @@ ret = avcodec_decode_audio4(priv->codecContext, &avf, &got_frame, &priv->packet)
       data_size = avf.linesize[0];
       memcpy(priv->m_tmpBuffer, avf.data[0], avf.linesize[0] * sizeof(uint8_t));
 #else // this was deprecated in LIBAVCODEC_VERSION_MAJOR 53
-      ret = avcodec_decode_audio3(priv->codecContext, 
-          priv->m_tmpBuffer, &data_size, &priv->packet);
+      ret = avcodec_decode_audio3(priv->codecContext, priv->m_tmpBuffer, &data_size, &priv->packet);
 #endif
 
       if (ret < 0 || ret > priv->pkt_len) {
@@ -276,7 +274,7 @@ ret = avcodec_decode_audio4(priv->codecContext, &avf, &got_frame, &priv->packet)
       }
 
       /* align buffer after seek. */
-      if (priv->seek_frame > 0) { 
+      if (priv->seek_frame > 0) {
         const int diff = priv->output_clock-priv->decoder_clock;
         if (diff<0) { 
           /* seek ended up past the wanted sample */
@@ -379,7 +377,7 @@ const ad_plugin * get_ffmpeg() {
 #endif
     av_register_all();
     avcodec_register_all();
-    av_log_set_level(_debug_ ? AV_LOG_VERBOSE : AV_LOG_QUIET);
+    av_log_set_level(_debug_ > 1 ? AV_LOG_VERBOSE : AV_LOG_QUIET);
   }
 #endif
   return &ad_ffmpeg;

@@ -47,7 +47,8 @@ mx_test_SOURCES = main.c \
 	list_item.c list_item.h \
 	$(top_srcdir)/src/sample.c $(top_srcdir)/src/sample.h \
 	$(top_srcdir)/src/model.c $(top_srcdir)/src/model.h \
-	$(top_srcdir)/src/overview.c $(top_srcdir)/src/overview.h \
+	$(top_srcdir)/src/worker.c $(top_srcdir)/src/worker.h \
+	$(top_srcdir)/src/support.c $(top_srcdir)/src/support.h \
 	$(AUDIOANALYSERS_SRC) \
 	$(AD_SRC)
 

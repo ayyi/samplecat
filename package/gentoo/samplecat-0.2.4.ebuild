@@ -5,7 +5,7 @@
 RESTRICT="nomirror"
 IUSE="mysql sqlite tracker auditioner ffmpeg"
 DESCRIPTION="SampleCat is a program for cataloguing and auditioning audio samples."
-HOMEPAGE="http://samplecat.orford.org/"
+HOMEPAGE="http://ayyi.github.io/samplecat/"
 SRC_URI="http://www.orford.org/assets/${P}.tar.gz"
 
 LICENSE="GPL-3"

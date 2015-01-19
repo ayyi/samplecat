@@ -16,6 +16,7 @@
 #define list_clear(L) g_list_free(L); L = NULL;
 #define call(FN, A, ...) if(FN) (FN)(A, ##__VA_ARGS__)
 #define g_free0(A) (A = (g_free(A), NULL))
+#define g_list_free0(var) ((var == NULL) ? NULL : (var = (g_list_free (var), NULL)))
 
 #define TIMER_CONTINUE TRUE
 #define TIMER_STOP FALSE

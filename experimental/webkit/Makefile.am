@@ -21,7 +21,7 @@ samplecat_webkit_SOURCES = \
 	table.c table.h \
 	$(top_srcdir)/src/sample.c $(top_srcdir)/src/sample.h \
 	$(top_srcdir)/src/model.c $(top_srcdir)/src/model.h \
-	$(top_srcdir)/src/overview.c $(top_srcdir)/src/overview.h \
+	$(top_srcdir)/src/worker.c $(top_srcdir)/src/worker.h \
 	$(AUDIOANALYSERS_SRC) \
 	$(AD_SRC)
 

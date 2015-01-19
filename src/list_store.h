@@ -75,6 +75,7 @@ struct _SamplecatListStore {
 	GtkListStore parent_instance;
 	SamplecatListStorePrivate * priv;
 	gint row_count;
+	GtkTreeRowReference* playing;
 };
 
 struct _SamplecatListStoreClass {

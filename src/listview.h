@@ -40,9 +40,6 @@ Sample*     listview__get_sample_by_rowref       (GtkTreeRowReference*);
 void        listview__reset_colours              ();
 void        listview__edit_row                   (GtkWidget*, gpointer);
 
-void        highlight_playing_by_path            (GtkTreePath*);
-void        highlight_playing_by_ref             (GtkTreeRowReference*);
-
 void        listview__block_motion_handler       ();
 gint        listview__get_mouseover_row          ();
 

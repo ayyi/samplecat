@@ -60,11 +60,11 @@ GDL_LDFLAGS=$(top_srcdir)/lib/gdl/libgdl.a $(XML_LIBS)
 endif
 
 if ENABLE_AYYIDBUS
-AUDITIONER_AYYI = auditioner.c auditioner.h
+AUDITIONER_AYYI = auditioner.c
 endif
 
 if ENABLE_GPLAYER
-AUDITIONER_GPLAYER = gplayer.c gplayer.h
+AUDITIONER_GPLAYER = gplayer.c
 endif
 
 if ENABLE_JACK

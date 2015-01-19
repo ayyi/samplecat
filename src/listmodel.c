@@ -209,6 +209,7 @@ listmodel__add_result(Sample* sample)
 			COL_AYYI_ICON,  ayyi_icon,
 #endif
 			COL_SAMPLEPTR,  sample,
+			COL_LEN,        sample->length,
 			-1);
 
 	GtkTreePath* treepath;

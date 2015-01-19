@@ -1,3 +1,7 @@
+20150110
+-enable sorting by length
+-refactor of internal auditioner API
+
 20141219
 -fixed memory corruption bug in metadata extraction.
 -improved command line audio file scanning.

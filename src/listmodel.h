@@ -23,6 +23,7 @@ enum
   //from here on items are the store but not the view.
   COL_COLOUR,
   COL_SAMPLEPTR,
+  COL_LEN,
   NUM_COLS, ///< end of columns in the store
   // these are NOT in the store but in the sample-struct (COL_SAMPLEPTR)
   COL_X_EBUR,

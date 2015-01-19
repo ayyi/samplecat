@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2014 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2015 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -97,11 +97,10 @@ worker_thread_init(SamplecatModel* _model)
 	dbg(3, "creating overview thread...");
 	model = _model;
 
-	GError* error = NULL;
 	msg_queue = g_async_queue_new();
-	if(!g_thread_create(worker_thread, NULL, false, &error)){
-		perr("error creating thread: %s\n", error->message);
-		g_error_free(error);
+
+	if(!g_thread_new("worker", worker_thread, NULL)){
+		perr("failed to create worker thread");
 	}
 }
 
@@ -123,11 +122,11 @@ worker_thread(gpointer data)
 	//TODO consider replacing the main loop with a blocking call on the async queue,
 	//(g_async_queue_pop) waiting for messages.
 
-	dbg(1, "new overview thread.");
+	dbg(1, "new worker thread.");
 
 	g_async_queue_ref(msg_queue);
 
-	gboolean worker_timeout(gpointer data)
+	bool worker_timeout(gpointer data)
 	{
 
 		//check for new work
@@ -173,6 +172,7 @@ worker_thread(gpointer data)
 	g_source_attach(source, context);
 
 	g_main_loop_run (g_main_loop_new (context, 0));
+
 	return NULL;
 }
 

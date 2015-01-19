@@ -23,11 +23,13 @@
 #define SAMPLECAT_IS_LIST_STORE_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), SAMPLECAT_TYPE_LIST_STORE))
 #define SAMPLECAT_LIST_STORE_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), SAMPLECAT_TYPE_LIST_STORE, SamplecatListStoreClass))
 
+#define _gtk_tree_row_reference_free0(var) ((var == NULL) ? NULL : (var = (gtk_tree_row_reference_free (var), NULL)))
 
 struct _SamplecatListStoreX {
 	GtkListStore parent_instance;
 	SamplecatListStorePrivate * priv;
 	gint row_count;
+	GtkTreeRowReference* playing;
 };
 
 struct _SamplecatListStoreClassX {
@@ -50,8 +52,8 @@ static void samplecat_list_store_finalize (GObject* obj);
 
 SamplecatListStore* samplecat_list_store_construct (GType object_type) {
 	SamplecatListStore * self = NULL;
-	GType _tmp0_[13] = {0};
-	GType types[13];
+	GType _tmp0_[14] = {0};
+	GType types[14];
 	self = (SamplecatListStore*) g_object_new (object_type, NULL);
 	_tmp0_[0] = GDK_TYPE_PIXBUF;
 	_tmp0_[1] = G_TYPE_INT;
@@ -66,8 +68,9 @@ SamplecatListStore* samplecat_list_store_construct (GType object_type) {
 	_tmp0_[10] = G_TYPE_FLOAT;
 	_tmp0_[11] = G_TYPE_INT;
 	_tmp0_[12] = G_TYPE_POINTER;
-	memcpy (types, _tmp0_, 13 * sizeof (GType));
-	gtk_list_store_set_column_types ((GtkListStore*) self, 13, types);
+	_tmp0_[13] = G_TYPE_INT64;
+	memcpy (types, _tmp0_, 14 * sizeof (GType));
+	gtk_list_store_set_column_types ((GtkListStore*) self, 14, types);
 	return self;
 }
 
@@ -145,6 +148,7 @@ static void samplecat_list_store_instance_init (SamplecatListStore * self) {
 static void samplecat_list_store_finalize (GObject* obj) {
 	SamplecatListStore * self;
 	self = G_TYPE_CHECK_INSTANCE_CAST (obj, SAMPLECAT_TYPE_LIST_STORE, SamplecatListStore);
+	_gtk_tree_row_reference_free0 (self->playing);
 	G_OBJECT_CLASS (samplecat_list_store_parent_class)->finalize (obj);
 }
 

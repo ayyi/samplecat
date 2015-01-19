@@ -13,10 +13,26 @@
 #include "support.h"
 #include "sample.h"
 #include "main.h"
-#include "gplayer.h"
-#include "listview.h"
 
-int gplayer_check() {
+static int  gplayer_check      ();
+static void gplayer_connect    (Callback, gpointer);
+static void gplayer_disconnect ();
+static bool gplayer_play       (Sample*);
+static void gplayer_stop       ();
+
+const Auditioner a_gplayer = {
+	&gplayer_check,
+	&gplayer_connect,
+	&gplayer_disconnect,
+	&gplayer_play,
+	NULL,
+	&gplayer_stop,
+	NULL,
+	NULL,
+	NULL
+};
+
+static int gplayer_check() {
 	char *c;
 	if ((c=g_find_program_in_path ("afplay"))) {free(c); return 0;}
 	if ((c=g_find_program_in_path ("gst-launch-0.10"))) {free(c); return 0;}
@@ -75,7 +91,6 @@ static char ** get_preview_argv (const char *path) {
 
 static int audio_preview_child_watch =0;
 static GPid audio_preview_child_pid =0;
-static GList* play_queue = NULL;
 
 static void stop_playback () {
 	if (audio_preview_child_pid == 0)  return;
@@ -86,26 +101,16 @@ static void stop_playback () {
 	audio_preview_child_pid = 0;
 }
 
-static void play_next() {
-	if(play_queue){
-		Sample* result = play_queue->data;
-		play_queue = g_list_remove(play_queue, result);
-		dbg(1, "%s", result->full_path);
-		highlight_playing_by_ref(result->row_ref);
-		gplayer_play(result);
-		sample_unref(result);
-	}else{
-		dbg(1, "play_all finished. disconnecting...");
-		stop_playback();
-	}
-}
-
 
 static void audio_child_died (GPid pid, gint status, gpointer data) {
 	dbg(1, "pid:%d status:%d", pid, status);
 	audio_preview_child_watch = 0;
 	audio_preview_child_pid = 0;
-	if(play_queue) play_next();
+
+	if(app->play.queue)
+		application_play_next();
+	else
+		application_on_play_finished();
 }
 
 static gboolean play_file (const char * path) {
@@ -143,56 +148,36 @@ static gboolean play_file (const char * path) {
 }
 
 
-/* public API */
-
-void gplayer_play_path(const char* path) {
+static void gplayer_play_path(const char* path) {
 	dbg(1, "%s", path);
 	stop_playback();
 	play_file(path);
 }
 
-void gplayer_toggle(Sample* sample) {
+/* public API */
+
+#if 0
+static void gplayer_toggle(Sample* sample) {
 	dbg(1, "%s", sample->full_path);
 	if (audio_preview_child_pid) gplayer_stop();
 	else gplayer_play_path(sample->full_path);
 }
+#endif
 
-void gplayer_play(Sample* sample) {
+static bool gplayer_play(Sample* sample) {
 	dbg(1, "%s", sample->full_path);
 	gplayer_play_path(sample->full_path);
+	return true;
 }
 
-void gplayer_play_all() {
-	dbg(1, "...");
-	if(play_queue){
-		pwarn("already playing");
-		return;
-	}
-
-	gboolean foreach_func(GtkTreeModel* model, GtkTreePath* path, GtkTreeIter* iter, gpointer user_data)
-	{
-		Sample* result = sample_get_from_model(path);
-		play_queue = g_list_append(play_queue, result);
-		dbg(2, "%s", result->sample_name);
-		return FALSE; //continue
-	}
-	gtk_tree_model_foreach(GTK_TREE_MODEL(app->store), foreach_func, NULL);
-	if(play_queue) play_next();
-}
-
-void gplayer_connect(Callback callback, gpointer user_data)
+static void gplayer_connect(Callback callback, gpointer user_data)
 {
 	callback(user_data);
 }
 
-void gplayer_disconnect() {;}
+static void gplayer_disconnect() {;}
 
-void gplayer_stop() {
+static void gplayer_stop() {
 	dbg(1, "stop audition..");
-	if (play_queue) {
-		g_list_foreach(play_queue,(GFunc)sample_unref, NULL);
-		g_list_free(play_queue);
-		play_queue=NULL;
-	}
 	stop_playback();
 }

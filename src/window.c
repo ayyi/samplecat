@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2014 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2015 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -54,7 +54,6 @@
 #endif
 #include "colour_box.h"
 #include "rotator.h"
-#include "auditioner.h"
 #include "window.h"
 #ifndef __APPLE__
 #include "icons/samplecat.xpm"
@@ -334,7 +333,7 @@ GtkWindow
 
 	gtk_paned_add1(GTK_PANED(pcpaned), window.dir_tree);
 
-	if (app->auditioner && app->auditioner->status && app->auditioner->seek){
+	if (app->auditioner && app->auditioner->position && app->auditioner->seek){
 		gtk_paned_add2(GTK_PANED(pcpaned), app->playercontrol->widget);
 	}
 
@@ -399,7 +398,9 @@ GtkWindow
 							case PANEL_TYPE_WAVEFORM:
 								show_waveform(true);
 								break;
-							// TODO PANEL_TYPE_PLAYER ?
+							case PANEL_TYPE_PLAYER:
+								player_control_on_show_hide(true);
+								break;
 						}
 						gtk_widget_show_all(panel->widget); // just testing. 
 					}
@@ -1083,6 +1084,7 @@ menu__add_to_db(GtkMenuItem* menuitem, gpointer user_data)
 			if(do_progress(0, 0)) break;
 			ScanResults results = {0,};
 			application_add_file(filepath, &results);
+    		if(results.n_added) statusbar_print(1, "file added");
 			g_free(filepath);
 		}
 	}
@@ -1113,7 +1115,7 @@ menu__play(GtkMenuItem* menuitem, gpointer user_data)
 	for(;l;l=l->next){
 		char* item = l->data;
 		dbg(1, "%s", item);
-		app->auditioner->play_path(item);
+		application_play_path(item);
 		g_free(item);
 	}
 	g_list_free(selected);
@@ -1275,6 +1277,39 @@ show_waveform(gboolean enable)
 		update_waveform_view(sample);
 	}
 
+	bool waveform_is_playing()
+	{
+		if(!app->play.sample) return false;
+		if(!((WaveformViewPlus*)window.waveform)->waveform) return false;
+
+		char* path = ((WaveformViewPlus*)window.waveform)->waveform->filename;
+		return !strcmp(path, app->play.sample->full_path);
+	}
+
+	void waveform_on_position(GObject* _app, gpointer _)
+	{
+		g_return_if_fail(app->play.sample);
+		if(!((WaveformViewPlus*)window.waveform)->waveform) return;
+
+		((WaveformViewPlus*)window.waveform)->time = waveform_is_playing()
+			? app->auditioner->position
+				? app->auditioner->position()
+				: app->play.position
+			: UINT_MAX;
+		gtk_widget_queue_draw(window.waveform);
+	}
+
+	void waveform_on_play(GObject* _app, gpointer _)
+	{
+		waveform_on_position(_app, _);
+	}
+
+	void waveform_on_stop(GObject* _app, gpointer _)
+	{
+		((WaveformViewPlus*)window.waveform)->time = UINT32_MAX;
+		gtk_widget_queue_draw(window.waveform);
+	}
+
 	if(enable && !window.waveform){
 		C* c = g_new0(C, 1);
 
@@ -1292,6 +1327,14 @@ show_waveform(gboolean enable)
 
 		c->selection_handler = g_signal_connect((gpointer)app->model, "selection-changed", G_CALLBACK(_waveform_on_selection_change), c);
 		g_signal_connect((gpointer)window.waveform, "realize", G_CALLBACK(on_waveform_view_realise), NULL);
+
+		void waveform_on_audio_ready(GObject* _app, gpointer _)
+		{
+			g_signal_connect(app, "play-start", (GCallback)waveform_on_play, NULL);
+			g_signal_connect(app, "play-stop", (GCallback)waveform_on_stop, NULL);
+			g_signal_connect(app, "play-position", (GCallback)waveform_on_position, NULL);
+		}
+		g_signal_connect(app, "audio-ready", (GCallback)waveform_on_audio_ready, NULL);
 	}
 
 	if(window.waveform){
@@ -1443,21 +1486,24 @@ update_waveform_view(Sample* sample)
 
 	dbg(1, "name=%s", sample->sample_name);
 
-	char* ch_str = channels_format(sample->channels);
-	char* level  = gain2dbstring(sample->peaklevel);
-	char length[64]; smpte_format(length, sample->length);
-	char fs_str[32]; samplerate_format(fs_str, sample->sample_rate); strcpy(fs_str + strlen(fs_str), " kHz");
+	char text[128] = "";
+	if(sample->channels){
+		char* ch_str = channels_format(sample->channels);
+		char* level  = gain2dbstring(sample->peaklevel);
+		char length[64]; smpte_format(length, sample->length);
+		char fs_str[32]; samplerate_format(fs_str, sample->sample_rate); strcpy(fs_str + strlen(fs_str), " kHz");
 
-	char text[128];
-	snprintf(text, 128, "%s  %s  %s  %s", length, ch_str, fs_str, level);
-	text[127] = '\0';
+		snprintf(text, 128, "%s  %s  %s  %s", length, ch_str, fs_str, level);
+		text[127] = '\0';
+
+		g_free(ch_str);
+		g_free(level);
+	}
 
 	waveform_view_plus_set_colour((WaveformViewPlus*)window.waveform, 0xaaaaaaff, 0xf00000ff, 0x000000bb, 0xffffffbb);
 	waveform_view_plus_set_title((WaveformViewPlus*)window.waveform, sample->sample_name);
 	waveform_view_plus_set_text((WaveformViewPlus*)window.waveform, text);
 
-	g_free(ch_str);
-	g_free(level);
 #else
 	waveform_view_load_file((WaveformView*)window.waveform, sample->online ? sample->full_path : NULL);
 #endif
@@ -1573,6 +1619,7 @@ window_load_layout()
 static void
 window_save_layout()
 {
+	PF;
 	g_return_if_fail(window.layout);
 
 	char* dir = g_build_filename(app->config_dir, "layouts", NULL);
@@ -1647,12 +1694,12 @@ make_context_menu()
 
 	void menu_play_all(GtkWidget* widget, gpointer user_data)
 	{
-		app->auditioner->play_all();
+		application_play_all();
 	}
 
 	void menu_play_stop(GtkWidget* widget, gpointer user_data)
 	{
-		app->auditioner->stop();
+		application_stop();
 	}
 
 	void

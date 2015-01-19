@@ -2,7 +2,7 @@
   JACK audio player
   This file is part of the Samplecat project.
 
-  copyright (C) 2006-2007 Tim Orford <tim@orford.org>
+  copyright (C) 2006-2015 Tim Orford <tim@orford.org>
   copyright (C) 2011 Robin Gareus <robin@gareus.org>
 
   written by Robin Gareus
@@ -28,44 +28,11 @@
 #define VARISPEED 1 ///< allow to change speed while playing
 #define JACK_MIDI 1 ///< use JACK midi to trigger and - if LADSPA/rubberband is avail: pitch-shift
 
-int jplay__check();
-
-/** stop playback - if active */
-void     jplay__stop       ();
-
-void     jplay__connect    (Callback, gpointer);
-void     jplay__disconnect ();
-/**
- * look up path from sample and play it
- * it sets global app.playing_id and triggers
- * showing the player UI
- */
-void     jplay__play       (Sample*);
-/**
- * if currently playing, call \ref jplay_stop. 
- * if playback is stopped, call \ref jplay__play.
- */
-void     jplay__toggle     (Sample*);
-/**
- * play audio-file with given file-path
- * app.playing_id is set to (-1), player UI is triggered
- * @param path absolute path to the file.
- * @param reset_pitch 1: reset set midi pitch adj.
- * @return 0 on success, -1 on error.
- */
-void     jplay__play_path  (const char* path);
-int      jplay__play_pathX (const char* path, int reset_pitch);
-/**
- * play all files currently in main Tree model
- */
-void     jplay__play_all   ();
-
 /*
  * the following functions are relevant for the internal
  * player and not present in the Samplecat auditioner API
  */
 
-void     jplay__play_selected();
 /** 
  * toggle, set or unset playback pause
  * @param on: 1: pause playback, 0: resume playback, -1: toggle,
@@ -85,5 +52,5 @@ void     jplay__seek       (double pos);
  * @return play position [0.0 .. 1.0],
  * -1 if not playing, -2 if a seek is currently in progress.
  */
-double   jplay__getposition();
+guint    jplay__getposition();
 #endif

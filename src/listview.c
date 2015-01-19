@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2014 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2015 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -29,7 +29,6 @@
 #include "dnd.h"
 #include "cellrenderer_hypertext.h"
 #include "worker.h"
-#include "auditioner.h"
 #include "listview.h"
 
 static gboolean     listview__on_row_clicked          (GtkWidget*, GdkEventButton*, gpointer);
@@ -52,6 +51,8 @@ static void         cell_bg_lighter                   (GtkTreeViewColumn*, GtkCe
 static int          listview__path_get_id             (GtkTreePath*);
 static gboolean     treeview_get_tags_cell            (GtkTreeView*, guint x, guint y, GtkCellRenderer**);
 #endif
+static void         listview__highlight_playing_by_path(GtkTreePath*);
+static void         listview__highlight_playing_by_ref(GtkTreeRowReference*);
 
 
 GtkWidget*
@@ -157,6 +158,7 @@ listview__new()
 	GtkCellRenderer* cell5 = gtk_cell_renderer_text_new();
 	GtkTreeViewColumn* col5 = gtk_tree_view_column_new_with_attributes("Length", cell5, "text", COL_LENGTH, NULL);
 	gtk_tree_view_append_column(GTK_TREE_VIEW(view), col5);
+	gtk_tree_view_column_set_sort_column_id(col5, COL_LEN);
 	gtk_tree_view_column_set_resizable(col5, TRUE);
 	gtk_tree_view_column_set_reorderable(col5, TRUE);
 	gtk_tree_view_column_set_min_width(col5, 0);
@@ -207,6 +209,30 @@ listview__new()
 	}
 	g_signal_connect((gpointer)view, "unrealize", G_CALLBACK(on_unrealize), NULL);
 #endif
+
+	void listview_on_play(GObject* _app, gpointer _)
+	{
+		if(app->play.sample->row_ref){
+			listview__highlight_playing_by_ref(app->play.sample->row_ref);
+		}
+	}
+
+	g_signal_connect(app, "play-start", (GCallback)listview_on_play, NULL);
+
+	void on_sort_order_changed(GtkTreeSortable* sortable, gpointer user_data)
+	{
+		gint sort_column_id;
+		GtkSortType order;
+		if(gtk_tree_sortable_get_sort_column_id(sortable, &sort_column_id, &order)){
+			if(sort_column_id == COL_LEN){
+				int n_rows = ((SamplecatListStore*)app->store)->row_count;
+				if(n_rows >= MAX_DISPLAY_ROWS){
+					dbg(0, "TODO need to requery database ordered by length...");
+				}
+			}
+		}
+	}
+	g_signal_connect(GTK_TREE_SORTABLE(app->store), "sort-column-changed", (GCallback)on_sort_order_changed, NULL);
 
 	return lv->scroll;
 }
@@ -273,22 +299,13 @@ listview__on_row_clicked(GtkWidget* widget, GdkEventButton* event, gpointer user
 				dbg(2, "overview. column rect: %i %i %i %i", rect.x, rect.y, rect.width, rect.height);
 				if(app->auditioner){
 					Sample* sample = sample_get_from_model(path);
-
-					if(sample->id != app->playing_id){
-						if(app->playing_id){
-							//a sample was previously played, and it wasnt this one
-							app->auditioner->play(sample);
-						}else{
-							app->auditioner->toggle(sample);
-						}
-						app->playing_id = sample->id;
+					if(app->play.sample){
+						(sample->id == app->play.sample->id)
+							? application_stop(sample)
+							: application_play(sample);
+					}else{
+						application_play(sample);
 					}
-					else {
-						app->auditioner->toggle(sample);
-					}
-#if 1 /* highlight played items - until new search or user resets it via menu. */
-					highlight_playing_by_path(path);
-#endif
 					sample_unref(sample);
 				}
 			}else{
@@ -1030,8 +1047,8 @@ listview__get_mouseover_row()
 }
 
 
-void 
-highlight_playing_by_path (GtkTreePath* path)
+static void 
+listview__highlight_playing_by_path (GtkTreePath* path)
 {
 	GtkTreeIter iter;
 	gtk_tree_model_get_iter(GTK_TREE_MODEL(app->store), &iter, path);
@@ -1039,13 +1056,28 @@ highlight_playing_by_path (GtkTreePath* path)
 }
 
 
-void 
-highlight_playing_by_ref (GtkTreeRowReference* ref)
+static void 
+listview__highlight_playing_by_ref (GtkTreeRowReference* ref)
 {
 	GtkTreePath* path;
 	if (!ref || !gtk_tree_row_reference_valid(ref)) return;
 	if(!(path = gtk_tree_row_reference_get_path(ref))) return;
-	highlight_playing_by_path(path);
+
+	GtkTreeRowReference* prev = ((SamplecatListStore*)app->store)->playing;
+	if(prev){
+		GtkTreePath* path;
+		if((path = gtk_tree_row_reference_get_path(prev))){
+			GtkTreeIter iter;
+			gtk_tree_model_get_iter(GTK_TREE_MODEL(app->store), &iter, path);
+			gtk_list_store_set(GTK_LIST_STORE(app->store), &iter, COL_COLOUR, /*colour*/ 0, -1);
+		}
+		gtk_tree_row_reference_free(((SamplecatListStore*)app->store)->playing);
+		((SamplecatListStore*)app->store)->playing = NULL;
+	}
+	((SamplecatListStore*)app->store)->playing = gtk_tree_row_reference_copy(ref);
+
+	listview__highlight_playing_by_path(path);
+
 	gtk_tree_path_free(path);
 }
 

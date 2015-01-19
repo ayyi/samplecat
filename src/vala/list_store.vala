@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://samplecat.orford.org          |
-* | copyright (C) 2007-2014 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2015 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -21,11 +21,12 @@ namespace Samplecat
 public class ListStore : Gtk.ListStore
 {
 	public int row_count = 0;
+	public TreeRowReference playing;
 
 	public signal void content_changed(); // a new search has been completed.
 
 	public ListStore() {
-		Type types[13] = {
+		Type types[14] = {
 			typeof(Gdk.Pixbuf), // COL_ICON
 //#ifdef USE_AYYI
 //			typeof(Gdk.Pixbuf), // COL_AYYI_ICON
@@ -41,7 +42,8 @@ public class ListStore : Gtk.ListStore
 			typeof(string),     // COL_MIMETYPE
 			typeof(float),      // COL_PEAKLEVEL
 			typeof(int),        // COL_COLOUR
-			typeof(void*)       // COL_SAMPLEPTR
+			typeof(void*),      // COL_SAMPLEPTR
+			typeof(int64)       // COL_LEN
 		};
 		set_column_types(types);
 	}

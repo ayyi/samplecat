@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2014 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2015 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -90,7 +90,12 @@ struct _Application
 
    GList*               players;
 
-   int                  playing_id;             ///< database index of the file that is currently playing, or zero if none playing, -1 if playing an external file.
+   struct {
+      PlayStatus        status;
+      Sample*           sample;
+      GList*            queue;
+      guint             position;
+   }                    play;
 
    GtkListStore*        store;
    LibraryView*         libraryview;
@@ -133,14 +138,24 @@ extern SamplecatBackend backend;
 GType        application_get_type                () G_GNUC_CONST;
 Application* application_new                     ();
 Application* application_construct               (GType);
-void         application_emit_icon_theme_changed (Application*, const gchar*);
 void         application_quit                    (Application*);
 void         application_search                  ();
+
 void         application_scan                    (const char* path, ScanResults*);
 bool         application_add_file                (const char* path, ScanResults*);
 void         application_add_dir                 (const char* path, ScanResults*);
 
+void         application_play                    (Sample*);
+void         application_stop                    ();
+void         application_pause                   ();
+void         application_play_selected           ();
+void         application_play_all                ();
+void         application_play_next               ();
+void         application_play_path               (const char*);
+void         application_set_position            (gint64);
+void         application_on_play_finished        ();
 
+void         application_emit_icon_theme_changed (Application*, const gchar*);
 G_END_DECLS
 
 #endif

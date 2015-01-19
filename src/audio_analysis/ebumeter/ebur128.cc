@@ -39,7 +39,7 @@ static int ebur128proc (const char *fn, struct ebur128 *ebr) {
 	void *sf;
 	int i, k;
 	struct adinfo nfo;
-	Ebu_r128_proc  Proc;
+	Ebu_r128_proc Proc;
 	float *data[2];
 	float *inpb;
 	if (ebr) {

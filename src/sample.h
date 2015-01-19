@@ -8,7 +8,7 @@
 
 struct _sample
 {
-	int                  id;  // database index.
+	int                  id;  // database index or -1 for external file.
 	int                  ref_count;
 	GtkTreeRowReference* row_ref;
 
@@ -74,5 +74,7 @@ bool        sample_get_file_info     (Sample*);
 
 char*       sample_get_metadata_str  (Sample*);
 void        sample_set_metadata      (Sample*, const char*);
+
+#define sample_unref0(var) ((var == NULL) ? NULL : (var = (sample_unref (var), NULL)))
 
 #endif

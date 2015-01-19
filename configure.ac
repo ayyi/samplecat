@@ -55,6 +55,7 @@ AC_ARG_ENABLE(opengl,   AC_HELP_STRING([--disable-opengl], [disable use of OpenG
 AC_ARG_ENABLE(fftw,     AC_HELP_STRING([--disable-fftw], [disable usage of FFTW ]),enable_fftw=$enableval,enable_fftw="auto")
 AC_ARG_ENABLE(vala,     AC_HELP_STRING([--disable-vala], [disable usage of Vala. Vala is only needed for developers ]), enable_vala=$enableval, enable_vala="auto")
 AC_ARG_ENABLE(dock,     AC_HELP_STRING([--disable-dock], [disable usage of Gdl-dock ]), enable_dock=$enableval, enable_dock="auto")
+AC_ARG_ENABLE(aubio,    AC_HELP_STRING([--enable-aubio], [enable use of aubio for bpm detection]), enable_aubio=$enableval, enable_aubio="auto")
 
 case $target_os in
 	*darwin*)
@@ -408,6 +409,15 @@ AC_SUBST(XML_LIBS)
 
 dnl -----------------------------------------------------------------------------
 
+AS_IF([test "$enable_aubio" = "yes"],[
+	PKG_CHECK_MODULES(AUBIO, aubio, AC_DEFINE(USE_AUBIO, 1, Use aubio for bpm detection) enable_aubio="yes", enable_aubio="no")
+	], [enable_aubio="no"])
+AM_CONDITIONAL(ENABLE_AUBIO, test "$enable_aubio" = "yes")
+AC_SUBST(AUBIO_CFLAGS)
+AC_SUBST(AUBIO_LDFLAGS)
+
+dnl -----------------------------------------------------------------------------
+
 dnl TODO vala is not needed when compiling from tarball so this should probably be used in conjunction with --enable-maintainer-mode
 
 AS_IF([test "$enable_vala" != "no"], [
@@ -460,7 +470,6 @@ AC_MSG_RESULT([])
 AC_MSG_RESULT([Database backend:])
 AC_MSG_RESULT([  mysql support:              $enable_mysql])
 AC_MSG_RESULT([  sqlite support:             $enable_sqlite])
-AC_MSG_RESULT([  tracker support:            $enable_tracker])
 AC_MSG_RESULT([Audio decoders:])
 AC_MSG_RESULT([  libsndfile:                 yes])
 AC_MSG_RESULT([  ffmpeg decoder:             $enable_ffmpeg])
@@ -477,8 +486,9 @@ AC_MSG_RESULT([Building ayyi support:        $enable_ayyi])
 AC_MSG_RESULT([Building dock support:        $enable_dock])
 AC_MSG_RESULT([])
 
-if test "$enable_mx" = "yes" -o "$enable_webkit" = "yes" -o "$enable_sf2" = "yes" -o "$enable_nks" = "yes"; then
+if test "$enable_mx" = "yes" -o "$enable_webkit" = "yes" -o "$enable_sf2" = "yes" -o "$enable_nks" = "yes" -o "$enable_tracker" = "yes"; then
 AC_MSG_RESULT([*** You have experimental options enabled. These are of no use other than to developers])
+AC_MSG_RESULT([  tracker support:            $enable_tracker])
 AC_MSG_RESULT([  soundfont support:          $enable_sf2])
 AC_MSG_RESULT([  nks support:                $enable_nks])
 AC_MSG_RESULT([  mx support:                 $enable_mx])

@@ -28,6 +28,8 @@
 #include "listview.h"
 #include "sample.h"
 
+#undef DEBUG_REFCOUNTS
+
 static void sample_free (Sample*);
 
 
@@ -139,6 +141,9 @@ sample_free(Sample* sample)
 Sample*
 sample_ref(Sample* sample)
 {
+#ifdef DEBUG_REFCOUNTS
+	if(sample->sample_name && !strcmp(sample->sample_name, "test.wav")) printf("+ %i --> %i\n", sample->ref_count, sample->ref_count+1);
+#endif
 	sample->ref_count++;
 
 	return sample;
@@ -149,7 +154,17 @@ void
 sample_unref(Sample* sample)
 {
 	if (!sample) return;
+#ifdef DEBUG_REFCOUNTS
+	if(sample->sample_name && !strcmp(sample->sample_name, "test.wav")) printf("- %i --> %i\n", sample->ref_count, sample->ref_count-1);
+#endif
+
 	sample->ref_count--;
+
+#ifdef DEBUG_REFCOUNTS
+	g_return_if_fail(sample->ref_count >= 0);
+	if(sample->ref_count < 1) gwarn("freeing sample... %s", sample->sample_name ? sample->sample_name : "");
+#endif
+
 	if(sample->ref_count < 1) sample_free(sample);
 }
 

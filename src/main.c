@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2014 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2015 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -247,7 +247,7 @@ main(int argc, char** argv)
 				app->args.add = remove_trailing_slash(g_strdup(optarg));
 				break;
 			case 'V':
-				printf ("%s %s\n\n",basename(argv[0]), PACKAGE_VERSION);
+				printf ("%s %s\n\n", basename(argv[0]), PACKAGE_VERSION);
 				printf(
 					"Copyright (C) 2007-2014 Tim Orford\n"
 					"Copyright (C) 2011 Robin Gareus\n"
@@ -288,6 +288,8 @@ main(int argc, char** argv)
 			ADD_PLAYER(app->config.auditioner);
 		}
 	}
+
+	if(player_opt) g_strlcpy(app->config.auditioner, app->players->data, 8);
 
 #ifdef __APPLE__
 	GtkOSXApplication* osxApp = (GtkOSXApplication*) 
@@ -674,6 +676,9 @@ config_save()
 		g_key_file_set_value(app->key_file, "Samplecat", "show_spectrogram", app->view_options[SHOW_SPECTROGRAM].value ? "true" : "false");
 #endif
 #endif
+
+		if(strlen(app->config.auditioner))
+			g_key_file_set_value(app->key_file, "Samplecat", "auditioner", app->config.auditioner);
 
 		int i;
 		for (i=1;i<PALETTE_SIZE;i++) {

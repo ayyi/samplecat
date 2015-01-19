@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2014 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2015 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -24,7 +24,6 @@
 #include "support.h"
 #include "sample.h"
 #include "application.h"
-#include "auditioner.h"
 #include "listview.h"
 
 typedef struct
@@ -36,7 +35,26 @@ typedef struct
 #define DBUS_APP_PATH            "/org/ayyi/auditioner/daemon"
 #define DBUS_INTERFACE           "org.ayyi.auditioner.Daemon"
 
-static AyyiConnection *adbus;
+static AyyiConnection* adbus;
+
+static int  auditioner_check      ();
+static void auditioner_connect    (Callback, gpointer);
+static void auditioner_disconnect ();
+static bool auditioner_play       (Sample*);
+static void auditioner_stop       ();
+static void auditioner_play_all   ();
+
+const Auditioner a_ayyidbus = {
+	&auditioner_check,
+	&auditioner_connect,
+	&auditioner_disconnect,
+	&auditioner_play,
+	&auditioner_play_all,
+	&auditioner_stop,
+	NULL,
+	NULL,
+	NULL
+};
 
 
 void
@@ -68,6 +86,21 @@ auditioner_connect(Callback callback, gpointer user_data)
 		}
 
 		dbus_g_proxy_add_signal(adbus->proxy, "PlaybackStopped", G_TYPE_INVALID);                                                             
+		dbus_g_proxy_add_signal(adbus->proxy, "Position", G_TYPE_INT, G_TYPE_INVALID);                                                             
+
+		void on_stopped(DBusGProxy* proxy, gpointer user_data)
+		{
+			if(!app->play.queue){
+				application_on_play_finished();
+			}
+		}
+		dbus_g_proxy_connect_signal (adbus->proxy, "PlaybackStopped", G_CALLBACK(on_stopped), NULL, NULL);
+
+		void on_position(DBusGProxy* proxy, int position, gpointer user_data)
+		{
+			application_set_position(position);
+		}
+		dbus_g_proxy_connect_signal (adbus->proxy, "Position", G_CALLBACK(on_position), NULL, NULL);
 
 		c->callback(c->user_data);
 
@@ -84,26 +117,20 @@ auditioner_disconnect()
 }
 
 
-int auditioner_check() {
-	// TODO: check if service is available.
-	// start `ayyi_auditioner` if possible and re-check.
-	return 0; /*OK*/
+static int
+auditioner_check()
+{
+	// It is not possible to check the service without starting it so we return OK
+	return 0;
 }
 
 
-void
+bool
 auditioner_play(Sample* sample)
 {
 	dbg(1, "%s", sample->full_path);
 	dbus_g_proxy_call_no_reply(adbus->proxy, "StartPlayback", G_TYPE_STRING, sample->full_path, G_TYPE_INVALID);
-}
-
-
-void
-auditioner_play_path(const char* path)
-{
-	g_return_if_fail(path);
-	dbus_g_proxy_call_no_reply(adbus->proxy, "StartPlayback", G_TYPE_STRING, path, G_TYPE_INVALID);
+	return true;
 }
 
 
@@ -116,38 +143,16 @@ auditioner_stop()
 
 
 void
-auditioner_toggle(Sample* sample)
-{
-	dbg(1, "%s", sample->full_path);
-	dbus_g_proxy_call_no_reply(adbus->proxy, "TogglePlayback", G_TYPE_STRING, sample->full_path, G_TYPE_INVALID);
-}
-
-
-void
 auditioner_play_all()
 {
-	//maybe add queue() fn to auditioner?
-
-	static GList* play_queue = NULL;
-	if(play_queue){
-		pwarn("already playing");
-		return;
-	}
-
 	static void (*stop)(DBusGProxy*, gpointer) = NULL;
 
 	void play_next()
 	{
-		if(play_queue){
-			Sample* result = play_queue->data;
-			play_queue = g_list_remove(play_queue, result);
-			highlight_playing_by_ref(result->row_ref);
-			auditioner_play(result);
-			sample_unref(result);
-		}else{
-			dbg(1, "play_all finished. disconnecting...");
+		if(!app->play.queue){
 			dbus_g_proxy_disconnect_signal(adbus->proxy, "PlaybackStopped", G_CALLBACK(stop), NULL);
 		}
+		application_play_next();
 	}
 
 	void playall__on_stopped(DBusGProxy* proxy, gpointer user_data)
@@ -157,18 +162,6 @@ auditioner_play_all()
 	stop = playall__on_stopped;
 
 	dbus_g_proxy_connect_signal (adbus->proxy, "PlaybackStopped", G_CALLBACK(playall__on_stopped), NULL, NULL);
-
-	gboolean foreach_func(GtkTreeModel* model, GtkTreePath* path, GtkTreeIter* iter, gpointer user_data)
-	{
-		Sample* result = sample_get_from_model(path);
-		play_queue = g_list_append(play_queue, result);
-		dbg(2, "%s", result->sample_name);
-		return FALSE; //continue
-	}
-
-	gtk_tree_model_foreach(GTK_TREE_MODEL(app->store), foreach_func, NULL);
-
-	if(play_queue) play_next();
 }
 
 
