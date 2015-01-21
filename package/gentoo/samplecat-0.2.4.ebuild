@@ -37,6 +37,5 @@ src_compile() {
 
 src_install() {
 	make DESTDIR=${D} install || die
-	dodoc NEWS
 }
 
