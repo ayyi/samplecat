@@ -81,7 +81,7 @@ samplecat_set_backend(BackendType type)
 			#ifdef USE_MYSQL
 			if(mysql__connect()){
 				mysql__set_as_backend(&backend);
-				printf("backend is mysql.\n");
+				printf("database is mysql.\n");
 				return true;
 			}
 			return false;
@@ -91,7 +91,7 @@ samplecat_set_backend(BackendType type)
 			#ifdef USE_SQLITE
 			sqlite__set_as_backend(&backend);
 
-			printf("backend is sqlite.\n");
+			printf("database is sqlite.\n");
 			#endif
 			break;
 		case BACKEND_TRACKER:
@@ -115,7 +115,7 @@ samplecat_set_backend(BackendType type)
 			backend.update_blob      = tracker__update_blob;
 
 			backend.disconnect       = tracker__disconnect;
-			printf("backend is tracker.\n");
+			printf("database is tracker.\n");
 			#endif
 			break;
 		default:

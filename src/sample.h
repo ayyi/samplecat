@@ -8,13 +8,13 @@
 
 struct _sample
 {
-	int                  id;  // database index or -1 for external file.
+	int                  id;          // database index or -1 for external file.
 	int                  ref_count;
 	GtkTreeRowReference* row_ref;
 
-	char*        sample_dir;  ///< directory UTF8
-	char*        sample_name; ///< basename UTF8
-	char*        full_path;   ///< filename as native to system
+	char*                name;        ///< basename UTF8
+	char*                sample_dir;  ///< directory UTF8
+	char*                full_path;   ///< filename as native to system
 
 	unsigned int sample_rate;
 	int64_t      length;        //milliseconds

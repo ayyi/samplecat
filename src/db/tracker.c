@@ -1,9 +1,13 @@
-/*
-
-Copyright (C) Tim Orford 2007-2010
-
-This software is licensed under the GPL. See accompanying file COPYING.
-
+/**
+* +----------------------------------------------------------------------+
+* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
+* | copyright (C) 2007-2014 Tim Orford <tim@orford.org>                  |
+* +----------------------------------------------------------------------+
+* | This program is free software; you can redistribute it and/or modify |
+* | it under the terms of the GNU General Public License version 3       |
+* | as published by the Free Software Foundation.                        |
+* +----------------------------------------------------------------------+
+*
 */
 #include "config.h"
 #ifdef USE_TRACKER
@@ -235,8 +239,8 @@ tracker__search_iter_next(unsigned long** unused)
 		dbg(0, "  dir=%s", dir);
 		g_free(_dir);
 
-		result.sample_name = file;
-		result.full_path   = data[0];
+		result.name = file;
+		result.full_path = data[0];
 		result.sample_dir = dir;
 		result.id = iter.idx;
 		result.online = true;

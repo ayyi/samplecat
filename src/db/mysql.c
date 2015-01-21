@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2014 Tim Orford <tim@orford.org> and others       |
+* | copyright (C) 2007-2015 Tim Orford <tim@orford.org> and others       |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -85,7 +85,7 @@ static int  mysql__exec_sql (const char* sql);
 static void clear_result    ();
 
 #define MYSQL_ESCAPE(VAR, STR) \
-	char *VAR; if (!(STR) || strlen(STR)==0) {VAR=calloc(1,sizeof(char));} else { \
+	char* VAR; if (!(STR) || strlen(STR)==0) {VAR=calloc(1,sizeof(char));} else { \
 		int sl=strlen(STR);\
 		VAR = malloc((sl*2+1)*sizeof(char)); \
 		mysql_real_escape_string(&mysql, VAR, (STR), sl); \
@@ -281,7 +281,7 @@ mysql__insert(Sample* sample)
 	char* _metadata = sample_get_metadata_str(sample);
 
 	MYSQL_ESCAPE(full_path,   sample->full_path);
-	MYSQL_ESCAPE(sample_name, sample->sample_name);
+	MYSQL_ESCAPE(name,        sample->name);
 	MYSQL_ESCAPE(sample_dir,  sample->sample_dir);
 	MYSQL_ESCAPE(mimetype,    sample->mimetype);
 	MYSQL_ESCAPE(ebur,        sample->ebur);
@@ -290,7 +290,7 @@ mysql__insert(Sample* sample)
 	gchar* sql = g_strdup_printf(
 		"INSERT INTO samples(full_path,filename,filedir,length,sample_rate,channels,online,mimetype,ebur,peaklevel,colour,mtime,frames,bit_rate,bit_depth,meta_data) "
 		"VALUES ('%s','%s','%s',%"PRIi64",'%i','%i','%i','%s','%s','%f','%i','%lu',%"PRIi64",'%i','%i','%s')",
-			full_path, sample_name, sample_dir,
+			full_path, name, sample_dir,
 			sample->length, sample->sample_rate, sample->channels,
 			sample->online, mimetype, ebur,
 			sample->peaklevel, sample->colour_index, (unsigned long) sample->mtime,
@@ -306,7 +306,7 @@ mysql__insert(Sample* sample)
 	}
 	g_free(sql);
 	free(full_path);
-	free(sample_name);
+	free(name);
 	free(sample_dir);
 	free(mimetype);
 	free(ebur);
@@ -586,7 +586,7 @@ mysql__search_iter_next_(unsigned long** lengths)
 
 	result.id          = atoi(row[MYSQL_ID]);
 	result.full_path   = full_path;
-	result.sample_name = row[MYSQL_NAME];
+	result.name        = row[MYSQL_NAME];
 	result.sample_dir  = row[MYSQL_DIR];
 	result.keywords    = row[MYSQL_KEYWORDS];
 	result.length      = get_int(row, MYSQL_LENGTH);
@@ -668,7 +668,7 @@ mysql__add_row_to_model(MYSQL_ROW row, unsigned long* lengths)
 	GdkPixbuf* iconbuf = NULL;
 	char length[64];
 	char keywords[256];
-	char sample_name[256];
+	char name[256];
 	float samplerate; char samplerate_s[32];
 	unsigned channels, colour;
 	gboolean online = FALSE;
@@ -692,7 +692,7 @@ mysql__add_row_to_model(MYSQL_ROW row, unsigned long* lengths)
 	if(row[MYSQL_ONLINE]==NULL) online = 0; else online = atoi(row[MYSQL_ONLINE]);
 	if(row[MYSQL_COLOUR]==NULL) colour = 0; else colour = atoi(row[MYSQL_COLOUR]);
 
-	strncpy(sample_name, row[MYSQL_NAME], 255);
+	strncpy(name, row[MYSQL_NAME], 255);
 	//TODO markup should be set in cellrenderer, not model!
 #if 0
 	if(GTK_WIDGET_REALIZED(app.view)){
@@ -701,7 +701,7 @@ mysql__add_row_to_model(MYSQL_ROW row, unsigned long* lengths)
 		dbg(2, "rowcolour=%s", app.config.colour[colour]);
 		GdkColor row_colour; color_rgba_to_gdk(&row_colour, c_num << 8);
 		if(is_similar(&row_colour, &app.fg_colour, 0x60)){
-			snprintf(sample_name, 255, "%s%s%s", "<span foreground=\"blue\">", row[MYSQL_NAME], "</span>");
+			snprintf(name, 255, "%s%s%s", "<span foreground=\"blue\">", row[MYSQL_NAME], "</span>");
 		}
 	}
 #endif
@@ -709,7 +709,7 @@ mysql__add_row_to_model(MYSQL_ROW row, unsigned long* lengths)
 #ifdef USE_AYYI
 	//is the file loaded in the current Ayyi song?
 	if(ayyi.got_song){
-		gchar* fullpath = g_build_filename(row[MYSQL_DIR], sample_name, NULL);
+		gchar* fullpath = g_build_filename(row[MYSQL_DIR], name, NULL);
 		if(pool__file_exists(fullpath)) dbg(0, "exists"); else dbg(0, "doesnt exist");
 		g_free(fullpath);
 	}
@@ -733,14 +733,14 @@ mysql__add_row_to_model(MYSQL_ROW row, unsigned long* lengths)
 #ifdef USE_AYYI
 	                   COL_AYYI_ICON, ayyi_icon,
 #endif
-	                   COL_IDX, atoi(row[MYSQL_ID]), COL_NAME, sample_name, COL_FNAME, row[MYSQL_DIR], COL_KEYWORDS, keywords, 
+	                   COL_IDX, atoi(row[MYSQL_ID]), COL_NAME, name, COL_FNAME, row[MYSQL_DIR], COL_KEYWORDS, keywords, 
 	                   COL_OVERVIEW, pixbuf, COL_LENGTH, length, COL_SAMPLERATE, samplerate_s, COL_CHANNELS, channels, 
 	                   COL_MIMETYPE, row[MYSQL_MIMETYPE], COL_NOTES, row[MYSQL_NOTES], COL_COLOUR, colour, -1);
 	if(pixbuf) g_object_unref(pixbuf);
 
 #if 0
 	if(app.no_gui){
-		printf(" %s\n", sample_name);
+		printf(" %s\n", name);
 	}
 #endif
 }

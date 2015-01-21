@@ -464,7 +464,7 @@ tracker__search_iter_next()
 
 		gpointer val = g_ptr_array_index(iter.qresult, iter.idx);
 		gchar** meta = val;
-		result.sample_name = g_path_get_basename(meta[0]);
+		result.name = g_path_get_basename(meta[0]);
 		result.dir = g_path_get_dirname(meta[0]);
 		result.idx = iter.idx;           //TODO this idx is pretty meaningless.
 		result.online = true;
@@ -497,7 +497,7 @@ tracker__search_iter_next()
 		char* s = g_locale_from_utf8(*iter.p_strarray, -1, NULL, NULL, NULL);
 		if(s){
 			//g_print("  %i: %s\n", iter.idx, s);
-			result.sample_name = g_path_get_basename(s);
+			result.name = g_path_get_basename(s);
 			result.dir = g_path_get_dirname(s);
 			result.idx = iter.idx; //TODO this idx is pretty meaningless.
 			result.mimetype = "audio/x-wav";

@@ -36,7 +36,7 @@ enum {
 typedef struct _SamplecatMxListItemPrivate SamplecatMxListItemPrivate;
 struct _SamplecatMxListItemPrivate {
 	gchar*        id;
-	gchar*        sample_name;
+	gchar*        name;
 	int           samplerate;
 	int           length;
 	ClutterActor* list_view;

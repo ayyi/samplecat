@@ -178,7 +178,7 @@ listmodel__add_result(Sample* sample)
 
 	//is the file loaded in the current Ayyi song?
 	if(ayyi.got_shm){
-		gchar* fullpath = g_build_filename(sample->sample_dir, sample->sample_name, NULL);
+		gchar* fullpath = g_build_filename(sample->sample_dir, sample->name, NULL);
 		if(ayyi_song__have_file(fullpath)){
 			dbg(1, "sample is used in current project TODO set icon");
 		} else dbg(2, "sample not used in current project");
@@ -194,7 +194,7 @@ listmodel__add_result(Sample* sample)
 	gtk_list_store_append(app->store, &iter);
 	gtk_list_store_set(app->store, &iter,
 			COL_ICON,       iconbuf,
-			COL_NAME,       sample->sample_name,
+			COL_NAME,       sample->name,
 			COL_FNAME,      sample->sample_dir,
 			COL_IDX,        sample->id,
 			COL_MIMETYPE,   sample->mimetype,

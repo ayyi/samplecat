@@ -233,7 +233,7 @@ sample_list_model_add_item(SampleListModel* list_model, Sample* sample)
 
 	clutter_model_append((ClutterModel*)list_model,
 		SAMPLE_LIST_MODEL_COLUMN_ID, "42",
-		SAMPLE_LIST_MODEL_COLUMN_NAME, g_strdup(sample->sample_name),
+		SAMPLE_LIST_MODEL_COLUMN_NAME, g_strdup(sample->name),
 		SAMPLE_LIST_MODEL_COLUMN_LENGTH, (int)sample->length,
 		SAMPLE_LIST_MODEL_COLUMN_TYPE, SAMPLE_LIST_MODEL_TYPE_MEDIA,
 		SAMPLE_LIST_MODEL_COLUMN_SAMPLERATE, sample->sample_rate,

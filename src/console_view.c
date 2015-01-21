@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2014 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2015 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -85,7 +85,7 @@ console__show_result(Sample* result)
 	#define SNAME_MAX (20)
 	int max = SNAME_MAX + (w > 100 ? 10 : 0);
 	char name[max];
-	g_strlcpy(name, result->sample_name, max);
+	g_strlcpy(name, result->name, max);
 
 	char format[256] = {0,};
 	snprintf(format, 255, "  %%-%is %%-35s %%7"PRIi64" %%d %%5d %%s\n", max);

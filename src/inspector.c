@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2014 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2015 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -419,7 +419,7 @@ inspector_set_labels(Sample* sample)
 
 	char* keywords = (sample->keywords && strlen(sample->keywords)) ? sample->keywords : "<no tags>";
 
-	gtk_label_set_text(GTK_LABEL(i->name),       sample->sample_name);
+	gtk_label_set_text(GTK_LABEL(i->name),       sample->name);
 	gtk_label_set_text(GTK_LABEL(i->filename),   to_utf8(sample->full_path));
 	gtk_label_set_text(GTK_LABEL(i->tags),       keywords);
 	gtk_label_set_text(GTK_LABEL(i->length),     length);
@@ -545,12 +545,12 @@ inspector_update(SamplecatModel* m, Sample* sample, gpointer user_data)
 		if(!sample->length){
 			//this sample hasnt been previously selected, and non-db info isnt available.
 			//-get the info directly from the file, and set it into the main treeview.
-			MIME_type* mime_type = type_from_path(sample->sample_name);
+			MIME_type* mime_type = type_from_path(sample->name);
 			char mime_string[64];
 			snprintf(mime_string, 64, "%s/%s", mime_type->media_type, mime_type->subtype);
 			if(mimestring_is_unsupported(mime_string)){
 				inspector_clear();
-				gtk_label_set_text(GTK_LABEL(i->filename), basename(sample->sample_name));
+				gtk_label_set_text(GTK_LABEL(i->filename), basename(sample->name));
 				return;
 			}
 			if(!sample_get_file_info(sample)){
@@ -568,7 +568,7 @@ inspector_update(SamplecatModel* m, Sample* sample, gpointer user_data)
 		inspector_set_labels(sample);
 	} else {
 		inspector_clear();
-		gtk_label_set_text(GTK_LABEL(i->priv->name), sample->sample_name);
+		gtk_label_set_text(GTK_LABEL(i->priv->name), sample->name);
 	}
 }
 

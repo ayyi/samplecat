@@ -93,7 +93,7 @@ main (int argc, char **argv)
 	int row_count = 0;
 	dbg(1, "adding items to model...");
 	while((result = backend.search_iter_next(&lengths)) && row_count < MAX_DISPLAY_ROWS){
-		dbg(2, "  %s", result->sample_name);
+		dbg(2, "  %s", result->name);
 		sample_list_model_add_item((SampleListModel*)list_model, result);
 		row_count++;
 	}

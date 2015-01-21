@@ -72,9 +72,9 @@ sample_new_from_filename(char* path, gboolean path_alloced)
 
 	sample->mtime = file_mtime(path);
 
-	if(!sample->sample_name){
+	if(!sample->name){
 		gchar* bn = g_path_get_basename(sample->full_path);
-		sample->sample_name= to_utf8(bn);
+		sample->name= to_utf8(bn);
 		g_free(bn);
 	}
 	if(!sample->sample_dir){
@@ -105,7 +105,7 @@ sample_dup(Sample* s)
 	r->mtime        = s->mtime;
 #define DUPSTR(P) if (s->P) r->P = strdup(s->P);
 	DUPSTR(sample_dir)
-	DUPSTR(sample_name)
+	DUPSTR(name)
 	DUPSTR(full_path)
 	DUPSTR(keywords)
 	DUPSTR(ebur)
@@ -126,7 +126,7 @@ sample_free(Sample* sample)
 		gwarn("freeing sample with refcount: %d", sample->ref_count);
 	}
 	if(sample->row_ref) gtk_tree_row_reference_free(sample->row_ref);
-	if(sample->sample_name) g_free(sample->sample_name);
+	if(sample->name) g_free(sample->name);
 	if(sample->full_path) g_free(sample->full_path);
 	if(sample->mimetype) g_free(sample->mimetype);
 	if(sample->ebur) g_free(sample->ebur);
@@ -142,7 +142,7 @@ Sample*
 sample_ref(Sample* sample)
 {
 #ifdef DEBUG_REFCOUNTS
-	if(sample->sample_name && !strcmp(sample->sample_name, "test.wav")) printf("+ %i --> %i\n", sample->ref_count, sample->ref_count+1);
+	if(sample->name && !strcmp(sample->name, "test.wav")) printf("+ %i --> %i\n", sample->ref_count, sample->ref_count+1);
 #endif
 	sample->ref_count++;
 
@@ -155,14 +155,14 @@ sample_unref(Sample* sample)
 {
 	if (!sample) return;
 #ifdef DEBUG_REFCOUNTS
-	if(sample->sample_name && !strcmp(sample->sample_name, "test.wav")) printf("- %i --> %i\n", sample->ref_count, sample->ref_count-1);
+	if(sample->name && !strcmp(sample->name, "test.wav")) printf("- %i --> %i\n", sample->ref_count, sample->ref_count-1);
 #endif
 
 	sample->ref_count--;
 
 #ifdef DEBUG_REFCOUNTS
 	g_return_if_fail(sample->ref_count >= 0);
-	if(sample->ref_count < 1) gwarn("freeing sample... %s", sample->sample_name ? sample->sample_name : "");
+	if(sample->ref_count < 1) gwarn("freeing sample... %s", sample->name ? sample->name : "");
 #endif
 
 	if(sample->ref_count < 1) sample_free(sample);

@@ -109,9 +109,9 @@ web_view_on_loaded (WebKitWebView* view, WebKitWebFrame* frame, gpointer user_da
 	int row_count = 0;
 	//dbg(0, "adding items to model...");
 	while((result = backend.search_iter_next(&lengths)) && row_count < MAX_DISPLAY_ROWS){
-		dbg(2, "  %s", result->sample_name);
+		dbg(2, "  %s", result->name);
 
-		gchar* text = g_strdup(result->sample_name); //TODO needs freeing?
+		gchar* text = g_strdup(result->name); //TODO needs freeing?
 
 		WebKitDOMElement* tr = webkit_dom_document_create_element (document, "tr", NULL);
 		webkit_dom_node_append_child (WEBKIT_DOM_NODE(t->tbody), WEBKIT_DOM_NODE (tr), NULL);

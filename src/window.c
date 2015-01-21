@@ -1484,7 +1484,7 @@ update_waveform_view(Sample* sample)
 	g_object_weak_ref((GObject*)((WaveformViewPlus*)window.waveform)->waveform, on_waveform_finalize, NULL);
 #endif
 
-	dbg(1, "name=%s", sample->sample_name);
+	dbg(1, "name=%s", sample->name);
 
 	char text[128] = "";
 	if(sample->channels){
@@ -1501,7 +1501,7 @@ update_waveform_view(Sample* sample)
 	}
 
 	waveform_view_plus_set_colour((WaveformViewPlus*)window.waveform, 0xaaaaaaff, 0xf00000ff, 0x000000bb, 0xffffffbb);
-	waveform_view_plus_set_title((WaveformViewPlus*)window.waveform, sample->sample_name);
+	waveform_view_plus_set_title((WaveformViewPlus*)window.waveform, sample->name);
 	waveform_view_plus_set_text((WaveformViewPlus*)window.waveform, text);
 
 #else

@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2014 Tim Orford <tim@orford.org> and others       |
+* | copyright (C) 2007-2015 Tim Orford <tim@orford.org> and others       |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -259,7 +259,7 @@ sqlite__insert(Sample* sample)
 	char* sql = sqlite3_mprintf(
 		"INSERT INTO samples(full_path,filename,filedir,length,sample_rate,channels,online,mimetype,ebur,peaklevel,colour,mtime,frames,bit_rate,bit_depth,meta_data) "
 		"VALUES ('%q','%q','%q',%"PRIi64",'%i','%i','%i','%q','%q','%f','%i','%lu',%"PRIi64",'%i','%i','%q')",
-		sample->full_path, sample->sample_name, sample->sample_dir,
+		sample->full_path, sample->name, sample->sample_dir,
 		sample->length, sample->sample_rate, sample->channels,
 		sample->online, sample->mimetype, 
 		sample->ebur?sample->ebur:"", 
@@ -518,7 +518,7 @@ sqlite__search_iter_next(unsigned long** lengths)
 	memset(&result, 0, sizeof(Sample));
 	result.id          = sqlite3_column_int(ppStmt, COLUMN_ID);
 	result.full_path   = (char*)(char*)sqlite3_column_text(ppStmt, COLUMN_ABSPATH);
-	result.sample_name = (char*)sqlite3_column_text(ppStmt, COLUMN_FILENAME);
+	result.name        = (char*)sqlite3_column_text(ppStmt, COLUMN_FILENAME);
 	result.sample_dir  = (char*)sqlite3_column_text(ppStmt, COLUMN_DIR);
 	result.keywords    = (char*)sqlite3_column_text(ppStmt, COLUMN_KEYWORDS);
 	result.length      = sqlite3_column_int(ppStmt, COLUMN_LENGTH);
@@ -541,7 +541,7 @@ sqlite__search_iter_next(unsigned long** lengths)
 	/* backwards compat. */
 	if (!result.full_path) {
 		static char full_path[PATH_MAX];
-		snprintf(full_path, PATH_MAX, "%s/%s", result.sample_dir, result.sample_name); full_path[PATH_MAX-1]='\0';
+		snprintf(full_path, PATH_MAX, "%s/%s", result.sample_dir, result.name); full_path[PATH_MAX-1]='\0';
 		result.full_path  = full_path;
 		dbg(1, "compat: filling in path by dir & filename");
 	}

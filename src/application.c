@@ -188,7 +188,7 @@ bool auditioner_nullS2(Sample* s) {return true;}
 static void
 _set_auditioner()
 {
-	printf("auditioner backend: "); fflush(stdout);
+	printf("auditioner: "); fflush(stdout);
 	const static Auditioner a_null = {
 		&auditioner_nullC,
 		&auditioner_null,
@@ -488,7 +488,7 @@ application_play(Sample* sample)
 		return;
 	}
 
-	dbg(1, "%s", sample->sample_name);
+	dbg(1, "%s", sample->name);
   	app->play.status = PLAY_PLAY_PENDING;
 
 	if(app->auditioner->play(sample)){

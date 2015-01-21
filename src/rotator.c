@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://samplecat.orford.org          |
-* | copyright (C) 2007-2013 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2015 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -1869,7 +1869,7 @@ _add_by_iter(Rotator* tree_view, GtkTreeIter* iter)
 
 	Waveform* w = waveform_load_new(sample->full_path);
 if(waveform_get_n_frames(w) < 31000) return;
-	dbg(0, "  %s %i", sample->sample_name, waveform_get_n_frames(w));
+	dbg(0, "  %s %i", sample->name, waveform_get_n_frames(w));
 	WaveformActor* a = wf_canvas_add_new_actor(wfc, w);
 	SampleActor* sa = g_new0(SampleActor, 1);
 	sa->sample = sample;
@@ -7336,12 +7336,12 @@ rotator_row_deleted (GtkTreeModel* model, GtkTreePath* path, gpointer data)
 
 	Sample* sample = sample_get_from_model(path);
 	if(sample){
-		dbg(0, "sample=%s", sample->sample_name);
+		dbg(0, "sample=%s", sample->name);
 
 		GList* l = _r->actors;
 		for(;l;l=l->next){
 			SampleActor* sa = l->data;
-			dbg(0, "  %s -- %s", sample->sample_name, sa->actor->waveform->filename);
+			dbg(0, "  %s -- %s", sample->name, sa->actor->waveform->filename);
 			if(sa->sample == sample){
 				dbg(0, "   found!");
 				_r->actors = g_list_remove(_r->actors, sa);
