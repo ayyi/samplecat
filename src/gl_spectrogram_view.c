@@ -6,7 +6,6 @@
 #include <glib-object.h>
 #include <gdk-pixbuf/gdk-pixdata.h>
 #include <gtk/gtk.h>
-#include <GL/glew.h>
 #include <float.h>
 #include <math.h>
 #include <gdk/gdk.h>
