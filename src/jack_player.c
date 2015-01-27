@@ -134,7 +134,7 @@ static int64_t  m_frames = 0;
 static int      thread_run = 0;
 static int      player_active = 0;
 static volatile int silent = 0;
-static volatile int playpause = 0;             // TODO review now we have app->play.status (note volatile)
+static volatile int playpause = 0;             // internal flag checked periodically in the jack thread.
 static volatile double seek_request = -1.0;
 static int64_t  play_position =0;
 
@@ -757,12 +757,12 @@ void jplay__seek (double pos) {
 int jplay__pause (int on) {
 	if(!myplayer) return -1;
 
+	// set the playpause flag for the jack thread
 	playpause = (on == 1)
 		? 1
 		: (on == 0)
 			? 0
 			: !playpause;
-	playpause ? application_pause() : application_play(NULL);
 
 	return playpause;
 }

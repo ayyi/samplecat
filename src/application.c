@@ -488,7 +488,7 @@ application_play(Sample* sample)
 		return;
 	}
 
-	dbg(1, "%s", sample->name);
+	if(sample) dbg(1, "%s", sample->name);
   	app->play.status = PLAY_PLAY_PENDING;
 
 	if(app->auditioner->play(sample)){
