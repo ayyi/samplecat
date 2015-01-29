@@ -475,7 +475,8 @@ application_play(Sample* sample)
 {
 	bool play_update(gpointer _)
 	{
-		g_signal_emit_by_name (app, "play-position");
+		if(app->auditioner->position) app->play.position = app->auditioner->position();
+		if(app->play.position != UINT_MAX) g_signal_emit_by_name (app, "play-position");
 		return TIMER_CONTINUE;
 	}
 
@@ -592,6 +593,11 @@ application_play_next ()
 		Sample* next = app->play.queue->data;
 		REMOVE_FROM_QUEUE(next);
 		dbg(1, "%s", next->full_path);
+
+		if(app->play.sample){
+			app->play.position = UINT32_MAX;
+			g_signal_emit_by_name (app, "play-position");
+		}
 
 		application_play(next);
 	}else{

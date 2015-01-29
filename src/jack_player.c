@@ -136,9 +136,11 @@ static int      player_active = 0;
 static volatile int silent = 0;
 static volatile int playpause = 0;             // internal flag checked periodically in the jack thread.
 static volatile double seek_request = -1.0;
-static int64_t  play_position =0;
+static int64_t  play_position = 0;
 
+#if (defined ENABLE_LADSPA)
 static const char* m_use_effect = "ladspa-rubberband.so";
+#endif
 static const int   m_effectno   = 0;
 
 pthread_t player_thread_id;
@@ -173,7 +175,7 @@ int jack_audio_callback(jack_nframes_t nframes, void *arg) {
 		jack_midi_event_t ev;
 		jack_midi_event_get(&ev, jack_buf, n);
 
-		if (ev.size <3 || ev.size > 3) continue; // filter note on/off
+		if (ev.size < 3 || ev.size > 3) continue; // filter note on/off
 		else {
 			event_queue[queued_events_end].time = ev.time;
 			event_queue[queued_events_end].size = ev.size;
@@ -277,12 +279,12 @@ update_playposition (int64_t decoder_position, float varispeed) {
 }
 
 void *jack_player_thread(void *unused){
-	int err = 0;
 	const int nframes = 1024;
 	float *tmpbuf = (float*) calloc(nframes * m_channels, sizeof(float));
 	float *bufptr = tmpbuf;
-	size_t maxbufsiz = nframes;
 #ifdef ENABLE_RESAMPLING
+	size_t maxbufsiz = nframes;
+	int err = 0;
 	SRC_STATE* src_state = src_new(SRC_QUALITY, m_channels, NULL);
 	SRC_DATA src_data;
 	int nframes_r = floorf((float) nframes*m_fResampleRatio); ///< # of frames after resampling
@@ -336,7 +338,7 @@ void *jack_player_thread(void *unused){
 		if (rv > 0) decoder_position+=rv/m_channels;
 
 #ifdef JACK_MIDI
-		const float pp[3] = {app->effect_param[0], app->effect_param[1]+midi_note, app->effect_param[2]+midi_octave};
+		const float pp[3] = {app->effect_param[0], app->effect_param[1] + midi_note, app->effect_param[2] + midi_octave};
 #else
 		const float pp[3] = {app->effect_param[0], app->effect_param[1], app->effect_param[2]};
 #endif
@@ -347,11 +349,11 @@ void *jack_player_thread(void *unused){
 		 * src_set_ratio() allow for immediate updates at loss of quality */
 		static float oldspd = -1;
 		if (oldspd != varispeed) {
-			if ((err=src_set_ratio(src_state, m_fResampleRatio*varispeed))) dbg(0, "SRC ERROR: %s", src_strerror(err)); // instant change.
+			if ((err = src_set_ratio(src_state, m_fResampleRatio * varispeed))) dbg(0, "SRC ERROR: %s", src_strerror(err)); // instant change.
 			oldspd = varispeed;
 		}
 #endif
-		nframes_r = floorf((float) nframes*m_fResampleRatio*varispeed); ///< # of frames after resampling
+		nframes_r = floorf((float) nframes * m_fResampleRatio * varispeed); ///< # of frames after resampling
 		src_data.input_frames  = nframes;
 		src_data.output_frames = nframes_r;
 		src_data.src_ratio     = m_fResampleRatio * varispeed;
@@ -370,9 +372,9 @@ void *jack_player_thread(void *unused){
 				{
 					src_data.input_frames = rv / m_channels;
 #ifdef VARISPEED
-					src_data.output_frames = floorf((float)(rv / m_channels)*m_fResampleRatio*varispeed);
+					src_data.output_frames = floorf((float)(rv / m_channels) * m_fResampleRatio * varispeed);
 #else
-					src_data.output_frames = floorf((float)(rv / m_channels)*m_fResampleRatio);
+					src_data.output_frames = floorf((float)(rv / m_channels) * m_fResampleRatio);
 #endif
 					src_data.end_of_input = app->loop_playback ? 0 : 1;
 					src_process(src_state, &src_data);
@@ -758,18 +760,16 @@ int jplay__pause (int on) {
 	if(!myplayer) return -1;
 
 	// set the playpause flag for the jack thread
-	playpause = (on == 1)
+	return playpause = (on == 1)
 		? 1
 		: (on == 0)
 			? 0
 			: !playpause;
-
-	return playpause;
 }
 
 guint jplay__getposition() {
 	if(!app->play.sample) return -1;
-	if(seek_request != -1.0) return -2;
+	if(seek_request != -1.0) return UINT_MAX;
 	if(!myplayer) return -1;
 	if(m_frames < 1) return -1;
 

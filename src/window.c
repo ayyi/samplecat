@@ -1277,6 +1277,7 @@ show_waveform(gboolean enable)
 		update_waveform_view(sample);
 	}
 
+#ifdef USE_LIBASS
 	bool waveform_is_playing()
 	{
 		if(!app->play.sample) return false;
@@ -1288,15 +1289,20 @@ show_waveform(gboolean enable)
 
 	void waveform_on_position(GObject* _app, gpointer _)
 	{
+		WaveformViewPlus* view = (WaveformViewPlus*)window.waveform;
+
 		g_return_if_fail(app->play.sample);
 		if(!((WaveformViewPlus*)window.waveform)->waveform) return;
 
-		((WaveformViewPlus*)window.waveform)->time = waveform_is_playing()
-			? app->auditioner->position
-				? app->auditioner->position()
-				: app->play.position
-			: UINT_MAX;
-		gtk_widget_queue_draw(window.waveform);
+		if(waveform_is_playing()){
+			((WaveformViewPlus*)window.waveform)->time = app->play.position;
+			gtk_widget_queue_draw((GtkWidget*)view);
+		}
+
+		else if(view->time != UINT32_MAX){
+			view->time = UINT32_MAX;
+			gtk_widget_queue_draw((GtkWidget*)view);
+		}
 	}
 
 	void waveform_on_play(GObject* _app, gpointer _)
@@ -1309,6 +1315,7 @@ show_waveform(gboolean enable)
 		((WaveformViewPlus*)window.waveform)->time = UINT32_MAX;
 		gtk_widget_queue_draw(window.waveform);
 	}
+#endif
 
 	if(enable && !window.waveform){
 		C* c = g_new0(C, 1);
@@ -1330,9 +1337,11 @@ show_waveform(gboolean enable)
 
 		void waveform_on_audio_ready(GObject* _app, gpointer _)
 		{
+#ifdef USE_LIBASS
 			g_signal_connect(app, "play-start", (GCallback)waveform_on_play, NULL);
 			g_signal_connect(app, "play-stop", (GCallback)waveform_on_stop, NULL);
 			g_signal_connect(app, "play-position", (GCallback)waveform_on_position, NULL);
+#endif
 		}
 		g_signal_connect(app, "audio-ready", (GCallback)waveform_on_audio_ready, NULL);
 	}
@@ -1473,8 +1482,11 @@ update_waveform_view(Sample* sample)
 	g_return_if_fail(window.waveform);
 	if(!gtk_widget_get_realized(window.waveform)) return; // may be hidden by the layout manager.
 
+
 #ifdef USE_LIBASS
-	waveform_view_plus_load_file((WaveformViewPlus*)window.waveform, sample->online ? sample->full_path : NULL);
+	WaveformViewPlus* view = (WaveformViewPlus*)window.waveform;
+
+	waveform_view_plus_load_file(view, sample->online ? sample->full_path : NULL);
 
 #if 0
 	void on_waveform_finalize(gpointer _c, GObject* was)
@@ -1500,9 +1512,9 @@ update_waveform_view(Sample* sample)
 		g_free(level);
 	}
 
-	waveform_view_plus_set_colour((WaveformViewPlus*)window.waveform, 0xaaaaaaff, 0xf00000ff, 0x000000bb, 0xffffffbb);
-	waveform_view_plus_set_title((WaveformViewPlus*)window.waveform, sample->name);
-	waveform_view_plus_set_text((WaveformViewPlus*)window.waveform, text);
+	waveform_view_plus_set_colour(view, 0xaaaaaaff, 0xf00000ff, 0x000000bb, 0xffffffbb);
+	waveform_view_plus_set_title(view, sample->name);
+	waveform_view_plus_set_text(view, text);
 
 #else
 	waveform_view_load_file((WaveformView*)window.waveform, sample->online ? sample->full_path : NULL);
