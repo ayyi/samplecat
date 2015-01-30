@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2014 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2015 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -76,6 +76,7 @@ public class Model : GLib.Object
 
 	private Idle idle;
 	private static char unk[32];
+	private uint selection_change_timeout;
 
 	public signal void dir_list_changed();
 	public signal void selection_changed(Sample* sample);
@@ -127,8 +128,16 @@ public class Model : GLib.Object
 			selection = (owned) sample;
 			selection->ref();
 
-			selection_changed(selection);
+			if((bool)selection_change_timeout) Source.remove(selection_change_timeout);
+			selection_change_timeout = Timeout.add(250, queue_selection_changed);
 		}
+	}
+
+	private bool queue_selection_changed()
+	{
+		selection_change_timeout = 0;
+		selection_changed(selection);
+		return false;
 	}
 
 	public void add_filter(Filter* filter)

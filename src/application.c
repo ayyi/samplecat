@@ -179,11 +179,9 @@ application_quit(Application* app)
 }
 
 
-int  auditioner_nullC() {return 0;}
-void auditioner_null() {;}
-void auditioner_nullP(const char* p) {;}
-void auditioner_nullS(Sample* s) {;}
-bool auditioner_nullS2(Sample* s) {return true;}
+static int  auditioner_nullC() {return 0;}
+static void auditioner_null() {;}
+static bool auditioner_nullS(Sample* s) {return true;}
 
 static void
 _set_auditioner()
@@ -193,7 +191,7 @@ _set_auditioner()
 		&auditioner_nullC,
 		&auditioner_null,
 		&auditioner_null,
-		&auditioner_nullS2,
+		&auditioner_nullS,
 		NULL,
 		&auditioner_null,
 		NULL, NULL, NULL

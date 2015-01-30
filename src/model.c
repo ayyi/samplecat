@@ -124,6 +124,7 @@ struct _SamplecatModelClass {
 
 struct _SamplecatModelPrivate {
 	SamplecatIdle* idle;
+	guint selection_change_timeout;
 };
 
 
@@ -180,6 +181,8 @@ gboolean samplecat_model_add (SamplecatModel* self);
 gboolean samplecat_model_remove (SamplecatModel* self, gint id);
 void samplecat_model_set_search_dir (SamplecatModel* self, gchar* dir);
 void samplecat_model_set_selection (SamplecatModel* self, Sample* sample);
+static gboolean samplecat_model_queue_selection_changed (SamplecatModel* self);
+static gboolean _samplecat_model_queue_selection_changed_gsource_func (gpointer self);
 void samplecat_model_add_filter (SamplecatModel* self, SamplecatFilter* filter);
 void samplecat_model_refresh_sample (SamplecatModel* self, Sample* sample, gboolean force_update);
 gboolean samplecat_model_update_sample (SamplecatModel* self, Sample* sample, gint prop, void* val);
@@ -697,6 +700,13 @@ void samplecat_model_set_search_dir (SamplecatModel* self, gchar* dir) {
 }
 
 
+static gboolean _samplecat_model_queue_selection_changed_gsource_func (gpointer self) {
+	gboolean result;
+	result = samplecat_model_queue_selection_changed (self);
+	return result;
+}
+
+
 void samplecat_model_set_selection (SamplecatModel* self, Sample* sample) {
 	Sample* _tmp0_;
 	Sample* _tmp1_;
@@ -707,7 +717,8 @@ void samplecat_model_set_selection (SamplecatModel* self, Sample* sample) {
 		Sample* _tmp2_;
 		Sample* _tmp4_;
 		Sample* _tmp5_;
-		Sample* _tmp6_;
+		guint _tmp6_;
+		guint _tmp8_ = 0U;
 		_tmp2_ = self->selection;
 		if ((gboolean) _tmp2_) {
 			Sample* _tmp3_;
@@ -719,9 +730,27 @@ void samplecat_model_set_selection (SamplecatModel* self, Sample* sample) {
 		self->selection = _tmp4_;
 		_tmp5_ = self->selection;
 		sample_ref (_tmp5_);
-		_tmp6_ = self->selection;
-		g_signal_emit_by_name (self, "selection-changed", _tmp6_);
+		_tmp6_ = self->priv->selection_change_timeout;
+		if ((gboolean) _tmp6_) {
+			guint _tmp7_;
+			_tmp7_ = self->priv->selection_change_timeout;
+			g_source_remove (_tmp7_);
+		}
+		_tmp8_ = g_timeout_add_full (G_PRIORITY_DEFAULT, (guint) 250, _samplecat_model_queue_selection_changed_gsource_func, g_object_ref (self), g_object_unref);
+		self->priv->selection_change_timeout = _tmp8_;
 	}
+}
+
+
+static gboolean samplecat_model_queue_selection_changed (SamplecatModel* self) {
+	gboolean result = FALSE;
+	Sample* _tmp0_;
+	g_return_val_if_fail (self != NULL, FALSE);
+	self->priv->selection_change_timeout = (guint) 0;
+	_tmp0_ = self->selection;
+	g_signal_emit_by_name (self, "selection-changed", _tmp0_);
+	result = FALSE;
+	return result;
 }
 
 
