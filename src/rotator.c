@@ -1881,7 +1881,7 @@ if(waveform_get_n_frames(w) < 31000) return;
 	uint32_t colours[2] = {0x66eeffff, 0x0000ffff}; // blue
 
 	wf_actor_set_region (a, &region); //TODO just use default?
-	wf_actor_set_colour (a, colours[0], colours[1]);
+	wf_actor_set_colour (a, colours[0]);
 	wf_actor_set_z      (a, g_list_length(_r->actors) * dz);
 	sample_unref(sample);
 
@@ -4162,8 +4162,8 @@ draw(Rotator* rotator)
 		for(;l;l=l->next){
 			//WaveformActor* actor = a[(i + a_front + 1) % G_N_ELEMENTS(a)];
 			SampleActor* sa = l->data;
-			//WaveformActor* actor = sa->actor;
-			wf_actor_paint(sa->actor);
+			AGlActor* actor = (AGlActor*)sa->actor;
+			actor->paint(actor);
 		}
 	glPopMatrix();
 
