@@ -53,6 +53,7 @@ AC_ARG_ENABLE(mx,       AS_HELP_STRING([--enable-mx], [build with mx support -- 
 AC_ARG_ENABLE(webkit,   AS_HELP_STRING([--enable-webkit], [build with webkit support -- experimental]), enable_webkit=$enableval, enable_webkit="auto")
 AC_ARG_ENABLE(opengl,   AC_HELP_STRING([--disable-opengl], [disable use of OpenGL]),enable_opengl=$enableval,enable_opengl="auto")
 AC_ARG_ENABLE(fftw,     AC_HELP_STRING([--disable-fftw], [disable usage of FFTW ]),enable_fftw=$enableval,enable_fftw="auto")
+AC_ARG_ENABLE(libass,   AC_HELP_STRING([--disable-libass], [disable usage of libass ]),enable_libass=$enableval,enable_libass="auto")
 AC_ARG_ENABLE(vala,     AC_HELP_STRING([--disable-vala], [disable usage of Vala. Vala is only needed for developers ]), enable_vala=$enableval, enable_vala="auto")
 AC_ARG_ENABLE(dock,     AC_HELP_STRING([--disable-dock], [disable usage of Gdl-dock ]), enable_dock=$enableval, enable_dock="auto")
 AC_ARG_ENABLE(aubio,    AC_HELP_STRING([--enable-aubio], [enable use of aubio for bpm detection]), enable_aubio=$enableval, enable_aubio="auto")

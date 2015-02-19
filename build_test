@@ -18,6 +18,7 @@ options=(
 --disable-ayyidbus
 --enable-ayyi
 --disable-fftw
+--disable-libass
 --disable-dnotify
 --enable-webkit
 --enable-mx
