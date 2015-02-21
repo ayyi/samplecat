@@ -52,11 +52,12 @@ drag_received(GtkWidget* widget, GdkDragContext* drag_context, gint x, gint y, G
 
   if(g_str_has_prefix((char*)data->data, "colour:")){
 
+#if 0
     if(listview__get_mouseover_row() > -1)
-    //if(widget==app->libraryview->widget)
     {
       dbg(1, "treeview!");
     }
+#endif
 
     char* colour_string = (char*)data->data + 7;
     unsigned colour_index = atoi(colour_string) ? atoi(colour_string) - 1 : 0;
@@ -71,9 +72,20 @@ drag_received(GtkWidget* widget, GdkDragContext* drag_context, gint x, gint y, G
 #ifdef HAVE_GTK_2_12
     gint bx, by;
     gtk_tree_view_convert_widget_to_bin_window_coords(GTK_TREE_VIEW(app->libraryview->widget), x, y - treeview_top, &bx, &by);
-    dbg(2, "note: gtk2.12 coords: %dx%d => %dx%d", x,y,bx,by);
+    dbg(2, "coords: %dx%d => %dx%d", x, y, bx, by);
+
 #else
     gint by = y - treeview_top - 20;
+#endif
+
+#ifdef USE_GDL
+	GdkWindow* top_window = gdk_window_get_toplevel(gtk_widget_get_toplevel(app->libraryview->widget)->window);
+	GdkWindow* window = app->libraryview->widget->window;
+	while((window = gdk_window_get_parent(window)) != top_window){
+		gint x0, y0;
+		gdk_window_get_position(window, &x0, &y0);
+		by -= y0;
+	}
 #endif
 
     if(gtk_tree_view_get_path_at_pos(GTK_TREE_VIEW(app->libraryview->widget), x, by, &path, NULL, NULL, NULL)){
