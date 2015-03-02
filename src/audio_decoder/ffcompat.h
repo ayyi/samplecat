@@ -70,3 +70,8 @@ avformat_close_input(AVFormatContext **s)
 }
 
 #endif /* < 53.5.0 */
+
+#ifndef AVCODEC_MAX_AUDIO_FRAME_SIZE
+#define AVCODEC_MAX_AUDIO_FRAME_SIZE 192000 // 1 second of 48khz 32bit audio
+#endif
+
