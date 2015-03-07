@@ -415,53 +415,54 @@ shortcuts_add_action(GtkAction* action, GimpActionGroup* action_group)
 }
 
 
+/**
+ *  Add keyboard shortcuts from the key array to the accelerator group.
+ *
+ *  @param action_group - if NULL, global group is used.
+ */
 void
-make_accels(GtkAccelGroup* accel_group, GimpActionGroup* action_group, struct _accel* keys, int count, gpointer user_data)
+make_accels(GtkAccelGroup* accel_group, GimpActionGroup* action_group, Accel* keys, int count, gpointer user_data)
 {
-  //add keyboard shortcuts from the key array to the accelerator group.
+	g_return_if_fail(accel_group);
+	g_return_if_fail(keys);
 
-  //@param action_group - if NULL, global group is used.
+	void add_action(Accel* key, const gchar* path, GtkAccelGroup* accel_group, GimpActionGroup* action_group, bool alt)
+	{
+		gchar* label = key->name;
+		guchar* stock_id = (guchar*)(key->stock_item
+			? (alt
+				? g_strconcat(key->stock_item->stock_id, "-ALT", NULL) // free !
+				: key->stock_item->stock_id)
+			: "gtk-file");
+		GtkAction* action = gtk_action_new((alt ? (char*)stock_id : (char*)key->name), label, "Tooltip", (char*)stock_id);
+		gtk_action_set_accel_path(action, path);
+		gtk_action_set_accel_group(action, accel_group);
+		shortcuts_add_action(action, action_group);
+	}
 
-  g_return_if_fail(accel_group);
-  g_return_if_fail(keys);
-
-  int k;
-  for(k=0;k<count;k++){
-    struct _accel* key = &keys[k];
-    dbg (2, "user_data=%p %s.", user_data, key->name);
-    GClosure* closure = NULL;
-    if(key->callback){
-      closure = g_cclosure_new(G_CALLBACK(key->callback), keys[k].user_data ? keys[k].user_data : user_data, NULL);
+	int k;
+	for(k=0;k<count;k++){
+		Accel* key = &keys[k];
+		dbg (2, "user_data=%p %s.", user_data, key->name);
+		GClosure* closure = NULL;
+		if(key->callback){
+			closure = g_cclosure_new(G_CALLBACK(key->callback), keys[k].user_data ? keys[k].user_data : user_data, NULL);
 #ifdef REAL
-      gtk_accel_group_connect(accel_group, keys[k].keycode, keys[k].mask, GTK_ACCEL_MASK, closure);
+			gtk_accel_group_connect(accel_group, keys[k].keycode, keys[k].mask, GTK_ACCEL_MASK, closure);
 #endif
-    }
+		}
 
-    gchar path[64]; sprintf(path, "<%s>/Categ/%s", action_group ? gtk_action_group_get_name(GTK_ACTION_GROUP(action_group)) : "Global", keys[k].name);
-    dbg(2, "path=%s", path);
-    if(closure) gtk_accel_group_connect_by_path(accel_group, path, closure);
-    gtk_accel_map_add_entry(path, key->key[0].code, key->key[0].mask);
-    dbg(2, "done");
+		gchar path[64]; sprintf(path, "<%s>/Categ/%s", action_group ? gtk_action_group_get_name(GTK_ACTION_GROUP(action_group)) : "Global", keys[k].name);
+		dbg(2, "path=%s", path);
+		if(closure) gtk_accel_group_connect_by_path(accel_group, path, closure);
+		gtk_accel_map_add_entry(path, key->key[0].code, key->key[0].mask);
 
-    //gchar name[64]; sprintf(name, "Action %i", k);
-    dbg(2, "stock_item=%p", key->stock_item);
-    dbg(2, "stock-id=%s", key->stock_item? key->stock_item->stock_id : "gtk-file");
-    gchar* label = key->name;
-    GtkAction* action = gtk_action_new(key->name, label, "Tooltip", key->stock_item? key->stock_item->stock_id : "gtk-file");
-    gtk_action_set_accel_path(action, path);
-    gtk_action_set_accel_group(action, accel_group);
-    shortcuts_add_action(action, action_group);
-
-    struct s_key* alt_key = &key->key[1];
-    int n_keys = alt_key->code ? 2 : 1;   //accels either have 1 or 2 keys
-    if(n_keys == 2){
-      guchar* stock_id = (guchar*)( key->stock_item ? g_strconcat(key->stock_item->stock_id, "-ALT", NULL) : "gtk-file"); //free!
-      GtkAction* action = gtk_action_new((char*)stock_id, label, "Tooltip", (char*)stock_id);
-      gtk_action_set_accel_path(action, path);
-      gtk_action_set_accel_group(action, accel_group);
-      shortcuts_add_action(action, action_group);
-    }
-  }
+		struct s_key* alt_key = &key->key[1];
+		int n_keys = alt_key->code ? 2 : 1;   // accels either have 1 or 2 keys
+		int i; for(i=0;i<n_keys;i++){
+			add_action(key, path, accel_group, action_group, (i > 0));
+		}
+	}
 }
 
 
