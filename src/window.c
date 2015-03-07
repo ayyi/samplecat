@@ -451,9 +451,8 @@ GtkWindow
 	g_signal_connect(G_OBJECT(app->window), "configure_event", G_CALLBACK(window_on_configure), NULL);
 
 	GtkAccelGroup* accel_group = gtk_accel_group_new();
-	gboolean mnemonics = FALSE;
-	GimpActionGroupUpdateFunc update_func = NULL;
-	GimpActionGroup* action_group = gimp_action_group_new("Samplecat-window", "Samplecat-window", "gtk-paste", mnemonics, NULL, update_func);
+	gboolean mnemonics = false;
+	GimpActionGroup* action_group = gimp_action_group_new("Samplecat-window", "Samplecat-window", "gtk-paste", mnemonics, NULL, (GimpActionGroupUpdateFunc)NULL);
 	make_accels(accel_group, action_group, window_keys, G_N_ELEMENTS(window_keys), NULL);
 	gtk_window_add_accel_group(GTK_WINDOW(app->window), accel_group);
 
@@ -1295,14 +1294,12 @@ show_waveform(gboolean enable)
 		if(!((WaveformViewPlus*)window.waveform)->waveform) return;
 
 		if(waveform_is_playing()){
-			((WaveformViewPlus*)window.waveform)->time = app->play.position;
-			gtk_widget_queue_draw((GtkWidget*)view);
+			waveform_view_plus_set_time(view, app->play.position);
 		}
 
-		else if(view->time != UINT32_MAX){
-			view->time = UINT32_MAX;
-			gtk_widget_queue_draw((GtkWidget*)view);
-		}
+		//else if(view->time != UINT32_MAX){
+			waveform_view_plus_set_time(view, UINT32_MAX);
+		//}
 	}
 
 	void waveform_on_play(GObject* _app, gpointer _)
@@ -1312,8 +1309,7 @@ show_waveform(gboolean enable)
 
 	void waveform_on_stop(GObject* _app, gpointer _)
 	{
-		((WaveformViewPlus*)window.waveform)->time = UINT32_MAX;
-		gtk_widget_queue_draw(window.waveform);
+		waveform_view_plus_set_time((WaveformViewPlus*)window.waveform, UINT32_MAX);
 	}
 #endif
 
@@ -1358,7 +1354,15 @@ show_waveform(gboolean enable)
 			{
 				Sample* s;
 				if((s = app->model->selection)){
+#ifdef USE_LIBASS
+					WaveformViewPlus* view = (WaveformViewPlus*)window.waveform;
+					Waveform* w = view->waveform;
+					if(!w || strcmp(w->filename, s->full_path)){
+						update_waveform_view(s);
+					}
+#else
 					update_waveform_view(s);
+#endif
 				}
 				return G_SOURCE_REMOVE;
 			}
@@ -1512,7 +1516,7 @@ update_waveform_view(Sample* sample)
 		g_free(level);
 	}
 
-	waveform_view_plus_set_colour(view, 0xaaaaaaff, 0xf00000ff, 0x000000bb, 0xffffffbb);
+	waveform_view_plus_set_colour(view, 0xaaaaaaff, 0x333333ff, 0x000000bb, 0xffffffbb);
 	waveform_view_plus_set_title(view, sample->name);
 	waveform_view_plus_set_text(view, text);
 
