@@ -159,20 +159,17 @@ pc_add_widgets()
 	gtk_container_add(GTK_CONTAINER(align10), slider2);	
 
 	/* effect ctrl buttons */
-	GtkWidget* hbox = gtk_hbox_new(FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(vbox), hbox, EXPAND_FALSE, FILL_FALSE, 0);
-
 	GtkWidget* cb0 = pc->cbfx = gtk_check_button_new_with_label("enable pitch-shift");
 	gtk_widget_set_tooltip_text(cb0, "Pitch-shifting (rubberband) will decrease playback-quality and increase CPU load.");
 	gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(cb0), app->enable_effect);
-	gtk_box_pack_start(GTK_BOX(hbox), cb0, EXPAND_FALSE, FILL_FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(vbox), cb0, EXPAND_FALSE, FILL_FALSE, 0);
 	g_signal_connect((gpointer)cb0, "toggled", G_CALLBACK(cb_pitch_toggled), NULL);
 #ifdef VARISPEED
 	GtkWidget* cb1 = pc->cblnk = gtk_check_button_new_with_label("preserve pitch.");
 	gtk_widget_set_tooltip_text(cb1, "link the two sliders to preserve the original pitch.");
 	gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(cb1), true);
 	gtk_widget_set_sensitive(cb1, app->enable_effect);
-	gtk_box_pack_start(GTK_BOX(hbox), cb1, EXPAND_FALSE, FILL_FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(vbox), cb1, EXPAND_FALSE, FILL_FALSE, 0);
 	g_signal_connect((gpointer)cb1, "toggled", G_CALLBACK(cb_link_toggled), NULL);
 #endif
 

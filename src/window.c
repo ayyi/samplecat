@@ -870,23 +870,30 @@ search_new()
 }
 
 
-#warning TODO buttons are too wide when a long filter setting is active.
 static GtkWidget*
 filters_new()
 {
 	static GHashTable* buttons; buttons = g_hash_table_new(NULL, NULL);
 
-	GtkWidget* hbox = gtk_hbox_new(FALSE, 2);
+	GtkWidget* hbox = gtk_vbox_new(FALSE, 2);
+
+	char* label_text(SamplecatFilter* filter)
+	{
+		char value[16] = {0,};
+		g_strlcpy(value, filter->value ? filter->value : "", 12);
+		return g_strdup_printf("%s: %s%s", filter->name, value, filter->value && strlen(filter->value) > 12 ? "..." : "");
+	}
 
 	GList* l = app->model->filters_;
 	for(;l;l=l->next){
 		SamplecatFilter* filter = l->data;
 		dbg(2, "  %s %s", filter->name, filter->value);
 
-		char* text = g_strdup_printf("%s: %s", filter->name, filter->value ? filter->value : "");
+		char* text = label_text(filter);
 		GtkWidget* button = gtk_button_new_with_label(text);
 		g_free(text);
 		gtk_box_pack_start(GTK_BOX(hbox), button, EXPAND_FALSE, FALSE, 0);
+		gtk_button_set_alignment ((GtkButton*)button, 0.0, 0.5);
 		gtk_widget_set_no_show_all(button, !(filter->value && strlen(filter->value)));
 
 		GtkWidget* icon = gtk_image_new_from_stock(GTK_STOCK_CLOSE, GTK_ICON_SIZE_MENU);
@@ -906,7 +913,7 @@ filters_new()
 		void set_label(SamplecatFilter* filter, GtkWidget* button)
 		{
 			if(button){
-				char* text = g_strdup_printf("%s: %s", filter->name, filter->value);
+				char* text = label_text(filter);
 				gtk_button_set_label((GtkButton*)button, text);
 				g_free(text);
 				show_widget_if(button, filter->value && strlen(filter->value));
