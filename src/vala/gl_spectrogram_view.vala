@@ -1,3 +1,14 @@
+/**
+* +----------------------------------------------------------------------+
+* | This file is part of Samplecat. http://samplecat.orford.org          |
+* | copyright (C) 2007-2015 Tim Orford <tim@orford.org>                  |
+* +----------------------------------------------------------------------+
+* | This program is free software; you can redistribute it and/or modify |
+* | it under the terms of the GNU General Public License version 3       |
+* | as published by the Free Software Foundation.                        |
+* +----------------------------------------------------------------------+
+*
+*/
 using GLib;
 using Gtk;
 using Gdk;
@@ -15,7 +26,8 @@ public delegate void SpectrogramReady(char* filename, Gdk.Pixbuf* a, void* user_
 public extern void get_spectrogram_with_target (char* path, SpectrogramReady on_ready, void* user_data);
 public extern void cancel_spectrogram          (char* path);
  
-public class GlSpectrogram : Gtk.DrawingArea {
+public class GlSpectrogram : Gtk.DrawingArea
+{
 	public static GlSpectrogram instance;
 	public static GLContext glcontext;
 
@@ -28,7 +40,6 @@ public class GlSpectrogram : Gtk.DrawingArea {
 
 	public GlSpectrogram ()
 	{
-		//print("GlSpectrogram\n");
 		add_events (Gdk.EventMask.BUTTON_PRESS_MASK | Gdk.EventMask.BUTTON_RELEASE_MASK | Gdk.EventMask.POINTER_MOTION_MASK);
 
 		set_size_request (200, 100);
@@ -46,11 +57,10 @@ public class GlSpectrogram : Gtk.DrawingArea {
 
 	private void load_texture()
 	{
-		//print("GlSpectrogram.load_texture...\n");
 		GLDrawable gldrawable = WidgetGL.get_gl_drawable(this);
 
-		if (!gldrawable.gl_begin(glcontext)) print("gl context error!\n");
-		if (!gldrawable.gl_begin(glcontext)) return;
+		if (!gldrawable.gl_begin(WidgetGL.get_gl_context(this))) print("gl context error!\n");
+		if (!gldrawable.gl_begin(WidgetGL.get_gl_context(this))) return;
 
 		glBindTexture(GL_TEXTURE_2D, Textures[0]);
 
@@ -74,7 +84,7 @@ public class GlSpectrogram : Gtk.DrawingArea {
 	{
 		GLDrawable gldrawable = WidgetGL.get_gl_drawable(this);
 
-		if (!gldrawable.gl_begin(glcontext)) return false;
+		if (!gldrawable.gl_begin(WidgetGL.get_gl_context(this))) return false;
 
 		glViewport(0, 0, (GLsizei)allocation.width, (GLsizei)allocation.height);
 
@@ -94,12 +104,13 @@ public class GlSpectrogram : Gtk.DrawingArea {
 	{
 		GLDrawable gldrawable = WidgetGL.get_gl_drawable (this);
 
-		if (!gldrawable.gl_begin (glcontext)) return false;
+		if (!gldrawable.gl_begin (WidgetGL.get_gl_context(this))) return false;
 
 		set_projection(); // has to be done on each expose when using shared context.
 
 		glClearColor (0.0f, 0.0f, 0.0f, 1.0f);
 		glClear (GL_COLOR_BUFFER_BIT);
+		glBindTexture(GL_TEXTURE_2D, Textures[0]);
 
 		double x = 0.0;
 		double w = allocation.width;
@@ -154,7 +165,7 @@ public class GlSpectrogram : Gtk.DrawingArea {
 		print("on_configure_event\n");
 		GLDrawable gldrawable = WidgetGL.get_gl_drawable (widget);
 
-		if (!gldrawable.gl_begin (glcontext)) return false;
+		if (!gldrawable.gl_begin (WidgetGL.get_gl_context(this))) return false;
 
 		glViewport (0, 0, (GLsizei) widget.allocation.width, (GLsizei) widget.allocation.height);
 
@@ -165,7 +176,6 @@ public class GlSpectrogram : Gtk.DrawingArea {
 
 	public void set_file(char* filename)
 	{
-		//print("GlSpectrogram.set_file: %s\n", (string)filename);
 		_filename = ((string*)filename)->dup();
 
 		cancel_spectrogram(null);

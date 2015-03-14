@@ -134,11 +134,11 @@ static void gl_spectrogram_load_texture (GlSpectrogram* self) {
 	_tmp0_ = gtk_widget_get_gl_drawable ((GtkWidget*) self);
 	_tmp1_ = _g_object_ref0 (_tmp0_);
 	gldrawable = _tmp1_;
-	_tmp2_ = gdk_gl_drawable_gl_begin (gldrawable, gl_spectrogram_glcontext);
+	_tmp2_ = gdk_gl_drawable_gl_begin (gldrawable, gtk_widget_get_gl_context((GtkWidget*)self));
 	if (!_tmp2_) {
 		g_print ("gl context error!\n");
 	}
-	_tmp3_ = gdk_gl_drawable_gl_begin (gldrawable, gl_spectrogram_glcontext);
+	_tmp3_ = gdk_gl_drawable_gl_begin (gldrawable, gtk_widget_get_gl_context((GtkWidget*)self));
 	if (!_tmp3_) {
 		_g_object_unref0 (gldrawable);
 		return;
@@ -181,7 +181,7 @@ static gboolean gl_spectrogram_real_configure_event (GtkWidget* base, GdkEventCo
 	_tmp0_ = gtk_widget_get_gl_drawable ((GtkWidget*) self);
 	_tmp1_ = _g_object_ref0 (_tmp0_);
 	gldrawable = _tmp1_;
-	_tmp2_ = gdk_gl_drawable_gl_begin (gldrawable, gl_spectrogram_glcontext);
+	_tmp2_ = gdk_gl_drawable_gl_begin (gldrawable, gtk_widget_get_gl_context((GtkWidget*)self));
 	if (!_tmp2_) {
 		result = FALSE;
 		_g_object_unref0 (gldrawable);
@@ -217,7 +217,7 @@ static gboolean gl_spectrogram_real_expose_event (GtkWidget* base, GdkEventExpos
 	_tmp0_ = gtk_widget_get_gl_drawable ((GtkWidget*) self);
 	_tmp1_ = _g_object_ref0 (_tmp0_);
 	gldrawable = _tmp1_;
-	_tmp2_ = gdk_gl_drawable_gl_begin (gldrawable, gl_spectrogram_glcontext);
+	_tmp2_ = gdk_gl_drawable_gl_begin (gldrawable, gtk_widget_get_gl_context((GtkWidget*)self));
 	if (!_tmp2_) {
 		result = FALSE;
 		_g_object_unref0 (gldrawable);
@@ -230,6 +230,7 @@ static gboolean gl_spectrogram_real_expose_event (GtkWidget* base, GdkEventExpos
 	w = (gdouble) ((GtkWidget*) self)->allocation.width;
 	top = (gdouble) ((GtkWidget*) self)->allocation.height;
 	botm = 0.0;
+	glBindTexture (GL_TEXTURE_2D, self->priv->Textures[0]);
 	glBegin (GL_QUADS);
 	glTexCoord2d (0.0, 0.0);
 	glVertex2d (x, top);
