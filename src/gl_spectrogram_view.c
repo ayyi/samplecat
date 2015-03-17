@@ -230,6 +230,7 @@ static gboolean gl_spectrogram_real_expose_event (GtkWidget* base, GdkEventExpos
 	w = (gdouble) ((GtkWidget*) self)->allocation.width;
 	top = (gdouble) ((GtkWidget*) self)->allocation.height;
 	botm = 0.0;
+	glEnable (GL_TEXTURE_2D);
 	glBindTexture (GL_TEXTURE_2D, self->priv->Textures[0]);
 	glBegin (GL_QUADS);
 	glTexCoord2d (0.0, 0.0);

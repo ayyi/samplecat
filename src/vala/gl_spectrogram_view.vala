@@ -34,7 +34,7 @@ public class GlSpectrogram : Gtk.DrawingArea
 	private string _filename;
 	private Gdk.Pixbuf* pixbuf = null;
 	private bool gl_init_done = false;
-	private GL.GLuint Textures[2];
+	private GL.GLuint textures[2];
 	private const double near = 10.0;
 	private const double far = -100.0;
 
@@ -62,7 +62,7 @@ public class GlSpectrogram : Gtk.DrawingArea
 		if (!gldrawable.gl_begin(WidgetGL.get_gl_context(this))) print("gl context error!\n");
 		if (!gldrawable.gl_begin(WidgetGL.get_gl_context(this))) return;
 
-		glBindTexture(GL_TEXTURE_2D, Textures[0]);
+		glBindTexture(GL_TEXTURE_2D, textures[0]);
 
 		Gdk.Pixbuf* scaled = pixbuf->scale_simple(256, 256, Gdk.InterpType.BILINEAR);
 		//print("GlSpectrogram.load_texture: %ix%ix%i\n", scaled->get_width(), scaled->get_height(), scaled->get_n_channels());
@@ -89,9 +89,9 @@ public class GlSpectrogram : Gtk.DrawingArea
 		glViewport(0, 0, (GLsizei)allocation.width, (GLsizei)allocation.height);
 
 		if(!gl_init_done){
-			glGenTextures(1, Textures);
+			glGenTextures(1, textures);
 			glEnable(GL_TEXTURE_2D);
-			glBindTexture(GL_TEXTURE_2D, Textures[0]);
+			glBindTexture(GL_TEXTURE_2D, textures[0]);
 
 			gl_init_done = true;
 		}
@@ -110,7 +110,8 @@ public class GlSpectrogram : Gtk.DrawingArea
 
 		glClearColor (0.0f, 0.0f, 0.0f, 1.0f);
 		glClear (GL_COLOR_BUFFER_BIT);
-		glBindTexture(GL_TEXTURE_2D, Textures[0]);
+		glEnable(GL_TEXTURE_2D);
+		glBindTexture(GL_TEXTURE_2D, textures[0]);
 
 		double x = 0.0;
 		double w = allocation.width;
@@ -123,12 +124,9 @@ public class GlSpectrogram : Gtk.DrawingArea
 		glTexCoord2d(0.0, 1.0); glVertex2d(x,     botm);
 		glEnd();
 
-		if (gldrawable.is_double_buffered ())
-			gldrawable.swap_buffers ();
-		else
-			glFlush ();
-
+		gldrawable.swap_buffers ();
 		gldrawable.gl_end ();
+
 		return true;
 	}
 
@@ -156,21 +154,6 @@ public class GlSpectrogram : Gtk.DrawingArea
 
 	public override bool motion_notify_event (Gdk.EventMotion event) {
 		return false;
-	}
-	*/
-
-	/*
-	private bool on_configure_event (Widget widget, EventConfigure event)
-	{
-		print("on_configure_event\n");
-		GLDrawable gldrawable = WidgetGL.get_gl_drawable (widget);
-
-		if (!gldrawable.gl_begin (WidgetGL.get_gl_context(this))) return false;
-
-		glViewport (0, 0, (GLsizei) widget.allocation.width, (GLsizei) widget.allocation.height);
-
-		gldrawable.gl_end ();
-		return true;
 	}
 	*/
 
