@@ -14488,7 +14488,7 @@ dbg(0, "%p drawable=%p", _canvas, _r->gl_drawable);
 
 	gl_initialised = true;
 
-	wfc = wf_canvas_new(_r->gl_context, _r->gl_drawable);
+	wfc = wf_canvas_new((AGlRootActor*)agl_actor__new_root(_canvas));
 
 	canvas_init_done = true;
 
