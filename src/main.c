@@ -74,7 +74,7 @@ static void      config_new   ();
 static bool      config_save  ();
 
 Application*     app = NULL;
-SamplecatBackend backend; 
+SamplecatBackend backend = {0,}; 
 Palette          palette;
 GList*           mime_types; // list of MIME_type*
 
@@ -163,7 +163,6 @@ main(int argc, char** argv)
 	SamplecatModel* model = app->model;
 
 	colour_box_init();
-	memset(&backend, 0, sizeof(struct _backend)); 
 
 #define ADD_BACKEND(A) model->backends = g_list_append(model->backends, A)
 

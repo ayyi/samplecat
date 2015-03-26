@@ -1,3 +1,9 @@
+/**
+* +----------------------------------------------------------------------+
+* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
+* | copyright (C) 2007-2015 Tim Orford <tim@orford.org>                  |
+* +----------------------------------------------------------------------+
+*/
 /*
  * $Id: type.c,v 1.169 2005/07/24 10:19:31 tal197 Exp $
  *
@@ -41,13 +47,15 @@
 #include "icon_theme.h"
 
 GList* themes = NULL; 
-char theme_name[64] = "Amaranth";
+char theme_name[64] = {0,};
 extern GtkIconTheme* icon_theme;
 extern Application* application;
 
-static void add_themes_from_dir (GPtrArray* names, const char* dir);
-static void on_theme_select     (GtkMenuItem*, gpointer);
-static void print_icon_list     ();
+static void get_theme_names      (GPtrArray*);
+static void icon_theme_on_select (GtkMenuItem*, gpointer);
+#ifdef DEBUG
+static void print_icon_list      ();
+#endif
 
 
 /*static */GList*
@@ -55,9 +63,8 @@ icon_theme_init()
 {
 	//-build a menu list of available themes.
 
-	icon_theme = gtk_icon_theme_new();
-	//icon_theme = gtk_icon_theme_get_default();
-	set_icon_theme();
+	icon_theme = gtk_icon_theme_new(); // use a new theme as the default theme cannot be updated.
+	icon_theme_set_theme();
 
 	if(_debug_){
 		gint n_elements;
@@ -70,20 +77,12 @@ icon_theme_init()
 		g_strfreev(*path);
 	}
 
-	gchar **theme_dirs = NULL;
-	gint n_dirs = 0;
-	int i;
-
 	GtkWidget* menu = gtk_menu_new();
 
-	gtk_icon_theme_get_search_path(icon_theme, &theme_dirs, &n_dirs);
 	GPtrArray* names = g_ptr_array_new();
-	for (i = 0; i < n_dirs; i++) add_themes_from_dir(names, theme_dirs[i]);
-	g_strfreev(theme_dirs);
+	get_theme_names(names);
 
-	g_ptr_array_sort(names, strcmp2);
-
-	for (i = 0; i < names->len; i++) {
+	int i; for (i = 0; i < names->len; i++) {
 		char *name = names->pdata[i];
 		dbg(2, "name=%s", name);
 
@@ -93,7 +92,7 @@ icon_theme_init()
 
 		g_object_set_data(G_OBJECT(item), "theme", g_strdup(name)); //make sure this string is free'd when menu is updated.
 
-		g_signal_connect(G_OBJECT(item), "activate", G_CALLBACK(on_theme_select), NULL);
+		g_signal_connect(G_OBJECT(item), "activate", G_CALLBACK(icon_theme_on_select), NULL);
 
 		g_free(name);
 	}
@@ -105,69 +104,98 @@ icon_theme_init()
 
 
 static void
-add_themes_from_dir(GPtrArray* names, const char* dir)
+get_theme_names(GPtrArray* names)
 {
-	if (access(dir, F_OK) != 0)	return;
+	void add_themes_from_dir(GPtrArray* names, const char* dir)
+	{
+		if (access(dir, F_OK) != 0)	return;
 
-	GPtrArray* list = list_dir((guchar*)dir);
-	g_return_if_fail(list != NULL);
+		GPtrArray* list = list_dir((guchar*)dir);
+		g_return_if_fail(list != NULL);
 
-	int i;
-	for (i = 0; i < list->len; i++){
-		char *index_path;
+		int i;
+		for (i = 0; i < list->len; i++){
+			char* index_path = g_build_filename(dir, list->pdata[i], "index.theme", NULL);
+			
+			if (access(index_path, F_OK) == 0){
+				g_ptr_array_add(names, list->pdata[i]);
+			}
+			else g_free(list->pdata[i]);
 
-		index_path = g_build_filename(dir, list->pdata[i], "index.theme", NULL);
-		
-		if (access(index_path, F_OK) == 0){
-			g_ptr_array_add(names, list->pdata[i]);
+			g_free(index_path);
 		}
-		else g_free(list->pdata[i]);
 
-		g_free(index_path);
+		g_ptr_array_free(list, TRUE);
 	}
 
-	g_ptr_array_free(list, TRUE);
+	gint n_dirs = 0;
+	gchar** theme_dirs = NULL;
+	gtk_icon_theme_get_search_path(icon_theme, &theme_dirs, &n_dirs); // dir list is derived from XDG_DATA_DIRS
+	int i; for (i = 0; i < n_dirs; i++) add_themes_from_dir(names, theme_dirs[i]);
+	g_strfreev(theme_dirs);
+
+	g_ptr_array_sort(names, strcmp2);
 }
 
 
 static void
-on_theme_select(GtkMenuItem* menuitem, gpointer user_data)
+icon_theme_on_select(GtkMenuItem* menuitem, gpointer user_data)
 {
 	g_return_if_fail(menuitem);
 
 	gchar* name = g_object_get_data(G_OBJECT(menuitem), "theme");
 	dbg(0, "theme=%s", name);
 
-	if(name && strlen(name)) strncpy(theme_name, name, 64);
+	if(name && strlen(name)) g_strlcpy(theme_name, name, 64);
 
+#ifdef DEBUG
 	if(_debug_) print_icon_list();
-	set_icon_theme();
+#endif
+	icon_theme_set_theme();
 	application_emit_icon_theme_changed(app, name);
 }
 
 
-void
-set_icon_theme()
+bool
+check_default_theme(gpointer data)
 {
-	//const char *home_dir = g_get_home_dir();
-	GtkIconInfo *info;
-	//char *icon_home;
+	// The default gtk icon theme "hi-color" does not contain any mimetype icons.
 
-	//if (!theme_name || !*theme_name) theme_name = "ROX";
-	if (/*!theme_name ||*/ !*theme_name) strcpy(theme_name, "ROX");
+	static char* names[] = {"audio-x-wav", "audio-x-generic", "gnome-mime-audio"};
 
-	//g_hash_table_remove_all(type_hash);
+	if(!theme_name[0]){
+		GtkIconInfo* info;
+		int i = 0;
+		while(i++ < G_N_ELEMENTS(names) && !(info = gtk_icon_theme_lookup_icon(icon_theme, names[i], ICON_HEIGHT, 0)));
+		if(info){
+			g_object_unref(info);
+		}else{
+			warnprintf("default icon theme appears not to contain audio mime-type icons\n");
+
+			// TODO use a random fallback theme
+		}
+	}
+	return G_SOURCE_REMOVE;
+}
+
+
+void
+icon_theme_set_theme()
+{
 	reset_type_hash();
 
 	while (1)
 	{
 		dbg(1, "setting theme: %s.", theme_name);
-		gtk_icon_theme_set_custom_theme(icon_theme, theme_name);
+		if(strlen(theme_name))
+			gtk_icon_theme_set_custom_theme(icon_theme, theme_name);
+		else
+			g_idle_add(check_default_theme, NULL);
 		return;
 
 		//the test below is disabled as its not reliable
-
-		info = gtk_icon_theme_lookup_icon(icon_theme, "mime-application:postscript", ICON_HEIGHT, 0);
+#if 0
+		GtkIconInfo* info = gtk_icon_theme_lookup_icon(icon_theme, "mime-application:postscript", ICON_HEIGHT, 0);
 		if (!info)
 		{
 			//dbg(1, "looking up test icon...");
@@ -177,20 +205,21 @@ set_icon_theme()
 		{
 			dbg(0, "got test icon ok. Using theme '%s'", theme_name);
 			//print_icon_list();
-			gtk_icon_info_free(info);
+			g_object_unref(info);
 			return;
 		}
 
-		if (strcmp(theme_name, "ROX") == 0) break;
+		if (strcmp(theme_name, DEFAULT_THEME) == 0) break;
 
-		warnprintf("Icon theme '%s' does not contain MIME icons. Using ROX default theme instead.\n", theme_name);
+		warnprintf("Icon theme '%s' does not contain MIME icons. Using default theme instead.\n", theme_name);
 		
-		//theme_name = "ROX";
-		strcpy(theme_name, "ROX");
+		strcpy(theme_name, DEFAULT_THEME);
+#endif
 	}
 
 #if 0
-	icon_home = g_build_filename(home_dir, ".icons", NULL);
+	const char *home_dir = g_get_home_dir();
+	char *icon_home = g_build_filename(home_dir, ".icons", NULL);
 	if (!file_exists(icon_home)) mkdir(icon_home, 0755);
 	g_free(icon_home);
 #endif
@@ -207,6 +236,7 @@ set_icon_theme()
 }
 
 
+#ifdef DEBUG
 static void
 print_icon_list()
 {
@@ -224,5 +254,6 @@ print_icon_list()
 	else warnprintf("icon_theme has no mimetype icons?\n");
 
 }
+#endif
 
 

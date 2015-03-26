@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2014 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2015 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -31,8 +31,6 @@ static void update_dir_node_list      ();
 static bool on_dir_tree_link_selected (GObject*, DhLink*, gpointer);
 static void create_nodes_for_path     (gchar** path);
 
-GtkWidget* dir_tree;
-
 
 GtkWidget*
 dir_panel_new()
@@ -41,10 +39,10 @@ dir_panel_new()
 
 	GtkWidget* _dir_tree_new()
 	{
-		//data:
+		// data:
 		update_dir_node_list();
 
-		//view:
+		// view:
 	#ifndef NO_USE_DEVHELP_DIRTREE
 		app->dir_treeview = dh_book_tree_new(&app->dir_tree);
 	#else
@@ -59,8 +57,8 @@ dir_panel_new()
 #endif
 #ifndef NO_USE_DEVHELP_DIRTREE
 		GtkWidget* tree = _dir_tree_new();
-		widget = dir_tree = scrolled_window_new();
-		gtk_container_add((GtkContainer*)dir_tree, tree);
+		widget = scrolled_window_new();
+		gtk_container_add((GtkContainer*)widget, tree);
 		g_signal_connect(tree, "link-selected", G_CALLBACK(on_dir_tree_link_selected), NULL);
 
 		/* The dir tree shows ALL directories and is not affected by the current filter setting.
@@ -101,6 +99,18 @@ dir_panel_new()
 		dh_book_tree_reload((DhBookTree*)app->dir_treeview);
 	}
 	g_signal_connect(app->model, "dir-list-changed", G_CALLBACK(on_dir_list_changed), NULL);
+
+#ifndef NO_USE_DEVHELP_DIRTREE
+	void dir_on_theme_changed(Application* a, char* theme, gpointer _tree)
+	{
+		GtkWidget* container = gtk_widget_get_parent(app->dir_treeview);
+		gtk_widget_destroy(app->dir_treeview);
+		app->dir_treeview = _dir_tree_new();
+		gtk_container_add((GtkContainer*)container, app->dir_treeview);
+		gtk_widget_show(app->dir_treeview);
+	}
+	g_signal_connect(app, "icon-theme", G_CALLBACK(dir_on_theme_changed), &tree);
+#endif
 
 	return widget;
 }

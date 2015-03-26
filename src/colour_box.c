@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://samplecat.orford.org          |
-* | copyright (C) 2007-2013 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2015 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -78,7 +78,7 @@ colour_box_new(GtkWidget* parent)
 	}
 	if(!self.menu) self.menu = colour_box__make_context_menu();
 
-	void _on_theme_change(Application* a, gpointer _){ colour_box_update(); }
+	void _on_theme_change(Application* a, char* t, gpointer _){ colour_box_update(); }
 	g_signal_connect((gpointer)app, "theme-changed", G_CALLBACK(_on_theme_change), NULL);
 
 	void _config_loaded(Application* a, gpointer _)
