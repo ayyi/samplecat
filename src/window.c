@@ -879,9 +879,9 @@ filters_new()
 
 	char* label_text(SamplecatFilter* filter)
 	{
-		char value[16] = {0,};
-		g_strlcpy(value, filter->value ? filter->value : "", 12);
-		return g_strdup_printf("%s: %s%s", filter->name, value, filter->value && strlen(filter->value) > 12 ? "..." : "");
+		char value[20] = {0,};
+		g_strlcpy(value, filter->value ? filter->value : "", 16);
+		return g_strdup_printf("%s: %s%s", filter->name, value, filter->value && strlen(filter->value) > 16 ? "..." : "");
 	}
 
 	GList* l = app->model->filters_;
@@ -1246,6 +1246,7 @@ show_waveform(gboolean enable)
 	void on_waveform_view_realise(GtkWidget* widget, gpointer user_data)
 	{
 		// The widget becomes unrealised after layout changes and it needs to be restored afterwards
+		// TODO the widget now supports being unrealised so this may no longer be needed.
 		PF;
 #ifdef USE_LIBASS
 		WaveformViewPlus* view = (WaveformViewPlus*)widget;
@@ -1300,13 +1301,7 @@ show_waveform(gboolean enable)
 		g_return_if_fail(app->play.sample);
 		if(!((WaveformViewPlus*)window.waveform)->waveform) return;
 
-		if(waveform_is_playing()){
-			waveform_view_plus_set_time(view, app->play.position);
-		}
-
-		//else if(view->time != UINT32_MAX){
-			waveform_view_plus_set_time(view, UINT32_MAX);
-		//}
+		waveform_view_plus_set_time(view, waveform_is_playing() ? app->play.position : UINT32_MAX);
 	}
 
 	void waveform_on_play(GObject* _app, gpointer _)
