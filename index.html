@@ -20,7 +20,7 @@
         <h2>SampleCat is a a program for cataloguing and auditioning audio samples.</h2>
 
         <section id="downloads">
-          <a href="http://www.orford.org/assets/samplecat-0.2.3.tar.gz" class="btn">Download stable</a>
+          <a href="http://www.orford.org/assets/samplecat-0.2.4.tar.gz" class="btn">Download stable</a>
           <a href="https://github.com/ayyi/samplecat/tarball/master" class="btn">Download latest snapshot</a>
           <a href="https://github.com/ayyi/samplecat" class="btn btn-github"><span class="icon"></span>View on GitHub</a>
         </section>
@@ -43,6 +43,10 @@ MySql and Sqlite can be used for the database.</p>
 <div class="news">
 	<h2>news</h2>
 	<p>
+	<strong>20150325</strong>: Version 0.2.4. Added new tarball. This includes the new layout management, improvements to the waveform display, and many bugfixes. Thanks to everyone who contributed towards testing.
+	</p>
+
+	<p>
 	<strong>20140525</strong>: Window panels can now be managed with standard docking behaviour. Layouts can be loaded and saved. This is now reasonably complete and a long overdue tarball release will be offered if people consider it to be stable.
 	</p>
 
@@ -53,20 +57,15 @@ MySql and Sqlite can be used for the database.</p>
 	<p>
 	<strong>20121212</strong>: The Inspector layout has been tidied up. The EBUR display format had to be changed to accommodate this so you will have to Refresh samples for them to display correctly.
 	</p>
-
-	<p>
-	<strong>20120426</strong>: Version 0.2.3. Added new tarball. This should be used in preference to the github source for the time being. This version is mostly the work of Robin Gareus. Many thanks to him. A <a href="https://github.com/ayyi/Samplecat/blob/master/utils/config_migrate_0.1__0.2">script</a> is available to migrate an existing config file.
-	</p>
-	<p>
 </div>
 
 <h2>features</h2>
 <ul>
 	<li>catalogues 'offline' (eg cdrom), as well as 'online' sample files.
 	</li><li>supported filetypes are wav, flac, aiff, sd2, etc, via libsndfile.
-	</li><li>metadata stored: filename, path, samplerate, channels, mimetype, peak level, and a small waveform overview.
+	</li><li>metadata stored: filename, path, samplerate, channels, mimetype, peak level, id3.
 	</li><li>freeform tagging.
-	</li><li>browsing is done by directory, and filtering is on name, path or tag.
+	</li><li>filtering based on name, directory, category, and tag.
 	</li><li>spectrogram display.</li>
 
 	<li>auditioning of samples is possible via JACK.</li>
