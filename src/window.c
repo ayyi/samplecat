@@ -108,7 +108,6 @@ struct _window {
    GtkWidget*     toolbar2;
    GtkWidget*     search;
    GtkWidget*     category;
-   GtkWidget*     view_category;
    GtkWidget*     file_man;
    GtkWidget*     dir_tree;
    GtkWidget*     waveform;
@@ -879,9 +878,10 @@ filters_new()
 
 	char* label_text(SamplecatFilter* filter)
 	{
+		int len = 22 - strlen(filter->name);
 		char value[20] = {0,};
-		g_strlcpy(value, filter->value ? filter->value : "", 16);
-		return g_strdup_printf("%s: %s%s", filter->name, value, filter->value && strlen(filter->value) > 16 ? "..." : "");
+		g_strlcpy(value, filter->value ? filter->value : "", len);
+		return g_strdup_printf("%s: %s%s", filter->name, value, filter->value && strlen(filter->value) > len ? "..." : "");
 	}
 
 	GList* l = app->model->filters_;
@@ -899,7 +899,7 @@ filters_new()
 		GtkWidget* icon = gtk_image_new_from_stock(GTK_STOCK_CLOSE, GTK_ICON_SIZE_MENU);
 		gtk_misc_set_padding((GtkMisc*)icon, 4, 0);
 		gtk_button_set_image(GTK_BUTTON(button), icon);
-		gtk_widget_set(button, "image-position", GTK_POS_RIGHT, NULL);
+		gtk_widget_set(button, "image-position", GTK_POS_LEFT, NULL);
 
 		g_hash_table_insert(buttons, filter, button);
 
@@ -1008,7 +1008,7 @@ tagshow_selector_new()
 
 	#define ALL_CATEGORIES "all categories"
 
-	GtkWidget* combo = window.view_category = gtk_combo_box_new_text();
+	GtkWidget* combo = gtk_combo_box_new_text();
 	GtkComboBox* combo_ = GTK_COMBO_BOX(combo);
 	gtk_combo_box_append_text(combo_, ALL_CATEGORIES);
 	int i; for(i=0;i<G_N_ELEMENTS(categories);i++){
@@ -1023,11 +1023,30 @@ tagshow_selector_new()
 		//update the sample list with the new view-category.
 		PF;
 
-		char* category = gtk_combo_box_get_active_text(GTK_COMBO_BOX(window.view_category));
+		char* category = gtk_combo_box_get_active_text(GTK_COMBO_BOX(widget));
 		if (!strcmp(category, ALL_CATEGORIES)) g_free0(category);
 		samplecat_filter_set_value(app->model->filters.category, category);
 	}
 	g_signal_connect(combo, "changed", G_CALLBACK(on_view_category_changed), NULL);
+
+	void on_category_filter_changed(GObject* _filter, gpointer user_data)
+	{
+		GtkComboBox* combo = user_data;
+		SamplecatFilter* filter = (SamplecatFilter*)_filter;
+		if(filter->value){
+			if(!strlen(filter->value)){
+				gtk_combo_box_set_active(combo, 0);
+			}
+		}
+	}
+
+	GList* l = app->model->filters_;
+	for(;l;l=l->next){
+		SamplecatFilter* filter = l->data;
+		if(!strcmp(filter->name, "category")){
+			g_signal_connect(filter, "changed", G_CALLBACK(on_category_filter_changed), combo);
+		}
+	}
 
 	return TRUE;
 }
