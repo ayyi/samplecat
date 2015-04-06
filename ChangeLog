@@ -1,3 +1,15 @@
+20150406
+inspector: fixed table cell references not being updated.
+
+20150330
+filters: improvements to clear button layout, and update category drop-down menu when cleared.
+
+20150327
+waveform view: fixed incorrect time setting.
+
+20150320
+-improvements to icon selection.
+
 20150110
 -enable sorting by length
 -refactor of internal auditioner API

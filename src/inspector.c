@@ -214,7 +214,7 @@ inspector_new()
 
 		GValue gval = {0,};
 		g_value_init(&gval, G_TYPE_CHAR);
-		g_value_set_char(&gval, MARGIN_LEFT);
+		g_value_set_schar(&gval, MARGIN_LEFT);
 		g_object_set_property(G_OBJECT(i->text), "border-width", &gval);
 
 		gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(i->text), GTK_WRAP_WORD_CHAR);
@@ -311,7 +311,7 @@ inspector_add_meta_cells(GPtrArray* meta_data)
 
 	if(n_to_add > 0){
 		GtkWidget* meta_rows[n_to_add];
-		int r; for(r=i->meta.start+i->meta.n;r<i->meta.start+meta_data->len/2;r++){
+		int r; for(r = i->meta.start + i->meta.n; r < i->meta.start + meta_data->len/2; r++){
 			GtkWidget* row00 = meta_rows[r - i->meta.start - i->meta.n] = gtk_label_new("");
 			gtk_misc_set_alignment(GTK_MISC(row00), 0.0, 0.5);
 			gtk_misc_set_padding(GTK_MISC(row00), MARGIN_LEFT, 0);
@@ -322,7 +322,7 @@ inspector_add_meta_cells(GPtrArray* meta_data)
 			gtk_label_set_ellipsize((GtkLabel*)row01, PANGO_ELLIPSIZE_END);
 			gtk_table_attach(GTK_TABLE(i->table), row01, 1, 2, r, r+1, GTK_FILL, GTK_FILL, 0, 0);
 		}
-		if(!i->meta.first_child) i->meta.first_child = meta_rows[0];
+		i->meta.first_child = meta_rows[0];
 	}else if(n_to_add < 0){
 		inspector_remove_rows(i->meta.start + meta_data->len / 2, -n_to_add);
 	}
@@ -473,10 +473,9 @@ inspector_set_labels(Sample* sample)
 		}
 
 		for(r=0;l && r<sample->meta_data->len/2;l=l->next, r++){
-			GtkWidget* child = l->data;
-			gtk_label_set_markup(GTK_LABEL(child), meta_data[2*r]); // markup used for backwards compatibility. previous format contained italic tags.
-			l = l->next, child = l->data;
-			gtk_label_set_text(GTK_LABEL(child), meta_data[2*r+1]);
+			gtk_label_set_markup(GTK_LABEL(l->data), meta_data[2*r]); // markup used for backwards compatibility. previous format contained italic tags.
+			l = l->next;
+			gtk_label_set_text(GTK_LABEL(l->data), meta_data[2*r+1]);
 		}
 	}
 
