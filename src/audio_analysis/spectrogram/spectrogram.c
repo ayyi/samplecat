@@ -1,7 +1,7 @@
 /*
 ** Copyright (C) 2007-2009 Erik de Castro Lopo <erikd@mega-nerd.com>
 **
-** modified for soundcat by Tim Orford and Robin Gareus
+** modified for samplecat by Tim Orford and Robin Gareus
 ** based on sndfile-tools-1.03
 **
 ** This program is free software: you can redistribute it and/or modify
@@ -175,6 +175,7 @@ apply_window (double * data, int datalen)
 	return 0;
 } /* apply_window */
 
+
 static double
 calc_magnitude (const double * freq, int freqlen, double * magnitude)
 {
@@ -335,7 +336,7 @@ render_sndfile (const char* file)
 
 	void* infile = ad_open (file, &nfo);
 	if (!infile) {
-		dbg(0, "can not open file: %s", file);
+		dbg(1, "cannot open file: %s", file);
 		return NULL;
 	};
 
@@ -352,7 +353,7 @@ render_sndfile (const char* file)
 }
 
 /*************************
- * SoundCat render queue
+ * SampleCat render queue
  */
 
 /* TODO: merge all msg queue code with src/overview.c 
@@ -499,16 +500,15 @@ send_message(Message* msg)
 
 	if(!msg_queue){
 		dbg(2, "creating fft thread...");
-		GError* error = NULL;
 		msg_queue = g_async_queue_new();
-		if(!g_thread_create(fft_thread, NULL, false, &error)){
-			perr("error creating thread: %s\n", error->message);
-			g_error_free(error);
+		if(!g_thread_new("fft", fft_thread, NULL)){
+			perr("failed to create fft thread\n");
 		}
 	}
 
 	g_async_queue_push(msg_queue, msg);
 }
+
 
 void
 render_spectrogram(const char* path, SpectrogramReady callback, gpointer user_data)
@@ -534,6 +534,7 @@ render_spectrogram(const char* path, SpectrogramReady callback, gpointer user_da
 	send_message(m);
 }
 
+
 void
 cancel_spectrogram(const char* path)
 {
@@ -548,6 +549,12 @@ cancel_spectrogram(const char* path)
 void
 get_spectrogram(const char* path, SpectrogramReady callback, gpointer user_data)
 {
+	typedef struct
+	{
+		SpectrogramReady callback;
+		void*            user_data;
+	} Closure;
+
 	gchar* cache_dir = g_build_filename(app->cache_dir, "spectrogram", NULL);
 	g_mkdir_with_parents(cache_dir, S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP);
 
@@ -573,12 +580,7 @@ get_spectrogram(const char* path, SpectrogramReady callback, gpointer user_data)
 		}
 	}else{
 		dbg(1, "cache: not found: %s", cache_path);
-		typedef struct __closure
-		{
-			SpectrogramReady callback;
-			void*            user_data;
-		} _closure;
-		_closure* closure = g_new0(_closure, 1);
+		Closure* closure = g_new0(Closure, 1);
 		closure->callback = callback;
 		closure->user_data = user_data;
 
@@ -646,7 +648,7 @@ get_spectrogram(const char* path, SpectrogramReady callback, gpointer user_data)
 				g_free(cache_dir);
 			}
 
-			_closure* closure = user_data;
+			Closure* closure = user_data;
 
 			if(closure) call(closure->callback, filename, pixbuf, closure->user_data);
 
@@ -664,21 +666,23 @@ get_spectrogram(const char* path, SpectrogramReady callback, gpointer user_data)
 void
 get_spectrogram_with_target(const char* path, SpectrogramReady callback, void* target, gpointer user_data)
 {
-	typedef struct _closure
+	typedef struct
 	{
 		SpectrogramReadyTarget callback;
 		gpointer               user_data;
 		void*                  target;
 	} TargetClosure;
-	struct _closure* closure = g_new0(struct _closure, 1);
-	closure->callback = (SpectrogramReadyTarget)callback;
-	closure->user_data = user_data;
-	closure->target = target;
 
-	void
-	ready(const char* filename, GdkPixbuf* pixbuf, gpointer __closure)
+	TargetClosure* closure = g_new0(TargetClosure, 1);
+	*closure = (TargetClosure){
+		.callback = (SpectrogramReadyTarget)callback,
+		.user_data = user_data,
+		.target = target
+	};
+
+	void ready(const char* filename, GdkPixbuf* pixbuf, gpointer __closure)
 	{
-		struct _closure* closure = (struct _closure*)__closure;
+		TargetClosure* closure = (TargetClosure*)__closure;
 		closure->callback(filename, pixbuf, closure->user_data, closure->target);
 		g_free(closure);
 	}
