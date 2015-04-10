@@ -14,6 +14,8 @@
 #include <GL/glu.h>
 #include <stdlib.h>
 #include <string.h>
+#include "agl/utils.h"
+#include "agl/shader.h"
 
 
 #define TYPE_GL_SPECTROGRAM (gl_spectrogram_get_type ())
@@ -40,6 +42,7 @@ struct _GlSpectrogramClass {
 };
 
 struct _GlSpectrogramPrivate {
+	struct _agl* agl;
 	gchar* _filename;
 	GdkPixbuf* pixbuf;
 	gboolean gl_init_done;
@@ -177,6 +180,7 @@ static gboolean gl_spectrogram_real_configure_event (GtkWidget* base, GdkEventCo
 	GdkGLDrawable* _tmp1_;
 	GdkGLDrawable* gldrawable;
 	gboolean _tmp2_;
+	struct _agl* _tmp12_ = NULL;
 	self = (GlSpectrogram*) base;
 	_tmp0_ = gtk_widget_get_gl_drawable ((GtkWidget*) self);
 	_tmp1_ = _g_object_ref0 (_tmp0_);
@@ -197,6 +201,8 @@ static gboolean gl_spectrogram_real_configure_event (GtkWidget* base, GdkEventCo
 	gdk_gl_drawable_gl_end (gldrawable);
 	result = TRUE;
 	_g_object_unref0 (gldrawable);
+	_tmp12_ = agl_get_instance ();
+	self->priv->agl = _tmp12_;
 	return result;
 }
 
@@ -230,6 +236,10 @@ static gboolean gl_spectrogram_real_expose_event (GtkWidget* base, GdkEventExpos
 	w = (gdouble) ((GtkWidget*) self)->allocation.width;
 	top = (gdouble) ((GtkWidget*) self)->allocation.height;
 	botm = 0.0;
+	if(self->priv->agl->use_shaders){
+		self->priv->agl->shaders.texture->uniform.fg_colour = 0xffffffff;
+		agl_use_program((AGlShader*)self->priv->agl->shaders.texture);
+	}
 	glEnable (GL_TEXTURE_2D);
 	glBindTexture (GL_TEXTURE_2D, self->priv->Textures[0]);
 	glBegin (GL_QUADS);
