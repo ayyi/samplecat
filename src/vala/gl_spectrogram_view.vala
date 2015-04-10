@@ -14,7 +14,6 @@ using Gtk;
 using Gdk;
 using GL;
 using GLU;
-using Cairo;
 
 [CCode(
    cheader_filename = "stdint.h",
@@ -30,6 +29,7 @@ public class GlSpectrogram : Gtk.DrawingArea
 {
 	public static GlSpectrogram instance;
 	public static GLContext glcontext;
+	private AGl.Instance* agl;
 
 	private string _filename;
 	private Gdk.Pixbuf* pixbuf = null;
@@ -97,6 +97,9 @@ public class GlSpectrogram : Gtk.DrawingArea
 		}
 
 		gldrawable.gl_end();
+
+		agl = AGl.get_instance();
+
 		return true;
 	}
 
@@ -107,6 +110,11 @@ public class GlSpectrogram : Gtk.DrawingArea
 		if (!gldrawable.gl_begin (WidgetGL.get_gl_context(this))) return false;
 
 		set_projection(); // has to be done on each expose when using shared context.
+
+		if(agl->use_shaders){
+			agl->shaders.texture.uniform.fg_colour = (uint32)0xffffffff;
+			AGl.use_program((AGl.Shader*)agl->shaders.texture);
+		}
 
 		glClearColor (0.0f, 0.0f, 0.0f, 1.0f);
 		glClear (GL_COLOR_BUFFER_BIT);
