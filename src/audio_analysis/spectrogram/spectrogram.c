@@ -98,19 +98,19 @@ get_colour_map_value (float value, double spec_floor_db, unsigned char colour [3
 		{	  1,   3,  37 },  /* -160dB */
 		{	  1,   2,  19 },  /* -170dB */
 		{	  0,   0,   0 },  /* -180dB */
-	} ;
+	};
 
-	float rem ;
-	int indx ;
+	float rem;
+	int indx;
 
 	if (value >= 0.0)
-	{	colour = map [0] ;
+	{	colour = map [0];
 		return 0;
 	};
 
 	value = fabs (value * (-180.0 / spec_floor_db) * 0.1);
 
-	indx = rintf (floorf (value)) ;
+	indx = rintf (floorf (value));
 
 	if (indx < 0) {
 		printf ("\nError : colour map array index is %d\n\n", indx);
@@ -118,31 +118,31 @@ get_colour_map_value (float value, double spec_floor_db, unsigned char colour [3
 	};
 
 	if (indx >= G_N_ELEMENTS (map) - 1) {
-		colour = map [G_N_ELEMENTS (map) - 1] ;
+		colour = map [G_N_ELEMENTS (map) - 1];
 		return 0;
 	};
 
-	rem = fmod (value, 1.0) ;
+	rem = fmod (value, 1.0);
 
-	colour [0] = lrintf ((1.0 - rem) * map [indx][0] + rem * map [indx + 1][0]) ;
-	colour [1] = lrintf ((1.0 - rem) * map [indx][1] + rem * map [indx + 1][1]) ;
-	colour [2] = lrintf ((1.0 - rem) * map [indx][2] + rem * map [indx + 1][2]) ;
+	colour [0] = lrintf ((1.0 - rem) * map [indx][0] + rem * map [indx + 1][0]);
+	colour [1] = lrintf ((1.0 - rem) * map [indx][1] + rem * map [indx + 1][1]);
+	colour [2] = lrintf ((1.0 - rem) * map [indx][2] + rem * map [indx + 1][2]);
 
 	return 0;
 } /* get_colour_map_value */
 
 static int
-read_mono_audio (void * file, struct adinfo *nfo, double * data, int datalen, int indx, int total)
+read_mono_audio (void* file, struct adinfo* nfo, double* data, int datalen, int index, int total)
 {
 	int rv = 0;
-	int64_t start = (indx * nfo->frames) / total - datalen / 2 ;
+	int64_t start = (index * nfo->frames) / total - datalen / 2;
 	int i=0; for(i=0;i<datalen;i++) data[i]=0;
 
-	if (start >= 0)
-		ad_seek (file, start);
-	else {
+	if (start >= 0) {
+		if(ad_seek (file, start) < 0) return rv;
+	} else {
 		start = -start;
-		ad_seek (file, 0);
+		if(ad_seek (file, 0) < 0) return rv;
 		data += start;
 		datalen -= start;
 	}
@@ -153,24 +153,24 @@ read_mono_audio (void * file, struct adinfo *nfo, double * data, int datalen, in
 static int
 apply_window (double * data, int datalen)
 {
-	static double window [10 * MAX_HEIGHT] ;
-	static int window_len = 0 ;
-	int k ;
+	static double window [10 * MAX_HEIGHT];
+	static int window_len = 0;
+	int k;
 
 	if (window_len != datalen)
 	{
-		window_len = datalen ;
+		window_len = datalen;
 		if (datalen > G_N_ELEMENTS (window))
 		{
-			printf ("%s : datalen >  MAX_HEIGHT\n", __func__) ;
+			printf ("%s : datalen >  MAX_HEIGHT\n", __func__);
 			return -1;
 		}
 
-		calc_kaiser_window (window, datalen, 20.0) ;
+		calc_kaiser_window (window, datalen, 20.0);
 	}
 
-	for (k = 0 ; k < datalen ; k++)
-		data [k] *= window [k] ;
+	for (k = 0; k < datalen; k++)
+		data [k] *= window [k];
 
 	return 0;
 } /* apply_window */
@@ -179,37 +179,37 @@ apply_window (double * data, int datalen)
 static double
 calc_magnitude (const double * freq, int freqlen, double * magnitude)
 {
-	int k ;
-	double max = 0.0 ;
+	int k;
+	double max = 0.0;
 
-	for (k = 1 ; k < freqlen / 2 ; k++)
-	{	magnitude [k] = sqrt (freq [k] * freq [k] + freq [freqlen - k - 1] * freq [freqlen - k - 1]) ;
-		max = MAX (max, magnitude [k]) ;
-		} ;
-	magnitude [0] = 0.0 ;
+	for (k = 1; k < freqlen / 2; k++)
+	{	magnitude [k] = sqrt (freq [k] * freq [k] + freq [freqlen - k - 1] * freq [freqlen - k - 1]);
+		max = MAX (max, magnitude [k]);
+		};
+	magnitude [0] = 0.0;
 
-	return max ;
+	return max;
 } /* calc_magnitude */
 
 
 static int
 _render_spectrogram_to_pixbuf (GdkPixbuf* pixbuf, double spec_floor_db, float mag2d [SG_WIDTH][MAX_HEIGHT], double maxval)
 {
-	unsigned char colour [3] = { 0, 0, 0 } ;
-	double linear_spec_floor ;
+	unsigned char colour [3] = { 0, 0, 0 };
+	double linear_spec_floor;
 
 	int stride = gdk_pixbuf_get_rowstride (pixbuf);
 	int n_channels = gdk_pixbuf_get_n_channels(pixbuf);
 
 	unsigned char* data = gdk_pixbuf_get_pixels(pixbuf);
 
-	linear_spec_floor = pow (10.0, spec_floor_db / 20.0) ;
+	linear_spec_floor = pow (10.0, spec_floor_db / 20.0);
 
 	int w, h;
-	for (w = 0 ; w < SG_WIDTH ; w ++) {
-		for (h = 0 ; h < SG_HEIGHT ; h++) {
-			mag2d [w][h] = mag2d [w][h] / maxval ;
-			mag2d [w][h] = (mag2d [w][h] < linear_spec_floor) ? spec_floor_db : 20.0 * log10 (mag2d [w][h]) ;
+	for (w = 0; w < SG_WIDTH; w ++) {
+		for (h = 0; h < SG_HEIGHT; h++) {
+			mag2d [w][h] = mag2d [w][h] / maxval;
+			mag2d [w][h] = (mag2d [w][h] < linear_spec_floor) ? spec_floor_db : 20.0 * log10 (mag2d [w][h]);
 
 			if (get_colour_map_value (mag2d [w][h], spec_floor_db, colour)) return -1;
 
@@ -228,25 +228,25 @@ _render_spectrogram_to_pixbuf (GdkPixbuf* pixbuf, double spec_floor_db, float ma
 static void
 interp_spec (float * mag, int maglen, const double *spec, int speclen)
 {
-	int k, lastspec = 0 ;
+	int k, lastspec = 0;
 
-	mag [0] = spec [0] ;
+	mag [0] = spec [0];
 
-	for (k = 1 ; k < maglen ; k++)
-	{	double sum = 0.0 ;
-		int count = 0 ;
+	for (k = 1; k < maglen; k++)
+	{	double sum = 0.0;
+		int count = 0;
 
 		do
-		{	sum += spec [lastspec] ;
-			lastspec ++ ;
-			count ++ ;
+		{	sum += spec [lastspec];
+			lastspec ++;
+			count ++;
 			}
-		while (lastspec <= ceil ((k * speclen) / maglen)) ;
+		while (lastspec <= ceil ((k * speclen) / maglen));
 
-		mag [k] = sum / count ;
-		} ;
+		mag [k] = sum / count;
+		};
 
-	return ;
+	return;
 } /* interp_spec */
 
 static int
@@ -261,45 +261,45 @@ render_to_pixbuf (void *infile, struct adinfo *nfo, GdkPixbuf* pixbuf)
 	fftw_plan plan;
 	double max_mag = 0;
 	int w, h, speclen;
-	for (w=0;w<SG_WIDTH; w++) for (h=0;h<MAX_HEIGHT; h++) mag_spec[w][h] =0;
+	for (w=0;w<SG_WIDTH; w++) for (h=0;h<MAX_HEIGHT; h++) mag_spec[w][h] = 0;
 
 	/*
 	**	Choose a speclen value that is long enough to represent frequencies down
 	**	to 20Hz, and then increase it slightly so it is a multiple of 0x40 so that
 	**	FFTW calculations will be quicker.
 	*/
-	speclen = SG_HEIGHT * (nfo->sample_rate / 20 / SG_HEIGHT + 1) ;
-	speclen += 0x40 - (speclen & 0x3f) ;
+	speclen = SG_HEIGHT * (nfo->sample_rate / 20 / SG_HEIGHT + 1);
+	speclen += 0x40 - (speclen & 0x3f);
 
 	if (2 * speclen > G_N_ELEMENTS (time_domain)) {
 		printf ("%s : 2 * speclen > G_N_ELEMENTS (time_domain) (%d > %d)\n", __func__, 2 * speclen, G_N_ELEMENTS (time_domain));
 		return -1;
 	};
 
-	plan = fftw_plan_r2r_1d (2 * speclen, time_domain, freq_domain, FFTW_R2HC, FFTW_MEASURE | FFTW_PRESERVE_INPUT) ;
+	plan = fftw_plan_r2r_1d (2 * speclen, time_domain, freq_domain, FFTW_R2HC, FFTW_MEASURE | FFTW_PRESERVE_INPUT);
 	if (plan == NULL) {
 		printf ("%s : line %d : create plan failed.\n", __FILE__, __LINE__);
 		return -1;
 	};
 
-	for (w = 0 ; w < SG_WIDTH ; w++) {
+	for (w = 0; w < SG_WIDTH; w++) {
 		double single_max;
 
-		if (read_mono_audio(infile, nfo, time_domain, 2 * speclen, w, SG_WIDTH)<0) {
+		if (read_mono_audio(infile, nfo, time_domain, 2 * speclen, w, SG_WIDTH) < 0) {
 			dbg(1, "read failed before EOF");
 			break;
 		}
 
 		if (apply_window (time_domain, 2 * speclen)) {
-			rv=-1; break;
+			rv = -1; break;
 		}
 
-		fftw_execute (plan) ;
+		fftw_execute (plan);
 
-		single_max = calc_magnitude (freq_domain, 2 * speclen, single_mag_spec) ;
-		max_mag = MAX (max_mag, single_max) ;
+		single_max = calc_magnitude (freq_domain, 2 * speclen, single_mag_spec);
+		max_mag = MAX (max_mag, single_max);
 
-		interp_spec (mag_spec [w], SG_HEIGHT, single_mag_spec, speclen) ;
+		interp_spec (mag_spec [w], SG_HEIGHT, single_mag_spec, speclen);
 	};
 
 	/* FIXME: there's some worm in here - on OSX i386 max_mag can become NaN
@@ -307,7 +307,7 @@ render_to_pixbuf (void *infile, struct adinfo *nfo, GdkPixbuf* pixbuf)
 	 * -> image creation fails w/ "colour map array index < 0"
 	 */
 
-	fftw_destroy_plan (plan) ;
+	fftw_destroy_plan (plan);
 
 	if (!rv) 
 		rv = _render_spectrogram_to_pixbuf (pixbuf, SPEC_FLOOR_DB, mag_spec, max_mag);
@@ -320,9 +320,9 @@ static void
 check_int_range (const char * name, int value, int lower, int upper)
 {
 	if (value < lower || value > upper)
-	{	printf ("Error : '%s' parameter must be in range [%d, %d]\n", name, lower, upper) ;
-		exit (1) ; // XXX we must not exit samplecat !
-		} ;
+	{	printf ("Error : '%s' parameter must be in range [%d, %d]\n", name, lower, upper);
+		exit (1); // XXX we must not exit samplecat !
+		};
 } /* check_int_range */
 #endif
 

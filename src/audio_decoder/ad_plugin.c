@@ -90,25 +90,25 @@ ssize_t ad_read(void *sf, float* out, size_t len){
 ssize_t ad_read_mono_dbl(void *sf, struct adinfo *nfo, double* d, size_t len){
 	int c,f;
 	int chn = nfo->channels;
-	if (len<1) return 0;
+	if (len < 1) return 0;
 
 	static float *buf = NULL;
 	static size_t bufsiz = 0;
 	if (!buf || bufsiz != len*chn) {
-		bufsiz=len*chn;
+		bufsiz = len * chn;
 		buf = (float*) realloc((void*)buf, bufsiz * sizeof(float));
 	}
 
-	len = ad_read(sf, buf, bufsiz);
+	if((len = ad_read(sf, buf, bufsiz)) > bufsiz) return 0;
 
 	for (f=0;f<len/chn;f++) {
-		double val=0.0;
+		double val = 0.0;
 		for (c=0;c<chn;c++) {
-			val+=buf[f*chn + c];
+			val += buf[f * chn + c];
 		}
-		d[f]= val/chn;
+		d[f] = val / chn;
 	}
-	return len/chn;
+	return len / chn;
 }
 
 

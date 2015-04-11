@@ -254,8 +254,8 @@ ret = avcodec_decode_audio4(priv->codecContext, &avf, &got_frame, &priv->packet)
         dbg(0, "audio decode error");
         return -1;
 #endif
-        priv->pkt_len=0;
-        ret=0;
+        priv->pkt_len = 0;
+        ret = 0;
         continue;
       }
 
@@ -269,16 +269,16 @@ ret = avcodec_decode_audio4(priv->codecContext, &avf, &got_frame, &priv->packet)
         priv->decoder_clock += (data_size>>1) / priv->channels;
       }
 
-      if (data_size>0) {
+      if (data_size > 0) {
         priv->m_tmpBufferLen+= (data_size>>1); // 2 bytes per sample
       }
 
       /* align buffer after seek. */
       if (priv->seek_frame > 0) {
         const int diff = priv->output_clock-priv->decoder_clock;
-        if (diff<0) { 
+        if (diff < 0) { 
           /* seek ended up past the wanted sample */
-          dbg(0, " !!! Audio seek failed.");
+          gwarn("audio seek failed.");
           return -1;
         } else if (priv->m_tmpBufferLen < (diff*priv->channels)) {
           /* wanted sample not in current buffer - keep going */
@@ -293,11 +293,11 @@ ret = avcodec_decode_audio4(priv->codecContext, &avf, &got_frame, &priv->packet)
           memmove(priv->m_tmpBuffer, priv->m_tmpBufferStart, priv->m_tmpBufferLen);
           priv->m_tmpBufferStart = priv->m_tmpBuffer;
 #endif
-          priv->seek_frame=0;
+          priv->seek_frame = 0;
           priv->decoder_clock += diff;
         } else if (data_size > 0) {
           dbg(2, "Audio exact sync-seek (%"PRIi64" == %"PRIi64")", priv->decoder_clock, priv->seek_frame);
-          priv->seek_frame=0;
+          priv->seek_frame = 0;
         } else {
           dbg(0, "Error: no audio data in packet");
         }
@@ -306,8 +306,8 @@ ret = avcodec_decode_audio4(priv->codecContext, &avf, &got_frame, &priv->packet)
       //dbg(0, "CLK: frame:  %"PRIi64"  T:%.3fs",priv->decoder_clock, (float) priv->decoder_clock/priv->samplerate);
     }
   }
-  if (written!=frames) {
-        dbg(2, "short-read");
+  if (written != frames) {
+    dbg(2, "short-read");
   }
   return written * priv->channels;
 }

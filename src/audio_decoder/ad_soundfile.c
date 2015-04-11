@@ -53,10 +53,7 @@ void *ad_open_sndfile(const char *fn, struct adinfo *nfo) {
 	sndfile_audio_decoder *priv = (sndfile_audio_decoder*) calloc(1, sizeof(sndfile_audio_decoder));
 	priv->sfinfo.format = 0;
 	if(!(priv->sffile = sf_open(fn, SFM_READ, &priv->sfinfo))){
-		dbg(1, "unable to open file '%s'.", fn);
-		puts(sf_strerror(NULL));
-		int e = sf_error(NULL);
-		dbg(1, "error=%i", e);
+		dbg(1, "unable to open file '%s': %i: %s", fn, sf_error(NULL), sf_strerror(NULL));
 		free(priv);
 		return NULL;
 	}
