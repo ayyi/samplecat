@@ -375,8 +375,8 @@ player_control_on_show_hide(bool enable)
 	}
 
 	if(!play_start_handler) play_start_handler = g_signal_connect(app, "play-start", (GCallback)pc_on_play, pc);
-	if(!play_stop_handler) play_stop_handler = g_signal_connect(app, "play-stop", (GCallback)pc_on_stop, pc);
 #ifdef HAVE_JACK
+	if(!play_stop_handler) play_stop_handler = g_signal_connect(app, "play-stop", (GCallback)pc_on_stop, pc);
 	if(!play_pos_handler) play_pos_handler = g_signal_connect(app, "play-position", (GCallback)update_slider, pc);
 #endif
 }
