@@ -24,12 +24,15 @@
 #include "typedefs.h"
 #include "mimetype.h"
 #include "support.h"
-#include "main.h"
+#include "model.h"
+#include "application.h"
 #include "sample.h"
 #include "dnd.h"
 #include "cellrenderer_hypertext.h"
 #include "worker.h"
 #include "listview.h"
+
+#define START_EDITING 1
 
 static gboolean     listview__on_row_clicked          (GtkWidget*, GdkEventButton*, gpointer);
 static void         listview__on_cursor_change        (GtkTreeView*, gpointer);

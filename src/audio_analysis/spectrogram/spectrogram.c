@@ -56,7 +56,7 @@
 
 #include "audio_decoder/ad.h"
 #include "audio_analysis/spectrogram/sndfile_window.h"
-#include "main.h"
+#include "application.h"
 
 typedef void (*SpectrogramReady)(const char* filename, GdkPixbuf*, gpointer);
 typedef void (*SpectrogramReadyTarget)(const char* filename, GdkPixbuf*, gpointer, void* target);

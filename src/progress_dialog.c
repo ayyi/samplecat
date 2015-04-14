@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <gtk/gtk.h>
 #include "debug/debug.h"
-#include "main.h"
+#include "application.h"
 #include "support.h"
 #include "progress_dialog.h"
 

@@ -12,7 +12,7 @@
 #include "typedefs.h"
 #include "support.h"
 #include "sample.h"
-#include "main.h"
+#include "application.h"
 
 static int  gplayer_check      ();
 static void gplayer_connect    (Callback, gpointer);

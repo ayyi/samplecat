@@ -32,7 +32,7 @@
 #include <gimp/gimpactiongroup.h>
 #include "typedefs.h"
 #include "src/support.h"
-#include "main.h"
+#include "application.h"
 
 #define HEX_ESCAPE '%'
 #define N_(A) A 

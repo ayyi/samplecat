@@ -21,7 +21,6 @@
 #include "typedefs.h"
 #include "debug/debug.h"
 #include "model.h"
-#include "main.h"
 #include "sample.h"
 #include "db/db.h"
 #include "db/mysql.h"

@@ -22,7 +22,7 @@
 #include <gimp/gimpactiongroup.h>
 #include "typedefs.h"
 #include "support.h"
-#include "main.h"
+#include "application.h"
 #include "listview.h"
 #include "dnd.h"
 #include "colour_box.h"

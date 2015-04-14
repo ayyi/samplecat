@@ -25,11 +25,10 @@
 #include <stdint.h>
 #include <gtk/gtk.h>
 #include "debug/debug.h"
-#include "cellrenderer_hypertext.h"
-
 #include "typedefs.h"
 #include "support.h"
-#include "main.h"
+#include "application.h"
+#include "cellrenderer_hypertext.h"
 
 static void gtk_cell_renderer_hyper_text_get_size (GtkCellRenderer *cell,
 					     GtkWidget       *widget,

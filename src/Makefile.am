@@ -80,7 +80,7 @@ AUDIOANALYSERS_SRC = \
 
 samplecat_SOURCES = \
 	typedefs.h types.h \
-	main.c main.h \
+	main.c \
 	application.c application.h \
 	model.c model.h \
 	list_store.c list_store.h \

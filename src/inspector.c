@@ -19,7 +19,8 @@
 #include "file_manager/rox_support.h" // to_utf8()
 #include "mimetype.h"
 #include "support.h"
-#include "main.h"
+#include "model.h"
+#include "application.h"
 #include "mimetype.h"
 #include "sample.h"
 #include "listview.h"

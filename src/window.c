@@ -31,7 +31,8 @@
 #include "db/db.h"
 #include "sample.h"
 #include "support.h"
-#include "main.h"
+#include "model.h"
+#include "application.h"
 #include "listview.h"
 #include "dnd.h"
 #include "inspector.h"
@@ -66,6 +67,7 @@ extern GList*     themes;
 extern SamplecatBackend backend;
  
 extern void       view_details_dnd_get            (GtkWidget*, GdkDragContext*, GtkSelectionData*, guint info, guint time, gpointer data);
+extern void       on_quit                         (GtkMenuItem*, gpointer);
 
 char* categories[] = {"drums", "perc", "bass", "keys", "synth", "strings", "brass", "fx", "impulse", "breaks"};
 
@@ -76,6 +78,7 @@ static void       window_on_allocate              (GtkWidget*, GtkAllocation*, g
 static gboolean   window_on_configure             (GtkWidget*, GdkEventConfigure*, gpointer);
 static gboolean   tag_selector_new                ();
 static void       window_on_fileview_row_selected (GtkTreeView*, gpointer);
+static void       delete_selected_rows            ();
 static void       on_category_set_clicked         (GtkComboBox*, gpointer);
 static void       menu__add_to_db                 (GtkMenuItem*, gpointer);
 static void       menu__add_dir_to_db             (GtkMenuItem*, gpointer);
@@ -1053,6 +1056,56 @@ tagshow_selector_new()
 
 
 static void
+delete_selected_rows()
+{
+	GtkTreeModel* model = gtk_tree_view_get_model(GTK_TREE_VIEW(app->libraryview->widget));
+
+	GtkTreeSelection* selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(app->libraryview->widget));
+	GList* selectionlist = gtk_tree_selection_get_selected_rows(selection, &(model));
+	if(!selectionlist){ perr("no files selected?\n"); return; }
+	dbg(1, "%i rows selected.", g_list_length(selectionlist));
+
+	GList* selected_row_refs = NULL;
+
+	//get row refs for each selected row before the list is modified:
+	GList* l = selectionlist;
+	for(;l;l=l->next){
+		GtkTreePath* treepath_selection = l->data;
+
+		GtkTreeRowReference* row_ref = gtk_tree_row_reference_new(GTK_TREE_MODEL(app->store), treepath_selection);
+		selected_row_refs = g_list_prepend(selected_row_refs, row_ref);
+	}
+	g_list_free(selectionlist);
+
+	int n = 0;
+	GtkTreePath* path;
+	GtkTreeIter iter;
+	l = selected_row_refs;
+	for(;l;l=l->next){
+		GtkTreeRowReference* row_ref = l->data;
+		if((path = gtk_tree_row_reference_get_path(row_ref))){
+
+			if(gtk_tree_model_get_iter(model, &iter, path)){
+				gchar* fname;
+				int id;
+				gtk_tree_model_get(model, &iter, COL_NAME, &fname, COL_IDX, &id, -1);
+
+				if(!samplecat_model_remove(app->model, id)) return;
+
+				gtk_list_store_remove(app->store, &iter);
+				n++;
+
+			} else perr("bad iter!\n");
+			gtk_tree_path_free(path);
+		} else perr("cannot get path from row_ref!\n");
+	}
+	g_list_free(selected_row_refs); //FIXME free the row_refs?
+
+	statusbar_print(1, "%i rows deleted", n);
+}
+
+
+static void
 window_on_fileview_row_selected(GtkTreeView* treeview, gpointer user_data)
 {
 	//a filesystem file has been clicked on.
@@ -1235,7 +1288,11 @@ waveform_panel_new()
 {
 #ifdef USE_LIBASS
 	waveform_view_plus_set_gl(window_get_gl_context());
-	return (GtkWidget*)waveform_view_plus_new(NULL);
+	WaveformViewPlus* view = waveform_view_plus_new(NULL);
+#if 0
+	waveform_view_plus_set_show_grid(view, true);
+#endif
+	return (GtkWidget*)view;
 #else
 	waveform_view_set_gl(window_get_gl_context());
 	return (GtkWidget*)waveform_view_new(NULL);

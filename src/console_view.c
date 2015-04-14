@@ -14,7 +14,8 @@
 #include <string.h>
 #include <debug/debug.h>
 
-#include "main.h"
+#include "model.h"
+#include "application.h"
 #include "support.h"
 #include "sample.h"
 #include "console_view.h"

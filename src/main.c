@@ -28,6 +28,7 @@ char * program_name;
 #endif
 
 #include "debug/debug.h"
+#include "waveform/utils.h"
 #include "utils/ayyi_utils.h"
 #include "utils/pixmaps.h"
 #ifdef USE_AYYI
@@ -64,10 +65,9 @@ char * program_name;
 #include "console_view.h"
 #include "audio_decoder/ad.h"
 
-#include "main.h"
-
 #undef DEBUG_NO_THREADS
 
+void on_quit (GtkMenuItem*, gpointer);
 
 static bool      config_load  ();
 static void      config_new   ();
@@ -76,7 +76,8 @@ static bool      config_save  ();
 Application*     app = NULL;
 SamplecatBackend backend = {0,}; 
 Palette          palette;
-GList*           mime_types; // list of MIME_type*
+
+extern char theme_name[64];
 
 static gboolean  search_pending = false;
 
@@ -93,6 +94,7 @@ static const struct option long_options[] = {
   { "no-gui",           0, NULL, 'g' },
   { "verbose",          1, NULL, 'v' },
   { "search",           1, NULL, 's' },
+  { "cwd",              0, NULL, 'c' },
   { "add",              1, NULL, 'a' },
   { "help",             0, NULL, 'h' },
   { "version",          0, NULL, 'V' },
@@ -196,7 +198,7 @@ main(int argc, char** argv)
 			case 'v':
 				printf("using debug level: %s\n", optarg);
 				int d = atoi(optarg);
-				if(d<0 || d>5) { gwarn ("bad arg. debug=%i", d); } else _debug_ = d;
+				if(d<0 || d>5) { gwarn ("bad arg. debug=%i", d); } else _debug_ = wf_debug = d;
 				#ifdef USE_AYYI
 				ayyi.debug = _debug_;
 				#endif
@@ -238,7 +240,7 @@ main(int argc, char** argv)
 				exit(EXIT_SUCCESS);
 				break;
 			case 's':
-				printf("search=%s\n", optarg);
+				printf("search: %s\n", optarg);
 				app->args.search = g_strdup(optarg);
 				break;
 			case 'a':
@@ -248,7 +250,7 @@ main(int argc, char** argv)
 			case 'V':
 				printf ("%s %s\n\n", basename(argv[0]), PACKAGE_VERSION);
 				printf(
-					"Copyright (C) 2007-2014 Tim Orford\n"
+					"Copyright (C) 2007-2015 Tim Orford\n"
 					"Copyright (C) 2011 Robin Gareus\n"
 					"This is free software; see the source for copying conditions.  There is NO\n"
 					"warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n"
@@ -411,111 +413,6 @@ main(int argc, char** argv)
 	exit(EXIT_SUCCESS);
 }
 
-
-void
-delete_selected_rows()
-{
-	GtkTreeModel* model = gtk_tree_view_get_model(GTK_TREE_VIEW(app->libraryview->widget));
-
-	GtkTreeSelection* selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(app->libraryview->widget));
-	GList* selectionlist = gtk_tree_selection_get_selected_rows(selection, &(model));
-	if(!selectionlist){ perr("no files selected?\n"); return; }
-	dbg(1, "%i rows selected.", g_list_length(selectionlist));
-
-	GList* selected_row_refs = NULL;
-
-	//get row refs for each selected row before the list is modified:
-	GList* l = selectionlist;
-	for(;l;l=l->next){
-		GtkTreePath* treepath_selection = l->data;
-
-		GtkTreeRowReference* row_ref = gtk_tree_row_reference_new(GTK_TREE_MODEL(app->store), treepath_selection);
-		selected_row_refs = g_list_prepend(selected_row_refs, row_ref);
-	}
-	g_list_free(selectionlist);
-
-	int n = 0;
-	GtkTreePath* path;
-	GtkTreeIter iter;
-	l = selected_row_refs;
-	for(;l;l=l->next){
-		GtkTreeRowReference* row_ref = l->data;
-		if((path = gtk_tree_row_reference_get_path(row_ref))){
-
-			if(gtk_tree_model_get_iter(model, &iter, path)){
-				gchar* fname;
-				int id;
-				gtk_tree_model_get(model, &iter, COL_NAME, &fname, COL_IDX, &id, -1);
-
-				if(!samplecat_model_remove(app->model, id)) return;
-
-				gtk_list_store_remove(app->store, &iter);
-				n++;
-
-			} else perr("bad iter!\n");
-			gtk_tree_path_free(path);
-		} else perr("cannot get path from row_ref!\n");
-	}
-	g_list_free(selected_row_refs); //FIXME free the row_refs?
-
-	statusbar_print(1, "%i rows deleted", n);
-}
-
-
-#if 0
-gboolean
-treeview_get_cell(GtkTreeView *view, guint x, guint y, GtkCellRenderer **cell)
-{
-	//taken from the treeview tutorial:
-
-	//this is useless - we might as well just store the cell at create time.
-
-	GtkTreeViewColumn *colm = NULL;
-	guint              colm_x = 0;
-
-	GList* columns = gtk_tree_view_get_columns(view);
-
-	GList* node;
-	for (node = columns;  node != NULL && colm == NULL;  node = node->next){
-		GtkTreeViewColumn *checkcolm = (GtkTreeViewColumn*) node->data;
-
-		if (x >= colm_x  &&  x < (colm_x + checkcolm->width))
-			colm = checkcolm;
-		else
-			colm_x += checkcolm->width;
-	}
-
-	g_list_free(columns);
-
-	if(colm == NULL) return false; // not found
-
-	// (2) find the cell renderer within the column 
-
-	GList* cells = gtk_tree_view_column_get_cell_renderers(colm);
-
-	for (node = cells;  node != NULL;  node = node->next){
-		GtkCellRenderer *checkcell = (GtkCellRenderer*) node->data;
-		guint            width = 0;
-
-		// Will this work for all packing modes? doesn't that return a random width depending on the last content rendered?
-		gtk_cell_renderer_get_size(checkcell, GTK_WIDGET(view), NULL, NULL, NULL, (int*)&width, NULL);
-
-		if(x >= colm_x && x < (colm_x + width)){
-			*cell = checkcell;
-			g_list_free(cells);
-			return true;
-		}
-
-		colm_x += width;
-	}
-
-	g_list_free(cells);
-	return false; // not found
-}
-#endif
-
-
-extern char theme_name[64];
 
 static bool
 config_load()
@@ -759,7 +656,7 @@ on_quit(GtkMenuItem* menuitem, gpointer user_data)
 	app->auditioner->stop();
 	app->auditioner->disconnect();
 
-	if (backend.disconnect) backend.disconnect();
+	if(backend.disconnect) backend.disconnect();
 
 #if 0
 	//disabled due to errors when quitting early.
