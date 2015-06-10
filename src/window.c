@@ -45,6 +45,9 @@
 #else
 #include "waveform/view.h"
 #endif
+#include "agl/actor.h"
+#include "waveform/actors/text.h"
+#include "waveform/actors/spp.h"
 #endif
 #ifdef HAVE_FFTW3
 #ifdef USE_OPENGL
@@ -1289,6 +1292,10 @@ waveform_panel_new()
 #ifdef USE_LIBASS
 	waveform_view_plus_set_gl(window_get_gl_context());
 	WaveformViewPlus* view = waveform_view_plus_new(NULL);
+
+	AGlActor* text_layer = waveform_view_plus_add_layer(view, text_actor(NULL), 3);
+	text_actor_set_colour((TextActor*)text_layer, 0x000000bb, 0xffffffbb);
+
 #if 0
 	waveform_view_plus_set_show_grid(view, true);
 #endif
@@ -1377,7 +1384,10 @@ show_waveform(gboolean enable)
 		g_return_if_fail(app->play.sample);
 		if(!((WaveformViewPlus*)window.waveform)->waveform) return;
 
-		waveform_view_plus_set_time(view, waveform_is_playing() ? app->play.position : UINT32_MAX);
+		AGlActor* spp = waveform_view_plus_get_layer(view, 5);
+		if(spp){
+			spp_actor_set_time((SppActor*)spp, waveform_is_playing() ? app->play.position : UINT32_MAX);
+		}
 	}
 
 	void waveform_on_play(GObject* _app, gpointer _)
@@ -1387,7 +1397,14 @@ show_waveform(gboolean enable)
 
 	void waveform_on_stop(GObject* _app, gpointer _)
 	{
+#if 0
 		waveform_view_plus_set_time((WaveformViewPlus*)window.waveform, UINT32_MAX);
+#else
+		AGlActor* spp = waveform_view_plus_get_layer((WaveformViewPlus*)window.waveform, 5);
+		if(spp){
+			spp_actor_set_time((SppActor*)spp, UINT32_MAX);
+		}
+#endif
 	}
 #endif
 
@@ -1580,23 +1597,24 @@ update_waveform_view(Sample* sample)
 
 	dbg(1, "name=%s", sample->name);
 
-	char text[128] = "";
-	if(sample->channels){
-		char* ch_str = channels_format(sample->channels);
-		char* level  = gain2dbstring(sample->peaklevel);
-		char length[64]; smpte_format(length, sample->length);
-		char fs_str[32]; samplerate_format(fs_str, sample->sample_rate); strcpy(fs_str + strlen(fs_str), " kHz");
+	AGlActor* text_layer = waveform_view_plus_get_layer(view, 3);
+	if(text_layer){
+		char* text = NULL;
+		if(sample->channels){
+			char* ch_str = channels_format(sample->channels);
+			char* level  = gain2dbstring(sample->peaklevel);
+			char length[64]; smpte_format(length, sample->length);
+			char fs_str[32]; samplerate_format(fs_str, sample->sample_rate); strcpy(fs_str + strlen(fs_str), " kHz");
 
-		snprintf(text, 128, "%s  %s  %s  %s", length, ch_str, fs_str, level);
-		text[127] = '\0';
+			text = g_strdup_printf("%s  %s  %s  %s", length, ch_str, fs_str, level);
 
-		g_free(ch_str);
-		g_free(level);
+			g_free(ch_str);
+			g_free(level);
+		}
+
+		text_actor_set_text(((TextActor*)text_layer), g_strdup(sample->name), text);
+		//text_actor_set_colour((TextActor*)text_layer, 0x33aaffff, 0xffff00ff);
 	}
-
-	waveform_view_plus_set_colour(view, 0xaaaaaaff, 0x333333ff, 0x000000bb, 0xffffffbb);
-	waveform_view_plus_set_title(view, sample->name);
-	waveform_view_plus_set_text(view, text);
 
 #else
 	waveform_view_load_file((WaveformView*)window.waveform, sample->online ? sample->full_path : NULL);
