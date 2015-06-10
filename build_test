@@ -3,7 +3,7 @@
 # build with each configure option
 #
 package=samplecat
-version=0.2.4
+version=0.2.5
 tarball=${package}-${version}.tar.gz
 tmpdir=/tmp/${package}_build
 
@@ -79,9 +79,14 @@ get_tarball && \
 	tar xf $tarball && \
 	cd ${package}-${version} && \
 	echo "" && \
-	for i in "${options[@]}"; do compile "$i";done && \
+	for i in "${options[@]}"; do compile "$i" || break; done && \
 	echo "" && \
-	${SETCOLOR_YELLOW} && echo "all builds completed successfully" && ${SETCOLOR_NORMAL};
 
-echo "complete="$n_tests_complete
+if [ $abort = "true" ]
+then
+	echo "complete: "$n_tests_complete" / "${#options[@]}
+else
+	${SETCOLOR_YELLOW} && echo "all builds completed successfully" && ${SETCOLOR_NORMAL};
+	echo "complete="$n_tests_complete
+fi
 

@@ -1,5 +1,5 @@
 AC_PREREQ(2.59)
-AC_INIT([Samplecat],[0.2.4],[tim@orford.org])
+AC_INIT([Samplecat],[0.2.5],[tim@orford.org])
 AC_CONFIG_SRCDIR([src/main.c])
 AC_CONFIG_HEADER([config.h])
 AC_CANONICAL_HOST
