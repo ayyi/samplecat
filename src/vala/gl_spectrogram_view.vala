@@ -28,7 +28,7 @@ public extern void cancel_spectrogram          (char* path);
 public class GlSpectrogram : Gtk.DrawingArea
 {
 	public static GlSpectrogram instance;
-	public static GLContext glcontext;
+	private static GLContext glcontext;
 	private AGl.Instance* agl;
 
 	private string _filename;
@@ -48,6 +48,11 @@ public class GlSpectrogram : Gtk.DrawingArea
 		WidgetGL.set_gl_capability (this, glconfig, glcontext, true, GLRenderType.RGBA_TYPE);
 
 		instance = this;
+	}
+
+	~GlSpectrogram ()
+	{
+		cancel_spectrogram(null);
 	}
 
 	public static void set_gl_context(GLContext _glcontext)
@@ -205,11 +210,12 @@ public class GlSpectrogram : Gtk.DrawingArea
 		*/
 		base.realize();
 	}
+#endif
 
 	public override void unrealize ()
 	{
+		cancel_spectrogram(null);
 		base.unrealize();
 	}
-#endif
 }
 

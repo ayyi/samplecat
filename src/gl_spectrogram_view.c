@@ -53,8 +53,7 @@ struct _GlSpectrogramPrivate {
 static gpointer gl_spectrogram_parent_class = NULL;
 extern GlSpectrogram* gl_spectrogram_instance;
 GlSpectrogram* gl_spectrogram_instance = NULL;
-extern GdkGLContext* gl_spectrogram_glcontext;
-GdkGLContext* gl_spectrogram_glcontext = NULL;
+static GdkGLContext* gl_spectrogram_glcontext = NULL;
 
 void get_spectrogram_with_target (gchar* path, SpectrogramReady on_ready, void* on_ready_target, void* user_data);
 void cancel_spectrogram (gchar* path);
@@ -75,6 +74,7 @@ static void gl_spectrogram_set_projection (GlSpectrogram* self);
 void gl_spectrogram_set_file (GlSpectrogram* self, gchar* filename);
 static void _lambda0_ (gchar* filename, GdkPixbuf* _pixbuf, void* b, GlSpectrogram* self);
 static void __lambda0__spectrogram_ready (gchar* filename, GdkPixbuf* a, void* user_data_, gpointer self);
+static void gl_spectrogram_real_unrealize (GtkWidget* base);
 static void gl_spectrogram_finalize (GObject* obj);
 
 
@@ -310,11 +310,20 @@ void gl_spectrogram_set_file (GlSpectrogram* self, gchar* filename) {
 }
 
 
+static void gl_spectrogram_real_unrealize (GtkWidget* base) {
+	GlSpectrogram * self;
+	self = (GlSpectrogram*) base;
+	cancel_spectrogram (NULL);
+	GTK_WIDGET_CLASS (gl_spectrogram_parent_class)->unrealize ((GtkWidget*) G_TYPE_CHECK_INSTANCE_CAST (self, GTK_TYPE_DRAWING_AREA, GtkDrawingArea));
+}
+
+
 static void gl_spectrogram_class_init (GlSpectrogramClass * klass) {
 	gl_spectrogram_parent_class = g_type_class_peek_parent (klass);
 	g_type_class_add_private (klass, sizeof (GlSpectrogramPrivate));
 	GTK_WIDGET_CLASS (klass)->configure_event = gl_spectrogram_real_configure_event;
 	GTK_WIDGET_CLASS (klass)->expose_event = gl_spectrogram_real_expose_event;
+	GTK_WIDGET_CLASS (klass)->unrealize = gl_spectrogram_real_unrealize;
 	G_OBJECT_CLASS (klass)->finalize = gl_spectrogram_finalize;
 }
 
@@ -329,6 +338,7 @@ static void gl_spectrogram_instance_init (GlSpectrogram * self) {
 static void gl_spectrogram_finalize (GObject* obj) {
 	GlSpectrogram * self;
 	self = GL_SPECTROGRAM (obj);
+	cancel_spectrogram (NULL);
 	_g_free0 (self->priv->_filename);
 	G_OBJECT_CLASS (gl_spectrogram_parent_class)->finalize (obj);
 }

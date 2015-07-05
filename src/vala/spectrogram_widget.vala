@@ -34,7 +34,8 @@ public extern void get_spectrogram_with_target(char* path, RenderDoneFunc on_rea
 //public extern void get_spectrogram(char* path, RenderDoneFunc callback, void* user_data);
 public extern void cancel_spectrogram          (char* path);
  
-public class SpectrogramWidget : Gtk.Widget {
+public class SpectrogramWidget : Gtk.Widget
+{
 	private string _filename;
 	private Gdk.Pixbuf* pixbuf = null;
 

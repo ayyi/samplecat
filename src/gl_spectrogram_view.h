@@ -37,7 +37,6 @@ void get_spectrogram_with_target (gchar* path, SpectrogramReady on_ready, void* 
 void cancel_spectrogram (gchar* path);
 GType gl_spectrogram_get_type (void) G_GNUC_CONST;
 extern GlSpectrogram* gl_spectrogram_instance;
-extern GdkGLContext* gl_spectrogram_glcontext;
 GlSpectrogram* gl_spectrogram_new (void);
 GlSpectrogram* gl_spectrogram_construct (GType object_type);
 void gl_spectrogram_set_gl_context (GdkGLContext* _glcontext);
