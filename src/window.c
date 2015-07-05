@@ -1585,7 +1585,7 @@ update_waveform_view(Sample* sample)
 #ifdef USE_LIBASS
 	WaveformViewPlus* view = (WaveformViewPlus*)window.waveform;
 
-	waveform_view_plus_load_file(view, sample->online ? sample->full_path : NULL);
+	waveform_view_plus_load_file(view, sample->online ? sample->full_path : NULL, NULL, NULL);
 
 #if 0
 	void on_waveform_finalize(gpointer _c, GObject* was)
