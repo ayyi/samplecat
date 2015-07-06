@@ -24,7 +24,6 @@
 #include "mimetype.h"
 #include "sample.h"
 #include "listview.h"
-#include "window.h"
 #ifdef USE_TRACKER
   #include "src/db/db.h"
   #include "src/db/tracker.h"
@@ -514,7 +513,7 @@ inspector_set_labels(Sample* sample)
 	}
 
 #ifndef USE_GDL
-	if (app->auditioner->status && app->auditioner->status() != -1.0 && app->view_options[SHOW_PLAYER].value){
+	if (/*app->auditioner->status && app->auditioner->status() != -1.0 && */app->view_options[SHOW_PLAYER].value){
 		show_player(true); // show/hide player
 	}
 #endif
