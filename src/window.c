@@ -339,7 +339,7 @@ GtkWindow
 	gtk_paned_add1(GTK_PANED(pcpaned), window.dir_tree);
 
 	if (app->auditioner && app->auditioner->position && app->auditioner->seek){
-		gtk_paned_add2(GTK_PANED(pcpaned), app->playercontrol->widget);
+		gtk_paned_add2(GTK_PANED(pcpaned), panels[PANEL_TYPE_PLAYER].widget);
 	}
 
 #ifdef USE_OPENGL
@@ -760,7 +760,7 @@ left_pane2()
 
 	player_control_new();
 	if(!app->view_options[SHOW_PLAYER].value)
-		gtk_widget_set_no_show_all(app->playercontrol->widget, true);
+		gtk_widget_set_no_show_all(panels[PANEL_TYPE_PLAYER].widget, true);
 
 	inspector_new();
 	gtk_paned_add2(GTK_PANED(window.vpaned), app->inspector->widget);
@@ -1568,7 +1568,7 @@ show_player(gboolean enable)
 #ifdef USE_GDL
 	show_widget_if(panels[PANEL_TYPE_PLAYER].widget, enable);
 #else
-	show_widget_if(app->playercontrol->widget, enable);
+	show_widget_if(panels[PANEL_TYPE_PLAYER].widget, enable);
 #endif
 
 	player_control_on_show_hide(enable);
