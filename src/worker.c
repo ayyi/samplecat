@@ -43,9 +43,10 @@ typedef struct
    bool    success;
 } WorkResult;
 
-static GList*          msg_list = NULL;
+static GList*          msg_list  = NULL;
 static GAsyncQueue*    msg_queue = NULL;
-static SamplecatModel* model = NULL;
+static GList*          clients   = NULL;
+static SamplecatModel* model     = NULL;
 
 static gpointer worker_thread (gpointer data);
 
@@ -106,11 +107,12 @@ worker_thread_init(SamplecatModel* _model)
 
 
 static bool
-print_progress(gpointer user_data)
+send_progress(gpointer user_data)
 {
-	int n = GPOINTER_TO_INT(user_data);
-	if(n) statusbar_print(2, "updating %i items...", n);
-	else statusbar_print(2, "");
+	GList* l = clients;
+	for(;l;l=l->next){
+		((Callback)l->data)(user_data);
+	}
 
 	return G_SOURCE_REMOVE;
 }
@@ -157,7 +159,7 @@ worker_thread(gpointer data)
 				g_idle_add(on_ebur128_done, result);
 			}
 
-			g_idle_add(print_progress, GINT_TO_POINTER(g_list_length(msg_list)));
+			g_idle_add(send_progress, GINT_TO_POINTER(g_list_length(msg_list)));
 
 			g_free(message);
 		}
@@ -264,6 +266,13 @@ on_ebur128_done(gpointer _result)
 	sample_unref(result->sample);
 	g_free(result);
 	return G_SOURCE_REMOVE;
+}
+
+
+void
+worker_register(Callback callback)
+{
+	clients = g_list_prepend(clients, callback);
 }
 
 

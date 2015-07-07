@@ -58,6 +58,7 @@
 #endif
 #include "colour_box.h"
 #include "rotator.h"
+#include "worker.h"
 #include "window.h"
 #ifndef __APPLE__
 #include "icons/samplecat.xpm"
@@ -521,6 +522,15 @@ GtkWindow
 		return NOT_HANDLED;
 	}
 	g_signal_connect((gpointer)app->window, "button-press-event", G_CALLBACK(window_on_clicked), NULL);
+
+	void on_worker_progress(gpointer _n)
+	{
+		int n = GPOINTER_TO_INT(_n);
+
+		if(n) statusbar_print(2, "updating %i items...", n);
+		else statusbar_print(2, "");
+	}
+	worker_register(on_worker_progress);
 
 	return true;
 }
