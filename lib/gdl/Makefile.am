@@ -9,6 +9,8 @@ GDL_AGE=0
 INCLUDES = \
 	-DG_LOG_DOMAIN=\"Gdl\" \
 	-DGDL_UIDIR=\""$(uidir)"\" \
+	-DGTK_DISABLE_DEPRECATION_WARNINGS \
+	-DGLIB_DISABLE_DEPRECATION_WARNINGS \
 	-I$(includedir) -I$(top_srcdir)/lib \
 	$(GTK_CFLAGS) \
 	$(XML_CFLAGS)
