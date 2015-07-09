@@ -158,14 +158,9 @@ gimp_action_group_constructor (GType                  type,
                                GObjectConstructParam *params)
 {
   GObject         *object;
-  GimpActionGroup *group;
   const gchar     *name;
 
   object = G_OBJECT_CLASS (parent_class)->constructor (type, n_params, params);
-
-  group = GIMP_ACTION_GROUP (object);
-
-  //g_assert (GIMP_IS_GIMP (group->gimp));
 
   name = gtk_action_group_get_name (GTK_ACTION_GROUP (object));
 
@@ -537,12 +532,10 @@ gimp_action_group_add_enum_actions (GimpActionGroup     *group,
     {
       GimpEnumAction *action;
       gchar          *label;
-      const gchar    *tooltip;
 
       //label   = gettext (entries[i].label);
       label   = g_strdup(entries[i].label);
-      //tooltip = gettext (entries[i].tooltip);
-      tooltip = entries[i].tooltip;
+      //const gchar* tooltip = entries[i].tooltip;
 
       if (! group->mnemonics) label = gimp_strip_uline (label);
 
@@ -588,12 +581,9 @@ gimp_action_group_add_string_actions (GimpActionGroup       *group,
     {
       GimpStringAction *action;
       gchar            *label;
-      const gchar      *tooltip;
 
-      //label   = gettext (entries[i].label);
       label   = g_strdup(entries[i].label);
-      //tooltip = gettext (entries[i].tooltip);
-      tooltip = entries[i].tooltip;
+      //const gchar* tooltip = entries[i].tooltip;
 
       if (! group->mnemonics) label = gimp_strip_uline (label);
 

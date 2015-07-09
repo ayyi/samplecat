@@ -469,11 +469,17 @@ GtkWindow
 		PF;
 #ifdef HAVE_FFTW3
 		if(window.spectrogram){
-#ifdef USE_OPENGL
-			gl_spectrogram_set_file((GlSpectrogram*)window.spectrogram, sample->full_path);
+#ifdef USE_GDL
+			if(gdl_dock_item_is_active((GdlDockItem*)panels[PANEL_TYPE_SPECTROGRAM].dock_item)){
 #else
-			spectrogram_widget_set_file ((SpectrogramWidget*)window.spectrogram, sample->full_path);
+			if(true){
 #endif
+#ifdef USE_OPENGL
+				gl_spectrogram_set_file((GlSpectrogram*)window.spectrogram, sample->full_path);
+#else
+				spectrogram_widget_set_file ((SpectrogramWidget*)window.spectrogram, sample->full_path);
+#endif
+			}
 		}
 #endif
 	}
@@ -1300,7 +1306,7 @@ static GtkWidget*
 waveform_panel_new()
 {
 #ifdef USE_LIBASS
-	waveform_view_plus_set_gl(window_get_gl_context());
+	waveform_view_plus_set_gl(agl_get_gl_context());
 	WaveformViewPlus* view = waveform_view_plus_new(NULL);
 
 	AGlActor* text_layer = waveform_view_plus_add_layer(view, text_actor(NULL), 3);
@@ -1310,8 +1316,9 @@ waveform_panel_new()
 	waveform_view_plus_set_show_grid(view, true);
 #endif
 	return (GtkWidget*)view;
+
 #else
-	waveform_view_set_gl(window_get_gl_context());
+	waveform_view_set_gl(agl_get_gl_context());
 	return (GtkWidget*)waveform_view_new(NULL);
 #endif
 }
@@ -1482,7 +1489,7 @@ show_waveform(gboolean enable)
 static GtkWidget*
 spectrogram_new()
 {
-	gl_spectrogram_set_gl_context(window_get_gl_context());
+	gl_spectrogram_set_gl_context(agl_get_gl_context());
 
 	return
 #ifdef USE_OPENGL
@@ -1500,7 +1507,7 @@ show_spectrogram(gboolean enable)
 #ifdef USE_GDL
 		window.spectrogram = panels[PANEL_TYPE_SPECTROGRAM].widget;
 #else
-		gl_spectrogram_set_gl_context(window_get_gl_context());
+		gl_spectrogram_set_gl_context(agl_get_gl_context());
 		window.spectrogram = panels[PANEL_TYPE_SPECTROGRAM].new();
 #ifdef USE_OPENGL
 		gtk_widget_set_size_request(window.spectrogram, 100, 100);
@@ -1611,9 +1618,9 @@ update_waveform_view(Sample* sample)
 	if(text_layer){
 		char* text = NULL;
 		if(sample->channels){
-			char* ch_str = channels_format(sample->channels);
+			char* ch_str = format_channels(sample->channels);
 			char* level  = gain2dbstring(sample->peaklevel);
-			char length[64]; smpte_format(length, sample->length);
+			char length[64]; format_smpte(length, sample->length);
 			char fs_str[32]; samplerate_format(fs_str, sample->sample_rate); strcpy(fs_str + strlen(fs_str), " kHz");
 
 			text = g_strdup_printf("%s  %s  %s  %s", length, ch_str, fs_str, level);
@@ -1754,29 +1761,6 @@ window_save_layout()
 
 	} else gwarn("failed to create layout directory: %s", dir);
 	g_free(dir);
-}
-#endif
-
-
-#ifdef USE_OPENGL
-/*   Returns a global GdkGLContext that can be used to share
- *   OpenGL display lists between multiple drawables with
- *   dynamic lifetimes.
- */
-#include <gtk/gtkgl.h>
-GdkGLContext*
-window_get_gl_context()
-{
-	static GdkGLContext* share_list = NULL;
-
-	if(!share_list){
-		GdkGLConfig* const config = gdk_gl_config_new_by_mode(GDK_GL_MODE_RGBA | GDK_GL_MODE_DOUBLE | GDK_GL_MODE_DEPTH);
-		GdkPixmap* const pixmap = gdk_pixmap_new(0, 8, 8, gdk_gl_config_get_depth(config));
-		gdk_pixmap_set_gl_capability(pixmap, config, 0);
-		share_list = gdk_gl_context_new(gdk_pixmap_get_gl_drawable(pixmap), 0, true, GDK_GL_RGBA_TYPE);
-	}
-
-	return share_list;
 }
 #endif
 

@@ -121,8 +121,8 @@ namespace Samplecat {
 
 	[CCode(cname = "samplerate_format", cheader_filename = "support.h")]
 	public void samplerate_format (char* f, int samplerate);
-	[CCode(cname = "smpte_format", cheader_filename = "support.h")]
-	public void smpte_format (char* f, int64 t);
+	[CCode(cname = "format_smpte", cheader_filename = "support.h")]
+	public void format_smpte (char* f, int64 t);
 	[CCode(cname = "pixbuf_to_blob", cheader_filename = "support.h")]
 	public uint8* pixbuf_to_blob (Gdk.Pixbuf* in, out uint len);
 }

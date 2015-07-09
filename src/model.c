@@ -1311,10 +1311,8 @@ static void g_cclosure_user_marshal_VOID__POINTER_INT_POINTER (GClosure * closur
 static GObject * samplecat_model_constructor (GType type, guint n_construct_properties, GObjectConstructParam * construct_properties) {
 	GObject * obj;
 	GObjectClass * parent_class;
-	SamplecatModel * self;
 	parent_class = G_OBJECT_CLASS (samplecat_model_parent_class);
 	obj = parent_class->constructor (type, n_construct_properties, construct_properties);
-	self = G_TYPE_CHECK_INSTANCE_CAST (obj, SAMPLECAT_TYPE_MODEL, SamplecatModel);
 	return obj;
 }
 

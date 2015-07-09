@@ -28,7 +28,7 @@
 
 #include "player_control.h"
 
-struct _playctrl
+struct _PlayCtrl
 {
 	GtkWidget* widget;
 

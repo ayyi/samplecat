@@ -408,11 +408,11 @@ inspector_set_labels(Sample* sample)
 		g_list_free(children);
 	}
 
-	char* ch_str = channels_format(sample->channels);
+	char* ch_str = format_channels(sample->channels);
 	char* level  = gain2dbstring(sample->peaklevel);
 
 	char fs_str[32]; samplerate_format(fs_str, sample->sample_rate); strcpy(fs_str + strlen(fs_str), " kHz");
-	char length[64]; smpte_format(length, sample->length);
+	char length[64]; format_smpte(length, sample->length);
 	char frames[32]; sprintf(frames, "%"PRIi64"", sample->frames);
 	char bitrate[32]; bitrate_format(bitrate, sample->bit_rate);
 	char bitdepth[32]; bitdepth_format(bitdepth, sample->bit_depth);

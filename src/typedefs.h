@@ -47,7 +47,7 @@ typedef struct _sample            Sample;
 typedef struct _libraryview       LibraryView;
 typedef struct _inspector         Inspector;
 typedef struct _inspector_priv    InspectorPriv;
-typedef struct _playctrl          PlayCtrl;
+typedef struct _PlayCtrl          PlayCtrl;
 typedef struct _auditioner        Auditioner;
 typedef struct _view_option       ViewOption;
 typedef struct _SamplecatModel    SamplecatModel;

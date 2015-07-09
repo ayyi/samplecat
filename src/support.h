@@ -49,12 +49,6 @@ struct _accel {
 
 void         p_                        (int level, const char* format, ...);
 
-void         samplerate_format         (char*, int samplerate);
-void         bitrate_format            (char* str, int bitdepth);
-void         bitdepth_format           (char* str, int bitdepth);
-gchar*       dir_format                (char*);
-gchar*       channels_format           (int);
-void         smpte_format              (char*, int64_t);
 //gint         strcmp2(gconstpointer a, gconstpointer b);
 //GPtrArray*   list_dir(const guchar *path);
 

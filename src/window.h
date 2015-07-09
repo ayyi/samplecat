@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2014 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2015 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -9,6 +9,8 @@
 * +----------------------------------------------------------------------+
 *
 */
+#ifndef __samplecat_window_c__
+#define __samplecat_window_c__
 #include <gtk/gtk.h>
 
 gboolean    window_new            ();
@@ -21,8 +23,4 @@ void        show_filemanager      (gboolean enable);
 void        show_waveform         (gboolean enable);
 void        show_player           (gboolean enable);
 
-#ifdef USE_OPENGL
-#ifdef __gl_h_
-GdkGLContext* window_get_gl_context();
-#endif
 #endif

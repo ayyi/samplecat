@@ -303,7 +303,6 @@ static guint tree_view_signals [LAST_SIGNAL] = { 0 };
 
 extern void debug_printf (const char* func, int level, const char* format, ...);
 #define dbg(A, B, ...) debug_printf(__func__, A, B, ##__VA_ARGS__)
-extern GdkGLContext* window_get_gl_context();
 extern Application* application;
 
 typedef struct
@@ -1462,8 +1461,7 @@ rotator_init (Rotator* tree_view)
 		gwarn("failed to set gl capability");
 	}
 #else
-	//gwarn("context=%p", window_get_gl_context());
-	gtk_widget_set_gl_capability((GtkWidget*)widget, glconfig, window_get_gl_context(), 1, GDK_GL_RGBA_TYPE);
+	gtk_widget_set_gl_capability((GtkWidget*)widget, glconfig, agl_get_gl_context(), 1, GDK_GL_RGBA_TYPE);
 #endif
 
 	void rotator_on_selection_change(SamplecatModel* m, Sample* sample, gpointer user_data)
@@ -14482,8 +14480,7 @@ on_canvas_realise(GtkWidget* _canvas, gpointer user_data)
 
 	_r->gl_drawable = gtk_widget_get_gl_drawable(_canvas);
 dbg(0, "%p drawable=%p", _canvas, _r->gl_drawable);
-//gwarn("context=%p", window_get_gl_context());
-	/*GdkGLContext* context = */_r->gl_context = window_get_gl_context();
+	/*GdkGLContext* context = */_r->gl_context = agl_get_gl_context();
 	//_r->gl_context  = gtk_widget_get_gl_context(_canvas);
 
 	gl_initialised = true;

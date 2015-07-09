@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2014 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2015 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -36,5 +36,12 @@ void         colour_get_float          (GdkColor*, float* r, float* g, float* b,
 uint8_t*     pixbuf_to_blob            (GdkPixbuf* in, guint* len);
 
 bool         can_use                   (GList*, const char*);
+
+void         samplerate_format         (char*, int samplerate);
+void         bitrate_format            (char* str, int bitdepth);
+void         bitdepth_format           (char* str, int bitdepth);
+gchar*       dir_format                (char*);
+gchar*       format_channels           (int);
+void         format_smpte              (char*, int64_t);
 
 #endif

@@ -96,7 +96,7 @@ listmodel__new()
 					gtk_tree_path_free(path);
 
 					char samplerate_s[32]; samplerate_format(samplerate_s, sample->sample_rate);
-					char length_s[64]; smpte_format(length_s, sample->length);
+					char length_s[64]; format_smpte(length_s, sample->length);
 					gtk_list_store_set((GtkListStore*)app->store, &iter, 
 							COL_CHANNELS, sample->channels,
 							COL_SAMPLERATE, samplerate_s,
@@ -171,7 +171,7 @@ listmodel__add_result(Sample* sample)
 	}
 
 	char samplerate_s[32]; samplerate_format(samplerate_s, sample->sample_rate);
-	char length_s[64]; smpte_format(length_s, sample->length);
+	char length_s[64]; format_smpte(length_s, sample->length);
 
 #ifdef USE_AYYI
 	GdkPixbuf* ayyi_icon = NULL;
