@@ -79,10 +79,10 @@ set_sample_name (SamplecatMxListItem* self, const char* name)
 {
 	SamplecatMxListItemPrivate* priv = SAMPLECAT_MX_LIST_ITEM_GET_PRIVATE (self);
 
-	priv->sample_name = (char*)name;
+	priv->name = (char*)name;
 	g_object_notify (G_OBJECT (self), "sample_name");
 
-	gchar* sr = g_strdup(priv->sample_name);
+	gchar* sr = g_strdup(priv->name);
 	mx_label_set_text(priv->label0, sr);
 	g_free(sr);
 }
@@ -170,7 +170,7 @@ samplecat_mx_list_item_get_property (GObject* gobject, guint prop_id, GValue* va
 		g_value_set_string (value, get_id (self));
 		break;
 	case PROP_SAMPLENAME:
-		g_value_set_string (value, priv->sample_name);
+		g_value_set_string (value, priv->name);
 		break;
 	case PROP_SAMPLERATE:
 		g_value_set_int (value, priv->samplerate);

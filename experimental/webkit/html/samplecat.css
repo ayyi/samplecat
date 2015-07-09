@@ -1,6 +1,7 @@
 
 table#samples      { width: 100%; margin: 0 0 1em;}
 tr.odd             { background-color: #eee; }
+th                 { text-align: left; }
 .dataTables_filter { display: none;}
 .dataTables_info   { font-size: 80%; }
 #search-box        { padding: 4px; background-color: #eee; }
