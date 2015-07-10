@@ -133,7 +133,9 @@ typedef enum {
    PANEL_TYPE_DIRECTORIES,
    PANEL_TYPE_FILEMANAGER,
    PANEL_TYPE_PLAYER,
+#ifdef USE_OPENGL
    PANEL_TYPE_WAVEFORM,
+#endif
 #ifdef HAVE_FFTW3
    PANEL_TYPE_SPECTROGRAM,
 #endif
@@ -142,7 +144,11 @@ typedef enum {
 
 typedef GtkWidget* (NewPanelFn)();
 
-static NewPanelFn spectrogram_new, waveform_panel_new, search_new, filters_new, make_fileview_pane;
+static NewPanelFn
+#ifdef USE_OPENGL
+	waveform_panel_new,
+#endif
+	spectrogram_new, search_new, filters_new, make_fileview_pane;
 extern NewPanelFn dir_panel_new;
 
 typedef struct {
@@ -163,7 +169,9 @@ Panel_ panels[] = {
    {"Directories", dir_panel_new},
    {"Filemanager", make_fileview_pane},
    {"Player",      player_control_new},
+#ifdef USE_OPENGL
    {"Waveform",    waveform_panel_new},
+#endif
 #ifdef HAVE_FFTW3
    {"Spectrogram", spectrogram_new},
 #endif
@@ -401,9 +409,11 @@ GtkWindow
 								show_spectrogram(true);
 								break;
 #endif
+#ifdef USE_OPENGL
 							case PANEL_TYPE_WAVEFORM:
 								show_waveform(true);
 								break;
+#endif
 							case PANEL_TYPE_PLAYER:
 								player_control_on_show_hide(true);
 								break;
@@ -1489,13 +1499,15 @@ show_waveform(gboolean enable)
 static GtkWidget*
 spectrogram_new()
 {
+#ifdef USE_OPENGL
 	gl_spectrogram_set_gl_context(agl_get_gl_context());
+#endif
 
 	return
 #ifdef USE_OPENGL
 		(GtkWidget*)gl_spectrogram_new();
 #else
-        spectrogram_widget_new();
+        (GtkWidget*)spectrogram_widget_new();
 #endif
 }
 
@@ -1592,12 +1604,12 @@ show_player(gboolean enable)
 }
 
 
+#ifdef USE_OPENGL
 static void
 update_waveform_view(Sample* sample)
 {
 	g_return_if_fail(window.waveform);
 	if(!gtk_widget_get_realized(window.waveform)) return; // may be hidden by the layout manager.
-
 
 #ifdef USE_LIBASS
 	WaveformViewPlus* view = (WaveformViewPlus*)window.waveform;
@@ -1637,6 +1649,7 @@ update_waveform_view(Sample* sample)
 	waveform_view_load_file((WaveformView*)window.waveform, sample->online ? sample->full_path : NULL);
 #endif
 }
+#endif
 
 
 static void

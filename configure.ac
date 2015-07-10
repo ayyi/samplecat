@@ -124,6 +124,9 @@ else
   HAVE_GTK_2_10="no"
 fi;
 
+GMODULE_LIBS=`pkg-config gmodule-2.0 --libs`
+AC_SUBST(GMODULE_LIBS)
+
 dnl -----------------------------------------------------------------------------
 
 PKG_CHECK_MODULES(VFS, gnome-vfs-2.0,, [true])

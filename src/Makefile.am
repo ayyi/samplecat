@@ -23,6 +23,7 @@ AM_CFLAGS = \
 	$(FFMPEG_CFLAGS) \
 	$(ZLIB_CFLAGS) \
 	$(GTK_CFLAGS) \
+	$(GMODULE_LIBS) \
 	$(DBUS_CFLAGS) $(MYSQL_CFLAGS) $(TRACKER_CFLAGS)
 
 AM_CXXFLAGS = $(AM_CFLAGS)
@@ -44,12 +45,13 @@ FFT_SRC = spectrogram_widget.c spectrogram_widget.h
 FFT_ANANALYSERS_SRC = \
 	audio_analysis/spectrogram/spectrogram.c audio_analysis/spectrogram/spectrogram.h \
 	audio_analysis/spectrogram/sndfile_window.c audio_analysis/spectrogram/sndfile_window.h
-OPENGL_SRC = gl_spectrogram_view.c gl_spectrogram_view.h
 endif
 
 if ENABLE_OPENGL
+OPENGL_SRC = \
+	gl_spectrogram_view.c gl_spectrogram_view.h \
+	rotator.c rotator.h
 OPENGL_LDFLAGS = \
-	$(top_srcdir)/lib/waveform/waveform/.libs/libwaveform.a \
 	$(top_srcdir)/lib/waveform/agl/.libs/libagl.a \
 	$(top_srcdir)/lib/waveform/transition/.libs/libtransition.a \
 	$(OPENGL_LIBS)
@@ -97,7 +99,6 @@ samplecat_SOURCES = \
 	dh_tree.c dh_tree.h \
 	cellrenderer_hypertext.c cellrenderer_hypertext.h \
 	colour_box.c colour_box.h \
-	rotator.c rotator.h \
 	dnd.c dnd.h \
 	support.c support.h \
 	console_view.c console_view.h \
@@ -120,6 +121,7 @@ samplecat_LDADD = \
 	$(GDL_LDFLAGS) \
 	gimp/libgimpwidgets.a \
 	db/libsamplecatdb.a \
+	$(top_srcdir)/lib/waveform/waveform/.libs/libwaveform.a \
 	$(SAMPLECAT_LIBS) \
 	$(AYYI_LIBS) \
 	$(DBUS_LIBS) \
