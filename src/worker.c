@@ -17,50 +17,25 @@
 #include <math.h>
 #include <sys/time.h>
 #include <gtk/gtk.h>
-
 #include "debug/debug.h"
-#include "utils/pixmaps.h"
-#include "file_manager/file_manager.h"
-#include "file_manager/mimetype.h"
-#include "typedefs.h"
+#include "samplecat/worker.h"
 #include "support.h"
 #include "sample.h"
 #include "model.h"
-#include "listmodel.h"
+#include "list_store.h"
+#include "application.h"
 #include "audio_decoder/ad.h"
 #include "audio_analysis/waveform/waveform.h"
+#include "audio_analysis/meter/peak.h"
+#include "audio_analysis/ebumeter/ebur128.h"
 #include "worker.h"
 
 typedef struct
 {
-	enum MsgType type;
-	Sample*      sample;
-} Message;
-
-typedef struct
-{
-   Sample* sample;
    bool    success;
 } WorkResult;
 
-static GList*          msg_list  = NULL;
-static GAsyncQueue*    msg_queue = NULL;
-static GList*          clients   = NULL;
-static SamplecatModel* model     = NULL;
 
-static gpointer worker_thread (gpointer data);
-
-static bool   on_overview_done  (gpointer);
-static bool   on_peaklevel_done (gpointer);
-static bool   on_ebur128_done   (gpointer);
-
-// TODO move to audio_analysis/analyzers.c ?!
-#include "audio_analysis/meter/peak.h"
-static double calc_signal_max (Sample* sample) {
-	return ad_maxsignal(sample->full_path);
-}
-
-#include "audio_analysis/ebumeter/ebur128.h"
 static bool
 calc_ebur128(Sample* sample)
 {
@@ -92,187 +67,124 @@ calc_ebur128(Sample* sample)
 }
 
 
+/*
+ *  Combine all analysis jobs in one for the purpose of having only a single model update
+ */
 void
-worker_thread_init(SamplecatModel* _model)
+request_analysis(Sample* sample)
 {
-	dbg(3, "creating overview thread...");
-	model = _model;
+	typedef struct {
+		int changed;
+	} C;
+	C* c = g_new0(C, 1);
 
-	msg_queue = g_async_queue_new();
-
-	if(!g_thread_new("worker", worker_thread, NULL)){
-		perr("failed to create worker thread");
-	}
-}
-
-
-static bool
-send_progress(gpointer user_data)
-{
-	GList* l = clients;
-	for(;l;l=l->next){
-		((Callback)l->data)(user_data);
-	}
-
-	return G_SOURCE_REMOVE;
-}
-
-
-static gpointer
-worker_thread(gpointer data)
-{
-	//TODO consider replacing the main loop with a blocking call on the async queue,
-	//(g_async_queue_pop) waiting for messages.
-
-	dbg(1, "new worker thread.");
-
-	g_async_queue_ref(msg_queue);
-
-	bool worker_timeout(gpointer data)
+	void analysis_work(Sample* sample, gpointer _c)
 	{
+		C* c = _c;
 
-		//check for new work
-		while(g_async_queue_length(msg_queue)){
-			Message* message = g_async_queue_pop(msg_queue); // blocks
-			msg_list = g_list_append(msg_list, message);
-			dbg(2, "new message! %p", message);
+		if(!sample->overview){
+			if(make_overview(sample)) c->changed |= 1 << COL_OVERVIEW;
 		}
-
-		while(msg_list != NULL){
-			Message* message = g_list_first(msg_list)->data;
-			msg_list = g_list_remove(msg_list, message);
-
-			Sample* sample = message->sample;
-			if(message->type == MSG_TYPE_OVERVIEW){
-				dbg(1, "queuing for overview: filename=%s.", sample->full_path);
-				make_overview(sample);
-				g_idle_add(on_overview_done, sample);
-			}
-			else if(message->type == MSG_TYPE_PEAKLEVEL){
-				sample->peaklevel = calc_signal_max(message->sample);
-				g_idle_add(on_peaklevel_done, sample);
-			}
-			else if(message->type == MSG_TYPE_EBUR128){
-				WorkResult* result = g_new0(WorkResult, 1);
-				result->sample = sample;
-				result->success = calc_ebur128(message->sample);
-				g_idle_add(on_ebur128_done, result);
-			}
-
-			g_idle_add(send_progress, GINT_TO_POINTER(g_list_length(msg_list)));
-
-			g_free(message);
+		if(sample->peaklevel == 0){
+			if((sample->peaklevel = ad_maxsignal(sample->full_path))) c->changed |= 1 << COL_PEAKLEVEL;
 		}
-
-		return TIMER_CONTINUE;
+		if(!sample->ebur || !strlen(sample->ebur)){
+			if(calc_ebur128(sample)) c->changed |= 1 << COL_X_EBUR;
+		}
 	}
 
-	GMainContext* context = g_main_context_new();
-	GSource* source = g_timeout_source_new(1000);
-	gpointer _data = NULL;
-	g_source_set_callback(source, worker_timeout, _data, NULL);
-	g_source_attach(source, context);
+	void analysis_done(Sample* sample, gpointer _c)
+	{
+		C* c = _c;
+		switch(c->changed){
+			case 1 << COL_PEAKLEVEL:
+				samplecat_model_update_sample (app->model, sample, COL_PEAKLEVEL, NULL);
+				break;
+			case 1 << COL_OVERVIEW:
+				samplecat_model_update_sample (app->model, sample, COL_OVERVIEW, NULL);
+				break;
+			case 1 << COL_X_EBUR:
+				samplecat_model_update_sample (app->model, sample, COL_X_EBUR, NULL);
+				break;
+			case 0:
+				break;
+			default:
+				samplecat_model_update_sample (app->model, sample, COL_ALL, NULL);
+		}
+		g_free(c);
+	}
 
-	g_main_loop_run (g_main_loop_new (context, 0));
-
-	return NULL;
-}
-
-
-static Message*
-new_message(enum MsgType type, Sample* sample)
-{
-	Message* message = g_new0(Message, 1);
-	message->type = type;
-	message->sample = sample_ref(sample);
-	return message;
+	if(!sample->overview || sample->peaklevel == 0 || !sample->ebur || !strlen(sample->ebur))
+		worker_add_job(sample, analysis_work, analysis_done, c);
 }
 
 
 void
 request_overview(Sample* sample)
 {
-	if(!msg_queue) return;
+	void overview_work(Sample* sample, gpointer user_data)
+	{
+		make_overview(sample);
+	}
 
-	Message* message = g_new0(Message, 1);
-	message->type = MSG_TYPE_OVERVIEW;
-	message->sample = sample;
+	void overview_done(Sample* sample, gpointer user_data)
+	{
+		PF;
+		g_return_val_if_fail(sample, false);
+		if(sample->overview){
+			samplecat_model_update_sample (app->model, sample, COL_OVERVIEW, NULL);
+		}else{
+			dbg(1, "overview creation failed (no pixbuf).");
+		}
+	}
 
 	dbg(2, "sample=%p filename=%s", sample, sample->full_path);
-	sample_ref(sample);
-	g_async_queue_push(msg_queue, message);
+	worker_add_job(sample, overview_work, overview_done, NULL);
 }
 
 
 void
 request_peaklevel(Sample* sample)
 {
-	if(!msg_queue) return;
+	void peaklevel_work(Sample* sample, gpointer user_data)
+	{
+		sample->peaklevel = ad_maxsignal(sample->full_path);
+	}
 
-	Message* message = g_new0(Message, 1);
-	message->type = MSG_TYPE_PEAKLEVEL;
-	message->sample = sample;
+	void peaklevel_done(Sample* sample, gpointer user_data)
+	{
+		dbg(1, "peaklevel=%.2f id=%i", sample->peaklevel, sample->id);
+		// important not to do too many updates to the model as it makes the tree unresponsive.
+		// this can happen when file is not available.
+		if(sample->peaklevel > 0.0){
+			samplecat_model_update_sample (app->model, sample, COL_PEAKLEVEL, NULL);
+		}
+	}
 
 	dbg(2, "sample=%p filename=%s", sample, sample->full_path);
-	sample_ref(sample);
-	g_async_queue_push(msg_queue, message);
+	worker_add_job(sample, peaklevel_work, peaklevel_done, NULL);
 }
 
 
 void
 request_ebur128(Sample* sample)
 {
-	if(!msg_queue) return;
+	void ebur128_work(Sample* sample, gpointer _result)
+	{
+		WorkResult* result = _result;
+		result->success = calc_ebur128(sample);
+	}
+
+	void ebur128_done(Sample* sample, gpointer _result)
+	{
+		WorkResult* result = _result;
+		if(result->success) samplecat_model_update_sample (app->model, sample, COL_X_EBUR, NULL);
+		g_free(result);
+	}
 
 	dbg(2, "sample=%p filename=%s", sample, sample->full_path);
 
-	g_async_queue_push(msg_queue, new_message(MSG_TYPE_EBUR128, sample));
-}
-
-
-static bool
-on_overview_done(gpointer _sample)
-{
-	PF;
-	Sample* sample = _sample;
-	g_return_val_if_fail(sample, false);
-	if(sample->overview){
-		samplecat_model_update_sample (model, sample, COL_OVERVIEW, NULL);
-	}else{
-		dbg(1, "overview creation failed (no pixbuf).");
-	}
-	sample_unref(sample);
-
-	return G_SOURCE_REMOVE;
-}
-
-
-static bool
-on_peaklevel_done(gpointer _sample)
-{
-	Sample* sample = _sample;
-	dbg(1, "peaklevel=%.2f id=%i", sample->peaklevel, sample->id);
-	samplecat_model_update_sample (model, sample, COL_PEAKLEVEL, NULL);
-	sample_unref(sample);
-	return G_SOURCE_REMOVE;
-}
-
-
-static bool
-on_ebur128_done(gpointer _result)
-{
-	WorkResult* result = _result;
-	if(result->success) samplecat_model_update_sample (model, result->sample, COL_X_EBUR, NULL);
-	sample_unref(result->sample);
-	g_free(result);
-	return G_SOURCE_REMOVE;
-}
-
-
-void
-worker_register(Callback callback)
-{
-	clients = g_list_prepend(clients, callback);
+	worker_add_job(sample, ebur128_work, ebur128_done, g_new0(WorkResult, 1));
 }
 
 

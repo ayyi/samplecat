@@ -15,15 +15,7 @@
 #include <gtk/gtk.h>
 #include "typedefs.h"
 
-enum MsgType
-{
-	MSG_TYPE_OVERVIEW,
-	MSG_TYPE_PEAKLEVEL,
-	MSG_TYPE_EBUR128,
-} MsgType;
-
-void        worker_thread_init   (SamplecatModel*);
-void        worker_register      (Callback);
+void        request_analysis     (Sample*);
 
 void        request_overview     (Sample*);
 void        request_peaklevel    (Sample*);

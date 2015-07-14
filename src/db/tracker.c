@@ -25,7 +25,6 @@
 #include "sample.h"
 #include "support.h"
 #include "lib/file_manager/mimetype.h"
-#include "listmodel.h"
 #include "src/types.h"
 #include "application.h"
 #include "db/tracker.h"
@@ -40,6 +39,7 @@ static GStrv      get_uris                  (GStrv files);
 static gchar*     get_filter_string         (GStrv files, gboolean files_are_urns, const gchar* tag);
 static GPtrArray* get_file_urns             (TrackerClient*, GStrv uris, const gchar* tag);
 static GPtrArray* get_tag_urns_for_label    (const char* label);
+static char*      listmodel__get_filename_from_id(int id);
 
 static TrackerClient* tc = NULL;
 static Sample result;
@@ -973,4 +973,34 @@ get_fts_string (GStrv search_words, gboolean use_or_operator)
 	return g_string_free (fts, FALSE);
 }
 
+struct find_filename {
+	int id;
+	char *rv;
+};
+
+
+static bool
+filter_id (GtkTreeModel* model, GtkTreePath* path, GtkTreeIter* iter, gpointer data) {
+	struct find_filename* ff = (struct find_filename*) data;
+	Sample* s = sample_get_by_tree_iter(iter);
+	if (s->id == ff->id) {
+		ff->rv = strdup(s->full_path);
+		sample_unref(s);
+		return true;
+	}
+	sample_unref(s);
+	return false;
+}
+
+
+static char*
+listmodel__get_filename_from_id(int id)
+{
+	struct find_filename ff;
+	ff.id = id;
+	ff.rv = NULL;
+	GtkTreeModel* model = GTK_TREE_MODEL(app->store);
+	gtk_tree_model_foreach(model, &filter_id, &ff);
+	return ff.rv;
+}
 #endif //USE_TRACKER

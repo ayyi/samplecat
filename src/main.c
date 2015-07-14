@@ -31,6 +31,7 @@ char * program_name;
 #include "waveform/utils.h"
 #include "utils/ayyi_utils.h"
 #include "utils/pixmaps.h"
+#include "samplecat/worker.h"
 #ifdef USE_AYYI
   #include "ayyi.h"
   #include "ayyi_model.h"
@@ -51,7 +52,6 @@ char * program_name;
 #include "list_store.h"
 #include "support.h"
 #include "sample.h"
-#include "worker.h"
 #include "cellrenderer_hypertext.h"
 #include "listview.h"
 #include "window.h"
@@ -301,7 +301,7 @@ main(int argc, char** argv)
 	icon_theme_init();
 	pixmaps_init();
 	ad_init();
-	app->store = listmodel__new();
+
 	if(app->no_gui) console__init();
 
 
@@ -361,7 +361,7 @@ main(int argc, char** argv)
 	}
 
 #ifndef DEBUG_NO_THREADS
-	worker_thread_init(app->model);
+	worker_thread_init();
 #endif
 
 	if(!app->no_gui) window_new(); 

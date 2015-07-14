@@ -9,6 +9,9 @@ namespace Samplecat {
 		public bool         get_file_info();
 		public char*        get_metadata_str();
 
+		[CCode (cname = "request_analysis", cheader_filename = "worker.h")]
+		public void         request_analysis  ();
+
 		[CCode (cname = "request_overview", cheader_filename = "worker.h")]
 		public void         request_overview  ();
 		[CCode (cname = "request_peaklevel", cheader_filename = "worker.h")]
@@ -19,6 +22,8 @@ namespace Samplecat {
 		public int          id;
 		public int          ref_count;
 		public Gtk.TreeRowReference* row_ref;
+		public char*        name;
+		public char*        sample_dir;
 		public char*        full_path;
 
 		public uint         sample_rate;
@@ -49,7 +54,8 @@ namespace Samplecat {
 	[CCode (cname = "Application")]
 	public struct Application
 	{
-		Model* model;
+		Model*              model;
+		Gtk.ListStore*      store;
 	}
 
 	[CCode(cname = "SamplecatBackend", has_type_id = false, cheader_filename = "db/db.h")]
@@ -73,13 +79,7 @@ namespace Samplecat {
 	[CCode(cname = "app", cheader_filename = "application.h")]
 	Application* app;
 
-	[CCode(cname = "listmodel__add_result", cheader_filename = "listmodel.h")]
-	public void listmodel__add_result(Sample* sample);
-
-	[CCode(cname = "request_ebur128", cheader_filename = "worker.h")]
-	void        request_ebur128        (Sample* sample);
-
-	[CCode(cprefix = "COL_", cheader_filename = "listmodel.h")]
+	[CCode(cprefix = "COL_", cheader_filename = "list_store.h")]
 	enum Column {
 		ICON = 0,
 		IDX,
@@ -97,7 +97,8 @@ namespace Samplecat {
 		NUM_COLS, ///< end of columns in the store
 		// these are NOT in the store but in the sample-struct (COL_SAMPLEPTR)
 		X_EBUR,
-		X_NOTES
+		X_NOTES,
+		ALL
 	}
 
 	[CCode (cname = "ObjectCallback", has_target = false, has_type_id = false)]
@@ -119,10 +120,46 @@ namespace Samplecat {
 	[CCode(cname = "file_mtime", cheader_filename = "samplecat/support.h")]
 	public time_t file_mtime (char* file);
 
-	[CCode(cname = "samplerate_format", cheader_filename = "support.h")]
+	[CCode(cname = "samplerate_format", cheader_filename = "samplecat/support.h")]
 	public void samplerate_format (char* f, int samplerate);
 	[CCode(cname = "format_smpte", cheader_filename = "support.h")]
 	public void format_smpte (char* f, int64 t);
 	[CCode(cname = "pixbuf_to_blob", cheader_filename = "support.h")]
 	public uint8* pixbuf_to_blob (Gdk.Pixbuf* in, out uint len);
+
+	[CCode(cname = "get_iconbuf_from_mimetype", cheader_filename = "support.h")]
+	public Gdk.Pixbuf* get_iconbuf_from_mimetype (char* mimetype);
+
+	public class MaskedPixmap
+	{
+		Gdk.Pixbuf	*src_pixbuf;	// Limited to 'huge' size 
+
+		/*
+		// If huge_pixbuf is NULL then call pixmap_make_huge()
+		GdkPixbuf	*huge_pixbuf;
+		GdkPixbuf	*huge_pixbuf_lit;
+		int		huge_width, huge_height;
+
+		GdkPixbuf	*pixbuf;	// Normal size image, always valid
+		GdkPixbuf	*pixbuf_lit;
+		int		width, height;
+		*/
+
+		// If sm_pixbuf is NULL then call pixmap_make_small()
+		public Gdk.Pixbuf*     sm_pixbuf;
+		public Gdk.Pixbuf*     sm_pixbuf_lit;
+		public int             sm_width;
+		public int             sm_height;
+	}
+
+	public struct MIME_type
+	{
+		public char*           media_type;
+		public char*           subtype;
+		public MaskedPixmap*   image;
+		public time_t          image_time;
+	}
+
+	public MIME_type*  mime_type_lookup         (char* type);
+	public MaskedPixmap* type_to_icon           (MIME_type* mime_type);
 }

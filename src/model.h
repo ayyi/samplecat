@@ -127,6 +127,7 @@ void samplecat_model_add_filter (SamplecatModel* self, SamplecatFilter* filter);
 void samplecat_model_refresh_sample (SamplecatModel* self, Sample* sample, gboolean force_update);
 gboolean samplecat_model_update_sample (SamplecatModel* self, Sample* sample, gint prop, void* val);
 gchar* samplecat_model_print_col_name (guint prop_type);
+void samplecat_model_move_files (GList*, const gchar* dest_path);
 
 
 G_END_DECLS

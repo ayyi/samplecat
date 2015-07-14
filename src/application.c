@@ -102,6 +102,22 @@ application_new ()
 
 	application_set_auditioner(app);
 
+	GtkListStore*
+	listmodel__new()
+	{
+		void icon_theme_changed(Application* application, char* theme, gpointer data){ application_search(); }
+		g_signal_connect((gpointer)app, "icon-theme", G_CALLBACK(icon_theme_changed), NULL);
+
+		void listmodel__sample_changed(SamplecatModel* m, Sample* sample, int prop, void* val, gpointer _app)
+		{
+			samplecat_list_store_on_sample_changed((SamplecatListStore*)((Application*)_app)->store, sample, prop, val);
+		}
+		g_signal_connect((gpointer)app->model, "sample-changed", G_CALLBACK(listmodel__sample_changed), app);
+
+		return (GtkListStore*)samplecat_list_store_new();
+	}
+	app->store = listmodel__new();
+
 	return app;
 }
 
@@ -109,8 +125,9 @@ application_new ()
 void
 application_emit_icon_theme_changed (Application* self, const gchar* s)
 {
-	g_return_if_fail (self != NULL);
-	g_return_if_fail (s != NULL);
+	g_return_if_fail (self);
+	g_return_if_fail (s);
+
 	g_signal_emit_by_name (self, "icon-theme", s);
 }
 
@@ -276,14 +293,13 @@ application_search()
 	if(app->libraryview)
 		listview__block_motion_handler(); // TODO make private to listview.
 
-	listmodel__clear();
+	samplecat_list_store_clear_((SamplecatListStore*)app->store);
 
 	int row_count = 0;
 	unsigned long* lengths;
 	Sample* result;
 	while((result = backend.search_iter_next(&lengths)) && row_count < MAX_DISPLAY_ROWS){
 		Sample* s = sample_dup(result);
-		//listmodel__add_result(s);
 		samplecat_list_store_add((SamplecatListStore*)app->store, s);
 		sample_unref(s);
 		row_count++;
@@ -294,6 +310,20 @@ application_search()
 	((SamplecatListStore*)app->store)->row_count = row_count;
 
 	samplecat_list_store_do_search((SamplecatListStore*)app->store);
+
+	bool select_first(gpointer user_data)
+	{
+		GtkTreeSelection* selection = gtk_tree_view_get_selection((GtkTreeView*)app->libraryview->widget);
+		if(!gtk_tree_selection_count_selected_rows(selection)){
+			GtkTreePath* path;
+			if(gtk_tree_view_get_visible_range((GtkTreeView*)app->libraryview->widget, &path, NULL)){
+				gtk_tree_view_set_cursor((GtkTreeView*)app->libraryview->widget, path, NULL, 0);
+				gtk_tree_path_free(path);
+			}
+		}
+		return G_SOURCE_REMOVE;
+	}
+	g_idle_add(select_first, NULL);
 }
 
 

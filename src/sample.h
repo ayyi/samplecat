@@ -6,7 +6,7 @@
 #include <gtk/gtk.h>
 #include "typedefs.h"
 
-struct _sample
+struct _Sample
 {
 	int                  id;          // database index or -1 for external file.
 	int                  ref_count;

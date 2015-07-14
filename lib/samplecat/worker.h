@@ -9,27 +9,14 @@
 * +----------------------------------------------------------------------+
 *
 */
-#include "config.h"
-#include <stdlib.h>
-#include <stdint.h>
-#include <string.h>
+#ifndef __libsamplecat_worker_h__
+#define __libsamplecat_worker_h__
+
 #include <gtk/gtk.h>
-
-#include "debug/debug.h"
-#ifdef USE_AYYI
-#include "ayyi/ayyi.h"
-#endif
-
 #include "typedefs.h"
-#include "utils/pixmaps.h"
-#include "file_manager/mimetype.h"
-#include "db/db.h"
-#include "support.h"
-#include "model.h"
-#include "application.h"
-#include "sample.h"
-#include "list_store.h"
-#include "listmodel.h"
 
+void    worker_thread_init   ();
+void    worker_register      (Callback);
+void    worker_add_job       (Sample*, SampleCallback work, SampleCallback done, gpointer);
 
-
+#endif

@@ -25,6 +25,7 @@
 #include "debug/debug.h"
 #include "file_manager.h"
 #include "file_manager/menu.h"
+#include "samplecat/worker.h"
 #include "gimp/gimpaction.h"
 #include "gimp/gimpactiongroup.h"
 #include "typedefs.h"
@@ -58,7 +59,6 @@
 #endif
 #include "colour_box.h"
 #include "rotator.h"
-#include "worker.h"
 #include "window.h"
 #ifndef __APPLE__
 #include "icons/samplecat.xpm"

@@ -36,7 +36,7 @@ static void sample_free (Sample*);
 Sample*
 sample_new()
 {
-	Sample* sample = g_new0(struct _sample, 1);
+	Sample* sample = g_new0(Sample, 1);
 	sample->id = -1;
 	sample->colour_index = 0;
 	sample_ref(sample);

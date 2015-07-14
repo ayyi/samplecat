@@ -40,7 +40,7 @@
 #include "waveform/actor.h"
 
 #include "application.h"
-#include "listmodel.h"
+#include "list_store.h"
 #include "rotator.h"
 #if 0
 #define GTK_ROTATOR_PRIORITY_VALIDATE (GDK_PRIORITY_REDRAW + 5)

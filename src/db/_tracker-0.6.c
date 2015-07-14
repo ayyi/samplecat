@@ -20,7 +20,7 @@ This software is licensed under the GPL. See accompanying file COPYING.
 #include "typedefs.h"
 #include "support.h"
 #include "mimetype.h"
-#include "listmodel.h"
+#include "list_store.h"
 #include "src/types.h"
 #include <db/tracker_.h>
 

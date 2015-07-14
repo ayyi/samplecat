@@ -65,6 +65,13 @@ public class Idle
 	}
 }
 
+public struct SampleChange
+{
+	public Sample* sample;
+	public int     prop;
+	public void*   val;
+}
+
 public class Model : GLib.Object
 {
 	public int state = 0;
@@ -75,6 +82,8 @@ public class Model : GLib.Object
 	public Sample* selection;
 
 	private Idle idle;
+	private Idle sample_changed_idle;
+	public GLib.List<SampleChange*> modified;
 	private static char unk[32];
 	private uint selection_change_timeout;
 
@@ -93,6 +102,15 @@ public class Model : GLib.Object
 
 		idle = new Idle(() => {
 			dir_list_changed();
+			return false;
+		});
+
+		sample_changed_idle = new Idle(() => {
+			foreach (SampleChange* change in modified) {
+				sample_changed(change.sample, change.prop, change.val);
+				free(change);
+			};
+			modified = null;
 			return false;
 		});
 	}
@@ -138,6 +156,22 @@ public class Model : GLib.Object
 		selection_change_timeout = 0;
 		selection_changed(selection);
 		return false;
+	}
+
+	private void queue_sample_changed(Sample* sample, int prop, void* val)
+	{
+		foreach (SampleChange* change in modified) {
+			if(change.sample == sample){
+				// when merging multiple change signals it is not possible to specify the change type
+				change.prop = -1;
+				change.val = null;
+				return;
+			}
+		}
+		SampleChange* c = GLib.malloc(sizeof(SampleChange));
+		*c = SampleChange(){sample = sample, prop = prop, val = val};
+		modified.append(c);
+		sample_changed_idle.queue();
 	}
 
 	public void add_filter(Filter* filter)
@@ -240,8 +274,9 @@ public class Model : GLib.Object
 				pwarn("model.update_sample", "unhandled property");
 				break;
 		}
+
 		if(ok){
-			sample_changed(sample, prop, val);
+			queue_sample_changed(sample, prop, val);
 		}else{
 			pwarn("model.update_sample", "database update failed for %s", print_col_name(prop));
 		}
@@ -267,6 +302,7 @@ public class Model : GLib.Object
 			//case Column.NUM_COLS: return "NUM_COLS";
 			case Column.X_EBUR: return "X_EBUR";
 			case Column.X_NOTES: return "X_NOTES";
+			case Column.ALL: return "ALL";
 			default:
 				string a = "UNKNOWN PROPERTY (%u)".printf(prop_type);
 				Posix.memcpy(unk, a, 31);

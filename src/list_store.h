@@ -82,6 +82,33 @@ struct _SamplecatListStoreClass {
 	GtkListStoreClass parent_class;
 };
 
+enum
+{
+   COL_ICON = 0,
+#ifdef USE_AYYI
+   COL_AYYI_ICON,
+#endif
+   COL_IDX,
+   COL_NAME,
+   COL_FNAME,
+   COL_KEYWORDS,
+   COL_OVERVIEW,
+   COL_LENGTH,
+   COL_SAMPLERATE,
+   COL_CHANNELS,
+   COL_MIMETYPE,
+   COL_PEAKLEVEL,
+   //from here on items are the store but not the view.
+   COL_COLOUR,
+   COL_SAMPLEPTR,
+   COL_LEN,
+   NUM_COLS, ///< end of columns in the store
+   // these are NOT in the store but in the sample-struct (COL_SAMPLEPTR)
+   COL_X_EBUR,
+   COL_X_NOTES,
+   COL_ALL
+};
+
 
 gpointer samplecat_filter_ref (gpointer instance);
 void samplecat_filter_unref (gpointer instance);
@@ -103,7 +130,9 @@ void samplecat_model_add_filter (SamplecatModel* self, SamplecatFilter* filter);
 GType samplecat_list_store_get_type (void) G_GNUC_CONST;
 SamplecatListStore* samplecat_list_store_new (void);
 SamplecatListStore* samplecat_list_store_construct (GType object_type);
+void samplecat_list_store_clear_ (SamplecatListStore* self);
 void samplecat_list_store_add (SamplecatListStore* self, Sample* sample);
+void samplecat_list_store_on_sample_changed (SamplecatListStore* self, Sample* sample, gint prop, void* val);
 void samplecat_list_store_do_search (SamplecatListStore* self);
 
 

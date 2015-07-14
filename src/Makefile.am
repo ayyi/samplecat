@@ -87,7 +87,6 @@ samplecat_SOURCES = \
 	model.c model.h \
 	list_store.c list_store.h \
 	window.c window.h \
-	listmodel.c listmodel.h \
 	progress_dialog.c progress_dialog.h \
 	listview.c listview.h \
 	inspector.c inspector.h \
