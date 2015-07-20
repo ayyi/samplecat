@@ -238,7 +238,8 @@ void samplecat_list_store_on_sample_changed (SamplecatListStore* self, Sample* s
 		case COL_X_NOTES:
 			// nothing to do.
 			break;
-		case -1:
+		case COL_ALL:
+		case -1: // deprecated
 			{
 				//char* metadata = sample_get_metadata_str(s);
 
@@ -256,7 +257,7 @@ void samplecat_list_store_on_sample_changed (SamplecatListStore* self, Sample* s
 			}
 			break;
 		default:
-			dbg(0, "property not handled");
+			dbg(0, "property not handled %i", prop);
 			break;
 	}
 }
