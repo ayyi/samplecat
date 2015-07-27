@@ -48,8 +48,11 @@ FFT_ANANALYSERS_SRC = \
 endif
 
 if ENABLE_OPENGL
+if ENABLE_FFTW3
+OPENGL_FFTW_SRC = gl_spectrogram_view.c gl_spectrogram_view.h
+endif
 OPENGL_SRC = \
-	gl_spectrogram_view.c gl_spectrogram_view.h \
+	$(OPENGL_FFTW_SRC) \
 	rotator.c rotator.h
 OPENGL_LDFLAGS = \
 	$(top_srcdir)/lib/waveform/agl/.libs/libagl.a \
