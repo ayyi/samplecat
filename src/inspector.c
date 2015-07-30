@@ -563,7 +563,7 @@ inspector_update(SamplecatModel* m, Sample* sample, gpointer user_data)
 	// - check if file is already in DB -> load sample-info
 	// - check if file is an audio-file -> read basic info directly from file
 	// - else just display the base-name in the inspector..
-	if(sample->id || sample_get_file_info(sample)){
+	if(sample->id > -1 || sample_get_file_info(sample)){
 		inspector_set_labels(sample);
 	} else {
 		inspector_clear();
