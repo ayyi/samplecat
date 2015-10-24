@@ -41,14 +41,12 @@
 #include "player_control.h"
 #ifdef USE_OPENGL
 #include <GL/gl.h>
+#include "agl/actor.h"
 #ifdef USE_LIBASS
 #include "waveform/view_plus.h"
 #else
 #include "waveform/view.h"
 #endif
-#include "agl/actor.h"
-#include "waveform/actors/text.h"
-#include "waveform/actors/spp.h"
 #endif
 #ifdef HAVE_FFTW3
 #ifdef USE_OPENGL
@@ -122,6 +120,9 @@ struct _window {
 #ifndef USE_GDL
    GtkWidget*     vpaned;        //vertical divider on lhs between the dir_tree and inspector
 #endif
+   struct {
+      AGlActor*   spp;
+   }              layers;
 
 } window;
 
@@ -677,7 +678,7 @@ window_on_configure(GtkWidget* widget, GdkEventConfigure* event, gpointer user_d
 			if(gdl_dock_layout_load_layout (window.layout, "__default__")){
 				if(_debug_) gdl_dock_print_recursive((GdlDockMaster*)((GdlDockObject*)window.dock)->master);
 			}else{
-				gwarn("load failed");
+				gwarn("load layout failed");
 			}
 
 			return TIMER_STOP;
@@ -754,7 +755,9 @@ make_fileview_pane()
 		g_signal_connect(G_OBJECT(file_view), "drag_data_get", G_CALLBACK(view_details_dnd_get), NULL);
 	}
 
-	const char* dir = (app->config.browse_dir && app->config.browse_dir[0] && g_file_test(app->config.browse_dir, G_FILE_TEST_IS_DIR)) ? app->config.browse_dir : g_get_home_dir();
+	const char* dir = (app->config.browse_dir && app->config.browse_dir[0] && g_file_test(app->config.browse_dir, G_FILE_TEST_IS_DIR))
+		? app->config.browse_dir
+		: g_get_home_dir();
 	fman_left(dir);
 	fman_right(dir);
 
@@ -1322,6 +1325,9 @@ waveform_panel_new()
 	AGlActor* text_layer = waveform_view_plus_add_layer(view, text_actor(NULL), 3);
 	text_actor_set_colour((TextActor*)text_layer, 0x000000bb, 0xffffffbb);
 
+	window.layers.spp = waveform_view_plus_add_layer(view, spp_actor(waveform_view_plus_get_actor(view)), 0);
+
+	//waveform_view_plus_add_layer(view, grid_actor(waveform_view_plus_get_actor(view)), 0);
 #if 0
 	waveform_view_plus_set_show_grid(view, true);
 #endif
@@ -1406,14 +1412,11 @@ show_waveform(gboolean enable)
 
 	void waveform_on_position(GObject* _app, gpointer _)
 	{
-		WaveformViewPlus* view = (WaveformViewPlus*)window.waveform;
-
 		g_return_if_fail(app->play.sample);
 		if(!((WaveformViewPlus*)window.waveform)->waveform) return;
 
-		AGlActor* spp = waveform_view_plus_get_layer(view, 5);
-		if(spp){
-			spp_actor_set_time((SppActor*)spp, waveform_is_playing() ? app->play.position : UINT32_MAX);
+		if(window.layers.spp){
+			spp_actor_set_time((SppActor*)window.layers.spp, waveform_is_playing() ? app->play.position : UINT32_MAX);
 		}
 	}
 
