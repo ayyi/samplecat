@@ -340,6 +340,8 @@ struct _RotatorPrivate
 
 	GdkGLDrawable*  gl_drawable;
 	GdkGLContext*   gl_context;
+
+	AGlScene*       scene;
 #if 0
   guint flags;
   /* tree information */
@@ -14485,7 +14487,8 @@ dbg(0, "%p drawable=%p", _canvas, _r->gl_drawable);
 
 	gl_initialised = true;
 
-	wfc = wf_canvas_new((AGlRootActor*)agl_actor__new_root(_canvas));
+	wfc = wf_canvas_new(_r->scene = (AGlScene*)agl_actor__new_root(_canvas));
+	_r->scene->user_data = _canvas;
 
 	canvas_init_done = true;
 
@@ -14522,12 +14525,11 @@ dbg(0, "%p drawable=%p", _canvas, _r->gl_drawable);
 	on_allocate(_canvas, &_canvas->allocation, user_data);
 
 	//allow the WaveformCanvas to initiate redraws
-	void _on_wf_canvas_requests_redraw(WaveformCanvas* wfc, gpointer __canvas)
+	void _on_scene_requests_redraw(AGlScene* wfc, gpointer __canvas)
 	{
 		gdk_window_invalidate_rect(((GtkWidget*)__canvas)->window, NULL, false);
 	}
-	wfc->draw = _on_wf_canvas_requests_redraw;
-	wfc->draw_data = _canvas;
+	_r->scene->draw = _on_scene_requests_redraw;
 }
 
 
