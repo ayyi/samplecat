@@ -71,6 +71,7 @@ void         colour_get_style_text     (GdkColor*, int state);
 gchar*       gdkcolor_get_hexstring    (GdkColor*);
 void         hexstring_from_gdkcolor   (char* hexstring, GdkColor*);
 void         color_rgba_to_gdk         (GdkColor*, uint32_t rgba);
+uint32_t     color_gdk_to_rgba         (GdkColor*);
 gboolean     colour_lighter            (GdkColor* lighter, GdkColor*);
 gboolean     colour_darker             (GdkColor* lighter, GdkColor*);
 gboolean     is_black                  (GdkColor*);

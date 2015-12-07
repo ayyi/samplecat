@@ -1097,6 +1097,8 @@ delete_selected_rows()
 	if(!selectionlist){ perr("no files selected?\n"); return; }
 	dbg(1, "%i rows selected.", g_list_length(selectionlist));
 
+	statusbar_print(1, "deleting %i files...", g_list_length(selectionlist));
+
 	GList* selected_row_refs = NULL;
 
 	//get row refs for each selected row before the list is modified:
@@ -1133,7 +1135,7 @@ delete_selected_rows()
 	}
 	g_list_free(selected_row_refs); //FIXME free the row_refs?
 
-	statusbar_print(1, "%i rows deleted", n);
+	statusbar_print(1, "%i files deleted", n);
 }
 
 
@@ -1325,7 +1327,7 @@ waveform_panel_new()
 	AGlActor* text_layer = waveform_view_plus_add_layer(view, text_actor(NULL), 3);
 	text_actor_set_colour((TextActor*)text_layer, 0x000000bb, 0xffffffbb);
 
-	window.layers.spp = waveform_view_plus_add_layer(view, spp_actor(waveform_view_plus_get_actor(view)), 0);
+	window.layers.spp = waveform_view_plus_add_layer(view, wf_spp_actor(waveform_view_plus_get_actor(view)), 0);
 
 	//waveform_view_plus_add_layer(view, grid_actor(waveform_view_plus_get_actor(view)), 0);
 #if 0
@@ -1416,7 +1418,7 @@ show_waveform(gboolean enable)
 		if(!((WaveformViewPlus*)window.waveform)->waveform) return;
 
 		if(window.layers.spp){
-			spp_actor_set_time((SppActor*)window.layers.spp, waveform_is_playing() ? app->play.position : UINT32_MAX);
+			wf_spp_actor_set_time((SppActor*)window.layers.spp, waveform_is_playing() ? app->play.position : UINT32_MAX);
 		}
 	}
 
@@ -1427,14 +1429,10 @@ show_waveform(gboolean enable)
 
 	void waveform_on_stop(GObject* _app, gpointer _)
 	{
-#if 0
-		waveform_view_plus_set_time((WaveformViewPlus*)window.waveform, UINT32_MAX);
-#else
 		AGlActor* spp = waveform_view_plus_get_layer((WaveformViewPlus*)window.waveform, 5);
 		if(spp){
-			spp_actor_set_time((SppActor*)spp, UINT32_MAX);
+			wf_spp_actor_set_time((SppActor*)spp, UINT32_MAX);
 		}
-#endif
 	}
 #endif
 

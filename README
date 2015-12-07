@@ -44,4 +44,5 @@ usage
 * auditioning is started by clicking in the waveform view. Jack ports are not created until auditioning is started for the first time.
 * import files into your audio editor using dragndrop.
 * apply colour coding by dragging from the colour bar. Right click on the colour bar to change the colour palette.
+* middle-click on a waveform to set the cursor position.
 

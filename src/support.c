@@ -173,6 +173,13 @@ color_rgba_to_gdk(GdkColor* colour, uint32_t rgba)
 #endif
 
 
+uint32_t
+color_gdk_to_rgba(GdkColor* color)
+{
+	return ((color->red / 0x100) << 24) + ((color->green / 0x100) << 16) + ((color->blue / 0x100) << 8) + 0xff;
+}
+
+
 gboolean
 colour_lighter(GdkColor* lighter, GdkColor* colour)
 {

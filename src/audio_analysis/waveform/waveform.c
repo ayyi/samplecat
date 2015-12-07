@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2014 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2015 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -18,6 +18,7 @@
 #include <gtk/gtk.h>
 #include <gdk-pixbuf/gdk-pixdata.h>
 #include <cairo.h>
+#include "waveform/waveform.h"
 
 #include "debug/debug.h"
 #include "typedefs.h"
@@ -57,6 +58,16 @@ make_overview(Sample* sample)
 	void* sf = ad_open(sample->full_path, &nfo);
 	if (!sf) return NULL;
 	dbg(1, "NEW OVERVIEW");
+
+	if(!strcmp(sample->mimetype, "audio/mp4")){
+		// Using libwaveform for thumbnail generation is the way to go.
+		// It is being tested for mp4 files as AAC is broken in the older path.
+		GdkPixbuf* pixbuf = gdk_pixbuf_new(GDK_COLORSPACE_RGB, HAS_ALPHA_FALSE, BITS_PER_CHAR_8, OVERVIEW_WIDTH, OVERVIEW_HEIGHT);
+		Waveform* waveform = waveform_load_new(sample->full_path);
+		waveform_peak_to_pixbuf(waveform, pixbuf, NULL, color_gdk_to_rgba(&app->text_colour), color_gdk_to_rgba(&app->base_colour), true);
+		g_object_unref(waveform);
+		return sample->overview = pixbuf;
+	}
 
 	GdkPixbuf* pixbuf = gdk_pixbuf_new(GDK_COLORSPACE_RGB, HAS_ALPHA_TRUE, BITS_PER_CHAR_8, OVERVIEW_WIDTH, OVERVIEW_HEIGHT);
 	pixbuf_clear(pixbuf, &app->bg_colour);
