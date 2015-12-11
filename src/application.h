@@ -72,6 +72,7 @@ struct _Application
    gboolean             link_speed_pitch;
 #endif
    gboolean             no_gui;
+   gboolean             temp_view;
    struct _args {
       char*             search;
       char*             add;

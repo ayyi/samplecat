@@ -185,7 +185,7 @@ void samplecat_list_store_add (SamplecatListStore* self, Sample* sample) {
 
 	Sample* _tmp13_;
 	g_return_if_fail (self != NULL);
-	if(sample->row_ref){
+	if(sample->row_ref && sample->online){
 		request_analysis(sample);
 	}
 

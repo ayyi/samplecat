@@ -1,5 +1,17 @@
+20151211
+-added 'cwd' option showing the audio contents of the current directory
+
+20151210
+-removed video files from the unsupported filetype list.
+
+20151207
+-improved support for AAC thumbnails.
+
 20150417
-Incremented version number to 0.2.5
+-incremented version number to 0.2.5
+
+20150730
+-fix missing Inspector information when in filesystem view.
 
 20150406
 inspector: fixed table cell references not being updated.

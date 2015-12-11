@@ -100,10 +100,10 @@ static const struct option long_options[] = {
   { "version",          0, NULL, 'V' },
 };
 
-static const char* const short_options = "b:gv:s:a:p:hV";
+static const char* const short_options = "b:gv:s:a:p:chV";
 
 static const char* const usage =
-	"Usage: %s [OPTION]\n\n"
+	"Usage: %s [OPTIONS]\n\n"
 	"SampleCat is a program for cataloguing and auditioning audio samples.\n" 
 	"\n"
 	"Options:\n"
@@ -113,6 +113,7 @@ static const char* const usage =
 	"  -h, --help             show this usage information and quit.\n"
 	"  -p, --player <name>    select audio player.\n"
 	"  -s, --search <txt>     search using this phrase.\n"
+	"  -c, --cwd              show contents of current directory (temporary view, state not saved).\n"
 	"  -v, --verbose <level>  show more information.\n"
 	"  -V, --version          print version and exit.\n"
 	"\n"
@@ -130,7 +131,8 @@ static const char* const usage =
 	"\n"
 	"Files:\n"
 	"  samplecat stores configuration and caches data in\n"
-	"  $HOME/.config/samplecat/\n"
+	"    $HOME/.config/samplecat/\n"
+	"    $HOME/.cache/peak/\n"
 	"\n"
 	"Report bugs to <tim@orford.org>.\n"
 	"Website and manual: <http://ayyi.github.io/samplecat/>\n"
@@ -242,6 +244,9 @@ main(int argc, char** argv)
 			case 's':
 				printf("search: %s\n", optarg);
 				app->args.search = g_strdup(optarg);
+				break;
+			case 'c':
+				app->temp_view = true;
 				break;
 			case 'a':
 				dbg(1, "add=%s", optarg);
@@ -358,6 +363,12 @@ main(int argc, char** argv)
 			application_add_file(app->args.add, &results);
 		}
 		hide_progress();
+	}
+
+	if(app->temp_view){
+		gchar* dir = g_get_current_dir();
+		g_strlcpy(app->config.browse_dir, dir, PATH_MAX);
+		g_free(dir);
 	}
 
 #ifndef DEBUG_NO_THREADS
@@ -651,7 +662,7 @@ on_quit(GtkMenuItem* menuitem, gpointer user_data)
 	int exit_code = GPOINTER_TO_INT(user_data);
 	if(exit_code > 1) exit_code = 0; //ignore invalid exit code.
 
-	if(app->loaded) config_save();
+	if(app->loaded && !app->temp_view) config_save();
 
 	app->auditioner->stop();
 	app->auditioner->disconnect();

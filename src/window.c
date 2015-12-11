@@ -512,7 +512,7 @@ GtkWindow
 		if(0 && row_count < MAX_DISPLAY_ROWS){
 			statusbar_print(1, "%i samples found.", row_count);
 		}else if(!row_count){
-			statusbar_print(1, "no samples found. filters: dir=%s", app->model->filters.dir->value);
+			statusbar_print(1, "no samples found.");
 		}else if (n_results < 0) {
 			statusbar_print(1, "showing %i sample(s)", row_count);
 		}else{
@@ -675,8 +675,38 @@ window_on_configure(GtkWidget* widget, GdkEventConfigure* event, gpointer user_d
 		{
 			PF;
 
-			if(gdl_dock_layout_load_layout (window.layout, "__default__")){
+			if(gdl_dock_layout_load_layout (window.layout, app->temp_view ? "File Manager" : "__default__")){
 				if(_debug_) gdl_dock_print_recursive((GdlDockMaster*)((GdlDockObject*)window.dock)->master);
+
+				void select_first_audio()
+				{
+					bool done = false;
+					DirItem* item;
+					ViewIter iter;
+					Filer* filer = file_manager__get();
+					view_get_iter(filer->view, &iter, 0);
+					while(!done && (item = iter.next(&iter))){
+						MIME_type* mime_type = item->mime_type;
+						if(mime_type){
+							char* mime_string = g_strdup_printf("%s/%s", mime_type->media_type, mime_type->subtype);
+							if(!mimetype_is_unsupported(item->mime_type, mime_string)){
+								gtk_widget_grab_focus(app->fm_view);
+								view_cursor_to_iter((ViewIface*)app->fm_view, &iter);
+								done = true;
+							}
+							g_free(mime_string);
+						}
+					}
+				}
+
+				bool check_ready(gpointer user_data)
+				{
+					return file_manager__get()->directory->have_scanned
+						? (select_first_audio(), G_SOURCE_REMOVE)
+						: TIMER_CONTINUE;
+				}
+
+				if(app->temp_view) g_timeout_add(100, check_ready, NULL);
 			}else{
 				gwarn("load layout failed");
 			}
