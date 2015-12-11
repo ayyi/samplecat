@@ -963,29 +963,16 @@ void samplecat_model_refresh_sample (SamplecatModel* self, Sample* sample, gbool
 
 gboolean samplecat_model_update_sample (SamplecatModel* self, Sample* sample, gint prop, void* val) {
 	gboolean result = FALSE;
-	gboolean ok;
-	gint _tmp0_;
 	gboolean _tmp105_;
 	g_return_val_if_fail (self != NULL, FALSE);
-	ok = FALSE;
-	_tmp0_ = prop;
-	switch (_tmp0_) {
+	gboolean ok = FALSE;
+	switch (prop) {
 		case COL_ICON:
 		{
-			gint _tmp1_ = 0;
-			Sample* _tmp4_;
 			gint _tmp5_;
-			gint _tmp6_;
 			gboolean _tmp7_ = FALSE;
-			if (sample->online) {
-				_tmp1_ = 1;
-			} else {
-				_tmp1_ = 0;
-			}
-			_tmp4_ = sample;
-			_tmp5_ = _tmp4_->id;
-			_tmp6_ = _tmp1_;
-			_tmp7_ = backend.update_int (_tmp5_, "online", (guint) _tmp6_);
+			_tmp5_ = sample->id;
+			_tmp7_ = backend.update_int (_tmp5_, "online", (guint) sample->online ? 1 : 0);
 			if (_tmp7_) {
 				Sample* _tmp8_;
 				gint _tmp9_;
@@ -1028,33 +1015,10 @@ gboolean samplecat_model_update_sample (SamplecatModel* self, Sample* sample, gi
 		}
 		case COL_OVERVIEW:
 		{
-			Sample* _tmp21_;
-			GdkPixbuf* _tmp22_;
-			_tmp21_ = sample;
-			_tmp22_ = _tmp21_->overview;
-			if ((gboolean) _tmp22_) {
+			if (sample->overview) {
 				guint len = 0U;
-				Sample* _tmp23_;
-				GdkPixbuf* _tmp24_;
-				guint _tmp25_ = 0U;
-				guint8* _tmp26_ = NULL;
-				guint8* blob;
-				Sample* _tmp27_;
-				gint _tmp28_;
-				guint8* _tmp29_;
-				guint _tmp30_;
-				gboolean _tmp31_ = FALSE;
-				_tmp23_ = sample;
-				_tmp24_ = _tmp23_->overview;
-				_tmp26_ = pixbuf_to_blob (_tmp24_, &_tmp25_);
-				len = _tmp25_;
-				blob = _tmp26_;
-				_tmp27_ = sample;
-				_tmp28_ = _tmp27_->id;
-				_tmp29_ = blob;
-				_tmp30_ = len;
-				_tmp31_ = backend.update_blob (_tmp28_, "pixbuf", _tmp29_, _tmp30_);
-				ok = _tmp31_;
+				guint8* blob = pixbuf_to_blob (sample->overview, &len);
+				ok = backend.update_blob (sample->id, "pixbuf", blob, len);
 			}
 			break;
 		}
@@ -1146,9 +1110,6 @@ gboolean samplecat_model_update_sample (SamplecatModel* self, Sample* sample, gi
 		case COL_ALL:
 		case -1: // deprecated
 		{
-			Sample* _tmp59_;
-			gchar* _tmp60_ = NULL;
-			gchar* metadata;
 			gboolean _tmp61_;
 			Sample* _tmp62_;
 			gint _tmp63_;
@@ -1187,9 +1148,7 @@ gboolean samplecat_model_update_sample (SamplecatModel* self, Sample* sample, gi
 			Sample* _tmp98_;
 			gboolean _tmp101_ = FALSE;
 			gchar* _tmp102_;
-			_tmp59_ = sample;
-			_tmp60_ = sample_get_metadata_str (_tmp59_);
-			metadata = _tmp60_;
+			gchar* metadata = sample_get_metadata_str (sample);
 			ok = TRUE;
 			_tmp61_ = ok;
 			_tmp62_ = sample;
@@ -1231,6 +1190,11 @@ gboolean samplecat_model_update_sample (SamplecatModel* self, Sample* sample, gi
 			_tmp94_ = sample;
 			_tmp96_ = backend.update_int (_tmp92_->id, "bit_depth", (guint) _tmp94_->bit_depth);
 			ok = _tmp91_ & _tmp96_;
+			if (sample->overview) {
+				guint len = 0U;
+				guint8* blob = pixbuf_to_blob (sample->overview, &len);
+				ok = backend.update_blob (sample->id, "pixbuf", blob, len);
+			}
 			_tmp97_ = ok;
 			_tmp98_ = sample;
 			_tmp101_ = backend.update_string (_tmp98_->id, "meta_data", metadata);
