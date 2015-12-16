@@ -982,7 +982,7 @@ struct find_filename {
 static bool
 filter_id (GtkTreeModel* model, GtkTreePath* path, GtkTreeIter* iter, gpointer data) {
 	struct find_filename* ff = (struct find_filename*) data;
-	Sample* s = sample_get_by_tree_iter(iter);
+	Sample* s = samplecat_list_store_get_sample_by_iter(iter);
 	if (s->id == ff->id) {
 		ff->rv = strdup(s->full_path);
 		sample_unref(s);

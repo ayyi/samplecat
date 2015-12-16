@@ -18,8 +18,8 @@
 #include <gtk/gtk.h>
 #include <gdk-pixbuf/gdk-pixdata.h>
 #include <mysql/errmsg.h>
-#include "typedefs.h"
 #include "debug/debug.h"
+#include "samplecat.h"
 #include "model.h"
 #include "sample.h"
 #include "db/db.h"
@@ -54,8 +54,7 @@ MYSQL mysql = {{NULL}, NULL, NULL};
 
 static SamplecatBackend* db = NULL;
 static gboolean is_connected = FALSE;
-static SamplecatModel* model = NULL;
-static DbConfig* config = NULL;
+static SamplecatDBConfig* config = NULL;
 static MYSQL_RES *dir_iter_result = NULL;
 static MYSQL_RES *search_result = NULL;
 static Sample result;
@@ -118,9 +117,8 @@ static const struct ColumnDefinitions sct[] = {
 #define COLCOUNT (21)
 
 void
-mysql__init(SamplecatModel* _model, void* _config)
+mysql__init(void* _config)
 {
-	model = _model;
 	config = _config;
 }
 
@@ -157,7 +155,7 @@ mysql__set_as_backend(SamplecatBackend* backend)
 gboolean
 mysql__connect()
 {
-	g_return_val_if_fail(model, false);
+	g_return_val_if_fail(samplecat.model, false);
 
 	if(!mysql.host){
 		if(!mysql_init(&mysql)){
@@ -219,12 +217,12 @@ mysql__connect()
 
 	if (!table_exists) {
 		/* CREATE Table */
-		int off=0; int i;
+		int off =0; int i;
 		sql = g_malloc(4096 * sizeof(char)); // XXX current length is 643 chars
-		off=sprintf(sql, "CREATE TABLE `samples` (");
+		off = sprintf(sql, "CREATE TABLE `samples` (");
 		for (i=0;i<COLCOUNT;i++)
 			off += sprintf(sql + off, "%s, ", sct[i].def);
-		sprintf(sql+off, "PRIMARY KEY  (`id`));");
+		sprintf(sql + off, "PRIMARY KEY  (`id`));");
 		dbg(0, "%d: %s", off, sql);
 
 		if (mysql_real_query(&mysql, sql, strlen(sql))) {
@@ -461,14 +459,14 @@ mysql__search_iter_new(char* dir, const char* category, int* n_results)
 {
 	//return TRUE on success.
 
-	g_return_val_if_fail(model, false);
+	g_return_val_if_fail(samplecat.model, false);
 
 	gboolean ok = true;
 
 	if(search_result) gwarn("previous query not free'd?");
 
 	GString* q = g_string_new("SELECT * FROM samples WHERE 1 ");
-	const char* search = model->filters.search->value;
+	const char* search = samplecat.model->filters.search->value;
 	if(search && strlen(search)) {
 #if 0
 		g_string_append_printf(q, "AND (filename LIKE '%%%s%%' OR filedir LIKE '%%%s%%' OR keywords LIKE '%%%s%%') ", search, search, search);
@@ -480,7 +478,7 @@ mysql__search_iter_new(char* dir, const char* category, int* n_results)
 		while ((tok = strtok(s, " _")) != 0) {
 			MYSQL_ESCAPE(esc, tok);
 			gchar* tmp = g_strdup_printf("%s %s (filename LIKE '%%%s%%' OR filedir LIKE '%%%s%%' OR keywords LIKE '%%%s%%') ",
-					where?where:"", where?"AND":"",
+					where ? where : "", where ? "AND" : "",
 					esc, esc, esc);
 			free(esc);
 			if (where) g_free(where);
@@ -503,7 +501,7 @@ mysql__search_iter_new(char* dir, const char* category, int* n_results)
 #endif
 		free(esc);
 	}
-	if(model->filters.category->value) {
+	if(samplecat.model->filters.category->value) {
 		MYSQL_ESCAPE(esc, category);
 		g_string_append_printf(q, "AND keywords LIKE '%%%s%%' ", esc);
 		free(esc);

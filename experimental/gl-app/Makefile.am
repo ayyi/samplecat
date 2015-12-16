@@ -1,5 +1,5 @@
 
-bin_PROGRAMS = samplecat_webkit
+bin_PROGRAMS = samplecat_gl
 
 AUDIOANALYSERS_SRC = \
 	$(FFT_ANANALYSERS_SRC) \
@@ -15,13 +15,14 @@ AD_SRC = ../../src/audio_decoder/ad.h \
 	../../src/audio_decoder/ad_ffmpeg.c \
 	../../src/audio_decoder/ffcompat.h
 
-samplecat_webkit_SOURCES = \
-	webkit.c \
-	util.c util.h \
-	table.c table.h \
+samplecat_gl_SOURCES = \
+	samplecat_gl.c \
+	glx.c glx.h \
+	views/list.c views/list.h \
+	keys.h \
+	$(top_srcdir)/src/icon_theme.c $(top_srcdir)/src/icon_theme.h \
 	$(top_srcdir)/src/model.c $(top_srcdir)/src/model.h \
 	$(top_srcdir)/src/list_store.c $(top_srcdir)/src/list_store.h \
-	$(top_srcdir)/src/icon_theme.c $(top_srcdir)/src/icon_theme.h \
 	$(top_srcdir)/src/worker.c $(top_srcdir)/src/worker.h \
 	$(AUDIOANALYSERS_SRC) \
 	$(AD_SRC)
@@ -36,23 +37,22 @@ AM_CFLAGS = \
 	-I$(top_srcdir)/xdgmime \
 	-I$(top_srcdir) \
 	-I$(top_srcdir)/src \
+	-I$(top_srcdir)/experimental \
 	-I./gimp \
 	$(SAMPLECAT_CFLAGS) \
 	$(FFTW3_CFLAGS) \
 	$(OPENGL_CFLAGS) \
-	$(GMODULE_LIBS) \
 	$(JACK_CFLAGS) \
 	$(SAMPLERATE_CFLAGS) \
 	$(SNDFILE_CFLAGS) \
 	$(FFMPEG_CFLAGS) \
 	$(ZLIB_CFLAGS) \
 	$(GTK_CFLAGS) \
-	$(MYSQL_CFLAGS) \
-	$(WEBKIT_CFLAGS)
+	$(MYSQL_CFLAGS)
 
 AM_CXXFLAGS = $(AM_CFLAGS)
 
-samplecat_webkit_LDADD = \
+samplecat_gl_LDADD = \
 	$(top_srcdir)/lib/utils/libutils.a \
 	$(top_srcdir)/lib/dir_tree/libdirtree.a \
 	$(top_srcdir)/lib/samplecat/libsamplecat.a \
@@ -74,6 +74,5 @@ samplecat_webkit_LDADD = \
 	$(FFTW3_LIBS) \
 	$(OPENGL_LIBS) \
 	$(ZLIB_LIBS) \
-	$(FFMPEG_LIBS) \
-	$(WEBKIT_LIBS)
+	$(FFMPEG_LIBS)
 

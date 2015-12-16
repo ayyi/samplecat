@@ -18,6 +18,7 @@
 #include "application.h"
 #include "support.h"
 #include "sample.h"
+#include "listview.h"
 #include "console_view.h"
 
 static void console__show_result_footer (int);
@@ -31,13 +32,13 @@ void console__init()
 	void store_row_inserted(GtkListStore* store, GtkTreePath* path, GtkTreeIter* iter, gpointer user_data)
 	{
 		PF0;
-		Sample* sample = sample_get_by_tree_iter(iter);
+		Sample* sample = samplecat_list_store_get_sample_by_iter(iter);
 		if(sample){
 			console__show_result(sample);
 			sample_unref(sample);
 		}
 	}
-	g_signal_connect(G_OBJECT(app->store), "row-inserted", G_CALLBACK(store_row_inserted), NULL);
+	g_signal_connect(G_OBJECT(samplecat.store), "row-inserted", G_CALLBACK(store_row_inserted), NULL);
 #endif
 
 	void store_content_changed(GtkListStore* store, gpointer data)
@@ -48,7 +49,7 @@ void console__init()
 		int row_count = 0;
 		do {
 			if(++row_count < 100){
-				Sample* sample = sample_get_by_tree_iter(&iter);
+				Sample* sample = samplecat_list_store_get_sample_by_iter(&iter);
 				if(sample){
 					console__show_result(sample);
 					sample_unref(sample);
@@ -60,14 +61,14 @@ void console__init()
 	}
 
 	if(!app->args.add)
-		g_signal_connect(G_OBJECT(app->store), "content-changed", G_CALLBACK(store_content_changed), NULL);
+		g_signal_connect(G_OBJECT(samplecat.store), "content-changed", G_CALLBACK(store_content_changed), NULL);
 }
 
 
 void
 console__show_result_header()
 {
-	printf("filters: text='%s' dir=%s\n", app->model->filters.search->value, strlen(app->model->filters.dir->value) ? app->model->filters.dir->value : "<all directories>");
+	printf("filters: text='%s' dir=%s\n", samplecat.model->filters.search->value, strlen(samplecat.model->filters.dir->value) ? samplecat.model->filters.dir->value : "<all directories>");
 
 	printf("  name                 directory                            length ch rate mimetype\n");
 }

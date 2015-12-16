@@ -19,7 +19,7 @@
 #include <glib.h>
 #include "debug/debug.h"
 #include "typedefs.h"
-#include "src/sample.h"
+#include "samplecat/sample.h"
 
 typedef struct
 {

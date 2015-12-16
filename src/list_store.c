@@ -18,12 +18,13 @@
 #include <float.h>
 #include <math.h>
 #include <file_manager/mimetype.h>
+#include <db/db.h>
 #include <sample.h>
 #include <debug/debug.h>
 #include <support.h>
 #include <application.h>
 #include <model.h>
-#include <worker.h>
+#include <src/worker.h>
 #include <list_store.h>
 
 
@@ -113,7 +114,7 @@ void samplecat_list_store_clear_ (SamplecatListStore* self) {
 
 void samplecat_list_store_add (SamplecatListStore* self, Sample* sample) {
 
-	if(!app->store) return;
+	if(!samplecat.store) return;
 	g_return_if_fail(sample);
 
 #if 1
@@ -156,8 +157,8 @@ void samplecat_list_store_add (SamplecatListStore* self, Sample* sample) {
 	GdkPixbuf* iconbuf = sample->online ? get_iconbuf_from_mimetype(sample->mimetype) : NULL;
 
 	GtkTreeIter iter;
-	gtk_list_store_append(app->store, &iter);
-	gtk_list_store_set(app->store, &iter,
+	gtk_list_store_append(samplecat.store, &iter);
+	gtk_list_store_set(samplecat.store, &iter,
 			COL_ICON,       iconbuf,
 			COL_NAME,       sample->name,
 			COL_FNAME,      sample->sample_dir,
@@ -178,8 +179,8 @@ void samplecat_list_store_add (SamplecatListStore* self, Sample* sample) {
 			-1);
 
 	GtkTreePath* treepath;
-	if((treepath = gtk_tree_model_get_path(GTK_TREE_MODEL(app->store), &iter))){
-		sample->row_ref = gtk_tree_row_reference_new(GTK_TREE_MODEL(app->store), treepath);
+	if((treepath = gtk_tree_model_get_path(GTK_TREE_MODEL(samplecat.store), &iter))){
+		sample->row_ref = gtk_tree_row_reference_new(GTK_TREE_MODEL(samplecat.store), treepath);
 		gtk_tree_path_free(treepath);
 	}
 
@@ -201,7 +202,7 @@ void samplecat_list_store_on_sample_changed (SamplecatListStore* self, Sample* s
 	GtkTreePath* path = gtk_tree_row_reference_get_path(sample->row_ref);
 	if(!path) return;
 	GtkTreeIter iter;
-	gtk_tree_model_get_iter(GTK_TREE_MODEL(app->store), &iter, path);
+	gtk_tree_model_get_iter(GTK_TREE_MODEL(samplecat.store), &iter, path);
 	gtk_tree_path_free(path);
 
 
@@ -216,23 +217,23 @@ void samplecat_list_store_on_sample_changed (SamplecatListStore* self, Sample* s
 					if (!mime_type->image) dbg(0, "no icon.");
 					iconbuf = mime_type->image->sm_pixbuf;
 				}
-				gtk_list_store_set(app->store, &iter, COL_ICON, iconbuf, -1);
+				gtk_list_store_set(samplecat.store, &iter, COL_ICON, iconbuf, -1);
 			}
 			break;
 		case COL_KEYWORDS:
-			gtk_list_store_set(app->store, &iter, COL_KEYWORDS, (char*)val, -1);
+			gtk_list_store_set(samplecat.store, &iter, COL_KEYWORDS, (char*)val, -1);
 			break;
 		case COL_OVERVIEW:
 			gtk_list_store_set((GtkListStore*)self, &iter, COL_OVERVIEW, sample->overview, -1);
 			break;
 		case COL_COLOUR:
-			gtk_list_store_set(app->store, &iter, prop, *((guint*)val), -1);
+			gtk_list_store_set(samplecat.store, &iter, prop, *((guint*)val), -1);
 			break;
 		case COL_PEAKLEVEL:
 			gtk_list_store_set((GtkListStore*)self, &iter, COL_PEAKLEVEL, sample->peaklevel, -1);
 			break;
 		case COL_FNAME:
-			gtk_list_store_set(app->store, &iter, COL_FNAME, sample->sample_dir, -1);
+			gtk_list_store_set(samplecat.store, &iter, COL_FNAME, sample->sample_dir, -1);
 			break;
 		case COL_X_EBUR:
 		case COL_X_NOTES:
@@ -245,7 +246,7 @@ void samplecat_list_store_on_sample_changed (SamplecatListStore* self, Sample* s
 
 				char samplerate_s[32]; samplerate_format(samplerate_s, sample->sample_rate);
 				char length_s[64]; format_smpte(length_s, sample->length);
-				gtk_list_store_set((GtkListStore*)app->store, &iter, 
+				gtk_list_store_set((GtkListStore*)samplecat.store, &iter,
 						COL_CHANNELS, sample->channels,
 						COL_SAMPLERATE, samplerate_s,
 						COL_LENGTH, length_s,
@@ -264,7 +265,28 @@ void samplecat_list_store_on_sample_changed (SamplecatListStore* self, Sample* s
 
 
 void samplecat_list_store_do_search (SamplecatListStore* self) {
-	g_return_if_fail (self != NULL);
+	g_return_if_fail (self);
+
+	samplecat_list_store_clear_(self);
+
+	if(!backend.search_iter_new(samplecat.model->filters.dir->value, samplecat.model->filters.category->value, NULL)) {
+		return;
+	}
+
+	int row_count = 0;
+	unsigned long* lengths;
+	Sample* result;
+	while((result = backend.search_iter_next(&lengths)) && row_count < MAX_DISPLAY_ROWS){
+		Sample* s = sample_dup(result);
+		samplecat_list_store_add(self, s);
+		sample_unref(s);
+		row_count++;
+	}
+
+	backend.search_iter_free();
+
+	((SamplecatListStore*)samplecat.store)->row_count = row_count;
+
 	g_signal_emit_by_name (self, "content-changed");
 }
 
@@ -300,5 +322,52 @@ GType samplecat_list_store_get_type (void) {
 	return samplecat_list_store_type_id__volatile;
 }
 
+
+
+/** samplecat_list_store_get_sample_by_iter returns a pointer to
+ * the sample struct in the data model or NULL if not found.
+ * @return needs to be sample_unref();
+ */
+Sample*
+samplecat_list_store_get_sample_by_iter(GtkTreeIter* iter)
+{
+	Sample* sample;
+	gtk_tree_model_get(GTK_TREE_MODEL(samplecat.store), iter, COL_SAMPLEPTR, &sample, -1);
+	if(sample) sample_ref(sample);
+	return sample;
+}
+
+
+/**
+ * @return needs to be sample_unref();
+ */
+Sample*
+samplecat_list_store_get_sample_by_row_index (int row)
+{
+	GtkTreePath* path = gtk_tree_path_new_from_indices (row, -1);
+	if(path){
+		Sample* sample = sample_get_from_model(path);
+		gtk_tree_path_free(path);
+		return sample;
+	}
+
+	return NULL;
+}
+
+
+/** samplecat_list_store_get_sample_by_row_ref returns a pointer to
+ * the sample struct in the data model or NULL if not found.
+ * @return needs to be sample_unref();
+ */
+Sample*
+samplecat_list_store_get_sample_by_row_ref(GtkTreeRowReference* ref)
+{
+	GtkTreePath* path;
+	if (!ref || !gtk_tree_row_reference_valid(ref)) return NULL;
+	if(!(path = gtk_tree_row_reference_get_path(ref))) return NULL;
+	Sample* sample = sample_get_from_model(path);
+	gtk_tree_path_free(path);
+	return sample;
+}
 
 

@@ -21,6 +21,7 @@ options=(
 --disable-libass
 --disable-dnotify
 --enable-webkit
+--enable-gl-app
 --enable-mx
 --enable-aubio
 --disable-opengl
@@ -82,7 +83,7 @@ get_tarball && \
 	for i in "${options[@]}"; do compile "$i" || break; done && \
 	echo "" && \
 
-if [ $abort = "true" ]
+if [ "$abort" = "true" ]
 then
 	echo "complete: "$n_tests_complete" / "${#options[@]}
 else

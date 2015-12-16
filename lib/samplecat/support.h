@@ -20,6 +20,12 @@
 #define HAS_ALPHA_FALSE 0
 #define HAS_ALPHA_TRUE 1
 
+#ifndef __ayyi_h__
+#define g_error_clear(E) { if(E){ g_error_free(E); E = NULL; }}
+#endif
+
+void         p_                        (int level, const char* format, ...);
+
 gboolean     file_exists               (const char*);
 time_t       file_mtime                (const char*);
 gboolean     is_dir                    (const char*);
@@ -28,10 +34,12 @@ void         file_extension            (const char*, char* extn);
 
 bool         mimestring_is_unsupported (char*);
 bool         mimetype_is_unsupported   (MIME_type*, char* mime_string);
+GdkPixbuf*   get_iconbuf_from_mimetype (char* mimetype);
 
 bool         ensure_config_dir         ();
 
 void         colour_get_float          (GdkColor*, float* r, float* g, float* b, const unsigned char alpha);
+uint32_t     color_gdk_to_rgba         (GdkColor*);
 
 uint8_t*     pixbuf_to_blob            (GdkPixbuf* in, guint* len);
 

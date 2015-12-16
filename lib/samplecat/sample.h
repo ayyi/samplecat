@@ -53,18 +53,6 @@ Sample*     sample_dup               (Sample*);
  */
 Sample*     sample_get_from_model    (GtkTreePath*);
 
-/** sample_get_by_tree_iter returns a pointer to
- * the sample struct in the data model or NULL if not found.
- * @return needs to be sample_unref();
- */
-Sample*     sample_get_by_tree_iter  (GtkTreeIter*);
-
-/** sample_get_by_row_ref returns a pointer to
- * the sample struct in the data model or NULL if not found.
- * @return needs to be sample_unref();
- */
-Sample*     sample_get_by_row_ref    (GtkTreeRowReference*); 
-
 Sample*     sample_get_by_filename   (const char* abspath);
 
 Sample*     sample_ref               (Sample*);

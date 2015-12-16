@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2014 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2015 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -23,6 +23,20 @@
 #include "file_manager/mimetype.h"
 
 #include "samplecat/support.h"
+
+
+void
+p_(int level, const char* format, ...)
+{
+	va_list argp;
+	va_start(argp, format);
+	if (level <= _debug_) {
+		gchar* s = g_strdup_vprintf(format, argp);
+		fprintf(stdout, "%s\n", s);
+		g_free(s);
+	}
+	va_end(argp);
+}
 
 
 /* Returns TRUE if the object exists, FALSE if it doesn't.
@@ -151,6 +165,22 @@ mimetype_is_unsupported(MIME_type* mime_type, char* mime_string)
 }
 
 
+#include "utils/pixmaps.h"
+#include "file_manager/support.h"
+#include "file_manager/mimetype.h"
+GdkPixbuf*
+get_iconbuf_from_mimetype(char* mimetype)
+{
+	GdkPixbuf* iconbuf = NULL;
+	MIME_type* mime_type = mime_type_lookup(mimetype);
+	if(mime_type){
+		type_to_icon(mime_type);
+		if (!mime_type->image) dbg(0, "no icon.");
+		iconbuf = mime_type->image->sm_pixbuf;
+	}
+	return iconbuf;
+}
+
 gboolean
 ensure_config_dir()
 {
@@ -173,6 +203,13 @@ colour_get_float(GdkColor* c, float* r, float* g, float* b, const unsigned char 
 	*r = _r / 0xffff;
 	*g = _g / 0xffff;
 	*b = _b / 0xffff;
+}
+
+
+uint32_t
+color_gdk_to_rgba(GdkColor* color)
+{
+	return ((color->red / 0x100) << 24) + ((color->green / 0x100) << 16) + ((color->blue / 0x100) << 8) + 0xff;
 }
 
 
@@ -214,11 +251,12 @@ samplerate_format(char* str, int samplerate)
 	if(!samplerate){ str[0] = '\0'; return; }
 
 	snprintf(str, 32, "%f", ((float)samplerate) / 1000.0);
-	while(str[strlen(str)-1]=='0'){
+	while(str[strlen(str)-1] == '0'){
 		str[strlen(str)-1] = '\0';
 	}
-	if(str[strlen(str)-1]=='.') str[strlen(str)-1] = '\0';
+	if(str[strlen(str)-1] == '.') str[strlen(str)-1] = '\0';
 }
+
 
 void
 bitrate_format(char* str, int bitrate)
@@ -231,6 +269,7 @@ bitrate_format(char* str, int bitrate)
 	else snprintf(str, 32, "%.1f MB/s", bitrate/8192000.0);
 	str[31] = '\0';
 }
+
 
 void
 bitdepth_format(char* str, int bitdepth)
@@ -267,8 +306,8 @@ format_channels(int n_ch)
 void
 format_smpte(char* str, int64_t t /*milliseconds*/)
 {
-	snprintf(str, 64, "%02d:%02d:%02d.%03d", (int)(t/3600000), (int)(t/60000)%60, (int)(t/1000)%60, (int)(t%1000));
-	str[63] = '\0';
+	snprintf(str, 32, "%02d:%02d:%02d.%03d", (int)(t/3600000), (int)(t/60000)%60, (int)(t/1000)%60, (int)(t%1000));
+	str[31] = '\0';
 }
 
 

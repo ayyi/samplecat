@@ -1,7 +1,7 @@
 ## Process this file with automake to produce Makefile.in
 
 VALA_DIR =
-SUBDIRS = gimp db $(VALA_DIR)
+SUBDIRS = gimp $(VALA_DIR)
 
 AM_CFLAGS = \
 	-g -Wall -O2 \
@@ -9,6 +9,7 @@ AM_CFLAGS = \
 	-DPACKAGE_LOCALE_DIR=\""$(prefix)/$(DATADIRNAME)/locale"\" \
 	-DIMAGES_DIR=\"$(imagesdir)\" \
 	-I$(top_srcdir)/lib \
+	-I$(top_srcdir)/lib/samplecat \
 	-I$(top_srcdir)/lib/file_manager \
 	-I$(top_srcdir)/lib/waveform \
 	-I$(top_srcdir)/xdgmime \
@@ -94,7 +95,6 @@ samplecat_SOURCES = \
 	listview.c listview.h \
 	inspector.c inspector.h \
 	player_control.c player_control.h \
-	sample.c sample.h \
 	worker.c worker.h \
 	directories.c directories.h \
 	dh_link.c dh_link.h \
@@ -120,9 +120,9 @@ samplecat_LDADD = \
 	$(top_srcdir)/lib/dir_tree/libdirtree.a \
 	$(top_srcdir)/lib/debug/libdebug.a \
 	$(top_srcdir)/lib/samplecat/libsamplecat.a \
+	$(top_srcdir)/lib/samplecat/db/libsamplecatdb.a \
 	$(GDL_LDFLAGS) \
 	gimp/libgimpwidgets.a \
-	db/libsamplecatdb.a \
 	$(top_srcdir)/lib/waveform/waveform/.libs/libwaveform.a \
 	$(SAMPLECAT_LIBS) \
 	$(AYYI_LIBS) \

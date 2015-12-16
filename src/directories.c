@@ -66,7 +66,7 @@ dir_panel_new()
 		{
 			SamplecatFilter* filter = (SamplecatFilter*)_filter;
 		}
-		g_signal_connect(app->model->filters.dir, "changed", G_CALLBACK(on_dir_filter_changed), NULL);
+		g_signal_connect(samplecat.model->filters.dir, "changed", G_CALLBACK(on_dir_filter_changed), NULL);
 		*/
 #else
 		GtkWidget* tree = _dir_tree_new();
@@ -98,7 +98,7 @@ dir_panel_new()
 		update_dir_node_list();
 		dh_book_tree_reload((DhBookTree*)app->dir_treeview);
 	}
-	g_signal_connect(app->model, "dir-list-changed", G_CALLBACK(on_dir_list_changed), NULL);
+	g_signal_connect(samplecat.model, "dir-list-changed", G_CALLBACK(on_dir_list_changed), NULL);
 
 #ifndef NO_USE_DEVHELP_DIRTREE
 	void dir_on_theme_changed(Application* a, char* theme, gpointer _tree)
@@ -123,7 +123,7 @@ on_dir_tree_link_selected(GObject* _, DhLink* link, gpointer data)
 
 	dbg(1, "dir=%s", link->uri);
 
-	samplecat_filter_set_value(app->model->filters.dir, g_strdup(link->uri));
+	samplecat_filter_set_value(samplecat.model->filters.dir, g_strdup(link->uri));
 
 	return false;
 }

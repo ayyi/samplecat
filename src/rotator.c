@@ -41,6 +41,7 @@
 
 #include "application.h"
 #include "list_store.h"
+#include "listview.h"
 #include "rotator.h"
 #if 0
 #define GTK_ROTATOR_PRIORITY_VALIDATE (GDK_PRIORITY_REDRAW + 5)
@@ -1471,7 +1472,7 @@ rotator_init (Rotator* tree_view)
 		PF0;
 	}
 
-	g_signal_connect((gpointer)app->model, "selection-changed", G_CALLBACK(rotator_on_selection_change), NULL);
+	g_signal_connect((gpointer)samplecat.model, "selection-changed", G_CALLBACK(rotator_on_selection_change), NULL);
 }
 
 
@@ -1863,7 +1864,7 @@ _add_by_iter(Rotator* tree_view, GtkTreeIter* iter)
 {
 	RotatorPrivate* _r = tree_view->priv;
 
-	Sample* sample = sample_get_by_tree_iter(iter);
+	Sample* sample = samplecat_list_store_get_sample_by_iter(iter);
 
 	if(!sample->online) return;
 

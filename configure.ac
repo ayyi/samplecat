@@ -51,6 +51,7 @@ AC_ARG_ENABLE(tracker,  AS_HELP_STRING([--enable-tracker],[build with tracker su
 AC_ARG_ENABLE(sqlite,   AS_HELP_STRING([--enable-sqlite],[build with sqlite support]),enable_sqlite=$enableval, enable_sqlite="auto")
 AC_ARG_ENABLE(mx,       AS_HELP_STRING([--enable-mx], [build with mx support -- experimental]), enable_mx=$enableval, enable_mx="auto")
 AC_ARG_ENABLE(webkit,   AS_HELP_STRING([--enable-webkit], [build with webkit support -- experimental]), enable_webkit=$enableval, enable_webkit="auto")
+AC_ARG_ENABLE(gl_app,   AS_HELP_STRING([--enable-gl_app], [build the gl application -- experimental]), enable_gl_app=$enableval, enable_gl_app="auto")
 AC_ARG_ENABLE(opengl,   AC_HELP_STRING([--disable-opengl], [disable use of OpenGL]),enable_opengl=$enableval,enable_opengl="auto")
 AC_ARG_ENABLE(fftw,     AC_HELP_STRING([--disable-fftw], [disable usage of FFTW ]),enable_fftw=$enableval,enable_fftw="auto")
 AC_ARG_ENABLE(libass,   AC_HELP_STRING([--disable-libass], [disable usage of libass ]),enable_libass=$enableval,enable_libass="auto")
@@ -364,6 +365,13 @@ AC_SUBST(WEBKIT_LDFLAGS)
 
 dnl -----------------------------------------------------------------------------
 
+AS_IF([test "$enable_gl_app" = "yes"],[
+	PKG_CHECK_MODULES(WEBKIT, webkit-1.0, AC_DEFINE(USE_WEBKIT, 1, Build the experimental GL application) enable_gl_app="yes", enable_gl_app="no")
+	], [enable_gl_app="no"])
+AM_CONDITIONAL(ENABLE_GL_APP, test "$enable_gl_app" = "yes")
+
+dnl -----------------------------------------------------------------------------
+
 AS_IF([test "$enable_opengl" != "no"], [
 	PKG_CHECK_MODULES(OPENGL, gtkglext-1.0, [AC_DEFINE(USE_OPENGL, 1, Opengl features are enabled)])
 	enable_opengl="yes"
@@ -447,14 +455,15 @@ AC_CONFIG_FILES([lib/file_manager/filetypes/Makefile])
 AC_CONFIG_FILES([lib/file_manager/vala/Makefile])
 AC_CONFIG_FILES([lib/dir_tree/Makefile])
 AC_CONFIG_FILES([lib/samplecat/Makefile])
+AC_CONFIG_FILES([lib/samplecat/db/Makefile])
 AC_CONFIG_FILES([lib/gdl/Makefile])
 AC_CONFIG_FILES([layouts/Makefile])
 AC_CONFIG_FILES([src/Makefile])
-AC_CONFIG_FILES([src/db/Makefile])
 AC_CONFIG_FILES([src/gimp/Makefile])
 AC_CONFIG_FILES([experimental/Makefile])
 AC_CONFIG_FILES([experimental/webkit/Makefile])
 AC_CONFIG_FILES([experimental/mx/Makefile])
+AC_CONFIG_FILES([experimental/gl-app/Makefile])
 dnl AC_CONFIG_FILES([src/vala/Makefile])
 AC_OUTPUT
 
@@ -490,12 +499,14 @@ AC_MSG_RESULT([Building ayyi support:        $enable_ayyi])
 AC_MSG_RESULT([Building dock support:        $enable_dock])
 AC_MSG_RESULT([])
 
-if test "$enable_mx" = "yes" -o "$enable_webkit" = "yes" -o "$enable_sf2" = "yes" -o "$enable_nks" = "yes" -o "$enable_tracker" = "yes"; then
+if test "$enable_mx" = "yes" -o "$enable_webkit" = "yes" -o "$enable_gl_app" = "yes" -o "$enable_sf2" = "yes" -o "$enable_nks" = "yes" -o "$enable_tracker" = "yes"; then
 AC_MSG_RESULT([*** You have experimental options enabled. These are of no use other than to developers])
 AC_MSG_RESULT([  tracker support:            $enable_tracker])
 AC_MSG_RESULT([  soundfont support:          $enable_sf2])
 AC_MSG_RESULT([  nks support:                $enable_nks])
 AC_MSG_RESULT([  mx support:                 $enable_mx])
 AC_MSG_RESULT([  webkit support:             $enable_webkit])
+AC_MSG_RESULT([  webkit support:             $enable_webkit])
+AC_MSG_RESULT([  gl application:             $enable_gl_app])
 AC_MSG_RESULT([])
 fi

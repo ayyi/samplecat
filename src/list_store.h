@@ -135,6 +135,10 @@ void samplecat_list_store_add (SamplecatListStore* self, Sample* sample);
 void samplecat_list_store_on_sample_changed (SamplecatListStore* self, Sample* sample, gint prop, void* val);
 void samplecat_list_store_do_search (SamplecatListStore* self);
 
+Sample* samplecat_list_store_get_sample_by_iter      (GtkTreeIter*);
+Sample* samplecat_list_store_get_sample_by_row_index (int);
+Sample* samplecat_list_store_get_sample_by_row_ref   (GtkTreeRowReference*);
+
 
 G_END_DECLS
 

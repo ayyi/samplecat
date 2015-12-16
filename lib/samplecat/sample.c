@@ -19,13 +19,11 @@
 #include "file_manager/rox_support.h" // to_utf8()
 #include "file_manager/mimetype.h"
 #include "samplecat/support.h"
-#include "types.h"
 #include "support.h"
-#include "audio_decoder/ad.h"
-#include "model.h"
-#include "application.h"
+#include "src/audio_decoder/ad.h"
+#include "src/model.h"
 #include "worker.h"
-#include "listview.h"
+#include "src/listview.h"
 #include "sample.h"
 
 #undef DEBUG_REFCOUNTS
@@ -176,7 +174,7 @@ sample_get_file_info(Sample* sample)
 
 	if(!file_exists(sample->full_path)){
 		if(sample->online){
-			samplecat_model_update_sample (app->model, sample, COL_ICON, NULL);
+			samplecat_model_update_sample (samplecat.model, sample, COL_ICON, NULL);
 		}
 		return false;
 	}
@@ -198,35 +196,13 @@ sample_get_file_info(Sample* sample)
 
 
 Sample*
-sample_get_by_tree_iter(GtkTreeIter* iter)
-{
-	Sample* sample;
-	gtk_tree_model_get(GTK_TREE_MODEL(app->store), iter, COL_SAMPLEPTR, &sample, -1);
-	if(sample) sample_ref(sample);
-	return sample;
-}
-
-
-Sample*
 sample_get_from_model(GtkTreePath* path)
 {
-	GtkTreeModel* model = GTK_TREE_MODEL(app->store);
+	GtkTreeModel* model = GTK_TREE_MODEL(samplecat.store);
 	GtkTreeIter iter;
 	if(!gtk_tree_model_get_iter(model, &iter, path)) return NULL;
-	Sample* sample = sample_get_by_tree_iter(&iter);
-	if (sample && !sample->row_ref) sample->row_ref = gtk_tree_row_reference_new(GTK_TREE_MODEL(app->store), path);
-	return sample;
-}
-
-
-Sample*
-sample_get_by_row_ref(GtkTreeRowReference* ref)
-{
-	GtkTreePath* path;
-	if (!ref || !gtk_tree_row_reference_valid(ref)) return NULL;
-	if(!(path = gtk_tree_row_reference_get_path(ref))) return NULL;
-	Sample* sample = sample_get_from_model(path);
-	gtk_tree_path_free(path);
+	Sample* sample = samplecat_list_store_get_sample_by_iter(&iter);
+	if (sample && !sample->row_ref) sample->row_ref = gtk_tree_row_reference_new(GTK_TREE_MODEL(samplecat.store), path);
 	return sample;
 }
 
@@ -242,7 +218,7 @@ sample_get_by_filename(const char* abspath)
 	bool filter_sample (GtkTreeModel* model, GtkTreePath* path, GtkTreeIter* iter, gpointer data)
 	{
 		struct find_sample* fs = (struct find_sample*) data;
-		Sample* s = sample_get_by_tree_iter(iter);
+		Sample* s = samplecat_list_store_get_sample_by_iter(iter);
 		if (!strcmp(s->full_path, fs->abspath)) {
 			fs->rv=s;
 			return TRUE;
@@ -253,7 +229,7 @@ sample_get_by_filename(const char* abspath)
 
 	struct find_sample fs;
 	fs.rv = NULL; fs.abspath = abspath;
-	GtkTreeModel* model = GTK_TREE_MODEL(app->store);
+	GtkTreeModel* model = GTK_TREE_MODEL(samplecat.store);
 	gtk_tree_model_foreach(model, &filter_sample, &fs);
 
 	return fs.rv;

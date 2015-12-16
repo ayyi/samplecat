@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2014 Tim Orford <tim@orford.org> and others       |
+* | copyright (C) 2007-2015 Tim Orford <tim@orford.org> and others       |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -19,7 +19,7 @@
 #include <gdk-pixbuf/gdk-pixdata.h>
 #include "typedefs.h"
 #include "debug/debug.h"
-#include "sample.h"
+#include "samplecat/sample.h"
 #include "support.h"
 #include "model.h"
 #ifdef USE_MYSQL
@@ -37,14 +37,12 @@
 #include "db/db.h"
 
 extern SamplecatBackend backend;
-static SamplecatModel* model = NULL;
-static DbConfig* mysql_config;
+static SamplecatDBConfig* mysql_config;
 
 
 void
-db_init(SamplecatModel* _model, DbConfig* _mysql)
+db_init(SamplecatDBConfig* _mysql)
 {
-	model = _model;
 	mysql_config = _mysql;
 }
 
@@ -54,13 +52,13 @@ db_connect()
 {
 	gboolean db_connected = false;
 #ifdef USE_MYSQL
-	mysql__init(model, mysql_config);
-	if(can_use(model->backends, "mysql")){
+	mysql__init(mysql_config);
+	if(can_use(samplecat.model->backends, "mysql")){
 		db_connected = samplecat_set_backend(BACKEND_MYSQL);
 	}
 #endif
 #ifdef USE_SQLITE
-	if(!db_connected && can_use(model->backends, "sqlite")){
+	if(!db_connected && can_use(samplecat.model->backends, "sqlite")){
 		if(sqlite__connect()){
 			db_connected = samplecat_set_backend(BACKEND_SQLITE);
 		}
@@ -121,7 +119,7 @@ samplecat_set_backend(BackendType type)
 		default:
 			break;
 	}
-	backend.init(model,
+	backend.init(
 #ifdef USE_MYSQL
 		mysql_config
 #else

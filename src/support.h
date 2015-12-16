@@ -9,7 +9,6 @@
 #include "samplecat/support.h"
 
 #ifndef __ayyi_h__
-#define g_error_clear(E) { if(E){ g_error_free(E); E = NULL; }}
 #define g_error_free0(E) (g_error_free(E), E = NULL)
 #define PF_DONE printf("%s(): done.\n", __func__);
 #endif
@@ -29,13 +28,6 @@
 #define FILL_TRUE 1
 #define FILL_FALSE 0
 
-typedef struct _rect {
-  double x1;
-  double y1;
-  double x2;
-  double y2;
-} drect;
-
 struct _accel {
 	char          name[16];
 	GtkStockItem* stock_item;
@@ -47,8 +39,6 @@ struct _accel {
 	gpointer      user_data;
 };
 
-void         p_                        (int level, const char* format, ...);
-
 //gint         strcmp2(gconstpointer a, gconstpointer b);
 //GPtrArray*   list_dir(const guchar *path);
 
@@ -58,7 +48,7 @@ void         pixbuf_clear              (GdkPixbuf*, GdkColor*);
 #ifdef OLD
 void         pixbuf_draw_line          (GdkPixbuf*, struct _ArtDRect *pts, double line_width, GdkColor *colour);
 #else
-void         draw_cairo_line           (cairo_t*, drect*, double line_width, GdkColor *colour);
+void         draw_cairo_line           (cairo_t*, DRect*, double line_width, GdkColor *colour);
 #endif
 //GdkPixbuf*   scale_pixbuf(GdkPixbuf *src, int max_w, int max_h);
 //GdkPixbuf*   scale_pixbuf_up(GdkPixbuf *src, int max_w, int max_h);
@@ -71,7 +61,6 @@ void         colour_get_style_text     (GdkColor*, int state);
 gchar*       gdkcolor_get_hexstring    (GdkColor*);
 void         hexstring_from_gdkcolor   (char* hexstring, GdkColor*);
 void         color_rgba_to_gdk         (GdkColor*, uint32_t rgba);
-uint32_t     color_gdk_to_rgba         (GdkColor*);
 gboolean     colour_lighter            (GdkColor* lighter, GdkColor*);
 gboolean     colour_darker             (GdkColor* lighter, GdkColor*);
 gboolean     is_black                  (GdkColor*);
@@ -110,8 +99,6 @@ char*        gain2dbstring             (float);
 
 void         show_widget_if            (GtkWidget*, gboolean);
 GtkWidget*   scrolled_window_new       ();
-
-GdkPixbuf*   get_iconbuf_from_mimetype (char* mimetype);
 
 gboolean     keyword_is_dupe           (const char* keyword, const char* existing);
 

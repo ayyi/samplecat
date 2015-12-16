@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2014 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2015 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -14,17 +14,19 @@
 #include <mx/mx.h>
 #include "debug/debug.h"
 #include "src/typedefs.h"
+#include "samplecat.h"
 #include "db/db.h"
-#include "sample.h"
 #include "list_view.h"
 #include "utils/ayyi_utils.h"
 #include "src/model.h"
 
 struct _backend backend;
-SamplecatModel* model = NULL;
 
-typedef struct _Application Application;
-Application* app = NULL;
+typedef struct _Application {
+   ConfigContext   config_ctx;
+   Config          config;
+} Application;
+Application app = {{0,},};
 
 unsigned debug = 1;
 
@@ -36,32 +38,24 @@ main (int argc, char **argv)
 {
 	memset(&backend, 0, sizeof(struct _backend));
 
-	MxApplication* app = mx_application_new (&argc, &argv, "Test PathBar", 0);
+	MxApplication* mx_app = mx_application_new (&argc, &argv, "Test PathBar", 0);
 
-	model = samplecat_model_new();
+	samplecat_init();
 
-	samplecat_model_add_filter (model, model->filters.search   = samplecat_filter_new("search"));
-	samplecat_model_add_filter (model, model->filters.dir      = samplecat_filter_new("directory"));
-	samplecat_model_add_filter (model, model->filters.category = samplecat_filter_new("category"));
+	app.config_ctx.filename = g_strdup_printf("%s/.config/" PACKAGE "/" PACKAGE, g_get_home_dir());
+	config_load(&app.config_ctx, &app.config);
 
 	#define MAX_DISPLAY_ROWS 20
 #ifdef USE_MYSQL
-	mysql__init(model, &(SamplecatMysqlConfig){
-		"localhost",
-		"samplecat",
-		"samplecat",
-		"samplecat",
-	});
-	if(samplecat_set_backend(BACKEND_MYSQL)){
-		//g_strlcpy(model.filters.phrase, "909", 256);
-	}
+	mysql__init(&app.config.mysql);
+	samplecat_set_backend(BACKEND_MYSQL);
 #endif
 
 	GError* error = NULL;
 	MxStyle* style = mx_style_get_default();
 	mx_style_load_from_file(style, "style.css", &error);
 
-	MxWindow* window = mx_application_create_window (app);
+	MxWindow* window = mx_application_create_window (mx_app);
 	ClutterActor* stage = (ClutterActor*)mx_window_get_clutter_stage (window);
 	mx_window_set_icon_name (window, "window-new");
 	clutter_actor_set_size (stage, 480, 320);
@@ -83,7 +77,7 @@ main (int argc, char **argv)
 	ClutterActor* scroll_view = mx_scroll_view_new ();
 	mx_scroll_view_set_scroll_policy(MX_SCROLL_VIEW(scroll_view), MX_SCROLL_POLICY_VERTICAL);
 
-	ClutterModel* list_model = sample_list_model_new(model);
+	ClutterModel* list_model = sample_list_model_new(samplecat.model);
 
 	int n_results = 0;
 	if(!backend.search_iter_new("", "", &n_results)){
@@ -225,7 +219,7 @@ main (int argc, char **argv)
 
 	clutter_actor_show_all (stage);
 
-	mx_application_run (app);
+	mx_application_run (mx_app);
 
 	return 0;
 }
@@ -254,6 +248,13 @@ rotate_clicked_cb (ClutterActor* button, MxWindow* window)
 	}
 
 	mx_window_set_window_rotation (window, rotation);
+}
+
+
+// temporary
+void
+application_emit_icon_theme_changed (Application* app, const gchar* _)
+{
 }
 
 

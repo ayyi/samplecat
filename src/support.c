@@ -39,20 +39,6 @@
 #define gettext(A) A
 
 
-void
-p_(int level, const char* format, ...)
-{
-	va_list argp;
-	va_start(argp, format);
-	if (level <= _debug_) {
-		gchar* s = g_strdup_vprintf(format, argp);
-		fprintf(stdout, "%s\n", s);
-		g_free(s);
-	}
-	va_end(argp);
-}
-
-
 #if 0
 /* Used as the sort function for sorting GPtrArrays */
 gint 
@@ -171,13 +157,6 @@ color_rgba_to_gdk(GdkColor* colour, uint32_t rgba)
 	colour->blue  = (rgba & 0x0000ff00);
 }
 #endif
-
-
-uint32_t
-color_gdk_to_rgba(GdkColor* color)
-{
-	return ((color->red / 0x100) << 24) + ((color->green / 0x100) << 16) + ((color->blue / 0x100) << 8) + 0xff;
-}
 
 
 gboolean
@@ -922,22 +901,6 @@ scrolled_window_new()
 	return scroll;
 }
 
-
-#include "utils/pixmaps.h"
-#include "file_manager/support.h"
-#include "file_manager/mimetype.h"
-GdkPixbuf* 
-get_iconbuf_from_mimetype(char* mimetype)
-{
-	GdkPixbuf* iconbuf = NULL;
-	MIME_type* mime_type = mime_type_lookup(mimetype);
-	if(mime_type){
-		type_to_icon(mime_type);
-		if (!mime_type->image) dbg(0, "no icon.");
-		iconbuf = mime_type->image->sm_pixbuf;
-	}
-	return iconbuf;
-}
 
 gboolean
 keyword_is_dupe(const char* new, const char* existing)

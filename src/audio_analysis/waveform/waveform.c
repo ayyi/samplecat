@@ -29,7 +29,7 @@
 #include "audio_decoder/ad.h"
 
 void
-draw_cairo_line(cairo_t* cr, drect* pts, double line_width, GdkColor* colour)
+draw_cairo_line(cairo_t* cr, DRect* pts, double line_width, GdkColor* colour)
 {
 	float r, g, b;
 	colour_get_float(colour, &r, &g, &b, 0xff);
@@ -59,6 +59,7 @@ make_overview(Sample* sample)
 	if (!sf) return NULL;
 	dbg(1, "NEW OVERVIEW");
 
+
 	if(!strcmp(sample->mimetype, "audio/mp4")){
 		// Using libwaveform for thumbnail generation is the way to go.
 		// It is being tested for mp4 files as AAC is broken in the older path.
@@ -79,7 +80,7 @@ make_overview(Sample* sample)
 	cairo_set_line_width (cr, 0.5);
 
 	if (1) {
-		drect pts = {0, OVERVIEW_HEIGHT/2, OVERVIEW_WIDTH, OVERVIEW_HEIGHT/2 + 1};
+		DRect pts = {0, OVERVIEW_HEIGHT/2, OVERVIEW_WIDTH, OVERVIEW_HEIGHT/2 + 1};
 		draw_cairo_line(cr, &pts, 1.0, &app->base_colour);
 	}
 	cairo_set_line_width (cr, 1.0);
@@ -112,7 +113,7 @@ make_overview(Sample* sample)
 		min = rint(min * OVERVIEW_HEIGHT/2.0);
 		max = rint(max * OVERVIEW_HEIGHT/2.0);
 
-		drect pts = {x, OVERVIEW_HEIGHT/2 - min, x, OVERVIEW_HEIGHT/2 - max};
+		DRect pts = {x, OVERVIEW_HEIGHT/2 - min, x, OVERVIEW_HEIGHT/2 - max};
 		draw_cairo_line(cr, &pts, 1.0, &app->text_colour);
 
 		x++;

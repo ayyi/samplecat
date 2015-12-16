@@ -98,23 +98,23 @@ request_analysis(Sample* sample)
 		C* c = _c;
 		switch(c->changed){
 			case 1 << COL_PEAKLEVEL:
-				samplecat_model_update_sample (app->model, sample, COL_PEAKLEVEL, NULL);
+				samplecat_model_update_sample (samplecat.model, sample, COL_PEAKLEVEL, NULL);
 				break;
 			case 1 << COL_OVERVIEW:
-				samplecat_model_update_sample (app->model, sample, COL_OVERVIEW, NULL);
+				samplecat_model_update_sample (samplecat.model, sample, COL_OVERVIEW, NULL);
 				break;
 			case 1 << COL_X_EBUR:
-				samplecat_model_update_sample (app->model, sample, COL_X_EBUR, NULL);
+				samplecat_model_update_sample (samplecat.model, sample, COL_X_EBUR, NULL);
 				break;
 			case 0:
 				break;
 			default:
-				samplecat_model_update_sample (app->model, sample, COL_ALL, NULL);
+				samplecat_model_update_sample (samplecat.model, sample, COL_ALL, NULL);
 		}
 		g_free(c);
 	}
 
-	if(!sample->overview || sample->peaklevel == 0 || !sample->ebur || !strlen(sample->ebur))
+	if(!sample->overview || sample->peaklevel == 0.0 || !sample->ebur || !strlen(sample->ebur))
 		worker_add_job(sample, analysis_work, analysis_done, c);
 }
 
@@ -132,7 +132,7 @@ request_overview(Sample* sample)
 		PF;
 		g_return_val_if_fail(sample, false);
 		if(sample->overview){
-			samplecat_model_update_sample (app->model, sample, COL_OVERVIEW, NULL);
+			samplecat_model_update_sample (samplecat.model, sample, COL_OVERVIEW, NULL);
 		}else{
 			dbg(1, "overview creation failed (no pixbuf).");
 		}
@@ -157,7 +157,7 @@ request_peaklevel(Sample* sample)
 		// important not to do too many updates to the model as it makes the tree unresponsive.
 		// this can happen when file is not available.
 		if(sample->peaklevel > 0.0){
-			samplecat_model_update_sample (app->model, sample, COL_PEAKLEVEL, NULL);
+			samplecat_model_update_sample (samplecat.model, sample, COL_PEAKLEVEL, NULL);
 		}
 	}
 
@@ -178,7 +178,7 @@ request_ebur128(Sample* sample)
 	void ebur128_done(Sample* sample, gpointer _result)
 	{
 		WorkResult* result = _result;
-		if(result->success) samplecat_model_update_sample (app->model, sample, COL_X_EBUR, NULL);
+		if(result->success) samplecat_model_update_sample (samplecat.model, sample, COL_X_EBUR, NULL);
 		g_free(result);
 	}
 

@@ -36,7 +36,7 @@ void        listview__show_db_missing            ();
 void        listview__add_item                   ();
 gchar*      listview__get_first_selected_filename();
 gchar*      listview__get_first_selected_filepath();
-Sample*     listview__get_sample_by_rowref       (GtkTreeRowReference*);
+
 void        listview__reset_colours              ();
 void        listview__edit_row                   (GtkWidget*, gpointer);
 

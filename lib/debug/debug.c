@@ -33,7 +33,7 @@ warnprintf(char* format, ...)
   printf("%s ", ayyi_warn);
 
   va_list argp;           //points to each unnamed arg in turn
-  va_start(argp, format); //make ap (arg pointer) point to 1st unnamed arg
+  va_start(argp, format); //make arg pointer point to 1st unnamed arg
   vprintf(format, argp);
   va_end(argp); 		  //clean up
 }

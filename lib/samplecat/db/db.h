@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2014 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2015 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -18,7 +18,7 @@ struct _backend
 {
 	gboolean         pending;
 
-	void             (*init)             (SamplecatModel*, void* config);
+	void             (*init)             (void* config);
 
 	gboolean         (*search_iter_new)  (char* dir, const char* category, int* n_results);
 	Sample*          (*search_iter_next) (unsigned long**);
@@ -45,7 +45,7 @@ struct _backend
 
 #define BACKEND_IS_NULL (backend.search_iter_new == NULL)
 
-void       db_init                (SamplecatModel*, DbConfig*);
+void       db_init                (SamplecatDBConfig*);
 gboolean   db_connect             ();
 gboolean   samplecat_set_backend  (BackendType);
 

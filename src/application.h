@@ -17,6 +17,7 @@
 #include <glib-object.h>
 #include "types.h"
 #include "dir_tree/view_dir_tree.h"
+#include "settings.h"
 
 #define MAX_DISPLAY_ROWS 1000
 
@@ -55,14 +56,10 @@ struct _Application
    gboolean             loaded;
 
    const char*          cache_dir;
-   const char*          config_dir;
-   char*                config_filename;
+   ConfigContext        configctx;
    Config               config;
-   SamplecatModel*      model;
 
    pthread_t            gui_thread;
-   gboolean             add_recursive;
-   gboolean             loop_playback;
    Auditioner const*    auditioner;
 #if (defined HAVE_JACK)
    gboolean             enable_effect;
@@ -87,8 +84,6 @@ struct _Application
    }                    view_options[MAX_VIEW_OPTIONS];
 #endif
 
-   GKeyFile*            key_file;               // config file data.
-
    GList*               players;
 
    struct {
@@ -98,7 +93,6 @@ struct _Application
       guint             position;
    }                    play;
 
-   GtkListStore*        store;
    LibraryView*         libraryview;
    Inspector*           inspector;
    PlayCtrl*            playercontrol;
@@ -140,6 +134,7 @@ GType        application_get_type                () G_GNUC_CONST;
 Application* application_new                     ();
 Application* application_construct               (GType);
 void         application_quit                    (Application*);
+void         application_set_ready               ();
 void         application_search                  ();
 
 void         application_scan                    (const char* path, ScanResults*);

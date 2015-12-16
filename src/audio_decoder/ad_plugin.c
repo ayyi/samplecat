@@ -29,38 +29,40 @@ void ad_init() { /* global init */ }
 
 ad_plugin const * choose_backend(const char *fn) {
 	int max, val;
-	ad_plugin const *b=NULL;
-	max=0;
+	ad_plugin const* b = NULL;
+	max = 0;
 
-	val=get_sndfile()->eval(fn);
-	if (val>max) {max=val; b=get_sndfile();}
+	val = get_sndfile()->eval(fn);
+	if (val > max) {max = val; b = get_sndfile();}
 
-	val=get_ffmpeg()->eval(fn);
-	if (val>max) {max=val; b=get_ffmpeg();}
+	val = get_ffmpeg()->eval(fn);
+	if (val > max) {max = val; b = get_ffmpeg();}
 
-	val=get_libflac()->eval(fn);
-	if (val>max) {max=val; b=get_libflac();}
+	val = get_libflac()->eval(fn);
+	if (val > max) {max = val; b = get_libflac();}
 
 	return b;
 }
 
-void *ad_open(const char *fn, struct adinfo *nfo) {
+void *ad_open(const char *fname, struct adinfo *nfo) {
 	adecoder *d = (adecoder*) calloc(1, sizeof(adecoder));
 	ad_clear_nfo(nfo);
 
-	d->b = choose_backend(fn);
+	d->b = choose_backend(fname);
 	if (!d->b) {
-		dbg(0, "fatal: no decoder backend available");
+		char* ext = strrchr(fname, '.');
+		g_warning("no decoder backend available for filetype: '%s'", ext);
 		free(d);
 		return NULL;
 	}
-	d->d = d->b->open(fn, nfo);
+	d->d = d->b->open(fname, nfo);
 	if (!d->d) {
 		free(d);
 		return NULL;
 	}
 	return (void*)d;
 }
+
 int ad_info(void *sf, struct adinfo *nfo) {
 	adecoder *d = (adecoder*) sf;
 	if (!d) return -1;

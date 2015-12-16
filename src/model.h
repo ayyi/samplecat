@@ -6,7 +6,7 @@
 
 #include <glib.h>
 #include <glib-object.h>
-#include <sample.h>
+#include <samplecat/sample.h>
 
 G_BEGIN_DECLS
 

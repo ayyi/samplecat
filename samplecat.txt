@@ -1,7 +1,4 @@
 todo:
- v0.2.X:
-  -automatically update old config-file s/database_/mysql_/ - add new values.
-   eval: how many users * time to notify/document  vs. time to write one-time updater.
  v0.3.X:
   -file-manager: rmdir/mkdir, unlink+confirm
   -interactive import - similar, duplicate files.
@@ -20,17 +17,12 @@ sometime:
    * move "loop" from menu->pref to player_control.
    * make use of the two status-bars.
   -major GUI redesign.
-   * use GDL docking widgets
-   * make samplecat an embeddable widget?
    * flexible, configurable list-view
    * preferences and about windows
    * fix focus-save behaviour of notes and tag-edit in inspector.
    * add button and/or shortcut to reset colours of played files.
-  -merge w/ latest geeqie/gqview and ROX code
   -fix compiler warnings in file manager code. remove cruft.
-  -update tracker backend 0.10 , new values in data-model
   -look at spek (vala spectrogram) -- but why? sndfile's spectrogram is great :)
-  -appears to freeze when importing from cdrom. move to idle function?
   -GtkInfBar added in gtk 2.18 - we should probably use it instead of the message_panel__ functions in window.c 
   -show warning icon in statusbar - eggtrayicon.c ?
   -check out libsexy SexyUrlLabel (for tags) 
@@ -68,13 +60,13 @@ functionality status:
     -command-line player                 done (hardcoded, no config)
   -import
     -scan directories                    done
-    -scan dvd's/cdr's                    test
+    -scan dvd's/cdr's                    done
     -drag n drop                         done
     -dupe checking                       done
   export
     -seismix                             yes
     -ardour/rosegarden etc               yes
-    -drag n drop                         ? - ardour:yes, rosegarden:?
+    -drag n drop                         yes
   formats
     -wav/aiff/etc                        done
     -flac                                done

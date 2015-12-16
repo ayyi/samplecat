@@ -90,8 +90,8 @@ drag_received(GtkWidget* widget, GdkDragContext* drag_context, gint x, gint y, G
 
     if(gtk_tree_view_get_path_at_pos(GTK_TREE_VIEW(app->libraryview->widget), x, by, &path, NULL, NULL, NULL)){
 
-      gtk_tree_model_get_iter(GTK_TREE_MODEL(app->store), &iter, path);
-      gchar* path_str = gtk_tree_model_get_string_from_iter(GTK_TREE_MODEL(app->store), &iter);
+      gtk_tree_model_get_iter(GTK_TREE_MODEL(samplecat.store), &iter, path);
+      gchar* path_str = gtk_tree_model_get_string_from_iter(GTK_TREE_MODEL(samplecat.store), &iter);
       dbg(2, "path=%s y=%i final_y=%i", path_str, y, y - treeview_top);
 
       listview_item_set_colour(path, colour_index);
@@ -171,11 +171,11 @@ listview_item_set_colour(GtkTreePath* path, unsigned colour_index)
 {
 	g_return_val_if_fail(path, false);
 	GtkTreeIter iter;
-	gtk_tree_model_get_iter(GTK_TREE_MODEL(app->store), &iter, path);
+	gtk_tree_model_get_iter(GTK_TREE_MODEL(samplecat.store), &iter, path);
 
 	bool ok;
-	Sample* s =  sample_get_by_tree_iter(&iter);
-	if((ok = samplecat_model_update_sample (app->model, s, COL_COLOUR, (void*)&colour_index))){
+	Sample* s =  samplecat_list_store_get_sample_by_iter(&iter);
+	if((ok = samplecat_model_update_sample (samplecat.model, s, COL_COLOUR, (void*)&colour_index))){
 		statusbar_print(1, "colour updated");
 	}else{
 		statusbar_print(1, "error! colour not updated");

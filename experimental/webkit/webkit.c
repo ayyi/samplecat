@@ -13,19 +13,21 @@
 #include <webkit/webkit.h>
 #include <debug/debug.h>
 #include "src/typedefs.h"
-#include "samplecat/support.h"
+#include "samplecat.h"
 #include "db/db.h"
 #include "sample.h"
-#include "model.h"
 #include "table.h"
 #include "util.h"
 #include "utils/ayyi_utils.h"
 
-SamplecatModel* model = NULL;
+#define MODEL samplecat.model
 
-struct _backend backend; 
-typedef struct _Application Application;
-Application* app = NULL;
+SamplecatBackend backend = {0,};
+typedef struct _Application {
+   ConfigContext   config_ctx;
+   Config          config;
+} Application;
+Application app = {{0,},};
 GList* samples = NULL;
 
 #define HTML_DIR "html/"
@@ -74,18 +76,17 @@ web_view_on_loaded (WebKitWebView* view, WebKitWebFrame* frame, gpointer user_da
 		webkit_dom_node_set_text_content (WEBKIT_DOM_NODE (th), g_strdup(headings[i]), NULL);
 	}
 
+	samplecat_init();
+
+	app.config_ctx.filename = g_strdup_printf("%s/.config/" PACKAGE "/" PACKAGE, g_get_home_dir());
+	config_load(&app.config_ctx, &app.config);
+
 #ifdef USE_MYSQL
-	mysql__init(model, &(SamplecatMysqlConfig){
-		"localhost",
-		"samplecat",
-		"samplecat",
-		"samplecat",
-	});
-	if(samplecat_set_backend(BACKEND_MYSQL)){
-	}
+	mysql__init(&app.config.mysql);
+	samplecat_set_backend(BACKEND_MYSQL);
 #endif
 
-	model->filters.search->value = g_strdup("909");
+	MODEL->filters.search->value = g_strdup("909");
 
 	int n_results = 0;
 	if(!backend.search_iter_new("", "", &n_results)){
@@ -170,13 +171,6 @@ gint
 main (gint argc, gchar** argv)
 {
 	gtk_init (&argc, &argv);
-	memset(&backend, 0, sizeof(struct _backend));
-
-	model = samplecat_model_new();
-
-	samplecat_model_add_filter (model, model->filters.search   = samplecat_filter_new("search"));
-	samplecat_model_add_filter (model, model->filters.dir      = samplecat_filter_new("directory"));
-	samplecat_model_add_filter (model, model->filters.category = samplecat_filter_new("category"));
 
 	gchar* cwd = g_get_current_dir();
 	gchar* html_path = g_build_filename(cwd, HTML_DIR "index.html", NULL);
@@ -310,6 +304,13 @@ find_sample_by_id(int id)
 		if(((Sample*)l->data)->id == id) return (Sample*)l->data;
 	}
 	return NULL;
+}
+
+
+// temporary
+void
+application_emit_icon_theme_changed (Application* app, const gchar* _)
+{
 }
 
 

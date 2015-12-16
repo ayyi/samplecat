@@ -209,12 +209,12 @@ ssize_t ad_read_ffmpeg(void *sf, float* d, size_t len) {
   int written = 0;
   int ret = 0;
   while (ret >= 0 && written < frames) {
-    dbg(3, "loop: %i/%i (bl:%lu)",written, frames, priv->m_tmpBufferLen );
-    if (priv->seek_frame == 0 && priv->m_tmpBufferLen > 0 ) {
-      int s = MIN(priv->m_tmpBufferLen / priv->channels, frames - written );
+    dbg(3, "loop: %i/%i (bl:%lu)", written, frames, priv->m_tmpBufferLen);
+    if (priv->seek_frame == 0 && priv->m_tmpBufferLen > 0) {
+      int s = MIN(priv->m_tmpBufferLen / priv->channels, frames - written);
       int16_to_float(priv->m_tmpBufferStart, d, priv->channels, s , written);
       written += s;
-      priv->output_clock+=s;
+      priv->output_clock += s;
       s = s * priv->channels;
       priv->m_tmpBufferStart += s;
       priv->m_tmpBufferLen -= s;

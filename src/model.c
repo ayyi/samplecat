@@ -25,6 +25,7 @@
 #include <list_store.h>
 #include <gobject/gvaluecollector.h>
 #include <application.h>
+#include <src/worker.h>
 
 
 #define SAMPLECAT_TYPE_FILTER (samplecat_filter_get_type ())
@@ -660,20 +661,12 @@ static gboolean ___lambda3__gsource_func (gpointer self) {
 static gboolean __lambda4_ (gpointer _self) {
 	SamplecatModel* self = _self;
 
-	GList* _tmp0_ = self->modified;
-	{
-		GList* change_collection = NULL;
-		GList* change_it = NULL;
-		change_collection = _tmp0_;
-		for (change_it = change_collection; change_it != NULL; change_it = change_it->next) {
-			SamplecatSampleChange* change = NULL;
-			change = change_it->data;
-			{
-				g_signal_emit_by_name (self, "sample-changed", change->sample, change->prop, change->val);
-				sample_unref(change->sample);
-				g_free (change);
-			}
-		}
+	GList* l = self->modified;
+	for (;l;l=l->next) {
+		SamplecatSampleChange* change = l->data;
+		g_signal_emit_by_name (self, "sample-changed", change->sample, change->prop, change->val);
+		sample_unref(change->sample);
+		g_free (change);
 	}
 	_g_list_free0 (self->modified);
 
@@ -755,34 +748,21 @@ static gboolean _samplecat_model_queue_selection_changed_gsource_func (gpointer 
 void samplecat_model_set_selection (SamplecatModel* self, Sample* sample) {
 	Sample* _tmp0_;
 	Sample* _tmp1_;
-	g_return_if_fail (self != NULL);
+	g_return_if_fail (self);
 	_tmp0_ = sample;
 	_tmp1_ = self->selection;
 	if (_tmp0_ != _tmp1_) {
-		Sample* _tmp2_;
-		Sample* _tmp4_;
-		Sample* _tmp5_;
-		guint _tmp6_;
-		guint _tmp8_ = 0U;
-		_tmp2_ = self->selection;
-		if ((gboolean) _tmp2_) {
+		if (self->selection) {
 			Sample* _tmp3_;
 			_tmp3_ = self->selection;
 			sample_unref (_tmp3_);
 		}
-		_tmp4_ = sample;
-		sample = NULL;
-		self->selection = _tmp4_;
-		_tmp5_ = self->selection;
-		sample_ref (_tmp5_);
-		_tmp6_ = self->priv->selection_change_timeout;
-		if ((gboolean) _tmp6_) {
-			guint _tmp7_;
-			_tmp7_ = self->priv->selection_change_timeout;
-			g_source_remove (_tmp7_);
+		self->selection = sample;
+		sample_ref (self->selection);
+		if (self->priv->selection_change_timeout) {
+			g_source_remove (self->priv->selection_change_timeout);
 		}
-		_tmp8_ = g_timeout_add_full (G_PRIORITY_DEFAULT, (guint) 250, _samplecat_model_queue_selection_changed_gsource_func, g_object_ref (self), g_object_unref);
-		self->priv->selection_change_timeout = _tmp8_;
+		self->priv->selection_change_timeout = g_timeout_add_full (G_PRIORITY_DEFAULT, (guint) 250, _samplecat_model_queue_selection_changed_gsource_func, g_object_ref (self), g_object_unref);
 	}
 }
 
@@ -800,51 +780,25 @@ static gboolean samplecat_model_queue_selection_changed (SamplecatModel* self) {
 
 
 static void samplecat_model_queue_sample_changed (SamplecatModel* self, Sample* sample, gint prop, void* val) {
-	GList* _tmp0_;
-	Sample* _tmp8_;
-	SamplecatSampleChange* _tmp9_;
-	gint _tmp10_;
-	SamplecatSampleChange* _tmp11_;
-	void* _tmp12_;
-	SamplecatSampleChange* _tmp13_;
 	g_return_if_fail (self != NULL);
-	_tmp0_ = self->modified;
-	{
-		GList* change_collection = NULL;
-		GList* change_it = NULL;
-		change_collection = _tmp0_;
-		for (change_it = change_collection; change_it != NULL; change_it = change_it->next) {
-			SamplecatSampleChange* change = NULL;
-			change = change_it->data;
-			{
-				SamplecatSampleChange* _tmp1_;
-				Sample* _tmp2_;
-				Sample* _tmp3_;
-				_tmp1_ = change;
-				_tmp2_ = (*_tmp1_).sample;
-				_tmp3_ = sample;
-				if (_tmp2_ == _tmp3_) {
-					SamplecatSampleChange* _tmp4_;
-					SamplecatSampleChange* _tmp5_;
-					_tmp4_ = change;
-					(*_tmp4_).prop = -1;
-					_tmp5_ = change;
-					(*_tmp5_).val = NULL;
-					return;
-				}
-			}
+
+	GList* l = self->modified;
+	for (;l;l=l->next) {
+		SamplecatSampleChange* change = l->data;
+		if (change->sample == sample) {
+			change->prop = COL_ALL;
+			change->val = NULL;
+			return;
 		}
 	}
+
 	SamplecatSampleChange* c = g_new(SamplecatSampleChange, 1);
-	c->sample = _tmp8_ = sample_ref(sample);
-	_tmp9_ = c;
-	_tmp10_ = prop;
-	(*_tmp9_).prop = _tmp10_;
-	_tmp11_ = c;
-	_tmp12_ = val;
-	(*_tmp11_).val = _tmp12_;
-	_tmp13_ = c;
-	self->modified = g_list_append (self->modified, _tmp13_);
+	*c = (SamplecatSampleChange){
+		.sample = sample_ref(sample),
+		.prop = prop,
+		.val = val,
+	};
+	self->modified = g_list_append (self->modified, c);
 	samplecat_idle_queue (self->priv->sample_changed_idle);
 }
 
@@ -899,42 +853,19 @@ void samplecat_model_refresh_sample (SamplecatModel* self, Sample* sample, gbool
 		}
 		_tmp11_ = _tmp6_;
 		if (_tmp11_) {
-			Sample* _tmp12_;
-			gchar* _tmp13_;
-			Sample* _tmp14_;
-			Sample* test;
-			Sample* _tmp15_;
-			Sample* _tmp16_;
-			gboolean _tmp17_ = FALSE;
-			_tmp12_ = sample;
-			_tmp13_ = _tmp12_->full_path;
-			_tmp14_ = sample_new_from_filename (_tmp13_, FALSE);
-			test = _tmp14_;
-			_tmp15_ = test;
-			if (!((gboolean) _tmp15_)) {
+			Sample* _tmp14_ = sample_new_from_filename (sample->full_path, FALSE);
+			Sample* test = _tmp14_;
+			if (!((gboolean)test)) {
 				_sample_unref0 (test);
 				return;
 			}
-			_tmp16_ = sample;
-			_tmp17_ = sample_get_file_info (_tmp16_);
-			if (_tmp17_) {
-				Sample* _tmp18_;
-				time_t _tmp19_;
-				Sample* _tmp20_;
-				Sample* _tmp21_;
-				Sample* _tmp22_;
-				Sample* _tmp23_;
-				_tmp18_ = sample;
-				_tmp19_ = mtime;
-				_tmp18_->mtime = _tmp19_;
-				_tmp20_ = sample;
-				g_signal_emit_by_name (self, "sample-changed", _tmp20_, -1, NULL);
-				_tmp21_ = sample;
-				request_peaklevel (_tmp21_);
-				_tmp22_ = sample;
-				request_overview (_tmp22_);
-				_tmp23_ = sample;
-				request_ebur128 (_tmp23_);
+			if (sample_get_file_info (sample)) {
+				Sample* _tmp18_ = sample;
+				_tmp18_->mtime = mtime;
+				g_signal_emit_by_name (self, "sample-changed", sample, COL_ALL, NULL);
+				request_peaklevel (sample);
+				request_overview (sample);
+				request_ebur128 (sample);
 			} else {
 				dbg (0, "full update - reading file info failed!");
 			}
@@ -1108,7 +1039,6 @@ gboolean samplecat_model_update_sample (SamplecatModel* self, Sample* sample, gi
 			break;
 		}
 		case COL_ALL:
-		case -1: // deprecated
 		{
 			gboolean _tmp61_;
 			Sample* _tmp62_;
@@ -1366,7 +1296,7 @@ samplecat_model_move_files(GList* list, const gchar* dest_path)
 				g_free(s->sample_dir);
 				s->full_path  = strdup(full_path);
 				s->sample_dir = strdup(dest_path);
-				g_signal_emit_by_name(app->model, "sample-changed", s, COL_FNAME, NULL);
+				g_signal_emit_by_name(samplecat.model, "sample-changed", s, COL_FNAME, NULL);
 			}
 		}
 		g_free(full_path);

@@ -2,16 +2,14 @@
 #define __db_mysql_h__
 #include "mysql/mysql.h"
 
-typedef struct _db_config SamplecatMysqlConfig;
-
 #define BACKEND_IS_MYSQL (backend.search_iter_new == mysql__search_iter_new)
 
-void      mysql__init             (SamplecatModel*, void* config);
+void      mysql__init             (void* config);
 gboolean  mysql__connect          ();
 void      mysql__set_as_backend   (SamplecatBackend*);
 
 
-struct _db_config
+struct _SamplecatDBConfig
 {
 	char      host[64];
 	char      user[64];

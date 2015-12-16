@@ -21,10 +21,16 @@
 #include "support.h"
 #include "model.h"
 #include "db/db.h"
+#include "samplecat.h"
 #include "list_store.h"
 #include "listview.h"
 #include "progress_dialog.h"
+#ifndef USE_GDL
+#include "window.h"
+#endif
 #include "application.h"
+
+extern char theme_name[64];
 
 #ifdef HAVE_AYYIDBUS
 extern Auditioner a_ayyidbus;
@@ -58,21 +64,28 @@ application_construct (GType object_type)
 {
 	Application* app = g_object_new (object_type, NULL);
 	app->cache_dir = g_build_filename (g_get_home_dir(), ".config", PACKAGE, "cache", NULL);
-	app->config_dir = g_build_filename (g_get_home_dir(), ".config", PACKAGE, NULL);
+	app->configctx.dir = g_build_filename (g_get_home_dir(), ".config", PACKAGE, NULL);
 	return app;
 }
+
+
+typedef enum {
+   CONFIG_WINDOW_WIDTH = 0,
+   CONFIG_WINDOW_HEIGHT,
+   CONFIG_MAX = 9
+} ConfigOptionType;
 
 
 Application*
 application_new ()
 {
-	Application* app = application_construct (TYPE_APPLICATION);
+	app = application_construct (TYPE_APPLICATION);
 
 	colour_box_init();
 
 	memset(app->config.colour, 0, PALETTE_SIZE * 8);
 
-	app->config_filename = g_strdup_printf("%s/.config/" PACKAGE "/" PACKAGE, g_get_home_dir());
+	app->configctx.filename = g_strdup_printf("%s/.config/" PACKAGE "/" PACKAGE, g_get_home_dir());
 
 #if (defined HAVE_JACK)
 	app->enable_effect = true;
@@ -83,11 +96,7 @@ application_new ()
 	app->playback_speed = 1.0;
 #endif
 
-	app->model = samplecat_model_new();
-
-	samplecat_model_add_filter (app->model, app->model->filters.search   = samplecat_filter_new("search"));
-	samplecat_model_add_filter (app->model, app->model->filters.dir      = samplecat_filter_new("directory"));
-	samplecat_model_add_filter (app->model, app->model->filters.category = samplecat_filter_new("category"));
+	samplecat_init();
 
 	void on_filter_changed(GObject* _filter, gpointer user_data)
 	{
@@ -95,28 +104,28 @@ application_new ()
 		application_search();
 	}
 
-	GList* l = app->model->filters_;
+	GList* l = samplecat.model->filters_;
 	for(;l;l=l->next){
 		g_signal_connect((SamplecatFilter*)l->data, "changed", G_CALLBACK(on_filter_changed), NULL);
 	}
 
 	application_set_auditioner(app);
 
-	GtkListStore*
-	listmodel__new()
+	void icon_theme_changed(Application* application, char* theme, gpointer data){ application_search(); }
+	g_signal_connect((gpointer)app, "icon-theme", G_CALLBACK(icon_theme_changed), NULL);
+
+	void listmodel__sample_changed(SamplecatModel* m, Sample* sample, int prop, void* val, gpointer _app)
 	{
-		void icon_theme_changed(Application* application, char* theme, gpointer data){ application_search(); }
-		g_signal_connect((gpointer)app, "icon-theme", G_CALLBACK(icon_theme_changed), NULL);
-
-		void listmodel__sample_changed(SamplecatModel* m, Sample* sample, int prop, void* val, gpointer _app)
-		{
-			samplecat_list_store_on_sample_changed((SamplecatListStore*)((Application*)_app)->store, sample, prop, val);
-		}
-		g_signal_connect((gpointer)app->model, "sample-changed", G_CALLBACK(listmodel__sample_changed), app);
-
-		return (GtkListStore*)samplecat_list_store_new();
+		samplecat_list_store_on_sample_changed((SamplecatListStore*)samplecat.store, sample, prop, val);
 	}
-	app->store = listmodel__new();
+	g_signal_connect((gpointer)samplecat.model, "sample-changed", G_CALLBACK(listmodel__sample_changed), app);
+
+	void log_message(GObject* o, char* message, gpointer _)
+	{
+		dbg(1, "---> %s", message);
+		statusbar_print(1, PACKAGE_NAME". Version "PACKAGE_VERSION);
+	}
+	g_signal_connect(samplecat.logger, "message", G_CALLBACK(log_message), NULL);
 
 	return app;
 }
@@ -193,6 +202,84 @@ application_quit(Application* app)
 	PF;
 	application_stop();
 	g_signal_emit_by_name (app, "on-quit");
+}
+
+
+void
+application_set_ready()
+{
+	app->loaded = true;
+	dbg(1, "loaded");
+
+	// make config saveable
+	// note that this is not done until the application is fully loaded
+	{
+		ConfigContext* ctx = &app->configctx;
+		ctx->options = g_malloc0(CONFIG_MAX * sizeof(ConfigOption*));
+
+		void get_width(ConfigOption* option)
+		{
+			gint width = 0;
+			if(app->window && GTK_WIDGET_REALIZED(app->window)){
+				gtk_window_get_size(GTK_WINDOW(app->window), &width, NULL);
+			}
+			g_value_set_int(&option->val, width);
+		}
+		ctx->options[CONFIG_WINDOW_WIDTH] = config_option_new_int("window_width", get_width, 20, 4096);
+
+		void get_height(ConfigOption* option)
+		{
+			gint height = 0;
+			if(app->window && GTK_WIDGET_REALIZED(app->window)){
+				gtk_window_get_size(GTK_WINDOW(app->window), NULL, &height);
+			}
+			g_value_set_int(&option->val, height);
+		}
+		ctx->options[CONFIG_WINDOW_HEIGHT] = config_option_new_int("window_height", get_height, 20, 4096);
+
+		void get_theme_name(ConfigOption* option)
+		{
+			g_value_set_string(&option->val, theme_name);
+		}
+		ctx->options[2] = config_option_new_string("icon_theme", get_theme_name);
+
+		void get_col1_width(ConfigOption* option)
+		{
+			GtkTreeViewColumn* column = gtk_tree_view_get_column(GTK_TREE_VIEW(app->libraryview->widget), 1);
+			g_value_set_int(&option->val, gtk_tree_view_column_get_width(column));
+		}
+		ctx->options[3] = config_option_new_int("col1_width", get_col1_width, 10, 1024);
+
+		void get_auditioner(ConfigOption* option)
+		{
+			if(strlen(app->config.auditioner))
+				g_value_set_string(&option->val, app->config.auditioner);
+		}
+		ctx->options[4] = config_option_new_string("auditioner", get_auditioner);
+
+		void get_colours(ConfigOption* option)
+		{
+			int i;
+			for (i=1;i<PALETTE_SIZE;i++) {
+				char keyname[32];
+				snprintf(keyname, 32, "colorkey%02d", i);
+				g_key_file_set_value(app->configctx.key_file, "Samplecat", keyname, app->config.colour[i]);
+			}
+		}
+		ctx->options[5] = config_option_new_manual(get_colours);
+
+		void get_add_recursive(ConfigOption* option)
+		{
+			g_value_set_boolean(&option->val, app->config.add_recursive);
+		}
+		ctx->options[6] = config_option_new_bool("add_recursive", get_add_recursive);
+
+		void get_loop_playback(ConfigOption* option)
+		{
+			g_value_set_boolean(&option->val, app->config.loop_playback);
+		}
+		ctx->options[7] = config_option_new_bool("loop_playback", get_loop_playback);
+	}
 }
 
 
@@ -286,30 +373,10 @@ application_search()
 
 	if(BACKEND_IS_NULL) return;
 
-	if(!backend.search_iter_new(app->model->filters.dir->value, app->model->filters.category->value, NULL)) {
-		return;
-	}
-
 	if(app->libraryview)
 		listview__block_motion_handler(); // TODO make private to listview.
 
-	samplecat_list_store_clear_((SamplecatListStore*)app->store);
-
-	int row_count = 0;
-	unsigned long* lengths;
-	Sample* result;
-	while((result = backend.search_iter_next(&lengths)) && row_count < MAX_DISPLAY_ROWS){
-		Sample* s = sample_dup(result);
-		samplecat_list_store_add((SamplecatListStore*)app->store, s);
-		sample_unref(s);
-		row_count++;
-	}
-
-	backend.search_iter_free();
-
-	((SamplecatListStore*)app->store)->row_count = row_count;
-
-	samplecat_list_store_do_search((SamplecatListStore*)app->store);
+	samplecat_list_store_do_search((SamplecatListStore*)samplecat.store);
 
 	bool select_first(gpointer user_data)
 	{
@@ -364,7 +431,7 @@ application_add_file(const char* path, ScanResults* result)
 		Sample* s = sample_get_by_filename(path);
 		if (s) {
 			//sample_refresh(s, false);
-			samplecat_model_refresh_sample (app->model, s, false);
+			samplecat_model_refresh_sample (samplecat.model, s, false);
 			sample_unref(s);
 		} else {
 			dbg(1, "sample found in db but not in model.");
@@ -438,9 +505,9 @@ application_add_file(const char* path, ScanResults* result)
 		return false;
 	}
 
-	samplecat_list_store_add((SamplecatListStore*)app->store, sample);
+	samplecat_list_store_add((SamplecatListStore*)samplecat.store, sample);
 
-	samplecat_model_add(app->model);
+	samplecat_model_add(samplecat.model);
 
 	result->n_added++;
 
@@ -480,7 +547,7 @@ application_add_dir(const char* path, ScanResults* result)
 				}
 			}
 			// IS_DIR
-			else if(app->add_recursive){
+			else if(app->config.add_recursive){
 				application_add_dir(filepath, result);
 			}
 		}
@@ -577,7 +644,7 @@ void
 application_play_selected()
 {
 	PF;
-	Sample* sample = app->model->selection;
+	Sample* sample = samplecat.model->selection;
 	if (!sample) {
 		statusbar_print(1, "Not playing: nothing selected");
 		return;
@@ -604,7 +671,7 @@ application_play_all ()
 		app->play.queue = g_list_append(app->play.queue, sample_get_from_model(path)); // there is a ref already added, so another one is not needed when adding to the queue.
 		return false; // continue
 	}
-	gtk_tree_model_foreach(GTK_TREE_MODEL(app->store), foreach_func, NULL);
+	gtk_tree_model_foreach(GTK_TREE_MODEL(samplecat.store), foreach_func, NULL);
 
 	if(app->play.queue){
 		if(app->auditioner->play_all) app->auditioner->play_all(); // TODO remove this fn.

@@ -1,15 +1,20 @@
 NULL =
 
 AM_CFLAGS = -g -Wall $(MX_CFLAGS) $(MX_MAINTAINER_CFLAGS)
+
 LDADD = \
-	$(top_srcdir)/lib/file_manager/libfilemanager.a \
-	$(top_srcdir)/lib/xdgmime/libxdgmime.a \
-	$(top_srcdir)/src/db/libsamplecatdb.a \
+	$(top_srcdir)/lib/samplecat/db/libsamplecatdb.a \
 	$(top_srcdir)/lib/samplecat/libsamplecat.a \
 	$(top_srcdir)/lib/debug/libdebug.a \
 	$(top_srcdir)/lib/utils/libutils.a \
+	$(top_srcdir)/lib/waveform/waveform/.libs/libwaveform.a \
+	$(top_srcdir)/lib/waveform/agl/.libs/libagl.a \
+	$(top_srcdir)/lib/waveform/transition/.libs/libtransition.a \
+	$(top_srcdir)/lib/file_manager/libfilemanager.a \
+	$(top_srcdir)/lib/xdgmime/libxdgmime.a \
 	$(MX_LDFLAGS) $(MX_LIBS) \
 	$(GTK_LIBS) \
+	$(OPENGL_LIBS) \
 	$(SNDFILE_LIBS) \
 	$(FFMPEG_LIBS) \
 	$(MYSQL_LDFLAGS) \
@@ -19,6 +24,7 @@ LDADD = \
 INCLUDES = \
 	-I$(top_srcdir) \
 	-I$(top_srcdir)/lib \
+	-I$(top_srcdir)/lib/samplecat \
 	-I$(top_srcdir)/src \
 	-I$(top_builddir) \
 	$(GTK_CFLAGS)
@@ -45,10 +51,10 @@ mx_test_SOURCES = main.c \
 	list_model.c list_model.h \
 	list_view.c list_view.h \
 	list_item.c list_item.h \
-	$(top_srcdir)/src/sample.c $(top_srcdir)/src/sample.h \
+	$(top_srcdir)/src/list_store.c $(top_srcdir)/src/list_store.h \
 	$(top_srcdir)/src/model.c $(top_srcdir)/src/model.h \
 	$(top_srcdir)/src/worker.c $(top_srcdir)/src/worker.h \
-	$(top_srcdir)/src/support.c $(top_srcdir)/src/support.h \
+	$(top_srcdir)/src/icon_theme.c $(top_srcdir)/src/icon_theme.h \
 	$(AUDIOANALYSERS_SRC) \
 	$(AD_SRC)
 

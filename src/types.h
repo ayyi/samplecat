@@ -13,33 +13,8 @@
 #define __samplecat_types_h__
 #include <gtk/gtk.h>
 #include "typedefs.h"
-#ifdef USE_MYSQL
-#include "db/mysql.h"
-#endif
 
 #define PALETTE_SIZE 17
-
-struct _config
-{
-	char      database_backend[64];
-#ifdef USE_MYSQL
-	DbConfig  mysql;
-#endif
-	char      auditioner[16];
-	char      show_dir[PATH_MAX];
-	char      window_width[8];
-	char      window_height[8];
-	char      colour[PALETTE_SIZE][8];
-	//gboolean  add_recursive; ///< TODO save w/ config ?
-	//gboolean  loop_playback; ///< TODO save w/ config ?
-	char      column_widths[4][8];
-	char      browse_dir[PATH_MAX];
-	char      show_player[8];
-	char      show_waveform[8];
-	char      show_spectrogram[8];
-	char      jack_autoconnect[1024];
-	char      jack_midiconnect[1024];
-};
 
 struct _menu_def
 {

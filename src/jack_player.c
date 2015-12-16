@@ -272,7 +272,7 @@ update_playposition (int64_t decoder_position, float varispeed) {
 #else
 	const int64_t latency = floor(jack_ringbuffer_read_space(rb) / m_channels);
 #endif
-	if (!app->loop_playback || decoder_position>latency)
+	if (!app->config.loop_playback || decoder_position>latency)
 		play_position = decoder_position - latency;
 	else
 		play_position = m_frames + decoder_position - latency;
@@ -376,7 +376,7 @@ void *jack_player_thread(void *unused){
 #else
 					src_data.output_frames = floorf((float)(rv / m_channels) * m_fResampleRatio);
 #endif
-					src_data.end_of_input = app->loop_playback ? 0 : 1;
+					src_data.end_of_input = app->config.loop_playback ? 0 : 1;
 					src_process(src_state, &src_data);
 					bufptr = smpbuf;
 					rv = src_data.output_frames_gen * m_channels;
@@ -390,7 +390,7 @@ void *jack_player_thread(void *unused){
 				}
 				jack_ringbuffer_write(rb, (char *) bufptr, rv *  sizeof(float));
 			}
-			if (app->loop_playback) {
+			if (app->config.loop_playback) {
 				ad_seek(myplayer, 0);
 				decoder_position = 0;
 #ifdef ENABLE_RESAMPLING
@@ -588,7 +588,7 @@ void JACKaudiooutputinit(void *sf, int channels, int samplerate, int64_t frames)
 		const char **found_ports = jack_get_ports(j_client, jack_autoconnect, NULL, JackPortIsInput);
 		for(i = 0; found_ports && found_ports[i]; i++) {
 			if(jack_connect(j_client, jack_port_name(j_output_port[myc]), found_ports[i])) {
-				dbg(0, "can not connect to jack output");
+				dbg(0, "cannot connect to jack output");
 			}
 			if(myc >= m_channels) break;
 		}

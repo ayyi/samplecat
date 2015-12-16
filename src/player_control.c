@@ -332,7 +332,7 @@ player_control_on_show_hide(bool enable)
 		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(app->playercontrol->pbpause), app->play.status == PLAY_PAUSED);
 	}
 
-	if (app->model->selection && app->play.sample && (app->play.sample->id == app->model->selection->id)) {
+	if (samplecat.model->selection && app->play.sample && (app->play.sample->id == samplecat.model->selection->id)) {
 		if(!visible){
 			gtk_widget_set_no_show_all(pc->widget, false);
 			gtk_widget_show_all(pc->widget);

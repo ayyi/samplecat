@@ -1,3 +1,4 @@
+SUBDIRS = db
 
 AM_CFLAGS = \
 	-g -Wall \
@@ -15,6 +16,10 @@ CLEANFILES =
 
 libsamplecat_a_SOURCES = \
 	typedefs.h \
+	samplecat.c samplecat.h \
+	sample.c sample.h \
 	worker.c worker.h \
+	logger.c logger.h \
+	settings.c settings.h \
 	support.c support.h
 

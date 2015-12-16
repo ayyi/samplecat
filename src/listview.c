@@ -22,7 +22,7 @@
 #include "file_manager/support.h"
 
 #include "typedefs.h"
-#include "mimetype.h"
+#include "file_manager/mimetype.h"
 #include "support.h"
 #include "model.h"
 #include "application.h"
@@ -67,13 +67,15 @@ listview__new()
 
 	lv->scroll = scrolled_window_new();
 
-	GtkWidget* view = app->libraryview->widget = gtk_tree_view_new_with_model(GTK_TREE_MODEL(app->store));
+	GtkWidget* view = app->libraryview->widget = gtk_tree_view_new_with_model(GTK_TREE_MODEL(samplecat.store));
 	gtk_container_add(GTK_CONTAINER(lv->scroll), view);
 	g_signal_connect(view, "realize", G_CALLBACK(listview__on_realise), NULL);
 	g_signal_connect(view, "motion-notify-event", (GCallback)listview__on_motion, NULL);
 	g_signal_connect(view, "drag-data-received", G_CALLBACK(listview__drag_received), NULL); //currently the window traps this before we get here.
 	g_signal_connect(view, "drag-motion", G_CALLBACK(drag_motion), NULL);
-	//gtk_tree_view_set_fixed_height_mode(GTK_TREE_VIEW(view), TRUE); //supposed to be faster. gtk >= 2.6
+#if 0 // TODO why does this not work?
+	gtk_tree_view_set_fixed_height_mode(GTK_TREE_VIEW(view), TRUE);
+#endif
 
 	//set up as dnd source:
 	gtk_drag_source_set(view, GDK_BUTTON1_MASK | GDK_BUTTON2_MASK,
@@ -203,7 +205,7 @@ listview__new()
 
 	g_signal_connect((gpointer)view, "button-press-event", G_CALLBACK(listview__on_row_clicked), NULL);
 	g_signal_connect((gpointer)view, "cursor-changed", G_CALLBACK(listview__on_cursor_change), NULL);
-	g_signal_connect(G_OBJECT(app->store), "content-changed", G_CALLBACK(listview__on_store_changed), NULL);
+	g_signal_connect(G_OBJECT(samplecat.store), "content-changed", G_CALLBACK(listview__on_store_changed), NULL);
 
 #if 0
 	void on_unrealize(GtkWidget* widget, gpointer user_data)
@@ -228,14 +230,14 @@ listview__new()
 		GtkSortType order;
 		if(gtk_tree_sortable_get_sort_column_id(sortable, &sort_column_id, &order)){
 			if(sort_column_id == COL_LEN){
-				int n_rows = ((SamplecatListStore*)app->store)->row_count;
+				int n_rows = ((SamplecatListStore*)samplecat.store)->row_count;
 				if(n_rows >= MAX_DISPLAY_ROWS){
 					dbg(0, "TODO need to requery database ordered by length...");
 				}
 			}
 		}
 	}
-	g_signal_connect(GTK_TREE_SORTABLE(app->store), "sort-column-changed", (GCallback)on_sort_order_changed, NULL);
+	g_signal_connect(GTK_TREE_SORTABLE(samplecat.store), "sort-column-changed", (GCallback)on_sort_order_changed, NULL);
 
 	return lv->scroll;
 }
@@ -257,7 +259,7 @@ listview__path_get_id(GtkTreePath* path)
 	int id;
 	GtkTreeIter iter;
 	gchar* filename;
-	GtkTreeModel* store = GTK_TREE_MODEL(app->store);
+	GtkTreeModel* store = GTK_TREE_MODEL(samplecat.store);
 	gtk_tree_model_get_iter(store, &iter, path);
 	gtk_tree_model_get(store, &iter, COL_IDX, &id, COL_NAME, &filename, -1);
 
@@ -275,8 +277,8 @@ listview__show_db_missing()
 	if(done) return;
 
 	GtkTreeIter iter;
-	gtk_list_store_append(app->store, &iter);
-	gtk_list_store_set(app->store, &iter, COL_NAME, "no database available", -1); 
+	gtk_list_store_append(samplecat.store, &iter);
+	gtk_list_store_set(samplecat.store, &iter, COL_NAME, "no database available", -1);
 
 	done = TRUE;
 }
@@ -323,7 +325,7 @@ listview__on_row_clicked(GtkWidget* widget, GdkEventButton* event, gpointer user
 					gtk_tree_model_get(model, &iter, /*COL_FNAME, &fpath, COL_NAME, &fname, */COL_KEYWORDS, &tags, COL_IDX, &id, -1);
 
 					if(tags && strlen(tags)){
-						samplecat_filter_set_value(app->model->filters.search, g_strdup(tags));
+						samplecat_filter_set_value(samplecat.model->filters.search, g_strdup(tags));
 					}
 				}
 			}
@@ -371,7 +373,7 @@ listview__on_cursor_change(GtkTreeView* widget, gpointer user_data)
 	if((s = listview__get_first_selected_sample())){
 		if(s->id != app->libraryview->selected){
 			app->libraryview->selected = s->id;
-			samplecat_model_set_selection (app->model, s);
+			samplecat_model_set_selection (samplecat.model, s);
 		}
 		sample_unref(s);
 	}
@@ -411,13 +413,13 @@ void
 listview__reset_colours()
 {
 	gboolean reset_colours (GtkTreeModel* model, GtkTreePath* path, GtkTreeIter* iter, gpointer data) {
-		Sample *s = sample_get_by_tree_iter(iter);
-		gtk_list_store_set(app->store, iter, COL_COLOUR, s->colour_index, -1);
+		Sample *s = samplecat_list_store_get_sample_by_iter(iter);
+		gtk_list_store_set(samplecat.store, iter, COL_COLOUR, s->colour_index, -1);
 		sample_unref(s);
 		return FALSE;
 	}
 
-	GtkTreeModel* model = GTK_TREE_MODEL(app->store);
+	GtkTreeModel* model = GTK_TREE_MODEL(samplecat.store);
 	gtk_tree_model_foreach(model, &reset_colours, NULL);
 }
 
@@ -483,19 +485,12 @@ listview__get_first_selected_filepath()
 }
 
 
-Sample*
-listview__get_sample_by_rowref(GtkTreeRowReference* row_ref)
-{
-	return sample_get_by_row_ref(row_ref); //TODO fn is misplaced. move out of the sample object.
-}
-
-
 static void
-listview__dnd_get(GtkWidget *widget, GdkDragContext *context, GtkSelectionData *selection_data, guint info, guint time, gpointer data)
+listview__dnd_get(GtkWidget* widget, GdkDragContext* context, GtkSelectionData* selection_data, guint info, guint time, gpointer data)
 {
 	//outgoing drop. provide the dropee with info on which samples were dropped.
 
-	GtkTreeModel* model = GTK_TREE_MODEL(app->store);
+	GtkTreeModel* model = GTK_TREE_MODEL(samplecat.store);
 	GtkTreeSelection* selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(app->libraryview->widget));
 	GList* selected_rows = gtk_tree_selection_get_selected_rows(selection, &(model));
 
@@ -608,15 +603,15 @@ listview__on_motion(GtkWidget* widget, GdkEventMotion* event, gpointer user_data
 	//GtkTreeRowReference* row_ref = NULL;
 	if(gtk_tree_view_get_path_at_pos(GTK_TREE_VIEW(app->libraryview->widget), (gint)event->x, (gint)event->y, &path, NULL, NULL, NULL)){
 
-		gtk_tree_model_get_iter(GTK_TREE_MODEL(app->store), &iter, path);
-		gchar* path_str = gtk_tree_model_get_string_from_iter(GTK_TREE_MODEL(app->store), &iter);
+		gtk_tree_model_get_iter(GTK_TREE_MODEL(samplecat.store), &iter, path);
+		gchar* path_str = gtk_tree_model_get_string_from_iter(GTK_TREE_MODEL(samplecat.store), &iter);
 
 		if(prev_row_ref){
 			GtkTreePath* prev_path;
 			if((prev_path = gtk_tree_row_reference_get_path(prev_row_ref))){
 			
-				gtk_tree_model_get_iter(GTK_TREE_MODEL(app->store), &prev_iter, prev_path);
-				gchar* prev_path_str = gtk_tree_model_get_string_from_iter(GTK_TREE_MODEL(app->store), &prev_iter);
+				gtk_tree_model_get_iter(GTK_TREE_MODEL(samplecat.store), &prev_iter, prev_path);
+				gchar* prev_path_str = gtk_tree_model_get_string_from_iter(GTK_TREE_MODEL(samplecat.store), &prev_iter);
 
 				//if(row_ref != prev_row_ref)
 				//if(prev_path && (path != prev_path))
@@ -625,11 +620,11 @@ listview__on_motion(GtkWidget* widget, GdkEventMotion* event, gpointer user_data
 					dbg(1, "new row! path=%p (%s) prev_path=%p (%s)", path, path_str, prev_path, prev_path_str);
 
 					//restore text to previous row:
-					gtk_list_store_set(app->store, &prev_iter, COL_KEYWORDS, prev_text, -1);
+					gtk_list_store_set(samplecat.store, &prev_iter, COL_KEYWORDS, prev_text, -1);
 
 					//store original text:
 					gchar* txt;
-					gtk_tree_model_get(GTK_TREE_MODEL(app->store), &iter, COL_KEYWORDS, &txt, -1);
+					gtk_tree_model_get(GTK_TREE_MODEL(samplecat.store), &iter, COL_KEYWORDS, &txt, -1);
 					dbg(1, "text=%s", prev_text);
 					snprintf(prev_text, 256, "%s", txt);
 					g_free(txt);
@@ -672,14 +667,14 @@ listview__on_motion(GtkWidget* widget, GdkEventMotion* event, gpointer user_data
 						//celltext->text = text;
 						//celltext->extra_attrs = attrs;
 						//hypercell->markup_set = true;
-						gtk_list_store_set(app->store, &iter, COL_KEYWORDS, joined, -1);
+						gtk_list_store_set(samplecat.store, &iter, COL_KEYWORDS, joined, -1);
 
 						if (joined) g_free(joined);
 					}
 						*/
 
 					g_free(prev_row_ref);
-					prev_row_ref = gtk_tree_row_reference_new(GTK_TREE_MODEL(app->store), path);
+					prev_row_ref = gtk_tree_row_reference_new(GTK_TREE_MODEL(samplecat.store), path);
 					//prev_row_ref = row_ref;
 				}
 			}else{
@@ -691,7 +686,7 @@ listview__on_motion(GtkWidget* widget, GdkEventMotion* event, gpointer user_data
 			gtk_tree_path_free(prev_path);
 
 		}else{
-			prev_row_ref = gtk_tree_row_reference_new(GTK_TREE_MODEL(app->store), path);
+			prev_row_ref = gtk_tree_row_reference_new(GTK_TREE_MODEL(samplecat.store), path);
 		}
 
 		gtk_tree_path_free(path);
@@ -712,15 +707,15 @@ listview__edit_row(GtkWidget* widget, gpointer user_data)
 
 	GtkTreeSelection* selection = gtk_tree_view_get_selection(treeview);
 	if(!selection){ perr("cannot get selection.\n");/* return;*/ }
-	GtkTreeModel* model = GTK_TREE_MODEL(app->store);
+	GtkTreeModel* model = GTK_TREE_MODEL(samplecat.store);
 	GList* selectionlist = gtk_tree_selection_get_selected_rows(selection, &(model));
 	if(!selectionlist){ perr("no files selected?\n"); return; }
 
 	GtkTreePath* treepath;
 	if((treepath = g_list_nth_data(selectionlist, 0))){
 		GtkTreeIter iter;
-		if(gtk_tree_model_get_iter(GTK_TREE_MODEL(app->store), &iter, treepath)){
-			gchar* path_str = gtk_tree_model_get_string_from_iter(GTK_TREE_MODEL(app->store), &iter);
+		if(gtk_tree_model_get_iter(GTK_TREE_MODEL(samplecat.store), &iter, treepath)){
+			gchar* path_str = gtk_tree_model_get_string_from_iter(GTK_TREE_MODEL(samplecat.store), &iter);
 			dbg(2, "path=%s", path_str);
 
 			GtkTreeViewColumn* focus_column = app->libraryview->col_tags;
@@ -750,7 +745,7 @@ listview__on_keywords_edited(GtkCellRendererText* cell, gchar* path_string, gcha
 	int idx;
 	gchar* filename;
 	Sample* sample;
-	GtkTreeModel* store = GTK_TREE_MODEL(app->store);
+	GtkTreeModel* store = GTK_TREE_MODEL(samplecat.store);
 	GtkTreePath* path = gtk_tree_path_new_from_string(path_string);
 	gtk_tree_model_get_iter(store, &iter, path);
 	gtk_tree_model_get(store, &iter, COL_SAMPLEPTR, &sample, COL_IDX, &idx, COL_NAME, &filename, -1);
@@ -758,7 +753,7 @@ listview__on_keywords_edited(GtkCellRendererText* cell, gchar* path_string, gcha
 	gtk_tree_path_free(path);
 
 	sample_ref(sample);
-	if(samplecat_model_update_sample (app->model, sample, COL_KEYWORDS, (void*)new_text)){
+	if(samplecat_model_update_sample (samplecat.model, sample, COL_KEYWORDS, (void*)new_text)){
 		statusbar_print(1, "keywords updated");
 	}else{
 		statusbar_print(1, "failed to update keywords");
@@ -805,12 +800,12 @@ listview__tag_cell_data(GtkTreeViewColumn* tree_column, GtkCellRenderer* cell, G
 
 	GtkCellRendererText* celltext = (GtkCellRendererText*)cell;
 	GtkCellRendererHyperText* hypercell = (GtkCellRendererHyperText*)cell;
-	GtkTreePath* path = gtk_tree_model_get_path(GTK_TREE_MODEL(app->store), iter);
+	GtkTreePath* path = gtk_tree_model_get_path(GTK_TREE_MODEL(samplecat.store), iter);
 	GdkRectangle cellrect;
 
 	gint mouse_row_num = listview__get_mouseover_row();
 
-	gchar* path_str = gtk_tree_model_get_string_from_iter(GTK_TREE_MODEL(app->store), iter);
+	gchar* path_str = gtk_tree_model_get_string_from_iter(GTK_TREE_MODEL(samplecat.store), iter);
 	gint cell_row_num = atoi(path_str);
 
 	//get the coords for this cell:
@@ -937,7 +932,7 @@ static void
 cell_bg_lighter(GtkTreeViewColumn *tree_column, GtkCellRenderer *cell, GtkTreeModel *tree_model, GtkTreeIter *iter)
 {
 	unsigned colour_index = 0;
-	gtk_tree_model_get(GTK_TREE_MODEL(app->store), iter, COL_COLOUR, &colour_index, -1);
+	gtk_tree_model_get(GTK_TREE_MODEL(samplecat.store), iter, COL_COLOUR, &colour_index, -1);
 	if(colour_index > PALETTE_SIZE){ gwarn("bad colour data. Index out of range (%u).\n", colour_index); return; }
 
 	if(colour_index == 0){
@@ -961,7 +956,7 @@ listview__cell_data_bg(GtkTreeViewColumn *tree_column, GtkCellRenderer *cell, Gt
 {
 	unsigned colour_index = 0;
 	char colour[16] = "#606060";
-	gtk_tree_model_get(GTK_TREE_MODEL(app->store), iter, COL_COLOUR, &colour_index, -1);
+	gtk_tree_model_get(GTK_TREE_MODEL(samplecat.store), iter, COL_COLOUR, &colour_index, -1);
 	if(colour_index < PALETTE_SIZE) { 
 		if(strlen(app->config.colour[colour_index])){
 			snprintf(colour, 16, "#%s", app->config.colour[colour_index]);
@@ -1039,8 +1034,8 @@ listview__get_mouseover_row()
 	GtkTreePath* path;
 	GtkTreeIter iter;
 	if((view->mouseover_row_ref && (path = gtk_tree_row_reference_get_path(view->mouseover_row_ref)))){
-		gtk_tree_model_get_iter(GTK_TREE_MODEL(app->store), &iter, path);
-		gchar* path_str = gtk_tree_model_get_string_from_iter(GTK_TREE_MODEL(app->store), &iter);
+		gtk_tree_model_get_iter(GTK_TREE_MODEL(samplecat.store), &iter, path);
+		gchar* path_str = gtk_tree_model_get_string_from_iter(GTK_TREE_MODEL(samplecat.store), &iter);
 		row_num = atoi(path_str);
 
 		g_free(path_str);
@@ -1054,8 +1049,8 @@ static void
 listview__highlight_playing_by_path (GtkTreePath* path)
 {
 	GtkTreeIter iter;
-	gtk_tree_model_get_iter(GTK_TREE_MODEL(app->store), &iter, path);
-	gtk_list_store_set(GTK_LIST_STORE(app->store), &iter, COL_COLOUR, /*colour*/ PALETTE_SIZE, -1);
+	gtk_tree_model_get_iter(GTK_TREE_MODEL(samplecat.store), &iter, path);
+	gtk_list_store_set(GTK_LIST_STORE(samplecat.store), &iter, COL_COLOUR, /*colour*/ PALETTE_SIZE, -1);
 }
 
 
@@ -1066,18 +1061,18 @@ listview__highlight_playing_by_ref (GtkTreeRowReference* ref)
 	if (!ref || !gtk_tree_row_reference_valid(ref)) return;
 	if(!(path = gtk_tree_row_reference_get_path(ref))) return;
 
-	GtkTreeRowReference* prev = ((SamplecatListStore*)app->store)->playing;
+	GtkTreeRowReference* prev = ((SamplecatListStore*)samplecat.store)->playing;
 	if(prev){
 		GtkTreePath* path;
 		if((path = gtk_tree_row_reference_get_path(prev))){
 			GtkTreeIter iter;
-			gtk_tree_model_get_iter(GTK_TREE_MODEL(app->store), &iter, path);
-			gtk_list_store_set(GTK_LIST_STORE(app->store), &iter, COL_COLOUR, /*colour*/ 0, -1);
+			gtk_tree_model_get_iter(GTK_TREE_MODEL(samplecat.store), &iter, path);
+			gtk_list_store_set(GTK_LIST_STORE(samplecat.store), &iter, COL_COLOUR, /*colour*/ 0, -1);
 		}
-		gtk_tree_row_reference_free(((SamplecatListStore*)app->store)->playing);
-		((SamplecatListStore*)app->store)->playing = NULL;
+		gtk_tree_row_reference_free(((SamplecatListStore*)samplecat.store)->playing);
+		((SamplecatListStore*)samplecat.store)->playing = NULL;
 	}
-	((SamplecatListStore*)app->store)->playing = gtk_tree_row_reference_copy(ref);
+	((SamplecatListStore*)samplecat.store)->playing = gtk_tree_row_reference_copy(ref);
 
 	listview__highlight_playing_by_path(path);
 

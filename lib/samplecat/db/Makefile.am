@@ -6,8 +6,8 @@ AM_CFLAGS = \
 	-g -Wall -O2 \
 	-DPACKAGE_DATA_DIR=\""$(datadir)"\" \
 	-DPACKAGE_LOCALE_DIR=\""$(prefix)/$(DATADIRNAME)/locale"\" \
-	-DIMAGES_DIR=\"$(imagesdir)\" \
 	-I$(top_srcdir)/lib \
+	-I$(top_srcdir)/lib/samplecat \
 	-I$(top_srcdir)/src \
 	$(SAMPLECAT_CFLAGS) \
 	$(FFTW3_CFLAGS) \

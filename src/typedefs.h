@@ -16,31 +16,9 @@
 #define OVERVIEW_WIDTH (200)
 #define OVERVIEW_HEIGHT (20)
 
-#ifndef __PRI64_PREFIX
-#if (defined __X86_64__ || defined __LP64__)
-# define __PRI64_PREFIX  "l"
-#else
-# define __PRI64_PREFIX  "ll"
-#endif
-#endif
-
-#ifndef PRIu64
-# define PRIu64   __PRI64_PREFIX "u"
-#endif
-#ifndef PRIi64
-# define PRIi64   __PRI64_PREFIX "i"
-#endif
-
 #ifndef PATH_MAX
 #define PATH_MAX (1024)
 #endif
-
-typedef enum {
-	BACKEND_NONE = 0,
-	BACKEND_MYSQL,
-	BACKEND_SQLITE,
-	BACKEND_TRACKER,
-} BackendType;
 
 typedef struct _menu_def          MenuDef;
 typedef struct _libraryview       LibraryView;
@@ -49,12 +27,8 @@ typedef struct _inspector_priv    InspectorPriv;
 typedef struct _PlayCtrl          PlayCtrl;
 typedef struct _auditioner        Auditioner;
 typedef struct _view_option       ViewOption;
-typedef struct _SamplecatModel    SamplecatModel;
-typedef struct _backend           SamplecatBackend;
 typedef struct _palette           Palette;
-typedef struct _config            Config;
 typedef struct _accel             Accel;
-typedef struct _db_config         DbConfig;
 typedef struct _ScanResults       ScanResults;
 
 #ifndef __file_manager_h__

@@ -45,7 +45,6 @@ static bool     sqlite__file_exists      (const char*, int *id);
 
 static sqlite3* db;
 sqlite3_stmt* ppStmt = NULL;
-static SamplecatModel* model = NULL;
 #define MAX_LEN 256 //temp!
 
 enum {
@@ -74,9 +73,8 @@ enum {
 
 
 void
-sqlite__init(SamplecatModel* _model, void* _config)
+sqlite__init(void* _config)
 {
-	model = _model;
 	//config = _config;
 }
 
@@ -431,7 +429,7 @@ sqlite__search_iter_new(char* dir, const char* category, int* n_results)
 	gboolean ok = true;
 
 	char* where = sqlite3_mprintf("%s", "");
-	const char* search = model->filters.search->value;
+	const char* search = samplecat.model->filters.search->value;
 	if(search && strlen(search)){
 #if 0
 		char* where2 = sqlite3_mprintf("%s AND (filename LIKE '%%%q%%' OR filedir LIKE '%%%q%%' OR keywords LIKE '%%%q%%') ", where, search, search, search);

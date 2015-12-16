@@ -93,7 +93,9 @@ static GtkWidget* message_panel__new              ();
 static void       left_pane2                      ();
 #endif
 static void       window_on_layout_changed        ();
+#ifdef USE_OPENGL
 static void       update_waveform_view            (Sample*);
+#endif
 
 static void       k_delete_row                    (GtkAccelGroup*, gpointer);
 #ifdef USE_GDL
@@ -120,10 +122,11 @@ struct _window {
 #ifndef USE_GDL
    GtkWidget*     vpaned;        //vertical divider on lhs between the dir_tree and inspector
 #endif
+#ifdef USE_OPENGL
    struct {
       AGlActor*   spp;
    }              layers;
-
+#endif
 } window;
 
 typedef enum {
@@ -328,7 +331,7 @@ GtkWindow
 	if(0 && BACKEND_IS_NULL) gtk_widget_set_no_show_all(app->libraryview->widget, true); //dont show main view if no database.
 
 #if 0
-	GtkWidget* rotator = rotator_new_with_model(GTK_TREE_MODEL(app->store));
+	GtkWidget* rotator = rotator_new_with_model(GTK_TREE_MODEL(samplecat.store));
 	gtk_widget_show(rotator);
 	gtk_box_pack_start(GTK_BOX(rhs_vbox), rotator, EXPAND_FALSE, FALSE, 0);
 	gtk_widget_set_size_request(rotator, -1, 100);
@@ -494,7 +497,7 @@ GtkWindow
 		}
 #endif
 	}
-	g_signal_connect((gpointer)app->model, "selection-changed", G_CALLBACK(window_on_selection_change), NULL);
+	g_signal_connect((gpointer)samplecat.model, "selection-changed", G_CALLBACK(window_on_selection_change), NULL);
 
 #ifdef USE_GDL
 	void window_on_quit(Application* a, gpointer user_data)
@@ -519,7 +522,7 @@ GtkWindow
 			statusbar_print(1, "showing %i of %i sample(s)", row_count, n_results);
 		}
 	}
-	g_signal_connect(G_OBJECT(app->store), "content-changed", G_CALLBACK(store_content_changed), NULL);
+	g_signal_connect(G_OBJECT(samplecat.store), "content-changed", G_CALLBACK(store_content_changed), NULL);
 
 	dnd_setup();
 
@@ -884,13 +887,13 @@ search_new()
 	{
 		PF;
 		const gchar* text = gtk_entry_get_text(GTK_ENTRY(window.search));
-		if(!app->model->filters.search->value || strcmp(text, app->model->filters.search->value)){
-			samplecat_filter_set_value(app->model->filters.search, g_strdup(text));
+		if(!samplecat.model->filters.search->value || strcmp(text, samplecat.model->filters.search->value)){
+			samplecat_filter_set_value(samplecat.model->filters.search, g_strdup(text));
 		}
 		return NOT_HANDLED;
 	}
 
-	SamplecatFilter* filter = app->model->filters.search;
+	SamplecatFilter* filter = samplecat.model->filters.search;
 	GtkWidget* entry = window.search = gtk_entry_new();
 	gtk_entry_set_max_length(GTK_ENTRY(entry), 64);
 	if(filter->value) gtk_entry_set_text(GTK_ENTRY(entry), filter->value);
@@ -949,7 +952,7 @@ filters_new()
 		return g_strdup_printf("%s: %s%s", filter->name, value, filter->value && strlen(filter->value) > len ? "..." : "");
 	}
 
-	GList* l = app->model->filters_;
+	GList* l = samplecat.model->filters_;
 	for(;l;l=l->next){
 		SamplecatFilter* filter = l->data;
 		dbg(2, "  %s %s", filter->name, filter->value);
@@ -1090,7 +1093,7 @@ tagshow_selector_new()
 
 		char* category = gtk_combo_box_get_active_text(GTK_COMBO_BOX(widget));
 		if (!strcmp(category, ALL_CATEGORIES)) g_free0(category);
-		samplecat_filter_set_value(app->model->filters.category, category);
+		samplecat_filter_set_value(samplecat.model->filters.category, category);
 	}
 	g_signal_connect(combo, "changed", G_CALLBACK(on_view_category_changed), NULL);
 
@@ -1105,7 +1108,7 @@ tagshow_selector_new()
 		}
 	}
 
-	GList* l = app->model->filters_;
+	GList* l = samplecat.model->filters_;
 	for(;l;l=l->next){
 		SamplecatFilter* filter = l->data;
 		if(!strcmp(filter->name, "category")){
@@ -1136,7 +1139,7 @@ delete_selected_rows()
 	for(;l;l=l->next){
 		GtkTreePath* treepath_selection = l->data;
 
-		GtkTreeRowReference* row_ref = gtk_tree_row_reference_new(GTK_TREE_MODEL(app->store), treepath_selection);
+		GtkTreeRowReference* row_ref = gtk_tree_row_reference_new(GTK_TREE_MODEL(samplecat.store), treepath_selection);
 		selected_row_refs = g_list_prepend(selected_row_refs, row_ref);
 	}
 	g_list_free(selectionlist);
@@ -1154,9 +1157,9 @@ delete_selected_rows()
 				int id;
 				gtk_tree_model_get(model, &iter, COL_NAME, &fname, COL_IDX, &id, -1);
 
-				if(!samplecat_model_remove(app->model, id)) return;
+				if(!samplecat_model_remove(samplecat.model, id)) return;
 
-				gtk_list_store_remove(app->store, &iter);
+				gtk_list_store_remove(samplecat.store, &iter);
 				n++;
 
 			} else perr("bad iter!\n");
@@ -1206,7 +1209,7 @@ window_on_fileview_row_selected(GtkTreeView* treeview, gpointer user_data)
 	Sample* s = sample_new_from_filename(full_path, true);
 	if(s){
 		s->online = true;
-		samplecat_model_set_selection (app->model, s);
+		samplecat_model_set_selection (samplecat.model, s);
 		sample_unref(s);
 	}
 }
@@ -1312,15 +1315,15 @@ on_category_set_clicked(GtkComboBox* widget, gpointer user_data)
 	for(i=0;i<g_list_length(selectionlist);i++){
 		GtkTreePath* treepath_selection = g_list_nth_data(selectionlist, i);
 
-		if(gtk_tree_model_get_iter(GTK_TREE_MODEL(app->store), &iter, treepath_selection)){
+		if(gtk_tree_model_get_iter(GTK_TREE_MODEL(samplecat.store), &iter, treepath_selection)){
 			gchar* fname; gchar* tags;
 			int id;
 			Sample* sample;
-			gtk_tree_model_get(GTK_TREE_MODEL(app->store), &iter, COL_SAMPLEPTR, &sample, COL_NAME, &fname, COL_KEYWORDS, &tags, COL_IDX, &id, -1);
+			gtk_tree_model_get(GTK_TREE_MODEL(samplecat.store), &iter, COL_SAMPLEPTR, &sample, COL_NAME, &fname, COL_KEYWORDS, &tags, COL_IDX, &id, -1);
 			dbg(1, "id=%i name=%s", id, fname);
 
 			if(!strcmp(category, "no categories")){
-				if(samplecat_model_update_sample(app->model, sample, COL_KEYWORDS, "")){
+				if(samplecat_model_update_sample(samplecat.model, sample, COL_KEYWORDS, "")){
 				}
 			}else{
 				if(!keyword_is_dupe(category, tags)){
@@ -1328,7 +1331,7 @@ on_category_set_clicked(GtkComboBox* widget, gpointer user_data)
 					snprintf(tags_new, 1024, "%s %s", tags ? tags : "", category);
 					g_strstrip(tags_new); // trim
 
-					if(samplecat_model_update_sample(app->model, sample, COL_KEYWORDS, (void*)tags_new)){
+					if(samplecat_model_update_sample(samplecat.model, sample, COL_KEYWORDS, (void*)tags_new)){
 						statusbar_print(1, "category set");
 					}
 
@@ -1481,7 +1484,7 @@ show_waveform(gboolean enable)
 		gtk_widget_set_size_request(window.waveform, 100, 96);
 #endif
 
-		c->selection_handler = g_signal_connect((gpointer)app->model, "selection-changed", G_CALLBACK(_waveform_on_selection_change), c);
+		c->selection_handler = g_signal_connect((gpointer)samplecat.model, "selection-changed", G_CALLBACK(_waveform_on_selection_change), c);
 		g_signal_connect((gpointer)window.waveform, "realize", G_CALLBACK(on_waveform_view_realise), NULL);
 
 		void waveform_on_audio_ready(GObject* _app, gpointer _)
@@ -1506,7 +1509,7 @@ show_waveform(gboolean enable)
 			bool show_wave()
 			{
 				Sample* s;
-				if((s = app->model->selection)){
+				if((s = samplecat.model->selection)){
 #ifdef USE_LIBASS
 					WaveformViewPlus* view = (WaveformViewPlus*)window.waveform;
 					Waveform* w = view->waveform;
@@ -1746,7 +1749,7 @@ window_load_layout()
 	bool _load_layout_from_file(const char* name)
 	{
 		bool ok = false;
-		char* filename = g_strdup_printf("%s/layouts/%s.xml", app->config_dir, name);
+		char* filename = g_strdup_printf("%s/layouts/%s.xml", app->configctx.dir, name);
 		if(gdl_dock_layout_load_from_file(window.layout, filename)){
 			if(!strcmp(name, "__default__")){ // only activate one layout
 				_load_layout(name);
@@ -1758,7 +1761,7 @@ window_load_layout()
 		return ok;
 	}
 
-	char* path = g_strdup_printf("%s/layouts/", app->config_dir);
+	char* path = g_strdup_printf("%s/layouts/", app->configctx.dir);
 	GError* error = NULL;
 	GDir* dir = g_dir_open(path, 0, &error);
 	if(!error) {
@@ -1795,10 +1798,10 @@ window_save_layout()
 	PF;
 	g_return_if_fail(window.layout);
 
-	char* dir = g_build_filename(app->config_dir, "layouts", NULL);
+	char* dir = g_build_filename(app->configctx.dir, "layouts", NULL);
 	if(!g_mkdir_with_parents(dir, 488)){
 
-		char* filename = g_build_filename(app->config_dir, "layouts", "__default__.xml", NULL);
+		char* filename = g_build_filename(app->configctx.dir, "layouts", "__default__.xml", NULL);
 		if(gdl_dock_layout_save_to_file(window.layout, filename)){
 		}
 		g_free(filename);
@@ -1834,7 +1837,7 @@ make_context_menu()
 			GtkTreePath* treepath = g_list_nth_data(selectionlist, i);
 			Sample* sample = sample_get_from_model(treepath);
 			if(do_progress(0, 0)) break; // TODO: set progress title to "updating"
-			samplecat_model_refresh_sample (app->model, sample, force_update);
+			samplecat_model_refresh_sample (samplecat.model, sample, force_update);
 			statusbar_print(1, "online status updated (%s)", sample->online ? "online" : "not online");
 			sample_unref(sample);
 		}
@@ -1856,13 +1859,13 @@ make_context_menu()
 	toggle_loop_playback(GtkMenuItem* widget, gpointer user_data)
 	{
 		PF;
-		if(app->loop_playback) app->loop_playback = false; else app->loop_playback = true;
+		app->config.loop_playback = !app->config.loop_playback;
 	}
 
 	void toggle_recursive_add(GtkMenuItem* widget, gpointer user_data)
 	{
 		PF;
-		if(app->add_recursive) app->add_recursive = false; else app->add_recursive = true;
+		app->config.add_recursive = !app->config.add_recursive;
 	}
 
 	MenuDef _menu_def[] = {
@@ -2040,12 +2043,12 @@ make_context_menu()
 
 	GtkWidget* menu_item = gtk_check_menu_item_new_with_mnemonic("Add Recursively");
 	gtk_menu_shell_append(GTK_MENU_SHELL(sub), menu_item);
-	gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menu_item), app->add_recursive);
+	gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menu_item), app->config.add_recursive);
 	g_signal_connect(G_OBJECT(menu_item), "activate", G_CALLBACK(toggle_recursive_add), NULL);
 
 	widgets.loop_playback = menu_item = gtk_check_menu_item_new_with_mnemonic("Loop Playback");
 	gtk_menu_shell_append(GTK_MENU_SHELL(sub), menu_item);
-	gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menu_item), app->loop_playback);
+	gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menu_item), app->config.loop_playback);
 	g_signal_connect(G_OBJECT(menu_item), "activate", G_CALLBACK(toggle_loop_playback), NULL);
 	gtk_widget_set_no_show_all(menu_item, true);
 

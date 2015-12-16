@@ -6,4 +6,8 @@ if ENABLE_WEBKIT
 WEBKIT_DIR = webkit
 endif
 
-SUBDIRS = $(WEBKIT_DIR) $(MX_DIR)
+if ENABLE_GL_APP
+GL_APP_DIR = gl-app
+endif
+
+SUBDIRS = $(WEBKIT_DIR) $(MX_DIR) $(GL_APP_DIR)

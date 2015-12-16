@@ -228,14 +228,14 @@ inspector_new()
 	gtk_entry_set_text(GTK_ENTRY(edit), "");
 	g_object_ref(edit); // stops gtk deleting the unparented widget.
 
-	g_signal_connect((gpointer)app->model, "selection-changed", G_CALLBACK(inspector_update), NULL);
+	g_signal_connect((gpointer)samplecat.model, "selection-changed", G_CALLBACK(inspector_update), NULL);
 
 	void sample_changed(SamplecatModel* m, Sample* sample, int what, void* data, gpointer user_data)
 	{
 		if (sample->id == app->inspector->priv->row_id)
 			inspector_update(m, sample, NULL);
 	}
-	g_signal_connect((gpointer)app->model, "sample-changed", G_CALLBACK(sample_changed), NULL);
+	g_signal_connect((gpointer)samplecat.model, "sample-changed", G_CALLBACK(sample_changed), NULL);
 
 	gtk_widget_set_size_request(inspector->widget, 20, 20);
 
@@ -628,10 +628,10 @@ on_notes_focus_out(GtkWidget* widget, gpointer userdata)
 	gtk_text_buffer_get_end_iter  (textbuf,  &end_iter);
 	gchar* notes = gtk_text_buffer_get_text(textbuf, &start_iter, &end_iter, true);
 
-	Sample* sample = app->model->selection;
+	Sample* sample = samplecat.model->selection;
 	if(sample && (sample->id == i->row_id) && (!sample->notes || strcmp(notes, sample->notes))){
 		statusbar_print(1,
-			samplecat_model_update_sample (app->model, sample, COL_X_NOTES, notes)
+			samplecat_model_update_sample (samplecat.model, sample, COL_X_NOTES, notes)
 				? "notes updated"
 				: "failed to update notes");
 	}
@@ -668,7 +668,7 @@ tag_edit_start(int _)
 	if(!GTK_IS_WIDGET(edit)) { perr("edit widget missing.\n"); return;}
 	if(!GTK_IS_WIDGET(label)) { perr("label widget is missing.\n"); return;}
 
-	Sample* s = sample_get_by_row_ref(i->row_ref);
+	Sample* s = samplecat_list_store_get_sample_by_row_ref(i->row_ref);
 	if (!s) {
 		dbg(0,"sample not found");
 	} else {
@@ -725,9 +725,9 @@ tag_edit_stop(GtkWidget* widget, GdkEventCrossing* event, gpointer user_data)
 
 		dbg(1, "id=%i", id);
 
-		Sample* sample = sample_get_by_row_ref(row_ref);
+		Sample* sample = samplecat_list_store_get_sample_by_row_ref(row_ref);
 		g_return_val_if_fail(sample, false);
-		if((ok = samplecat_model_update_sample (app->model, sample, COL_KEYWORDS, (void*)tags_new))){
+		if((ok = samplecat_model_update_sample (samplecat.model, sample, COL_KEYWORDS, (void*)tags_new))){
 			statusbar_print(1, "keywords updated");
 		}else{
 			statusbar_print(1, "failed to update keywords");

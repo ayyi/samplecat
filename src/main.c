@@ -31,7 +31,7 @@ char * program_name;
 #include "waveform/utils.h"
 #include "utils/ayyi_utils.h"
 #include "utils/pixmaps.h"
-#include "samplecat/worker.h"
+#include "samplecat.h"
 #ifdef USE_AYYI
   #include "ayyi.h"
   #include "ayyi_model.h"
@@ -39,7 +39,7 @@ char * program_name;
 #include "file_manager.h"
 #include "typedefs.h"
 #ifdef USE_TRACKER
-  #include "src/db/tracker.h"
+  #include "db/tracker.h"
 #endif
 #ifdef USE_MYSQL
   #include "db/mysql.h"
@@ -68,10 +68,6 @@ char * program_name;
 #undef DEBUG_NO_THREADS
 
 void on_quit (GtkMenuItem*, gpointer);
-
-static bool      config_load  ();
-static void      config_new   ();
-static bool      config_save  ();
 
 Application*     app = NULL;
 SamplecatBackend backend = {0,}; 
@@ -164,7 +160,7 @@ main(int argc, char** argv)
 	printf("%s"PACKAGE_NAME". Version "PACKAGE_VERSION"%s\n", yellow, white);
 
 	app = application_new();
-	SamplecatModel* model = app->model;
+	SamplecatModel* model = samplecat.model;
 
 	colour_box_init();
 
@@ -273,9 +269,10 @@ main(int argc, char** argv)
 
 	type_init();
 
-	config_load();
+	config_load(&app->configctx, &app->config);
+	g_signal_emit_by_name (app, "config-loaded");
 
-	db_init(app->model,
+	db_init(
 #ifdef USE_MYSQL
 		&app->config.mysql
 #else
@@ -356,7 +353,6 @@ main(int argc, char** argv)
 		do_progress(0, 0);
 		ScanResults results = {0,};
 		if(g_file_test(app->args.add, G_FILE_TEST_IS_DIR)){
-			if(app->no_gui) app->add_recursive = true; // TODO take from config
 			application_scan(app->args.add, &results);
 		}else{
 			printf("Adding file: %s\n", app->args.add);
@@ -406,8 +402,8 @@ main(int argc, char** argv)
 	//if(BACKEND_IS_NULL) listview__show_db_missing();
 #endif
 
-	app->loaded = true;
-	dbg(1, "loaded");
+	application_set_ready();
+
 #ifndef USE_GDL
 	message_panel__add_msg("hello", GTK_STOCK_INFO);
 #endif
@@ -425,244 +421,16 @@ main(int argc, char** argv)
 }
 
 
-static bool
-config_load()
-{
-#ifdef USE_MYSQL
-	strcpy(app->config.mysql.name, "samplecat");
-#endif
-	strcpy(app->config.show_dir, "");
-
-	int i;
-	for (i=0;i<PALETTE_SIZE;i++) {
-		//currently these are overridden anyway
-		snprintf(app->config.colour[i], 7, "%s", "000000");
-	}
-
-	GError* error = NULL;
-	app->key_file = g_key_file_new();
-	if(g_key_file_load_from_file(app->key_file, app->config_filename, G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS, &error)){
-		p_(1, "config loaded.");
-		gchar* groupname = g_key_file_get_start_group(app->key_file);
-		dbg (2, "group=%s.", groupname);
-		if(!strcmp(groupname, "Samplecat")){
-#ifdef USE_MYSQL
-#define num_keys (16)
-#else
-#define num_keys (12)
-#endif
-#define ADD_CONFIG_KEY(VAR, NAME) \
-			strcpy(keys[i], NAME); \
-			loc[i] = VAR; \
-			siz[i] = G_N_ELEMENTS(VAR); \
-			i++;
-
-			char  keys[num_keys+(PALETTE_SIZE-1)][64];
-			char*  loc[num_keys+(PALETTE_SIZE-1)];
-			size_t siz[num_keys+(PALETTE_SIZE-1)];
-
-			i=0;
-			ADD_CONFIG_KEY (app->config.database_backend, "database_backend");
-#ifdef USE_MYSQL
-			ADD_CONFIG_KEY (app->config.mysql.host,       "mysql_host");
-			ADD_CONFIG_KEY (app->config.mysql.user,       "mysql_user");
-			ADD_CONFIG_KEY (app->config.mysql.pass,       "mysql_pass");
-			ADD_CONFIG_KEY (app->config.mysql.name,       "mysql_name");
-#endif
-			ADD_CONFIG_KEY (app->config.window_height,    "window_height");
-			ADD_CONFIG_KEY (app->config.window_width,     "window_width");
-			ADD_CONFIG_KEY (theme_name,                   "icon_theme");
-			ADD_CONFIG_KEY (app->config.column_widths[0], "col1_width");
-			ADD_CONFIG_KEY (app->config.browse_dir,       "browse_dir");
-			ADD_CONFIG_KEY (app->config.show_player,      "show_player");
-			ADD_CONFIG_KEY (app->config.show_waveform,    "show_waveform");
-			ADD_CONFIG_KEY (app->config.show_spectrogram, "show_spectrogram");
-			ADD_CONFIG_KEY (app->config.auditioner,       "auditioner");
-			ADD_CONFIG_KEY (app->config.jack_autoconnect, "jack_autoconnect");
-			ADD_CONFIG_KEY (app->config.jack_midiconnect, "jack_midiconnect");
-
-			int k;
-			for (k=0;k<PALETTE_SIZE-1;k++) {
-				char tmp[16]; snprintf(tmp, 16, "colorkey%02d", k+1);
-				ADD_CONFIG_KEY(app->config.colour[k+1], tmp)
-			}
-
-			gchar* keyval;
-			for(k=0;k<(num_keys+PALETTE_SIZE-1);k++){
-				if((keyval = g_key_file_get_string(app->key_file, groupname, keys[k], &error))){
-					if(loc[k]){
-						size_t keylen = siz[k];
-						snprintf(loc[k], keylen, "%s", keyval); loc[k][keylen-1] = '\0';
-					}
-					dbg(2, "%s=%s", keys[k], keyval);
-					g_free(keyval);
-				}else{
-					if(error->code == 3) g_error_clear(error)
-					else { GERR_WARN; }
-					if (!loc[k] || strlen(loc[k])==0) strcpy(loc[k], "");
-				}
-			}
-
-			if((keyval = g_key_file_get_string(app->key_file, groupname, "show_dir", &error))){
-				samplecat_model_set_search_dir (app->model, app->config.show_dir);
-			}
-			if((keyval = g_key_file_get_string(app->key_file, groupname, "filter", &error))){
-				app->model->filters.search->value = g_strdup(keyval);
-			}
-
-#ifndef USE_GDL
-			app->view_options[SHOW_PLAYER]      = (ViewOption){"Player",      show_player,      strcmp(app->config.show_player, "false")};
-			app->view_options[SHOW_FILEMANAGER] = (ViewOption){"Filemanager", show_filemanager, true};
-			app->view_options[SHOW_WAVEFORM]    = (ViewOption){"Waveform",    show_waveform,    !strcmp(app->config.show_waveform, "true")};
-#ifdef HAVE_FFTW3
-			app->view_options[SHOW_SPECTROGRAM] = (ViewOption){"Spectrogram", show_spectrogram, !strcmp(app->config.show_spectrogram, "true")};
-#endif
-#endif
-		}
-		else{ pwarn("cannot find Samplecat key group.\n"); return false; }
-		g_free(groupname);
-	}else{
-		printf("unable to load config file: %s.\n", error->message);
-		g_error_free(error);
-		error = NULL;
-		config_new();
-		config_save();
-		return false;
-	}
-
-	g_signal_emit_by_name (app, "config-loaded");
-	return true;
-}
-
-
-static bool
-config_save()
-{
-	if(app->loaded){
-		//update the search directory:
-		g_key_file_set_value(app->key_file, "Samplecat", "show_dir", app->model->filters.dir->value ? app->model->filters.dir->value : "");
-
-		//save window dimensions:
-		gint width, height;
-		char value[256];
-		if(app->window && GTK_WIDGET_REALIZED(app->window)){
-			gtk_window_get_size(GTK_WINDOW(app->window), &width, &height);
-		} else {
-			dbg (0, "couldnt get window size...", "");
-			width  = MIN(atoi(app->config.window_width),  2048); //FIXME ?
-			height = MIN(atoi(app->config.window_height), 2048);
-		}
-		snprintf(value, 255, "%i", width);
-		g_key_file_set_value(app->key_file, "Samplecat", "window_width", value);
-		snprintf(value, 255, "%i", height);
-		g_key_file_set_value(app->key_file, "Samplecat", "window_height", value);
-
-		g_key_file_set_value(app->key_file, "Samplecat", "icon_theme", theme_name);
-
-		GtkTreeViewColumn* column = gtk_tree_view_get_column(GTK_TREE_VIEW(app->libraryview->widget), 1);
-		int column_width = gtk_tree_view_column_get_width(column);
-		snprintf(value, 255, "%i", column_width);
-		g_key_file_set_value(app->key_file, "Samplecat", "col1_width", value);
-
-		g_key_file_set_value(app->key_file, "Samplecat", "col1_height", value);
-
-		g_key_file_set_value(app->key_file, "Samplecat", "filter", app->model->filters.search->value);
-
-		AyyiLibfilemanager* fm = file_manager__get_signaller();
-		if(fm){
-			struct _Filer* f = fm->file_window;
-			if(f){
-				g_key_file_set_value(app->key_file, "Samplecat", "browse_dir", f->real_path);
-			}
-		}
-
-#ifndef USE_GDL
-		g_key_file_set_value(app->key_file, "Samplecat", "show_player", app->view_options[SHOW_PLAYER].value ? "true" : "false");
-		g_key_file_set_value(app->key_file, "Samplecat", "show_waveform", app->view_options[SHOW_WAVEFORM].value ? "true" : "false");
-#ifdef HAVE_FFTW3
-		g_key_file_set_value(app->key_file, "Samplecat", "show_spectrogram", app->view_options[SHOW_SPECTROGRAM].value ? "true" : "false");
-#endif
-#endif
-
-		if(strlen(app->config.auditioner))
-			g_key_file_set_value(app->key_file, "Samplecat", "auditioner", app->config.auditioner);
-
-		int i;
-		for (i=1;i<PALETTE_SIZE;i++) {
-			char keyname[32];
-			snprintf(keyname,32, "colorkey%02d", i);
-			g_key_file_set_value(app->key_file, "Samplecat", keyname, app->config.colour[i]);
-		}
-	}
-
-	GError* error = NULL;
-	gsize length;
-	gchar* string = g_key_file_to_data(app->key_file, &length, &error);
-	if(error){
-		dbg (0, "error saving config file: %s", error->message);
-		g_error_free(error);
-	}
-
-	if(ensure_config_dir()){
-
-		FILE* fp;
-		if(!(fp = fopen(app->config_filename, "w"))){
-			errprintf("cannot open config file for writing (%s).\n", app->config_filename);
-			statusbar_print(1, "cannot open config file for writing (%s).", app->config_filename);
-			return false;
-		}
-		if(fprintf(fp, "%s", string) < 0){
-			errprintf("error writing data to config file (%s).\n", app->config_filename);
-			statusbar_print(1, "error writing data to config file (%s).", app->config_filename);
-		}
-		fclose(fp);
-
-		application_quit(app);
-	}
-	else errprintf("cannot create config directory.");
-	g_free(string);
-	return true;
-}
-
-
-static void
-config_new()
-{
-	//g_key_file_has_group(GKeyFile *key_file, const gchar *group_name);
-
-	GError* error = NULL;
-	char data[256 * 256];
-	sprintf(data, "# this is the default config file for the Samplecat application.\n# pls enter your database details.\n"
-		"[Samplecat]\n"
-		"database_backend=sqlite\n"
-		"mysql_host=localhost\n"
-		"mysql_user=username\n"
-		"mysql_pass=pass\n"
-		"mysql_name=samplelib\n"
-		"show_dir=\n"
-		"auditioner=\n"
-		"jack_autoconnect=system:playback_\n"
-		"jack_midiconnect=DISABLED\n"
-		);
-
-	if(!g_key_file_load_from_data(app->key_file, data, strlen(data), G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS, &error)){
-		perr("error creating new key_file from data. %s\n", error->message);
-		g_error_free(error);
-		error = NULL;
-		return;
-	}
-
-	printf("A default config file has been created. Please enter your database details in '%s'.\n", app->config_filename);
-}
-
-
 void
 on_quit(GtkMenuItem* menuitem, gpointer user_data)
 {
 	int exit_code = GPOINTER_TO_INT(user_data);
 	if(exit_code > 1) exit_code = 0; //ignore invalid exit code.
 
-	if(app->loaded && !app->temp_view) config_save();
+	if(app->loaded && !app->temp_view){
+		config_save(&app->configctx);
+		application_quit(app); // emit signal
+	}
 
 	app->auditioner->stop();
 	app->auditioner->disconnect();
