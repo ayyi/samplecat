@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2015 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2016 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -12,99 +12,30 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <string.h>
-#include <sample.h>
 #include <config.h>
-#include <db/db.h>
-#include <samplecat/support.h>
-#include <time.h>
-#include <worker.h>
-#include <debug/debug.h>
-#include <gdk-pixbuf/gdk-pixbuf.h>
-#include <support.h>
 #include <stdlib.h>
-#include <list_store.h>
+#include <time.h>
+#include <gdk-pixbuf/gdk-pixbuf.h>
 #include <gobject/gvaluecollector.h>
-#include <application.h>
+#include <debug/debug.h>
+#include <samplecat.h>
+#include <db/db.h>
+#include <src/list_store.h>
 #include <src/worker.h>
 
+#define backend samplecat.model->backend
 
-#define SAMPLECAT_TYPE_FILTER (samplecat_filter_get_type ())
-#define SAMPLECAT_FILTER(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), SAMPLECAT_TYPE_FILTER, SamplecatFilter))
-#define SAMPLECAT_FILTER_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST ((klass), SAMPLECAT_TYPE_FILTER, SamplecatFilterClass))
-#define SAMPLECAT_IS_FILTER(obj) (G_TYPE_CHECK_INSTANCE_TYPE ((obj), SAMPLECAT_TYPE_FILTER))
-#define SAMPLECAT_IS_FILTER_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), SAMPLECAT_TYPE_FILTER))
-#define SAMPLECAT_FILTER_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), SAMPLECAT_TYPE_FILTER, SamplecatFilterClass))
-
-typedef struct _SamplecatFilter SamplecatFilter;
-typedef struct _SamplecatFilterClass SamplecatFilterClass;
-typedef struct _SamplecatFilterPrivate SamplecatFilterPrivate;
 #define _g_free0(var) (var = (g_free (var), NULL))
 typedef struct _SamplecatParamSpecFilter SamplecatParamSpecFilter;
 
-#define SAMPLECAT_TYPE_FILTERS (samplecat_filters_get_type ())
-typedef struct _SamplecatFilters SamplecatFilters;
-
-#define SAMPLECAT_TYPE_IDLE (samplecat_idle_get_type ())
-#define SAMPLECAT_IDLE(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), SAMPLECAT_TYPE_IDLE, SamplecatIdle))
-#define SAMPLECAT_IDLE_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST ((klass), SAMPLECAT_TYPE_IDLE, SamplecatIdleClass))
-#define SAMPLECAT_IS_IDLE(obj) (G_TYPE_CHECK_INSTANCE_TYPE ((obj), SAMPLECAT_TYPE_IDLE))
-#define SAMPLECAT_IS_IDLE_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), SAMPLECAT_TYPE_IDLE))
-#define SAMPLECAT_IDLE_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), SAMPLECAT_TYPE_IDLE, SamplecatIdleClass))
-
-typedef struct _SamplecatIdle SamplecatIdle;
-typedef struct _SamplecatIdleClass SamplecatIdleClass;
-typedef struct _SamplecatIdlePrivate SamplecatIdlePrivate;
 typedef struct _SamplecatParamSpecIdle SamplecatParamSpecIdle;
 
 typedef struct _SamplecatSampleChange SamplecatSampleChange;
 
-#define SAMPLECAT_TYPE_MODEL (samplecat_model_get_type ())
-#define SAMPLECAT_MODEL(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), SAMPLECAT_TYPE_MODEL, SamplecatModel))
-#define SAMPLECAT_MODEL_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST ((klass), SAMPLECAT_TYPE_MODEL, SamplecatModelClass))
-#define SAMPLECAT_IS_MODEL(obj) (G_TYPE_CHECK_INSTANCE_TYPE ((obj), SAMPLECAT_TYPE_MODEL))
-#define SAMPLECAT_IS_MODEL_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), SAMPLECAT_TYPE_MODEL))
-#define SAMPLECAT_MODEL_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), SAMPLECAT_TYPE_MODEL, SamplecatModelClass))
-
-typedef struct _SamplecatModel SamplecatModel;
-typedef struct _SamplecatModelClass SamplecatModelClass;
 typedef struct _SamplecatModelPrivate SamplecatModelPrivate;
 #define _g_list_free0(var) ((var == NULL) ? NULL : (var = (g_list_free (var), NULL)))
 #define _samplecat_idle_unref0(var) ((var == NULL) ? NULL : (var = (samplecat_idle_unref (var), NULL)))
 #define _sample_unref0(var) ((var == NULL) ? NULL : (var = (sample_unref (var), NULL)))
-
-struct _SamplecatFilter {
-	GTypeInstance parent_instance;
-	volatile int ref_count;
-	SamplecatFilterPrivate * priv;
-	gchar* name;
-	gchar* value;
-};
-
-struct _SamplecatFilterClass {
-	GTypeClass parent_class;
-	void (*finalize) (SamplecatFilter *self);
-};
-
-struct _SamplecatParamSpecFilter {
-	GParamSpec parent_instance;
-};
-
-struct _SamplecatFilters {
-	SamplecatFilter* search;
-	SamplecatFilter* dir;
-	SamplecatFilter* category;
-};
-
-struct _SamplecatIdle {
-	GTypeInstance parent_instance;
-	volatile int ref_count;
-	SamplecatIdlePrivate * priv;
-};
-
-struct _SamplecatIdleClass {
-	GTypeClass parent_class;
-	void (*finalize) (SamplecatIdle *self);
-};
 
 struct _SamplecatIdlePrivate {
 	guint id;
@@ -113,30 +44,10 @@ struct _SamplecatIdlePrivate {
 	GDestroyNotify fn_target_destroy_notify;
 };
 
-struct _SamplecatParamSpecIdle {
-	GParamSpec parent_instance;
-};
-
 struct _SamplecatSampleChange {
 	Sample* sample;
 	gint prop;
 	void* val;
-};
-
-struct _SamplecatModel {
-	GObject parent_instance;
-	SamplecatModelPrivate * priv;
-	gint state;
-	gchar* cache_dir;
-	GList* backends;
-	SamplecatFilters filters;
-	GList* filters_;
-	Sample* selection;
-	GList* modified;
-};
-
-struct _SamplecatModelClass {
-	GObjectClass parent_class;
 };
 
 struct _SamplecatModelPrivate {
@@ -226,13 +137,9 @@ SamplecatFilter* samplecat_filter_new (gchar* _name) {
 
 
 void samplecat_filter_set_value (SamplecatFilter* self, gchar* val) {
-	gchar* _tmp0_;
-	gchar* _tmp1_;
-	g_return_if_fail (self != NULL);
-	_tmp0_ = val;
-	_tmp1_ = g_strdup ((const gchar*) _tmp0_);
+	g_return_if_fail (self);
 	_g_free0 (self->value);
-	self->value = _tmp1_;
+	self->value = g_strdup ((const gchar*)val);
 	g_signal_emit_by_name (self, "changed");
 }
 

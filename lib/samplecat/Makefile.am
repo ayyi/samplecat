@@ -17,6 +17,7 @@ CLEANFILES =
 libsamplecat_a_SOURCES = \
 	typedefs.h \
 	samplecat.c samplecat.h \
+	model.c model.h \
 	sample.c sample.h \
 	worker.c worker.h \
 	logger.c logger.h \

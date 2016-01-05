@@ -192,7 +192,7 @@ update_dir_node_list()
 
 	if(BACKEND_IS_NULL) return;
 
-	backend.dir_iter_new();
+	samplecat.model->backend.dir_iter_new();
 
 	if(app->dir_tree) g_node_destroy(app->dir_tree);
 	app->dir_tree = g_node_new(NULL);
@@ -249,7 +249,7 @@ update_dir_node_list()
 	}
 
 	char* u;
-	while((u = backend.dir_iter_next())){
+	while((u = samplecat.model->backend.dir_iter_next())){
 
 		dbg(2, "%s", u);
 		gchar** v = g_strsplit(u, "/", 64);
@@ -267,7 +267,7 @@ update_dir_node_list()
 		g_strfreev(v);
 	}
 
-	backend.dir_iter_free();
+	samplecat.model->backend.dir_iter_free();
 	dbg(2, "size=%i", g_node_n_children(app->dir_tree));
 }
 

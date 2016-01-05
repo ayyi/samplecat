@@ -14,7 +14,7 @@
 #include "gdk/gdk.h"
 #include "typedefs.h"
 
-struct _backend
+struct _SamplecatBackend
 {
 	gboolean         pending;
 
@@ -43,7 +43,7 @@ struct _backend
 	int              n_results;
 };
 
-#define BACKEND_IS_NULL (backend.search_iter_new == NULL)
+#define BACKEND_IS_NULL (samplecat.model->backend.search_iter_new == NULL)
 
 void       db_init                (SamplecatDBConfig*);
 gboolean   db_connect             ();
@@ -52,6 +52,6 @@ gboolean   samplecat_set_backend  (BackendType);
 GdkPixbuf* blob_to_pixbuf         (const unsigned char* blob, guint len);
 
 #ifdef USE_MYSQL
-#include "db/mysql.h"
+#include "samplecat/db/mysql.h"
 #endif
 #endif //__db_db_h__

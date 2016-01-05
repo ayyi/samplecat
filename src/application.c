@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2015 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2016 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -425,7 +425,7 @@ application_add_file(const char* path, ScanResults* result)
 	/* check if file already exists in the store
 	 * -> don't add it again
 	 */
-	if(backend.file_exists(path, NULL)) {
+	if(samplecat.model->backend.file_exists(path, NULL)) {
 		if(!app->no_gui) statusbar_print(1, "duplicate: not re-adding a file already in db.");
 		g_warning("duplicate file: %s", path);
 		Sample* s = sample_get_by_filename(path);
@@ -464,7 +464,7 @@ application_add_file(const char* path, ScanResults* result)
 #ifdef CHECK_SIMILAR
 	/* check if /same/ file already exists w/ different path */
 	GList* existing;
-	if((existing = backend.filter_by_audio(sample))) {
+	if((existing = samplecat.model->backend.filter_by_audio(sample))) {
 		GList* l = existing; int i;
 #ifdef INTERACTIVE_IMPORT
 		GString* note = g_string_new("Similar or identical file(s) already present in database:\n");
@@ -499,7 +499,7 @@ application_add_file(const char* path, ScanResults* result)
 #endif /* END check for similar files on import */
 
 	sample->online = 1;
-	sample->id = backend.insert(sample);
+	sample->id = samplecat.model->backend.insert(sample);
 	if (sample->id < 0) {
 		sample_unref(sample);
 		return false;

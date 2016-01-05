@@ -513,6 +513,7 @@ inspector_set_labels(Sample* sample)
 	}
 
 #ifndef USE_GDL
+	extern void show_player (gboolean);
 	if (/*app->auditioner->status && app->auditioner->status() != -1.0 && */app->view_options[SHOW_PLAYER].value){
 		show_player(true); // show/hide player
 	}

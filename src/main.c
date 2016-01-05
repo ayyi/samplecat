@@ -70,7 +70,6 @@ char * program_name;
 void on_quit (GtkMenuItem*, gpointer);
 
 Application*     app = NULL;
-SamplecatBackend backend = {0,}; 
 Palette          palette;
 
 extern char theme_name[64];
@@ -382,7 +381,7 @@ main(int argc, char** argv)
 	gtk_osxapplication_set_menu_bar(osxApp, GTK_MENU_SHELL(menu_bar));
 #endif
 
-	if(!backend.pending){ 
+	if(!samplecat.model->backend.pending){
 		application_search();
 		search_pending = false;
 	}else{
@@ -435,7 +434,7 @@ on_quit(GtkMenuItem* menuitem, gpointer user_data)
 	app->auditioner->stop();
 	app->auditioner->disconnect();
 
-	if(backend.disconnect) backend.disconnect();
+	if(samplecat.model->backend.disconnect) samplecat.model->backend.disconnect();
 
 #if 0
 	//disabled due to errors when quitting early.

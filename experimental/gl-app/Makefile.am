@@ -19,9 +19,9 @@ samplecat_gl_SOURCES = \
 	samplecat_gl.c \
 	glx.c glx.h \
 	views/list.c views/list.h \
+	views/search.c views/search.h \
 	keys.h \
 	$(top_srcdir)/src/icon_theme.c $(top_srcdir)/src/icon_theme.h \
-	$(top_srcdir)/src/model.c $(top_srcdir)/src/model.h \
 	$(top_srcdir)/src/list_store.c $(top_srcdir)/src/list_store.h \
 	$(top_srcdir)/src/worker.c $(top_srcdir)/src/worker.h \
 	$(AUDIOANALYSERS_SRC) \

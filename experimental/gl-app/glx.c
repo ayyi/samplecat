@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2012-2015 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2012-2016 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -245,7 +245,7 @@ make_window(Display *dpy, const char *name, int x, int y, int width, int height,
 	attr.background_pixel = 0;
 	attr.border_pixel = 0;
 	attr.colormap = XCreateColormap(dpy, root, visinfo->visual, AllocNone);
-	attr.event_mask = StructureNotifyMask | ExposureMask | KeyPressMask;
+	attr.event_mask = StructureNotifyMask | ExposureMask | KeyPressMask | ButtonPressMask;
 	mask = CWBackPixel | CWBorderPixel | CWColormap | CWEventMask;
 
 	Window win = XCreateWindow(dpy, root, 0, 0, width, height, 0, visinfo->depth, InputOutput, visinfo->visual, mask, &attr);
@@ -306,42 +306,43 @@ event_loop(Display* dpy, Window win)
 			XNextEvent(dpy, &event);
 			switch (event.type) {
 				case Expose:
-					/* we'll redraw below */
-								need_draw = TRUE;
+					need_draw = TRUE;
 					break;
 				case ConfigureNotify:
 					on_window_resize(event.xconfigure.width, event.xconfigure.height);
-					need_draw = TRUE;
+								need_draw = TRUE;
+					//g_idle_add(_redraw, NULL);
+//					g_timeout_add(500, _redraw, NULL);
 					break;
 				case KeyPress: {
 					char buffer[10];
 					int code = XLookupKeysym(&event.xkey, 0);
 
 					KeyHandler* handler = g_hash_table_lookup(key_handlers, &code);
-					if(handler){
-						handler();
-					}
-					else dbg(1, "%i", code);
+					if(handler) handler();
 
-					if (code == XK_Left) {
+					XLookupString(&event.xkey, buffer, sizeof(buffer), NULL, NULL);
+					if (buffer[0] == 27 /* ESC */|| buffer[0] == 'q') {
+						return;
 					}
-					else if (code == XK_Right) {
+					else agl_actor__xevent(scene, &event);
+
+					} break;
+				case ButtonPress:
+					if(event.xbutton.button == 1){
+						int x = event.xbutton.x;
+						int y = event.xbutton.y;
+						printf("button press: %i %i\n", x, y);
 					}
-					else {
-						XLookupString(&event.xkey, buffer, sizeof(buffer), NULL, NULL);
-						if (buffer[0] == 27 || buffer[0] == 'q') {
-							/* escape */
-							return;
-						}
-					}
-				}
+					agl_actor__xevent(scene, &event);
+					break;
 			}
 		}
 
 		if(need_draw){
 			draw();
-			need_draw = FALSE;
 			glXSwapBuffers(dpy, win);
+			need_draw = FALSE;
 		}
 
 		if (get_frame_usage) {
@@ -415,27 +416,27 @@ show_refresh_rate(Display* dpy)
 void
 make_extension_table(const char* string)
 {
-   char** string_tab;
-   unsigned  num_strings;
-   unsigned  base;
-   unsigned  idx;
-   unsigned  i;
-      
-   /* Count the number of spaces in the string.  That gives a base-line
-    * figure for the number of extension in the string.
-    */
-   
-   num_strings = 1;
-   for (i = 0 ; string[i] != NUL ; i++) {
-      if (string[i] == ' ') {
-		num_strings++;
-      }
-   }
-   
-   string_tab = (char**) malloc(sizeof( char * ) * num_strings);
-   if (string_tab == NULL) {
-      return;
-   }
+	char** string_tab;
+	unsigned  num_strings;
+	unsigned  base;
+	unsigned  idx;
+	unsigned  i;
+
+	/* Count the number of spaces in the string.  That gives a base-line
+	 * figure for the number of extension in the string.
+	 */
+
+	num_strings = 1;
+	for (i = 0 ; string[i] != NUL ; i++) {
+		if (string[i] == ' ') {
+			num_strings++;
+		}
+	}
+
+	string_tab = (char**) malloc(sizeof( char * ) * num_strings);
+	if (string_tab == NULL) {
+		return;
+	}
 
 	base = 0;
 	idx = 0;

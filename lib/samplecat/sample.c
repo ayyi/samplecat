@@ -21,7 +21,7 @@
 #include "samplecat/support.h"
 #include "support.h"
 #include "src/audio_decoder/ad.h"
-#include "src/model.h"
+#include "model.h"
 #include "worker.h"
 #include "src/listview.h"
 #include "sample.h"

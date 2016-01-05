@@ -18,7 +18,6 @@
 #include "db/db.h"
 #include "list_view.h"
 #include "utils/ayyi_utils.h"
-#include "src/model.h"
 
 struct _backend backend;
 
@@ -47,7 +46,7 @@ main (int argc, char **argv)
 
 	#define MAX_DISPLAY_ROWS 20
 #ifdef USE_MYSQL
-	mysql__init(&app.config.mysql);
+	db_init(&app.config.mysql);
 	samplecat_set_backend(BACKEND_MYSQL);
 #endif
 

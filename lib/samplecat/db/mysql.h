@@ -4,9 +4,8 @@
 
 #define BACKEND_IS_MYSQL (backend.search_iter_new == mysql__search_iter_new)
 
-void      mysql__init             (void* config);
 gboolean  mysql__connect          ();
-void      mysql__set_as_backend   (SamplecatBackend*);
+void      mysql__set_as_backend   (SamplecatBackend*, SamplecatDBConfig*);
 
 
 struct _SamplecatDBConfig

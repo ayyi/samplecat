@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2015 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2016 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -41,12 +41,8 @@
 #include "player_control.h"
 #ifdef USE_OPENGL
 #include <GL/gl.h>
-#include "agl/actor.h"
-#ifdef USE_LIBASS
 #include "waveform/view_plus.h"
-#else
-#include "waveform/view.h"
-#endif
+#include "waveform/actor.h"
 #endif
 #ifdef HAVE_FFTW3
 #ifdef USE_OPENGL
@@ -66,7 +62,7 @@
 
 extern Filer      filer;
 extern GList*     themes; 
-extern SamplecatBackend backend;
+#define BACKEND samplecat.model->backend
  
 extern void       view_details_dnd_get            (GtkWidget*, GdkDragContext*, GtkSelectionData*, guint info, guint time, gpointer data);
 extern void       on_quit                         (GtkMenuItem*, gpointer);
@@ -125,6 +121,7 @@ struct _window {
 #ifdef USE_OPENGL
    struct {
       AGlActor*   spp;
+      AGlActor*   spinner;
    }              layers;
 #endif
 } window;
@@ -509,10 +506,10 @@ GtkWindow
 
 	void store_content_changed(GtkListStore* store, gpointer data)
 	{
-		int n_results = backend.n_results;
+		int n_results = BACKEND.n_results;
 		int row_count = ((SamplecatListStore*)store)->row_count;
 
-		if(0 && row_count < MAX_DISPLAY_ROWS){
+		if(0 && row_count < LIST_STORE_MAX_ROWS){
 			statusbar_print(1, "%i samples found.", row_count);
 		}else if(!row_count){
 			statusbar_print(1, "no samples found.");
@@ -1353,7 +1350,6 @@ on_category_set_clicked(GtkComboBox* widget, gpointer user_data)
 static GtkWidget*
 waveform_panel_new()
 {
-#ifdef USE_LIBASS
 	waveform_view_plus_set_gl(agl_get_gl_context());
 	WaveformViewPlus* view = waveform_view_plus_new(NULL);
 
@@ -1362,16 +1358,13 @@ waveform_panel_new()
 
 	window.layers.spp = waveform_view_plus_add_layer(view, wf_spp_actor(waveform_view_plus_get_actor(view)), 0);
 
+	window.layers.spinner = waveform_view_plus_add_layer(view, wf_spinner(NULL), 0);
+
 	//waveform_view_plus_add_layer(view, grid_actor(waveform_view_plus_get_actor(view)), 0);
 #if 0
 	waveform_view_plus_set_show_grid(view, true);
 #endif
 	return (GtkWidget*)view;
-
-#else
-	waveform_view_set_gl(agl_get_gl_context());
-	return (GtkWidget*)waveform_view_new(NULL);
-#endif
 }
 
 
@@ -1399,11 +1392,8 @@ show_waveform(gboolean enable)
 		// The widget becomes unrealised after layout changes and it needs to be restored afterwards
 		// TODO the widget now supports being unrealised so this may no longer be needed.
 		PF;
-#ifdef USE_LIBASS
 		WaveformViewPlus* view = (WaveformViewPlus*)widget;
-#else
-		WaveformView* view = (WaveformView*)widget;
-#endif
+
 		static guint timer = 0;
 
 		bool redisplay(gpointer _view)
@@ -1412,11 +1402,7 @@ show_waveform(gboolean enable)
 #ifdef USE_GDL
 			if(gdl_dock_item_is_active((GdlDockItem*)panels[PANEL_TYPE_WAVEFORM].dock_item)){
 #else
-#ifdef USE_LIBASS
 			WaveformViewPlus* view = (WaveformViewPlus*)_view;
-#else
-			WaveformView* view = (WaveformView*)_view;
-#endif
 			if(!view->waveform && app->view_options[SHOW_WAVEFORM].value){
 #endif
 				show_waveform(true);
@@ -1435,7 +1421,6 @@ show_waveform(gboolean enable)
 		update_waveform_view(sample);
 	}
 
-#ifdef USE_LIBASS
 	bool waveform_is_playing()
 	{
 		if(!app->play.sample) return false;
@@ -1467,7 +1452,6 @@ show_waveform(gboolean enable)
 			wf_spp_actor_set_time((SppActor*)spp, UINT32_MAX);
 		}
 	}
-#endif
 
 	if(enable && !window.waveform){
 		C* c = g_new0(C, 1);
@@ -1489,11 +1473,9 @@ show_waveform(gboolean enable)
 
 		void waveform_on_audio_ready(GObject* _app, gpointer _)
 		{
-#ifdef USE_LIBASS
 			g_signal_connect(app, "play-start", (GCallback)waveform_on_play, NULL);
 			g_signal_connect(app, "play-stop", (GCallback)waveform_on_stop, NULL);
 			g_signal_connect(app, "play-position", (GCallback)waveform_on_position, NULL);
-#endif
 		}
 		g_signal_connect(app, "audio-ready", (GCallback)waveform_on_audio_ready, NULL);
 	}
@@ -1510,15 +1492,11 @@ show_waveform(gboolean enable)
 			{
 				Sample* s;
 				if((s = samplecat.model->selection)){
-#ifdef USE_LIBASS
 					WaveformViewPlus* view = (WaveformViewPlus*)window.waveform;
 					Waveform* w = view->waveform;
 					if(!w || strcmp(w->filename, s->full_path)){
 						update_waveform_view(s);
 					}
-#else
-					update_waveform_view(s);
-#endif
 				}
 				return G_SOURCE_REMOVE;
 			}
@@ -1645,10 +1623,16 @@ update_waveform_view(Sample* sample)
 	g_return_if_fail(window.waveform);
 	if(!gtk_widget_get_realized(window.waveform)) return; // may be hidden by the layout manager.
 
-#ifdef USE_LIBASS
 	WaveformViewPlus* view = (WaveformViewPlus*)window.waveform;
 
-	waveform_view_plus_load_file(view, sample->online ? sample->full_path : NULL, NULL, NULL);
+	wf_spinner_start((WfSpinner*)window.layers.spinner);
+
+	void on_loaded(Waveform* w, gpointer _)
+	{
+		wf_spinner_stop((WfSpinner*)window.layers.spinner);
+	}
+
+	waveform_view_plus_load_file(view, sample->online ? sample->full_path : NULL, on_loaded, NULL);
 
 #if 0
 	void on_waveform_finalize(gpointer _c, GObject* was)
@@ -1678,10 +1662,6 @@ update_waveform_view(Sample* sample)
 		text_actor_set_text(((TextActor*)text_layer), g_strdup(sample->name), text);
 		//text_actor_set_colour((TextActor*)text_layer, 0x33aaffff, 0xffff00ff);
 	}
-
-#else
-	waveform_view_load_file((WaveformView*)window.waveform, sample->online ? sample->full_path : NULL);
-#endif
 }
 #endif
 

@@ -44,6 +44,8 @@ typedef struct _SamplecatModelPrivate SamplecatModelPrivate;
 #define SAMPLECAT_IS_LIST_STORE_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), SAMPLECAT_TYPE_LIST_STORE))
 #define SAMPLECAT_LIST_STORE_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), SAMPLECAT_TYPE_LIST_STORE, SamplecatListStoreClass))
 
+#define LIST_STORE_MAX_ROWS 1000
+
 typedef struct _SamplecatListStore SamplecatListStore;
 typedef struct _SamplecatListStoreClass SamplecatListStoreClass;
 typedef struct _SamplecatListStorePrivate SamplecatListStorePrivate;

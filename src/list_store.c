@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2015 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2016 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -22,7 +22,6 @@
 #include <sample.h>
 #include <debug/debug.h>
 #include <support.h>
-#include <application.h>
 #include <model.h>
 #include <src/worker.h>
 #include <list_store.h>
@@ -269,21 +268,21 @@ void samplecat_list_store_do_search (SamplecatListStore* self) {
 
 	samplecat_list_store_clear_(self);
 
-	if(!backend.search_iter_new(samplecat.model->filters.dir->value, samplecat.model->filters.category->value, NULL)) {
+	if(!samplecat.model->backend.search_iter_new(samplecat.model->filters.dir->value, samplecat.model->filters.category->value, NULL)) {
 		return;
 	}
 
 	int row_count = 0;
 	unsigned long* lengths;
 	Sample* result;
-	while((result = backend.search_iter_next(&lengths)) && row_count < MAX_DISPLAY_ROWS){
+	while((result = samplecat.model->backend.search_iter_next(&lengths)) && row_count < LIST_STORE_MAX_ROWS){
 		Sample* s = sample_dup(result);
 		samplecat_list_store_add(self, s);
 		sample_unref(s);
 		row_count++;
 	}
 
-	backend.search_iter_free();
+	samplecat.model->backend.search_iter_free();
 
 	((SamplecatListStore*)samplecat.store)->row_count = row_count;
 

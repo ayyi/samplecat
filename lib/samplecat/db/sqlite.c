@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2015 Tim Orford <tim@orford.org> and others       |
+* | copyright (C) 2007-2016 Tim Orford <tim@orford.org> and others       |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -16,13 +16,11 @@
 #include <gtk/gtk.h>
 #include <gdk-pixbuf/gdk-pixdata.h>
 #include "debug/debug.h"
-#include "sample.h"
-#include "support.h"
-#include "model.h"
+#include "samplecat.h"
 #include "db/db.h"
 #include "db/sqlite.h"
 
-extern SamplecatBackend backend;
+#define backend() (samplecat.model->backend)
 
 static void     sqlite__disconnect       ();
 
@@ -484,7 +482,7 @@ sqlite__search_iter_new(char* dir, const char* category, int* n_results)
 		count = 0;
 		select_count(where);
 		if(n_results) *n_results = count;
-		backend.n_results = count;
+		backend().n_results = count;
 	}
 	else{
 		gwarn("failed to create prepared statement. sql=%s", sql);

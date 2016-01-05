@@ -8,9 +8,10 @@ $(function(){
 	});
 });
 
+var dt;
 function do_table(){
-	$('table#samples').dataTable({
-		bPaginate: false,
-		bFilter: true,
-	});
+	dt = $('table#samples').dataTable({
+		paging: false
+		//order: [[0, "desc"]]
+	}).api();
 }

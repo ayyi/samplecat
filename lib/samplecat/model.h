@@ -7,6 +7,7 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <samplecat/sample.h>
+#include <samplecat/db/db.h>
 
 G_BEGIN_DECLS
 
@@ -83,9 +84,11 @@ struct _SamplecatModel {
 	gint state;
 	gchar* cache_dir;
 	GList* backends;
+	SamplecatBackend backend;
 	SamplecatFilters filters;
 	GList* filters_;
 	Sample* selection;
+	GList* modified;
 };
 
 struct _SamplecatModelClass {

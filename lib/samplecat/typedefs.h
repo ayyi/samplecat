@@ -38,7 +38,7 @@ typedef enum {
 typedef struct _Samplecat         Samplecat;
 typedef struct _SamplecatModel    SamplecatModel;
 typedef struct _Sample            Sample;
-typedef struct _backend           SamplecatBackend;
+typedef struct _SamplecatBackend  SamplecatBackend;
 typedef struct _SamplecatDBConfig SamplecatDBConfig;
 typedef struct _Logger            Logger;
 

@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2015 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2016 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -32,10 +32,9 @@
 #include "glx.h"
 #include "keys.h"
 #include "views/list.h"
+#include "views/search.h"
 
 extern GLboolean need_draw; // TODO use scene->invalidate instead
-
-SamplecatBackend backend = {0,};
 
 typedef struct _Application {
    ConfigContext  config_ctx;
@@ -45,7 +44,7 @@ Application _app;
 Application* app = &_app;
 
 AGlRootActor* scene = NULL;
-struct Actors {AGlActor *bg, *list, *wave; } actors = {NULL,};
+struct Actors {AGlActor *bg, *list, *wave, *search; } actors = {NULL,};
 
 static KeyHandler
 	nav_up,
@@ -148,25 +147,14 @@ main(int argc, char* argv[])
 		config_load(&app->config_ctx, &app->config);
 
 #ifdef USE_MYSQL
-		mysql__init(&app->config.mysql);
+		db_init(&app->config.mysql);
+		db_connect();
 		samplecat_set_backend(BACKEND_MYSQL);
 #endif
 
 		samplecat_list_store_do_search((SamplecatListStore*)samplecat.store);
 
 		Waveform* w = NULL;
-		/*
-		if(((SamplecatListStore*)samplecat.store)->row_count){
-			GtkTreeIter iter;
-			if(!gtk_tree_model_get_iter_first((GtkTreeModel*)samplecat.store, &iter)){ gerr ("cannot get iter."); return G_SOURCE_REMOVE; }
-			Sample* sample = samplecat_list_store_get_sample_by_iter(&iter);
-			if(sample){
-				dbg(0, " * %s", sample->name);
-				w = waveform_load_new(sample->full_path);
-				sample_unref(sample);
-			}
-		} else dbg(0, "no results");
-		*/
 
 		WaveformCanvas* wfc = wf_canvas_new(scene);
 
@@ -174,20 +162,33 @@ main(int argc, char* argv[])
 		actors.bg->region.x2 = 1;
 		actors.bg->region.y2 = 1;
 
+		agl_actor__add_child((AGlActor*)scene, actors.search = search_view(NULL));
 		agl_actor__add_child((AGlActor*)scene, actors.list = list_view(NULL));
 
 		agl_actor__add_child((AGlActor*)scene, actors.wave = (AGlActor*)wf_canvas_add_new_actor(wfc, w));
 
 		void scene_set_size(AGlActor* scene)
 		{
-			actors.list->region = (AGliRegion){20, 20, scene->region.x2 - 20, scene->region.y2 / 2};
+			#define SPACING 2
+			int vspace = scene->region.y2 - 40;
+			int y = 20;
+
+			int h = search_view_height((SearchView*)actors.search);
+			actors.search->region = (AGliRegion){20, y, scene->region.x2 - 20, y + h};
+			agl_actor__set_size(actors.search);
+			vspace -= h + SPACING;
+			y += h + SPACING;
+
+			actors.list->region = (AGliRegion){20, y, scene->region.x2 - 20, y + vspace / 2};
+			vspace -= vspace / 2;
+			y += vspace;
 			agl_actor__set_size(actors.list); // clear cache
 
 			actors.wave->region = (AGliRegion){
 				20,
-				scene->region.y2 / 2,
+				y,
 				scene->region.x2 - 20,
-				scene->region.y2 - 20
+				y + vspace
 			};
 			wf_actor_set_rect((WaveformActor*)actors.wave, &(WfRectangle){
 				0.0,
@@ -217,7 +218,7 @@ main(int argc, char* argv[])
 	{
 		PF0;
 
-		void waveform_view_plus_load_file_done(WaveformActor* a, gpointer _c)
+		void load_file_done(WaveformActor* a, gpointer _c)
 		{
 			PF0;
 			// TODO not sure if we need to redraw here or not...
@@ -225,7 +226,7 @@ main(int argc, char* argv[])
 		}
 
 		Waveform* waveform = waveform_new(sample->full_path);
-		wf_actor_set_waveform((WaveformActor*)actors.wave, waveform, waveform_view_plus_load_file_done, NULL);
+		wf_actor_set_waveform((WaveformActor*)actors.wave, waveform, load_file_done, NULL);
 		g_object_unref(waveform);
 
 	}

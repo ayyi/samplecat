@@ -53,6 +53,7 @@ function get_tarball1 {
 }
 
 mkdir -p ${tmpdir};
+rm -rf $tmpdir/${package}-${version}
 
 function compile {
 	echo ""

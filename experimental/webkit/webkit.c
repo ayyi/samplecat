@@ -10,19 +10,17 @@
 *
 */
 #include "config.h"
-#include <webkit/webkit.h>
 #include <debug/debug.h>
-#include "src/typedefs.h"
 #include "samplecat.h"
-#include "db/db.h"
-#include "sample.h"
+#include <webkit/webkit.h> // included _after_ samplecat due to redefine of bool
 #include "table.h"
 #include "util.h"
-#include "utils/ayyi_utils.h"
+#include "src/support.h"
 
 #define MODEL samplecat.model
+#define backend samplecat.model->backend
+#define ADD_BACKEND(A) MODEL->backends = g_list_append(MODEL->backends, A)
 
-SamplecatBackend backend = {0,};
 typedef struct _Application {
    ConfigContext   config_ctx;
    Config          config;
@@ -33,11 +31,18 @@ GList* samples = NULL;
 #define HTML_DIR "html/"
 #define MAX_DISPLAY_ROWS 20
 
-static WebKitDOMDocument* document = NULL;
-static WebKitDOMNode* main_node = NULL;
+static GtkWidget* web_view = NULL;
 
-static void add_web_inspector (GtkWidget* web_view, GtkWidget* paned);
-static void build_about       (WebKitDOMNode* about_node);
+struct {
+	WebKitDOMDocument* document;
+	WebKitDOMNode*     main;
+	WebKitDOMElement*  results;
+	Table*             table;
+} dom = {0,};
+
+
+static void    add_web_inspector (GtkWidget* web_view, GtkWidget* paned);
+static void    build_about       (WebKitDOMNode* about_node);
 static Sample* find_sample_by_id (int);
 
 
@@ -50,47 +55,10 @@ plugins_clicked_cb (WebKitDOMEventTarget* target, WebKitDOMEvent* event, gpointe
 #endif
 
 static void
-web_view_on_loaded (WebKitWebView* view, WebKitWebFrame* frame, gpointer user_data)
+show_results()
 {
-	document = webkit_web_view_get_dom_document (view);
+	Table* t = dom.table;
 
-	main_node = WEBKIT_DOM_NODE (webkit_dom_document_get_element_by_id (document, "main"));
-	g_return_if_fail(main_node);
-
-	WebKitDOMNode* about_node = WEBKIT_DOM_NODE (webkit_dom_document_get_element_by_id (document, "about"));
-	build_about (about_node);
-
-	//webkit_dom_node_append_child (main_node, WEBKIT_DOM_NODE(webkit_dom_document_create_element(document, "input", NULL)), NULL);
-
-	table_document = document;
-	Table* t = table_new((WebKitDOMElement*)main_node, "samples");
-
-	WebKitDOMElement* tr0 = webkit_dom_document_create_element (document, "tr", NULL);
-	webkit_dom_node_append_child ((WebKitDOMNode*)t->thead, WEBKIT_DOM_NODE (tr0), NULL);
-
-	char* headings[] = {"name", "path", "", "length", "channels"}; 
-
-	int i; for(i=0;i<G_N_ELEMENTS(headings);i++) {
-		WebKitDOMElement* th = webkit_dom_document_create_element (document, "th", NULL);
-		webkit_dom_node_append_child (WEBKIT_DOM_NODE(tr0), WEBKIT_DOM_NODE (th), NULL);
-		webkit_dom_node_set_text_content (WEBKIT_DOM_NODE (th), g_strdup(headings[i]), NULL);
-	}
-
-	samplecat_init();
-
-	app.config_ctx.filename = g_strdup_printf("%s/.config/" PACKAGE "/" PACKAGE, g_get_home_dir());
-	config_load(&app.config_ctx, &app.config);
-
-#ifdef USE_MYSQL
-	mysql__init(&app.config.mysql);
-	samplecat_set_backend(BACKEND_MYSQL);
-#endif
-
-	MODEL->filters.search->value = g_strdup("909");
-
-	int n_results = 0;
-	if(!backend.search_iter_new("", "", &n_results)){
-	}
 	unsigned long* lengths;
 	Sample* result;
 	int row_count = 0;
@@ -103,20 +71,20 @@ web_view_on_loaded (WebKitWebView* view, WebKitWebFrame* frame, gpointer user_da
 		gchar* text = g_strdup(result->name);
 		char length[64]; format_smpte(length, result->length);
 
-		WebKitDOMElement* tr = webkit_dom_document_create_element (document, "tr", NULL);
+		WebKitDOMElement* tr = webkit_dom_document_create_element (dom.document, "tr", NULL);
 		webkit_dom_node_append_child (WEBKIT_DOM_NODE(t->tbody), WEBKIT_DOM_NODE (tr), NULL);
 
-		WebKitDOMElement* td = webkit_dom_document_create_element (document, "td", NULL);
+		WebKitDOMElement* td = webkit_dom_document_create_element (dom.document, "td", NULL);
 		webkit_dom_node_append_child (WEBKIT_DOM_NODE(tr), WEBKIT_DOM_NODE (td), NULL);
 		webkit_dom_node_set_text_content (WEBKIT_DOM_NODE (td), text, NULL);
 
-		td = webkit_dom_document_create_element (document, "td", NULL);
+		td = webkit_dom_document_create_element (dom.document, "td", NULL);
 		webkit_dom_node_append_child (WEBKIT_DOM_NODE(tr), WEBKIT_DOM_NODE (td), NULL);
 		webkit_dom_node_set_text_content (WEBKIT_DOM_NODE (td), dir_format(result->full_path), NULL);
 
-		td = webkit_dom_document_create_element (document, "td", NULL);
+		td = webkit_dom_document_create_element (dom.document, "td", NULL);
 		webkit_dom_node_append_child (WEBKIT_DOM_NODE(tr), WEBKIT_DOM_NODE (td), NULL);
-		WebKitDOMElement* img = webkit_dom_document_create_element (document, "img", NULL);
+		WebKitDOMElement* img = webkit_dom_document_create_element (dom.document, "img", NULL);
 		char thumbnail[32] = {0,};
 		snprintf(thumbnail, 31, "file:///thumbnail-%i.png", result->id);
 		webkit_dom_element_set_attribute (img, "src", thumbnail, NULL);
@@ -124,11 +92,11 @@ web_view_on_loaded (WebKitWebView* view, WebKitWebFrame* frame, gpointer user_da
 		webkit_dom_element_set_attribute (img, "height", "20", NULL);
 		webkit_dom_node_append_child (WEBKIT_DOM_NODE(td), WEBKIT_DOM_NODE(img), NULL);
 
-		td = webkit_dom_document_create_element (document, "td", NULL);
+		td = webkit_dom_document_create_element (dom.document, "td", NULL);
 		webkit_dom_node_append_child (WEBKIT_DOM_NODE(tr), WEBKIT_DOM_NODE (td), NULL);
 		webkit_dom_node_set_text_content (WEBKIT_DOM_NODE (td), length, NULL);
 
-		td = webkit_dom_document_create_element (document, "td", NULL);
+		td = webkit_dom_document_create_element (dom.document, "td", NULL);
 		webkit_dom_node_append_child (WEBKIT_DOM_NODE(tr), WEBKIT_DOM_NODE (td), NULL);
 		gchar* channels = g_strdup_printf("%u", result->channels);
 		webkit_dom_node_set_text_content (WEBKIT_DOM_NODE (td), channels, NULL);
@@ -138,18 +106,111 @@ web_view_on_loaded (WebKitWebView* view, WebKitWebFrame* frame, gpointer user_da
 
 		row_count++;
 	}
-	dbg(0, "n_results=%i", n_results);
 
-	WebKitDOMElement* script = webkit_dom_document_create_element (document, "script", NULL);
+	webkit_web_view_execute_script((WebKitWebView*)web_view, "do_table();");
+}
+
+
+static void
+web_view_on_loaded (WebKitWebView* view, WebKitWebFrame* frame, gpointer user_data)
+{
+	dom.document = webkit_web_view_get_dom_document (view);
+
+	dom.main = WEBKIT_DOM_NODE (webkit_dom_document_get_element_by_id (dom.document, "main"));
+	g_return_if_fail(dom.main);
+
+	WebKitDOMNode* about_node = WEBKIT_DOM_NODE (webkit_dom_document_get_element_by_id (dom.document, "about"));
+	build_about (about_node);
+
+	//webkit_dom_node_append_child (dom.main, WEBKIT_DOM_NODE(webkit_dom_document_create_element(dom.document, "input", NULL)), NULL);
+
+	table_document = dom.document;
+	Table* t = dom.table = table_new((WebKitDOMElement*)dom.main, "samples");
+	//webkit_web_view_execute_script((WebKitWebView*)web_view, "do_table();");
+
+	WebKitDOMElement* tr0 = webkit_dom_document_create_element (dom.document, "tr", NULL);
+	webkit_dom_node_append_child ((WebKitDOMNode*)t->thead, WEBKIT_DOM_NODE (tr0), NULL);
+
+	char* headings[] = {"name", "path", "", "length", "channels"};
+
+	int i; for(i=0;i<G_N_ELEMENTS(headings);i++) {
+		WebKitDOMElement* th = webkit_dom_document_create_element (dom.document, "th", NULL);
+		webkit_dom_node_append_child (WEBKIT_DOM_NODE(tr0), WEBKIT_DOM_NODE (th), NULL);
+		webkit_dom_node_set_text_content (WEBKIT_DOM_NODE (th), g_strdup(headings[i]), NULL);
+	}
+
+	samplecat_init();
+
+	app.config_ctx.filename = g_strdup_printf("%s/.config/" PACKAGE "/" PACKAGE, g_get_home_dir());
+	config_load(&app.config_ctx, &app.config);
+
+	db_init(
+#ifdef USE_MYSQL
+		&app.config.mysql
+#else
+		NULL
+#endif
+	);
+
+#ifdef USE_MYSQL
+	ADD_BACKEND("mysql");
+#endif
+#ifdef USE_SQLITE
+	ADD_BACKEND("sqlite");
+#endif
+#ifdef USE_TRACKER
+	ADD_BACKEND("tracker");
+#endif
+	if (app.config.database_backend && can_use(MODEL->backends, app.config.database_backend)) {
+		list_clear(MODEL->backends);
+		ADD_BACKEND(app.config.database_backend);
+	}
+
+	if(!db_connect()){
+		g_warning("cannot connect to any database.\n");
+		exit(1);
+	}
+
+	void on_search_filter_changed(GObject* _filter, gpointer _)
+	{
+		dbg(0, "search=%s", MODEL->filters.search->value);
+
+		int n_results = 0;
+		backend.search_iter_new("", "", &n_results);
+		dbg(0, "n_results=%i", n_results);
+		show_results();
+		backend.search_iter_free();
+
+		WebKitDOMHTMLInputElement* search = WEBKIT_DOM_HTML_INPUT_ELEMENT (webkit_dom_document_get_element_by_id (dom.document, "search-box-input"));
+		gchar* text = webkit_dom_html_input_element_get_value(search);
+		if(strcmp(text, ((SamplecatFilter*)samplecat.model->filters.search)->value)){
+			webkit_dom_html_input_element_set_value (search, ((SamplecatFilter*)samplecat.model->filters.search)->value);
+		}
+		g_free(text);
+	}
+
+	on_search_filter_changed((GObject*)samplecat.model->filters.search, NULL);
+
+	/*
+	WebKitDOMElement* script = webkit_dom_document_create_element (dom.document, "script", NULL);
 	webkit_dom_node_set_text_content (WEBKIT_DOM_NODE (script), "do_table();", NULL);
-	webkit_dom_node_append_child (main_node, WEBKIT_DOM_NODE (script), NULL);
+	webkit_dom_node_append_child (dom.main, WEBKIT_DOM_NODE (script), NULL);
+	*/
 
 	bool on_navigation_requested(WebKitWebView* web_view, WebKitWebFrame* frame, WebKitNetworkRequest* request, WebKitWebNavigationAction* action, WebKitWebPolicyDecision* decision, gpointer user_data)
 	{
 		const gchar* uri = webkit_network_request_get_uri(request);
 		if(!strcmp(uri, "file:///search")){
 			// search button was pressed
-			dbg(0, "TODO carry out new search.");
+
+			webkit_web_view_execute_script((WebKitWebView*)web_view, "dt.destroy(false);");
+			table_clear(dom.table);
+
+			WebKitDOMHTMLInputElement* search = WEBKIT_DOM_HTML_INPUT_ELEMENT (webkit_dom_document_get_element_by_id (dom.document, "search-box-input"));
+			gchar* text = webkit_dom_html_input_element_get_value(search);
+			samplecat_filter_set_value(samplecat.model->filters.search, text);
+			g_free(text);
+
 			webkit_web_policy_decision_ignore(decision);
 			return true;
 		}
@@ -157,6 +218,8 @@ web_view_on_loaded (WebKitWebView* view, WebKitWebFrame* frame, gpointer user_da
 		return false; // use default behaviour
 	}
 	g_signal_connect(view, "navigation-policy-decision-requested", (GCallback)on_navigation_requested, NULL);
+
+	g_signal_connect(samplecat.model->filters.search, "changed", G_CALLBACK(on_search_filter_changed), NULL);
 }
 
 
@@ -186,7 +249,7 @@ main (gint argc, gchar** argv)
 	gtk_window_set_title (GTK_WINDOW (main_window), "Samplecat");
 	GtkWidget* scrolled_window = gtk_scrolled_window_new (NULL, NULL);
 	GtkWidget* paned = gtk_vpaned_new();
-	GtkWidget* web_view = webkit_web_view_new ();
+	web_view = webkit_web_view_new ();
 
 	gtk_scrolled_window_add_with_viewport ((GtkScrolledWindow*)scrolled_window, paned);
 	gtk_paned_add1((GtkPaned*)paned, web_view);
@@ -203,7 +266,7 @@ main (gint argc, gchar** argv)
 			gchar* dot = g_strrstr (copy, ".");
 			if(dot){
 				dot[0] = '\0';
-				dbg(0, "id=%i", atoi(copy));
+				dbg(1, "id=%i", atoi(copy));
 				Sample* s = find_sample_by_id (atoi(copy));
 				if(s){
 					gsize buffer_size;
@@ -276,7 +339,7 @@ add_web_inspector(GtkWidget* web_view, GtkWidget* paned)
 static void
 build_about (WebKitDOMNode* about_node)
 {
-	WebKitDOMElement* icon = webkit_dom_document_create_element (document, "img", NULL);
+	WebKitDOMElement* icon = webkit_dom_document_create_element (dom.document, "img", NULL);
 	//webkit_dom_element_set_attribute (icon, "src", "/usr/share/icons/Faenza/apps/32/audiobook.png", NULL);
 	gchar* cwd = g_get_current_dir();
 	gchar* icon_path = g_build_filename(cwd, "../../icons/samplecat.png", NULL);
@@ -287,11 +350,11 @@ build_about (WebKitDOMNode* about_node)
 	webkit_dom_element_set_attribute (icon, "onClick", "$('#about_dialog').dialog('open');", NULL);
 	webkit_dom_node_append_child (about_node, WEBKIT_DOM_NODE (icon), NULL);
 
-	WebKitDOMElement* element = webkit_dom_document_create_element (document, "p", NULL);
+	WebKitDOMElement* element = webkit_dom_document_create_element (dom.document, "p", NULL);
 	gchar* text = g_strdup_printf ("%s - %s", PACKAGE_STRING, "Experimental Samplecat client using WebKitGTK.");
 	webkit_dom_node_set_text_content (WEBKIT_DOM_NODE (element), text, NULL);
 
-	WebKitDOMNode* about_dialog_node = WEBKIT_DOM_NODE (webkit_dom_document_get_element_by_id (document, "about_dialog"));
+	WebKitDOMNode* about_dialog_node = WEBKIT_DOM_NODE (webkit_dom_document_get_element_by_id (dom.document, "about_dialog"));
 	webkit_dom_node_append_child (about_dialog_node, WEBKIT_DOM_NODE (element), NULL);
 }
 

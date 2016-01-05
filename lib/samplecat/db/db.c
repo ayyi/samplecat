@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2015 Tim Orford <tim@orford.org> and others       |
+* | copyright (C) 2007-2016 Tim Orford <tim@orford.org> and others       |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -17,11 +17,8 @@
 #include <unistd.h>
 #include <gtk/gtk.h>
 #include <gdk-pixbuf/gdk-pixdata.h>
-#include "typedefs.h"
 #include "debug/debug.h"
-#include "samplecat/sample.h"
-#include "support.h"
-#include "model.h"
+#include "samplecat/samplecat.h"
 #ifdef USE_MYSQL
 #include "db/mysql.h"
 #endif
@@ -36,7 +33,8 @@
 #endif
 #include "db/db.h"
 
-extern SamplecatBackend backend;
+#define backend samplecat.model->backend
+
 static SamplecatDBConfig* mysql_config;
 
 
@@ -52,7 +50,6 @@ db_connect()
 {
 	gboolean db_connected = false;
 #ifdef USE_MYSQL
-	mysql__init(mysql_config);
 	if(can_use(samplecat.model->backends, "mysql")){
 		db_connected = samplecat_set_backend(BACKEND_MYSQL);
 	}
@@ -77,8 +74,8 @@ samplecat_set_backend(BackendType type)
 	switch(type){
 		case BACKEND_MYSQL:
 			#ifdef USE_MYSQL
+			mysql__set_as_backend(&backend, mysql_config);
 			if(mysql__connect()){
-				mysql__set_as_backend(&backend);
 				printf("database is mysql.\n");
 				return true;
 			}

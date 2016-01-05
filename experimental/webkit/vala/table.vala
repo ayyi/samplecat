@@ -1,6 +1,6 @@
 /*
   This file is part of Samplecat. http://samplecat.orford.org
-  copyright (C) 2007-2012 Tim Orford and others.
+  copyright (C) 2007-2016 Tim Orford
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License version 3
@@ -45,6 +45,21 @@ public class Table : GLib.Object
 			el.append_child(tbody = document.create_element ("tbody"));
 
 		} catch {
+		};
+	}
+
+	public void clear()
+	{
+		// see also https://datatables.net/reference/api/clear()
+
+		DOMHTMLTableElement table = (DOMHTMLTableElement)el;
+		//print("rows=%lu\n", rows.length);
+		try {
+			for(ulong i=table.get_rows().length-1;i>=1;i--){
+				table.delete_row ((long)i);
+			}
+		} catch {
+			print("error clearing table\n");
 		};
 	}
 }

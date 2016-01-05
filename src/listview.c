@@ -231,7 +231,7 @@ listview__new()
 		if(gtk_tree_sortable_get_sort_column_id(sortable, &sort_column_id, &order)){
 			if(sort_column_id == COL_LEN){
 				int n_rows = ((SamplecatListStore*)samplecat.store)->row_count;
-				if(n_rows >= MAX_DISPLAY_ROWS){
+				if(n_rows >= LIST_STORE_MAX_ROWS){
 					dbg(0, "TODO need to requery database ordered by length...");
 				}
 			}

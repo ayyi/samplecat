@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2015 Tim Orford <tim@orford.org> and others       |
+* | copyright (C) 2007-2016 Tim Orford <tim@orford.org> and others       |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -55,9 +55,11 @@ MYSQL mysql = {{NULL}, NULL, NULL};
 static SamplecatBackend* db = NULL;
 static gboolean is_connected = FALSE;
 static SamplecatDBConfig* config = NULL;
-static MYSQL_RES *dir_iter_result = NULL;
-static MYSQL_RES *search_result = NULL;
+static MYSQL_RES* dir_iter_result = NULL;
+static MYSQL_RES* search_result = NULL;
 static Sample result;
+
+static void      mysql__init             (void* config);
 
 static void      mysql__disconnect       ();
 static int       mysql__insert           (Sample*);
@@ -79,8 +81,8 @@ static char*     mysql__dir_iter_next    ();
 static void      mysql__dir_iter_free    ();
 
 
-static int  mysql__exec_sql (const char* sql);
-static void clear_result    ();
+static int      mysql__exec_sql          (const char* sql);
+static void     clear_result             ();
 
 #define MYSQL_ESCAPE(VAR, STR) \
 	char* VAR; if (!(STR) || strlen(STR)==0) {VAR=calloc(1,sizeof(char));} else { \
@@ -124,7 +126,7 @@ mysql__init(void* _config)
 
 
 void
-mysql__set_as_backend(SamplecatBackend* backend)
+mysql__set_as_backend(SamplecatBackend* backend, SamplecatDBConfig* config)
 {
 	db = backend;
 
@@ -149,6 +151,8 @@ mysql__set_as_backend(SamplecatBackend* backend)
 	backend->update_blob      = mysql__update_blob;
 
 	backend->disconnect       = mysql__disconnect;
+
+	mysql__init(config);
 }
 
 

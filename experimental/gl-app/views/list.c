@@ -1,18 +1,13 @@
-/*
-  copyright (C) 2012-2015 Tim Orford <tim@orford.org>
-
-  This program is free software; you can redistribute it and/or modify
-  it under the terms of the GNU General Public License version 3
-  as published by the Free Software Foundation.
-
-  This program is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License
-  along with this program; if not, write to the Free Software
-  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+/**
+* +----------------------------------------------------------------------+
+* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
+* | copyright (C) 2012-2016 Tim Orford <tim@orford.org>                  |
+* +----------------------------------------------------------------------+
+* | This program is free software; you can redistribute it and/or modify |
+* | it under the terms of the GNU General Public License version 3       |
+* | as published by the Free Software Foundation.                        |
+* +----------------------------------------------------------------------+
+*
 */
 #define __wf_private__
 #include "config.h"
@@ -38,11 +33,7 @@ extern int need_draw;
 
 #define _g_free0(var) (var = (g_free (var), NULL))
 
-#define FONT \
-	"Droid Sans"
-	//"Ubuntu"
-	//"Open Sans Rg"
-	//"Fontin Sans Rg"
+#define FONT "Droid Sans"
 
 static AGl* agl = NULL;
 static int instance_count = 0;
@@ -90,7 +81,7 @@ list_view(WaveformActor* _)
 			if(row_count == view->selection - view->scroll_offset){
 				agl->shaders.plain->uniform.colour = 0x6677ff77;
 				agl_use_program((AGlShader*)agl->shaders.plain);
-				agl_rect_((AGlRect){0, row_count * row_height, agl_actor__width(actor), row_height});
+				agl_rect_((AGlRect){0, row_count * row_height - 2, agl_actor__width(actor), row_height});
 			}
 
 			Sample* sample = samplecat_list_store_get_sample_by_iter(&iter);
@@ -125,6 +116,23 @@ list_view(WaveformActor* _)
 	{
 	}
 
+	bool list_event(AGlActor* actor, GdkEvent* event, AGliPt xy, AGliPt scroll_offset)
+	{
+									// TODO why is y not relative to actor.y ?
+		switch(event->type){
+			case GDK_BUTTON_PRESS:
+			case GDK_BUTTON_RELEASE:
+				agl_actor__invalidate(actor);
+				int row = (xy.y - actor->region.y1) / row_height;
+				dbg(0, "y=%i", xy.y - actor->region.y1);
+				list_view_select((ListView*)actor, row);
+				break;
+			default:
+				break;
+		}
+		return AGL_HANDLED;
+	}
+
 	void list_free(AGlActor* actor)
 	{
 		if(!--instance_count){
@@ -140,12 +148,20 @@ list_view(WaveformActor* _)
 	actor->free = list_free;
 	actor->paint = list_paint;
 	actor->set_size = list_set_size;
+	actor->on_event = list_event;
 
 	void on_selection_change(SamplecatModel* m, Sample* sample, gpointer user_data)
 	{
-		PF0;
+		PF;
 	}
 	g_signal_connect((gpointer)samplecat.model, "selection-changed", G_CALLBACK(on_selection_change), NULL);
+
+	void list_on_search_filter_changed(GObject* _filter, gpointer _actor)
+	{
+		//             update list...
+		agl_actor__invalidate((AGlActor*)_actor);
+	}
+	g_signal_connect(samplecat.model->filters.search, "changed", G_CALLBACK(list_on_search_filter_changed), actor);
 
 	return actor;
 }
@@ -165,7 +181,6 @@ list_view_select(ListView* list, int row)
 			list->scroll_offset--;
 		}
 		agl_actor__invalidate((AGlActor*)list);
-		need_draw = true; // FIXME should not be needed
 
 		Sample* sample = samplecat_list_store_get_sample_by_row_index(list->selection);
 		if(sample){

@@ -19,8 +19,6 @@
 #include "dir_tree/view_dir_tree.h"
 #include "settings.h"
 
-#define MAX_DISPLAY_ROWS 1000
-
 G_BEGIN_DECLS
 
 
@@ -126,7 +124,6 @@ struct _ApplicationClass
 
 #ifndef __main_c__
 extern Application*     app;
-extern SamplecatBackend backend;
 #endif
 
 
