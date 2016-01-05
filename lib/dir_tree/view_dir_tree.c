@@ -13,22 +13,19 @@
 #include <gtk/gtk.h>
 #include "debug/debug.h"
 #include "utils/mime_type.h"
+#include "utils/ayyi_utils.h"
 #include "file_manager/file_manager.h"
 #include "file_manager/support.h"
+#include "samplecat/model.h"
 
 #include "dir_tree/gqview.h"
-#include "view_dir_tree.h"
-
-#include "typedefs.h"
-#include "support.h"
-#include "src/model.h"
-
 #include "dir_tree/filelist.h"
 #include "dir_tree/layout_util.h"
 #include "dir_tree/utilops.h"
 #include "dir_tree/ui_fileops.h"
 #include "dir_tree/ui_menu.h"
 #include "dir_tree/ui_tree_edit.h"
+#include "dir_tree/view_dir_tree.h"
 
 #include <gdk/gdkkeysyms.h> /* for keyboard values */
 
