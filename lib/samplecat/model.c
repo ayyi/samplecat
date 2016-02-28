@@ -20,8 +20,6 @@
 #include <debug/debug.h>
 #include <samplecat.h>
 #include <db/db.h>
-#include <src/list_store.h>
-#include <src/worker.h>
 
 #define backend samplecat.model->backend
 

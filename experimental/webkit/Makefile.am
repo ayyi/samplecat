@@ -19,9 +19,7 @@ samplecat_webkit_SOURCES = \
 	webkit.c \
 	util.c util.h \
 	table.c table.h \
-	$(top_srcdir)/src/list_store.c $(top_srcdir)/src/list_store.h \
 	$(top_srcdir)/src/icon_theme.c $(top_srcdir)/src/icon_theme.h \
-	$(top_srcdir)/src/worker.c $(top_srcdir)/src/worker.h \
 	$(AUDIOANALYSERS_SRC) \
 	$(AD_SRC)
 

@@ -88,13 +88,11 @@ samplecat_SOURCES = \
 	typedefs.h types.h \
 	main.c \
 	application.c application.h \
-	list_store.c list_store.h \
 	window.c window.h \
 	progress_dialog.c progress_dialog.h \
 	listview.c listview.h \
 	inspector.c inspector.h \
 	player_control.c player_control.h \
-	worker.c worker.h \
 	directories.c directories.h \
 	dh_link.c dh_link.h \
 	dh_tree.c dh_tree.h \

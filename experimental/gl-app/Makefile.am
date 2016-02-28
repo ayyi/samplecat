@@ -22,8 +22,6 @@ samplecat_gl_SOURCES = \
 	views/search.c views/search.h \
 	keys.h \
 	$(top_srcdir)/src/icon_theme.c $(top_srcdir)/src/icon_theme.h \
-	$(top_srcdir)/src/list_store.c $(top_srcdir)/src/list_store.h \
-	$(top_srcdir)/src/worker.c $(top_srcdir)/src/worker.h \
 	$(AUDIOANALYSERS_SRC) \
 	$(AD_SRC)
 

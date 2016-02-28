@@ -28,7 +28,6 @@
 #include "agl/actor.h"
 #include "agl/ext.h"
 #include "waveform/waveform.h"
-#include "src/list_store.h"
 #include "glx.h"
 #include "keys.h"
 #include "views/list.h"
@@ -156,7 +155,7 @@ main(int argc, char* argv[])
 
 		Waveform* w = NULL;
 
-		WaveformCanvas* wfc = wf_canvas_new(scene);
+		WaveformCanvas* wfc = wf_context_new(scene);
 
 		agl_actor__add_child((AGlActor*)scene, actors.bg = background_actor(NULL));
 		actors.bg->region.x2 = 1;

@@ -116,7 +116,7 @@ list_view(WaveformActor* _)
 	{
 	}
 
-	bool list_event(AGlActor* actor, GdkEvent* event, AGliPt xy, AGliPt scroll_offset)
+	bool list_event(AGlActor* actor, GdkEvent* event, AGliPt xy)
 	{
 									// TODO why is y not relative to actor.y ?
 		switch(event->type){

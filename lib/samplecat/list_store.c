@@ -18,12 +18,9 @@
 #include <float.h>
 #include <math.h>
 #include <file_manager/mimetype.h>
-#include <db/db.h>
-#include <sample.h>
 #include <debug/debug.h>
-#include <support.h>
-#include <model.h>
-#include <src/worker.h>
+#include <db/db.h>
+#include <samplecat.h>
 #include <list_store.h>
 
 
@@ -168,7 +165,7 @@ void samplecat_list_store_add (SamplecatListStore* self, Sample* sample) {
 			COL_OVERVIEW,   sample->overview,
 			COL_LENGTH,     length_s,
 			COL_SAMPLERATE, samplerate_s,
-			COL_CHANNELS,   sample->channels, 
+			COL_CHANNELS,   sample->channels,
 			COL_COLOUR,     sample->colour_index,
 #ifdef USE_AYYI
 			COL_AYYI_ICON,  ayyi_icon,

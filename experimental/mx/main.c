@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2015 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2016 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -19,7 +19,7 @@
 #include "list_view.h"
 #include "utils/ayyi_utils.h"
 
-struct _backend backend;
+#define backend samplecat.model->backend
 
 typedef struct _Application {
    ConfigContext   config_ctx;
@@ -35,8 +35,6 @@ static void rotate_clicked_cb (ClutterActor* button, MxWindow*);
 int
 main (int argc, char **argv)
 {
-	memset(&backend, 0, sizeof(struct _backend));
-
 	MxApplication* mx_app = mx_application_new (&argc, &argv, "Test PathBar", 0);
 
 	samplecat_init();

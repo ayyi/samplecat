@@ -14482,13 +14482,12 @@ on_canvas_realise(GtkWidget* _canvas, gpointer user_data)
 	if(!GTK_WIDGET_REALIZED (_canvas)) return;
 
 	_r->gl_drawable = gtk_widget_get_gl_drawable(_canvas);
-dbg(0, "%p drawable=%p", _canvas, _r->gl_drawable);
 	/*GdkGLContext* context = */_r->gl_context = agl_get_gl_context();
 	//_r->gl_context  = gtk_widget_get_gl_context(_canvas);
 
 	gl_initialised = true;
 
-	wfc = wf_canvas_new(_r->scene = (AGlScene*)agl_actor__new_root(_canvas));
+	wfc = wf_context_new(_r->scene = (AGlScene*)agl_actor__new_root(_canvas));
 	_r->scene->user_data = _canvas;
 
 	canvas_init_done = true;
@@ -14540,9 +14539,6 @@ on_allocate(GtkWidget* widget, GtkAllocation* allocation, gpointer user_data)
 	if(!gl_initialised) return;
 
 	rotator_setup_projection(widget);
-
-	//optimise drawing by telling the canvas which area is visible
-	wf_canvas_set_viewport(wfc, &(WfViewPort){0, 0, GL_WIDTH, GL_HEIGHT});
 
 	start_zoom((Rotator*)widget, zoom);
 }

@@ -18,8 +18,10 @@ libsamplecat_a_SOURCES = \
 	typedefs.h \
 	samplecat.c samplecat.h \
 	model.c model.h \
+	list_store.c list_store.h \
 	sample.c sample.h \
 	worker.c worker.h \
+	work.c work.h \
 	logger.c logger.h \
 	settings.c settings.h \
 	support.c support.h

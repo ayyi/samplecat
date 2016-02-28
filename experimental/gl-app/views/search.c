@@ -119,7 +119,7 @@ search_view(WaveformActor* _)
 		agl_actor__invalidate((AGlActor*)view);
 	}
 
-	bool search_event(AGlActor* actor, GdkEvent* event, AGliPt xy, AGliPt scroll_offset)
+	bool search_event(AGlActor* actor, GdkEvent* event, AGliPt xy)
 	{
 		PF0;
 		SearchView* view = (SearchView*)actor;
