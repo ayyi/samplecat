@@ -5,6 +5,10 @@
 *.bak
 *~
 *.real
+*.orig
+*.gz
+*.local
+*.diff
 src/samplecat
 configure
 Makefile
@@ -23,5 +27,5 @@ libtool
 .libs
 layouts/layout_ui.c
 layouts/layouts.c
-src/vala/application.c
-src/vala/application.h
+src/vala/*.[ch]
+experimental/gl-app/samplecat_gl

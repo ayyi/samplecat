@@ -1,3 +1,9 @@
+samplecat (0.2.5-1) unstable; urgency=low
+
+  * updated to upstream 0.2.5 -- see upstream ChangeLog
+
+ -- Tim Orford <tim@ayyi.org>  Mon, 29 Feb 2016 17:22:58 +0100
+
 samplecat (0.2.3-1) unstable; urgency=low
 
   * updated to upstream 0.2.3 -- see upstream ChangeLog

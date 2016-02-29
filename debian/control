@@ -15,7 +15,7 @@ Build-Depends: debhelper (>= 8.0.0), automake, libtool, autoconf,
  libgnome-vfs2.0-cil-dev | libgsf-gnome-1-dev,
  libdbus-glib-1-dev,
  libcairo2-dev
-Homepage: http://samplecat.orford.org
+Homepage: http://ayyi.github.io/samplecat/
 Standards-Version: 3.9.2
 
 Package: samplecat
