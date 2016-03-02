@@ -1,11 +1,13 @@
 
-samplecat installation
+Samplecat installation
 ----------------------
 
-Please report any problems to tim@orford.org
+Please report any problems at https://github.com/ayyi/samplecat
 
 
 1 - configure, make, make install.
+
+    The configure script will report missing dependencies.
 
 2 - if you are using Mysql, you need to setup the database.
     (Sqlite setup is done automatically)
@@ -17,6 +19,18 @@ Please report any problems to tim@orford.org
 
 3 - running the program will create a default config file 
     (~/.config/samplecat/samplecat) that you should edit with
-    your db access info.
+    your database access information.
 
 
+If installing directly from the repository rather than from
+a tarball, some additional steps are needed before you can
+build:
+
+	./autogen.sh
+	git submodule init
+	git submodule update
+
+If you subsequently need to update the submodules as part of a git pull:
+
+	git submodule foreach git pull origin master
+	make clean
