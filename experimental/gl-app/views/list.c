@@ -18,7 +18,6 @@
 #include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
 #include <GL/gl.h>
-#include <ass/ass.h>
 #include "agl/ext.h"
 #include "agl/utils.h"
 #include "agl/actor.h"
