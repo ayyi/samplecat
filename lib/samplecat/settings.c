@@ -191,10 +191,10 @@ config_save(ConfigContext* ctx)
 {
 	// filter settings:
 	g_key_file_set_value(ctx->key_file, "Samplecat", "show_dir", samplecat.model->filters.dir->value ? samplecat.model->filters.dir->value : "");
-	g_key_file_set_value(ctx->key_file, "Samplecat", "filter", samplecat.model->filters.search->value);
+	g_key_file_set_value(ctx->key_file, "Samplecat", "filter", samplecat.model->filters.search->value ? samplecat.model->filters.search->value : "");
 
 	// application specific settings:
-	{
+	if(ctx->options){
 		char value[256];
 		int i = 0;
 		ConfigOption* option;
