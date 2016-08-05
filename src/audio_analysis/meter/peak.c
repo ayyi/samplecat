@@ -5,10 +5,10 @@
 
 double ad_maxsignal(const char *fn) {
 	struct adinfo nfo;
-	void * sf = ad_open(fn, &nfo);
+	void* sf = ad_open(fn, &nfo);
 	if (!sf) return 0.0;
 
-	int     read_len = 1024 * nfo.channels;
+	size_t read_len = 1024 * nfo.channels;
 	float* sf_data = malloc(sizeof(float) * read_len);
 
 	int readcount;

@@ -11,12 +11,12 @@
 #include "support.h"
 #include "audio_decoder/ad_plugin.h"
 
-int     ad_eval_null(const char *f) { return -1; }
-void *  ad_open_null(const char *f, struct adinfo *n) { return NULL; }
-int     ad_close_null(void *x) { return -1; }
-int     ad_info_null(void *x, struct adinfo *n) { return -1; }
-int64_t ad_seek_null(void *x, int64_t p) { return -1; }
-ssize_t ad_read_null(void *x, float*d, size_t s) { return -1;}
+int     ad_eval_null  (const char* f)               { return -1; }
+void *  ad_open_null  (const char* f, AdInfo* nfo)  { return NULL; }
+int     ad_close_null (void* sf)                    { return -1; }
+int     ad_info_null  (void* sf, AdInfo* nfo)       { return -1; }
+int64_t ad_seek_null  (void* sf, int64_t p)         { return -1; }
+ssize_t ad_read_null  (void* sf, float*d, size_t s) { return -1; }
 
 typedef struct {
 	ad_plugin const *b; ///< decoder back-end
@@ -44,8 +44,8 @@ ad_plugin const * choose_backend(const char *fn) {
 	return b;
 }
 
-void *ad_open(const char *fname, struct adinfo *nfo) {
-	adecoder *d = (adecoder*) calloc(1, sizeof(adecoder));
+void* ad_open(const char* fname, AdInfo* nfo) {
+	adecoder* d = (adecoder*) calloc(1, sizeof(adecoder));
 	ad_clear_nfo(nfo);
 
 	d->b = choose_backend(fname);
@@ -63,24 +63,27 @@ void *ad_open(const char *fname, struct adinfo *nfo) {
 	return (void*)d;
 }
 
-int ad_info(void *sf, struct adinfo *nfo) {
+int ad_info(void* sf, struct adinfo *nfo) {
 	adecoder *d = (adecoder*) sf;
 	if (!d) return -1;
 	return d->b->info(d->d, nfo);
 }
-int ad_close(void *sf) {
+
+int ad_close(void* sf) {
 	adecoder *d = (adecoder*) sf;
 	if (!d) return -1;
 	int rv = d->b->close(d->d);
 	free(d);
 	return rv;
 }
-int64_t ad_seek(void *sf, int64_t pos) {
+
+int64_t ad_seek(void* sf, int64_t pos) {
 	adecoder *d = (adecoder*) sf;
 	if (!d) return -1;
 	return d->b->seek(d->d, pos);
 }
-ssize_t ad_read(void *sf, float* out, size_t len){
+
+ssize_t ad_read(void* sf, float* out, size_t len){
 	adecoder *d = (adecoder*) sf;
 	if (!d) return -1;
 	return d->b->read(d->d, out, len);

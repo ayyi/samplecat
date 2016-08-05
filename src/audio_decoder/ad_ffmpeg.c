@@ -15,18 +15,31 @@
 
 #include "ffcompat.h"
 
-typedef struct {
-  AVFormatContext* formatContext;
-  AVCodecContext*  codecContext;
+typedef struct _ffmpeg_audio_decoder ffmpeg_audio_decoder;
+
+typedef struct
+{
+    short*          buf[2];
+    guint           size;           // number of shorts allocated, NOT bytes. When accessing, note that the last block will likely not be full.
+} Buf16;
+
+struct _ffmpeg_audio_decoder {
+  AVFormatContext* format_context;
+  AVCodecContext*  codec_context;
   AVCodec*         codec;
   AVPacket         packet;
-  int              audioStream;
+  int              audio_stream;
   int              pkt_len;
   uint8_t*         pkt_ptr;
 
-  int16_t          m_tmpBuffer[AVCODEC_MAX_AUDIO_FRAME_SIZE];
-  int16_t*         m_tmpBufferStart;
-  unsigned long    m_tmpBufferLen;
+  AVFrame          frame;
+  int              frame_iter;
+
+  struct {
+    int16_t        buf[AVCODEC_MAX_AUDIO_FRAME_SIZE];
+    int16_t*       start;
+    unsigned long  len;
+  }                tmp_buf;
 
   int64_t          decoder_clock;
   int64_t          output_clock;
@@ -34,7 +47,11 @@ typedef struct {
   unsigned int     samplerate;
   unsigned int     channels;
   int64_t          length;
-} ffmpeg_audio_decoder;
+
+  ssize_t (*read)  (ffmpeg_audio_decoder*, Buf16*, size_t len);
+};
+
+static ssize_t wf_ff_read_short_planar(ffmpeg_audio_decoder*, Buf16* buf, size_t len);
 
 
 static gboolean
@@ -65,7 +82,9 @@ ad_metadata_array_set_tag_postion(GPtrArray* tags, const char* tag_name, int pos
 }
 
 
-int ad_info_ffmpeg(void *sf, struct adinfo *nfo) {
+int
+ad_info_ffmpeg(void* sf, struct adinfo* nfo)
+{
 	ffmpeg_audio_decoder *priv = (ffmpeg_audio_decoder*) sf;
 	if (!priv) return -1;
 	if (nfo) {
@@ -74,7 +93,7 @@ int ad_info_ffmpeg(void *sf, struct adinfo *nfo) {
 		nfo->frames      = priv->length;
 		if (!nfo->sample_rate) return -1;
 		nfo->length      = (nfo->frames * 1000) / nfo->sample_rate;
-		nfo->bit_rate    = priv->formatContext->bit_rate;
+		nfo->bit_rate    = priv->format_context->bit_rate;
 		nfo->bit_depth   = 0;
 		nfo->meta_data   = NULL;
 
@@ -82,14 +101,14 @@ int ad_info_ffmpeg(void *sf, struct adinfo *nfo) {
 
 		AVDictionaryEntry *tag = NULL;
 		// Tags in container
-		while ((tag = av_dict_get(priv->formatContext->metadata, "", tag, AV_DICT_IGNORE_SUFFIX))) {
+		while ((tag = av_dict_get(priv->format_context->metadata, "", tag, AV_DICT_IGNORE_SUFFIX))) {
 			dbg(2, "FTAG: %s=%s", tag->key, tag->value);
 			g_ptr_array_add(tags, g_utf8_strdown(tag->key, -1));
 			g_ptr_array_add(tags, g_strdup(tag->value));
 		}
 		// Tags in stream
 		tag = NULL;
-		AVStream *stream = priv->formatContext->streams[priv->audioStream];
+		AVStream *stream = priv->format_context->streams[priv->audio_stream];
 		while ((tag = av_dict_get(stream->metadata, "", tag, AV_DICT_IGNORE_SUFFIX))) {
 			dbg(2, "STAG: %s=%s", tag->key, tag->value);
 			g_ptr_array_add(tags, g_utf8_strdown(tag->key, -1));
@@ -114,61 +133,63 @@ int ad_info_ffmpeg(void *sf, struct adinfo *nfo) {
 	return 0;
 }
 
-void *ad_open_ffmpeg(const char *fn, struct adinfo *nfo) {
+void*
+ad_open_ffmpeg(const char* fn, struct adinfo* nfo)
+{
   ffmpeg_audio_decoder *priv = (ffmpeg_audio_decoder*) calloc(1, sizeof(ffmpeg_audio_decoder));
   
-  priv->m_tmpBufferStart=NULL;
-  priv->m_tmpBufferLen=0;
-  priv->decoder_clock=priv->output_clock=priv->seek_frame=0; 
+  priv->tmp_buf.start = NULL;
+  priv->tmp_buf.len = 0;
+  priv->decoder_clock = priv->output_clock = priv->seek_frame = 0;
   priv->packet.size=0; priv->packet.data=NULL;
 
-  if (avformat_open_input(&priv->formatContext, fn, NULL, NULL) < 0) {
+  if (avformat_open_input(&priv->format_context, fn, NULL, NULL) < 0) {
     dbg(1, "ffmpeg is unable to open file '%s'.", fn);
     free(priv); return(NULL);
   }
 
-  if (avformat_find_stream_info(priv->formatContext, NULL) < 0) {
-    avformat_close_input(&priv->formatContext);
+  if (avformat_find_stream_info(priv->format_context, NULL) < 0) {
+    avformat_close_input(&priv->format_context);
     dbg(1, "av_find_stream_info failed");
     free(priv); return(NULL);
   }
 
-  priv->audioStream = -1;
+  priv->audio_stream = -1;
   int i;
-  for (i=0; i<priv->formatContext->nb_streams; i++) {
-    if (priv->formatContext->streams[i]->codec->codec_type == AVMEDIA_TYPE_AUDIO) {
-      priv->audioStream = i;
+  for (i=0; i<priv->format_context->nb_streams; i++) {
+    if (priv->format_context->streams[i]->codec->codec_type == AVMEDIA_TYPE_AUDIO) {
+      priv->audio_stream = i;
       break;
     }
   }
-  if (priv->audioStream == -1) {
+  if (priv->audio_stream == -1) {
     dbg(1, "No Audio Stream found in file");
-    avformat_close_input(&priv->formatContext);
+    avformat_close_input(&priv->format_context);
     free(priv); return(NULL);
   }
 
-  priv->codecContext = priv->formatContext->streams[priv->audioStream]->codec;
-  priv->codec        = avcodec_find_decoder(priv->codecContext->codec_id);
+  priv->codec_context = priv->format_context->streams[priv->audio_stream]->codec;
+  priv->codec         = avcodec_find_decoder(priv->codec_context->codec_id);
 
   if (priv->codec == NULL) {
-    avformat_close_input(&priv->formatContext);
+    avformat_close_input(&priv->format_context);
     dbg(1, "Codec not supported by ffmpeg");
     free(priv); return(NULL);
   }
-  if (avcodec_open2(priv->codecContext, priv->codec, NULL) < 0) {
+  if (avcodec_open2(priv->codec_context, priv->codec, NULL) < 0) {
     dbg(1, "avcodec_open failed" );
     free(priv); return(NULL);
   }
 
-  dbg(2, "ffmpeg - audio tics: %i/%i [sec]", priv->formatContext->streams[priv->audioStream]->time_base.num, priv->formatContext->streams[priv->audioStream]->time_base.den);
+  dbg(2, "ffmpeg - audio tics: %i/%i [sec]", priv->format_context->streams[priv->audio_stream]->time_base.num, priv->format_context->streams[priv->audio_stream]->time_base.den);
 
-  int64_t len = priv->formatContext->duration - priv->formatContext->start_time;
+  int64_t len = priv->format_context->duration - priv->format_context->start_time;
 
-  priv->formatContext->flags |= AVFMT_FLAG_GENPTS;
-  priv->formatContext->flags |= AVFMT_FLAG_IGNIDX;
+  priv->format_context->flags |= AVFMT_FLAG_GENPTS;
+  priv->format_context->flags |= AVFMT_FLAG_IGNIDX;
 
-  priv->samplerate = priv->codecContext->sample_rate;
-  priv->channels   = priv->codecContext->channels;
+  priv->samplerate = priv->codec_context->sample_rate;
+  priv->channels   = priv->codec_context->channels;
   priv->length     = (int64_t)(len * priv->samplerate / AV_TIME_BASE);
 
   if (ad_info_ffmpeg((void*)priv, nfo)) {
@@ -180,74 +201,125 @@ void *ad_open_ffmpeg(const char *fn, struct adinfo *nfo) {
   if (nfo) 
     dbg(2, "ffmpeg - sr:%i c:%i d:%"PRIi64" f:%"PRIi64, nfo->sample_rate, nfo->channels, nfo->length, nfo->frames);
 
-  return (void*) priv;
+	switch(priv->codec_context->sample_fmt){
+		case AV_SAMPLE_FMT_S16P:
+			priv->read = wf_ff_read_short_planar;
+			break;
+		case AV_SAMPLE_FMT_FLTP:
+		case AV_SAMPLE_FMT_S32P:
+			gwarn("planar (non-interleaved) unhandled!");
+			priv->read = NULL;
+			break;
+		default:
+			priv->read = NULL;
+			break;
+	}
+
+	return (void*) priv;
 }
 
 int ad_close_ffmpeg(void *sf) {
   ffmpeg_audio_decoder *priv = (ffmpeg_audio_decoder*) sf;
   if (!priv) return -1;
-  avcodec_close(priv->codecContext);
-  avformat_close_input(&priv->formatContext);
+  avcodec_close(priv->codec_context);
+  avformat_close_input(&priv->format_context);
   free(priv);
   return 0;
 }
 
-void int16_to_float(int16_t *in, float *out, int num_channels, int num_samples, int out_offset) {
-  int i,ii;
-  for (i=0;i<num_samples;i++) {
-    for (ii=0;ii<num_channels;ii++) {
-     out[(i+out_offset)*num_channels+ii]= (float) in[i*num_channels+ii]/ 32768.0;
-    }
-  }
+/*
+ *  Input and output is both interleaved
+ */
+void
+int16_to_float(float* out, int16_t* in, int n_channels, int n_frames, int out_offset)
+{
+	int f, c;
+	for (f=0;f<n_frames;f++) {
+		for (c=0;c<n_channels;c++) {
+			out[(f+out_offset)*n_channels+c] = (float) in[f*n_channels+c] / 32768.0;
+		}
+	}
 }
 
-ssize_t ad_read_ffmpeg(void *sf, float* d, size_t len) {
-  ffmpeg_audio_decoder *priv = (ffmpeg_audio_decoder*) sf;
+#define SHORT_TO_FLOAT(A) (((float)A) / 32768.0)
+
+static void
+interleave(float* out, size_t len, Buf16* buf, int n_channels)
+{
+	int i,c; for(i=0; i<len/n_channels;i++){
+		for(c=0;c<n_channels;c++){
+			out[i * n_channels + c] = SHORT_TO_FLOAT(buf->buf[c][i]);
+		}
+	}
+}
+
+
+/*
+ *  Implements ad_plugin.read
+ *  Output is interleaved
+ *  len is the size of the out array (n_frames * n_channels).
+ */
+ssize_t
+ad_read_ffmpeg(void* sf, float* out, size_t len)
+{
+  ffmpeg_audio_decoder* priv = (ffmpeg_audio_decoder*)sf;
   if (!priv) return -1;
+
+	// TODO different consumers prefer different audio formats.
+	//      -for now just provide interleaved float, improve efficiency later
+	if(priv->read){
+		Buf16 buf = {{g_malloc(sizeof(short) * len),}, len};
+		if(priv->channels > 1){
+			buf.buf[1] = buf.buf[0] + len / 2;
+			buf.size = len / 2;
+		}
+
+		size_t size = priv->read(priv, &buf, len);
+		interleave(out, len, &buf, priv->channels);
+
+		g_free(buf.buf[0]);
+		return size;
+	}
+
   size_t frames = len / priv->channels;
 
   int written = 0;
   int ret = 0;
   while (ret >= 0 && written < frames) {
-    dbg(3, "loop: %i/%i (bl:%lu)", written, frames, priv->m_tmpBufferLen);
-    if (priv->seek_frame == 0 && priv->m_tmpBufferLen > 0) {
-      int s = MIN(priv->m_tmpBufferLen / priv->channels, frames - written);
-      int16_to_float(priv->m_tmpBufferStart, d, priv->channels, s , written);
+    dbg(3, "loop: %i/%i (bl:%lu)", written, frames, priv->tmp_buf.len);
+    if (priv->seek_frame == 0 && priv->tmp_buf.len > 0) {
+      int s = MIN(priv->tmp_buf.len / priv->channels, frames - written);
+      int16_to_float(out, priv->tmp_buf.start, priv->channels, s, written);
       written += s;
       priv->output_clock += s;
       s = s * priv->channels;
-      priv->m_tmpBufferStart += s;
-      priv->m_tmpBufferLen -= s;
+      priv->tmp_buf.start += s;
+      priv->tmp_buf.len -= s;
       ret = 0;
     } else {
-      priv->m_tmpBufferStart = priv->m_tmpBuffer;
-      priv->m_tmpBufferLen = 0;
+      priv->tmp_buf.start = priv->tmp_buf.buf;
+      priv->tmp_buf.len = 0;
 
       if (!priv->pkt_ptr || priv->pkt_len < 1) {
         if (priv->packet.data) av_free_packet(&priv->packet);
-        ret = av_read_frame(priv->formatContext, &priv->packet);
+        ret = av_read_frame(priv->format_context, &priv->packet);
         if (ret < 0) { dbg(2, "reached end of file."); break; }
         priv->pkt_len = priv->packet.size;
         priv->pkt_ptr = priv->packet.data;
       }
 
-      if (priv->packet.stream_index != priv->audioStream) {
+      if (priv->packet.stream_index != priv->audio_stream) {
         priv->pkt_ptr = NULL;
         continue;
       }
 
-      /* decode all chunks in packet */
-      int data_size= AVCODEC_MAX_AUDIO_FRAME_SIZE;
-#if 0 // TODO  ffcompat.h -- this works but is not optimal (channels may not be planar/interleaved)
+      int data_size = AVCODEC_MAX_AUDIO_FRAME_SIZE;
       AVFrame avf; // TODO statically allocate
       memset(&avf, 0, sizeof(AVFrame)); // not sure if that is needed
       int got_frame = 0;
-ret = avcodec_decode_audio4(priv->codecContext, &avf, &got_frame, &priv->packet);
+      ret = avcodec_decode_audio4(priv->codec_context, &avf, &got_frame, &priv->packet);
       data_size = avf.linesize[0];
-      memcpy(priv->m_tmpBuffer, avf.data[0], avf.linesize[0] * sizeof(uint8_t));
-#else // this was deprecated in LIBAVCODEC_VERSION_MAJOR 53
-      ret = avcodec_decode_audio3(priv->codecContext, priv->m_tmpBuffer, &data_size, &priv->packet);
-#endif
+      memcpy(priv->tmp_buf.buf, avf.data[0], avf.linesize[0] * sizeof(uint8_t));
 
       if (ret < 0 || ret > priv->pkt_len) {
 #if 0
@@ -263,14 +335,14 @@ ret = avcodec_decode_audio4(priv->codecContext, &avf, &got_frame, &priv->packet)
 
       /* sample exact alignment  */
       if (priv->packet.pts != AV_NOPTS_VALUE) {
-        priv->decoder_clock = priv->samplerate * av_q2d(priv->formatContext->streams[priv->audioStream]->time_base) * priv->packet.pts;
+        priv->decoder_clock = priv->samplerate * av_q2d(priv->format_context->streams[priv->audio_stream]->time_base) * priv->packet.pts;
       } else {
         dbg(0, "!!! NO PTS timestamp in file");
         priv->decoder_clock += (data_size>>1) / priv->channels;
       }
 
       if (data_size > 0) {
-        priv->m_tmpBufferLen+= (data_size>>1); // 2 bytes per sample
+        priv->tmp_buf.len += (data_size>>1); // 2 bytes per sample
       }
 
       /* align buffer after seek. */
@@ -280,18 +352,18 @@ ret = avcodec_decode_audio4(priv->codecContext, &avf, &got_frame, &priv->packet)
           /* seek ended up past the wanted sample */
           gwarn("audio seek failed.");
           return -1;
-        } else if (priv->m_tmpBufferLen < (diff*priv->channels)) {
+        } else if (priv->tmp_buf.len < (diff*priv->channels)) {
           /* wanted sample not in current buffer - keep going */
           dbg(2, " !!! seeked sample was not in decoded buffer. frames-to-go: %li", diff);
-          priv->m_tmpBufferLen = 0;
+          priv->tmp_buf.len = 0;
         } else if (diff!=0 && data_size > 0) {
           /* wanted sample is in current buffer but not at the beginnning */
           dbg(2, " !!! sync buffer to seek. (diff:%i)", diff);
-          priv->m_tmpBufferStart+= diff*priv->codecContext->channels;
-          priv->m_tmpBufferLen  -= diff*priv->codecContext->channels;
+          priv->tmp_buf.start += diff * priv->codec_context->channels;
+          priv->tmp_buf.len   -= diff * priv->codec_context->channels;
 #if 1
-          memmove(priv->m_tmpBuffer, priv->m_tmpBufferStart, priv->m_tmpBufferLen);
-          priv->m_tmpBufferStart = priv->m_tmpBuffer;
+          memmove(priv->tmp_buf.buf, priv->tmp_buf.start, priv->tmp_buf.len);
+          priv->tmp_buf.start = priv->tmp_buf.buf;
 #endif
           priv->seek_frame = 0;
           priv->decoder_clock += diff;
@@ -312,13 +384,79 @@ ret = avcodec_decode_audio4(priv->codecContext, &avf, &got_frame, &priv->packet)
   return written * priv->channels;
 }
 
+
+static ssize_t
+wf_ff_read_short_planar(ffmpeg_audio_decoder* f, Buf16* buf, size_t Xlen)
+{
+	int64_t n_fr_done = 0;
+
+	int data_size = av_get_bytes_per_sample(f->codec_context->sample_fmt);
+	g_return_val_if_fail(data_size == 2, 0);
+
+	bool have_frame = false;
+	if(f->frame.nb_samples && f->frame_iter < f->frame.nb_samples){
+		have_frame = true;
+	}
+
+	while(have_frame || !av_read_frame(f->format_context, &f->packet)){
+		have_frame = false;
+		if(f->packet.stream_index == f->audio_stream){
+
+			int got_frame = false;
+			if(f->frame_iter && f->frame_iter < f->frame.nb_samples){
+				got_frame = true;
+			}else{
+				memset(&f->frame, 0, sizeof(AVFrame));
+				av_frame_unref(&f->frame);
+				f->frame_iter = 0;
+
+				if(avcodec_decode_audio4(f->codec_context, &f->frame, &got_frame, &f->packet) < 0){
+					dbg(0, "Error decoding audio");
+				}
+			}
+			if(got_frame){
+				int size = av_samples_get_buffer_size (NULL, f->codec_context->channels, f->frame.nb_samples, f->codec_context->sample_fmt, 1);
+				if (size < 0)  {
+					dbg(0, "av_samples_get_buffer_size invalid value");
+				}
+
+				int64_t fr = f->frame.best_effort_timestamp * f->samplerate / f->format_context->streams[f->audio_stream]->time_base.den + f->frame_iter;
+				int ch;
+				int i; for(i=f->frame_iter; i<f->frame.nb_samples; i++){
+					if(n_fr_done >= buf->size) break;
+					if(fr >= f->seek_frame){
+						for(ch=0; ch<MIN(2, f->codec_context->channels); ch++){
+							memcpy(buf->buf[ch] + n_fr_done, f->frame.data[ch] + data_size * i, data_size);
+						}
+						n_fr_done++;
+						f->frame_iter++;
+					}
+				}
+				f->output_clock = fr + n_fr_done;
+
+				if(n_fr_done >= buf->size) goto stop;
+			}
+		}
+		av_free_packet(&f->packet);
+		continue;
+
+		stop:
+			av_free_packet(&f->packet);
+			break;
+	}
+
+	return n_fr_done;
+}
+
+
+
 int64_t ad_seek_ffmpeg(void *sf, int64_t pos) {
   ffmpeg_audio_decoder *priv = (ffmpeg_audio_decoder*) sf;
   if (!sf) return -1;
   if (pos == priv->output_clock) return pos;
 
   /* flush internal buffer */
-  priv->m_tmpBufferLen = 0;
+  priv->tmp_buf.len = 0;
   priv->seek_frame = pos;
   priv->output_clock = pos;
   priv->pkt_len = 0; priv->pkt_ptr = NULL;
@@ -332,11 +470,11 @@ int64_t ad_seek_ffmpeg(void *sf, int64_t pos) {
   else pos = 0;
 #endif
 
-  const int64_t timestamp = pos / av_q2d(priv->formatContext->streams[priv->audioStream]->time_base) / priv->samplerate;
+  const int64_t timestamp = pos / av_q2d(priv->format_context->streams[priv->audio_stream]->time_base) / priv->samplerate;
   dbg(2, "seek frame:%"PRIi64" - idx:%"PRIi64, pos, timestamp);
   
-  av_seek_frame(priv->formatContext, priv->audioStream, timestamp, AVSEEK_FLAG_ANY | AVSEEK_FLAG_BACKWARD);
-  avcodec_flush_buffers(priv->codecContext);
+  av_seek_frame(priv->format_context, priv->audio_stream, timestamp, AVSEEK_FLAG_ANY | AVSEEK_FLAG_BACKWARD);
+  avcodec_flush_buffers(priv->codec_context);
   return pos;
 }
 
