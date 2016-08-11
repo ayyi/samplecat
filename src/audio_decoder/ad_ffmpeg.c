@@ -1,3 +1,13 @@
+/**
+* +----------------------------------------------------------------------+
+* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
+* +----------------------------------------------------------------------+
+* | This program is free software; you can redistribute it and/or modify |
+* | it under the terms of the GNU General Public License version 3       |
+* | as published by the Free Software Foundation.                        |
+* +----------------------------------------------------------------------+
+*
+*/
 #include "config.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -48,10 +58,15 @@ struct _ffmpeg_audio_decoder {
   unsigned int     channels;
   int64_t          length;
 
-  ssize_t (*read)  (ffmpeg_audio_decoder*, Buf16*, size_t len);
+  ssize_t (*read)  (ffmpeg_audio_decoder*, float*, size_t len);
+  ssize_t (*read_planar) (ffmpeg_audio_decoder*, Buf16*);
 };
 
-static ssize_t wf_ff_read_short_planar(ffmpeg_audio_decoder*, Buf16* buf, size_t len);
+static ssize_t ad_ff_read_short_planar_to_planar            (ffmpeg_audio_decoder*, Buf16* buf);
+static ssize_t ad_ff_read_short_planar_to_interleaved       (ffmpeg_audio_decoder*, float*, size_t);
+static ssize_t ad_ff_read_short_interleaved_to_interleaved  (ffmpeg_audio_decoder*, float*, size_t);
+static ssize_t ad_ff_read_float_planar_to_interleaved       (ffmpeg_audio_decoder*, float*, size_t);
+static ssize_t ad_read_ffmpeg_default_interleaved           (ffmpeg_audio_decoder*, float*, size_t);
 
 
 static gboolean
@@ -85,8 +100,9 @@ ad_metadata_array_set_tag_postion(GPtrArray* tags, const char* tag_name, int pos
 int
 ad_info_ffmpeg(void* sf, struct adinfo* nfo)
 {
-	ffmpeg_audio_decoder *priv = (ffmpeg_audio_decoder*) sf;
+	ffmpeg_audio_decoder* priv = (ffmpeg_audio_decoder*) sf;
 	if (!priv) return -1;
+
 	if (nfo) {
 		nfo->sample_rate = priv->samplerate;
 		nfo->channels    = priv->channels;
@@ -132,6 +148,7 @@ ad_info_ffmpeg(void* sf, struct adinfo* nfo)
 	}
 	return 0;
 }
+
 
 void*
 ad_open_ffmpeg(const char* fn, struct adinfo* nfo)
@@ -197,35 +214,40 @@ ad_open_ffmpeg(const char* fn, struct adinfo* nfo)
     free(priv); return(NULL);
   }
 
-  dbg(2, "ffmpeg - %s", fn);
-  if (nfo) 
-    dbg(2, "ffmpeg - sr:%i c:%i d:%"PRIi64" f:%"PRIi64, nfo->sample_rate, nfo->channels, nfo->length, nfo->frames);
+	dbg(2, "ffmpeg - %s", fn);
+	if (nfo) dbg(2, "ffmpeg - sr:%i c:%i d:%"PRIi64" f:%"PRIi64, nfo->sample_rate, nfo->channels, nfo->length, nfo->frames);
 
 	switch(priv->codec_context->sample_fmt){
 		case AV_SAMPLE_FMT_S16P:
-			priv->read = wf_ff_read_short_planar;
+			priv->read_planar = ad_ff_read_short_planar_to_planar;
+			priv->read = ad_ff_read_short_planar_to_interleaved;
 			break;
 		case AV_SAMPLE_FMT_FLTP:
+			priv->read = ad_ff_read_float_planar_to_interleaved;
+			break;
 		case AV_SAMPLE_FMT_S32P:
 			gwarn("planar (non-interleaved) unhandled!");
-			priv->read = NULL;
-			break;
+		//case AV_SAMPLE_FMT_FLT:
 		default:
-			priv->read = NULL;
+			priv->read = ad_read_ffmpeg_default_interleaved;
 			break;
 	}
 
 	return (void*) priv;
 }
 
-int ad_close_ffmpeg(void *sf) {
-  ffmpeg_audio_decoder *priv = (ffmpeg_audio_decoder*) sf;
-  if (!priv) return -1;
-  avcodec_close(priv->codec_context);
-  avformat_close_input(&priv->format_context);
-  free(priv);
-  return 0;
+
+int
+ad_close_ffmpeg(void* sf)
+{
+	ffmpeg_audio_decoder *priv = (ffmpeg_audio_decoder*) sf;
+	if (!priv) return -1;
+	avcodec_close(priv->codec_context);
+	avformat_close_input(&priv->format_context);
+	free(priv);
+	return 0;
 }
+
 
 /*
  *  Input and output is both interleaved
@@ -242,7 +264,9 @@ int16_to_float(float* out, int16_t* in, int n_channels, int n_frames, int out_of
 }
 
 #define SHORT_TO_FLOAT(A) (((float)A) / 32768.0)
+#define FLOAT_TO_SHORT(A) (A * (1<<15));
 
+#if 0
 static void
 interleave(float* out, size_t len, Buf16* buf, int n_channels)
 {
@@ -252,6 +276,7 @@ interleave(float* out, size_t len, Buf16* buf, int n_channels)
 		}
 	}
 }
+#endif
 
 
 /*
@@ -262,24 +287,19 @@ interleave(float* out, size_t len, Buf16* buf, int n_channels)
 ssize_t
 ad_read_ffmpeg(void* sf, float* out, size_t len)
 {
-  ffmpeg_audio_decoder* priv = (ffmpeg_audio_decoder*)sf;
-  if (!priv) return -1;
+	ffmpeg_audio_decoder* priv = (ffmpeg_audio_decoder*)sf;
+	if (!priv) return -1;
 
-	// TODO different consumers prefer different audio formats.
-	//      -for now just provide interleaved float, improve efficiency later
-	if(priv->read){
-		Buf16 buf = {{g_malloc(sizeof(short) * len),}, len};
-		if(priv->channels > 1){
-			buf.buf[1] = buf.buf[0] + len / 2;
-			buf.size = len / 2;
-		}
+	g_return_val_if_fail(priv->read, -1);
+	return priv->read(sf, out, len);
+}
 
-		size_t size = priv->read(priv, &buf, len);
-		interleave(out, len, &buf, priv->channels);
 
-		g_free(buf.buf[0]);
-		return size;
-	}
+ssize_t
+ad_read_ffmpeg_default_interleaved(ffmpeg_audio_decoder* priv, float* out, size_t len)
+{
+	//ffmpeg_audio_decoder* priv = (ffmpeg_audio_decoder*)sf;
+	if (!priv) return -1;
 
   size_t frames = len / priv->channels;
 
@@ -386,7 +406,7 @@ ad_read_ffmpeg(void* sf, float* out, size_t len)
 
 
 static ssize_t
-wf_ff_read_short_planar(ffmpeg_audio_decoder* f, Buf16* buf, size_t Xlen)
+ad_ff_read_short_planar_to_planar(ffmpeg_audio_decoder* f, Buf16* buf)
 {
 	int64_t n_fr_done = 0;
 
@@ -449,37 +469,248 @@ wf_ff_read_short_planar(ffmpeg_audio_decoder* f, Buf16* buf, size_t Xlen)
 }
 
 
+static ssize_t
+ad_ff_read_short_planar_to_interleaved(ffmpeg_audio_decoder* f, float* out, size_t len)
+{
+	int n_frames = len / f->channels;
+	int64_t n_fr_done = 0;
 
-int64_t ad_seek_ffmpeg(void *sf, int64_t pos) {
-  ffmpeg_audio_decoder *priv = (ffmpeg_audio_decoder*) sf;
-  if (!sf) return -1;
-  if (pos == priv->output_clock) return pos;
+	int data_size = av_get_bytes_per_sample(f->codec_context->sample_fmt);
+	g_return_val_if_fail(data_size == 2, 0);
 
-  /* flush internal buffer */
-  priv->tmp_buf.len = 0;
-  priv->seek_frame = pos;
-  priv->output_clock = pos;
-  priv->pkt_len = 0; priv->pkt_ptr = NULL;
-  priv->decoder_clock = 0;
+	bool have_frame = false;
+	if(f->frame.nb_samples && f->frame_iter < f->frame.nb_samples){
+		have_frame = true;
+	}
 
-#if 0
-  /* TODO seek at least 1 packet before target.
-   * for mpeg compressed files, the
-   * output may depend on past frames! */
-  if (pos > 8192) pos -= 8192;
-  else pos = 0;
-#endif
+	while(have_frame || !av_read_frame(f->format_context, &f->packet)){
+		have_frame = false;
+		if(f->packet.stream_index == f->audio_stream){
 
-  const int64_t timestamp = pos / av_q2d(priv->format_context->streams[priv->audio_stream]->time_base) / priv->samplerate;
-  dbg(2, "seek frame:%"PRIi64" - idx:%"PRIi64, pos, timestamp);
-  
-  av_seek_frame(priv->format_context, priv->audio_stream, timestamp, AVSEEK_FLAG_ANY | AVSEEK_FLAG_BACKWARD);
-  avcodec_flush_buffers(priv->codec_context);
-  return pos;
+			int got_frame = false;
+			if(f->frame_iter && f->frame_iter < f->frame.nb_samples){
+				got_frame = true;
+			}else{
+				memset(&f->frame, 0, sizeof(AVFrame));
+				av_frame_unref(&f->frame);
+				f->frame_iter = 0;
+
+				if(avcodec_decode_audio4(f->codec_context, &f->frame, &got_frame, &f->packet) < 0){
+					dbg(0, "Error decoding audio");
+				}
+			}
+			if(got_frame){
+				int size = av_samples_get_buffer_size (NULL, f->codec_context->channels, f->frame.nb_samples, f->codec_context->sample_fmt, 1);
+				if (size < 0)  {
+					dbg(0, "av_samples_get_buffer_size invalid value");
+				}
+
+				int64_t fr = f->frame.best_effort_timestamp * f->samplerate / f->format_context->streams[f->audio_stream]->time_base.den + f->frame_iter;
+				int ch;
+				int i; for(i=f->frame_iter; i<f->frame.nb_samples && (n_fr_done < n_frames); i++){
+					if(fr >= f->seek_frame){
+						for(ch=0; ch<MIN(2, f->codec_context->channels); ch++){
+							out[f->codec_context->channels * n_fr_done + ch] = SHORT_TO_FLOAT(*(((int16_t*)f->frame.data[ch]) + i));
+						}
+						n_fr_done++;
+						f->frame_iter++;
+					}
+				}
+				f->output_clock = fr + n_fr_done;
+
+				if(n_fr_done >= n_frames) goto stop;
+			}
+		}
+		av_free_packet(&f->packet);
+		continue;
+
+		stop:
+			av_free_packet(&f->packet);
+			break;
+	}
+
+	return n_fr_done * f->channels;
 }
 
-int ad_eval_ffmpeg(const char *f) { 
-  char *ext = strrchr(f, '.');
+
+/*
+ *
+ */
+static ssize_t
+ad_ff_read_short_interleaved_to_interleaved(ffmpeg_audio_decoder* f, float* out, size_t len)
+{
+	int n_frames = len / f->channels;
+	int64_t n_fr_done = 0;
+
+	int data_size = av_get_bytes_per_sample(f->codec_context->sample_fmt);
+	g_return_val_if_fail(data_size == 2, 0);
+
+	bool have_frame = false;
+	if(f->frame.nb_samples && f->frame_iter < f->frame.nb_samples){
+		have_frame = true;
+	}
+
+	while(have_frame || !av_read_frame(f->format_context, &f->packet)){
+		have_frame = false;
+		if(f->packet.stream_index == f->audio_stream){
+
+			int got_frame = false;
+			if(f->frame_iter && f->frame_iter < f->frame.nb_samples){
+				got_frame = true;
+			}else{
+				memset(&f->frame, 0, sizeof(AVFrame));
+				av_frame_unref(&f->frame);
+				f->frame_iter = 0;
+
+				if(avcodec_decode_audio4(f->codec_context, &f->frame, &got_frame, &f->packet) < 0){
+					dbg(0, "Error decoding audio");
+				}
+			}
+			if(got_frame){
+				int size = av_samples_get_buffer_size (NULL, f->codec_context->channels, f->frame.nb_samples, f->codec_context->sample_fmt, 1);
+				if (size < 0)  {
+					dbg(0, "av_samples_get_buffer_size invalid value");
+				}
+
+				int64_t fr = f->frame.best_effort_timestamp * f->samplerate / f->format_context->streams[f->audio_stream]->time_base.den + f->frame_iter;
+				int ch;
+				int i; for(i=f->frame_iter; i<f->frame.nb_samples; i++){
+					if(n_fr_done >= n_frames) break;
+					if(fr >= f->seek_frame){
+						for(ch=0; ch<MIN(2, f->codec_context->channels); ch++){
+							uint8_t* src = f->frame.data[0] + f->codec_context->channels * data_size * i + data_size * ch;
+							int16_t a;
+							memcpy(
+								&a,
+								&src,
+								sizeof(int16_t)
+							);
+							out[n_fr_done * f->channels + ch] = FLOAT_TO_SHORT(a);
+						}
+						n_fr_done++;
+						f->frame_iter++;
+					}
+				}
+				f->output_clock = fr + n_fr_done;
+
+				if(n_fr_done >= n_frames) goto stop;
+			}
+		}
+		av_free_packet(&f->packet);
+		continue;
+
+		stop:
+			av_free_packet(&f->packet);
+			break;
+	}
+
+	return n_fr_done;
+}
+
+
+static ssize_t
+ad_ff_read_float_planar_to_interleaved(ffmpeg_audio_decoder* f, float* out, size_t len)
+{
+	int n_frames = len / f->channels;
+	int64_t n_fr_done = 0;
+
+	int data_size = av_get_bytes_per_sample(f->codec_context->sample_fmt);
+	g_return_val_if_fail(data_size == 4, 0);
+
+	bool have_frame = false;
+	if(f->frame.nb_samples && f->frame_iter < f->frame.nb_samples){
+		have_frame = true;
+	}
+
+	while(have_frame || !av_read_frame(f->format_context, &f->packet)){
+		have_frame = false;
+		if(f->packet.stream_index == f->audio_stream){
+
+			int got_frame = false;
+			if(f->frame_iter && f->frame_iter < f->frame.nb_samples){
+				got_frame = true;
+			}else{
+				memset(&f->frame, 0, sizeof(AVFrame));
+				av_frame_unref(&f->frame);
+				f->frame_iter = 0;
+
+				if(avcodec_decode_audio4(f->codec_context, &f->frame, &got_frame, &f->packet) < 0){
+					dbg(0, "Error decoding audio");
+				}
+			}
+			if(got_frame){
+				int size = av_samples_get_buffer_size (NULL, f->codec_context->channels, f->frame.nb_samples, f->codec_context->sample_fmt, 1);
+				if (size < 0)  {
+					dbg(0, "av_samples_get_buffer_size invalid value");
+				}
+
+				int64_t fr = f->frame.best_effort_timestamp * f->samplerate / f->format_context->streams[f->audio_stream]->time_base.den + f->frame_iter;
+				int ch;
+				int i; for(i=f->frame_iter; i<f->frame.nb_samples && (n_fr_done < n_frames); i++){
+					if(fr >= f->seek_frame){
+						for(ch=0; ch<MIN(2, f->codec_context->channels); ch++){
+							out[f->codec_context->channels * n_fr_done + ch] = *(((float*)f->frame.data[ch]) + i);
+						}
+						n_fr_done++;
+						f->frame_iter++;
+					}
+				}
+				f->output_clock = fr + n_fr_done;
+
+				if(n_fr_done >= n_frames) goto stop;
+			}
+		}
+		av_free_packet(&f->packet);
+		continue;
+
+		stop:
+			av_free_packet(&f->packet);
+			break;
+	}
+
+	return n_fr_done;
+}
+
+
+int64_t
+ad_seek_ffmpeg(void* sf, int64_t pos)
+{
+	ffmpeg_audio_decoder* f = (ffmpeg_audio_decoder*) sf;
+	if (!sf) return -1;
+	if (pos == f->output_clock) return pos;
+
+	/* flush internal buffer */
+	f->tmp_buf.len = 0;
+	f->seek_frame = pos;
+	f->output_clock = pos;
+	f->pkt_len = 0; f->pkt_ptr = NULL;
+	f->decoder_clock = 0;
+
+	memset(&f->frame, 0, sizeof(AVFrame));
+	av_frame_unref(&f->frame);
+	f->frame_iter = 0;
+
+#if 0
+	/* TODO seek at least 1 packet before target.
+	 * for mpeg compressed files, the
+	 * output may depend on past frames! */
+	if (pos > 8192) pos -= 8192;
+	else pos = 0;
+#endif
+
+	const int64_t timestamp = pos / av_q2d(f->format_context->streams[f->audio_stream]->time_base) / f->samplerate;
+	dbg(2, "seek frame:%"PRIi64" - idx:%"PRIi64, pos, timestamp);
+
+	av_seek_frame(f->format_context, f->audio_stream, timestamp, AVSEEK_FLAG_ANY | AVSEEK_FLAG_BACKWARD);
+	avcodec_flush_buffers(f->codec_context);
+
+	return pos;
+}
+
+int
+ad_eval_ffmpeg(const char* f)
+{
+  char* ext = strrchr(f, '.');
   if (!ext) return 10;
   // libavformat.. guess_format.. 
   return 40;
