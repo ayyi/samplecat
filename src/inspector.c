@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2015 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2016 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -25,7 +25,6 @@
 #include "sample.h"
 #include "listview.h"
 #ifdef USE_TRACKER
-  #include "src/db/db.h"
   #include "src/db/tracker.h"
 #endif
 #if (defined HAVE_JACK)

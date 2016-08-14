@@ -19,7 +19,6 @@
 
 #define MODEL samplecat.model
 #define backend samplecat.model->backend
-#define ADD_BACKEND(A) MODEL->backends = g_list_append(MODEL->backends, A)
 
 typedef struct _Application {
    ConfigContext   config_ctx;
@@ -152,18 +151,9 @@ web_view_on_loaded (WebKitWebView* view, WebKitWebFrame* frame, gpointer user_da
 #endif
 	);
 
-#ifdef USE_MYSQL
-	ADD_BACKEND("mysql");
-#endif
-#ifdef USE_SQLITE
-	ADD_BACKEND("sqlite");
-#endif
-#ifdef USE_TRACKER
-	ADD_BACKEND("tracker");
-#endif
 	if (app.config.database_backend && can_use(MODEL->backends, app.config.database_backend)) {
 		list_clear(MODEL->backends);
-		ADD_BACKEND(app.config.database_backend);
+		samplecat_model_add_backend(app.config.database_backend);
 	}
 
 	if(!db_connect()){
@@ -176,7 +166,7 @@ web_view_on_loaded (WebKitWebView* view, WebKitWebFrame* frame, gpointer user_da
 		dbg(0, "search=%s", MODEL->filters.search->value);
 
 		int n_results = 0;
-		backend.search_iter_new("", "", &n_results);
+		backend.search_iter_new(&n_results);
 		dbg(0, "n_results=%i", n_results);
 		show_results();
 		backend.search_iter_free();

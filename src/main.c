@@ -106,7 +106,7 @@ static const char* const usage =
 	"  -b, --backend <name>   select which database type to use.\n"
 	"  -g, --no-gui           run as command line app.\n"
 	"  -h, --help             show this usage information and quit.\n"
-	"  -p, --player <name>    select audio player.\n"
+	"  -p, --player <name>    select audio player (jack, ayyi, cli).\n"
 	"  -s, --search <txt>     search using this phrase.\n"
 	"  -c, --cwd              show contents of current directory (temporary view, state not saved).\n"
 	"  -v, --verbose <level>  show more information.\n"
@@ -163,18 +163,6 @@ main(int argc, char** argv)
 
 	colour_box_init();
 
-#define ADD_BACKEND(A) model->backends = g_list_append(model->backends, A)
-
-#ifdef USE_MYSQL
-	ADD_BACKEND("mysql");
-#endif
-#ifdef USE_SQLITE
-	ADD_BACKEND("sqlite");
-#endif
-#ifdef USE_TRACKER
-	ADD_BACKEND("tracker");
-#endif
-
 #define ADD_PLAYER(A) app->players = g_list_append(app->players, A)
 
 #ifdef HAVE_JACK
@@ -205,7 +193,7 @@ main(int argc, char** argv)
 				dbg(1, "backend '%s' requested.", optarg);
 				if(can_use(model->backends, optarg)){
 					list_clear(model->backends);
-					ADD_BACKEND(optarg);
+					samplecat_model_add_backend(optarg);
 					dbg(1, "n_backends=%i", g_list_length(model->backends));
 				}
 				else{
@@ -281,7 +269,7 @@ main(int argc, char** argv)
 
 	if (app->config.database_backend && can_use(model->backends, app->config.database_backend)) {
 		list_clear(model->backends);
-		ADD_BACKEND(app->config.database_backend);
+		samplecat_model_add_backend(app->config.database_backend);
 	}
 
 	if (!player_opt && app->config.auditioner) {

@@ -77,7 +77,7 @@ main (int argc, char **argv)
 	ClutterModel* list_model = sample_list_model_new(samplecat.model);
 
 	int n_results = 0;
-	if(!backend.search_iter_new("", "", &n_results)){
+	if(!backend.search_iter_new(&n_results)){
 	}
 	unsigned long* lengths;
 	Sample* result;

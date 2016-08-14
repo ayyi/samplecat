@@ -54,6 +54,19 @@ struct _SamplecatModelPrivate {
 	guint selection_change_timeout;
 };
 
+static gpointer          samplecat_idle_ref (gpointer instance);
+static void              samplecat_idle_unref (gpointer instance);
+static GType             samplecat_idle_get_type   (void) G_GNUC_CONST;
+static SamplecatIdle*    samplecat_idle_new        (GSourceFunc _fn, void* _fn_target);
+static SamplecatIdle*    samplecat_idle_construct  (GType object_type, GSourceFunc _fn, void* _fn_target);
+static void              samplecat_idle_queue      (SamplecatIdle* self);
+#if 0
+static GParamSpec*       samplecat_param_spec_idle (const gchar* name, const gchar* nick, const gchar* blurb, GType object_type, GParamFlags flags);
+static void              samplecat_value_set_idle  (GValue* value, gpointer v_object);
+static void              samplecat_value_take_idle (GValue* value, gpointer v_object);
+static gpointer          samplecat_value_get_idle  (const GValue* value);
+#endif
+
 
 static gpointer samplecat_filter_parent_class = NULL;
 static gpointer samplecat_idle_parent_class = NULL;
@@ -78,20 +91,10 @@ static void samplecat_filter_finalize (SamplecatFilter* obj);
 GType samplecat_filters_get_type (void) G_GNUC_CONST;
 SamplecatFilters* samplecat_filters_dup (const SamplecatFilters* self);
 void samplecat_filters_free (SamplecatFilters* self);
-gpointer samplecat_idle_ref (gpointer instance);
-void samplecat_idle_unref (gpointer instance);
-GParamSpec* samplecat_param_spec_idle (const gchar* name, const gchar* nick, const gchar* blurb, GType object_type, GParamFlags flags);
-void samplecat_value_set_idle (GValue* value, gpointer v_object);
-void samplecat_value_take_idle (GValue* value, gpointer v_object);
-gpointer samplecat_value_get_idle (const GValue* value);
-GType samplecat_idle_get_type (void) G_GNUC_CONST;
 #define SAMPLECAT_IDLE_GET_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), SAMPLECAT_TYPE_IDLE, SamplecatIdlePrivate))
 enum  {
 	SAMPLECAT_IDLE_DUMMY_PROPERTY
 };
-SamplecatIdle* samplecat_idle_new (GSourceFunc _fn, void* _fn_target);
-SamplecatIdle* samplecat_idle_construct (GType object_type, GSourceFunc _fn, void* _fn_target);
-void samplecat_idle_queue (SamplecatIdle* self);
 static gboolean ___lambda2_ (SamplecatIdle* self);
 static gboolean ____lambda2__gsource_func (gpointer self);
 static void samplecat_idle_finalize (SamplecatIdle* obj);
@@ -327,7 +330,9 @@ GType samplecat_filters_get_type (void) {
 }
 
 
-SamplecatIdle* samplecat_idle_construct (GType object_type, GSourceFunc _fn, void* _fn_target) {
+static SamplecatIdle*
+samplecat_idle_construct (GType object_type, GSourceFunc _fn, void* _fn_target)
+{
 	SamplecatIdle* self = NULL;
 	GSourceFunc _tmp0_;
 	void* _tmp0__target;
@@ -345,7 +350,9 @@ SamplecatIdle* samplecat_idle_construct (GType object_type, GSourceFunc _fn, voi
 }
 
 
-SamplecatIdle* samplecat_idle_new (GSourceFunc _fn, void* _fn_target) {
+static SamplecatIdle*
+samplecat_idle_new (GSourceFunc _fn, void* _fn_target)
+{
 	return samplecat_idle_construct (SAMPLECAT_TYPE_IDLE, _fn, _fn_target);
 }
 
@@ -370,10 +377,11 @@ static gboolean ____lambda2__gsource_func (gpointer self) {
 }
 
 
-void samplecat_idle_queue (SamplecatIdle* self) {
-	guint _tmp0_;
+static void
+samplecat_idle_queue (SamplecatIdle* self)
+{
 	g_return_if_fail (self != NULL);
-	_tmp0_ = self->priv->id;
+	guint _tmp0_ = self->priv->id;
 	if (!((gboolean) _tmp0_)) {
 		guint _tmp1_ = 0U;
 		_tmp1_ = g_idle_add_full (G_PRIORITY_DEFAULT_IDLE, ____lambda2__gsource_func, samplecat_idle_ref (self), samplecat_idle_unref);
@@ -442,22 +450,33 @@ static gchar* samplecat_value_idle_lcopy_value (const GValue* value, guint n_col
 }
 
 
-GParamSpec* samplecat_param_spec_idle (const gchar* name, const gchar* nick, const gchar* blurb, GType object_type, GParamFlags flags) {
+#if 0
+static GParamSpec*
+samplecat_param_spec_idle (const gchar* name, const gchar* nick, const gchar* blurb, GType object_type, GParamFlags flags)
+{
 	SamplecatParamSpecIdle* spec;
 	g_return_val_if_fail (g_type_is_a (object_type, SAMPLECAT_TYPE_IDLE), NULL);
 	spec = g_param_spec_internal (G_TYPE_PARAM_OBJECT, name, nick, blurb, flags);
 	G_PARAM_SPEC (spec)->value_type = object_type;
 	return G_PARAM_SPEC (spec);
 }
+#endif
 
 
-gpointer samplecat_value_get_idle (const GValue* value) {
+#if 0
+static gpointer
+samplecat_value_get_idle (const GValue* value)
+{
 	g_return_val_if_fail (G_TYPE_CHECK_VALUE_TYPE (value, SAMPLECAT_TYPE_IDLE), NULL);
 	return value->data[0].v_pointer;
 }
+#endif
 
 
-void samplecat_value_set_idle (GValue* value, gpointer v_object) {
+#if 0
+static void
+samplecat_value_set_idle (GValue* value, gpointer v_object)
+{
 	SamplecatIdle* old;
 	g_return_if_fail (G_TYPE_CHECK_VALUE_TYPE (value, SAMPLECAT_TYPE_IDLE));
 	old = value->data[0].v_pointer;
@@ -473,9 +492,13 @@ void samplecat_value_set_idle (GValue* value, gpointer v_object) {
 		samplecat_idle_unref (old);
 	}
 }
+#endif
 
 
-void samplecat_value_take_idle (GValue* value, gpointer v_object) {
+#if 0
+static void
+samplecat_value_take_idle (GValue* value, gpointer v_object)
+{
 	SamplecatIdle* old;
 	g_return_if_fail (G_TYPE_CHECK_VALUE_TYPE (value, SAMPLECAT_TYPE_IDLE));
 	old = value->data[0].v_pointer;
@@ -490,6 +513,7 @@ void samplecat_value_take_idle (GValue* value, gpointer v_object) {
 		samplecat_idle_unref (old);
 	}
 }
+#endif
 
 
 static void samplecat_idle_class_init (SamplecatIdleClass * klass) {
@@ -516,7 +540,9 @@ static void samplecat_idle_finalize (SamplecatIdle* obj) {
 }
 
 
-GType samplecat_idle_get_type (void) {
+static GType
+samplecat_idle_get_type (void)
+{
 	static volatile gsize samplecat_idle_type_id__volatile = 0;
 	if (g_once_init_enter (&samplecat_idle_type_id__volatile)) {
 		static const GTypeValueTable g_define_type_value_table = { samplecat_value_idle_init, samplecat_value_idle_free_value, samplecat_value_idle_copy_value, samplecat_value_idle_peek_pointer, "p", samplecat_value_idle_collect_value, "p", samplecat_value_idle_lcopy_value };
@@ -530,17 +556,19 @@ GType samplecat_idle_get_type (void) {
 }
 
 
-gpointer samplecat_idle_ref (gpointer instance) {
-	SamplecatIdle* self;
-	self = instance;
+static gpointer
+samplecat_idle_ref (gpointer instance)
+{
+	SamplecatIdle* self = instance;
 	g_atomic_int_inc (&self->ref_count);
 	return instance;
 }
 
 
-void samplecat_idle_unref (gpointer instance) {
-	SamplecatIdle* self;
-	self = instance;
+static void
+samplecat_idle_unref (gpointer instance)
+{
+	SamplecatIdle* self = instance;
 	if (g_atomic_int_dec_and_test (&self->ref_count)) {
 		SAMPLECAT_IDLE_GET_CLASS (self)->finalize (self);
 		g_type_free_instance ((GTypeInstance *) self);

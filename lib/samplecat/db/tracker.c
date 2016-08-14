@@ -105,11 +105,12 @@ str_in_array (const gchar *str, gchar **array)
 
 
 gboolean
-tracker__search_iter_new(char* search, char* dir, const char* category, int* n_results)
+tracker__search_iter_new(int* n_results)
 {
 	g_return_val_if_fail(tc, false);
 	// TODO handle search==NULL and dir==NULL cases.
 
+	const char* category = samplecat.model->filters.category->value;
 	dbg(0, "search=%s category=%s.", search, category);
 	*n_results = -1;
 

@@ -19,14 +19,13 @@
 # define GLX_GLXEXT_PROTOTYPES
 #include <GL/gl.h>
 #include <GL/glx.h>
-#include "gtk/gtk.h"
+#include <gtk/gtk.h>
 #include <debug/debug.h>
-#include "src/typedefs.h"
-#include "samplecat.h"
-#include "db/db.h"
-#include "utils/ayyi_utils.h"
 #include "agl/actor.h"
 #include "agl/ext.h"
+#include "src/typedefs.h"
+#include "samplecat.h"
+#include "utils/ayyi_utils.h"
 #include "waveform/waveform.h"
 #include "glx.h"
 #include "keys.h"
@@ -55,7 +54,6 @@ Key keys[] = {
 };
 
 static void add_key_handlers();
-//#define MAX_DISPLAY_ROWS 20
 
 
 gint
@@ -145,11 +143,23 @@ main(int argc, char* argv[])
 		app->config_ctx.filename = g_strdup_printf("%s/.config/" PACKAGE "/" PACKAGE, g_get_home_dir());
 		config_load(&app->config_ctx, &app->config);
 
+		if (app->config.database_backend && can_use(samplecat.model->backends, app->config.database_backend)) {
+			#define list_clear(L) g_list_free(L); L = NULL;
+			list_clear(samplecat.model->backends);
+			samplecat_model_add_backend(app->config.database_backend);
+		}
+
+		db_init(
 #ifdef USE_MYSQL
-		db_init(&app->config.mysql);
-		db_connect();
-		samplecat_set_backend(BACKEND_MYSQL);
+			&app->config.mysql
+#else
+			NULL
 #endif
+		);
+		if (!db_connect()) {
+			g_warning("cannot connect to any database.\n");
+			return EXIT_FAILURE;
+		}
 
 		samplecat_list_store_do_search((SamplecatListStore*)samplecat.store);
 

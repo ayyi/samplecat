@@ -24,7 +24,7 @@
 
 static void     sqlite__disconnect       ();
 
-static bool     sqlite__search_iter_new  (char* dir, const char* category, int* n_results);
+static bool     sqlite__search_iter_new  (int* n_results);
 static Sample*  sqlite__search_iter_next (unsigned long** lengths);
 static void     sqlite__search_iter_free ();
 
@@ -102,6 +102,7 @@ sqlite__set_as_backend(SamplecatBackend* backend)
 
 	backend->disconnect       = sqlite__disconnect;
 }
+
 
 void
 sqlite__create_db()
@@ -409,7 +410,7 @@ sqlite__filter_by_audio(Sample *s)
 
 
 static gboolean
-sqlite__search_iter_new(char* dir, const char* category, int* n_results)
+sqlite__search_iter_new(int* n_results)
 {
 	PF;
 	static int count = 0;
@@ -457,11 +458,13 @@ sqlite__search_iter_new(char* dir, const char* category, int* n_results)
 		sqlite3_free(where);
 		where = where2;
 	}
+	const char* category = samplecat.model->filters.category->value;
 	if(category){
 		gchar* where2 = sqlite3_mprintf("%s AND keywords LIKE '%%%q%%' ", where, category);
 		sqlite3_free(where);
 		where = where2;
 	}
+	const char* dir = samplecat.model->filters.dir->value;
 	if(dir && strlen(dir)){
 #ifdef DONT_SHOW_SUBDIRS //TODO
 		gchar* where2 = sqlite3_mprintf("%s AND filedir='%q' ", where, dir);

@@ -72,7 +72,7 @@ static gboolean  mysql__update_int       (int id, const char*, const long int);
 static gboolean  mysql__update_float     (int id, const char*, float);
 static gboolean  mysql__update_blob      (int id, const char*, const guint8*, const guint);
 
-static gboolean  mysql__search_iter_new  (char* dir, const char* category, int* n_results);
+static gboolean  mysql__search_iter_new  (int* n_results);
 static Sample*   mysql__search_iter_next_(unsigned long** lengths);
 static void      mysql__search_iter_free ();
 
@@ -459,7 +459,7 @@ mysql__filter_by_audio(Sample *s)
 
 
 static gboolean
-mysql__search_iter_new(char* dir, const char* category, int* n_results)
+mysql__search_iter_new(int* n_results)
 {
 	//return TRUE on success.
 
@@ -496,6 +496,7 @@ mysql__search_iter_new(char* dir, const char* category, int* n_results)
 #endif
 	}
 
+	const char* dir = samplecat.model->filters.dir->value;
 	if(dir && strlen(dir)) {
 		MYSQL_ESCAPE(esc, dir);
 #ifdef DONT_SHOW_SUBDIRS //TODO
@@ -505,7 +506,8 @@ mysql__search_iter_new(char* dir, const char* category, int* n_results)
 #endif
 		free(esc);
 	}
-	if(samplecat.model->filters.category->value) {
+	const char* category = samplecat.model->filters.category->value;
+	if(category && strlen(category)) {
 		MYSQL_ESCAPE(esc, category);
 		g_string_append_printf(q, "AND keywords LIKE '%%%s%%' ", esc);
 		free(esc);

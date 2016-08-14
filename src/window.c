@@ -29,7 +29,6 @@
 #include "gimp/gimpaction.h"
 #include "gimp/gimpactiongroup.h"
 #include "typedefs.h"
-#include "db/db.h"
 #include "sample.h"
 #include "support.h"
 #include "model.h"

@@ -265,7 +265,7 @@ void samplecat_list_store_do_search (SamplecatListStore* self) {
 
 	samplecat_list_store_clear_(self);
 
-	if(!samplecat.model->backend.search_iter_new(samplecat.model->filters.dir->value, samplecat.model->filters.category->value, NULL)) {
+	if(!samplecat.model->backend.search_iter_new(NULL)) {
 		return;
 	}
 
