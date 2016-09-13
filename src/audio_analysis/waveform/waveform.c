@@ -21,12 +21,12 @@
 #include "waveform/waveform.h"
 
 #include "debug/debug.h"
+#include "decoder/ad.h"
 #include "typedefs.h"
 #include "support.h"
 #include "application.h"
 #include "sample.h"
 
-#include "audio_decoder/ad.h"
 
 void
 draw_cairo_line(cairo_t* cr, DRect* pts, double line_width, GdkColor* colour)
@@ -54,11 +54,9 @@ pixbuf_clear(GdkPixbuf* pixbuf, GdkColor* colour)
 GdkPixbuf*
 make_overview(Sample* sample)
 {
-	struct adinfo nfo;
-	void* sf = ad_open(sample->full_path, &nfo);
-	if (!sf) return NULL;
+	WfDecoder d = {{0,}};
+	if(!ad_open(&d, sample->full_path)) return NULL;
 	dbg(1, "NEW OVERVIEW");
-
 
 	if(!strcmp(sample->mimetype, "audio/mp4")){
 		// Using libwaveform for thumbnail generation is the way to go.
@@ -85,15 +83,15 @@ make_overview(Sample* sample)
 	}
 	cairo_set_line_width (cr, 1.0);
 
-	int frames_per_buf = nfo.frames / OVERVIEW_WIDTH;
-	int buffer_len = frames_per_buf * nfo.channels;
+	int frames_per_buf = d.info.frames / OVERVIEW_WIDTH;
+	int buffer_len = frames_per_buf * d.info.channels;
 	float* data = g_malloc(sizeof(float) * buffer_len);
 
-	int x=0;
+	int x = 0;
 	float min;                //negative peak value for each pixel.
 	float max;                //positive peak value for each pixel.
 	int readcount;
-	while((readcount = ad_read(sf, data, buffer_len)) > 0){
+	while((readcount = ad_read(&d, data, buffer_len)) > 0){
 		int frame;
 		const int srcidx_start = 0;
 		const int srcidx_stop  = frames_per_buf;
@@ -101,9 +99,9 @@ make_overview(Sample* sample)
 		min = 1.0; max = -1.0;
 		for(frame=srcidx_start;frame<srcidx_stop;frame++){ 
 			int ch;
-			for(ch=0;ch<nfo.channels;ch++){
-				if(frame * nfo.channels + ch > buffer_len){ perr("index error!\n"); break; }
-				const float sample_val = data[frame * nfo.channels + ch];
+			for(ch=0;ch<d.info.channels;ch++){
+				if(frame * d.info.channels + ch > buffer_len){ perr("index error!\n"); break; }
+				const float sample_val = data[frame * d.info.channels + ch];
 				max = MAX(max, sample_val);
 				min = MIN(min, sample_val);
 			}
@@ -119,9 +117,9 @@ make_overview(Sample* sample)
 		x++;
 	}
 
-	if(ad_close(sf)) perr("bad file close.\n");
+	if(ad_close(&d)) perr("bad file close.\n");
 	g_free(data);
-	ad_free_nfo(&nfo);
+	ad_free_nfo(&d.info);
 	cairo_destroy(cr);
 	cairo_surface_destroy(surface);
 	sample->overview = pixbuf;

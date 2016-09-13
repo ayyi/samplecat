@@ -56,14 +56,11 @@ char * program_name;
 #include "listview.h"
 #include "window.h"
 #include "colour_box.h"
-#include "inspector.h"
 #include "progress_dialog.h"
-#include "player_control.h"
 #include "dnd.h"
 #include "icon_theme.h"
 #include "application.h"
 #include "console_view.h"
-#include "audio_decoder/ad.h"
 
 #undef DEBUG_NO_THREADS
 
@@ -289,7 +286,6 @@ main(int argc, char** argv)
 
 	icon_theme_init();
 	pixmaps_init();
-	ad_init();
 
 	if(app->no_gui) console__init();
 

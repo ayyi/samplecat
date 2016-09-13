@@ -18,7 +18,6 @@
 #include <gtk/gtk.h>
 #include "debug/debug.h"
 #include "samplecat.h"
-#include "src/audio_decoder/ad.h"
 #include "src/audio_analysis/waveform/waveform.h"
 #include "src/audio_analysis/meter/peak.h"
 #include "src/audio_analysis/ebumeter/ebur128.h"
@@ -123,7 +122,7 @@ request_overview(Sample* sample)
 	void overview_done(Sample* sample, gpointer user_data)
 	{
 		PF;
-		g_return_val_if_fail(sample, false);
+		g_return_if_fail(sample);
 		if(sample->overview){
 			samplecat_model_update_sample (samplecat.model, sample, COL_OVERVIEW, NULL);
 		}else{

@@ -208,7 +208,7 @@ static MaskedPixmap *mp_from_stock(const char *stock_id, int size)
                                      NULL,
                                      NULL);
 	retval = masked_pixmap_new(pixbuf);
-	gdk_pixbuf_unref(pixbuf);
+	g_object_unref(pixbuf);
 
 	return retval;
 }
@@ -646,7 +646,7 @@ image_from_file(const char *path)
 
 	MaskedPixmap* image = masked_pixmap_new(pixbuf);
 
-	gdk_pixbuf_unref(pixbuf);
+	g_object_unref(pixbuf);
 
 	return image;
 }
@@ -663,7 +663,7 @@ GdkPixbuf *scale_pixbuf(GdkPixbuf *src, int max_w, int max_h)
 
 	if (w <= max_w && h <= max_h)
 	{
-		gdk_pixbuf_ref(src);
+		g_object_ref(src);
 		return src;
 	}
 	else
@@ -693,7 +693,7 @@ static GdkPixbuf *scale_pixbuf_up(GdkPixbuf *src, int max_w, int max_h)
 
 	if (w == 0 || h == 0 || w >= max_w || h >= max_h)
 	{
-		gdk_pixbuf_ref(src);
+		g_object_ref(src);
 		return src;
 	}
 	else
@@ -720,7 +720,7 @@ get_bad_image(void)
 	
 	bad = gdk_pixbuf_new_from_xpm_data(bad_xpm);
 	MaskedPixmap *mp = masked_pixmap_new(bad);
-	gdk_pixbuf_unref(bad);
+	g_object_unref(bad);
 
 	return mp;
 }

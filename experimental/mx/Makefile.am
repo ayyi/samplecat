@@ -10,6 +10,7 @@ LDADD = \
 	$(top_srcdir)/lib/waveform/waveform/.libs/libwaveform.a \
 	$(top_srcdir)/lib/waveform/agl/.libs/libagl.a \
 	$(top_srcdir)/lib/waveform/transition/.libs/libtransition.a \
+	$(top_srcdir)/lib/waveform/decoder/.libs/libwaveformdecoder.a \
 	$(top_srcdir)/lib/file_manager/libfilemanager.a \
 	$(top_srcdir)/lib/xdgmime/libxdgmime.a \
 	$(MX_LDFLAGS) $(MX_LIBS) \
@@ -40,20 +41,12 @@ AUDIOANALYSERS_SRC = \
 	$(top_srcdir)/src/audio_analysis/ebumeter/ebur128.cc $(top_srcdir)/src/audio_analysis/ebumeter/ebur128.h \
 	$(top_srcdir)/src/audio_analysis/ebumeter/ebu_r128_proc.cc $(top_srcdir)/src/audio_analysis/ebumeter/ebu_r128_proc.h
 
-AD_SRC = ../../src/audio_decoder/ad.h \
-	../../src/audio_decoder/ad_plugin.h ../../src/audio_decoder/ad_plugin.c \
-	../../src/audio_decoder/ad_soundfile.c \
-	../../src/audio_decoder/ad_flac.c \
-	../../src/audio_decoder/ad_ffmpeg.c \
-	../../src/audio_decoder/ffcompat.h
-
 mx_test_SOURCES = main.c \
 	list_model.c list_model.h \
 	list_view.c list_view.h \
 	list_item.c list_item.h \
 	$(top_srcdir)/src/icon_theme.c $(top_srcdir)/src/icon_theme.h \
-	$(AUDIOANALYSERS_SRC) \
-	$(AD_SRC)
+	$(AUDIOANALYSERS_SRC)
 
 ###$(top_srcdir)/lib/utils/ayyi_utils.c $(top_srcdir)/lib/utils/ayyi_utils.h
 

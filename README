@@ -24,6 +24,7 @@ get the submodule:
 ```
 	git submodule init
 	git submodule update
+	git submodule foreach git pull origin master
 ```
 If you subsequently need to update the submodules as part of a git pull:
 ```

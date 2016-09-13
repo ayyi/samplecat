@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2015 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2016 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -15,12 +15,12 @@
 #include <string.h>
 #include <gtk/gtk.h>
 #include "debug/debug.h"
+#include "decoder/ad.h"
 #include "file_manager/file_manager.h"
 #include "file_manager/rox_support.h" // to_utf8()
 #include "file_manager/mimetype.h"
 #include "samplecat/support.h"
 #include "support.h"
-#include "src/audio_decoder/ad.h"
 #include "model.h"
 #include "worker.h"
 #include "src/listview.h"
@@ -179,7 +179,7 @@ sample_get_file_info(Sample* sample)
 		return false;
 	}
 
-	struct adinfo nfo;
+	WfAudioInfo nfo;
 	if (!ad_finfo(sample->full_path, &nfo)) {
 		return false;
 	}

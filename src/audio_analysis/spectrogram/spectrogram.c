@@ -51,12 +51,14 @@
 #include <glib/gstdio.h>
 
 #include "debug/debug.h"
+#include "decoder/ad.h"
 #include "typedefs.h"
 #include "support.h"
 
-#include "audio_decoder/ad.h"
 #include "audio_analysis/spectrogram/sndfile_window.h"
 #include "application.h"
+
+#define _g_object_unref0(var) ((var == NULL) ? NULL : (var = (g_object_unref (var), NULL)))
 
 typedef void (*SpectrogramReady)(const char* filename, GdkPixbuf*, gpointer);
 typedef void (*SpectrogramReadyTarget)(const char* filename, GdkPixbuf*, gpointer, void* target);
@@ -101,7 +103,6 @@ get_colour_map_value (float value, double spec_floor_db, unsigned char colour [3
 	};
 
 	float rem;
-	int indx;
 
 	if (value >= 0.0)
 	{	colour = map [0];
@@ -110,10 +111,10 @@ get_colour_map_value (float value, double spec_floor_db, unsigned char colour [3
 
 	value = fabs (value * (-180.0 / spec_floor_db) * 0.1);
 
-	indx = rintf (floorf (value));
+	int indx = rintf (floorf (value));
 
 	if (indx < 0) {
-		printf ("\nError : colour map array index is %d\n\n", indx);
+		printf ("\nError: colour map array index is %d\n\n", indx);
 		return -1;
 	};
 
@@ -131,11 +132,12 @@ get_colour_map_value (float value, double spec_floor_db, unsigned char colour [3
 	return 0;
 } /* get_colour_map_value */
 
+
 static int
-read_mono_audio (void* file, struct adinfo* nfo, double* data, int datalen, int index, int total)
+read_mono_audio (WfDecoder* file, double* data, int datalen, int index, int total)
 {
 	int rv = 0;
-	int64_t start = (index * nfo->frames) / total - datalen / 2;
+	int64_t start = (index * file->info.frames) / total - datalen / 2;
 	int i=0; for(i=0;i<datalen;i++) data[i]=0;
 
 	if (start >= 0) {
@@ -146,9 +148,10 @@ read_mono_audio (void* file, struct adinfo* nfo, double* data, int datalen, int 
 		data += start;
 		datalen -= start;
 	}
-	ad_read_mono_dbl(file, nfo, data, datalen);
+	ad_read_mono_dbl(file, data, datalen);
 	return rv;
 } /* read_mono_audio */
+
 
 static int
 apply_window (double * data, int datalen)
@@ -250,15 +253,14 @@ interp_spec (float * mag, int maglen, const double *spec, int speclen)
 } /* interp_spec */
 
 static int
-render_to_pixbuf (void *infile, struct adinfo *nfo, GdkPixbuf* pixbuf)
+spectrogram_render_to_pixbuf (WfDecoder* infile, GdkPixbuf* pixbuf)
 {
-	int rv =0; /* OK */
+	int rv = 0; /* OK */
 	static double time_domain [10 * MAX_HEIGHT];
 	static double freq_domain [10 * MAX_HEIGHT];
 	static double single_mag_spec [5 * MAX_HEIGHT];
 	static float mag_spec [SG_WIDTH][MAX_HEIGHT];
 
-	fftw_plan plan;
 	double max_mag = 0;
 	int w, h, speclen;
 	for (w=0;w<SG_WIDTH; w++) for (h=0;h<MAX_HEIGHT; h++) mag_spec[w][h] = 0;
@@ -268,7 +270,7 @@ render_to_pixbuf (void *infile, struct adinfo *nfo, GdkPixbuf* pixbuf)
 	**	to 20Hz, and then increase it slightly so it is a multiple of 0x40 so that
 	**	FFTW calculations will be quicker.
 	*/
-	speclen = SG_HEIGHT * (nfo->sample_rate / 20 / SG_HEIGHT + 1);
+	speclen = SG_HEIGHT * (infile->info.sample_rate / 20 / SG_HEIGHT + 1);
 	speclen += 0x40 - (speclen & 0x3f);
 
 	if (2 * speclen > G_N_ELEMENTS (time_domain)) {
@@ -276,7 +278,7 @@ render_to_pixbuf (void *infile, struct adinfo *nfo, GdkPixbuf* pixbuf)
 		return -1;
 	};
 
-	plan = fftw_plan_r2r_1d (2 * speclen, time_domain, freq_domain, FFTW_R2HC, FFTW_MEASURE | FFTW_PRESERVE_INPUT);
+	fftw_plan plan = fftw_plan_r2r_1d (2 * speclen, time_domain, freq_domain, FFTW_R2HC, FFTW_MEASURE | FFTW_PRESERVE_INPUT);
 	if (plan == NULL) {
 		printf ("%s : line %d : create plan failed.\n", __FILE__, __LINE__);
 		return -1;
@@ -285,7 +287,7 @@ render_to_pixbuf (void *infile, struct adinfo *nfo, GdkPixbuf* pixbuf)
 	for (w = 0; w < SG_WIDTH; w++) {
 		double single_max;
 
-		if (read_mono_audio(infile, nfo, time_domain, 2 * speclen, w, SG_WIDTH) < 0) {
+		if (read_mono_audio(infile, time_domain, 2 * speclen, w, SG_WIDTH) < 0) {
 			dbg(1, "read failed before EOF");
 			break;
 		}
@@ -330,25 +332,23 @@ check_int_range (const char * name, int value, int lower, int upper)
 /* END COPY OF sndfile-spectrogram.c */
 
 static GdkPixbuf*
-render_sndfile (const char* file)
+spectrogram_render_sndfile (const char* file)
 {
-	struct adinfo nfo;
+	WfDecoder decoder = {{0,}};
 
-	void* infile = ad_open (file, &nfo);
-	if (!infile) {
+	if(!ad_open(&decoder, file)){
 		dbg(1, "cannot open file: %s", file);
 		return NULL;
 	};
 
 	GdkPixbuf* pixbuf = gdk_pixbuf_new(GDK_COLORSPACE_RGB, /*alpha*/ FALSE, 8, SG_WIDTH, SG_HEIGHT);
-	if (render_to_pixbuf (infile, &nfo, pixbuf)) {
-		dbg(0, "failed to create pixbuf: %s", file);
-		g_object_unref(pixbuf);
-		pixbuf = NULL;
+	if (spectrogram_render_to_pixbuf(&decoder, pixbuf)) {
+		dbg(0, "failed to create pixbuf for: %s", file);
+		_g_object_unref0(pixbuf);
 	}
 
-	ad_close(infile);
-	ad_free_nfo(&nfo);
+	ad_close(&decoder);
+	ad_free_nfo(&decoder.info);
 	return pixbuf;
 }
 
@@ -388,6 +388,7 @@ typedef struct _msg
 } Message;
 
 static GAsyncQueue* msg_queue = NULL;
+
 
 static Message*
 message_new(MsgType type)
@@ -473,7 +474,7 @@ fft_thread(gpointer data)
 			*/
 
 			dbg(1, "filename=%s.", render->sndfilepath);
-			render->pixbuf = render_sndfile(render->sndfilepath); /* < this does the actual work */
+			render->pixbuf = spectrogram_render_sndfile(render->sndfilepath); /* < this does the actual work */
 
 			//check the completed render wasnt cancelled in the meantime
 			gboolean got_cancel = false;

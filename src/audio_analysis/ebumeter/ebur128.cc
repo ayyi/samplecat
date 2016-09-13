@@ -29,37 +29,37 @@
 #include "ebur128.h"
 
 extern "C" {
-#include "audio_decoder/ad.h"
+#include "decoder/ad.h"
 }
 
 const bool prob = false;
 const bool lufs = false;
 
 static int ebur128proc (const char *fn, struct ebur128 *ebr) {
-	void *sf;
 	int i, k;
-	struct adinfo nfo;
+	WfDecoder d = {{0,}};
 	Ebu_r128_proc Proc;
 	float *data[2];
 	float *inpb;
+
 	if (ebr) {
 		memset(ebr, 0, sizeof(struct ebur128));
 		ebr->err=1;
 	}
 
-	if (!(sf=ad_open(fn, &nfo))) {
+	if (!ad_open(&d, fn)) {
 		if(_debug_) fprintf (stderr, "Can't open input file '%s'.\n", fn);
 		return 1;
 	}
 
-	const int nchan   = nfo.channels;
-	const int64_t len = nfo.frames;
-	const float fsamp = nfo.sample_rate;
+	const int nchan   = d.info.channels;
+	const int64_t len = d.info.frames;
+	const float fsamp = d.info.sample_rate;
 
-	ad_free_nfo(&nfo);
+	ad_free_nfo(&d.info);
 	if (nchan > 2) {
 		fprintf (stderr, "EBU: Input file must be mono or stereo.\n");
-		ad_close(sf);
+		ad_close(&d);
 		return 1;
 	}
 
@@ -67,7 +67,7 @@ static int ebur128proc (const char *fn, struct ebur128 *ebr) {
 
 	if (bsize > len) { // XXX check do we need bsize or 2*bsize?
 		fprintf (stderr, "EBU: Input file is too short.\n");
-		ad_close(sf);
+		ad_close(&d);
 		if (ebr) {return 0;} // do not repeat analysis later.
 		return 1;
 	}
@@ -84,9 +84,9 @@ static int ebur128proc (const char *fn, struct ebur128 *ebr) {
 	Proc.init (nchan, fsamp);
 	Proc.integr_start ();
 	while (true) {
-		k = ad_read (sf, inpb, bsize*nchan);
+		k = ad_read (&d, inpb, bsize * nchan);
 		if (k < 1) break;
-		k=k/nchan;
+		k = k / nchan;
 		if (nchan > 1) {
 			float *p = inpb;
 			for (i = 0; i < k; i++) {
@@ -96,7 +96,7 @@ static int ebur128proc (const char *fn, struct ebur128 *ebr) {
 		}
 		Proc.process (k, data);
 	}
-	ad_close(sf);
+	ad_close(&d);
 
 	if (nchan > 1) {
 		delete[] data [0];

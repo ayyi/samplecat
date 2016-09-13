@@ -1,20 +1,33 @@
+/**
+* +----------------------------------------------------------------------+
+* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
+* | copyright (C) 2007-2016 Tim Orford <tim@orford.org>                  |
+* +----------------------------------------------------------------------+
+* | This program is free software; you can redistribute it and/or modify |
+* | it under the terms of the GNU General Public License version 3       |
+* | as published by the Free Software Foundation.                        |
+* +----------------------------------------------------------------------+
+*
+*/
 #include "config.h"
 #include <stdlib.h>
 #include <math.h>
-#include "audio_decoder/ad.h"
+#include "decoder/ad.h"
 
-double ad_maxsignal(const char *fn) {
-	struct adinfo nfo;
-	void* sf = ad_open(fn, &nfo);
-	if (!sf) return 0.0;
 
-	size_t read_len = 1024 * nfo.channels;
+double
+ad_maxsignal(const char* filename)
+{
+	WfDecoder d = {{0,}};
+	if(!ad_open(&d, filename)) return 0.0;
+
+	size_t read_len = 1024 * d.info.channels;
 	float* sf_data = malloc(sizeof(float) * read_len);
 
 	int readcount;
 	float max_val = 0.0;
 	do {
-		readcount = ad_read(sf, sf_data, read_len);
+		readcount = ad_read(&d, sf_data, read_len);
 		int k;
 		for (k = 0; k < readcount; k++){
 			const float temp = fabs (sf_data [k]);
@@ -22,8 +35,9 @@ double ad_maxsignal(const char *fn) {
 		};
 	} while (readcount > 0);
 
-	ad_close(sf);
+	ad_close(&d);
 	free(sf_data);
-	ad_free_nfo(&nfo);
+	ad_free_nfo(&d.info);
+
 	return max_val;
 }

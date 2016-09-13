@@ -8,20 +8,12 @@ AUDIOANALYSERS_SRC = \
 	$(top_srcdir)/src/audio_analysis/ebumeter/ebur128.cc $(top_srcdir)/src/audio_analysis/ebumeter/ebur128.h \
 	$(top_srcdir)/src/audio_analysis/ebumeter/ebu_r128_proc.cc $(top_srcdir)/src/audio_analysis/ebumeter/ebu_r128_proc.h
 
-AD_SRC = ../../src/audio_decoder/ad.h \
-	../../src/audio_decoder/ad_plugin.h ../../src/audio_decoder/ad_plugin.c \
-	../../src/audio_decoder/ad_soundfile.c \
-	../../src/audio_decoder/ad_flac.c \
-	../../src/audio_decoder/ad_ffmpeg.c \
-	../../src/audio_decoder/ffcompat.h
-
 samplecat_webkit_SOURCES = \
 	webkit.c \
 	util.c util.h \
 	table.c table.h \
 	$(top_srcdir)/src/icon_theme.c $(top_srcdir)/src/icon_theme.h \
-	$(AUDIOANALYSERS_SRC) \
-	$(AD_SRC)
+	$(AUDIOANALYSERS_SRC)
 
 AM_CFLAGS = \
 	-g -Wall -O2 \
@@ -59,6 +51,7 @@ samplecat_webkit_LDADD = \
 	$(top_srcdir)/lib/waveform/waveform/.libs/libwaveform.a \
 	$(top_srcdir)/lib/waveform/agl/.libs/libagl.a \
 	$(top_srcdir)/lib/waveform/transition/.libs/libtransition.a \
+	$(top_srcdir)/lib/waveform/decoder/.libs/libwaveformdecoder.a \
 	$(top_srcdir)/lib/file_manager/libfilemanager.a \
 	$(top_srcdir)/lib/xdgmime/libxdgmime.a \
 	$(SAMPLECAT_LIBS) \

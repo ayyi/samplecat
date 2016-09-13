@@ -35,12 +35,6 @@ if ENABLE_AYYI
 AYYI_SRC = ayyi.c ayyi.h ayyi_model.c ayyi_model.h
 endif
 
-AD_SRC = audio_decoder/ad.h audio_decoder/ad_plugin.h audio_decoder/ad_plugin.c \
-	audio_decoder/ad_soundfile.c \
-	audio_decoder/ad_flac.c \
-	audio_decoder/ad_ffmpeg.c \
-	audio_decoder/ffcompat.h
-
 if ENABLE_FFTW3
 FFT_SRC = spectrogram_widget.c spectrogram_widget.h
 FFT_ANANALYSERS_SRC = \
@@ -104,12 +98,12 @@ samplecat_SOURCES = \
 	icon_theme.c icon_theme.h \
 	table.c table.h \
 	$(AUDIOANALYSERS_SRC) \
-	$(AD_SRC) \
 	$(FFT_SRC) \
 	$(OPENGL_SRC) \
 	$(AYYI_SRC) \
 	$(AUDITIONER_AYYI) $(AUDITIONER_GPLAYER) $(AUDITIONER_JACK)
 
+# to restore, copy Makefile.am.orig
 samplecat_LDADD = \
 	$(top_srcdir)/lib/utils/libutils.a \
 	$(top_srcdir)/lib/file_manager/libfilemanager.a \
@@ -121,6 +115,7 @@ samplecat_LDADD = \
 	$(GDL_LDFLAGS) \
 	gimp/libgimpwidgets.a \
 	$(top_srcdir)/lib/waveform/waveform/.libs/libwaveform.a \
+	$(top_srcdir)/lib/waveform/decoder/.libs/libwaveformdecoder.a \
 	$(SAMPLECAT_LIBS) \
 	$(AYYI_LIBS) \
 	$(DBUS_LIBS) \
