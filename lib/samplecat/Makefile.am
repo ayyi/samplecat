@@ -8,6 +8,7 @@ AM_CFLAGS = \
 	-I../ \
 	-DG_LOG_DOMAIN=\"Samplecat\" \
 	-I$(top_srcdir)/lib \
+	-I$(top_srcdir)/lib/waveform \
 	$(GTK_CFLAGS)
 
 noinst_LIBRARIES = libsamplecat.a

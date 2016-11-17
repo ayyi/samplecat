@@ -26,6 +26,7 @@ INCLUDES = \
 	-I$(top_srcdir) \
 	-I$(top_srcdir)/lib \
 	-I$(top_srcdir)/lib/samplecat \
+	-I$(top_srcdir)/lib/waveform \
 	-I$(top_srcdir)/src \
 	-I$(top_builddir) \
 	$(GTK_CFLAGS)
