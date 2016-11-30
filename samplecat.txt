@@ -17,7 +17,6 @@ sometime:
    * move "loop" from menu->pref to player_control.
    * make use of the two status-bars.
   -major GUI redesign.
-   * flexible, configurable list-view
    * preferences and about windows
    * fix focus-save behaviour of notes and tag-edit in inspector.
    * add button and/or shortcut to reset colours of played files.
@@ -82,25 +81,6 @@ functionality status:
     -sample versioning                   no
   slocate
     -allow searches of slocate db        no
-
-metadata:
-  -gio/gvfs:
-    -try g_file_query_info() using the 'metadata' namespace
-    -uses different store to tracker! designed to be faster.
-    -gio/gvfs metadata breaks mv etc, as it will use the metadata. You are supposed to use 'gvfs-move'.
-      -the proper way to do this is to use xattrs, which are supported by the filesystem, however Nautilus guy says they are too slow.
-    -what metadata will gio/gvfs give us?
-      -custom icon
-      -per-folder default view
-      -per-folder background
-      -per folder (spatial) geometry
-      -per folder icon view and list view settings (colums, zoom level, etc)
-      -icon position in manual layout mode (e.g. on desktop)
-      -icon scaling
-      -emblems
-      -file annotations (a note you can add on a file)
-      note: thumbnails are stored in another way (see thumbnail spec)
-    -evince uses gfvs-metadata.
 
 removable media:
   -currently we (probably?) dont store the volume name.

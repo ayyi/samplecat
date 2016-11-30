@@ -128,5 +128,6 @@ samplecat_LDADD = \
 	$(LIBASS_LDFLAGS) \
 	$(ZLIB_LIBS) \
 	$(GMODULE_LIBS) \
+	$(X11_LDFLAGS) \
 	$(FFMPEG_LIBS) \
 	-ldl

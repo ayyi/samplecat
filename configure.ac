@@ -130,9 +130,11 @@ AC_SUBST(GMODULE_LIBS)
 
 dnl -----------------------------------------------------------------------------
 
-PKG_CHECK_MODULES(VFS, gnome-vfs-2.0,, [true])
-AC_SUBST(VFS_CFLAGS)
-AC_SUBST(VFS_LIBS)
+dnl added for suse-42
+X11_LDFLAGS=`pkg-config --libs x11`
+AC_SUBST(X11_LDFLAGS)
+
+dnl -----------------------------------------------------------------------------
 
 PKG_CHECK_MODULES(GTHREAD, gthread-2.0,, [true])
 AC_SUBST(GTHREAD_CFLAGS)
