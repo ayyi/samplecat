@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://samplecat.orford.org          |
-* | copyright (C) 2007-2015 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2017 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -324,12 +324,12 @@ static void set_position             (WaveformActor*, int j);
 
 float rotate[3] = {30.0, 30.0, 30.0};
 float isometric_rotation[3] = {35.264f, 45.0f, 0.0f};
-GdkGLConfig*    glconfig       = NULL;
-static gboolean gl_initialised = false;
-WaveformCanvas* wfc            = NULL;
-Waveform*       w1             = NULL;
-float           dz             = 20.0;
-float           zoom           = 1.0;
+GdkGLConfig*     glconfig       = NULL;
+static gboolean  gl_initialised = false;
+WaveformContext* wfc            = NULL;
+Waveform*        w1             = NULL;
+float            dz             = 20.0;
+float            zoom           = 1.0;
 
 
 struct _RotatorPrivate
