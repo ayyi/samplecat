@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2012-2016 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2012-2017 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -31,8 +31,6 @@
 #include "waveform/actors/text.h"
 #include "samplecat.h"
 #include "views/search.h"
-
-extern int need_draw;
 
 #define _g_object_unref0(var) ((var == NULL) ? NULL : (var = (g_object_unref (var), NULL)))
 
@@ -121,7 +119,6 @@ search_view(WaveformActor* _)
 
 	bool search_event(AGlActor* actor, GdkEvent* event, AGliPt xy)
 	{
-		PF0;
 		SearchView* view = (SearchView*)actor;
 
 		switch(event->type){
@@ -135,23 +132,52 @@ search_view(WaveformActor* _)
 						agl_actor__invalidate(actor);
 						break;
 					case XK_Right:
-						view->cursor_pos = MIN(strlen(((SamplecatFilter*)samplecat.model->filters.search)->value), view->cursor_pos + 1);
-						agl_actor__invalidate(actor);
+						if(view->text){
+							view->cursor_pos = MIN(strlen(view->text), view->cursor_pos + 1);
+							agl_actor__invalidate(actor);
+						}
+						break;
+					case XK_Delete:
+						dbg(0, "Delete");
+						if(view->text && view->cursor_pos < strlen(view->text)){
+							GString* s = g_string_new(view->text);
+							g_string_erase(s, view->cursor_pos, 1);
+							g_free(view->text);
+							view->text = g_string_free(s, FALSE);
+
+							search_layout(view);
+						}
+						break;
+					case XK_BackSpace:
+						dbg(0, "BackSpace");
+						if(view->text && view->cursor_pos > 0){
+							char a[64]; g_strlcpy(a, view->text, view->cursor_pos);
+							char b[64]; g_strlcpy(b, view->text + view->cursor_pos, strlen(view->text) - view->cursor_pos + 2);
+							g_free(view->text);
+							view->text = g_strdup_printf("%s%s", a, b);
+							view->cursor_pos --;
+
+							search_layout(view);
+						}
 						break;
 					case XK_Return:
 						dbg(0, "RET");
 						samplecat_filter_set_value(samplecat.model->filters.search, view->text);
-						view->text = NULL;
+						samplecat_list_store_do_search((SamplecatListStore*)samplecat.store);
 						break;
 					default:
-						if(view->text){
-							char* t = view->text;
-							view->text = g_strdup_printf("%s%c", view->text, val);
-							g_free(t);
-						}else{
-							view->text = g_strdup_printf("%s%c", ((SamplecatFilter*)samplecat.model->filters.search)->value, val);
+						;char str[1] = {val};
+						if(g_utf8_validate(str, 1, NULL)){
+							if(view->text){
+								char* t = view->text;
+								view->text = g_strdup_printf("%s%c", view->text, val);
+								g_free(t);
+							}else{
+								view->text = g_strdup_printf("%s%c", ((SamplecatFilter*)samplecat.model->filters.search)->value, val);
+							}
+							view->cursor_pos ++;
+							search_layout(view);
 						}
-						search_layout(view);
 						break;
 				}
 				break;

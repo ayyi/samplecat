@@ -138,10 +138,8 @@ draw(void)
 void
 on_window_resize(int width, int height)
 {
-	int vx = 0;
-	int vy = 0;
-	glViewport(vx, vy, width, height);
-	dbg (2, "viewport: %i %i %i %i", vx, vy, width, height);
+	glViewport(0, 0, width, height);
+	dbg (2, "viewport: %i %i %i %i", 0, 0, width, height);
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 
@@ -245,7 +243,7 @@ make_window(Display *dpy, const char *name, int x, int y, int width, int height,
 	attr.background_pixel = 0;
 	attr.border_pixel = 0;
 	attr.colormap = XCreateColormap(dpy, root, visinfo->visual, AllocNone);
-	attr.event_mask = StructureNotifyMask | ExposureMask | KeyPressMask | ButtonPressMask;
+	attr.event_mask = StructureNotifyMask | ExposureMask | KeyPressMask | ButtonPressMask | ButtonReleaseMask | PointerMotionMask;
 	mask = CWBackPixel | CWBorderPixel | CWColormap | CWEventMask;
 
 	Window win = XCreateWindow(dpy, root, 0, 0, width, height, 0, visinfo->depth, InputOutput, visinfo->visual, mask, &attr);
@@ -329,11 +327,15 @@ event_loop(Display* dpy, Window win)
 
 					} break;
 				case ButtonPress:
+				case ButtonRelease:
 					if(event.xbutton.button == 1){
 						int x = event.xbutton.x;
 						int y = event.xbutton.y;
-						printf("button press: %i %i\n", x, y);
+						printf("button: %i %i\n", x, y);
 					}
+					agl_actor__xevent(scene, &event);
+					break;
+				case MotionNotify:
 					agl_actor__xevent(scene, &event);
 					break;
 			}

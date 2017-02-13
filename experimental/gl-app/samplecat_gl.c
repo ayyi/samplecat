@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2016 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2017 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -29,8 +29,15 @@
 #include "waveform/waveform.h"
 #include "glx.h"
 #include "keys.h"
+#include "views/dock_v.h"
+#include "views/panel.h"
 #include "views/list.h"
+#include "views/files.h"
 #include "views/search.h"
+#include "views/tabs.h"
+#ifdef SHOW_FBO_DEBUG
+#include "waveform/actors/debug.h"
+#endif
 
 extern GLboolean need_draw; // TODO use scene->invalidate instead
 
@@ -42,7 +49,7 @@ Application _app;
 Application* app = &_app;
 
 AGlRootActor* scene = NULL;
-struct Actors {AGlActor *bg, *list, *wave, *search; } actors = {NULL,};
+struct Actors {AGlActor *bg, *dock, *list, *files, *wave, *search, *tabs, *debug; } actors = {NULL,};
 
 static KeyHandler
 	nav_up,
@@ -165,46 +172,53 @@ main(int argc, char* argv[])
 
 		Waveform* w = NULL;
 
-		WaveformCanvas* wfc = wf_context_new(scene);
+		WaveformContext* wfc = wf_context_new(scene);
 
 		agl_actor__add_child((AGlActor*)scene, actors.bg = background_actor(NULL));
 		actors.bg->region.x2 = 1;
 		actors.bg->region.y2 = 1;
 
-		agl_actor__add_child((AGlActor*)scene, actors.search = search_view(NULL));
-		agl_actor__add_child((AGlActor*)scene, actors.list = list_view(NULL));
+		agl_actor__add_child((AGlActor*)scene, actors.dock = dock_v_view(NULL));
 
-		agl_actor__add_child((AGlActor*)scene, actors.wave = (AGlActor*)wf_canvas_add_new_actor(wfc, w));
+		AGlActor* panel1 = dock_v_add_panel((DockVView*)actors.dock, panel_view(NULL));
+		agl_actor__add_child(panel1, actors.search = search_view(NULL));
+		int h = search_view_height((SearchView*)actors.search);
+		((PanelView*)panel1)->size_req.preferred = (AGliPt){-1, h};
+		((PanelView*)panel1)->size_req.max = (AGliPt){-1, h};
+
+		AGlActor* panel2 = dock_v_add_panel((DockVView*)actors.dock, panel_view(NULL));
+		agl_actor__add_child(panel2, actors.tabs = tabs_view(NULL));
+		tabs_view__add_tab((TabsView*)actors.tabs, "Library", actors.list = list_view(NULL));
+		tabs_view__add_tab((TabsView*)actors.tabs, "Files", actors.files = files_view(NULL));
+
+		AGlActor* panel3 = dock_v_add_panel((DockVView*)actors.dock, panel_view(NULL));
+		agl_actor__add_child(panel3, actors.wave = (AGlActor*)wf_canvas_add_new_actor(wfc, w));
+		((PanelView*)panel3)->size_req.preferred.y = 60;
+		((PanelView*)panel3)->size_req.max.y = 100;
+
+#ifdef SHOW_FBO_DEBUG
+		agl_actor__add_child((AGlActor*)scene, actors.debug = wf_debug_actor(NULL));
+		wf_debug_actor_set_actor((DebugActor*)actors.debug, actors.list);
+#endif
 
 		void scene_set_size(AGlActor* scene)
 		{
-			#define SPACING 2
-			int vspace = scene->region.y2 - 40;
-			int y = 20;
+			actors.dock->region = (AGliRegion){20, 20, agl_actor__width(scene) - 20, agl_actor__height(scene) - 20};
+			agl_actor__set_size(actors.dock);
 
-			int h = search_view_height((SearchView*)actors.search);
-			actors.search->region = (AGliRegion){20, y, scene->region.x2 - 20, y + h};
-			agl_actor__set_size(actors.search);
-			vspace -= h + SPACING;
-			y += h + SPACING;
 
-			actors.list->region = (AGliRegion){20, y, scene->region.x2 - 20, y + vspace / 2};
-			vspace -= vspace / 2;
-			y += vspace;
 			agl_actor__set_size(actors.list); // clear cache
 
-			actors.wave->region = (AGliRegion){
-				20,
-				y,
-				scene->region.x2 - 20,
-				y + vspace
-			};
 			wf_actor_set_rect((WaveformActor*)actors.wave, &(WfRectangle){
 				0.0,
 				0.0,
 				agl_actor__width(actors.wave),
 				agl_actor__height(actors.wave)
 			});
+
+#ifdef SHOW_FBO_DEBUG
+			actors.debug->region = (AGliRegion){scene->region.x2/2, 10, scene->region.x2 - 10, scene->region.x2/2};
+#endif
 
 			need_draw = true;
 		}
@@ -216,6 +230,7 @@ main(int argc, char* argv[])
 
 		list_view_select((ListView*)actors.list, 0);
 
+		// TODO how do these handlers interact with individual view key handlers?
 		add_key_handlers();
 
 		return G_SOURCE_REMOVE;
@@ -225,11 +240,11 @@ main(int argc, char* argv[])
 
 	void on_selection_change(SamplecatModel* m, Sample* sample, gpointer user_data)
 	{
-		PF0;
+		PF;
 
 		void load_file_done(WaveformActor* a, gpointer _c)
 		{
-			PF0;
+			PF;
 			// TODO not sure if we need to redraw here or not...
 			//agl_actor__invalidate(((AGlActor*)a);
 		}

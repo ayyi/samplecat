@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2012-2017 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2016-2017 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -26,9 +26,7 @@
 #include "waveform/shader.h"
 #include "waveform/actors/text.h"
 #include "samplecat.h"
-#include "views/list.h"
-
-extern int need_draw;
+#include "views/files.h"
 
 #define _g_free0(var) (var = (g_free (var), NULL))
 
@@ -53,22 +51,23 @@ _init()
 
 
 AGlActor*
-list_view(WaveformActor* _)
+files_view(WaveformActor* _)
 {
 	instance_count++;
 
 	_init();
 
-	bool list_paint(AGlActor* actor)
+	bool files_paint(AGlActor* actor)
 	{
-		ListView* view = (ListView*)actor;
+		agl_print(0, 0, 0, 0xffffffff, "Files");
+		/*
+		FilesView* view = (FilesView*)actor;
 
 		#define row_height 20
 		#define N_ROWS_VISIBLE(A) (agl_actor__height(((AGlActor*)A)) / row_height)
 		int n_rows = N_ROWS_VISIBLE(actor);
 
 		int col[] = {0, 150, 260, 360, 420};
-		col[4] = MAX(col[4], actor->region.x2);
 
 		GtkTreeIter iter;
 		if(!gtk_tree_model_get_iter_first((GtkTreeModel*)samplecat.store, &iter)){ gerr ("cannot get iter."); return false; }
@@ -100,32 +99,31 @@ list_view(WaveformActor* _)
 		} while (++row_count < n_rows && gtk_tree_model_iter_next((GtkTreeModel*)samplecat.store, &iter));
 
 		agl_disable_stencil();
+		*/
 
 		return true;
 	}
 
-	void list_init(AGlActor* a)
+	void files_init(AGlActor* a)
 	{
-#ifdef AGL_ACTOR_RENDER_CACHE
+#ifdef XXAGL_ACTOR_RENDER_CACHE
 		a->fbo = agl_fbo_new(agl_actor__width(a), agl_actor__height(a), 0, AGL_FBO_HAS_STENCIL);
 		a->cache.enabled = true;
 #endif
 	}
 
-	void list_set_size(AGlActor* actor)
+	void files_set_size(AGlActor* actor)
 	{
 	}
 
-	bool list_event(AGlActor* actor, GdkEvent* event, AGliPt xy)
+	bool files_event(AGlActor* actor, GdkEvent* event, AGliPt xy)
 	{
 		// TODO why is y not relative to actor.y ?
 		switch(event->type){
 			case GDK_BUTTON_PRESS:
 			case GDK_BUTTON_RELEASE:
 				agl_actor__invalidate(actor);
-				int row = (xy.y - actor->region.y1) / row_height;
 				dbg(0, "y=%i", xy.y - actor->region.y1);
-				list_view_select((ListView*)actor, row);
 				break;
 			default:
 				break;
@@ -133,63 +131,28 @@ list_view(WaveformActor* _)
 		return AGL_HANDLED;
 	}
 
-	void list_free(AGlActor* actor)
+	void files_free(AGlActor* actor)
 	{
 		if(!--instance_count){
 		}
 	}
 
-	ListView* view = WF_NEW(ListView,
+	FilesView* view = WF_NEW(FilesView,
+		.a = 1,
 		.actor = {
 #ifdef AGL_DEBUG_ACTOR
-			.name = "List",
+			.name = "Files",
 #endif
-			.init = list_init,
-			.free = list_free,
-			.paint = list_paint,
-			.set_size = list_set_size,
-			.on_event = list_event,
 		}
 	);
 	AGlActor* actor = (AGlActor*)view;
-
-	void on_selection_change(SamplecatModel* m, Sample* sample, gpointer user_data)
-	{
-		PF;
-	}
-	g_signal_connect((gpointer)samplecat.model, "selection-changed", G_CALLBACK(on_selection_change), NULL);
-
-	void list_on_search_filter_changed(GObject* _filter, gpointer _actor)
-	{
-		// update list...
-		agl_actor__invalidate((AGlActor*)_actor);
-	}
-	g_signal_connect(samplecat.store, "content-changed", G_CALLBACK(list_on_search_filter_changed), actor);
+	actor->init = files_init;
+	actor->free = files_free;
+	actor->paint = files_paint;
+	actor->set_size = files_set_size;
+	actor->on_event = files_event;
 
 	return actor;
 }
 
-
-void
-list_view_select(ListView* list, int row)
-{
-	int n_rows_total = ((SamplecatListStore*)samplecat.store)->row_count;
-
-	if(row >= 0 && row < n_rows_total){
-		list->selection = row;
-		if(list->selection >= list->scroll_offset + N_ROWS_VISIBLE(list)){
-			dbg(0, "need to scroll down");
-			list->scroll_offset++;
-		}else if(list->selection < list->scroll_offset){
-			list->scroll_offset--;
-		}
-		agl_actor__invalidate((AGlActor*)list);
-
-		Sample* sample = samplecat_list_store_get_sample_by_row_index(list->selection);
-		if(sample){
-			samplecat_model_set_selection (samplecat.model, sample);
-			sample_unref(sample);
-		}
-	}
-}
 
