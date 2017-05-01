@@ -22,7 +22,6 @@
 #include "agl/utils.h"
 #include "agl/actor.h"
 #include "waveform/waveform.h"
-#include "waveform/peakgen.h"
 #include "waveform/shader.h"
 #include "waveform/actors/text.h"
 #include "samplecat.h"

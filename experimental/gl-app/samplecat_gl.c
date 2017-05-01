@@ -29,10 +29,12 @@
 #include "waveform/waveform.h"
 #include "glx.h"
 #include "keys.h"
+#include "views/dock_h.h"
 #include "views/dock_v.h"
 #include "views/panel.h"
 #include "views/list.h"
 #include "views/files.h"
+#include "views/dirs.h"
 #include "views/search.h"
 #include "views/tabs.h"
 #ifdef SHOW_FBO_DEBUG
@@ -49,7 +51,7 @@ Application _app;
 Application* app = &_app;
 
 AGlRootActor* scene = NULL;
-struct Actors {AGlActor *bg, *dock, *list, *files, *wave, *search, *tabs, *debug; } actors = {NULL,};
+struct Actors {AGlActor *bg, *hdock, *vdock1, *vdock2, *list, *files, *wave, *search, *tabs, *debug; } actors = {NULL,};
 
 static KeyHandler
 	nav_up,
@@ -135,6 +137,7 @@ main(int argc, char* argv[])
 	make_window(dpy, "Samplcecat", (XDisplayWidth(dpy, screen) - width) / 2, (XDisplayHeight(dpy, screen) - height) / 2, width, height, fullscreen, &win, &ctx);
 
 	agl_get_extensions();
+	agl_gl_init();
 
 	glx_init(dpy);
 
@@ -146,7 +149,7 @@ main(int argc, char* argv[])
 	scene->draw = scene_needs_redraw;
 
 	gboolean add_content(gpointer _)
-	{ 
+	{
 		app->config_ctx.filename = g_strdup_printf("%s/.config/" PACKAGE "/" PACKAGE, g_get_home_dir());
 		config_load(&app->config_ctx, &app->config);
 
@@ -174,27 +177,42 @@ main(int argc, char* argv[])
 
 		WaveformContext* wfc = wf_context_new(scene);
 
+#if 0
 		agl_actor__add_child((AGlActor*)scene, actors.bg = background_actor(NULL));
 		actors.bg->region.x2 = 1;
 		actors.bg->region.y2 = 1;
+#endif
 
-		agl_actor__add_child((AGlActor*)scene, actors.dock = dock_v_view(NULL));
+		agl_actor__add_child((AGlActor*)scene, actors.hdock = dock_h_view(NULL));
+		dock_h_add_panel((DockHView*)actors.hdock, actors.vdock1 = dock_v_view(NULL));
+		((PanelView*)actors.vdock1)->size_req.preferred.x = 80;
+		((PanelView*)actors.vdock1)->size_req.max.x = 160;
+		dock_h_add_panel((DockHView*)actors.hdock, actors.vdock2 = dock_v_view(NULL));
+		((PanelView*)actors.vdock2)->size_req.preferred.x = 320;
+#ifdef AGL_DEBUG_ACTOR
+		actors.vdock1->name = "Left";
+		actors.vdock2->name = "Right";
+#endif
 
-		AGlActor* panel1 = dock_v_add_panel((DockVView*)actors.dock, panel_view(NULL));
-		agl_actor__add_child(panel1, actors.search = search_view(NULL));
+		AGlActor* panell1 = dock_v_add_panel((DockVView*)actors.vdock1, panel_view(NULL));
+		agl_actor__add_child(panell1, directories_view(NULL));
+
+		AGlActor* panelr1 = dock_v_add_panel((DockVView*)actors.vdock2, panel_view(NULL));
+		agl_actor__add_child(panelr1, actors.search = search_view(NULL));
 		int h = search_view_height((SearchView*)actors.search);
-		((PanelView*)panel1)->size_req.preferred = (AGliPt){-1, h};
-		((PanelView*)panel1)->size_req.max = (AGliPt){-1, h};
+		((PanelView*)panelr1)->size_req.min = (AGliPt){-1, h};
+		((PanelView*)panelr1)->size_req.preferred = (AGliPt){-1, h};
+		((PanelView*)panelr1)->size_req.max = (AGliPt){-1, h};
 
-		AGlActor* panel2 = dock_v_add_panel((DockVView*)actors.dock, panel_view(NULL));
-		agl_actor__add_child(panel2, actors.tabs = tabs_view(NULL));
+		AGlActor* panelr2 = dock_v_add_panel((DockVView*)actors.vdock2, panel_view(NULL));
+		agl_actor__add_child(panelr2, actors.tabs = tabs_view(NULL));
 		tabs_view__add_tab((TabsView*)actors.tabs, "Library", actors.list = list_view(NULL));
 		tabs_view__add_tab((TabsView*)actors.tabs, "Files", actors.files = files_view(NULL));
 
-		AGlActor* panel3 = dock_v_add_panel((DockVView*)actors.dock, panel_view(NULL));
-		agl_actor__add_child(panel3, actors.wave = (AGlActor*)wf_canvas_add_new_actor(wfc, w));
-		((PanelView*)panel3)->size_req.preferred.y = 60;
-		((PanelView*)panel3)->size_req.max.y = 100;
+		AGlActor* panelr3 = dock_v_add_panel((DockVView*)actors.vdock2, panel_view(NULL));
+		agl_actor__add_child(panelr3, actors.wave = (AGlActor*)wf_canvas_add_new_actor(wfc, w));
+		((PanelView*)panelr3)->size_req.preferred.y = 60;
+		((PanelView*)panelr3)->size_req.max.y = 100;
 
 #ifdef SHOW_FBO_DEBUG
 		agl_actor__add_child((AGlActor*)scene, actors.debug = wf_debug_actor(NULL));
@@ -203,9 +221,8 @@ main(int argc, char* argv[])
 
 		void scene_set_size(AGlActor* scene)
 		{
-			actors.dock->region = (AGliRegion){20, 20, agl_actor__width(scene) - 20, agl_actor__height(scene) - 20};
-			agl_actor__set_size(actors.dock);
-
+			actors.hdock->region = (AGliRegion){20, 20, agl_actor__width(scene) - 20, agl_actor__height(scene) - 20};
+			agl_actor__set_size(actors.hdock);
 
 			agl_actor__set_size(actors.list); // clear cache
 

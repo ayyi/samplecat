@@ -4,7 +4,7 @@ SETCOLOR_WARN="echo -en \\033[1;33m"
 SETCOLOR_FAILURE="echo -en \\033[1;31m"
 SETCOLOR_NORMAL="echo -en \\033[0;39m"
 
-echo 'Generating necessary files...'
+echo 'Generating files...'
 libtoolize --automake
 aclocal
 autoheader -Wall

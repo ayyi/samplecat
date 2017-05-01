@@ -65,6 +65,7 @@ search_view(WaveformActor* _)
 		SearchView* view = (SearchView*)actor;
 
 		agl_enable_stencil(0, 0, actor->region.x2, actor->region.y2);
+		if(!agl->use_shaders) agl_enable(AGL_ENABLE_BLEND); // disable textures
 
 		// border
 		agl->shaders.plain->uniform.colour = 0x6677ff77;
@@ -197,12 +198,15 @@ search_view(WaveformActor* _)
 		}
 	}
 
-	SearchView* view = g_new0(SearchView, 1);
-	AGlActor* actor = (AGlActor*)view;
+	SearchView* view = AGL_NEW(SearchView,
+		.actor = {
 #ifdef AGL_DEBUG_ACTOR
-	actor->name = "Search";
+			.name = "Search",
 #endif
-	actor->init = search_init;
+			.init = search_init,
+		}
+	);
+	AGlActor* actor = (AGlActor*)view;
 	actor->free = search_free;
 	actor->paint = search_paint;
 	actor->set_size = search_size;

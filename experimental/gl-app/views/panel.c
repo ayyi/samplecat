@@ -59,6 +59,12 @@ panel_view(WaveformActor* _)
 
 	bool panel_paint(AGlActor* actor)
 	{
+#ifdef SHOW_PANEL_BACKGROUND
+		agl->shaders.plain->uniform.colour = 0xffff0033;
+		agl_use_program((AGlShader*)agl->shaders.plain);
+		agl_rect_((AGlRect){0, 0, agl_actor__width(actor), agl_actor__height(actor)});
+#endif
+
 		if(actor_context.grabbed == actor){
 			AGliPt offset = {mouse.x - origin.x, mouse.y - origin.y};
 			agl->shaders.plain->uniform.colour = 0x6677ff77;
@@ -134,6 +140,9 @@ panel_view(WaveformActor* _)
 			.paint = panel_paint,
 			.set_size = panel_set_size,
 			.on_event = panel_event,
+		},
+		.size_req = {
+			.min = {-1, -1}
 		}
 	);
 

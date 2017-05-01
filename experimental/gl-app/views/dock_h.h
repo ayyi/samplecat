@@ -9,20 +9,23 @@
 * +----------------------------------------------------------------------+
 *
 */
-#ifndef __views_panel_h__
-#define __views_panel_h__
+#ifndef __views_dock_h_h__
+#define __views_dock_h_h__
+#include "panel.h"
 
 typedef struct {
-   AGlActor    actor;
+   PanelView     panel;  // dock children must be PanelViews. DockVHiew inherits from PanelView so it can be a DockVView child.
+   GList*        panels; // list of type PanelView*
    struct {
-      AGliPt   min;
-      AGliPt   preferred;
-      AGliPt   max;
-   }           size_req;
-} PanelView;
+      AGlActor*  actor;
+      float      opacity;
+   } handle;
+   WfAnimatable* animatables[1];
+} DockHView;
 
-AGlActor* panel_view           (WaveformActor*);
-
-#define PANEL_DRAG_HANDLE_HEIGHT 8
+AGlActor* dock_h_view                (WaveformActor*);
+AGlActor* dock_h_add_panel           (DockHView*, AGlActor*);
+void      dock_h_move_panel_to_index (DockHView*, AGlActor*, int);
+void      dock_h_move_panel_to_y     (DockHView*, AGlActor*, int);
 
 #endif

@@ -9,20 +9,17 @@
 * +----------------------------------------------------------------------+
 *
 */
-#ifndef __views_panel_h__
-#define __views_panel_h__
+#ifndef __views_dirs_h__
+#define __views_dirs_h__
 
 typedef struct {
    AGlActor    actor;
    struct {
-      AGliPt   min;
-      AGliPt   preferred;
-      AGliPt   max;
-   }           size_req;
-} PanelView;
+      int      n_rows;
+      int      n_rows_visible;
+   } cache;
+} DirectoriesView;
 
-AGlActor* panel_view           (WaveformActor*);
-
-#define PANEL_DRAG_HANDLE_HEIGHT 8
+AGlActor* directories_view (WaveformActor*);
 
 #endif

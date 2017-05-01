@@ -12,9 +12,11 @@ samplecat_gl_SOURCES = \
 	samplecat_gl.c \
 	glx.c glx.h \
 	views/dock_v.c views/dock_v.h \
+	views/dock_h.c views/dock_h.h \
 	views/panel.c views/panel.h \
 	views/list.c views/list.h \
 	views/files.c views/files.h \
+	views/dirs.c views/dirs.h \
 	views/search.c views/search.h \
 	views/tabs.c views/tabs.h \
 	keys.h \

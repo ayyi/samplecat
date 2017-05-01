@@ -11,10 +11,16 @@
 */
 #ifndef __views_dock_v_h__
 #define __views_dock_v_h__
+#include "panel.h"
 
 typedef struct {
-   AGlActor    actor;
-   GList*      panels; // list of type PanelView*
+   PanelView     panel;  // dock children must be PanelViews. DockVView inherits from PanelView so it can be a DockHView child.
+   GList*        panels; // list of type PanelView*
+   struct {
+      AGlActor*  actor;
+      float      opacity;
+   } handle;
+   WfAnimatable* animatables[1];
 } DockVView;
 
 AGlActor* dock_v_view                (WaveformActor*);

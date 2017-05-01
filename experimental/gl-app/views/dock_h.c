@@ -22,9 +22,10 @@
 #include "agl/utils.h"
 #include "agl/actor.h"
 #include "waveform/waveform.h"
+#include "waveform/peakgen.h"
 #include "waveform/shader.h"
 #include "samplecat.h"
-#include "views/dock_v.h"
+#include "views/dock_h.h"
 
 #define _g_free0(var) (var = (g_free (var), NULL))
 #define SPACING 15
@@ -48,32 +49,32 @@ _init()
 
 
 AGlActor*
-dock_v_view(WaveformActor* _)
+dock_h_view(WaveformActor* _)
 {
 	instance_count++;
 
 	_init();
 
-	bool dock_v_paint(AGlActor* actor)
+	bool dock_h_paint(AGlActor* actor)
 	{
-		DockVView* dock = (DockVView*)actor;
+		DockHView* dock = (DockHView*)actor;
 
-		int y = 0;
+		int x = 0;
 		GList* l = dock->panels;
 		for(;l;l=l->next){
 			AGlActor* a = l->data;
-			if(y){
-				y = a->region.y1;
-				agl_rect_((AGlRect){0, y - SPACING / 2 - 1, agl_actor__width(actor), 1});
+			if(x){
+				x = a->region.x1;
+				agl_rect_((AGlRect){x - SPACING / 2 - 1, PANEL_DRAG_HANDLE_HEIGHT, 1, agl_actor__height(actor) - PANEL_DRAG_HANDLE_HEIGHT});
 			}
-			y = a->region.y2;
+			x = a->region.x2;
 		}
 
 		if(dock->handle.opacity > 0.0){
 			float alpha = dock->animatables[0]->val.f;
 			agl->shaders.plain->uniform.colour = (0x999999ff & 0xffffff00) + (uint32_t)(alpha * 0xff);
 			agl_use_program((AGlShader*)agl->shaders.plain);
-			agl_rect_((AGlRect){0, dock->handle.actor->region.y1 - SPACING / 2 - DIVIDER / 2 , agl_actor__width(actor), DIVIDER});
+			agl_rect_((AGlRect){dock->handle.actor->region.x1 - SPACING / 2 - DIVIDER / 2, 0, DIVIDER, agl_actor__height(actor)});
 		}
 
 		return true;
@@ -81,6 +82,15 @@ dock_v_view(WaveformActor* _)
 
 	void dock_init(AGlActor* a)
 	{
+		void panel_init(AGlActor* actor)
+		{
+			PanelView* panel = (PanelView*)actor;
+
+			panel->size_req.preferred = (AGliPt){-1, -1};
+			panel->size_req.max = (AGliPt){-1, -1};
+		}
+
+		panel_init(a);
 	}
 
 	void dock_set_state(AGlActor* actor)
@@ -88,13 +98,13 @@ dock_v_view(WaveformActor* _)
 		agl->shaders.plain->uniform.colour = 0x66666666;
 	}
 
-	void dock_set_size(AGlActor* actor)
+	void dock_h_set_size(AGlActor* actor)
 	{
-		DockVView* dock = (DockVView*)actor;
+		DockHView* dock = (DockHView*)actor;
 
 		typedef struct {
 			AGlActor* actor;
-			int       height;
+			int       width;
 		} Item;
 		Item items[g_list_length(dock->panels)];
 
@@ -104,59 +114,61 @@ dock_v_view(WaveformActor* _)
 		for(;l;l=l->next,i++){
 			items[i] = (Item){l->data, 0};
 			PanelView* panel = (PanelView*)items[i].actor;
-			if(panel->size_req.preferred.y > -1) req += panel->size_req.preferred.y;
+			if(panel->size_req.preferred.x > -1) req += panel->size_req.preferred.x;
 		}
 
-		int vspace = agl_actor__height(actor) - SPACING * (g_list_length(dock->panels) - 1);
+		int hspace = agl_actor__width(actor) - SPACING * (g_list_length(dock->panels) - 1);
 		int n_flexible = g_list_length(dock->panels);
 		for(i=0;i<G_N_ELEMENTS(items);i++){
 			Item* item = &items[i];
 			PanelView* panel = (PanelView*)item->actor;
-			AGlActor* a = (AGlActor*)panel;
-			a->region.x2 = panel->size_req.preferred.x > -1 ? panel->size_req.preferred.x : agl_actor__width(actor);
+			//AGlActor* a = (AGlActor*)panel;
 
-			if(panel->size_req.preferred.y > -1){
-				item->height = panel->size_req.preferred.y + PANEL_DRAG_HANDLE_HEIGHT;
+			if(panel->size_req.preferred.x > -1){
+				item->width = panel->size_req.preferred.x + PANEL_DRAG_HANDLE_HEIGHT;
 				n_flexible --;
 			}
-			vspace -= item->height;
+			hspace -= item->width;
 		}
 
-		int each_unallocated = n_flexible ? vspace / n_flexible : 0;
-		int y = 0;
+		int each_unallocated = n_flexible ? hspace / n_flexible : 0;
+		int x = 0;
 		for(i=0;i<G_N_ELEMENTS(items);i++){
 			Item* item = &items[i];
 			PanelView* panel = (PanelView*)item->actor;
 
 			if(each_unallocated > 0){
-				if(panel->size_req.preferred.y < 0){
-					item->height = each_unallocated;
+				if(panel->size_req.preferred.x < 0){ // -1 means no preference
+							// TODO should be += ?
+					item->width = each_unallocated;
 				}
 			}
-			y += item->height + SPACING;
+			x += item->width + SPACING;
 		}
-		y -= SPACING; // no spacing needed after last element
+		x -= SPACING; // no spacing needed after last element
 
-		if(y < agl_actor__height(actor)){
-			int remaining = agl_actor__height(actor) - y;
+		if(x < agl_actor__width(actor)){
+			int remaining = agl_actor__width(actor) - x;
 			int n_resizable = 0;
 			for(i=0;i<G_N_ELEMENTS(items);i++){
 				Item* item = &items[i];
 				PanelView* panel = (PanelView*)item->actor;
-				if(item->height < panel->size_req.max.y){
+				if(item->width < panel->size_req.max.x){
 					n_resizable ++;
 				}
 			}
-			int each = remaining / n_resizable;
-			for(i=0;i<G_N_ELEMENTS(items);i++){
-				Item* item = &items[i];
-				PanelView* panel = (PanelView*)item->actor;
-				if(item->height < panel->size_req.max.y){
-					item->height += each;
+			if(n_resizable){
+				int each = remaining / n_resizable;
+				for(i=0;i<G_N_ELEMENTS(items);i++){
+					Item* item = &items[i];
+					PanelView* panel = (PanelView*)item->actor;
+					if(item->width < panel->size_req.max.x){
+						item->width += each;
+					}
 				}
 			}
 		}
-		else if(y > agl_actor__height(actor)){
+		else if(x > agl_actor__width(actor)){
 			dbg(0, "over allocated");
 			/*
 			int over = y - agl_actor__height(actor);
@@ -166,32 +178,44 @@ dock_v_view(WaveformActor* _)
 					Item* item = &items[i];
 					PanelView* panel = (PanelView*)item->actor;
 					if(panel->size_req.preferred.y < 0){
-						flexible_height += item->height;
+						flexible_height += item->width;
 					}
 				}
 				dbg(0, "tot flexible_height=%i", flexible_height);
 			}
 			*/
-			if(agl_actor__height(actor)){
-				int gain = (1000 * y) / agl_actor__height(actor);
-				for(i=0;i<G_N_ELEMENTS(items);i++){
-					items[i].height = (1000 * items[i].height) / gain;
-				}
+			int gain = (1000 * x) / agl_actor__width(actor);
+			for(i=0;i<G_N_ELEMENTS(items);i++){
+				items[i].width = (1000 * items[i].width) / gain;
 			}
 		}
 
-		y = 0;
+		x = 0;
 		for(l=dock->panels,i=0;l;l=l->next,i++){
 			AGlActor* a = (AGlActor*)l->data;
-			a->region.y1 = y;
-			a->region.y2 = y + items[i].height;
-			y += items[i].height + SPACING;
+			Item* item = &items[i];
+			PanelView* panel = (PanelView*)item->actor;
+			a->region = (AGliRegion){
+				.x1 = x,
+				.y1 = 0,
+				.x2 = x + items[i].width,
+				.y2 = panel->size_req.preferred.y > -1 ? panel->size_req.preferred.y : agl_actor__height(actor)
+			};
+			x += items[i].width + SPACING;
+		}
+
+		// copynpaste - PanelView set_size
+		// single child takes all space of panel
+		if(g_list_length(actor->children) == 1){
+			AGlActor* child = actor->children->data;
+			child->region = (AGliRegion){0, PANEL_DRAG_HANDLE_HEIGHT, agl_actor__width(actor), agl_actor__height(actor)};
+			agl_actor__set_size(child);
 		}
 	}
 
-	bool dock_event(AGlActor* actor, GdkEvent* event, AGliPt xy)
+	bool dock_h_event(AGlActor* actor, GdkEvent* event, AGliPt xy)
 	{
-		DockVView* dock = (DockVView*)actor;
+		DockHView* dock = (DockHView*)actor;
 
 		void animation_done (WfAnimation* animation, gpointer user_data)
 		{
@@ -204,45 +228,45 @@ dock_v_view(WaveformActor* _)
 				break;
 			case GDK_MOTION_NOTIFY:
 				if(actor_context.grabbed == actor){
-					int y = xy.y - actor->region.y1;
+					int x = xy.x - actor->region.x1;
 
 					AGlActor* a2 = dock->handle.actor;
 					GList* l = g_list_find(dock->panels, a2);
 					AGlActor* a1 = l->prev->data;
 
-					int min_diff = -agl_actor__height(a1);
-					int max_diff = agl_actor__height(a2);
-					if(((PanelView*)a1)->size_req.min.y > -1){
-						min_diff = ((PanelView*)a1)->size_req.min.y - agl_actor__height(a1) + PANEL_DRAG_HANDLE_HEIGHT;
+					int min_diff = -agl_actor__width(a1);
+					int max_diff = 1000;
+					if(((PanelView*)a1)->size_req.min.x > -1){
+						min_diff = ((PanelView*)a1)->size_req.min.x - agl_actor__width(a1);
 					}
-					if(((PanelView*)a1)->size_req.max.y > -1){
-						max_diff = ((PanelView*)a1)->size_req.max.y - agl_actor__height(a1) + PANEL_DRAG_HANDLE_HEIGHT;
+					if(((PanelView*)a1)->size_req.max.x > -1){
+						max_diff = ((PanelView*)a1)->size_req.max.x - agl_actor__width(a1);
 					}
-					int diff = CLAMP(y - a2->region.y1, min_diff, max_diff);
+					int diff = CLAMP(x - a2->region.x1, min_diff, max_diff);
 					if(diff){
-						a2->region.y1 = y;
+						a2->region.x1 = x;
 						agl_actor__set_size(a2);
 						agl_actor__invalidate(a2);
 
-						a1->region.y2 += diff;
+						a1->region.x2 += diff;
 						agl_actor__set_size(a1);
 						agl_actor__invalidate(a1);
 					}
 				}else{
-					int y = 0;
+					int x = 0;
+					int cx = xy.x - actor->region.x1;
 					GList* l = dock->panels;
 					AGlActor* f = NULL;
 					for(;l;l=l->next){
 						AGlActor* a = l->data;
-						y = a->region.y1;
-						if(ABS(y - (xy.y - actor->region.y1)) < SPACING){
+						x = a->region.x1;
+						if(ABS(x - cx) < SPACING){
 							f = a;
 							break;
 						}
 					}
 					if(f){
 						if(!dock->handle.opacity){
-							//set_cursor(arrange->canvas->widget->window, CURSOR_H_DOUBLE_ARROW);
 							dock->handle.opacity = 1.0;
 							dock->handle.actor = f;
 							agl_actor__start_transition(actor, g_list_append(NULL, dock->animatables[0]), animation_done, NULL);
@@ -271,7 +295,7 @@ dock_v_view(WaveformActor* _)
 
 	void dock_free(AGlActor* actor)
 	{
-		DockVView* dock = (DockVView*)actor;
+		DockHView* dock = (DockHView*)actor;
 
 		g_list_free0(dock->panels);
 
@@ -279,24 +303,19 @@ dock_v_view(WaveformActor* _)
 		}
 	}
 
-	DockVView* dock = AGL_NEW(DockVView,
+	DockHView* dock = WF_NEW(DockHView,
 		.panel = {
 			.actor = {
 #ifdef AGL_DEBUG_ACTOR
-				.name = "Dock V",
+				.name = "Dock H",
 #endif
 				.program = (AGlShader*)agl->shaders.plain,
 				.init = dock_init,
 				.free = dock_free,
-				.paint = dock_v_paint,
+				.paint = dock_h_paint,
 				.set_state = dock_set_state,
-				.set_size = dock_set_size,
-				.on_event = dock_event,
-			},
-			.size_req = {
-				.min = {-1, -1},
-				.preferred = {-1, -1},
-				.max = {-1, -1}
+				.set_size = dock_h_set_size,
+				.on_event = dock_h_event,
 			}
 		}
 	);
@@ -313,7 +332,7 @@ dock_v_view(WaveformActor* _)
 
 
 AGlActor*
-dock_v_add_panel(DockVView* dock, AGlActor* panel)
+dock_h_add_panel(DockHView* dock, AGlActor* panel)
 {
 	dock->panels = g_list_append(dock->panels, panel);
 	agl_actor__add_child((AGlActor*)dock, panel);
@@ -322,7 +341,7 @@ dock_v_add_panel(DockVView* dock, AGlActor* panel)
 
 
 void
-dock_v_move_panel_to_index (DockVView* dock, AGlActor* panel, int i)
+dock_h_move_panel_to_index (DockHView* dock, AGlActor* panel, int i)
 {
 	dbg(0, "i=%i", i);
 	dock->panels = g_list_remove(dock->panels, panel);
@@ -332,9 +351,9 @@ dock_v_move_panel_to_index (DockVView* dock, AGlActor* panel, int i)
 
 
 void
-dock_v_move_panel_to_y (DockVView* dock, AGlActor* panel, int y)
+dock_h_move_panel_to_y (DockHView* dock, AGlActor* panel, int y)
 {
-	int find_index(DockVView* dock, int y)
+	int find_index(DockHView* dock, int y)
 	{
 		//int i; for(i=0;i<G_N_ELEMENTS(dock->items);i++){
 		//	AGlActor* a = dock->items[i]->actor;
@@ -353,7 +372,7 @@ dock_v_move_panel_to_y (DockVView* dock, AGlActor* panel, int y)
 
 	dbg(0, "y=%i", y);
 	int i = find_index(dock, y);
-	dock_v_move_panel_to_index(dock, panel, i);
+	dock_h_move_panel_to_index(dock, panel, i);
 }
 
 
