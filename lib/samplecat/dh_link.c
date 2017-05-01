@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2017-2017 Tim Orford
  * Copyright (C) 2001-2002 CodeFactory AB
  * Copyright (C) 2001-2002 Mikael Hallendal <micke@imendio.com>
  *
@@ -35,14 +36,14 @@ link_free (DhLink *link)
 }
 
 DhLink*
-dh_link_new (DhLinkType type, const gchar *name, const gchar *uri)
+dh_link_new (const gchar *name, const gchar *uri)
 {
 	g_return_val_if_fail (name != NULL, NULL);
 	g_return_val_if_fail (uri != NULL, NULL);
 
 	DhLink *link = g_new0 (DhLink, 1);
 
-	link->type = type;
+	link->type = 0;
 	link->name = g_strdup (name);
 	link->uri  = g_strdup (uri);
 	
@@ -52,7 +53,7 @@ dh_link_new (DhLinkType type, const gchar *name, const gchar *uri)
 DhLink*
 dh_link_copy (const DhLink *link)
 {
-	return dh_link_new (link->type, link->name, link->uri);
+	return dh_link_new (link->name, link->uri);
 }
 
 gint

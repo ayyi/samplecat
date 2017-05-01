@@ -342,7 +342,7 @@ mysql__exec_sql(const char* sql)
 static gboolean
 mysql__update_string(int id, const char* key, const char* value)
 {
-	return mysql__update_blob(id, key, (const guint8*) (value?value:""), (const guint) value?strlen(value):0);
+	return mysql__update_blob(id, key, (const guint8*)(value ? value : ""), (const guint)(value ? strlen(value) : 0));
 }
 
 

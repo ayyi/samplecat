@@ -101,7 +101,6 @@ struct _Application
    GtkWidget*           statusbar2;
    GtkWidget*           context_menu;
 
-   GNode*               dir_tree;
    GtkWidget*           dir_treeview;
    ViewDirTree*         dir_treeview2;
    GtkWidget*           fm_view;

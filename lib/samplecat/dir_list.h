@@ -9,18 +9,9 @@
 * +----------------------------------------------------------------------+
 *
 */
-#ifndef __samplecat_h__
-#define __samplecat_h__
-#include "samplecat/typedefs.h"
-#include "samplecat/logger.h"
-#include "samplecat/support.h"
-#include "samplecat/work.h"
-#include "samplecat/worker.h"
-#include "samplecat/settings.h"
-#include "samplecat/list_store.h"
-#include "samplecat/dir_list.h"
-#include "samplecat/model.h"
+#ifndef __dir_list_h__
+#define __dir_list_h__
 
-void samplecat_init();
+void dir_list_update ();
 
 #endif

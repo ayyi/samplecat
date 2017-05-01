@@ -95,6 +95,7 @@ struct _SamplecatModel {
     SamplecatBackend       backend;
     SamplecatFilters       filters;
     GList*                 filters_;
+    GNode*                 dir_tree;
     Sample*                selection;
     GList*                 modified;
 };

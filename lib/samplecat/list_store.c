@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2016 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2017 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -23,7 +23,6 @@
 #include <samplecat.h>
 #include <list_store.h>
 
-
 #define SAMPLECAT_TYPE_LIST_STORE (samplecat_list_store_get_type ())
 #define SAMPLECAT_LIST_STORE(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), SAMPLECAT_TYPE_LIST_STORE, SamplecatListStore))
 #define SAMPLECAT_LIST_STORE_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST ((klass), SAMPLECAT_TYPE_LIST_STORE, SamplecatListStoreClass))
@@ -34,38 +33,21 @@
 #define _gtk_tree_row_reference_free0(var) ((var == NULL) ? NULL : (var = (gtk_tree_row_reference_free (var), NULL)))
 #define _gtk_tree_path_free0(var) ((var == NULL) ? NULL : (var = (gtk_tree_path_free (var), NULL)))
 
-struct _SamplecatListStoreX {
-	GtkListStore parent_instance;
-	SamplecatListStorePrivate * priv;
-	gint row_count;
-	GtkTreeRowReference* playing;
-};
-
-struct _SamplecatListStoreClassX {
-	GtkListStoreClass parent_class;
-};
-
-
 static gpointer samplecat_list_store_parent_class = NULL;
 
-GType samplecat_list_store_get_type (void) G_GNUC_CONST;
 enum  {
 	SAMPLECAT_LIST_STORE_DUMMY_PROPERTY
 };
-SamplecatListStore* samplecat_list_store_new (void);
-SamplecatListStore* samplecat_list_store_construct (GType object_type);
-void samplecat_list_store_clear_ (SamplecatListStore* self);
-void samplecat_list_store_add (SamplecatListStore* self, Sample* sample);
-void samplecat_list_store_on_sample_changed (SamplecatListStore* self, Sample* sample, gint prop, void* val);
-void samplecat_list_store_do_search (SamplecatListStore* self);
-static void samplecat_list_store_finalize (GObject* obj);
+
+static void     samplecat_list_store_finalize (GObject*);
 
 
-SamplecatListStore* samplecat_list_store_construct (GType object_type) {
-	SamplecatListStore * self = NULL;
+SamplecatListStore*
+samplecat_list_store_construct (GType object_type)
+{
 	GType _tmp0_[14] = {0};
 	GType types[14];
-	self = (SamplecatListStore*) g_object_new (object_type, NULL);
+	SamplecatListStore* self = (SamplecatListStore*) g_object_new (object_type, NULL);
 	_tmp0_[0] = GDK_TYPE_PIXBUF;
 	_tmp0_[1] = G_TYPE_INT;
 	_tmp0_[2] = G_TYPE_STRING;
@@ -86,12 +68,16 @@ SamplecatListStore* samplecat_list_store_construct (GType object_type) {
 }
 
 
-SamplecatListStore* samplecat_list_store_new (void) {
+SamplecatListStore*
+samplecat_list_store_new (void)
+{
 	return samplecat_list_store_construct (SAMPLECAT_TYPE_LIST_STORE);
 }
 
 
-void samplecat_list_store_clear_ (SamplecatListStore* self) {
+void
+samplecat_list_store_clear_ (SamplecatListStore* self)
+{
 	PF;
 	GtkTreeIter iter;
 	while(gtk_tree_model_get_iter_first(GTK_TREE_MODEL(self), &iter)){
@@ -108,7 +94,9 @@ void samplecat_list_store_clear_ (SamplecatListStore* self) {
 }
 
 
-void samplecat_list_store_add (SamplecatListStore* self, Sample* sample) {
+void
+samplecat_list_store_add (SamplecatListStore* self, Sample* sample)
+{
 
 	if(!samplecat.store) return;
 	g_return_if_fail(sample);
@@ -191,7 +179,9 @@ void samplecat_list_store_add (SamplecatListStore* self, Sample* sample) {
 }
 
 
-void samplecat_list_store_on_sample_changed (SamplecatListStore* self, Sample* sample, gint prop, void* val) {
+void
+samplecat_list_store_on_sample_changed (SamplecatListStore* self, Sample* sample, gint prop, void* val)
+{
 	g_return_if_fail (self != NULL);
 	g_return_if_fail (sample->row_ref);
 
@@ -260,7 +250,9 @@ void samplecat_list_store_on_sample_changed (SamplecatListStore* self, Sample* s
 }
 
 
-void samplecat_list_store_do_search (SamplecatListStore* self) {
+void
+samplecat_list_store_do_search (SamplecatListStore* self)
+{
 	g_return_if_fail (self);
 
 	samplecat_list_store_clear_(self);
@@ -287,19 +279,25 @@ void samplecat_list_store_do_search (SamplecatListStore* self) {
 }
 
 
-static void samplecat_list_store_class_init (SamplecatListStoreClass * klass) {
+static void
+samplecat_list_store_class_init (SamplecatListStoreClass * klass)
+{
 	samplecat_list_store_parent_class = g_type_class_peek_parent (klass);
 	G_OBJECT_CLASS (klass)->finalize = samplecat_list_store_finalize;
 	g_signal_new ("content_changed", SAMPLECAT_TYPE_LIST_STORE, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_VOID__VOID, G_TYPE_NONE, 0);
 }
 
 
-static void samplecat_list_store_instance_init (SamplecatListStore * self) {
+static void
+samplecat_list_store_instance_init (SamplecatListStore * self)
+{
 	self->row_count = 0;
 }
 
 
-static void samplecat_list_store_finalize (GObject* obj) {
+static void
+samplecat_list_store_finalize (GObject* obj)
+{
 	SamplecatListStore * self;
 	self = G_TYPE_CHECK_INSTANCE_CAST (obj, SAMPLECAT_TYPE_LIST_STORE, SamplecatListStore);
 	_gtk_tree_row_reference_free0 (self->playing);
@@ -307,7 +305,9 @@ static void samplecat_list_store_finalize (GObject* obj) {
 }
 
 
-GType samplecat_list_store_get_type (void) {
+GType
+samplecat_list_store_get_type (void)
+{
 	static volatile gsize samplecat_list_store_type_id__volatile = 0;
 	if (g_once_init_enter (&samplecat_list_store_type_id__volatile)) {
 		static const GTypeInfo g_define_type_info = { sizeof (SamplecatListStoreClass), (GBaseInitFunc) NULL, (GBaseFinalizeFunc) NULL, (GClassInitFunc) samplecat_list_store_class_init, (GClassFinalizeFunc) NULL, NULL, sizeof (SamplecatListStore), 0, (GInstanceInitFunc) samplecat_list_store_instance_init, NULL };

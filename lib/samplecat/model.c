@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2016 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2017 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -71,73 +71,49 @@ static gpointer          samplecat_value_get_idle  (const GValue* value);
 static gpointer samplecat_filter_parent_class = NULL;
 static gpointer samplecat_idle_parent_class = NULL;
 static gpointer samplecat_model_parent_class = NULL;
-static gchar samplecat_model_unk[32];
-static gchar samplecat_model_unk[32] = {0};
+static gchar    samplecat_model_unk[32];
+static gchar    samplecat_model_unk[32] = {0};
 
-gpointer samplecat_filter_ref (gpointer instance);
-void samplecat_filter_unref (gpointer instance);
-GParamSpec* samplecat_param_spec_filter (const gchar* name, const gchar* nick, const gchar* blurb, GType object_type, GParamFlags flags);
-void samplecat_value_set_filter (GValue* value, gpointer v_object);
-void samplecat_value_take_filter (GValue* value, gpointer v_object);
-gpointer samplecat_value_get_filter (const GValue* value);
-GType samplecat_filter_get_type (void) G_GNUC_CONST;
 enum  {
 	SAMPLECAT_FILTER_DUMMY_PROPERTY
 };
-SamplecatFilter* samplecat_filter_new (gchar* _name);
-SamplecatFilter* samplecat_filter_construct (GType object_type, gchar* _name);
-void samplecat_filter_set_value (SamplecatFilter* self, gchar* val);
-static void samplecat_filter_finalize (SamplecatFilter* obj);
-GType samplecat_filters_get_type (void) G_GNUC_CONST;
-SamplecatFilters* samplecat_filters_dup (const SamplecatFilters* self);
-void samplecat_filters_free (SamplecatFilters* self);
+static void     samplecat_filter_finalize (SamplecatFilter* obj);
 #define SAMPLECAT_IDLE_GET_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), SAMPLECAT_TYPE_IDLE, SamplecatIdlePrivate))
 enum  {
 	SAMPLECAT_IDLE_DUMMY_PROPERTY
 };
-static gboolean ___lambda2_ (SamplecatIdle* self);
 static gboolean ____lambda2__gsource_func (gpointer self);
-static void samplecat_idle_finalize (SamplecatIdle* obj);
-GType samplecat_model_get_type (void) G_GNUC_CONST;
+static void     samplecat_idle_finalize   (SamplecatIdle* obj);
 #define SAMPLECAT_MODEL_GET_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), SAMPLECAT_TYPE_MODEL, SamplecatModelPrivate))
 enum  {
 	SAMPLECAT_MODEL_DUMMY_PROPERTY
 };
-SamplecatModel* samplecat_model_new (void);
-SamplecatModel* samplecat_model_construct (GType object_type);
-static gboolean __lambda3_ (SamplecatModel* self);
-static gboolean ___lambda3__gsource_func (gpointer self);
-gboolean samplecat_model_add (SamplecatModel* self);
-gboolean samplecat_model_remove (SamplecatModel* self, gint id);
-void samplecat_model_set_search_dir (SamplecatModel* self, gchar* dir);
-void samplecat_model_set_selection (SamplecatModel* self, Sample* sample);
 static gboolean samplecat_model_queue_selection_changed (SamplecatModel* self);
 static gboolean _samplecat_model_queue_selection_changed_gsource_func (gpointer self);
-void samplecat_model_add_filter (SamplecatModel* self, SamplecatFilter* filter);
-void samplecat_model_refresh_sample (SamplecatModel* self, Sample* sample, gboolean force_update);
-gboolean samplecat_model_update_sample (SamplecatModel* self, Sample* sample, gint prop, void* val);
-gchar* samplecat_model_print_col_name (guint prop_type);
-static void g_cclosure_user_marshal_VOID__POINTER_INT_POINTER (GClosure * closure, GValue * return_value, guint n_param_values, const GValue * param_values, gpointer invocation_hint, gpointer marshal_data);
-static GObject * samplecat_model_constructor (GType type, guint n_construct_properties, GObjectConstructParam * construct_properties);
-static void samplecat_model_finalize (GObject* obj);
+static void     g_cclosure_user_marshal_VOID__POINTER_INT_POINTER (GClosure * closure, GValue * return_value, guint n_param_values, const GValue * param_values, gpointer invocation_hint, gpointer marshal_data);
+static GObject* samplecat_model_constructor (GType type, guint n_construct_properties, GObjectConstructParam * construct_properties);
+static void     samplecat_model_finalize (GObject* obj);
 
 
-SamplecatFilter* samplecat_filter_construct (GType object_type, gchar* _name) {
-	SamplecatFilter* self = NULL;
-	gchar* _tmp0_;
-	self = (SamplecatFilter*) g_type_create_instance (object_type);
-	_tmp0_ = _name;
-	self->name = _tmp0_;
+SamplecatFilter*
+samplecat_filter_construct (GType object_type, gchar* _name)
+{
+	SamplecatFilter* self = (SamplecatFilter*)g_type_create_instance(object_type);
+	self->name = _name;
 	return self;
 }
 
 
-SamplecatFilter* samplecat_filter_new (gchar* _name) {
+SamplecatFilter*
+samplecat_filter_new (gchar* _name)
+{
 	return samplecat_filter_construct (SAMPLECAT_TYPE_FILTER, _name);
 }
 
 
-void samplecat_filter_set_value (SamplecatFilter* self, gchar* val) {
+void
+samplecat_filter_set_value (SamplecatFilter* self, gchar* val)
+{
 	g_return_if_fail (self);
 	_g_free0 (self->value);
 	self->value = g_strdup ((const gchar*)val);
@@ -145,19 +121,25 @@ void samplecat_filter_set_value (SamplecatFilter* self, gchar* val) {
 }
 
 
-static void samplecat_value_filter_init (GValue* value) {
+static void
+samplecat_value_filter_init (GValue* value)
+{
 	value->data[0].v_pointer = NULL;
 }
 
 
-static void samplecat_value_filter_free_value (GValue* value) {
+static void
+samplecat_value_filter_free_value (GValue* value)
+{
 	if (value->data[0].v_pointer) {
 		samplecat_filter_unref (value->data[0].v_pointer);
 	}
 }
 
 
-static void samplecat_value_filter_copy_value (const GValue* src_value, GValue* dest_value) {
+static void
+samplecat_value_filter_copy_value (const GValue* src_value, GValue* dest_value)
+{
 	if (src_value->data[0].v_pointer) {
 		dest_value->data[0].v_pointer = samplecat_filter_ref (src_value->data[0].v_pointer);
 	} else {
@@ -166,12 +148,16 @@ static void samplecat_value_filter_copy_value (const GValue* src_value, GValue* 
 }
 
 
-static gpointer samplecat_value_filter_peek_pointer (const GValue* value) {
+static gpointer
+samplecat_value_filter_peek_pointer (const GValue* value)
+{
 	return value->data[0].v_pointer;
 }
 
 
-static gchar* samplecat_value_filter_collect_value (GValue* value, guint n_collect_values, GTypeCValue* collect_values, guint collect_flags) {
+static gchar*
+samplecat_value_filter_collect_value (GValue* value, guint n_collect_values, GTypeCValue* collect_values, guint collect_flags)
+{
 	if (collect_values[0].v_pointer) {
 		SamplecatFilter* object;
 		object = collect_values[0].v_pointer;
@@ -188,7 +174,9 @@ static gchar* samplecat_value_filter_collect_value (GValue* value, guint n_colle
 }
 
 
-static gchar* samplecat_value_filter_lcopy_value (const GValue* value, guint n_collect_values, GTypeCValue* collect_values, guint collect_flags) {
+static gchar*
+samplecat_value_filter_lcopy_value (const GValue* value, guint n_collect_values, GTypeCValue* collect_values, guint collect_flags)
+{
 	SamplecatFilter** object_p;
 	object_p = collect_values[0].v_pointer;
 	if (!object_p) {
@@ -205,7 +193,9 @@ static gchar* samplecat_value_filter_lcopy_value (const GValue* value, guint n_c
 }
 
 
-GParamSpec* samplecat_param_spec_filter (const gchar* name, const gchar* nick, const gchar* blurb, GType object_type, GParamFlags flags) {
+GParamSpec*
+samplecat_param_spec_filter (const gchar* name, const gchar* nick, const gchar* blurb, GType object_type, GParamFlags flags)
+{
 	SamplecatParamSpecFilter* spec;
 	g_return_val_if_fail (g_type_is_a (object_type, SAMPLECAT_TYPE_FILTER), NULL);
 	spec = g_param_spec_internal (G_TYPE_PARAM_OBJECT, name, nick, blurb, flags);
@@ -214,13 +204,17 @@ GParamSpec* samplecat_param_spec_filter (const gchar* name, const gchar* nick, c
 }
 
 
-gpointer samplecat_value_get_filter (const GValue* value) {
+gpointer
+samplecat_value_get_filter (const GValue* value)
+{
 	g_return_val_if_fail (G_TYPE_CHECK_VALUE_TYPE (value, SAMPLECAT_TYPE_FILTER), NULL);
 	return value->data[0].v_pointer;
 }
 
 
-void samplecat_value_set_filter (GValue* value, gpointer v_object) {
+void
+samplecat_value_set_filter (GValue* value, gpointer v_object)
+{
 	SamplecatFilter* old;
 	g_return_if_fail (G_TYPE_CHECK_VALUE_TYPE (value, SAMPLECAT_TYPE_FILTER));
 	old = value->data[0].v_pointer;
@@ -238,7 +232,9 @@ void samplecat_value_set_filter (GValue* value, gpointer v_object) {
 }
 
 
-void samplecat_value_take_filter (GValue* value, gpointer v_object) {
+void
+samplecat_value_take_filter (GValue* value, gpointer v_object)
+{
 	SamplecatFilter* old;
 	g_return_if_fail (G_TYPE_CHECK_VALUE_TYPE (value, SAMPLECAT_TYPE_FILTER));
 	old = value->data[0].v_pointer;
@@ -255,26 +251,34 @@ void samplecat_value_take_filter (GValue* value, gpointer v_object) {
 }
 
 
-static void samplecat_filter_class_init (SamplecatFilterClass * klass) {
+static void
+samplecat_filter_class_init (SamplecatFilterClass* klass)
+{
 	samplecat_filter_parent_class = g_type_class_peek_parent (klass);
 	SAMPLECAT_FILTER_CLASS (klass)->finalize = samplecat_filter_finalize;
 	g_signal_new ("changed", SAMPLECAT_TYPE_FILTER, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_VOID__VOID, G_TYPE_NONE, 0);
 }
 
 
-static void samplecat_filter_instance_init (SamplecatFilter * self) {
+static void
+samplecat_filter_instance_init (SamplecatFilter * self)
+{
 	self->ref_count = 1;
 }
 
 
-static void samplecat_filter_finalize (SamplecatFilter* obj) {
+static void
+samplecat_filter_finalize (SamplecatFilter* obj)
+{
 	SamplecatFilter * self;
 	self = G_TYPE_CHECK_INSTANCE_CAST (obj, SAMPLECAT_TYPE_FILTER, SamplecatFilter);
 	_g_free0 (self->value);
 }
 
 
-GType samplecat_filter_get_type (void) {
+GType
+samplecat_filter_get_type (void)
+{
 	static volatile gsize samplecat_filter_type_id__volatile = 0;
 	if (g_once_init_enter (&samplecat_filter_type_id__volatile)) {
 		static const GTypeValueTable g_define_type_value_table = { samplecat_value_filter_init, samplecat_value_filter_free_value, samplecat_value_filter_copy_value, samplecat_value_filter_peek_pointer, "p", samplecat_value_filter_collect_value, "p", samplecat_value_filter_lcopy_value };
@@ -288,7 +292,9 @@ GType samplecat_filter_get_type (void) {
 }
 
 
-gpointer samplecat_filter_ref (gpointer instance) {
+gpointer
+samplecat_filter_ref (gpointer instance)
+{
 	SamplecatFilter* self;
 	self = instance;
 	g_atomic_int_inc (&self->ref_count);
@@ -296,7 +302,9 @@ gpointer samplecat_filter_ref (gpointer instance) {
 }
 
 
-void samplecat_filter_unref (gpointer instance) {
+void
+samplecat_filter_unref (gpointer instance)
+{
 	SamplecatFilter* self;
 	self = instance;
 	if (g_atomic_int_dec_and_test (&self->ref_count)) {
@@ -306,7 +314,9 @@ void samplecat_filter_unref (gpointer instance) {
 }
 
 
-SamplecatFilters* samplecat_filters_dup (const SamplecatFilters* self) {
+SamplecatFilters*
+samplecat_filters_dup (const SamplecatFilters* self)
+{
 	SamplecatFilters* dup;
 	dup = g_new0 (SamplecatFilters, 1);
 	memcpy (dup, self, sizeof (SamplecatFilters));
@@ -314,12 +324,16 @@ SamplecatFilters* samplecat_filters_dup (const SamplecatFilters* self) {
 }
 
 
-void samplecat_filters_free (SamplecatFilters* self) {
+void
+samplecat_filters_free (SamplecatFilters* self)
+{
 	g_free (self);
 }
 
 
-GType samplecat_filters_get_type (void) {
+GType
+samplecat_filters_get_type (void)
+{
 	static volatile gsize samplecat_filters_type_id__volatile = 0;
 	if (g_once_init_enter (&samplecat_filters_type_id__volatile)) {
 		GType samplecat_filters_type_id;
@@ -333,18 +347,11 @@ GType samplecat_filters_get_type (void) {
 static SamplecatIdle*
 samplecat_idle_construct (GType object_type, GSourceFunc _fn, void* _fn_target)
 {
-	SamplecatIdle* self = NULL;
-	GSourceFunc _tmp0_;
-	void* _tmp0__target;
-	self = (SamplecatIdle*) g_type_create_instance (object_type);
-	_tmp0_ = _fn;
-	_tmp0__target = _fn_target;
+	SamplecatIdle* self = (SamplecatIdle*) g_type_create_instance (object_type);
+
 	(self->priv->fn_target_destroy_notify == NULL) ? NULL : (self->priv->fn_target_destroy_notify (self->priv->fn_target), NULL);
-	self->priv->fn = NULL;
-	self->priv->fn_target = NULL;
-	self->priv->fn_target_destroy_notify = NULL;
-	self->priv->fn = _tmp0_;
-	self->priv->fn_target = _tmp0__target;
+	self->priv->fn = _fn;
+	self->priv->fn_target = _fn_target;
 	self->priv->fn_target_destroy_notify = NULL;
 	return self;
 }
@@ -357,20 +364,22 @@ samplecat_idle_new (GSourceFunc _fn, void* _fn_target)
 }
 
 
-static gboolean ___lambda2_ (SamplecatIdle* self) {
-	gboolean result = FALSE;
-	GSourceFunc _tmp0_;
-	void* _tmp0__target;
-	_tmp0_ = self->priv->fn;
-	_tmp0__target = self->priv->fn_target;
-	_tmp0_ (_tmp0__target);
-	self->priv->id = (guint) 0;
-	result = FALSE;
-	return result;
-}
+static gboolean
+____lambda2__gsource_func (gpointer self)
+{
+	gboolean ___lambda2_ (SamplecatIdle* self)
+	{
+		gboolean result = FALSE;
+		GSourceFunc _tmp0_;
+		void* _tmp0__target;
+		_tmp0_ = self->priv->fn;
+		_tmp0__target = self->priv->fn_target;
+		_tmp0_ (_tmp0__target);
+		self->priv->id = (guint) 0;
+		result = FALSE;
+		return result;
+	}
 
-
-static gboolean ____lambda2__gsource_func (gpointer self) {
 	gboolean result;
 	result = ___lambda2_ (self);
 	return result;
@@ -381,28 +390,31 @@ static void
 samplecat_idle_queue (SamplecatIdle* self)
 {
 	g_return_if_fail (self != NULL);
-	guint _tmp0_ = self->priv->id;
-	if (!((gboolean) _tmp0_)) {
-		guint _tmp1_ = 0U;
-		_tmp1_ = g_idle_add_full (G_PRIORITY_DEFAULT_IDLE, ____lambda2__gsource_func, samplecat_idle_ref (self), samplecat_idle_unref);
-		self->priv->id = _tmp1_;
+	if (!((gboolean)self->priv->id)) {
+		self->priv->id = g_idle_add_full (G_PRIORITY_DEFAULT_IDLE, ____lambda2__gsource_func, samplecat_idle_ref (self), samplecat_idle_unref);
 	}
 }
 
 
-static void samplecat_value_idle_init (GValue* value) {
+static void
+samplecat_value_idle_init (GValue* value)
+{
 	value->data[0].v_pointer = NULL;
 }
 
 
-static void samplecat_value_idle_free_value (GValue* value) {
+static void
+samplecat_value_idle_free_value (GValue* value)
+{
 	if (value->data[0].v_pointer) {
 		samplecat_idle_unref (value->data[0].v_pointer);
 	}
 }
 
 
-static void samplecat_value_idle_copy_value (const GValue* src_value, GValue* dest_value) {
+static void
+samplecat_value_idle_copy_value (const GValue* src_value, GValue* dest_value)
+{
 	if (src_value->data[0].v_pointer) {
 		dest_value->data[0].v_pointer = samplecat_idle_ref (src_value->data[0].v_pointer);
 	} else {
@@ -411,12 +423,16 @@ static void samplecat_value_idle_copy_value (const GValue* src_value, GValue* de
 }
 
 
-static gpointer samplecat_value_idle_peek_pointer (const GValue* value) {
+static gpointer
+samplecat_value_idle_peek_pointer (const GValue* value)
+{
 	return value->data[0].v_pointer;
 }
 
 
-static gchar* samplecat_value_idle_collect_value (GValue* value, guint n_collect_values, GTypeCValue* collect_values, guint collect_flags) {
+static gchar*
+samplecat_value_idle_collect_value (GValue* value, guint n_collect_values, GTypeCValue* collect_values, guint collect_flags)
+{
 	if (collect_values[0].v_pointer) {
 		SamplecatIdle* object;
 		object = collect_values[0].v_pointer;
@@ -433,7 +449,9 @@ static gchar* samplecat_value_idle_collect_value (GValue* value, guint n_collect
 }
 
 
-static gchar* samplecat_value_idle_lcopy_value (const GValue* value, guint n_collect_values, GTypeCValue* collect_values, guint collect_flags) {
+static gchar*
+samplecat_value_idle_lcopy_value (const GValue* value, guint n_collect_values, GTypeCValue* collect_values, guint collect_flags)
+{
 	SamplecatIdle** object_p;
 	object_p = collect_values[0].v_pointer;
 	if (!object_p) {
@@ -516,21 +534,27 @@ samplecat_value_take_idle (GValue* value, gpointer v_object)
 #endif
 
 
-static void samplecat_idle_class_init (SamplecatIdleClass * klass) {
+static void
+samplecat_idle_class_init (SamplecatIdleClass * klass)
+{
 	samplecat_idle_parent_class = g_type_class_peek_parent (klass);
 	SAMPLECAT_IDLE_CLASS (klass)->finalize = samplecat_idle_finalize;
 	g_type_class_add_private (klass, sizeof (SamplecatIdlePrivate));
 }
 
 
-static void samplecat_idle_instance_init (SamplecatIdle * self) {
+static void
+samplecat_idle_instance_init (SamplecatIdle * self)
+{
 	self->priv = SAMPLECAT_IDLE_GET_PRIVATE (self);
 	self->priv->id = (guint) 0;
 	self->ref_count = 1;
 }
 
 
-static void samplecat_idle_finalize (SamplecatIdle* obj) {
+static void
+samplecat_idle_finalize (SamplecatIdle* obj)
+{
 	SamplecatIdle * self;
 	self = G_TYPE_CHECK_INSTANCE_CAST (obj, SAMPLECAT_TYPE_IDLE, SamplecatIdle);
 	(self->priv->fn_target_destroy_notify == NULL) ? NULL : (self->priv->fn_target_destroy_notify (self->priv->fn_target), NULL);
@@ -576,90 +600,78 @@ samplecat_idle_unref (gpointer instance)
 }
 
 
-static gboolean __lambda3_ (SamplecatModel* self) {
-	gboolean result = FALSE;
-	g_signal_emit_by_name (self, "dir-list-changed");
-	result = FALSE;
-	return result;
-}
-
-
-static gboolean ___lambda3__gsource_func (gpointer self) {
-	gboolean result;
-	result = __lambda3_ (self);
-	return result;
-}
-
-
-static gboolean __lambda4_ (gpointer _self) {
-	SamplecatModel* self = _self;
-
-	GList* l = self->modified;
-	for (;l;l=l->next) {
-		SamplecatSampleChange* change = l->data;
-		g_signal_emit_by_name (self, "sample-changed", change->sample, change->prop, change->val);
-		sample_unref(change->sample);
-		g_free (change);
-	}
-	_g_list_free0 (self->modified);
-
-	return FALSE;
-}
-
-
-SamplecatModel* samplecat_model_construct (GType object_type) {
-	SamplecatModel * self = NULL;
-	const gchar* _tmp0_ = NULL;
-	gchar* _tmp1_ = NULL;
-	SamplecatIdle* _tmp2_;
-	self = (SamplecatModel*) g_object_new (object_type, NULL);
+SamplecatModel*
+samplecat_model_construct (GType object_type)
+{
+	SamplecatModel* self = (SamplecatModel*) g_object_new (object_type, NULL);
 	self->state = 1;
-	_tmp0_ = g_get_home_dir ();
-	_tmp1_ = g_build_filename (_tmp0_, ".config", PACKAGE, "cache", NULL, NULL);
-	self->cache_dir = _tmp1_;
+	self->cache_dir = g_build_filename (g_get_home_dir(), ".config", PACKAGE, "cache", NULL, NULL);
 
-	_tmp2_ = samplecat_idle_new (___lambda3__gsource_func, self);
+#if 0 // updating the directory list is not currently done until a consumer needs it
+
+	gboolean ___lambda__gsource_func (gpointer self)
+	{
+		dir_list_update();
+		g_signal_emit_by_name ((SamplecatModel*)self, "dir-list-changed");
+		return G_SOURCE_REMOVE;
+	}
+
+	SamplecatIdle* idle = samplecat_idle_new (___lambda__gsource_func, self);
 	_samplecat_idle_unref0 (self->priv->idle);
-	self->priv->idle = _tmp2_;
+	self->priv->idle = idle;
+	samplecat_idle_queue (self->priv->idle);
+#endif
 
-	self->priv->sample_changed_idle = samplecat_idle_new (__lambda4_, self);
+	gboolean __lambda (gpointer _self)
+	{
+		SamplecatModel* self = _self;
+
+		GList* l = self->modified;
+		for (;l;l=l->next) {
+			SamplecatSampleChange* change = l->data;
+			g_signal_emit_by_name (self, "sample-changed", change->sample, change->prop, change->val);
+			sample_unref(change->sample);
+			g_free (change);
+		}
+		_g_list_free0 (self->modified);
+
+		return FALSE;
+	}
+
+	self->priv->sample_changed_idle = samplecat_idle_new(__lambda, self);
 
 	return self;
 }
 
 
-SamplecatModel* samplecat_model_new (void) {
+SamplecatModel*
+samplecat_model_new (void)
+{
 	return samplecat_model_construct (SAMPLECAT_TYPE_MODEL);
 }
 
 
-gboolean samplecat_model_add (SamplecatModel* self) {
-	gboolean result = FALSE;
-	SamplecatIdle* _tmp0_;
+gboolean
+samplecat_model_add (SamplecatModel* self)
+{
 	g_return_val_if_fail (self != NULL, FALSE);
-	_tmp0_ = self->priv->idle;
-	samplecat_idle_queue (_tmp0_);
-	result = TRUE;
-	return result;
+	samplecat_idle_queue (self->priv->idle);
+	return TRUE;
 }
 
 
-gboolean samplecat_model_remove (SamplecatModel* self, gint id) {
-	gboolean result = FALSE;
-	SamplecatIdle* _tmp0_;
-	gint _tmp1_;
-	gboolean _tmp2_ = FALSE;
-	g_return_val_if_fail (self != NULL, FALSE);
-	_tmp0_ = self->priv->idle;
-	samplecat_idle_queue (_tmp0_);
-	_tmp1_ = id;
-	_tmp2_ = backend.remove (_tmp1_);
-	result = _tmp2_;
-	return result;
+gboolean
+samplecat_model_remove (SamplecatModel* self, gint id)
+{
+	g_return_val_if_fail(self != NULL, FALSE);
+	samplecat_idle_queue(self->priv->idle);
+	return backend.remove(id);
 }
 
 
-void samplecat_model_set_search_dir (SamplecatModel* self, gchar* dir) {
+void
+samplecat_model_set_search_dir (SamplecatModel* self, gchar* dir)
+{
 	SamplecatFilters _tmp0_;
 	SamplecatFilter* _tmp1_;
 	gchar* _tmp2_;
@@ -671,14 +683,16 @@ void samplecat_model_set_search_dir (SamplecatModel* self, gchar* dir) {
 }
 
 
-static gboolean _samplecat_model_queue_selection_changed_gsource_func (gpointer self) {
-	gboolean result;
-	result = samplecat_model_queue_selection_changed (self);
-	return result;
+static gboolean
+_samplecat_model_queue_selection_changed_gsource_func (gpointer self)
+{
+	return samplecat_model_queue_selection_changed (self);
 }
 
 
-void samplecat_model_set_selection (SamplecatModel* self, Sample* sample) {
+void
+samplecat_model_set_selection (SamplecatModel* self, Sample* sample)
+{
 	Sample* _tmp0_;
 	Sample* _tmp1_;
 	g_return_if_fail (self);
@@ -700,7 +714,9 @@ void samplecat_model_set_selection (SamplecatModel* self, Sample* sample) {
 }
 
 
-static gboolean samplecat_model_queue_selection_changed (SamplecatModel* self) {
+static gboolean
+samplecat_model_queue_selection_changed (SamplecatModel* self)
+{
 	gboolean result = FALSE;
 	Sample* _tmp0_;
 	g_return_val_if_fail (self != NULL, FALSE);
@@ -712,7 +728,9 @@ static gboolean samplecat_model_queue_selection_changed (SamplecatModel* self) {
 }
 
 
-static void samplecat_model_queue_sample_changed (SamplecatModel* self, Sample* sample, gint prop, void* val) {
+static void
+samplecat_model_queue_sample_changed (SamplecatModel* self, Sample* sample, gint prop, void* val)
+{
 	g_return_if_fail (self != NULL);
 
 	GList* l = self->modified;
@@ -736,7 +754,9 @@ static void samplecat_model_queue_sample_changed (SamplecatModel* self, Sample* 
 }
 
 
-void samplecat_model_add_filter (SamplecatModel* self, SamplecatFilter* filter) {
+void
+samplecat_model_add_filter (SamplecatModel* self, SamplecatFilter* filter)
+{
 	SamplecatFilter* _tmp0_;
 	g_return_if_fail (self != NULL);
 	_tmp0_ = filter;
@@ -744,36 +764,21 @@ void samplecat_model_add_filter (SamplecatModel* self, SamplecatFilter* filter) 
 }
 
 
-void samplecat_model_refresh_sample (SamplecatModel* self, Sample* sample, gboolean force_update) {
-	Sample* _tmp0_;
-	gboolean _tmp1_;
-	gboolean online;
-	Sample* _tmp2_;
-	gchar* _tmp3_;
-	time_t _tmp4_ = 0;
-	time_t mtime;
-	time_t _tmp5_;
-	Sample* _tmp28_;
-	gboolean _tmp29_;
-	gboolean _tmp30_;
+void
+samplecat_model_refresh_sample (SamplecatModel* self, Sample* sample, gboolean force_update)
+{
 	g_return_if_fail (self != NULL);
-	_tmp0_ = sample;
-	_tmp1_ = _tmp0_->online;
-	online = _tmp1_;
-	_tmp2_ = sample;
-	_tmp3_ = _tmp2_->full_path;
-	_tmp4_ = file_mtime (_tmp3_);
-	mtime = _tmp4_;
-	_tmp5_ = mtime;
+
+	gboolean online = sample->online;
+	time_t _tmp4_ = file_mtime (sample->full_path);
+	time_t mtime = _tmp4_;
+	time_t _tmp5_ = mtime;
 	if (_tmp5_ > ((time_t) 0)) {
 		gboolean _tmp6_ = FALSE;
 		Sample* _tmp7_;
 		time_t _tmp8_;
 		time_t _tmp9_;
 		gboolean _tmp11_;
-		Sample* _tmp24_;
-		time_t _tmp25_;
-		Sample* _tmp26_;
 		_tmp7_ = sample;
 		_tmp8_ = _tmp7_->mtime;
 		_tmp9_ = mtime;
@@ -786,9 +791,8 @@ void samplecat_model_refresh_sample (SamplecatModel* self, Sample* sample, gbool
 		}
 		_tmp11_ = _tmp6_;
 		if (_tmp11_) {
-			Sample* _tmp14_ = sample_new_from_filename (sample->full_path, FALSE);
-			Sample* test = _tmp14_;
-			if (!((gboolean)test)) {
+			Sample* test = sample_new_from_filename (sample->full_path, FALSE);
+			if (!(test)) {
 				_sample_unref0 (test);
 				return;
 			}
@@ -804,19 +808,16 @@ void samplecat_model_refresh_sample (SamplecatModel* self, Sample* sample, gbool
 			}
 			_sample_unref0 (test);
 		}
-		_tmp24_ = sample;
-		_tmp25_ = mtime;
-		_tmp24_->mtime = _tmp25_;
-		_tmp26_ = sample;
-		_tmp26_->online = TRUE;
+		sample->mtime = mtime;
+		sample->online = TRUE;
 	} else {
 		Sample* _tmp27_;
 		_tmp27_ = sample;
 		_tmp27_->online = FALSE;
 	}
-	_tmp28_ = sample;
-	_tmp29_ = _tmp28_->online;
-	_tmp30_ = online;
+	Sample* _tmp28_ = sample;
+	gboolean _tmp29_ = _tmp28_->online;
+	gboolean _tmp30_ = online;
 	if (_tmp29_ != _tmp30_) {
 		Sample* _tmp31_;
 		_tmp31_ = sample;
@@ -825,7 +826,9 @@ void samplecat_model_refresh_sample (SamplecatModel* self, Sample* sample, gbool
 }
 
 
-gboolean samplecat_model_update_sample (SamplecatModel* self, Sample* sample, gint prop, void* val) {
+gboolean
+samplecat_model_update_sample (SamplecatModel* self, Sample* sample, gint prop, void* val)
+{
 	gboolean result = FALSE;
 	gboolean _tmp105_;
 	g_return_val_if_fail (self != NULL, FALSE);
@@ -1010,7 +1013,6 @@ gboolean samplecat_model_update_sample (SamplecatModel* self, Sample* sample, gi
 			gboolean _tmp97_;
 			Sample* _tmp98_;
 			gboolean _tmp101_ = FALSE;
-			gchar* _tmp102_;
 			gchar* metadata = sample_get_metadata_str (sample);
 			ok = TRUE;
 			_tmp61_ = ok;
@@ -1062,13 +1064,8 @@ gboolean samplecat_model_update_sample (SamplecatModel* self, Sample* sample, gi
 			_tmp98_ = sample;
 			_tmp101_ = backend.update_string (_tmp98_->id, "meta_data", metadata);
 			ok = _tmp97_ & _tmp101_;
-			_tmp102_ = metadata;
-			if ((gboolean) _tmp102_) {
-				GDestroyNotify _tmp103_;
-				gchar* _tmp104_;
-				_tmp103_ = g_free;
-				_tmp104_ = metadata;
-				_tmp103_ (_tmp104_);
+			if (metadata) {
+				g_free(metadata);
 			}
 			break;
 		}
@@ -1095,7 +1092,9 @@ gboolean samplecat_model_update_sample (SamplecatModel* self, Sample* sample, gi
 }
 
 
-gchar* samplecat_model_print_col_name (guint prop_type) {
+gchar*
+samplecat_model_print_col_name (guint prop_type)
+{
 	gchar* result = NULL;
 	guint _tmp0_;
 	_tmp0_ = prop_type;

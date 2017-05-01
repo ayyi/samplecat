@@ -441,8 +441,6 @@ AM_CONDITIONAL(ENABLE_VALA, test "$enable_vala" = "yes")
 
 dnl -----------------------------------------------------------------------------
 
-#AC_DEFINE(NO_USE_DEVHELP_DIRTREE, 1, [Use the new directory tree])
-
 # Bolt on a few specific flags to CXXFLAGS that should always be used
 CXXFLAGS="$CXXFLAGS -pipe -fmessage-length=139 -fdiagnostics-show-location=every-line"
 CFLAGS="$CFLAGS -pipe  -fmessage-length=139 -fdiagnostics-show-location=every-line"

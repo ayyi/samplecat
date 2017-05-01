@@ -87,7 +87,6 @@ samplecat_SOURCES = \
 	inspector.c inspector.h \
 	player_control.c player_control.h \
 	directories.c directories.h \
-	dh_link.c dh_link.h \
 	dh_tree.c dh_tree.h \
 	cellrenderer_hypertext.c cellrenderer_hypertext.h \
 	colour_box.c colour_box.h \

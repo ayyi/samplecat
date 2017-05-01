@@ -332,36 +332,3 @@ dh_book_tree_reload(DhBookTree *tree)
 	book_tree_populate_tree (tree);
 }
 
-void
-dh_book_tree_show_uri (DhBookTree *tree, const gchar *uri)
-{
-#if 0
-	GtkTreeSelection    *selection;
-	GtkTreeRowReference *row;
-	GtkTreePath         *path;
-
-	selection = gtk_tree_view_get_selection (GTK_TREE_VIEW (tree));
-
-	/* FIXME: Hmm .. */
-	row = g_hash_table_lookup (tree->priv->node_rows, book_node);
-	g_return_if_fail (row != NULL);
-
-	path = gtk_tree_row_reference_get_path (row);
-	g_return_if_fail (path != NULL);
-	
-	g_signal_handlers_block_by_func
-		(selection, 
-		 book_tree_selection_changed_cb,
-		 tree);
-
-	gtk_tree_selection_select_path (selection, path);
-	gtk_tree_view_set_cursor (GTK_TREE_VIEW (tree), path, NULL, 0);	
-
-	g_signal_handlers_unblock_by_func
-		(selection, 
-		 book_tree_selection_changed_cb,
-		 tree);
-
-	gtk_tree_path_free (path);
-#endif
-}

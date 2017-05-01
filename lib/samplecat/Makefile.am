@@ -21,6 +21,8 @@ libsamplecat_a_SOURCES = \
 	model.c model.h \
 	list_store.c list_store.h \
 	sample.c sample.h \
+	dir_list.c dir_list.h \
+	dh_link.c dh_link.h \
 	worker.c worker.h \
 	work.c work.h \
 	logger.c logger.h \
