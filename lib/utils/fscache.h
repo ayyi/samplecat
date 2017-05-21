@@ -8,15 +8,15 @@
 #define _FSCACHE_H
 
 #include <fcntl.h>
-#include "file_manager/rox_global.h"
-#include "file_manager/rox_support.h"
-
 #include <sys/stat.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <time.h>
 #include <glib.h>
 #include <glib-object.h>
+#include "file_manager/typedefs.h"
+#include "file_manager/support.h"
+
 
 typedef GObject *(*GFSLoadFunc)(const char *pathname, gpointer user_data);
 typedef void (*GFSUpdateFunc)(gpointer object, const char *pathname, gpointer user_data);

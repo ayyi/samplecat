@@ -16,7 +16,7 @@
 #include <libgen.h>
 #include <gtk/gtk.h>
 #include "debug/debug.h"
-#include "file_manager/rox_support.h" // to_utf8()
+#include "file_manager/support.h" // to_utf8()
 #include "mimetype.h"
 #include "support.h"
 #include "model.h"

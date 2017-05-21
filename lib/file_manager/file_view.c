@@ -19,6 +19,7 @@
 
 /* view_details.c - display a list of files in a TreeView */
 
+#define _GNU_SOURCE
 #include "config.h"
 
 #include <stdlib.h>
@@ -30,13 +31,10 @@
 #include <gdk/gdkkeysyms.h>
 
 #include "debug/debug.h"
-#include "utils/ayyi_utils.h"
+#include "support.h"
 #include "file_manager.h"
-
 #include "display.h"
-#include "utils/pixmaps.h"
 #include "dnd.h"
-#include "menu.h"
 #include "cell_icon.h"
 
 /* These are the column numbers in the ListStore */
@@ -53,9 +51,6 @@
 #define COL_VIEW_ITEM 10
 #define N_COLUMNS 11
 
-extern Filer filer;
-extern int debug;
-
 static gpointer parent_class = NULL;
 
 struct _ViewDetailsClass {
@@ -66,53 +61,55 @@ struct _ViewDetailsClass {
 # define S_ISDOOR(mode) (FALSE)
 #endif
 
+#define _g_object_unref0(var) ((var == NULL) ? NULL : (var = (g_object_unref (var), NULL)))
+
 /* Static prototypes */
-static void     view_details_finialize           (GObject *object);
+static void     view_details_finialize           (GObject*);
 static void     view_details_class_init          (gpointer gclass, gpointer data);
 static void     view_details_init                (GTypeInstance*, gpointer gclass);
 
 static void     view_details_iface_init          (gpointer giface, gpointer iface_data);
 
 static void     view_details_sort                (ViewIface*);
-static void     view_details_style_changed       (ViewIface *view, int flags);
-static void     view_details_add_items           (ViewIface *view, GPtrArray *items);
-static void     view_details_update_items        (ViewIface *view, GPtrArray *items);
-static void     view_details_delete_if           (ViewIface *view, gboolean (*test)(gpointer item, gpointer data), gpointer data);
-static void     view_details_clear               (ViewIface *view);
-static void     view_details_select_all          (ViewIface *view);
-static void     view_details_clear_selection     (ViewIface *view);
-static int      view_details_count_items         (ViewIface *view);
-static int      view_details_count_selected      (ViewIface *view);
-static void     view_details_show_cursor         (ViewIface *view);
-static void     view_details_get_iter            (ViewIface *view, ViewIter *iter, IterFlags flags);
-static void     view_details_get_iter_at_point   (ViewIface *view, ViewIter *iter, GdkWindow *src, int x, int y);
-static void     view_details_cursor_to_iter      (ViewIface *view, ViewIter *iter);
-static void     view_details_set_selected        (ViewIface *view, ViewIter *iter, gboolean selected);
-static gboolean view_details_get_selected        (ViewIface *view, ViewIter *iter);
-static void     view_details_select_only         (ViewIface *view, ViewIter *iter);
-static void     view_details_set_frozen          (ViewIface *view, gboolean frozen);
-static gboolean view_details_cursor_visible      (ViewIface *view);
-static void     view_details_set_base            (ViewIface *view, ViewIter *iter);
-static void     view_details_start_lasso_box     (ViewIface *view, GdkEventButton*);
-static void     view_details_extend_tip          (ViewIface *view, ViewIter *iter, GString *tip);
-static gboolean view_details_auto_scroll_callback(ViewIface *view);
+static void     view_details_style_changed       (ViewIface*, int flags);
+static void     view_details_add_items           (ViewIface*, GPtrArray*);
+static void     view_details_update_items        (ViewIface*, GPtrArray*);
+static void     view_details_delete_if           (ViewIface*, gboolean (*test)(gpointer item, gpointer data), gpointer data);
+static void     view_details_clear               (ViewIface*);
+static void     view_details_select_all          (ViewIface*);
+static void     view_details_clear_selection     (ViewIface*);
+static int      view_details_count_items         (ViewIface*);
+static int      view_details_count_selected      (ViewIface*);
+static void     view_details_show_cursor         (ViewIface*);
+static void     view_details_get_iter            (ViewIface*, ViewIter*, IterFlags);
+static void     view_details_get_iter_at_point   (ViewIface*, ViewIter*, GdkWindow* src, int x, int y);
+static void     view_details_cursor_to_iter      (ViewIface*, ViewIter*);
+static void     view_details_set_selected        (ViewIface*, ViewIter*, gboolean selected);
+static gboolean view_details_get_selected        (ViewIface*, ViewIter*);
+static void     view_details_select_only         (ViewIface*, ViewIter*);
+static void     view_details_set_frozen          (ViewIface*, gboolean frozen);
+static gboolean view_details_cursor_visible      (ViewIface*);
+static void     view_details_set_base            (ViewIface*, ViewIter*);
+static void     view_details_start_lasso_box     (ViewIface*, GdkEventButton*);
+static void     view_details_extend_tip          (ViewIface*, ViewIter*, GString* tip);
+static gboolean view_details_auto_scroll_callback(ViewIface*);
 
-static DirItem* iter_peek                        (ViewIter *iter);
-static DirItem* iter_prev                        (ViewIter *iter);
-static DirItem* iter_next                        (ViewIter *iter);
-static void     make_iter                        (ViewDetails *view_details, ViewIter *iter, IterFlags flags);
-static void     make_item_iter                   (ViewDetails *view_details, ViewIter *iter, int i);
-static void     view_details_tree_model_init     (GtkTreeModelIface *iface);
-static gboolean details_get_sort_column_id       (GtkTreeSortable*, gint* sort_column_id, GtkSortType     *order);
-static void     details_set_sort_column_id       (GtkTreeSortable*, gint sort_column_id, GtkSortType         order);
-static void     details_set_sort_func            (GtkTreeSortable*, gint sort_column_id, GtkTreeIterCompareFunc, gpointer                data, GtkDestroyNotify        destroy);
-static void     details_set_default_sort_func    (GtkTreeSortable*, GtkTreeIterCompareFunc  func, gpointer   data, GtkDestroyNotify        destroy);
+static DirItem* iter_peek                        (ViewIter*);
+static DirItem* iter_prev                        (ViewIter*);
+static DirItem* iter_next                        (ViewIter*);
+static void     make_iter                        (ViewDetails*, ViewIter*, IterFlags);
+static void     make_item_iter                   (ViewDetails*, ViewIter*, int);
+static void     view_details_tree_model_init     (GtkTreeModelIface*);
+static gboolean details_get_sort_column_id       (GtkTreeSortable*, gint* sort_column_id, GtkSortType* order);
+static void     details_set_sort_column_id       (GtkTreeSortable*, gint sort_column_id, GtkSortType order);
+static void     details_set_sort_func            (GtkTreeSortable*, gint sort_column_id, GtkTreeIterCompareFunc, gpointer data, GtkDestroyNotify);
+static void     details_set_default_sort_func    (GtkTreeSortable*, GtkTreeIterCompareFunc, gpointer data, GtkDestroyNotify);
 static gboolean details_has_default_sort_func    (GtkTreeSortable*);
-static void     view_details_sortable_init       (GtkTreeSortableIface *iface);
-static void     set_selected                     (ViewDetails *view_details, int i, gboolean selected);
-static gboolean get_selected                     (ViewDetails *view_details, int i);
-static void     free_view_item                   (ViewItem *view_item);
-static void     details_update_header_visibility (ViewDetails *view_details);
+static void     view_details_sortable_init       (GtkTreeSortableIface*);
+static void     set_selected                     (ViewDetails*, int, gboolean selected);
+static gboolean get_selected                     (ViewDetails*, int);
+static void     free_view_item                   (ViewItem*);
+static void     details_update_header_visibility (ViewDetails*);
 //static void set_lasso(ViewDetails *view_details, int x, int y);
 static void     view_details_on_realise          (ViewDetails*, gpointer user_data);
 static void     view_details_on_edited           (GtkCellRendererText*, gchar* path_string, gchar* new_text, ViewDetails*);
@@ -125,25 +122,26 @@ gboolean had_cursor = 0;
  ****************************************************************/
 
 GtkWidget*
-view_details_new(Filer* filer_window)
+view_details_new (AyyiLibfilemanager* fm)
 {
 	PF;
 	ViewDetails* view_details = g_object_new(view_details_get_type(), NULL);
-	view_details->filer_window = filer_window;
+	view_details->filer_window = fm;
 	view_details->use_alt_colours = false;
-	filer_window->view = (ViewIface*)view_details;
+	view_details->filer_window->view = (ViewIface*)view_details;
 
-	filer_window->menu = fm__make_context_menu();
+	view_details->filer_window->menu = fm__make_context_menu();
 
 	view_details->scroll_win = gtk_scrolled_window_new(NULL, NULL); //adjustments created automatically.
 	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(view_details->scroll_win), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
 	gtk_container_add(GTK_CONTAINER(view_details->scroll_win), (GtkWidget*)view_details);
+	gtk_widget_show(view_details->scroll_win);
 #if 0
 	gtk_range_set_adjustment(GTK_RANGE(filer_window->scrollbar),
 		gtk_tree_view_get_vadjustment(GTK_TREE_VIEW(view_details)));
 #endif
 
-	if (filer_window->sort_type != -1) view_details_sort((ViewIface *) view_details);
+	if (view_details->filer_window->sort_type != -1) view_details_sort((ViewIface*)view_details);
 
 	details_update_header_visibility(view_details);
 
@@ -152,8 +150,9 @@ view_details_new(Filer* filer_window)
 	return GTK_WIDGET(view_details);
 }
 
+
 GType
-view_details_get_type(void)
+view_details_get_type (void)
 {
 	static GType type = 0;
 
@@ -194,16 +193,18 @@ view_details_get_type(void)
 	return type;
 }
 
+
 /****************************************************************
  *			INTERNAL FUNCTIONS			*
  ****************************************************************/
 
 /* Update the visibility of the list headers */
 static void 
-details_update_header_visibility(ViewDetails* view_details)
+details_update_header_visibility (ViewDetails* view_details)
 {
 	gtk_tree_view_set_headers_visible(GTK_TREE_VIEW(view_details), TRUE);
 }
+
 
 /* Fulfill the GtkTreeModel requirements */
 static guint
@@ -212,14 +213,16 @@ details_get_flags(GtkTreeModel *tree_model)
 	return GTK_TREE_MODEL_LIST_ONLY;
 }
 
+
 static gint
-details_get_n_columns(GtkTreeModel *tree_model)
+details_get_n_columns (GtkTreeModel* tree_model)
 {
 	return N_COLUMNS;
 }
 
+
 static GType
-details_get_column_type(GtkTreeModel *tree_model, gint index)
+details_get_column_type (GtkTreeModel* tree_model, gint index)
 {
 	g_return_val_if_fail(index < N_COLUMNS && index >= 0, G_TYPE_INVALID);
 
@@ -229,15 +232,15 @@ details_get_column_type(GtkTreeModel *tree_model, gint index)
 	                                                      return G_TYPE_STRING;
 }
 
+
 static gboolean
-details_get_iter(GtkTreeModel *tree_model, GtkTreeIter  *iter, GtkTreePath* path)
+details_get_iter (GtkTreeModel* tree_model, GtkTreeIter* iter, GtkTreePath* path)
 {
-	ViewDetails *view_details = (ViewDetails *) tree_model;
-	gint i;
+	ViewDetails* view_details = (ViewDetails*)tree_model;
 
 	g_return_val_if_fail(gtk_tree_path_get_depth (path) > 0, FALSE);
 
-	i = gtk_tree_path_get_indices(path)[0];
+	gint i = gtk_tree_path_get_indices(path)[0];
 
 	if (i >= view_details->items->len) return FALSE;
 
@@ -246,8 +249,9 @@ details_get_iter(GtkTreeModel *tree_model, GtkTreeIter  *iter, GtkTreePath* path
 	return TRUE;
 }
 
+
 static GtkTreePath*
-details_get_path(GtkTreeModel *tree_model, GtkTreeIter* iter)
+details_get_path (GtkTreeModel* tree_model, GtkTreeIter* iter)
 {
 	GtkTreePath* retval = gtk_tree_path_new();
 	gtk_tree_path_append_index(retval, GPOINTER_TO_INT(iter->user_data));
@@ -255,13 +259,14 @@ details_get_path(GtkTreeModel *tree_model, GtkTreeIter* iter)
 	return retval;
 }
 
+
 static void
-details_get_value(GtkTreeModel* tree_model, GtkTreeIter* iter, gint column, GValue* value)
+details_get_value (GtkTreeModel* tree_model, GtkTreeIter* iter, gint column, GValue* value)
 {
-	ViewDetails *view_details = (ViewDetails *) tree_model;
+	ViewDetails* view_details = (ViewDetails *) tree_model;
 	gint i;
-	GPtrArray *items = view_details->items;
-	ViewItem *view_item;
+	GPtrArray* items = view_details->items;
+	ViewItem* view_item;
 	mode_t m;
 
 	g_return_if_fail(column >= 0 && column < N_COLUMNS);
@@ -387,17 +392,18 @@ details_get_value(GtkTreeModel* tree_model, GtkTreeIter* iter, gint column, GVal
 	}
 }
 
+
 static gboolean
 details_iter_next(GtkTreeModel *tree_model, GtkTreeIter *iter)
 {
-	ViewDetails *view_details = (ViewDetails *) tree_model;
-	int i;
+	ViewDetails* view_details = (ViewDetails*)tree_model;
 
-	i = GPOINTER_TO_INT(iter->user_data) + 1;
+	int i = GPOINTER_TO_INT(iter->user_data) + 1;
 	iter->user_data = GINT_TO_POINTER(i);
 
 	return i < view_details->items->len;
 }
+
 
 static gboolean
 details_iter_children(GtkTreeModel *tree_model, GtkTreeIter  *iter, GtkTreeIter* parent)
@@ -421,11 +427,13 @@ details_iter_children(GtkTreeModel *tree_model, GtkTreeIter  *iter, GtkTreeIter*
 		return FALSE;
 }
 
+
 static gboolean
 details_iter_has_child(GtkTreeModel *tree_model, GtkTreeIter  *iter)
 {
 	return FALSE;
 }
+
 
 static gint
 details_iter_n_children(GtkTreeModel *tree_model, GtkTreeIter *iter)
@@ -437,13 +445,11 @@ details_iter_n_children(GtkTreeModel *tree_model, GtkTreeIter *iter)
 	return 0;
 }
 
+
 static gboolean
-details_iter_nth_child(GtkTreeModel *tree_model,
-				       GtkTreeIter  *iter,
-				       GtkTreeIter  *parent,
-				       gint          n)
+details_iter_nth_child (GtkTreeModel* tree_model, GtkTreeIter* iter, GtkTreeIter* parent, gint n)
 {
-	ViewDetails *view_details = (ViewDetails *) tree_model;
+	ViewDetails* view_details = (ViewDetails*)tree_model;
 
 	if (parent)
 		return FALSE;
@@ -457,18 +463,20 @@ details_iter_nth_child(GtkTreeModel *tree_model,
 		return FALSE;
 }
 
+
 static gboolean
-details_iter_parent(GtkTreeModel *tree_model, GtkTreeIter  *iter, GtkTreeIter  *child)
+details_iter_parent (GtkTreeModel* tree_model, GtkTreeIter* iter, GtkTreeIter* child)
 {
 	return FALSE;
 }
+
 
 /* A ViewDetails is both a GtkTreeView and a GtkTreeModel.
  * The following functions implement the model interface...
  */
 
 static void
-view_details_tree_model_init(GtkTreeModelIface *iface)
+view_details_tree_model_init (GtkTreeModelIface* iface)
 {
 	iface->get_flags       = details_get_flags;
 	iface->get_n_columns   = details_get_n_columns;
@@ -484,8 +492,9 @@ view_details_tree_model_init(GtkTreeModelIface *iface)
 	iface->iter_parent     = details_iter_parent;
 }
 
+
 static void
-view_details_sortable_init(GtkTreeSortableIface *iface)
+view_details_sortable_init (GtkTreeSortableIface* iface)
 {
 	iface->get_sort_column_id = details_get_sort_column_id;
 	iface->set_sort_column_id = details_set_sort_column_id;
@@ -494,15 +503,16 @@ view_details_sortable_init(GtkTreeSortableIface *iface)
 	iface->has_default_sort_func = details_has_default_sort_func;
 }
 
+
 static gboolean
-details_get_sort_column_id(GtkTreeSortable *sortable, gint* sort_column_id, GtkSortType* order)
+details_get_sort_column_id (GtkTreeSortable* sortable, gint* sort_column_id, GtkSortType* order)
 {
-	ViewDetails *view_details = (ViewDetails *) sortable;
-	Filer* filer_window = view_details->filer_window;
-	int col;
+	ViewDetails* view_details = (ViewDetails*)sortable;
+	AyyiLibfilemanager* filer_window = view_details->filer_window;
 
 	if (!filer_window) return FALSE;	/* Not yet initialised */
 
+	int col;
 	switch (filer_window->sort_type)
 	{
 		case SORT_NAME: col = COL_LEAF; break;
@@ -520,11 +530,12 @@ details_get_sort_column_id(GtkTreeSortable *sortable, gint* sort_column_id, GtkS
 	return TRUE;
 }
 
+
 static void
-details_set_sort_column_id(GtkTreeSortable* sortable, gint sort_column_id, GtkSortType order)
+details_set_sort_column_id (GtkTreeSortable* sortable, gint sort_column_id, GtkSortType order)
 {
-	ViewDetails *view_details = (ViewDetails *) sortable;
-	Filer *filer_window = view_details->filer_window;
+	ViewDetails* view_details = (ViewDetails*)sortable;
+	AyyiLibfilemanager* filer_window = view_details->filer_window;
 
 	if (!filer_window) return; /* Not yet initialised */
 
@@ -553,46 +564,42 @@ details_set_sort_column_id(GtkTreeSortable* sortable, gint sort_column_id, GtkSo
 	}
 }
 
+
 static void
-details_set_sort_func(GtkTreeSortable          *sortable,
-			          gint                    sort_column_id,
-			          GtkTreeIterCompareFunc  func,
-			          gpointer                data,
-			          GtkDestroyNotify        destroy)
+details_set_sort_func (GtkTreeSortable* sortable, gint sort_column_id, GtkTreeIterCompareFunc func, gpointer data, GtkDestroyNotify destroy)
 {
 	g_assert_not_reached();
 }
 
+
 static void
-details_set_default_sort_func(GtkTreeSortable        *sortable,
-				          GtkTreeIterCompareFunc  func,
-				          gpointer                data,
-				          GtkDestroyNotify        destroy)
+details_set_default_sort_func (GtkTreeSortable* sortable, GtkTreeIterCompareFunc func, gpointer data, GtkDestroyNotify destroy)
 {
 	g_assert_not_reached();
 }
+
 
 static gboolean
-details_has_default_sort_func(GtkTreeSortable *sortable)
+details_has_default_sort_func (GtkTreeSortable *sortable)
 {
 	return FALSE;
 }
 
-
 /* End of model implementation */
 
-static gboolean is_selected(ViewDetails *view_details, int i)
-{
-	ViewIter iter;
-	iter.i = i;
-	return view_details_get_selected((ViewIface *) view_details, &iter);
-}
 
 static gboolean
-view_details_scroll(GtkWidget *widget, GdkEventScroll *event)
+is_selected (ViewDetails* view_details, int i)
 {
-	GtkTreeView *tree = (GtkTreeView *) widget;
-	GtkTreePath *path = NULL;
+	return view_details_get_selected((ViewIface*)view_details, &(ViewIter){.i = i});
+}
+
+
+static gboolean
+view_details_scroll (GtkWidget* widget, GdkEventScroll* event)
+{
+	GtkTreeView* tree = (GtkTreeView*)widget;
+	GtkTreePath* path = NULL;
 
 	if (!gtk_tree_view_get_path_at_pos(tree, 0, 1, &path, NULL, NULL, NULL))
 		return TRUE;	/* Empty? */
@@ -610,11 +617,11 @@ out:
 	return TRUE;
 }
 
+
 #if 0
 static gint
-view_details_key_press(GtkWidget *widget, GdkEventKey *event)
+view_details_key_press (GtkWidget* widget, GdkEventKey* event)
 {
-	PF;
 	if (event->keyval == GDK_Up || event->keyval == GDK_Down ||
 	    event->keyval == GDK_Prior || event->keyval == GDK_Next ||
 	    event->keyval == GDK_Home || event->keyval == GDK_End)
@@ -623,41 +630,28 @@ view_details_key_press(GtkWidget *widget, GdkEventKey *event)
 }
 #endif
 
+
 static gboolean
-view_details_button_press(GtkWidget* widget, GdkEventButton* ev)
+view_details_button_press (GtkWidget* widget, GdkEventButton* ev)
 {
 	PF;
-	Filer *filer_window = ((ViewDetails *) widget)->filer_window;
-	GtkTreeView* treeview = (GtkTreeView *) widget;
+	//GtkTreeView* treeview = (GtkTreeView *) widget;
 
 	if(ev->type == GDK_BUTTON_PRESS && ev->button == 3){
-		if(filer_window->menu) gtk_menu_popup(GTK_MENU(filer_window->menu),
+		if(((ViewDetails*)widget)->filer_window->menu) gtk_menu_popup(GTK_MENU(((ViewDetails*)widget)->filer_window->menu),
                    NULL, NULL, NULL, NULL,
                    (ev) ? ev->button : 0,
                    gdk_event_get_time((GdkEvent*)ev));
-
-		GtkTreeSelection* selection = gtk_tree_view_get_selection(treeview);
-		GList* selectionlist = gtk_tree_selection_get_selected_rows(selection, NULL);
-		if(!selectionlist){
-			GtkTreePath* path;
-			if(gtk_tree_view_get_path_at_pos(treeview, (gint)ev->x, (gint)ev->y, &path, NULL, NULL, NULL)){
-				gtk_tree_selection_unselect_all(selection);
-				gtk_tree_selection_select_path(selection, path);
-				gtk_tree_path_free(path);
-			}
-			gtk_window_set_focus((GtkWindow*)gtk_widget_get_toplevel(widget), widget);
-		}
-		//return without calling parent so that selection is not changed.
-		return TRUE; // must be handled so that global pop-ups are not also opened.
 	}
 
-	//if (ev->window != gtk_tree_view_get_bin_window(treeview))
+	//if (bev->window != gtk_tree_view_get_bin_window(tree))
 		return GTK_WIDGET_CLASS(parent_class)->button_press_event(widget, ev);
 
 	//if (dnd_motion_press(widget, bev)) filer_perform_action(filer_window, bev);
 
 	return FALSE; //must return FALSE to allow gtk to do focus handling.
 }
+
 
 static int
 get_lasso_index(ViewDetails *view_details, int y)
@@ -687,8 +681,10 @@ get_lasso_index(ViewDetails *view_details, int y)
 	return i;
 }
 
+
 #if 0
-static gboolean select_lasso_cb(ViewIter *iter, gpointer data)
+static gboolean
+select_lasso_cb(ViewIter *iter, gpointer data)
 {
 	int start = ((int *) data)[0];
 	int end = ((int *) data)[1];
@@ -709,7 +705,9 @@ static gboolean select_lasso_cb(ViewIter *iter, gpointer data)
 						    &titer);
 }
 
-static void select_lasso(ViewDetails *view_details, GdkFunction fn)
+
+static void
+select_lasso(ViewDetails *view_details, GdkFunction fn)
 {
 	GtkAdjustment	*adj;
 	int range[3];
@@ -734,9 +732,10 @@ static void select_lasso(ViewDetails *view_details, GdkFunction fn)
 }
 #endif
 
+
 #if 0
 static gboolean
-view_details_button_release(GtkWidget *widget, GdkEventButton *ev)
+view_details_button_release (GtkWidget *widget, GdkEventButton *ev)
 {
 	PF;
 	GtkTreeView *tree = (GtkTreeView *) widget;
@@ -762,8 +761,9 @@ view_details_button_release(GtkWidget *widget, GdkEventButton *ev)
 }
 #endif
 
+
 static gint
-view_details_motion_notify(GtkWidget *widget, GdkEventMotion *event)
+view_details_motion_notify (GtkWidget *widget, GdkEventMotion *event)
 {
 #if 0
 	ViewDetails *view_details = (ViewDetails *) widget;
@@ -785,16 +785,15 @@ view_details_motion_notify(GtkWidget *widget, GdkEventMotion *event)
 	return 0;
 }
 
-static gboolean
-view_details_expose(GtkWidget *widget, GdkEventExpose *event)
-{
-	GtkTreeView *tree = (GtkTreeView *) widget;
-	GtkTreePath *path = NULL;
-	GdkRectangle focus_rectangle;
-	ViewDetails *view_details = (ViewDetails *) widget;
-	gboolean    had_cursor;
 
-	had_cursor = (GTK_WIDGET_FLAGS(widget) & GTK_HAS_FOCUS) != 0;
+static gboolean
+view_details_expose (GtkWidget* widget, GdkEventExpose* event)
+{
+	GtkTreeView* tree = (GtkTreeView*)widget;
+	GdkRectangle focus_rectangle;
+	ViewDetails* view_details = (ViewDetails*)widget;
+
+	gboolean had_cursor = (GTK_WIDGET_FLAGS(widget) & GTK_HAS_FOCUS) != 0;
 
 	if (view_details->filer_window->selection_state == GTK_STATE_SELECTED)
 		GTK_WIDGET_SET_FLAGS(widget, GTK_HAS_FOCUS);
@@ -854,6 +853,7 @@ view_details_expose(GtkWidget *widget, GdkEventExpose *event)
 		}
 	}
 
+	GtkTreePath* path = NULL;
 	gtk_tree_view_get_cursor(tree, &path, NULL);
 	if (!path) return FALSE;	/* No cursor */
 	gtk_tree_view_get_background_area(tree, path, NULL, &focus_rectangle);
@@ -877,6 +877,7 @@ view_details_expose(GtkWidget *widget, GdkEventExpose *event)
 	return FALSE;
 }
 
+
 static void
 view_details_size_request(GtkWidget *widget, GtkRequisition *requisition)
 {
@@ -890,12 +891,13 @@ view_details_size_request(GtkWidget *widget, GtkRequisition *requisition)
 	requisition->width = 50;
 }
 
-static void view_details_drag_data_received(GtkWidget *widget,
-		GdkDragContext *drag_context,
-		gint x, gint y, GtkSelectionData *data, guint info, guint time)
+
+static void
+view_details_drag_data_received (GtkWidget* widget, GdkDragContext* drag_context, gint x, gint y, GtkSelectionData* data, guint info, guint time)
 {
 	/* Just here to override annoying default handler */
 }
+
 
 static void
 view_details_destroy(GtkObject *obj)
@@ -905,6 +907,7 @@ view_details_destroy(GtkObject *obj)
 	view_details->filer_window = NULL;
 	*/
 }
+
 
 static void
 view_details_finialize(GObject *object)
@@ -916,6 +919,7 @@ view_details_finialize(GObject *object)
 
 	G_OBJECT_CLASS(parent_class)->finalize(object);
 }
+
 
 static void
 view_details_class_init(gpointer gclass, gpointer data)
@@ -956,12 +960,14 @@ view_details_class_init(gpointer gclass, gpointer data)
 					   G_PARAM_READABLE));
 }
 
+
 static gboolean
 block_focus(GtkWidget *button, GtkDirectionType dir, ViewDetails *view_details)
 {
 	GTK_WIDGET_UNSET_FLAGS(button, GTK_CAN_FOCUS);
 	return FALSE;
 }
+
 
 static gboolean
 test_can_change_selection(GtkTreeSelection *sel, GtkTreeModel *model, GtkTreePath *path,
@@ -974,13 +980,15 @@ test_can_change_selection(GtkTreeSelection *sel, GtkTreeModel *model, GtkTreePat
 	return view_details->can_change_selection != 0;
 }
 
+
 static void
 selection_changed(GtkTreeSelection *selection, gpointer user_data)
 {
 	ViewDetails *view_details = VIEW_DETAILS(user_data);
 
-	filer_selection_changed(view_details->filer_window, gtk_get_current_event_time());
+	fm__selection_changed(view_details->filer_window, gtk_get_current_event_time());
 }
+
 
 /*
  * Set the font used for a treeview column to that given for the
@@ -998,6 +1006,7 @@ set_column_mono_font(GtkWidget *widget, GObject *object)
 	g_object_set(object, "font", font_name, NULL);
 }
 
+
 #define ADD_TEXT_COLUMN(name, model_column) \
 	cell = gtk_cell_renderer_text_new();	\
 	column = gtk_tree_view_column_new_with_attributes(name, cell, \
@@ -1011,11 +1020,11 @@ set_column_mono_font(GtkWidget *widget, GObject *object)
 	//				    "foreground-gdk", COL_COLOUR,
 
 static void
-view_details_init(GTypeInstance *object, gpointer gclass)
+view_details_init (GTypeInstance* object, gpointer gclass)
 {
-	GtkTreeView *treeview = (GtkTreeView *) object;
+	GtkTreeView* treeview = (GtkTreeView*)object;
 	GtkTreeViewColumn *column;
-	ViewDetails *view_details = (ViewDetails *) object;
+	ViewDetails* view_details = (ViewDetails *) object;
 
 	view_details->items = g_ptr_array_new();
 	view_details->cursor_base = -1;
@@ -1031,7 +1040,6 @@ view_details_init(GTypeInstance *object, gpointer gclass)
 
 	/* Sorting */
 	view_details->sort_fn = NULL;
-	//GtkTreeSortable* sortable_list = GTK_TREE_SORTABLE(object);
 
 	gtk_tree_view_set_model(treeview, GTK_TREE_MODEL(view_details));
 	/* Do this after set_model, because that can generate this
@@ -1072,6 +1080,7 @@ view_details_init(GTypeInstance *object, gpointer gclass)
 	gtk_tree_view_column_set_sort_column_id(column, COL_GROUP);
 }
 
+
 /* Create the handers for the View interface */
 static void
 view_details_iface_init(gpointer giface, gpointer iface_data)
@@ -1106,14 +1115,14 @@ view_details_iface_init(gpointer giface, gpointer iface_data)
 	iface->auto_scroll_callback = view_details_auto_scroll_callback;
 }
 
+
 /* Implementations of the View interface. See view_iface.c for comments. */
 
 static void
 view_details_style_changed(ViewIface *view, int flags)
 {
-	ViewDetails*  view_details = (ViewDetails *) view;
-	GtkTreeModel* model        = (GtkTreeModel *) view;
-	ViewItem**    items        = (ViewItem **) view_details->items->pdata;
+	ViewDetails* view_details = (ViewDetails*)view;
+	ViewItem** items = (ViewItem**)view_details->items->pdata;
 	int n = view_details->items->len;
 
 	GtkTreePath* path = gtk_tree_path_new();
@@ -1122,16 +1131,11 @@ view_details_style_changed(ViewIface *view, int flags)
 	int i;
 	for (i = 0; i < n; i++)
 	{
-		GtkTreeIter iter;
-		ViewItem    *item = items[i];
+		ViewItem* item = items[i];
+		GtkTreeIter iter = {.user_data = GINT_TO_POINTER(i)};
 
-		iter.user_data = GINT_TO_POINTER(i);
-		if (item->image)
-		{
-			g_object_unref(G_OBJECT(item->image));
-			item->image = NULL;
-		}
-		gtk_tree_model_row_changed(model, path, &iter);
+		_g_object_unref0(item->image);
+		gtk_tree_model_row_changed((GtkTreeModel*)view, path, &iter);
 		gtk_tree_path_next(path);
 	}
 
@@ -1141,6 +1145,7 @@ view_details_style_changed(ViewIface *view, int flags)
 
 	if (flags & VIEW_UPDATE_HEADERS) details_update_header_visibility(view_details);
 }
+
 
 static gint
 wrap_sort(gconstpointer a, gconstpointer b, ViewDetails *view_details)
@@ -1153,6 +1158,7 @@ wrap_sort(gconstpointer a, gconstpointer b, ViewDetails *view_details)
 	else
 		return -view_details->sort_fn(ia->item, ib->item);
 }
+
 
 static void
 resort(ViewDetails *view_details)
@@ -1192,6 +1198,7 @@ resort(ViewDetails *view_details)
 	g_free(new_order);
 }
 
+
 static void
 view_details_sort(ViewIface *view)
 {
@@ -1199,32 +1206,30 @@ view_details_sort(ViewIface *view)
 	gtk_tree_sortable_sort_column_changed((GtkTreeSortable *) view);
 }
 
+
 static void
 view_details_add_items(ViewIface* view, GPtrArray* new_items)
 {
-	PF;
-	ViewDetails *view_details = (ViewDetails *) view;
-	GPtrArray *items = view_details->items;
-	int i;
-	GtkTreeModel *model = (GtkTreeModel *) view;
+	ViewDetails* view_details = (ViewDetails*)view;
+	GPtrArray* items = view_details->items;
+	GtkTreeModel* model = (GtkTreeModel*)view;
 
-	//find the last row in the tree model:
-	GtkTreeIter iter;
-	iter.user_data = GINT_TO_POINTER(items->len);
+	//find the last row in the tree model
+	GtkTreeIter iter = {.user_data = GINT_TO_POINTER(items->len)};
+
 	GtkTreePath* path = details_get_path(model, &iter);
 
-	for (i = 0; i < new_items->len; i++) {
+	int i; for (i = 0; i < new_items->len; i++) {
 		DirItem* item = (DirItem *) new_items->pdata[i];
 		char* leafname = item->leafname;
 
-		if(!filer_match_filter(&filer, item)) continue;
+		if(!fm__match_filter(view_details->filer_window, item)) continue;
 		if (leafname[0] == '.')
 		{
 			if (leafname[1] == '\0')
 				continue; /* Never show '.' */
 
-			if (leafname[1] == '.' &&
-					leafname[2] == '\0')
+			if (leafname[1] == '.' && leafname[2] == '\0')
 				continue; /* Never show '..' */
 		}
 
@@ -1235,7 +1240,7 @@ view_details_add_items(ViewIface* view, GPtrArray* new_items)
 		else                                      vitem->utf8_name = NULL;
 		dbg(2, "leaf=%20s owner=%3i size=%i", leafname, item->uid, item->size);
 
-		g_ptr_array_add(items, vitem); // !!! model just points to the garray entry???? !!!
+		g_ptr_array_add(items, vitem);
 
 		iter.user_data = GINT_TO_POINTER(items->len - 1);
 		gtk_tree_model_row_inserted(model, path, &iter); // emit "row-inserted"
@@ -1246,6 +1251,7 @@ view_details_add_items(ViewIface* view, GPtrArray* new_items)
 
 	resort(view_details);
 }
+
 
 /* Find an item in the sorted array.
  * Returns the item number, or -1 if not found.
@@ -1287,12 +1293,12 @@ details_find_item(ViewDetails *view_details, DirItem *item)
 	return -1;
 }
 
+
 static void
-view_details_update_items(ViewIface *view, GPtrArray *items)
+view_details_update_items(ViewIface* view, GPtrArray* items)
 {
-	PF;
-	ViewDetails	*view_details = (ViewDetails *) view;
-	GtkTreeModel *model = (GtkTreeModel *) view_details;
+	ViewDetails* view_details = (ViewDetails*)view;
+	GtkTreeModel* model = (GtkTreeModel*)view_details;
 
 	g_return_if_fail(items->len > 0);
 	
@@ -1307,7 +1313,7 @@ view_details_update_items(ViewIface *view, GPtrArray *items)
 		DirItem *item = (DirItem *) items->pdata[i];
 		const gchar *leafname = item->leafname;
 
-		if (!filer_match_filter(&filer, item)) continue;
+		if (!fm__match_filter(view_details->filer_window, item)) continue;
 
 		int j = details_find_item(view_details, item);
 
@@ -1328,6 +1334,7 @@ view_details_update_items(ViewIface *view, GPtrArray *items)
 		}
 	}
 }
+
 
 static void
 view_details_delete_if(ViewIface *view, gboolean (*test)(gpointer item, gpointer data), gpointer data)
@@ -1362,6 +1369,7 @@ view_details_delete_if(ViewIface *view, gboolean (*test)(gpointer item, gpointer
 	gtk_tree_path_free(path);
 }
 
+
 static void
 view_details_clear(ViewIface *view)
 {
@@ -1377,6 +1385,7 @@ view_details_clear(ViewIface *view)
 	gtk_tree_path_free(path);
 }
 
+
 static void
 view_details_select_all(ViewIface *view)
 {
@@ -1386,6 +1395,7 @@ view_details_select_all(ViewIface *view)
 	gtk_tree_selection_select_all(view_details->selection);
 	view_details->can_change_selection--;
 }
+
 
 static void
 view_details_clear_selection(ViewIface *view)
@@ -1397,6 +1407,7 @@ view_details_clear_selection(ViewIface *view)
 	view_details->can_change_selection--;
 }
 
+
 static int
 view_details_count_items(ViewIface *view)
 {
@@ -1404,6 +1415,7 @@ view_details_count_items(ViewIface *view)
 
 	return view_details->items->len;
 }
+
 
 #if GTK_MINOR_VERSION < 2
 static void
@@ -1413,6 +1425,7 @@ view_details_count_inc(GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *iter
 	(*count) += 1;
 }
 #endif
+
 
 static int
 view_details_count_selected(ViewIface *view)
@@ -1429,10 +1442,12 @@ view_details_count_selected(ViewIface *view)
 #endif
 }
 
+
 static void
 view_details_show_cursor(ViewIface *view)
 {
 }
+
 
 static void
 view_details_get_iter(ViewIface *view, ViewIter *iter, IterFlags flags)
@@ -1440,11 +1455,11 @@ view_details_get_iter(ViewIface *view, ViewIter *iter, IterFlags flags)
 	make_iter((ViewDetails *) view, iter, flags);
 }
 
+
 static void
 view_details_get_iter_at_point(ViewIface *view, ViewIter *iter, GdkWindow *src, int x, int y)
 {
 	ViewDetails *view_details = (ViewDetails *) view;
-	//GtkTreeModel *model = gtk_tree_view_get_model(tree);
 	GtkTreeView *tree = (GtkTreeView *) view;
 	GtkTreePath *path = NULL;
 	int i = -1;
@@ -1463,10 +1478,12 @@ view_details_get_iter_at_point(ViewIface *view, ViewIter *iter, GdkWindow *src, 
 	make_item_iter(view_details, iter, i);
 }
 
+
 static void
 view_details_cursor_to_iter(ViewIface *view, ViewIter *iter)
 {
 	ViewDetails *view_details = (ViewDetails *) view;
+	if(!GTK_WIDGET_REALIZED(view)) return;
 
 	GtkTreePath *path = gtk_tree_path_new();
 
@@ -1483,9 +1500,9 @@ view_details_cursor_to_iter(ViewIface *view, ViewIter *iter)
 	if(GTK_WIDGET_REALIZED((GtkWidget*)view)){
 		gtk_tree_view_set_cursor((GtkTreeView *) view, path, NULL, FALSE);
 	}
-	else dbg(2, "cannot set cursor, widget not realised.");
 	gtk_tree_path_free(path);
 }
+
 
 static void
 set_selected(ViewDetails *view_details, int i, gboolean selected)
@@ -1501,11 +1518,13 @@ set_selected(ViewDetails *view_details, int i, gboolean selected)
 	view_details->can_change_selection--;
 }
 
+
 static void
 view_details_set_selected(ViewIface *view, ViewIter *iter, gboolean selected)
 {
 	set_selected((ViewDetails *) view, iter->i, selected);
 }
+
 
 static gboolean
 get_selected(ViewDetails *view_details, int i)
@@ -1517,11 +1536,13 @@ get_selected(ViewDetails *view_details, int i)
 	return gtk_tree_selection_iter_is_selected(view_details->selection, &iter);
 }
 
+
 static gboolean
 view_details_get_selected(ViewIface *view, ViewIter *iter)
 {
 	return get_selected((ViewDetails *) view, iter->i);
 }
+
 
 static void
 view_details_select_only(ViewIface *view, ViewIter *iter)
@@ -1538,32 +1559,12 @@ view_details_select_only(ViewIface *view, ViewIter *iter)
 	gtk_tree_path_free(path);
 }
 
+
 static void
 view_details_set_frozen(ViewIface *view, gboolean frozen)
 {
 }
 
-#if 0
-static void
-view_details_autosize(ViewIface *view)
-{
-	ViewDetails *view_details = (ViewDetails *) view;
-	FilerWindow *filer_window = view_details->filer_window;
-	int max_width = (o_filer_size_limit.int_value * monitor_width) / 100;
-	int max_height = (o_filer_size_limit.int_value * monitor_height) / 100;
-	int h;
-	GtkRequisition req;
-
-	gtk_widget_queue_resize(GTK_WIDGET(view));
-	gtk_widget_size_request(GTK_WIDGET(view), &req);
-
-	h = MAX(view_details->desired_size.height, SMALL_HEIGHT);
-
-	filer_window_set_size(filer_window,
-			MIN(view_details->desired_size.width, max_width),
-			MIN(h, max_height));
-}
-#endif
 
 static gboolean
 view_details_cursor_visible(ViewIface *view)
@@ -1577,12 +1578,14 @@ view_details_cursor_visible(ViewIface *view)
 	return path != NULL;
 }
 
+
 static void view_details_set_base(ViewIface *view, ViewIter *iter)
 {
 	ViewDetails *view_details = (ViewDetails *) view;
 
 	view_details->cursor_base = iter->i;
 }
+
 
 #if 0
 /* Change the dynamic corner of the lasso box and trigger a redraw */
@@ -1629,6 +1632,7 @@ static void set_lasso(ViewDetails *view_details, int x, int y)
 }
 #endif
 
+
 static void
 view_details_start_lasso_box(ViewIface *view, GdkEventButton *event)
 {
@@ -1647,10 +1651,12 @@ view_details_start_lasso_box(ViewIface *view, GdkEventButton *event)
 	view_details->lasso_box = TRUE;
 }
 
+
 static void
 view_details_extend_tip(ViewIface *view, ViewIter *iter, GString *tip)
 {
 }
+
 
 static DirItem*
 iter_init(ViewIter *iter)
@@ -1695,8 +1701,9 @@ iter_init(ViewIter *iter)
 	return iter->peek(iter);
 }
 
+
 static DirItem*
-iter_prev(ViewIter *iter)
+iter_prev (ViewIter *iter)
 {
 	ViewDetails *view_details = (ViewDetails *) iter->view;
 	int n = view_details->items->len;
@@ -1730,8 +1737,9 @@ iter_prev(ViewIter *iter)
 	return NULL;
 }
 
+
 static DirItem*
-iter_next(ViewIter *iter)
+iter_next (ViewIter *iter)
 {
 	ViewDetails *view_details = (ViewDetails *) iter->view;
 	int n = view_details->items->len;
@@ -1765,8 +1773,9 @@ iter_next(ViewIter *iter)
 	return NULL;
 }
 
+
 static DirItem*
-iter_peek(ViewIter *iter)
+iter_peek (ViewIter *iter)
 {
 	ViewDetails *view_details = (ViewDetails *) iter->view;
 	int n = view_details->items->len;
@@ -1779,11 +1788,12 @@ iter_peek(ViewIter *iter)
 	return ((ViewItem *) view_details->items->pdata[i])->item;
 }
 
+
 /* Set the iterator to return 'i' on the next peek().
  * If i is -1, returns NULL on next peek().
  */
 static void
-make_item_iter(ViewDetails *view_details, ViewIter *iter, int i)
+make_item_iter (ViewDetails *view_details, ViewIter *iter, int i)
 {
 	make_iter(view_details, iter, 0);
 
@@ -1795,8 +1805,9 @@ make_item_iter(ViewDetails *view_details, ViewIter *iter, int i)
 	iter->n_remaining = 0;
 }
 
+
 static void
-make_iter(ViewDetails *view_details, ViewIter *iter, IterFlags flags)
+make_iter (ViewDetails *view_details, ViewIter *iter, IterFlags flags)
 {
 	iter->view = (ViewIface *) view_details;
 	iter->next = iter_init;
@@ -1814,16 +1825,18 @@ make_iter(ViewDetails *view_details, ViewIter *iter, IterFlags flags)
 		iter->n_remaining = view_details->items->len;
 }
 
+
 static void
-free_view_item(ViewItem *view_item)
+free_view_item (ViewItem *view_item)
 {
 	if (view_item->image) g_object_unref(G_OBJECT(view_item->image));
 	g_free(view_item->utf8_name);
 	g_free(view_item);
 }
 
+
 static gboolean
-view_details_auto_scroll_callback(ViewIface *view)
+view_details_auto_scroll_callback (ViewIface *view)
 {
 #if 0
 	GtkTreeView	*tree = (GtkTreeView *) view;
@@ -1866,8 +1879,9 @@ view_details_auto_scroll_callback(ViewIface *view)
 	return TRUE;
 }
 
+
 void
-view_details_dnd_get(GtkWidget* widget, GdkDragContext* context, GtkSelectionData* selection_data, guint info, guint time, gpointer data)
+view_details_dnd_get (GtkWidget* widget, GdkDragContext* context, GtkSelectionData* selection_data, guint info, guint time, gpointer data)
 {
 	//outgoing drop. provide the dropee with info on which files were dropped.
 
@@ -1912,9 +1926,9 @@ view_details_dnd_get(GtkWidget* widget, GdkDragContext* context, GtkSelectionDat
 void
 view_details_set_alt_colours(ViewDetails* view, GdkColor* bg, GdkColor* fg)
 {
+	view->use_alt_colours = true;
 	view->alt_bg = *bg;
 	view->alt_fg = *fg;
-	view->use_alt_colours = true;
 }
 
 
@@ -1936,8 +1950,6 @@ view_details_on_realise(ViewDetails* view, gpointer user_data)
 static void
 view_details_on_edited(GtkCellRendererText *cell, gchar* path_string, gchar* new_text, ViewDetails* view)
 {
-	PF;
-
 	GtkTreePath* treepath = gtk_tree_path_new_from_string(path_string);
 	if(treepath){
 		gchar* leaf;
@@ -1946,7 +1958,6 @@ view_details_on_edited(GtkCellRendererText *cell, gchar* path_string, gchar* new
 		gtk_tree_model_get_iter(model, &iter, treepath);
 		gtk_tree_model_get(model, &iter, COL_LEAF, &leaf, -1);
 
-		//Filer* filer = view->filer_window;
 		char* dir = view->filer_window->real_path;
 
 		gchar* src  = g_build_filename(dir, leaf, NULL);

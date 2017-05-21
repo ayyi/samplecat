@@ -30,9 +30,6 @@ typedef struct _view_option       ViewOption;
 typedef struct _palette           Palette;
 typedef struct _accel             Accel;
 typedef struct _ScanResults       ScanResults;
-
-#ifndef __file_manager_h__
 typedef struct _GimpActionGroup   GimpActionGroup;
-#endif
 
 #endif

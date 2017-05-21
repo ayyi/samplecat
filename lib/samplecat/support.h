@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2015 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2017 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -14,7 +14,7 @@
 #include <stdint.h>
 #include <gtk/gtk.h>
 #include "utils/ayyi_utils.h"
-#include "utils/mime_type.h"
+#include "file_manager/mimetype.h"
 #include "samplecat/typedefs.h"
 
 #define HAS_ALPHA_FALSE 0

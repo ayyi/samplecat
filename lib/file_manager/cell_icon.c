@@ -29,17 +29,16 @@
 #include <sys/stat.h>
 
 #include "debug/debug.h"
-#include "utils/ayyi_utils.h"
+
 #include "file_manager.h"
 
 #include "file_view.h"
 #include "cell_icon.h"
 #include "dir.h"
-#include "filer.h"
 #include "display.h"
 #include "diritem.h"
-#include "utils/pixmaps.h"
-#include "utils/fscache.h"
+#include "pixmaps.h"
+#include "fscache.h"
 
 typedef struct _CellIcon CellIcon;
 typedef struct _CellIconClass CellIconClass;
@@ -201,11 +200,11 @@ get_style(GtkCellRenderer *cell)
 
 	if (!view_item->image)
 	{
-		Filer* filer_window = icon->view_details->filer_window;
+		AyyiLibfilemanager* fm = icon->view_details->filer_window;
 
-		if (filer_window->show_thumbs && item->base_type == TYPE_FILE)
+		if (fm->show_thumbs && item->base_type == TYPE_FILE)
 		{
-			const guchar* path = make_path(filer_window->real_path, item->leafname);
+			const guchar* path = make_path(fm->real_path, item->leafname);
 
 			view_item->image = g_fscache_lookup_full(pixmap_cache, (char*)path, FSCACHE_LOOKUP_ONLY_NEW, NULL);
 		}

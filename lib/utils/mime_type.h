@@ -1,5 +1,6 @@
-#ifndef __mime_type_h__
-#define __mime_type_h__
+#if 0
+#ifndef __mimetype_h__
+#define __mimetype_h__
 
 #include <gtk/gtk.h>
 #include "utils/pixmaps.h"
@@ -31,3 +32,4 @@ GdkPixbuf*         mime_type_get_pixbuf (MIME_type*);
 MaskedPixmap*      type_to_icon         (MIME_type*);
 
 #endif //__mime_type_h__
+#endif

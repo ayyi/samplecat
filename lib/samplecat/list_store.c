@@ -18,6 +18,7 @@
 #include <float.h>
 #include <math.h>
 #include <file_manager/mimetype.h>
+#include <file_manager/pixmaps.h>
 #include <debug/debug.h>
 #include <db/db.h>
 #include <samplecat.h>
@@ -83,8 +84,7 @@ samplecat_list_store_clear_ (SamplecatListStore* self)
 	while(gtk_tree_model_get_iter_first(GTK_TREE_MODEL(self), &iter)){
 		GdkPixbuf* pixbuf = NULL;
 		Sample* sample = NULL;
-		gtk_tree_model_get(GTK_TREE_MODEL(self), &iter, COL_OVERVIEW, &pixbuf, -1);
-		gtk_tree_model_get(GTK_TREE_MODEL(self), &iter, COL_SAMPLEPTR, &sample, -1);
+		gtk_tree_model_get(GTK_TREE_MODEL(self), &iter, COL_OVERVIEW, &pixbuf, COL_SAMPLEPTR, &sample, -1);
 		gtk_list_store_remove((GtkListStore*)self, &iter);
 		if(pixbuf) g_object_unref(pixbuf);
 		if(sample) sample_unref(sample);

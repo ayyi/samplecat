@@ -48,8 +48,6 @@
  * dir_detach() functions.
  */
 
-#include "config.h"
-
 #define _GNU_SOURCE
 #include <gtk/gtk.h>
 #include <errno.h>
@@ -58,29 +56,25 @@
 #include <unistd.h>
 
 #include "debug/debug.h"
-#include "file_manager.h"
-#include "rox_global.h"
 
+#include "support.h"
 #include "dir.h"
 #include "diritem.h"
-#include "rox_support.h"
-#include "utils/fscache.h"
-#include "utils/pixmaps.h"
+#include "fscache.h"
+#include "pixmaps.h"
 #include "mimetype.h"
-#include "menu.h"
+
+#define g_source_remove0(S) {if(S) g_source_remove(S); S = 0;}
 
 #ifdef USE_NOTIFY
-static GHashTable *notify_fd_to_dir = NULL;
+static GHashTable* notify_fd_to_dir = NULL;
 #endif
 #ifdef USE_INOTIFY
 # include <sys/inotify.h>
-GIOChannel *inotify_channel;
+GIOChannel* inotify_channel;
 static int inotify_fd;
 #endif
 #ifdef USE_DNOTIFY
-/* Newer Linux kernels can tell us when the directories we are watching
- * change, using the dnotify system.
- */
 gboolean dnotify_wakeup_flag = FALSE;
 static int dnotify_last_fd = -1;
 #endif
@@ -90,27 +84,26 @@ int to_wakeup_pipe = -1;    /* Write here to get noticed */
 /* For debugging. Can't detach when this is non-zero. */
 static int in_callback = 0;
 
-GFSCache *dir_cache = NULL;
-
-extern int debug;
+GFSCache* dir_cache = NULL;
 
 /* Static prototypes */
-static void       update(Directory *dir, gchar *pathname, gpointer data);
-static void       set_idle_callback(Directory *dir);
-static DirItem*   insert_item(Directory *dir, const guchar *leafname);
-static void       remove_missing(Directory *dir, GPtrArray *keep);
-static void       dir_recheck(Directory *dir, const guchar *path, const guchar *leafname);
-static GPtrArray* hash_to_array(GHashTable *hash);
-static void       dir_force_update_item(Directory *dir, const gchar *leaf);
-static Directory* dir_new(const char *pathname);
-static void       dir_rescan(Directory *dir);
-#ifdef USE_NOTIFY
-static void       dir_rescan_soon(Directory *dir);
-# ifdef USE_INOTIFY
-static gboolean   inotify_handler(GIOChannel *source, GIOCondition condition, gpointer udata);
-# else
-static void       dnotify_handler(int sig, siginfo_t *si, void *data);
-# endif
+static void       update                (Directory*, gchar* pathname, gpointer);
+static void       set_idle_callback     (Directory*);
+static DirItem*   insert_item           (Directory*, const guchar* leafname);
+static void       remove_missing        (Directory*, GPtrArray* keep);
+#if 0
+static void       dir_recheck           (Directory*, const guchar* path, const guchar* leafname);
+#endif
+static GPtrArray* hash_to_array         (GHashTable*);
+static void       dir_force_update_item (Directory*, const gchar* leaf);
+static Directory* dir_new               (const char* pathname);
+static void       dir_rescan            (Directory*);
+#ifdef USE_DNOTIFY
+static void       dir_rescan_soon       (Directory*);
+static void       dnotify_handler       (int sig, siginfo_t *si, void *data);
+#endif
+#ifdef USE_INOTIFY
+static gboolean   inotify_handler       (GIOChannel* source, GIOCondition, gpointer);
 #endif
 
 /****************************************************************
@@ -153,57 +146,49 @@ dir_init(void)
 #endif
 }
 
-/* Periodically calls callback to notify about changes to the contents
- * of the directory.
- * Before this function returns, it calls the callback once to add all
- * the items currently in the directory (unless the dir is empty).
- * It then calls callback(DIR_QUEUE_INTERESTING) to find out which items the
- * caller cares about.
- * If we are not scanning, it also calls callback(DIR_END_SCAN).
+/*
+ *  Periodically calls callback to notify about changes to the contents
+ *  of the directory.
+ *  Before this function returns, it calls the callback once to add all
+ *  the items currently in the directory (unless the dir is empty).
+ *  It then calls callback(DIR_QUEUE_INTERESTING) to find out which items the
+ *  caller cares about.
+ *  If we are not scanning, it also calls callback(DIR_END_SCAN).
  */
 void
-dir_attach(Directory *dir, DirCallback callback, gpointer data)
+dir_attach (Directory* dir, DirCallback callback, gpointer data)
 {
-	g_return_if_fail(dir != NULL);
-	g_return_if_fail(callback != NULL);
+	g_return_if_fail(dir);
+	g_return_if_fail(callback);
 
 	DirUser* user = g_new(DirUser, 1);
 	user->callback = callback;
 	user->data = data;
 
 #ifdef USE_INOTIFY
-	if (!dir->users)
-	{
-		int fd;
-
+	if (!dir->users) {
 		if (dir->notify_fd != -1)
 			g_warning("dir_attach: inotify error\n");
 
-		fd = inotify_add_watch( inotify_fd,
+		int fd = inotify_add_watch( inotify_fd,
 					dir->pathname,
 					IN_CREATE | IN_DELETE | IN_MOVE |
 					IN_ATTRIB); 
 		
-		g_return_if_fail(g_hash_table_lookup(notify_fd_to_dir,
-						 GINT_TO_POINTER(fd)) == NULL);
-		if (fd != -1)
-		{
-		  
+		g_return_if_fail(g_hash_table_lookup(notify_fd_to_dir, GINT_TO_POINTER(fd)) == NULL);
+
+		if (fd != -1) {
 			dir->notify_fd = fd;
-			g_hash_table_insert(notify_fd_to_dir,
-					    GINT_TO_POINTER(fd), dir);
+			g_hash_table_insert(notify_fd_to_dir, GINT_TO_POINTER(fd), dir);
 		}
 	}
 #endif
 #ifdef USE_NOTIFY
 #ifdef USE_DNOTIFY
-	if (!dir->users)
-	{
-		int fd;
-		
+	if (!dir->users) {
 		if (dir->notify_fd != -1) g_warning("dir_attach: dnotify error\n");
 		
-		fd = open(dir->pathname, O_RDONLY);
+		int fd = open(dir->pathname, O_RDONLY);
 		g_return_if_fail(g_hash_table_lookup(notify_fd_to_dir, GINT_TO_POINTER(fd)) == NULL);
 		if (fd != -1) {
 			dir->notify_fd = fd;
@@ -232,22 +217,21 @@ dir_attach(Directory *dir, DirCallback callback, gpointer data)
 	if (!dir->scanning) callback(dir, DIR_END_SCAN, NULL, data);
 }
 
-/* Undo the effect of dir_attach */
-void
-dir_detach(Directory *dir, DirCallback callback, gpointer data)
-{
-	DirUser	*user;
-	GList	*list;
 
-	g_return_if_fail(dir != NULL);
-	g_return_if_fail(callback != NULL);
+/*
+ *   Undo the effect of dir_attach
+ */
+void
+dir_detach(Directory* dir, DirCallback callback, gpointer data)
+{
+	g_return_if_fail(dir);
+	g_return_if_fail(callback);
 	g_return_if_fail(in_callback == 0);
 
-	for (list = dir->users; list; list = list->next)
-	{
-		user = (DirUser *) list->data;
-		if (user->callback == callback && user->data == data)
-		{
+	GList* l = dir->users;
+	for (;l;l=l->next) {
+		DirUser* user = (DirUser*)l->data;
+		if (user->callback == callback && user->data == data) {
 			g_free(user);
 			dir->users = g_list_remove(dir->users, user);
 			g_object_unref(dir);
@@ -256,8 +240,7 @@ dir_detach(Directory *dir, DirCallback callback, gpointer data)
 			set_idle_callback(dir);
 
 #ifdef USE_NOTIFY
-			if (!dir->users && dir->notify_fd != -1)
-			{
+			if (!dir->users && dir->notify_fd != -1) {
 # ifdef USE_DNOTIFY
 				close(dir->notify_fd);
 # endif
@@ -279,24 +262,28 @@ dir_detach(Directory *dir, DirCallback callback, gpointer data)
 	g_warning("dir_detach: Callback/data pair not attached!\n");
 }
 
+
 void
-dir_update(Directory *dir, gchar *pathname)
+dir_update(Directory* dir, gchar* pathname)
 {
-	PF;
 	update(dir, pathname, NULL);
 }
 
-/* Rescan this directory */
+
+/*
+ *   Rescan this directory
+ */
 void
-refresh_dirs(const char *path)
+refresh_dirs (const char *path)
 {
-	PF;
 	g_fscache_update(dir_cache, path);
 }
 
-/* When something has happened to a particular object, call this
- * and all appropriate changes will be made.
+/*
+ *   When something has happened to a particular object, call this
+ *   and all appropriate changes will be made.
  */
+#if 0
 void
 dir_check_this(const guchar *path)
 {
@@ -305,21 +292,23 @@ dir_check_this(const guchar *path)
 	g_free(dir_path);
 
 	Directory* dir = g_fscache_lookup_full(dir_cache, (char*)real_path, FSCACHE_LOOKUP_PEEK, NULL);
-	if (dir)
-	{
-		dir_recheck(dir, real_path, (guchar*)g_basename((char*)path));
+	if (dir) {
+		char* basename = g_path_get_basename((gchar*)path);
+		dir_recheck(dir, real_path, (guchar*)basename);
+		g_free(basename);
 		g_object_unref(dir);
 	}
 	
 	g_free(real_path);
 }
+#endif
 
-#ifdef USE_DNOTIFY //not currently used with inotify
+#ifdef USE_NOTIFY
 static void
 drop_notify(gpointer key, gpointer value, gpointer data)
 {
 #ifdef USE_INOTIFY
-        inotify_rm_watch(inotify_fd, GPOINTER_TO_INT(key));
+	inotify_rm_watch(inotify_fd, GPOINTER_TO_INT(key));
 #endif
 #ifdef USE_DNOTIFY
 	close(GPOINTER_TO_INT(key));
@@ -334,7 +323,7 @@ drop_notify(gpointer key, gpointer value, gpointer data)
 void
 dir_drop_all_notifies(void)
 {
-#ifdef USE_DNOTIFY
+#ifdef USE_NOTIFY
 	g_hash_table_foreach(notify_fd_to_dir, drop_notify, NULL);
 #endif
 }
@@ -355,15 +344,19 @@ dir_force_update_path(const gchar *path)
 	dir = g_fscache_lookup_full(dir_cache, dir_path, FSCACHE_LOOKUP_PEEK, NULL);
 	if (dir)
 	{
-		dir_force_update_item(dir, g_basename(path));
+		char* basename = g_path_get_basename(path);
+		dir_force_update_item(dir, basename);
+		g_free(basename);
 		g_object_unref(dir);
 	}
 	
 	g_free(dir_path);
 }
 
-/* Ensure that @leafname is up-to-date. Returns the new/updated
- * DirItem, or NULL if the file no longer exists.
+
+/*
+ *  Ensure that @leafname is up-to-date. Returns the new/updated
+ *  DirItem, or NULL if the file no longer exists.
  */
 DirItem*
 dir_update_item(Directory *dir, const gchar *leafname)
@@ -376,31 +369,36 @@ dir_update_item(Directory *dir, const gchar *leafname)
 	return item;
 }
 
-/* Add item to the recheck_list if it's marked as needing it.
- * Item must have ITEM_FLAG_NEED_RESCAN_QUEUE.
- * Items on the list will get checked later in an idle callback.
+
+/*
+ *  Add item to the recheck_list if it's marked as needing it.
+ *  Item must have ITEM_FLAG_NEED_RESCAN_QUEUE.
+ *  Items on the list will get checked later in an idle callback.
  */
 void
-dir_queue_recheck(Directory *dir, DirItem *item)
+dir_queue_recheck(Directory* dir, DirItem* item)
 {
-	g_return_if_fail(dir != NULL);
-	g_return_if_fail(item != NULL);
+	g_return_if_fail(dir);
+	g_return_if_fail(item);
 	g_return_if_fail(item->flags & ITEM_FLAG_NEED_RESCAN_QUEUE);
 
-	dir->recheck_list = g_list_prepend(dir->recheck_list,
-			g_strdup(item->leafname));
+	dir->recheck_list = g_list_prepend(dir->recheck_list, g_strdup(item->leafname));
 	item->flags &= ~ITEM_FLAG_NEED_RESCAN_QUEUE;
 }
 
+
 static void
-free_recheck_list(Directory *dir)
+free_recheck_list(Directory* dir)
 {
 	destroy_glist(&dir->recheck_list);
 }
 
-/* If scanning state has changed then notify all filer windows */
+
+/*
+ *  If scanning state has changed then notify all filer windows
+ */
 static void
-dir_set_scanning(Directory *dir, gboolean scanning)
+dir_set_scanning(Directory* dir, gboolean scanning)
 {
 	if (scanning == dir->scanning) return;
 
@@ -413,9 +411,7 @@ dir_set_scanning(Directory *dir, gboolean scanning)
 	{
 		DirUser *user = (DirUser *) next->data;
 
-		user->callback(dir,
-				scanning ? DIR_START_SCAN : DIR_END_SCAN,
-				NULL, user->data);
+		user->callback(dir, scanning ? DIR_START_SCAN : DIR_END_SCAN, NULL, user->data);
 	}
 
 #if 0
@@ -430,16 +426,19 @@ dir_set_scanning(Directory *dir, gboolean scanning)
 	in_callback--;
 }
 
-/* Notify everyone that the error status of the directory has changed */
+
+/*
+ * Notify everyone that the error status of the directory has changed
+ */
 static void
-dir_error_changed(Directory *dir)
+dir_error_changed(Directory* dir)
 {
 	in_callback++;
 
 	GList* next;
 	for (next = dir->users; next; next = next->next)
 	{
-		DirUser *user = (DirUser *) next->data;
+		DirUser* user = (DirUser*)next->data;
 
 		user->callback(dir, DIR_ERROR_CHANGED, NULL, user->data);
 	}
@@ -447,18 +446,20 @@ dir_error_changed(Directory *dir)
 	in_callback--;
 }
 
-/* This is called in the background when there are items on the
- * dir->recheck_list to process.
+
+/*
+ *  This is called in the background when there are items on the
+ *  dir->recheck_list to process.
  */
 static gboolean
-recheck_callback(gpointer data)
+recheck_callback (gpointer data)
 {
-	Directory *dir = (Directory *) data;
+	Directory* dir = (Directory*)data;
 	
-	g_return_val_if_fail(dir != NULL, FALSE);
-	g_return_val_if_fail(dir->recheck_list != NULL, FALSE);
+	g_return_val_if_fail(dir, FALSE);
+	g_return_val_if_fail(dir->recheck_list, FALSE);
 
-	/* Remove the first name from the list */
+	// Remove the first name from the list
 	GList* next = dir->recheck_list;
 	dir->recheck_list = g_list_remove_link(dir->recheck_list, next);
 	guchar* leaf = (guchar *) next->data;
@@ -472,7 +473,7 @@ recheck_callback(gpointer data)
 
 	if (dir->recheck_list) return TRUE;	/* Call again */
 
-	/* The recheck_list list empty. Stop scanning, unless
+	/* The recheck_list list is empty. Stop scanning, unless
 	 * needs_update, in which case we start scanning again.
 	 */
 
@@ -480,30 +481,30 @@ recheck_callback(gpointer data)
 	
 	dir->have_scanned = TRUE;
 	dir_set_scanning(dir, FALSE);
-	g_source_remove(dir->idle_callback);
-	dir->idle_callback = 0;
+	g_source_remove0(dir->idle_callback);
 
 	if (dir->needs_update) dir_rescan(dir);
 
 	return FALSE;
 }
 
-/* Add all the new items to the items array.
- * Notify everyone who is watching us.
+
+/*
+ *   Add all the new items to the items array.
+ *   Notify everyone who is watching us.
  */
 void
-dir_merge_new(Directory *dir)
+dir_merge_new (Directory* dir)
 {
-	GPtrArray *new = dir->new_items;
-	GPtrArray *up = dir->up_items;
-	GPtrArray *gone = dir->gone_items;
-	GList	  *list;
+	GPtrArray* new = dir->new_items;
+	GPtrArray* up = dir->up_items;
+	GPtrArray* gone = dir->gone_items;
 	
 	in_callback++;
 
-	for (list = dir->users; list; list = list->next)
-	{
-		DirUser *user = (DirUser *) list->data;
+	GList* l = dir->users;
+	for (;l;l=l->next) {
+		DirUser* user = (DirUser*)l->data;
 
 		if (new->len)
 			user->callback(dir, DIR_ADD, new, user->data);
@@ -515,17 +516,14 @@ dir_merge_new(Directory *dir)
 
 	in_callback--;
 
-	guint i;
-	for (i = 0; i < new->len; i++)
-	{
-		DirItem *item = (DirItem *) new->pdata[i];
+	guint i; for (i = 0; i < new->len; i++) {
+		DirItem* item = (DirItem*)new->pdata[i];
 
 		g_hash_table_insert(dir->known_items, item->leafname, item);
 	}
 
-	for (i = 0; i < gone->len; i++)
-	{
-		DirItem	*item = (DirItem *) gone->pdata[i];
+	for (i = 0; i < gone->len; i++) {
+		DirItem* item = (DirItem*)gone->pdata[i];
 
 		diritem_free(item);
 	}
@@ -535,8 +533,11 @@ dir_merge_new(Directory *dir)
 	g_ptr_array_set_size(up, 0);
 }
 
+
 #ifdef USE_DNOTIFY
-/* Called from the mainloop shortly after dnotify_handler */
+/*
+ *   Called from the mainloop shortly after dnotify_handler
+ */
 void
 dnotify_wakeup(void)
 {
@@ -581,14 +582,13 @@ dir_rescan_soon(Directory *dir)
 }
 #endif
 
-static void
-free_items_array(GPtrArray *array)
-{
-	guint	i;
 
-	for (i = 0; i < array->len; i++)
+static void
+free_items_array (GPtrArray* array)
+{
+	guint i; for (i = 0; i < array->len; i++)
 	{
-		DirItem	*item = (DirItem *) array->pdata[i];
+		DirItem* item = (DirItem*)array->pdata[i];
 
 		diritem_free(item);
 	}
@@ -596,74 +596,73 @@ free_items_array(GPtrArray *array)
 	g_ptr_array_free(array, TRUE);
 }
 
-/* Tell everyone watching that these items have gone */
+
+/*
+ *  Tell everyone watching that these items have gone
+ */
 static void
-notify_deleted(Directory *dir, GPtrArray *deleted)
+notify_deleted (Directory* dir, GPtrArray* deleted)
 {
-	GList	*next;
-	
 	if (!deleted->len)
 		return;
 
 	in_callback++;
 
-	for (next = dir->users; next; next = next->next)
-	{
-		DirUser *user = (DirUser *) next->data;
-
+	GList* l = dir->users;
+	for (;l;l=l->next) {
+		DirUser* user = (DirUser*)l->data;
 		user->callback(dir, DIR_REMOVE, deleted, user->data);
 	}
 
 	in_callback--;
 }
 
+
 static void
-mark_unused(gpointer key, gpointer value, gpointer data)
+mark_unused (gpointer key, gpointer value, gpointer data)
 {
-	DirItem	*item = (DirItem *) value;
+	DirItem* item = (DirItem*)value;
 
 	item->may_delete = TRUE;
 }
 
+
 static void
-keep_deleted(gpointer key, gpointer value, gpointer data)
+keep_deleted (gpointer key, gpointer value, gpointer data)
 {
-	DirItem	*item = (DirItem *) value;
-	GPtrArray *deleted = (GPtrArray *) data;
+	DirItem* item = (DirItem*)value;
+	GPtrArray* deleted = (GPtrArray*)data;
 
 	if (item->may_delete)
 		g_ptr_array_add(deleted, item);
 }
 
+
 static gboolean
-check_unused(gpointer key, gpointer value, gpointer data)
+check_unused (gpointer key, gpointer value, gpointer data)
 {
-	DirItem	*item = (DirItem *) value;
+	DirItem* item = (DirItem*)value;
 
 	return item->may_delete;
 }
 
-/* Remove all the old items that have gone.
- * Notify everyone who is watching us of the removed items.
+
+/*
+ *  Remove all the old items that have gone.
+ *  Notify everyone who is watching us of the removed items.
  */
 static void
-remove_missing(Directory *dir, GPtrArray *keep)
+remove_missing (Directory* dir, GPtrArray* keep)
 {
-	GPtrArray	*deleted;
-	guint		i;
-
-	deleted = g_ptr_array_new();
+	GPtrArray* deleted = g_ptr_array_new();
 
 	/* Mark all current items as may_delete */
 	g_hash_table_foreach(dir->known_items, mark_unused, NULL);
 
 	/* Unmark all items also in 'keep' */
-	for (i = 0; i < keep->len; i++)
-	{
-		guchar	*leaf = (guchar *) keep->pdata[i];
-		DirItem *item;
-
-		item = g_hash_table_lookup(dir->known_items, leaf);
+	guint i; for (i = 0; i < keep->len; i++) {
+		guchar* leaf = (guchar*)keep->pdata[i];
+		DirItem* item = g_hash_table_lookup(dir->known_items, leaf);
 
 		if (item)
 			item->may_delete = FALSE;
@@ -680,10 +679,11 @@ remove_missing(Directory *dir, GPtrArray *keep)
 	free_items_array(deleted);
 }
 
+
 static gint
-notify_timeout(gpointer data)
+notify_timeout (gpointer data)
 {
-	Directory	*dir = (Directory *) data;
+	Directory* dir = (Directory*)data;
 
 	g_return_val_if_fail(dir->notify_active == TRUE, FALSE);
 
@@ -695,9 +695,12 @@ notify_timeout(gpointer data)
 	return FALSE;
 }
 
-/* Call dir_merge_new() after a while. */
+
+/*
+ *  Call dir_merge_new() after a while.
+ */
 static void
-delayed_notify(Directory *dir)
+delayed_notify (Directory* dir)
 {
 	if (dir->notify_active) return;
 	g_object_ref(dir);
@@ -705,20 +708,20 @@ delayed_notify(Directory *dir)
 	dir->notify_active = TRUE;
 }
 
-/* Stat this item and add, update or remove it.
- * Returns the new/updated item, if any.
- * (leafname may be from the current DirItem item)
- * Ensure diritem_recent_time is reasonably up-to-date before calling this.
+
+/*
+ *  Stat this item and add, update or remove it.
+ *  Returns the new/updated item, if any.
+ *  (leafname may be from the current DirItem item)
+ *  Ensure diritem_recent_time is reasonably up-to-date before calling this.
  */
 static DirItem*
-insert_item(Directory *dir, const guchar *leafname)
+insert_item (Directory* dir, const guchar* leafname)
 {
-	DirItem		old;
-	gboolean	do_compare = FALSE;	/* (old is filled in) */
-	memset(&old, 0, sizeof(DirItem));
+	DirItem old = {0,};
+	gboolean do_compare = FALSE;	// (old is filled in)
 
-	if (leafname[0] == '.' && (leafname[1] == '\n' ||
-			(leafname[1] == '.' && leafname[2] == '\n')))
+	if (leafname[0] == '.' && (leafname[1] == '\n' || (leafname[1] == '.' && leafname[2] == '\n')))
 		return NULL;		/* Ignore '.' and '..' */
 
 	const gchar* full_path = (gchar*)make_path(dir->pathname, (gchar*)leafname);
@@ -743,14 +746,12 @@ insert_item(Directory *dir, const guchar *leafname)
 		 */
 		item = diritem_new(leafname);
 		diritem_restat((guchar*)full_path, item, &dir->stat_info);
-		if (item->base_type == TYPE_ERROR &&
-				item->lstat_errno == ENOENT)
+		if (item->base_type == TYPE_ERROR && item->lstat_errno == ENOENT)
 		{
 			diritem_free(item);
 			return NULL;
 		}
 		g_ptr_array_add(dir->new_items, item);
-
 	}
 
 	/* No need to queue the item for scanning. If we got here because
@@ -800,8 +801,9 @@ insert_item(Directory *dir, const guchar *leafname)
 	return item;
 }
 
+
 static void
-update(Directory *dir, gchar *pathname, gpointer data)
+update (Directory* dir, gchar* pathname, gpointer data)
 {
 	g_free(dir->pathname);
 	dir->pathname = pathdup(pathname);
@@ -812,54 +814,52 @@ update(Directory *dir, gchar *pathname, gpointer data)
 		dir_rescan(dir);
 }
 
-/* If there is work to do, set the idle callback.
- * Otherwise, stop scanning and unset the idle callback.
+
+/*
+ *  If there is work to do, set the idle callback.
+ *  Otherwise, stop scanning and unset the idle callback.
  */
 static void
-set_idle_callback(Directory *dir)
+set_idle_callback (Directory* dir)
 {
 	if (dir->recheck_list && dir->users)
 	{
-		/* Work to do, and someone's watching */
+		// Work to do, and someone's watching
 		dir_set_scanning(dir, TRUE);
 		if (dir->idle_callback) return;
 		time(&diritem_recent_time);
 		dir->idle_callback = g_idle_add(recheck_callback, dir);
-		/* Do the first call now (will remove the callback itself) */
+		// Do the first call now (will remove the callback itself)
 		recheck_callback(dir);
 	}
 	else
 	{
 		dir_set_scanning(dir, FALSE);
-		if (dir->idle_callback)
-		{
-			g_source_remove(dir->idle_callback);
-			dir->idle_callback = 0;
-		}
+		g_source_remove0(dir->idle_callback);
 	}
 }
 
-/* See dir_force_update_path() */
+
+/*
+ *  See dir_force_update_path()
+ */
 static void
-dir_force_update_item(Directory *dir, const gchar *leaf)
+dir_force_update_item (Directory* dir, const gchar* leaf)
 {
 	PF;
-	GList *list;
-	DirItem *item;
 
 	GPtrArray* items = g_ptr_array_new();
 
-	item = g_hash_table_lookup(dir->known_items, leaf);
+	DirItem* item = g_hash_table_lookup(dir->known_items, leaf);
 	if (!item) goto out;
 
 	g_ptr_array_add(items, item);
 
 	in_callback++;
 
-	for (list = dir->users; list; list = list->next)
-	{
-		DirUser *user = (DirUser *) list->data;
-
+	GList* l = dir->users;
+	for (;l;l=l->next) {
+		DirUser* user = (DirUser*)l->data;
 		user->callback(dir, DIR_UPDATE, items, user->data);
 	}
 
@@ -869,11 +869,13 @@ out:
 	g_ptr_array_free(items, TRUE);
 }
 
+
+#if 0
 static void
-dir_recheck(Directory *dir, const guchar *path, const guchar *leafname)
+dir_recheck (Directory* dir, const guchar* path, const guchar* leafname)
 {
 	PF;
-	guchar *old = (guchar*)dir->pathname;
+	guchar* old = (guchar*)dir->pathname;
 
 	dir->pathname = g_strdup((gchar*)path);
 	g_free(old);
@@ -881,38 +883,40 @@ dir_recheck(Directory *dir, const guchar *path, const guchar *leafname)
 	time(&diritem_recent_time);
 	insert_item(dir, leafname);
 }
+#endif
+
 
 static void
-to_array(gpointer key, gpointer value, gpointer data)
+to_array (gpointer key, gpointer value, gpointer data)
 {
-	GPtrArray *array = (GPtrArray *) data;
+	GPtrArray* array = (GPtrArray*)data;
 
 	g_ptr_array_add(array, value);
 }
+
 
 /* Convert a hash table to an unsorted GPtrArray.
  * g_ptr_array_free() the result.
  */
 static GPtrArray*
-hash_to_array(GHashTable *hash)
+hash_to_array (GHashTable* hash)
 {
-	GPtrArray *array;
-
-	array = g_ptr_array_new();
+	GPtrArray* array = g_ptr_array_new();
 
 	g_hash_table_foreach(hash, to_array, array);
 
 	return array;
 }
 
+
 static gpointer parent_class;
 
 /* Note: dir_cache is never purged, so this shouldn't get called */
 static void
-dir_finialize(GObject *object)
+dir_finialize (GObject* object)
 {
-	GPtrArray *items;
-	Directory *dir = (Directory *) object;
+	GPtrArray* items;
+	Directory* dir = (Directory*)object;
 
 	g_return_if_fail(dir->users == NULL);
 
@@ -938,7 +942,9 @@ dir_finialize(GObject *object)
 	G_OBJECT_CLASS(parent_class)->finalize(object);
 }
 
-static void directory_class_init(gpointer gclass, gpointer data)
+
+static void
+directory_class_init (gpointer gclass, gpointer data)
 {
 	GObjectClass *object = (GObjectClass *) gclass;
 
@@ -947,7 +953,9 @@ static void directory_class_init(gpointer gclass, gpointer data)
 	object->finalize = dir_finialize;
 }
 
-static void directory_init(GTypeInstance *object, gpointer gclass)
+
+static void
+directory_init(GTypeInstance *object, gpointer gclass)
 {
 	Directory *dir = (Directory *) object;
 
@@ -975,7 +983,9 @@ static void directory_init(GTypeInstance *object, gpointer gclass)
 	dir->gone_items = g_ptr_array_new();
 }
 
-static GType dir_get_type(void)
+
+static GType
+dir_get_type (void)
 {
 	static GType type = 0;
 
@@ -994,38 +1004,33 @@ static GType dir_get_type(void)
 			directory_init
 		};
 
-		type = g_type_register_static(G_TYPE_OBJECT, "Directory",
-					      &info, 0);
+		type = g_type_register_static(G_TYPE_OBJECT, "Directory", &info, 0);
 	}
 
 	return type;
 }
 
-static Directory *dir_new(const char *pathname)
-{
-	Directory *dir;
 
-	dir = g_object_new(dir_get_type(), NULL);
+static Directory*
+dir_new (const char *pathname)
+{
+	Directory* dir = g_object_new(dir_get_type(), NULL);
 
 	dir->pathname = g_strdup(pathname);
 	
 	return dir;
 }
 
-/* Get the names of all files in the directory.
- * Remove any DirItems that are no longer listed.
- * Replace the recheck_list with the items found.
+
+/*
+ *  Get the names of all files in the directory.
+ *  Remove any DirItems that are no longer listed.
+ *  Replace the recheck_list with the items found.
  */
 static void
-dir_rescan(Directory *dir)
+dir_rescan (Directory* dir)
 {
-	PF;
-	DIR		*d;
-	struct dirent	*ent;
-	guint		i;
-	GList		*next;
-
-	g_return_if_fail(dir != NULL);
+	g_return_if_fail(dir);
 
 	const char* pathname = dir->pathname;
 
@@ -1051,7 +1056,7 @@ dir_rescan(Directory *dir)
 		return;		/* Report on attach */
 	}
 
-	d = opendir(pathname);
+	DIR* d = opendir(pathname);
 	if (!d)
 	{
 		dir->error = g_strdup_printf("Can't open directory: %s", g_strerror(errno));
@@ -1064,6 +1069,7 @@ dir_rescan(Directory *dir)
 	gdk_flush();
 
 	char filepath[256];
+	struct dirent* ent;
 	/* Make a list of all the names in the directory */
 	while ((ent = readdir(d)))
 	{
@@ -1094,12 +1100,10 @@ dir_rescan(Directory *dir)
 	 * list at some point in the future.
 	 * If the item is new, put a blank place-holder item in the directory.
 	 */
-	for (i = 0; i < names->len; i++)
-	{
-		DirItem *old;
-		guchar *name = names->pdata[i];
+	guint i; for (i = 0; i < names->len; i++) {
+		guchar* name = names->pdata[i];
 
-		old = g_hash_table_lookup(dir->known_items, name); 
+		DirItem* old = g_hash_table_lookup(dir->known_items, name);
 		if (old)
 		{
 			/* This flag is cleared when the item is added
@@ -1109,10 +1113,7 @@ dir_rescan(Directory *dir)
 		}
 		else
 		{
-			DirItem *new;
-
-			new = diritem_new(name);
-			g_ptr_array_add(dir->new_items, new);
+			g_ptr_array_add(dir->new_items, diritem_new(name));
 		}
 
 	}
@@ -1124,12 +1125,11 @@ dir_rescan(Directory *dir)
 	 * scanning hidden items.
 	 */
 	in_callback++;
-	for (next = dir->users; next; next = next->next)
+	GList* l = dir->users;
+	for (;l;l=l->next)
 	{
-		DirUser *user = (DirUser *) next->data;
-		user->callback(dir,
-				DIR_QUEUE_INTERESTING,
-				NULL, user->data);
+		DirUser* user = (DirUser*)l->data;
+		user->callback(dir, DIR_QUEUE_INTERESTING, NULL, user->data);
 	}
 	in_callback--;
 
@@ -1138,6 +1138,7 @@ dir_rescan(Directory *dir)
 	set_idle_callback(dir);
 	dir_merge_new(dir);
 }
+
 
 #ifdef USE_DNOTIFY
 /* Signal handler - don't do anything dangerous here */
@@ -1155,9 +1156,10 @@ dnotify_handler(int sig, siginfo_t *si, void *data)
 }
 #endif
 
+
 #ifdef USE_INOTIFY
 static gboolean
-inotify_handler(GIOChannel *source, GIOCondition condition, gpointer udata)
+inotify_handler (GIOChannel* source, GIOCondition condition, gpointer udata)
 {
 	int fd = g_io_channel_unix_get_fd(source);
 	Directory *dir;

@@ -18,10 +18,12 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
-
+#ifndef __gimp_action_group_h__
+#define __gimp_action_group_h__
+#include "src/typedefs.h"
 
 //non-gimp additions:
-typedef void (* GimpActionGroupUpdateFunc) (GimpActionGroup *group, gpointer         data);
+typedef void (*GimpActionGroupUpdateFunc) (GimpActionGroup*, gpointer data);
 typedef struct _GimpActionEntry              GimpActionEntry;
 typedef struct _GimpToggleActionEntry        GimpToggleActionEntry;
 typedef struct _GimpRadioActionEntry         GimpRadioActionEntry;
@@ -30,9 +32,6 @@ typedef struct _GimpStringActionEntry        GimpStringActionEntry;
 typedef struct _GimpEnumAction               GimpEnumAction;
 typedef struct _GimpStringAction             GimpStringAction;
 
-
-#ifndef __GIMP_ACTION_GROUP_H__
-#define __GIMP_ACTION_GROUP_H__
 
 #include <gtk/gtkactiongroup.h>
 

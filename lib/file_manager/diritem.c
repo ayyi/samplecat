@@ -25,8 +25,6 @@
  */
 #define MAX_ICON_SIZE (400 * 1024)
 
-#include "config.h"
-
 #include <gtk/gtk.h>
 #include <errno.h>
 #include <stdio.h>
@@ -38,14 +36,14 @@
 #include <sys/types.h>
 #include <sys/param.h>
 #include <sys/stat.h>
+#include "debug/debug.h"
 
 #include "file_manager.h"
-#include "src/typedefs.h"
-#include "rox_support.h"
 
 #include "diritem.h"
-#include "mimetype.h"
-#include "utils/pixmaps.h"
+#include "pixmaps.h"
+
+#define _g_object_unref0(var) ((var == NULL) ? NULL : (var = (g_object_unref (var), NULL)))
 
 #define RECENT_DELAY (5 * 60)	/* Time in seconds to consider a file recent */
 #define ABOUT_NOW(time) (diritem_recent_time - time < RECENT_DELAY)
@@ -66,19 +64,16 @@ void diritem_init(void)
 	//read_globicons();
 }
 
+
 /* Bring this item's structure uptodate.
  * 'parent' is optional; it saves one stat() for directories.
  */
 void
-diritem_restat(const guchar *path, DirItem *item, struct stat *parent)
+diritem_restat (const guchar* path, DirItem* item, struct stat* parent)
 {
 	struct stat	info;
 
-	if (item->_image)
-	{
-		g_object_unref(item->_image);
-		item->_image = NULL;
-	}
+	_g_object_unref0(item->_image);
 	item->flags = 0;
 	item->mime_type = NULL;
 
@@ -94,7 +89,7 @@ diritem_restat(const guchar *path, DirItem *item, struct stat *parent)
 	}
 	else
 	{
-		guchar *target_path;
+		guchar* target_path;
 
 		item->lstat_errno = 0;
 		item->size = info.st_size;
@@ -214,12 +209,11 @@ diritem_restat(const guchar *path, DirItem *item, struct stat *parent)
 		item->mime_type = text_plain;
 }
 
-DirItem*
-diritem_new(const guchar *leafname)
-{
-	DirItem		*item;
 
-	item = g_new(DirItem, 1);
+DirItem*
+diritem_new (const guchar* leafname)
+{
+	DirItem* item = g_new(DirItem, 1);
 	item->leafname = g_strdup((gchar*)leafname);
 	item->may_delete = FALSE;
 	item->_image = NULL;
@@ -231,20 +225,22 @@ diritem_new(const guchar *leafname)
 	return item;
 }
 
-void diritem_free(DirItem *item)
-{
-	g_return_if_fail(item != NULL);
 
-	if (item->_image)
-		g_object_unref(item->_image);
-	item->_image = NULL;
+void
+diritem_free (DirItem* item)
+{
+	g_return_if_fail(item);
+
+	_g_object_unref0(item->_image);
 	collate_key_free(item->leafname_collate);
 	g_free(item->leafname);
 	g_free(item);
 }
 
+
 /* For use by di_image() only. Sets item->_image. */
-void _diritem_get_image(DirItem *item)
+void
+_diritem_get_image (DirItem* item)
 {
 	g_return_if_fail(item->_image == NULL);
 
@@ -257,6 +253,7 @@ void _diritem_get_image(DirItem *item)
 		item->_image = type_to_icon(item->mime_type);
 }
 
+
 /****************************************************************
  *			INTERNAL FUNCTIONS			*
  ****************************************************************/
@@ -268,11 +265,11 @@ void _diritem_get_image(DirItem *item)
  * link_target contains stat info for the link target for symlinks (or for the
  * item itself if not a link).
  */
-static void examine_dir(const guchar *path, DirItem *item,
-			struct stat *link_target)
+static void
+examine_dir (const guchar* path, DirItem* item, struct stat* link_target)
 {
 	struct stat info;
-	static GString *tmp = NULL;
+	static GString* tmp = NULL;
 	uid_t uid = link_target->st_uid;
 
 	if (!tmp)
@@ -321,32 +318,6 @@ static void examine_dir(const guchar *path, DirItem *item,
 	item->_image = NULL;
 
 no_diricon:
-
-#if 0
-	/* Try to find AppRun... */
-	g_string_truncate(tmp, tmp->len - 8);
-	g_string_append(tmp, "AppRun");
-
-	if (lstat(tmp->str, &info) != 0 || info.st_uid != uid)
-		goto out;	/* Missing, or wrong owner */
-		
-	if (!(info.st_mode & (S_IXUSR | S_IXGRP | S_IXOTH)))
-		goto out;	/* Not executable */
-
-	item->flags |= ITEM_FLAG_APPDIR;
-
-	/* Try to load AppIcon.xpm... */
-
-	if (item->_image)
-		goto out;	/* Already got an icon */
-
-	g_string_truncate(tmp, tmp->len - 3);
-	g_string_append(tmp, "Icon.xpm");
-
-	/* Note: since AppRun is valid we don't need to check AppIcon.xpm
-	 *	 so carefully.
-	 */
-#endif
 
 	if (stat(tmp->str, &info) != 0)
 		goto out;	/* Missing, or broken symlink */

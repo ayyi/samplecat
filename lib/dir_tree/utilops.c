@@ -119,17 +119,17 @@ static void file_util_move_multiple(FileDataMult *fdm)
             if (!fdm->confirmed)
                 {
                 //GenericDialog *gd;
-                const gchar *title;
+                //const gchar *title;
                 gchar *text;
 
                 if (fdm->copy)
                     {
-                    title = "Source to copy matches destination";
+                    //title = "Source to copy matches destination";
                     text = g_strdup_printf("Unable to copy file:\n%s\nto itself.", fdm->dest);
                     }
                 else
                     {
-                    title = "Source to move matches destination";
+                    //title = "Source to move matches destination";
                     text = g_strdup_printf("Unable to move file:\n%s\nto itself.", fdm->dest);
                     }
 
@@ -213,18 +213,17 @@ static void file_util_move_multiple(FileDataMult *fdm)
         if (!success)
             {
             //GenericDialog *gd;
-            const gchar *title;
+            //const gchar *title;
             gchar *text;
 
             if (fdm->copy)
                 {
-                title = "Error copying file";
-
+                //title = "Error copying file";
                 text = g_strdup_printf("Unable to copy file:\n%s\nto:\n%s\nduring multiple file copy.", fdm->source, fdm->dest);
                 }
             else
                 {
-                title = "Error moving file";
+                //title = "Error moving file";
                 text = g_strdup_printf("Unable to move file:"/*\n*/"%s"/*\n*/"to:"/*\n*/"%s"/*\n*/"during multiple file move.", fdm->source, fdm->dest);
                 }
 			/*
@@ -342,16 +341,16 @@ static void file_util_move_single(FileDataSingle *fds)
 			}
 		else
             {
-            gchar *title;
+            //gchar *title;
             gchar *text;
             if (fds->copy)
                 {
-                title = "Error copying file";
+                //title = "Error copying file";
                 text = g_strdup_printf("Unable to copy file:\n%s\nto:\n%s", fds->source, fds->dest);
                 }
             else
                 {
-                title = "Error moving file";
+                //title = "Error moving file";
                 text = g_strdup_printf("Unable to move file: "/*\n*/"%s"/*\n*/" to: "/*\n*/"%s", fds->source, fds->dest);
                 }
             //file_util_warning_dialog(title, text, GTK_STOCK_DIALOG_ERROR, NULL);

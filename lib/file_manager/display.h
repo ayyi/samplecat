@@ -1,8 +1,15 @@
-/*
- * ROX-Filer, filer for the ROX desktop project
- * By Thomas Leonard, <tal197@users.sourceforge.net>.
- */
-
+/**
+* +----------------------------------------------------------------------+
+* | This file is part of the Ayyi project. http://ayyi.org               |
+* | copyright (C) 2011-2017 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2006, Thomas Leonard and others                        |
+* +----------------------------------------------------------------------+
+* | This program is free software; you can redistribute it and/or modify |
+* | it under the terms of the GNU General Public License version 3       |
+* | as published by the Free Software Foundation.                        |
+* +----------------------------------------------------------------------+
+*
+*/
 #ifndef _DISPLAY_H
 #define _DISPLAY_H
 
@@ -37,15 +44,13 @@ extern Option o_vertical_order_small, o_vertical_order_large;
 
 /* Prototypes */
 void display_init(void);
-void display_set_layout(FilerWindow  *filer_window,
-			DisplayStyle style,
-			DetailsType  details,
-			gboolean     force_resize);
+void display_set_layout(FilerWindow *filer_window, DisplayStyle style, DetailsType details, gboolean force_resize);
 void display_set_hidden(FilerWindow *filer_window, gboolean hidden);
 void display_set_filter_directories(FilerWindow *filer_window, gboolean filter_directories);
-void display_update_hidden(FilerWindow *filer_window);
-void display_set_filter(FilerWindow *filer_window, FilterType type,
-			const gchar *filter_string);
+#endif
+void display_update_hidden (AyyiLibfilemanager*);
+void display_set_filter    (AyyiLibfilemanager*, FilterType, const gchar* filter_string);
+#if 0
 void display_set_thumbs(FilerWindow *filer_window, gboolean thumbs);
 #endif
 int sort_by_name(const void *item1, const void *item2);
@@ -54,7 +59,7 @@ int sort_by_date(const void *item1, const void *item2);
 int sort_by_size(const void *item1, const void *item2);
 int sort_by_owner(const void *item1, const void *item2);
 int sort_by_group(const void *item1, const void *item2);
-void display_set_sort_type(Filer *filer_window, FmSortType sort_type, GtkSortType order);
+void display_set_sort_type(AyyiLibfilemanager*, FmSortType, GtkSortType order);
 #if 0
 void display_set_autoselect(FilerWindow *filer_window, const gchar *leaf);
 
@@ -81,7 +86,7 @@ void draw_small_icon(GdkWindow *window, GdkRectangle *area,
 void draw_huge_icon(GdkWindow *window, GdkRectangle *area, DirItem *item,
 			   MaskedPixmap *image, gboolean selected,
 			   GdkColor *color);
-void display_set_actual_size(FilerWindow *filer_window, gboolean force_resize);
 #endif
+void display_set_actual_size(AyyiLibfilemanager*, gboolean force_resize);
 
 #endif /* _DISPLAY_H */

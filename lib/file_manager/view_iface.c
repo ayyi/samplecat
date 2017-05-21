@@ -24,12 +24,8 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <gtk/gtk.h>
-
 #include "debug/debug.h"
-#include "file_manager/file_manager.h"
-
-#include "rox_global.h"
-
+#include "support.h"
 #include "view_iface.h"
 #include "diritem.h"
 

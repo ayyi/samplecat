@@ -105,7 +105,6 @@ samplecat_SOURCES = \
 samplecat_LDADD = \
 	$(top_srcdir)/lib/utils/libutils.a \
 	$(top_srcdir)/lib/file_manager/libfilemanager.a \
-	$(top_srcdir)/lib/xdgmime/libxdgmime.a \
 	$(top_srcdir)/lib/dir_tree/libdirtree.a \
 	$(top_srcdir)/lib/debug/libdebug.a \
 	$(top_srcdir)/lib/samplecat/libsamplecat.a \
@@ -130,3 +129,5 @@ samplecat_LDADD = \
 	$(X11_LDFLAGS) \
 	$(FFMPEG_LIBS) \
 	-ldl
+
+#	$(top_srcdir)/lib/xdgmime/libxdgmime.a

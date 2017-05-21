@@ -26,9 +26,9 @@
 #include "file_manager.h"
 #include "file_manager/menu.h"
 #include "samplecat/worker.h"
+#include "src/typedefs.h"
 #include "gimp/gimpaction.h"
 #include "gimp/gimpactiongroup.h"
-#include "typedefs.h"
 #include "sample.h"
 #include "support.h"
 #include "model.h"
@@ -59,7 +59,6 @@
 
 #include "../layouts/layouts.c"
 
-extern Filer      filer;
 extern GList*     themes; 
 #define BACKEND samplecat.model->backend
  
@@ -123,7 +122,7 @@ struct _window {
       AGlActor*   spinner;
    }              layers;
 #endif
-} window;
+} window = {0,};
 
 typedef enum {
    PANEL_TYPE_LIBRARY,
@@ -257,8 +256,6 @@ GtkWindow
       +--statusbar2
 
 */
-	memset(&window, 0, sizeof(struct _window));
-
 	app->window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	gtk_window_set_title(GTK_WINDOW(app->window), "SampleCat");
 	g_signal_connect(G_OBJECT(app->window), "delete_event", G_CALLBACK(on_quit), NULL);
@@ -682,8 +679,8 @@ window_on_configure(GtkWidget* widget, GdkEventConfigure* event, gpointer user_d
 					bool done = false;
 					DirItem* item;
 					ViewIter iter;
-					Filer* filer = file_manager__get();
-					view_get_iter(filer->view, &iter, 0);
+					AyyiLibfilemanager* fm = file_manager__get();
+					view_get_iter(fm->view, &iter, 0);
 					while(!done && (item = iter.next(&iter))){
 						MIME_type* mime_type = item->mime_type;
 						if(mime_type){
@@ -739,7 +736,7 @@ make_fileview_pane()
 		void dir_on_select(ViewDirTree* vdt, const gchar* path, gpointer data)
 		{
 			PF;
-			filer_change_to(&filer, path, NULL);
+			fm__change_to(file_manager__get(), path, NULL);
 		}
 
 		gint expand = TRUE;
@@ -760,14 +757,15 @@ make_fileview_pane()
 	void fman_right(const char* initial_folder)
 	{
 		GtkWidget* file_view = app->fm_view = file_manager__new_window(initial_folder);
-		gtk_paned_add2(GTK_PANED(fman_hpaned), VIEW_DETAILS(file_view)->scroll_win);
-		g_signal_connect(G_OBJECT(file_view), "cursor-changed", G_CALLBACK(window_on_fileview_row_selected), NULL);
+		AyyiLibfilemanager* fm = file_manager__get();
+		gtk_paned_add2(GTK_PANED(fman_hpaned), file_view);
+		g_signal_connect(G_OBJECT(fm->view), "cursor-changed", G_CALLBACK(window_on_fileview_row_selected), NULL);
 
 		void window_on_dir_changed(GtkWidget* widget, gpointer data)
 		{
 			PF;
 		}
-		g_signal_connect(G_OBJECT(file_manager__get_signaller()), "dir_changed", G_CALLBACK(window_on_dir_changed), NULL);
+		g_signal_connect(G_OBJECT(file_manager__get()), "dir_changed", G_CALLBACK(window_on_dir_changed), NULL);
 
 		void icon_theme_changed(Application* a, char* theme, gpointer _dir_tree)
 		{
@@ -1174,15 +1172,15 @@ window_on_fileview_row_selected(GtkTreeView* treeview, gpointer user_data)
 	//a filesystem file has been clicked on.
 	PF;
 
-	Filer* filer = file_manager__get();
+	AyyiLibfilemanager* fm = file_manager__get();
 
 	gchar* full_path = NULL;
 	DirItem* item;
 	ViewIter iter;
-	view_get_iter(filer->view, &iter, 0);
+	view_get_iter(fm->view, &iter, 0);
 	while((item = iter.next(&iter))){
-		if(view_get_selected(filer->view, &iter)){
-			full_path = g_build_filename(filer->real_path, item->leafname, NULL);
+		if(view_get_selected(fm->view, &iter)){
+			full_path = g_build_filename(fm->real_path, item->leafname, NULL);
 			break;
 		}
 	}
@@ -1215,13 +1213,14 @@ static void
 menu__add_to_db(GtkMenuItem* menuitem, gpointer user_data)
 {
 	PF;
+	AyyiLibfilemanager* fm = file_manager__get();
 
 	DirItem* item;
 	ViewIter iter;
-	view_get_iter(filer.view, &iter, 0);
+	view_get_iter(fm->view, &iter, 0);
 	while((item = iter.next(&iter))){
-		if(view_get_selected(filer.view, &iter)){
-			gchar* filepath = g_build_filename(filer.real_path, item->leafname, NULL);
+		if(view_get_selected(fm->view, &iter)){
+			gchar* filepath = g_build_filename(fm->real_path, item->leafname, NULL);
 			if(do_progress(0, 0)) break;
 			ScanResults results = {0,};
 			application_add_file(filepath, &results);
@@ -1251,7 +1250,9 @@ void
 menu__play(GtkMenuItem* menuitem, gpointer user_data)
 {
 	PF;
-	GList* selected = fm_selected_items(&filer);
+	AyyiLibfilemanager* fm = file_manager__get();
+
+	GList* selected = fm__selected_items(fm);
 	GList* l = selected;
 	for(;l;l=l->next){
 		char* item = l->data;

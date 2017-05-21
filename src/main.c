@@ -31,12 +31,12 @@ char * program_name;
 #include "waveform/utils.h"
 #include "utils/ayyi_utils.h"
 #include "utils/pixmaps.h"
+#include "file_manager.h"
 #include "samplecat.h"
 #ifdef USE_AYYI
   #include "ayyi.h"
   #include "ayyi_model.h"
 #endif
-#include "file_manager.h"
 #include "typedefs.h"
 #ifdef USE_TRACKER
   #include "db/tracker.h"
@@ -44,7 +44,6 @@ char * program_name;
 #ifdef USE_MYSQL
   #include "db/mysql.h"
 #endif
-#include "mimetype.h"
 #include "dh_link.h"
 
 #include "db/db.h"

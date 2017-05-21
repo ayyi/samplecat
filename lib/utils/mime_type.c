@@ -40,6 +40,7 @@
 #include "utils/fscache.h"
 #include "mime_type.h"
 
+#if 0
 GtkIconTheme* icon_theme = NULL;
 
 
@@ -151,4 +152,4 @@ out:
 	g_object_ref(type->image);
 	return type->image;
 }
-
+#endif

@@ -25,30 +25,30 @@
 #include <gdk/gdkkeysyms.h>
 #include <gtk/gtk.h>
 #include "debug/debug.h"
+#include "file_manager/mimetype.h"
 
 #include "typedefs.h"
 #include "support.h"
-#include "utils/mime_type.h"
 #include "dh_tree.h"
 
 #define d(x)
 
 #define DATA_DIR "~/"
 
-GdkPixbuf* mime_type_get_pixbuf(MIME_type*);
-extern MIME_type *inode_directory;
+extern GdkPixbuf* mime_type_get_pixbuf(MIME_type*);
+extern MIME_type* inode_directory;
 
 typedef struct {
-        GdkPixbuf *pixbuf_opened;
-        GdkPixbuf *pixbuf_closed;
-        GdkPixbuf *pixbuf_helpdoc;
+    GdkPixbuf *pixbuf_opened;
+    GdkPixbuf *pixbuf_closed;
+    GdkPixbuf *pixbuf_helpdoc;
 } DhBookTreePixbufs;
 
 struct _DhBookTreePriv {
-	GtkTreeStore      *store;
+    GtkTreeStore      *store;
 
-	DhBookTreePixbufs *pixbufs;
- 	GNode            **link_tree;
+    DhBookTreePixbufs *pixbufs;
+    GNode            **link_tree;
 };
 
 static void book_tree_class_init           (DhBookTreeClass*);
@@ -64,20 +64,21 @@ static void book_tree_create_pixbufs       (DhBookTree*);
 static void book_tree_selection_changed_cb (GtkTreeSelection*, DhBookTree*);
 
 enum {
-        LINK_SELECTED,
-        LAST_SIGNAL
+    LINK_SELECTED,
+    LAST_SIGNAL
 };
 
 enum {
-	COL_OPEN_PIXBUF,
-	COL_CLOSED_PIXBUF,
-	COL_TITLE,
-	COL_LINK,
-	N_COLUMNS
+    COL_OPEN_PIXBUF,
+    COL_CLOSED_PIXBUF,
+    COL_TITLE,
+    COL_LINK,
+    N_COLUMNS
 };
 
 static GtkTreeViewClass *parent_class = NULL;
 static gint              signals[LAST_SIGNAL] = { 0 };
+
 
 GType
 dh_book_tree_get_type (void)
@@ -283,11 +284,9 @@ book_tree_create_pixbufs (DhBookTree *tree)
 	
  	DhBookTreePixbufs *pixbufs = g_new0 (DhBookTreePixbufs, 1);
 
-	GdkPixbuf* iconbuf = mime_type_get_pixbuf(inode_directory);
-
-	pixbufs->pixbuf_closed = iconbuf;//gdk_pixbuf_new_from_file (DATA_DIR "/devhelp/images/book_closed.png", NULL);
-	pixbufs->pixbuf_opened = gdk_pixbuf_new_from_file (DATA_DIR "/devhelp/images/book_open.png", NULL);
-	pixbufs->pixbuf_helpdoc = iconbuf;//gdk_pixbuf_new_from_file (DATA_DIR "/devhelp/images/helpdoc.png", NULL);
+	pixbufs->pixbuf_closed = mime_type_get_pixbuf(mime_type_lookup("inode/directory"));
+	pixbufs->pixbuf_opened = mime_type_get_pixbuf(mime_type_lookup("inode/directory-open"));
+	pixbufs->pixbuf_helpdoc = mime_type_get_pixbuf(mime_type_lookup("inode/directory-open"));
 
 	tree->priv->pixbufs = pixbufs;
 }
@@ -318,7 +317,7 @@ dh_book_tree_new (GNode **books)
 	tree->priv->link_tree = books;
 
 	book_tree_populate_tree (tree);
-	
+
 	return GTK_WIDGET (tree);
 }
 

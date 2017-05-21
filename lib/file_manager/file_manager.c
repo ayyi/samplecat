@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2011, Tim Orford
+ * Copyright (C) 2007-2017, Tim Orford
  * Copyright (C) 2006, Thomas Leonard and others (see changelog for details).
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -16,7 +16,10 @@
  * Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-/* file_manager.c - provides single-instance backend for filesystem views */
+/*
+ *  file_manager.c
+ *  Provides single-instance backend for filesystem views
+ */
 
 #include "config.h"
 
@@ -27,13 +30,11 @@
 #include <sys/stat.h>
 #include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
-
 #include "debug/debug.h"
-#include "utils/ayyi_utils.h"
-#include "utils/mime_type.h"
+#include "support.h"
 #include "file_manager.h"
+#include "pixmaps.h"
 
-Filer filer;
 GList* all_filer_windows = NULL;
 static AyyiLibfilemanager* new_file_manager = NULL;
 static gboolean initialised = FALSE;
@@ -49,21 +50,12 @@ enum {
 static void file_manager__load_plugins();
 
 
-static Filer*
-file_manager__init()
+void
+file_manager__init ()
 {
-	memset(&filer, 0, sizeof(Filer));
+	new_file_manager = ayyi_libfilemanager_new();
 
-	filer.filter               = FILER_SHOW_ALL;
-	filer.filter_string        = NULL;
-	filer.regexp               = NULL;
-	filer.filter_directories   = FALSE;
-	filer.display_style_wanted = SMALL_ICONS;
-	filer.sort_type            = SORT_NAME;
-
-	new_file_manager = ayyi_libfilemanager_new(&filer);
-
-	//type_init();
+	type_init();
 	pixmaps_init();
 	dir_init();
 
@@ -71,43 +63,34 @@ file_manager__init()
 	g_idle_add(_load_plugins, NULL);
 
 	initialised = TRUE;
-	return &filer;
-	//return &new_file_manager->file_window;
 }
 
 
 GtkWidget*
-file_manager__new_window(const char* path)
+file_manager__new_window (const char* path)
 {
 	if(!initialised) file_manager__init();
 
-	GtkWidget* file_view = view_details_new(&filer);
-	filer.view = (ViewIface*)file_view;
+	GtkWidget* file_view = view_details_new(new_file_manager);
+	new_file_manager->view = (ViewIface*)file_view;
+	gtk_box_pack_end(GTK_BOX(new_file_manager->window), VIEW_DETAILS(file_view)->scroll_win, TRUE, TRUE, 0);
 
-	all_filer_windows = g_list_prepend(all_filer_windows, &filer);
+	all_filer_windows = g_list_prepend(all_filer_windows, new_file_manager);
 
-	filer_change_to(&filer, path, NULL);
+	fm__change_to(new_file_manager, path, NULL);
 
-	return file_view;
-}
-
-
-Filer*
-file_manager__get()
-{
-	if(!initialised) file_manager__init();
-	return &filer;
+	return new_file_manager->window;
 }
 
 
 void
-file_manager__update_all(void)
+file_manager__update_all (void)
 {
-	GList *next = all_filer_windows;
+	GList* next = all_filer_windows;
 
 	while (next)
 	{
-		Filer *filer_window = (Filer*) next->data;
+		AyyiLibfilemanager* fm = (AyyiLibfilemanager*)next->data;
 
 		/* Updating directory may remove it from list -- stop sending
 		 * patches to move this line!
@@ -118,29 +101,30 @@ file_manager__update_all(void)
 		 * Otherwise, two views of a single directory will trigger
 		 * two scans.
 		 */
-		if (filer_window->directory &&
-				!filer_window->directory->scanning)
-			filer_update_dir(filer_window, TRUE);
+		if (fm->directory && !fm->directory->scanning){
+			fm__update_dir(fm, TRUE);
+		}
 	}
 }
 
 
 void
-file_manager__on_dir_changed()
+file_manager__on_dir_changed ()
 {
 	ayyi_libfilemanager_emit_dir_changed(new_file_manager);
 }
 
 
 AyyiLibfilemanager*
-file_manager__get_signaller()
+file_manager__get ()
 {
+	if(!initialised) file_manager__init();
 	return new_file_manager;
 }
 
 
 static FileTypePluginPtr
-file_manager__plugin_load(const gchar* filepath)
+file_manager__plugin_load (const gchar* filepath)
 {
 	FileTypePluginPtr plugin = NULL;
 	gboolean success = FALSE;
@@ -199,7 +183,7 @@ file_manager__plugin_load(const gchar* filepath)
 
 #define plugin_path "/usr/lib/samplecat/:/usr/local/lib/samplecat/"
 static void
-file_manager__load_plugins()
+file_manager__load_plugins ()
 {
 	FileTypePluginPtr plugin = NULL;
 	GError* error = NULL;

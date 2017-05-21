@@ -181,6 +181,7 @@ get_iconbuf_from_mimetype(char* mimetype)
 	return iconbuf;
 }
 
+
 gboolean
 ensure_config_dir()
 {

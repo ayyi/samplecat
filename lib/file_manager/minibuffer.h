@@ -10,14 +10,13 @@
 * +----------------------------------------------------------------------+
 *
 */
-#ifndef __fm_menu_h__
-#define __fm_menu_h__
+#ifndef __minibuffer_h__
+#define __minibuffer_h__
 
-GtkWidget*      fm__make_context_menu   ();
-void            fm__add_menu_item       (GtkAction*);
-void            fm__add_submenu         (GtkWidget*);
-
-//private:
-void            fm__menu_on_view_change (GtkWidget*);
+void minibuffer_init   (void);
+void create_minibuffer (AyyiLibfilemanager*);
+void minibuffer_show   (AyyiLibfilemanager*, MiniType mini_type);
+void minibuffer_hide   (AyyiLibfilemanager*);
+void minibuffer_add    (AyyiLibfilemanager*, const gchar* leafname);
 
 #endif

@@ -274,7 +274,7 @@ spectrogram_render_to_pixbuf (WfDecoder* infile, GdkPixbuf* pixbuf)
 	speclen += 0x40 - (speclen & 0x3f);
 
 	if (2 * speclen > G_N_ELEMENTS (time_domain)) {
-		printf ("%s : 2 * speclen > G_N_ELEMENTS (time_domain) (%d > %d)\n", __func__, 2 * speclen, G_N_ELEMENTS (time_domain));
+		printf ("%s : 2 * speclen > G_N_ELEMENTS (time_domain) (%d > %li)\n", __func__, 2 * speclen, G_N_ELEMENTS (time_domain));
 		return -1;
 	};
 

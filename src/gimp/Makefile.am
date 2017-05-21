@@ -7,6 +7,7 @@ AM_CFLAGS = \
 	-DHAVE_GTK_2_10 \
 	-DG_LOG_DOMAIN=\"Gimp\" \
 	-I$(top_srcdir)/src \
+	-I$(top_srcdir)/lib \
 	$(DBUS_CFLAGS) $(GTK_CFLAGS)
 
 noinst_LIBRARIES = libgimpwidgets.a

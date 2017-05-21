@@ -1,29 +1,14 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2015 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2017 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
+* | This program is free software; you can redistribute it and/or modify |
+* | it under the terms of the GNU General Public License version 3       |
+* | as published by the Free Software Foundation.                        |
+* +----------------------------------------------------------------------+
+*
 */
-/*
- * $Id: type.c,v 1.169 2005/07/24 10:19:31 tal197 Exp $
- *
- * ROX-Filer, filer for the ROX desktop project, v2.3
- * Copyright (C) 2005, the ROX-Filer team.
- *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License as published by the Free
- * Software Foundation; either version 2 of the License, or (at your option)
- * any later version.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
- * more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 59 Temple
- * Place, Suite 330, Boston, MA  02111-1307  USA
- */
 
 #include "config.h"
 #include <stdlib.h>
@@ -46,8 +31,12 @@
 #include "application.h"
 #include "icon_theme.h"
 
-GList* themes = NULL; 
+GList* themes = NULL;
+#if 0
 char theme_name[64] = {0,};
+#else
+extern char theme_name[];
+#endif
 extern GtkIconTheme* icon_theme;
 extern Application* application;
 
@@ -58,13 +47,12 @@ static void print_icon_list      ();
 #endif
 
 
-/*static */GList*
+GList*
 icon_theme_init()
 {
 	//-build a menu list of available themes.
 
-	icon_theme = gtk_icon_theme_new(); // use a new theme as the default theme cannot be updated.
-	icon_theme_set_theme();
+	icon_theme_set_theme(NULL);
 
 	if(_debug_){
 		gint n_elements;
@@ -83,12 +71,11 @@ icon_theme_init()
 	get_theme_names(names);
 
 	int i; for (i = 0; i < names->len; i++) {
-		char *name = names->pdata[i];
+		char* name = names->pdata[i];
 		dbg(2, "name=%s", name);
 
 		GtkWidget* item = gtk_menu_item_new_with_label(name);
 		gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
-		gtk_widget_show_all(item);
 
 		g_object_set_data(G_OBJECT(item), "theme", g_strdup(name)); //make sure this string is free'd when menu is updated.
 
@@ -96,10 +83,11 @@ icon_theme_init()
 
 		g_free(name);
 	}
+	gtk_widget_show_all(menu);
 
 	g_ptr_array_free(names, TRUE);
 
-	return themes  = g_list_append(NULL, menu);
+	return themes = g_list_append(NULL, menu);
 }
 
 
@@ -143,15 +131,13 @@ icon_theme_on_select(GtkMenuItem* menuitem, gpointer user_data)
 {
 	g_return_if_fail(menuitem);
 
-	gchar* name = g_object_get_data(G_OBJECT(menuitem), "theme");
-	dbg(0, "theme=%s", name);
-
-	if(name && strlen(name)) g_strlcpy(theme_name, name, 64);
+	const gchar* name = g_object_get_data(G_OBJECT(menuitem), "theme");
+	dbg(1, "theme=%s", name);
 
 #ifdef DEBUG
 	if(_debug_) print_icon_list();
 #endif
-	icon_theme_set_theme();
+	icon_theme_set_theme(name);
 	application_emit_icon_theme_changed(app, name);
 }
 
@@ -168,7 +154,7 @@ check_default_theme(gpointer data)
 		int i = 0;
 		while(i++ < G_N_ELEMENTS(names) && !(info = gtk_icon_theme_lookup_icon(icon_theme, names[i], ICON_HEIGHT, 0)));
 		if(info){
-			g_object_unref(info);
+			gtk_icon_info_free(info);
 		}else{
 			warnprintf("default icon theme appears not to contain audio mime-type icons\n");
 
@@ -180,21 +166,24 @@ check_default_theme(gpointer data)
 
 
 void
-icon_theme_set_theme()
+icon_theme_set_theme(const char* name)
 {
-	reset_type_hash();
+	mime_type_clear();
 
+	dbg(1, "setting theme: %s.", theme_name);
+
+	if(name && name[0]){
+		if(!*theme_name) icon_theme = gtk_icon_theme_new(); // the old icon theme cannot be updated
+		g_strlcpy(theme_name, name, 64);
+		gtk_icon_theme_set_custom_theme(icon_theme, theme_name);
+	}
+
+	if(!strlen(theme_name))
+		g_idle_add(check_default_theme, NULL);
+
+#if 0 // test is disabled as it is not reliable
 	while (1)
 	{
-		dbg(1, "setting theme: %s.", theme_name);
-		if(strlen(theme_name))
-			gtk_icon_theme_set_custom_theme(icon_theme, theme_name);
-		else
-			g_idle_add(check_default_theme, NULL);
-		return;
-
-		//the test below is disabled as its not reliable
-#if 0
 		GtkIconInfo* info = gtk_icon_theme_lookup_icon(icon_theme, "mime-application:postscript", ICON_HEIGHT, 0);
 		if (!info)
 		{
@@ -214,8 +203,8 @@ icon_theme_set_theme()
 		warnprintf("Icon theme '%s' does not contain MIME icons. Using default theme instead.\n", theme_name);
 		
 		strcpy(theme_name, DEFAULT_THEME);
-#endif
 	}
+#endif
 
 #if 0
 	const char *home_dir = g_get_home_dir();

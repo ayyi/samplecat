@@ -35,21 +35,20 @@
 
 #include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
-
 #include "debug/debug.h"
+
+#include "support.h"
 #include "file_manager.h"
-#include "rox_global.h"
 
 #define display_dirs_first TRUE
 #define display_caps_first FALSE
 
-#include "rox_support.h"
 #include "dir.h"
-#include "filer.h"
-#include "utils/pixmaps.h"
-#include "mimetype.h"
+#include "pixmaps.h"
 #include "diritem.h"
 #include "view_iface.h"
+#include "display.h"
+
 #if 0
 #define HUGE_WRAP (1.5 * o_large_width.int_value)
 
@@ -192,8 +191,9 @@ void draw_large_icon(GdkWindow *window,
 }
 #endif
 
+
 void
-draw_small_icon(GdkWindow *window, GdkRectangle *area, DirItem *item, MaskedPixmap *image, gboolean selected, GdkColor *color)
+draw_small_icon (GdkWindow* window, GdkRectangle* area, DirItem* item, MaskedPixmap* image, gboolean selected, GdkColor* color)
 {
 	if (!image) return;
 
@@ -213,7 +213,7 @@ draw_small_icon(GdkWindow *window, GdkRectangle *area, DirItem *item, MaskedPixm
 	//dbg(0, "selected=%i pixbuf=%p ispixbuf=%i", selected, pixbuf, GDK_IS_PIXBUF(pixbuf));
 	if(!GDK_IS_PIXBUF(pixbuf)) errprintf("%s bad icon pixbuf", __func__);
 
-	dbg(3, "copying pixbuf to drawable... width=%i %i", width, area->y + image_y);
+	dbg(2, "copying pixbuf to drawable... width=%i %i", width, area->y + image_y);
 	gdk_pixbuf_render_to_drawable_alpha(
 			pixbuf,
 			window,                     // destination
@@ -244,12 +244,12 @@ draw_small_icon(GdkWindow *window, GdkRectangle *area, DirItem *item, MaskedPixm
 */
 }
 
+
 /* The sort functions aren't called from outside, but they are
  * passed as arguments to display_set_sort_fn().
  */
 
 #define IS_A_DIR(item) (item->base_type == TYPE_DIRECTORY)
-
 
 #define SORT_DIRS	\
 	if (display_dirs_first) {	\
@@ -260,10 +260,10 @@ draw_small_icon(GdkWindow *window, GdkRectangle *area, DirItem *item, MaskedPixm
 	}
 
 int
-sort_by_name(const void *item1, const void *item2)
+sort_by_name (const void* item1, const void* item2)
 {
-	const DirItem* i1 = (DirItem *) item1;
-	const DirItem* i2 = (DirItem *) item2;
+	const DirItem* i1 = (DirItem*)item1;
+	const DirItem* i2 = (DirItem*)item2;
 	CollateKey* n1 = i1->leafname_collate;
 	CollateKey* n2 = i2->leafname_collate;
 	g_return_val_if_fail(n1, 0);
@@ -276,10 +276,12 @@ sort_by_name(const void *item1, const void *item2)
 	return retval ? retval : strcmp(i1->leafname, i2->leafname);
 }
 
-int sort_by_type(const void *item1, const void *item2)
+
+int
+sort_by_type(const void* item1, const void* item2)
 {
-	const DirItem *i1 = (DirItem *) item1;
-	const DirItem *i2 = (DirItem *) item2;
+	const DirItem* i1 = (DirItem*)item1;
+	const DirItem* i2 = (DirItem*)item2;
 
 	int	 diff = i1->base_type - i2->base_type;
 
@@ -306,42 +308,44 @@ int sort_by_type(const void *item1, const void *item2)
 	return sort_by_name(item1, item2);
 }
 
-int sort_by_owner(const void *item1, const void *item2)
+
+int
+sort_by_owner (const void* item1, const void* item2)
 {
-	const DirItem *i1 = (DirItem *) item1;
-	const DirItem *i2 = (DirItem *) item2;
-	const gchar *name1;
-	const gchar *name2;
+	const DirItem* i1 = (DirItem*)item1;
+	const DirItem* i2 = (DirItem*)item2;
 
 	if(i1->uid==i2->uid)
 		return sort_by_name(item1, item2);
 
-	name1=user_name(i1->uid);
-	name2=user_name(i2->uid);
+	const gchar* name1 = user_name(i1->uid);
+	const gchar* name2 = user_name(i2->uid);
 
 	return strcmp(name1, name2);
 }
 
-int sort_by_group(const void *item1, const void *item2)
+
+int
+sort_by_group (const void* item1, const void* item2)
 {
-	const DirItem *i1 = (DirItem *) item1;
-	const DirItem *i2 = (DirItem *) item2;
-	const gchar *name1;
-	const gchar *name2;
+	const DirItem* i1 = (DirItem*)item1;
+	const DirItem* i2 = (DirItem*)item2;
 
 	if(i1->gid==i2->gid)
 		return sort_by_name(item1, item2);
 
-	name1=group_name(i1->gid);
-	name2=group_name(i2->gid);
+	const gchar* name1 = group_name(i1->gid);
+	const gchar *name2 = group_name(i2->gid);
 
 	return strcmp(name1, name2);
 }
 
-int sort_by_date(const void *item1, const void *item2)
+
+int
+sort_by_date (const void *item1, const void *item2)
 {
-	const DirItem *i1 = (DirItem *) item1;
-	const DirItem *i2 = (DirItem *) item2;
+	const DirItem* i1 = (DirItem*)item1;
+	const DirItem* i2 = (DirItem*)item2;
 
 	/* SORT_DIRS; -- too confusing! */
 
@@ -350,7 +354,9 @@ int sort_by_date(const void *item1, const void *item2)
 		sort_by_name(item1, item2);
 }
 
-int sort_by_size(const void *item1, const void *item2)
+
+int
+sort_by_size (const void* item1, const void* item2)
 {
 	const DirItem *i1 = (DirItem *) item1;
 	const DirItem *i2 = (DirItem *) item2;
@@ -362,18 +368,20 @@ int sort_by_size(const void *item1, const void *item2)
 		sort_by_name(item1, item2);
 }
 
+
 void
-display_set_sort_type(Filer* filer_window, FmSortType sort_type, GtkSortType order)
+display_set_sort_type (AyyiLibfilemanager* fm, FmSortType sort_type, GtkSortType order)
 {
-	if (filer_window->sort_type == sort_type &&
-	    filer_window->sort_order == order)
+	if (fm->sort_type == sort_type && fm->sort_order == order){
 		return;
+	}
 
-	filer_window->sort_type = sort_type;
-	filer_window->sort_order = order;
+	fm->sort_type = sort_type;
+	fm->sort_order = order;
 
-	view_sort(filer_window->view);
+	view_sort(fm->view);
 }
+
 
 #if 0
 /* Change the icon size and style.
@@ -424,14 +432,19 @@ void display_set_thumbs(FilerWindow *filer_window, gboolean thumbs)
 
 	filer_create_thumbs(filer_window);
 }
+#endif
 
-void display_update_hidden(FilerWindow *filer_window)
+
+void
+display_update_hidden (AyyiLibfilemanager* fm)
 {
-	filer_detach_rescan(filer_window);	/* (updates titlebar) */
+	filer_detach_rescan(fm);	// update titlebar
 
-	display_set_actual_size(filer_window, FALSE);
+	display_set_actual_size(fm, FALSE);
 }
 
+
+#if 0
 /* Set the 'Show Hidden' flag for this window */
 void display_set_hidden(FilerWindow *filer_window, gboolean hidden)
 {
@@ -443,7 +456,7 @@ void display_set_hidden(FilerWindow *filer_window, gboolean hidden)
 	*/
 	filer_set_hidden(filer_window, hidden);
 
-	display_update_hidden(filer_window);
+	display_update_hidden(fm);
 }
 
 /* Set the 'Filter Directories' flag for this window */
@@ -457,17 +470,20 @@ void display_set_filter_directories(FilerWindow *filer_window, gboolean filter_d
 	*/
 	filer_set_filter_directories(filer_window, filter_directories);
 
-	display_update_hidden(filer_window);
+	display_update_hidden(fm);
 }
+#endif
 
-void display_set_filter(FilerWindow *filer_window, FilterType type,
-			const gchar *filter_string)
+
+void
+display_set_filter (AyyiLibfilemanager* fm, FilterType type, const gchar *filter_string)
 {
-	if (filer_set_filter(filer_window, type, filter_string))
-		display_update_hidden(filer_window);
+	if (fm__set_filter(fm, type, filter_string))
+		display_update_hidden(fm);
 }
 
 
+#if 0
 /* Highlight (wink or cursor) this item in the filer window. If the item
  * isn't already there but we're scanning then highlight it if it
  * appears later.
@@ -531,18 +547,24 @@ ViewData *display_create_viewdata(FilerWindow *filer_window, DirItem *item)
 
 	return view;
 }
+#endif
+
 
 /* Set the display style to the desired style. If the desired style
  * is AUTO_SIZE_ICONS, choose an appropriate size. Also resizes filer
  * window, if requested.
  */
-void display_set_actual_size(FilerWindow *filer_window, gboolean force_resize)
+void
+display_set_actual_size (AyyiLibfilemanager* fm, gboolean force_resize)
 {
-	display_set_layout(filer_window, filer_window->display_style_wanted,
-			   filer_window->details_type, force_resize);
+#if 0
+	display_set_layout(fm->file_window, fm->file_window->display_style_wanted,
+			   fm->file_window->details_type, force_resize);
+#endif
 }
 
 
+#if 0
 /****************************************************************
  *			INTERNAL FUNCTIONS			*
  ****************************************************************/
@@ -554,7 +576,7 @@ options_changed(void)
 
 	for (next = all_filer_windows; next; next = next->next)
 	{
-		FilerWindow *filer_window = (FilerWindow *) next->data;
+		AyyiLibfilemanager* fm = (AyyiLibfilemanager*) next->data;
 		int flags = 0;
 
 		if (o_display_dirs_first.has_changed ||
@@ -567,7 +589,7 @@ options_changed(void)
 		if (o_large_width.has_changed || o_small_width.has_changed)
 			flags |= VIEW_UPDATE_NAME; /* Recreate PangoLayout */
 
-		view_style_changed(filer_window->view, flags);
+		view_style_changed(fm->file_window->view, flags);
 	}
 }
 
@@ -815,7 +837,8 @@ void display_update_view(FilerWindow *filer_window,
 /* Sets display_style from display_style_wanted.
  * See also display_set_actual_size().
  */
-static void display_set_actual_size_real(FilerWindow *filer_window)
+static void
+display_set_actual_size_real (FilerWindow *filer_window)
 {
 	DisplayStyle size = filer_window->display_style_wanted;
 	int n;

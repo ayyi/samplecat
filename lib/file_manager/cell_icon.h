@@ -1,11 +1,20 @@
-/*
- * ROX-Filer, filer for the ROX desktop project
- * By Thomas Leonard, <tal197@users.sourceforge.net>.
- */
+/**
+* +----------------------------------------------------------------------+
+* | This file is part of the Ayyi project. http://ayyi.org               |
+* | copyright (C) 2011-2017 Tim Orford <tim@orford.org>                  |
+* +----------------------------------------------------------------------+
+* | ROX-Filer, filer for the ROX desktop project, v2.3                   |
+* | Copyright (C) 2005, the ROX-Filer team.                              |
+* +----------------------------------------------------------------------+
+* | This program is free software; you can redistribute it and/or modify |
+* | it under the terms of the GNU General Public License version 3       |
+* | as published by the Free Software Foundation.                        |
+* +----------------------------------------------------------------------+
+*
+*/
+#ifndef __cell_icon_h__
+#define __cell_icon_h__
 
-#ifndef _CELL_ICON_H
-#define _CELL_ICON_H
+GtkCellRenderer* cell_icon_new (ViewDetails*);
 
-GtkCellRenderer *cell_icon_new(ViewDetails *view_details);
-
-#endif /* _CELL_ICON_H */
+#endif

@@ -22,7 +22,8 @@
 
 /* type.c - code for dealing with filetypes */
 
-#include "config.h"
+#define USE_GICON // using GIcon avoids missing icons with old method
+
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -34,55 +35,74 @@
 #include <sys/types.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <string.h>
+
 #include <sys/stat.h>
 #include <gtk/gtk.h>
-
 #include "debug/debug.h"
-#include "utils/fscache.h"
-#include "utils/pixmaps.h"
-#include "xdgmime.h"
-#include "utils/ayyi_utils.h"
-#include "utils/mime_type.h"
-#include "file_manager/file_manager.h"
 
-#define TYPE_NS "http://www.freedesktop.org/standards/shared-mime-info"
+#include "fscache.h"
+#include "pixmaps.h"
+#include "mimetype.h"
+#include "diritem.h"
+#ifndef USE_GICON
+#include "xdgmime.h"
+#endif
+#include "support.h"
+
+#define _g_object_unref0(var) ((var == NULL) ? NULL : (var = (g_object_unref (var), NULL)))
+
 enum {SET_MEDIA, SET_TYPE};
 
-extern char theme_name[];
+char theme_name[64] = {'\0',};
 
-
-/* Static prototypes */
-//static void alloc_type_colours(void);
-//static char *get_action_save_path(GtkWidget *dialog);
-static MIME_type *get_mime_type(const gchar *type_name, gboolean can_create);
-//static gboolean remove_handler_with_confirm(const guchar *path);
+static MIME_type* get_mime_type    (const gchar* type_name, gboolean can_create);
+#ifdef DEBUG
+static void       print_icon_list  ();
+#endif
+#if 0
+static void      _set_icon_theme   (const char*);
+#endif
 
 /* Hash of all allocated MIME types, indexed by "media/subtype".
  * MIME_type structs are never freed; this table prevents memory leaks
  * when rereading the config files.
  */
-static GHashTable *type_hash = NULL;
+static GHashTable* type_hash = NULL;
 
-/* Most things on Unix are text files, so this is the default type */
-MIME_type *text_plain;
-MIME_type *inode_directory;
-MIME_type *inode_mountpoint;
-MIME_type *inode_pipe;
-MIME_type *inode_socket;
-MIME_type *inode_block_dev;
-MIME_type *inode_char_dev;
-MIME_type *application_executable;
-MIME_type *application_octet_stream;
-MIME_type *application_x_shellscript;
-MIME_type *application_x_desktop;
-MIME_type *inode_unknown;
-MIME_type *inode_door;
+/* Text is the default type */
+MIME_type* text_plain;
+MIME_type* inode_directory;
+MIME_type* inode_mountpoint;
+MIME_type* inode_pipe;
+MIME_type* inode_socket;
+MIME_type* inode_block_dev;
+MIME_type* inode_char_dev;
+MIME_type* application_executable;
+MIME_type* application_octet_stream;
+MIME_type* application_x_shellscript;
+MIME_type* application_x_desktop;
+MIME_type* inode_unknown;
+MIME_type* inode_door;
 
-extern GtkIconTheme *icon_theme;
+/*static*/ GtkIconTheme* icon_theme = NULL;
 
 
-void type_init(void)
+void
+type_init(void)
 {
+	icon_theme = gtk_icon_theme_get_default();
+
+#ifdef DEBUG
+	gint n_elements;
+	gchar** path[64];
+	gtk_icon_theme_get_search_path(icon_theme, path, &n_elements);
+	int i; for(i=0;i<n_elements;i++){
+		dbg(2, "icon_theme_path=%s", path[0][i]);
+	}
+	g_strfreev(*path);
+#endif
+
 	type_hash = g_hash_table_new(g_str_hash, g_str_equal);
 
 	text_plain = get_mime_type("text/plain", TRUE);
@@ -99,12 +119,47 @@ void type_init(void)
 	application_x_desktop->executable = TRUE;
 	inode_unknown = get_mime_type("inode/unknown", TRUE);
 	inode_door = get_mime_type("inode/door", TRUE);
+
+	//_set_icon_theme(NULL);
 }
+
+
+GdkPixbuf*
+mime_type_get_pixbuf(MIME_type* mime_type)
+{
+	type_to_icon(mime_type);
+	if (!mime_type->image) dbg(0, "no icon.\n");
+	return mime_type->image->sm_pixbuf;
+}
+
+
+#if 0
+static void
+mime_type_on_theme_select(GtkMenuItem* menuitem, gpointer user_data)
+{
+	g_return_if_fail(menuitem);
+
+	gchar* name = g_object_get_data(G_OBJECT(menuitem), "theme");
+
+#ifdef DEBUG
+	if(0) print_icon_list();
+#endif
+	_set_icon_theme(name);
+
+	//the effects of changing the icon theme are confined to the filemanager only.
+	//Changing icons application wide only makes sense if the mime fns are separated from the filemanager.
+	dbg(0, "FIXME icons for current directory are not cleared.");
+	dbg(0, "FIXME ensure theme selection is initiated by the application and not the file_manager lib.");
+	extern void file_manager__update_all();
+	file_manager__update_all();
+}
+#endif
 
 
 /* Read-load all the glob patterns.
  * Note: calls filer_update_all.
  */
+#ifndef USE_GICON
 void
 reread_mime_files(void)
 {
@@ -112,25 +167,38 @@ reread_mime_files(void)
 
 	xdg_mime_shutdown();
 }
+#endif
 
-/* Returns the MIME_type structure for the given type name. It is looked
- * up in type_hash and returned if found. If not found (and can_create is
- * TRUE) then a new MIME_type is made, added to type_hash and returned.
- * NULL is returned if type_name is not in type_hash and can_create is
- * FALSE, or if type_name does not contain a '/' character.
+
+#if 0
+gboolean
+can_be_executable()
+{
+	char* type = g_strconcat(type->media_type, "/", type->subtype, NULL);
+	gboolean executable = g_content_type_can_be_executable(type);
+	g_free(type);
+	return executable;
+}
+#endif
+
+
+/*
+ *  Returns the MIME_type structure for the given type name. It is looked
+ *  up in type_hash and returned if found. If not found (and can_create is
+ *  TRUE) then a new MIME_type is made, added to type_hash and returned.
+ *  NULL is returned if type_name is not in type_hash and can_create is
+ *  FALSE, or if type_name does not contain a '/' character.
  */
 static MIME_type*
-get_mime_type(const gchar *type_name, gboolean can_create)
+get_mime_type (const gchar* type_name, gboolean can_create)
 {
 	g_return_val_if_fail(type_name, NULL);
-
-	gchar *slash;
 
 	MIME_type* mtype = g_hash_table_lookup(type_hash, type_name);
 	if (mtype || !can_create) return mtype;
 	dbg(2, "not found in cache: %s", type_name);
 
-	slash = strchr(type_name, '/');
+	gchar* slash = strchr(type_name, '/');
 	if (slash == NULL) {
 		g_warning("MIME type '%s' does not contain a '/' character!", type_name);
 		return NULL;
@@ -140,59 +208,35 @@ get_mime_type(const gchar *type_name, gboolean can_create)
 	mtype->media_type = g_strndup(type_name, slash - type_name);
 	mtype->subtype = g_strdup(slash + 1);
 	mtype->image = NULL;
-	mtype->comment = NULL;
-
-	mtype->executable = xdg_mime_mime_type_subclass(type_name, "application/x-executable");
+	mtype->executable =
+#ifdef USE_GICON
+		g_content_type_can_be_executable(type_name);
+#else
+		xdg_mime_mime_type_subclass(type_name, "application/x-executable");
+#endif
 
 	g_hash_table_insert(type_hash, g_strdup(type_name), mtype);
 
 	return mtype;
 }
 
-	/*
-const char *basetype_name(DirItem *item)
-{
-	return _("File");
-	if (item->flags & ITEM_FLAG_SYMLINK)
-		return _("Sym link");
-	else if (item->flags & ITEM_FLAG_MOUNT_POINT)
-		return _("Mount point");
 
-	switch (item->base_type)
-	{
-		case TYPE_FILE:
-			return _("File");
-		case TYPE_DIRECTORY:
-			return _("Dir");
-		case TYPE_CHAR_DEVICE:
-			return _("Char dev");
-		case TYPE_BLOCK_DEVICE:
-			return _("Block dev");
-		case TYPE_PIPE:
-			return _("Pipe");
-		case TYPE_SOCKET:
-			return _("Socket");
-		case TYPE_DOOR:
-			return _("Door");
-	}
-	
-	return _("Unknown");
-}
-	*/
-
-static void append_names(gpointer key, gpointer value, gpointer udata)
+static void
+append_names (gpointer key, gpointer value, gpointer data)
 {
-	GList **list = (GList **) udata;
+	GList** list = (GList**)data;
 
 	*list = g_list_prepend(*list, key);
 }
 
+
 /* Return list of all mime type names. Caller must free the list
  * but NOT the strings it contains (which are never freed).
  */
-GList *mime_type_name_list(void)
+GList*
+mime_type_name_list (void)
 {
-	GList *list = NULL;
+	GList* list = NULL;
 
 	g_hash_table_foreach(type_hash, append_names, &list);
 	list = g_list_sort(list, (GCompareFunc) strcmp);
@@ -200,17 +244,18 @@ GList *mime_type_name_list(void)
 	return list;
 }
 
+
 /*			MIME-type guessing 			*/
 
 /* Get the type of this file - stats the file and uses that if
  * possible. For regular or missing files, uses the pathname.
  */
-MIME_type *type_get_type(const guchar *path)
+MIME_type*
+type_get_type (const guchar* path)
 {
-	DirItem		*item;
-	MIME_type	*type = NULL;
+	MIME_type* type = NULL;
 
-	item = diritem_new((guchar*)"");
+	DirItem* item = diritem_new((guchar*)"");
 	diritem_restat(path, item, NULL);
 	if (item->base_type != TYPE_ERROR)
 		type = item->mime_type;
@@ -227,38 +272,48 @@ MIME_type *type_get_type(const guchar *path)
 	return type;
 }
 
-/* Returns a pointer to the MIME-type.
+
+/*
+ *  Returns a pointer to the MIME-type.
  *
- * Tries all enabled methods:
- * - Look for extended attribute
- * - If no attribute, check file name
- * - If no name rule, check contents
+ *  Tries all enabled methods:
+ *  - Look for extended attribute
+ *  - If no attribute, check file name
+ *  - If no name rule, check contents
  *
- * NULL if we can't think of anything.
+ *  NULL if we can't think of anything.
  */
 MIME_type*
-type_from_path(const char *path)
+type_from_path (const char* path)
 {
-	if(_debug_ > 1) printf("type_from_path()...\n");
+#ifdef USE_GICON
+	MIME_type* mtype = NULL;
 
-	/* Check for extended attribute first */
-	/*
-	MIME_type *mime_type = NULL;
-	mime_type = xtype_get(path);
-	if (mime_type) return mime_type;
-	*/
+	gboolean uncertain;
+	gchar* type_name = g_content_type_guess (path, NULL, 0, &uncertain);
+	if (type_name){
+		mtype = get_mime_type(type_name, TRUE);
+		g_free(type_name);
+	}
+	return mtype;
 
-	/* Try name and contents next */
+#else
 	const char* type_name = xdg_mime_get_mime_type_for_file(path, NULL);
+	dbg(2, "type_name=%s.", type_name);
+
 	if (type_name) return get_mime_type(type_name, TRUE);
 
 	return NULL;
+#endif
 }
 
-/* Returns the file/dir in Choices for handling this type.
- * NULL if there isn't one. g_free() the result.
+
+/*
+ *  Returns the file/dir in Choices for handling this type.
+ *  NULL if there isn't one. g_free() the result.
  */
-static char *handler_for(MIME_type *type)
+static char*
+handler_for (MIME_type* type)
 {
 	return NULL;
 	/*
@@ -270,33 +325,34 @@ static char *handler_for(MIME_type *type)
 	g_free(type_name);
 
 	if (!open)
-		open = choices_find_xdg_path_load(type->media_type,
-						  "MIME-types", SITE);
+		open = choices_find_xdg_path_load(type->media_type, "MIME-types", SITE);
 
 	return open;
 	*/
 }
 
+
 MIME_type*
-mime_type_lookup(const char *type)
+mime_type_lookup (const char* type)
 {
 	return get_mime_type(type, TRUE);
 }
 
+
 /*			Actions for types 			*/
 
-gboolean type_open(const char *path, MIME_type *type)
+gboolean
+type_open (const char* path, MIME_type* type)
 {
-	gchar *argv[] = {NULL, NULL, NULL};
-	char		*open;
-
-	argv[1] = (char *) path;
-
-	open = handler_for(type);
+	char* open = handler_for(type);
 	if (!open)
 		return FALSE;
 
 	/*
+	gchar *argv[] = {NULL, NULL, NULL};
+
+	argv[1] = (char *) path;
+
 	struct stat	info;
 	gboolean	retval;
 	if (stat(open, &info))
@@ -348,37 +404,138 @@ gboolean type_open(const char *path, MIME_type *type)
 	return FALSE;
 }
 
-GdkAtom type_to_atom(MIME_type *type)
+/*
+ *  Return the image for this type, loading it if needed.
+ *
+ *  Note: You must g_object_unref() the image afterwards.
+ */
+MaskedPixmap*
+type_to_icon (MIME_type* type)
 {
-	char	*str;
-	GdkAtom	retval;
-	
-	g_return_val_if_fail(type != NULL, GDK_NONE);
+	if (!type){	g_object_ref(im_unknown); return im_unknown; }
 
-	str = g_strconcat(type->media_type, "/", type->subtype, NULL);
-	retval = gdk_atom_intern(str, FALSE);
+	time_t now = time(NULL);
+	// already got an image?
+	if (type->image) {
+		// Yes - don't recheck too often
+		if (abs(now - type->image_time) < 2)
+			return g_object_ref(type->image);
+		_g_object_unref0(type->image);
+	}
+
+	if (type->image) goto out;
+
+#ifdef USE_GICON
+	char* type_name = g_strconcat(type->media_type, "/", type->subtype, NULL);
+	GIcon* icon = g_content_type_get_icon (type_name);
+					if(!strcmp(type_name, "inode/directory")){
+						g_themed_icon_prepend_name(G_THEMED_ICON(icon), "folder");
+					}
+					else if(!strcmp(type_name, "inode/directory-open")){
+						g_themed_icon_prepend_name(G_THEMED_ICON(icon), "folder-open");
+					}
+	GtkIconInfo* info = gtk_icon_theme_lookup_by_gicon((*theme_name) ? icon_theme : gtk_icon_theme_get_default(), icon, 16, GTK_ICON_LOOKUP_FORCE_SIZE);
+
+	g_free(type_name);
+#else
+	#define icon_height 16;
+
+	char* get_icon0(MIME_type* type)
+	{
+		return g_strconcat("mime-", type->media_type, ":", type->subtype, NULL);
+	}
+	char* get_icon1(MIME_type* type)
+	{
+		return (type == inode_directory)
+			? g_strdup("gnome-fs-directory")
+			: g_strconcat("gnome-mime-", type->media_type, "-", type->subtype, NULL);
+	}
+	char* get_icon2(MIME_type* type)
+	{
+		return g_strconcat("mime-", type->media_type, NULL);
+	}
+	char* get_icon3(MIME_type* type)
+	{
+		return g_strconcat("gnome-mime-", type->media_type, NULL);
+	}
+	char* get_icon4(MIME_type* type)
+	{
+		return g_strconcat(type->media_type, "-x-generic", NULL);
+	}
+	char* get_icon5(MIME_type* type)
+	{
+		// try any old non-standard rubbish
+		return g_strconcat("gnome-fs-regular", NULL);
+	}
+
+	typedef char* (*get_icon)(MIME_type*);
+	get_icon fns[] = { get_icon0, get_icon1, get_icon2, get_icon3, get_icon4, get_icon5 };
+
+	GtkIconInfo* info = NULL;
+
+	int i=0; for(;i < G_N_ELEMENTS(fns) && !info;i++) {
+		char* type_name = fns[i](type);
+		info = gtk_icon_theme_lookup_icon(icon_theme, type_name, icon_height, 0);
+		g_free(type_name);
+	}
+#endif
+	if (info) {
+		/* Get the actual icon through our cache, not through GTK, because
+		 * GTK doesn't cache icons.
+		 */
+		const char* icon_path = gtk_icon_info_get_filename(info);
+		if (icon_path) type->image = g_fscache_lookup(pixmap_cache, icon_path);
+		//if (icon_path) type->image = masked_pixmap_new(full);
+		/* else shouldn't happen, because we didn't use
+		 * GTK_ICON_LOOKUP_USE_BUILTIN.
+		 */
+		gtk_icon_info_free(info);
+	}
+
+out:
+	if (!type->image) {
+		dbg(2, "%s/% failed! using im_unknown.", type->media_type, type->subtype);
+		/* One ref from the type structure, one returned */
+		type->image = im_unknown;
+		g_object_ref(im_unknown);
+	}
+
+	type->image_time = now;
+	
+	g_object_ref(type->image);
+	return type->image;
+}
+
+
+GdkAtom
+type_to_atom (MIME_type* type)
+{
+	g_return_val_if_fail(type, GDK_NONE);
+
+	char* str = g_strconcat(type->media_type, "/", type->subtype, NULL);
+	GdkAtom retval = gdk_atom_intern(str, FALSE);
 	g_free(str);
 	
 	return retval;
 }
 
+
 /* Called if the user clicks on the OK button. Returns FALSE if an error
  * was displayed instead of performing the action.
  */
 #ifdef NEVER
-static gboolean set_shell_action(GtkWidget *dialog)
+static gboolean
+set_shell_action (GtkWidget* dialog)
 {
-	GtkEntry *entry;
-	const guchar *command;
-	gchar	*tmp, *path;
+	gchar *tmp, *path;
 	int	error = 0, len;
 	int	fd;
 
-	entry = g_object_get_data(G_OBJECT(dialog), "shell_command");
+	GtkEntry* entry = g_object_get_data(G_OBJECT(dialog), "shell_command");
 
-	g_return_val_if_fail(entry != NULL, FALSE);
+	g_return_val_if_fail(entry, FALSE);
 
-	command = gtk_entry_get_text(entry);
+	const guchar* command = gtk_entry_get_text(entry);
 	
 	if (!strchr(command, '$'))
 	{
@@ -440,13 +597,11 @@ static void set_action_response(GtkWidget *dialog, gint response, gpointer data)
  * NULL if nothing is defined for it.
  */
 	/*
-static guchar *handler_for_radios(GObject *dialog)
+static guchar*
+handler_for_radios (GObject* dialog)
 {
-	Radios	*radios;
-	MIME_type *type;
-
-	radios = g_object_get_data(G_OBJECT(dialog), "rox-radios");
-	type = g_object_get_data(G_OBJECT(dialog), "mime_type");
+	Radios* radios = g_object_get_data(G_OBJECT(dialog), "rox-radios");
+	MIME_type* type = g_object_get_data(G_OBJECT(dialog), "mime_type");
 	
 	g_return_val_if_fail(radios != NULL, NULL);
 	g_return_val_if_fail(type != NULL, NULL);
@@ -454,16 +609,13 @@ static guchar *handler_for_radios(GObject *dialog)
 	switch (radios_get_value(radios))
 	{
 		case SET_MEDIA:
-			return choices_find_xdg_path_load(type->media_type,
-							  "MIME-types", SITE);
+			return choices_find_xdg_path_load(type->media_type, "MIME-types", SITE);
 		case SET_TYPE:
 		{
 			gchar *tmp, *handler;
 			tmp = g_strconcat(type->media_type, "_",
 					  type->subtype, NULL);
-			handler = choices_find_xdg_path_load(tmp,
-							     "MIME-types",
-							     SITE);
+			handler = choices_find_xdg_path_load(tmp, "MIME-types", SITE);
 			g_free(tmp);
 			return handler;
 		}
@@ -519,45 +671,6 @@ static void clear_run_action(GtkWidget *drop_box, GtkWidget *dialog)
 }
 	*/
 
-/* Called when a URI list is dropped onto the box in the Set Run Action
- * dialog. Make sure it's an application, and make that the default
- * handler.
- */
-	/*
-static void drag_app_dropped(GtkWidget	*drop_box,
-			     const guchar *app,
-			     GtkWidget	*dialog)
-{
-	DirItem	*item;
-
-	item = diritem_new("");
-	diritem_restat(app, item, NULL);
-	if (item->flags & EXECUTABLE_FILE(item))
-	{
-		guchar	*path;
-
-		path = get_action_save_path(dialog);
-
-		if (path)
-		{
-			if (symlink(app, path))
-				delayed_error("symlink: %s",
-						g_strerror(errno));
-			else
-				destroy_on_idle(dialog);
-
-			g_free(path);
-		}
-	}
-	else
-		delayed_error(
-			_("This is not a program! Give me an application "
-			"instead!"));
-
-	diritem_free(item);
-}
-	*/
-
 
 /* Takes the st_mode field from stat() and returns the base type.
  * Should not be a symlink.
@@ -585,38 +698,10 @@ int mode_to_base_type(int st_mode)
 	*/
 }
 
-#ifdef NOT_USED
-static void expire_timer(gpointer key, gpointer value, gpointer data)
-{
-	MIME_type *type = value;
-
-	type->image_time = 0;
-}
-#endif
-
-/* Return a pointer to a (static) colour for this item. If colouring is
- * off, returns normal.
- */
-GdkColor *type_get_colour(DirItem *item, GdkColor *normal)
-{
-	/*
-	int type = item->base_type;
-
-	if (!o_display_colour_types.int_value)
-		return normal;
-
-	if (EXECUTABLE_FILE(item))
-		type = TYPE_EXEC;
-
-	g_return_val_if_fail(type >= 0 && type < NUM_TYPE_COLOURS, normal);
-
-	return &type_colours[type];
-	*/
-	return normal;
-}
 
 #ifdef NOT_USED
-static char **get_xdg_data_dirs(int *n_dirs)
+static char**
+get_xdg_data_dirs (int *n_dirs)
 {
 	const char *env;
 	char **dirs;
@@ -642,57 +727,90 @@ static char **get_xdg_data_dirs(int *n_dirs)
 }
 #endif
 
-/* Try to fill in 'type->comment' from this document */
-	/*
-static void get_comment(MIME_type *type, const guchar *path)
+
+#ifdef DEBUG
+static void
+print_icon_list()
 {
-	xmlNode *node;
-	XMLwrapper *doc;
-	
-	doc = xml_cache_load(path);
-	if (!doc)
-		return;
-
-	node = xml_get_section(doc, TYPE_NS, "comment");
-
-	if (node)
-	{
-		char *val;
-		g_return_if_fail(type->comment == NULL);
-		val= xmlNodeListGetString(node->doc, node->xmlChildrenNode, 1);
-		type->comment = g_strdup(val);
-		xmlFree(val);
+	GList* icon_list = gtk_icon_theme_list_icons(icon_theme, "MimeTypes");
+	if(icon_list){
+		dbg(0, "%s----------------------------------", theme_name);
+		for(;icon_list;icon_list=icon_list->next){
+			char* icon = icon_list->data;
+			printf("%s\n", icon);
+			g_free(icon);
+		}
+		g_list_free(icon_list);
+		printf("-------------------------------------------------\n");
 	}
+	else warnprintf("icon_theme has no mimetype icons?\n");
 
-	g_object_unref(doc);
-	return;
-}
-	*/
-
-const char*
-mime_type_comment(MIME_type* type)
-{
-	if(!type){ errprintf("%s(): @type is NULL\n", __func__); return NULL; } 
-	//if (!type->comment) find_comment(type);
-	return type->comment;
-}
-
-#ifdef NOT_USED
-static guchar *read_theme(Option *option)
-{
-	GtkOptionMenu *om = GTK_OPTION_MENU(option->widget);
-	GtkLabel *item;
-
-	item = GTK_LABEL(GTK_BIN(om)->child);
-
-	g_return_val_if_fail(item != NULL, g_strdup("ROX"));
-
-	return g_strdup(gtk_label_get_text(item));
 }
 #endif
 
+
+#if 0
+/*static*/ void
+_set_icon_theme(const char* name)
+{
+	g_hash_table_remove_all(type_hash);
+
+	dbg(2, "setting theme: %s.", name);
+	if(name && name[0]){
+		if(!*theme_name) icon_theme = gtk_icon_theme_new();
+		g_strlcpy(theme_name, name, 64);
+		gtk_icon_theme_set_custom_theme(icon_theme, theme_name);
+	}
+
+#if 0
+	// this test is disabled as its not reliable
+	while (1)
+	{
+		GtkIconInfo* info = gtk_icon_theme_lookup_icon(icon_theme, "mime-application:postscript", ICON_HEIGHT, 0);
+		if (!info)
+		{
+			info = gtk_icon_theme_lookup_icon(icon_theme, "gnome-mime-application-postscript", ICON_HEIGHT, 0);
+		}
+		if (info)
+		{
+			dbg(0, "got test icon ok. Using theme '%s'", theme_name);
+			print_icon_list();
+			gtk_icon_info_free(info);
+			return;
+		}
+
+		if (strcmp(theme_name, "ROX") == 0) break;
+
+		warnprintf("Icon theme '%s' does not contain MIME icons. Using ROX default theme instead.\n", theme_name);
+
+		//theme_name = "ROX";
+		strcpy(theme_name, "ROX");
+	}
+#endif
+
+#if 0
+	//const char *home_dir = g_get_home_dir();
+	//char *icon_home;
+	icon_home = g_build_filename(home_dir, ".icons", NULL);
+	if (!file_exists(icon_home)) mkdir(icon_home, 0755);
+	g_free(icon_home);
+#endif
+
+	//icon_home = g_build_filename(home_dir, ".icons", "ROX", NULL);
+	//if (symlink(make_path(app_dir, "ROX"), icon_home))
+	//	errprintf("Failed to create symlink '%s':\n%s\n\n"
+	//	"(this may mean that the ROX theme already exists there, but "
+	//	"the 'mime-application:postscript' icon couldn't be loaded for "
+	//	"some reason)", icon_home, g_strerror(errno));
+	//g_free(icon_home);
+
+	gtk_icon_theme_rescan_if_needed(icon_theme);
+}
+#endif
+
+
 void
-reset_type_hash()
+mime_type_clear ()
 {
 	g_hash_table_remove_all(type_hash);
 }

@@ -221,12 +221,9 @@ config_save(ConfigContext* ctx)
 		}
 	}
 
-	AyyiLibfilemanager* fm = file_manager__get_signaller();
+	AyyiLibfilemanager* fm = file_manager__get();
 	if(fm){
-		struct _Filer* f = fm->file_window;
-		if(f){
-			g_key_file_set_value(ctx->key_file, "Samplecat", "browse_dir", f->real_path);
-		}
+		g_key_file_set_value(ctx->key_file, "Samplecat", "browse_dir", fm->real_path);
 	}
 
 #if 0

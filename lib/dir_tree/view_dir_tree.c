@@ -15,7 +15,6 @@
 #include "utils/mime_type.h"
 #include "utils/ayyi_utils.h"
 #include "file_manager/file_manager.h"
-#include "file_manager/support.h"
 #include "samplecat/model.h"
 
 #include "dir_tree/gqview.h"
@@ -30,7 +29,7 @@
 #include <gdk/gdkkeysyms.h> /* for keyboard values */
 
 #include "dnd.h"
-GdkPixbuf* mime_type_get_pixbuf(MIME_type*);
+extern GdkPixbuf* mime_type_get_pixbuf(MIME_type*);
 
 
 #define VDTREE_INDENT 14
@@ -472,14 +471,14 @@ static void vdtree_pop_menu_new_cb(GtkWidget *widget, gpointer data)
 }
 #endif
 
+#ifdef LATER
 static void vdtree_pop_menu_rename_cb(GtkWidget *widget, gpointer data)
 {
-#ifdef LATER
 	ViewDirTree *vdt = data;
 
 	vdtree_rename_by_data(vdt, vdt->click_fd);
-#endif
 }
+#endif
 
 #ifdef LATER
 static void vdtree_pop_menu_tree_cb(GtkWidget *widget, gpointer data)
@@ -1911,8 +1910,6 @@ vdtree_on_icon_theme_changed(ViewDirTree *vdt)
 
 	vdt1 = vdt;
 
-	//MIME_type* mime_type = mime_type_lookup(row[MYSQL_MIMETYPE]);
-	//MIME_type* mime_type = inode_directory;
 	GdkPixbuf* pixbuf = mime_type_get_pixbuf(inode_directory);
 
 	GtkTreeModel* model = gtk_tree_view_get_model(GTK_TREE_VIEW(vdt->treeview));

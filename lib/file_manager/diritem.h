@@ -1,14 +1,19 @@
-/*
- * ROX-Filer, filer for the ROX desktop project
- * Thomas Leonard, <tal197@users.sourceforge.net>
- */
-
-
+/**
+* +----------------------------------------------------------------------+
+* | This file is part of the Ayyi project. http://ayyi.org               |
+* | copyright (C) 2011-2017 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2006, Thomas Leonard and others                        |
+* +----------------------------------------------------------------------+
+* | This program is free software; you can redistribute it and/or modify |
+* | it under the terms of the GNU General Public License version 3       |
+* | as published by the Free Software Foundation.                        |
+* +----------------------------------------------------------------------+
+*
+*/
 #ifndef _DIRITEM_H
 #define _DIRITEM_H
 
 #include <sys/types.h>
-#include "utils/mime_type.h"
 
 extern time_t diritem_recent_time;
 
@@ -47,11 +52,11 @@ struct _DirItem
 	int           lstat_errno; /* 0 if details are valid */
 };
 
-void diritem_init(void);
-DirItem *diritem_new(const guchar *leafname);
-void diritem_restat(const guchar *path, DirItem *item, struct stat *parent);
-void _diritem_get_image(DirItem *item);
-void diritem_free(DirItem *item);
+void     diritem_init      ();
+DirItem* diritem_new       (const guchar* leafname);
+void     diritem_restat    (const guchar* path, DirItem*, struct stat* parent);
+void    _diritem_get_image (DirItem*);
+void     diritem_free      (DirItem*);
 
 static inline MaskedPixmap *di_image(DirItem *item)
 {
