@@ -42,3 +42,6 @@ gl_spectrogram_view.c: gl_spectrogram_view.vala
 
 logger.c: logger.vala
 	valac -C -H logger.h --pkg config --pkg posix --pkg gdk-2.0 --pkg gmodule-2.0 --pkg debug --vapidir=. --vapidir=../../lib/debug logger.vala
+
+directory: directory.vala
+	valac -C -H directory.h --pkg config --pkg gtk+-2.0 --pkg gdk-2.0 --pkg gmodule-2.0 --pkg debug --vapidir=. --vapidir=../../lib/debug directory.vala

@@ -110,17 +110,12 @@ directories_view(WaveformActor* _)
 
 	bool dirs_event(AGlActor* actor, GdkEvent* event, AGliPt xy)
 	{
-		/*
 		switch(event->type){
 			case GDK_BUTTON_PRESS:
 			case GDK_BUTTON_RELEASE:
-				agl_actor__invalidate(actor);
-				dbg(0, "y=%i", xy.y - actor->region.y1);
-				break;
 			default:
 				break;
 		}
-		*/
 		return AGL_HANDLED;
 	}
 
@@ -143,7 +138,7 @@ directories_view(WaveformActor* _)
 		}
 	);
 
-	return view;
+	return (AGlActor*)view;
 }
 
 

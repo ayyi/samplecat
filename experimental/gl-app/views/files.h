@@ -11,12 +11,19 @@
 */
 #ifndef __views_files_h__
 #define __views_files_h__
+#include "waveform/actor.h"
+#include "gl-app/directory.h"
+typedef struct _FilesView FilesView;
+#include "views/files.impl.h"
 
-typedef struct {
-   AGlActor    actor;
-   int         a;
-} FilesView;
+struct _FilesView {
+   AGlActor       actor;
+   VMDirectory*   viewmodel;
+   DirectoryView* view;
+   int            scroll_offset;
+};
 
-AGlActor* files_view           (WaveformActor*);
+AGlActor* files_view              (WaveformActor*);
+int       files_view_row_at_coord (FilesView*, int x, int y);
 
 #endif

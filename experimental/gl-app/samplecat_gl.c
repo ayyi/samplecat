@@ -16,13 +16,15 @@
 #include <string.h>
 #include <X11/Xlib.h>
 #include <X11/keysym.h>
-# define GLX_GLXEXT_PROTOTYPES
+#define GLX_GLXEXT_PROTOTYPES
 #include <GL/gl.h>
 #include <GL/glx.h>
 #include <gtk/gtk.h>
 #include <debug/debug.h>
 #include "agl/actor.h"
 #include "agl/ext.h"
+#include "file_manager/mimetype.h"
+#include "file_manager/pixmaps.h"
 #include "src/typedefs.h"
 #include "samplecat.h"
 #include "utils/ayyi_utils.h"
@@ -65,17 +67,6 @@ Key keys[] = {
 static void add_key_handlers();
 
 
-gint
-mainX (gint argc, gchar** argv)
-{
-	gtk_init (&argc, &argv);
-
-	return 0;
-}
-
-
-#include "file_manager/mimetype.h"
-#include "src/icon_theme.h"
 int
 main(int argc, char* argv[])
 {
@@ -86,7 +77,9 @@ main(int argc, char* argv[])
 	gtk_init_check(&argc, &argv);
 	type_init();
 	pixmaps_init();
+#if 0
 	icon_theme_init();
+#endif
 
 	Window win;
 	GLXContext ctx;
