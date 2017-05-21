@@ -38,8 +38,8 @@ To update the repository later, run
 	make clean
 ```
 
-Install the build dependencies: `libsndfile1-dev libgtkglext1-dev`  
-Run the build process: `./autogen.sh && ./configure.sh`  
+Install the build dependencies: `libsndfile1-dev libgtkglext1-dev libxml2-dev`  
+Run the build process: `./autogen.sh && ./configure && make`  
 
 usage
 -----
