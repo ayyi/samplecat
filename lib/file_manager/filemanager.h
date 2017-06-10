@@ -112,7 +112,9 @@ struct _AyyiLibfilemanager {
     //GtkWidget	*thumb_bar, *thumb_progress;
     int                        max_thumbs;      // total for this batch
 
+#if 0
     gint                       auto_scroll;     // Timer
+#endif
 
     GtkWidget*                 menu;
 

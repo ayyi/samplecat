@@ -27,6 +27,7 @@
 extern GList* all_filer_windows;
 extern char theme_name[];
 
+#define _g_free0(var) ((var == NULL) ? NULL : (var = (g_free(var), NULL)))
 #define _g_object_unref0(var) ((var == NULL) ? NULL : (var = (g_object_unref (var), NULL)))
 #define g_source_remove0(S) {if(S) g_source_remove(S); S = 0;}
 
@@ -913,11 +914,13 @@ filer_window_destroyed (GtkWidget* widget, AyyiLibfilemanager* fm)
 
 	g_source_remove0(fm->open_timeout);
 
+#if 0
 	if (fm->auto_scroll != -1)
 	{
 		g_source_remove(fm->auto_scroll);
 		fm->auto_scroll = -1;
 	}
+#endif
 
 	if (fm->thumb_queue)
 		destroy_glist(&fm->thumb_queue);
@@ -926,12 +929,12 @@ filer_window_destroyed (GtkWidget* widget, AyyiLibfilemanager* fm)
 	filer_set_id(filer_window, NULL);
 #endif
 
-	if(fm->filter_string) g_free(fm->filter_string);
-	if(fm->regexp) g_free(fm->regexp);
-	g_free(fm->auto_select);
-	g_free(fm->real_path);
-	g_free(fm->sym_path);
-	g_free(fm);
+	_g_free0(fm->filter_string);
+	_g_free0(fm->regexp);
+	_g_free0(fm->auto_select);
+	_g_free0(fm->real_path);
+	_g_free0(fm->sym_path);
+	g_object_unref(fm);
 
 #if 0
 	one_less_window();

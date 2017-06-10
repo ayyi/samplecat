@@ -64,7 +64,7 @@ struct _ViewDetailsClass {
 #define _g_object_unref0(var) ((var == NULL) ? NULL : (var = (g_object_unref (var), NULL)))
 
 /* Static prototypes */
-static void     view_details_finialize           (GObject*);
+static void     view_details_finalize            (GObject*);
 static void     view_details_class_init          (gpointer gclass, gpointer data);
 static void     view_details_init                (GTypeInstance*, gpointer gclass);
 
@@ -900,19 +900,18 @@ view_details_drag_data_received (GtkWidget* widget, GdkDragContext* drag_context
 
 
 static void
-view_details_destroy(GtkObject *obj)
+view_details_destroy(GtkObject* obj)
 {
-	/*
-	ViewDetails *view_details = VIEW_DETAILS(obj);
-	view_details->filer_window = NULL;
-	*/
+	VIEW_DETAILS(obj)->filer_window = NULL;
+
+	GTK_OBJECT_CLASS(parent_class)->destroy(obj);
 }
 
 
 static void
-view_details_finialize(GObject *object)
+view_details_finalize(GObject* object)
 {
-	ViewDetails *view_details = (ViewDetails *) object;
+	ViewDetails* view_details = (ViewDetails*)object;
 
 	g_ptr_array_free(view_details->items, TRUE);
 	view_details->items = NULL;
@@ -924,12 +923,12 @@ view_details_finialize(GObject *object)
 static void
 view_details_class_init(gpointer gclass, gpointer data)
 {
-	GObjectClass *object = (GObjectClass *) gclass;
-	GtkWidgetClass *widget = (GtkWidgetClass *) gclass;
+	GObjectClass* object = (GObjectClass*)gclass;
+	GtkWidgetClass* widget = (GtkWidgetClass*)gclass;
 
 	parent_class = g_type_class_peek_parent(gclass);
 
-	object->finalize = view_details_finialize;
+	object->finalize = view_details_finalize;
 	GTK_OBJECT_CLASS(object)->destroy = view_details_destroy;
 
 	widget->scroll_event = view_details_scroll;
@@ -970,11 +969,9 @@ block_focus(GtkWidget *button, GtkDirectionType dir, ViewDetails *view_details)
 
 
 static gboolean
-test_can_change_selection(GtkTreeSelection *sel, GtkTreeModel *model, GtkTreePath *path,
-                                          gboolean path_currently_selected,
-                                          gpointer data)
+test_can_change_selection(GtkTreeSelection* sel, GtkTreeModel* model, GtkTreePath* path, gboolean path_currently_selected, gpointer data)
 {
-	ViewDetails *view_details = VIEW_DETAILS(gtk_tree_selection_get_tree_view(sel));
+	ViewDetails* view_details = VIEW_DETAILS(gtk_tree_selection_get_tree_view(sel));
 
 	return TRUE;
 	return view_details->can_change_selection != 0;
@@ -982,7 +979,7 @@ test_can_change_selection(GtkTreeSelection *sel, GtkTreeModel *model, GtkTreePat
 
 
 static void
-selection_changed(GtkTreeSelection *selection, gpointer user_data)
+selection_changed(GtkTreeSelection* selection, gpointer user_data)
 {
 	ViewDetails *view_details = VIEW_DETAILS(user_data);
 
@@ -991,14 +988,14 @@ selection_changed(GtkTreeSelection *selection, gpointer user_data)
 
 
 /*
- * Set the font used for a treeview column to that given for the
- * "mono-font" style property of a widget.  This has to be done _after_ the
- * widget has been realized, because that is when the style information is
- * set up.  This is done by connecting this function to run after the
- * "realize" signal.
+ *  Set the font used for a treeview column to that given for the
+ *  "mono-font" style property of a widget.  This has to be done _after_ the
+ *  widget has been realized, because that is when the style information is
+ *  set up.  This is done by connecting this function to run after the
+ *  "realize" signal.
  */
 static void
-set_column_mono_font(GtkWidget *widget, GObject *object)
+set_column_mono_font(GtkWidget* widget, GObject* object)
 {
 	const gchar *font_name;
 
@@ -1023,8 +1020,8 @@ static void
 view_details_init (GTypeInstance* object, gpointer gclass)
 {
 	GtkTreeView* treeview = (GtkTreeView*)object;
-	GtkTreeViewColumn *column;
-	ViewDetails* view_details = (ViewDetails *) object;
+	GtkTreeViewColumn* column;
+	ViewDetails* view_details = (ViewDetails*)object;
 
 	view_details->items = g_ptr_array_new();
 	view_details->cursor_base = -1;
