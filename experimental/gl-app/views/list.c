@@ -36,6 +36,14 @@ extern int need_draw;
 
 static AGl* agl = NULL;
 static int instance_count = 0;
+static AGlActorClass actor_class = {0, "List", (AGlActorNew*)list_view};
+
+
+AGlActorClass*
+list_view_get_class ()
+{
+	return &actor_class;
+}
 
 
 static void
@@ -118,13 +126,12 @@ list_view(WaveformActor* _)
 
 	bool list_event(AGlActor* actor, GdkEvent* event, AGliPt xy)
 	{
-		// TODO why is y not relative to actor.y ?
 		switch(event->type){
 			case GDK_BUTTON_PRESS:
 			case GDK_BUTTON_RELEASE:
 				agl_actor__invalidate(actor);
-				int row = (xy.y - actor->region.y1) / row_height;
-				dbg(0, "y=%i", xy.y - actor->region.y1);
+				int row = xy.y / row_height;
+				dbg(0, "y=%i row=%i", xy.y, row);
 				list_view_select((ListView*)actor, row);
 				break;
 			default:
@@ -141,9 +148,8 @@ list_view(WaveformActor* _)
 
 	ListView* view = WF_NEW(ListView,
 		.actor = {
-#ifdef AGL_DEBUG_ACTOR
-			.name = "List",
-#endif
+			.class = &actor_class,
+			.name = actor_class.name,
 			.init = list_init,
 			.free = list_free,
 			.paint = list_paint,

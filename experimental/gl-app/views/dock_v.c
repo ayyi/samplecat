@@ -32,6 +32,14 @@
 
 static AGl* agl = NULL;
 static int instance_count = 0;
+static AGlActorClass actor_class = {0, "Dock V", (AGlActorNew*)dock_v_view};
+
+
+AGlActorClass*
+dock_v_get_class()
+{
+	return &actor_class;
+}
 
 
 static void
@@ -48,7 +56,7 @@ _init()
 
 
 AGlActor*
-dock_v_view(WaveformActor* _)
+dock_v_view(gpointer _)
 {
 	instance_count++;
 
@@ -88,7 +96,7 @@ dock_v_view(WaveformActor* _)
 		agl->shaders.plain->uniform.colour = 0x66666666;
 	}
 
-	void dock_set_size(AGlActor* actor)
+	void dock_v_set_size(AGlActor* actor)
 	{
 		DockVView* dock = (DockVView*)actor;
 
@@ -107,6 +115,19 @@ dock_v_view(WaveformActor* _)
 			if(panel->size_req.preferred.y > -1) req += panel->size_req.preferred.y;
 		}
 
+		// if the allocated size is correct, it should be preserved
+		if(items[G_N_ELEMENTS(items) - 1].actor->region.y2 == actor->region.y2){
+			int width = agl_actor__width(actor);
+			GList* l = actor->children;
+			for(;l;l=l->next){
+				AGlActor* child = l->data;
+				child->region.x2 = child->region.x1 + width;
+				agl_actor__set_size(child);
+			}
+
+			return;
+		}
+
 		int vspace = agl_actor__height(actor) - SPACING * (g_list_length(dock->panels) - 1);
 		int n_flexible = g_list_length(dock->panels);
 		for(i=0;i<G_N_ELEMENTS(items);i++){
@@ -118,6 +139,9 @@ dock_v_view(WaveformActor* _)
 			if(panel->size_req.preferred.y > -1){
 				item->height = panel->size_req.preferred.y + PANEL_DRAG_HANDLE_HEIGHT;
 				n_flexible --;
+			}else if(panel->size_req.min.y > -1){
+				item->height = panel->size_req.min.y + PANEL_DRAG_HANDLE_HEIGHT;
+				n_flexible --;
 			}
 			vspace -= item->height;
 		}
@@ -126,10 +150,9 @@ dock_v_view(WaveformActor* _)
 		int y = 0;
 		for(i=0;i<G_N_ELEMENTS(items);i++){
 			Item* item = &items[i];
-			PanelView* panel = (PanelView*)item->actor;
 
 			if(each_unallocated > 0){
-				if(panel->size_req.preferred.y < 0){
+				if(!item->height){
 					item->height = each_unallocated;
 				}
 			}
@@ -138,6 +161,8 @@ dock_v_view(WaveformActor* _)
 		y -= SPACING; // no spacing needed after last element
 
 		if(y < agl_actor__height(actor)){
+			// under allocated
+			// TODO use distribute fn from dock_h.c
 			int remaining = agl_actor__height(actor) - y;
 			int n_resizable = 0;
 			for(i=0;i<G_N_ELEMENTS(items);i++){
@@ -147,12 +172,14 @@ dock_v_view(WaveformActor* _)
 					n_resizable ++;
 				}
 			}
-			int each = remaining / n_resizable;
-			for(i=0;i<G_N_ELEMENTS(items);i++){
-				Item* item = &items[i];
-				PanelView* panel = (PanelView*)item->actor;
-				if(item->height < panel->size_req.max.y){
-					item->height += each;
+			if(n_resizable){
+				int each = remaining / n_resizable;
+				for(i=0;i<G_N_ELEMENTS(items);i++){
+					Item* item = &items[i];
+					PanelView* panel = (PanelView*)item->actor;
+					if(item->height < panel->size_req.max.y){
+						item->height += each;
+					}
 				}
 			}
 		}
@@ -235,7 +262,7 @@ dock_v_view(WaveformActor* _)
 					for(;l;l=l->next){
 						AGlActor* a = l->data;
 						y = a->region.y1;
-						if(ABS(y - (xy.y - actor->region.y1)) < SPACING){
+						if(ABS(y - xy.y) < SPACING){
 							f = a;
 							break;
 						}
@@ -282,15 +309,14 @@ dock_v_view(WaveformActor* _)
 	DockVView* dock = AGL_NEW(DockVView,
 		.panel = {
 			.actor = {
-#ifdef AGL_DEBUG_ACTOR
+				.class = &actor_class,
 				.name = "Dock V",
-#endif
 				.program = (AGlShader*)agl->shaders.plain,
 				.init = dock_init,
 				.free = dock_free,
 				.paint = dock_v_paint,
 				.set_state = dock_set_state,
-				.set_size = dock_set_size,
+				.set_size = dock_v_set_size,
 				.on_event = dock_event,
 			},
 			.size_req = {

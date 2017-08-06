@@ -24,6 +24,8 @@ typedef struct {
    int         active;
 } TabsView;
 
+AGlActorClass* tabs_view_get_class ();
+
 AGlActor* tabs_view          (WaveformActor*);
 void      tabs_view__add_tab (TabsView*, const char*, AGlActor*);
 

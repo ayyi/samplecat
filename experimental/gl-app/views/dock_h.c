@@ -33,6 +33,14 @@
 
 static AGl* agl = NULL;
 static int instance_count = 0;
+static AGlActorClass actor_class = {0, "Dock H", (AGlActorNew*)dock_h_view};
+
+
+AGlActorClass*
+dock_h_get_class()
+{
+	return &actor_class;
+}
 
 
 static void
@@ -117,12 +125,25 @@ dock_h_view(WaveformActor* _)
 			if(panel->size_req.preferred.x > -1) req += panel->size_req.preferred.x;
 		}
 
+		// if the allocated horizontal size is correct, it should be preserved
+		if(items[G_N_ELEMENTS(items) - 1].actor->region.x2 == agl_actor__width(actor)){
+			dbg(2, "width already correct: %i", agl_actor__width(actor));
+
+			int height = agl_actor__height(actor);
+			GList* l = actor->children;
+			for(;l;l=l->next){
+				AGlActor* child = l->data;
+				child->region.y2 = child->region.y1 + height;
+				agl_actor__set_size(child);
+			}
+			return;
+		}
+
 		int hspace = agl_actor__width(actor) - SPACING * (g_list_length(dock->panels) - 1);
 		int n_flexible = g_list_length(dock->panels);
 		for(i=0;i<G_N_ELEMENTS(items);i++){
 			Item* item = &items[i];
 			PanelView* panel = (PanelView*)item->actor;
-			//AGlActor* a = (AGlActor*)panel;
 
 			if(panel->size_req.preferred.x > -1){
 				item->width = panel->size_req.preferred.x + PANEL_DRAG_HANDLE_HEIGHT;
@@ -148,23 +169,64 @@ dock_h_view(WaveformActor* _)
 		x -= SPACING; // no spacing needed after last element
 
 		if(x < agl_actor__width(actor)){
+			// under-allocated
 			int remaining = agl_actor__width(actor) - x;
 			int n_resizable = 0;
 			for(i=0;i<G_N_ELEMENTS(items);i++){
 				Item* item = &items[i];
 				PanelView* panel = (PanelView*)item->actor;
-				if(item->width < panel->size_req.max.x){
+				if(panel->size_req.max.x < 0 || item->width < panel->size_req.max.x){
 					n_resizable ++;
 				}
 			}
 			if(n_resizable){
-				int each = remaining / n_resizable;
+				typedef struct {PanelView* panel; int w; int amount; bool full;} A; // TODO just use Item
+
+				void distribute(A L[], int _to_distribute, int n_resizable, int iter)
+				{
+					g_return_if_fail(_to_distribute > 0);
+
+					int to_distribute = _to_distribute;
+					int each = to_distribute / n_resizable;
+					int remainder = to_distribute % n_resizable;
+
+					#define CHECK_FULL(A) if(width + amount == max){ A->full = true; n_resizable--; }
+
+					int i; for(i=0;i<20;i++){
+						A* a = &L[i];
+						if(a->panel){
+							if(!a->full){
+								PanelView* panel = a->panel;
+								int max = panel->size_req.max.x < 0 ? 10000 : panel->size_req.max.x;
+								int width = a->w + a->amount;
+								int amount = MIN(max - width, each);
+								//dbg(0, "   panel=%s width=%i max=%i possible=%i amount=%i (%i)", ((AGlActor*)a->panel)->name, width, max, max - width, amount, width + amount);
+								CHECK_FULL(a)
+								else if(remainder){
+									amount++;
+									remainder--;
+									CHECK_FULL(a)
+								}
+								to_distribute -= amount;
+								a->amount += amount;
+							}
+						} else break;
+					}
+					if(to_distribute && (to_distribute != _to_distribute) && iter++ < 5) distribute(L, to_distribute, n_resizable, iter);
+					if(iter == 5) gwarn("failed to distribute");
+				}
+				A L[G_N_ELEMENTS(items) + 1];
 				for(i=0;i<G_N_ELEMENTS(items);i++){
 					Item* item = &items[i];
-					PanelView* panel = (PanelView*)item->actor;
-					if(item->width < panel->size_req.max.x){
-						item->width += each;
-					}
+					L[i] = (A){(PanelView*)item->actor,item->width,};
+				}
+				L[i] = (A){NULL,};
+				distribute(L, remaining, n_resizable, 0);
+
+				for(i=0;i<G_N_ELEMENTS(items);i++){
+					Item* item = &items[i];
+					A* a = &L[i];
+					item->width += a->amount;
 				}
 			}
 		}
@@ -203,6 +265,7 @@ dock_h_view(WaveformActor* _)
 			};
 			x += items[i].width + SPACING;
 		}
+		dbg(2, "-> total=%i / %i", x - SPACING, agl_actor__width(actor));
 
 		// copynpaste - PanelView set_size
 		// single child takes all space of panel
@@ -228,8 +291,6 @@ dock_h_view(WaveformActor* _)
 				break;
 			case GDK_MOTION_NOTIFY:
 				if(actor_context.grabbed == actor){
-					int x = xy.x - actor->region.x1;
-
 					AGlActor* a2 = dock->handle.actor;
 					GList* l = g_list_find(dock->panels, a2);
 					AGlActor* a1 = l->prev->data;
@@ -242,9 +303,9 @@ dock_h_view(WaveformActor* _)
 					if(((PanelView*)a1)->size_req.max.x > -1){
 						max_diff = ((PanelView*)a1)->size_req.max.x - agl_actor__width(a1);
 					}
-					int diff = CLAMP(x - a2->region.x1, min_diff, max_diff);
+					int diff = CLAMP(xy.x - a2->region.x1, min_diff, max_diff);
 					if(diff){
-						a2->region.x1 = x;
+						a2->region.x1 += diff;
 						agl_actor__set_size(a2);
 						agl_actor__invalidate(a2);
 
@@ -254,13 +315,12 @@ dock_h_view(WaveformActor* _)
 					}
 				}else{
 					int x = 0;
-					int cx = xy.x - actor->region.x1;
 					GList* l = dock->panels;
 					AGlActor* f = NULL;
 					for(;l;l=l->next){
 						AGlActor* a = l->data;
 						x = a->region.x1;
-						if(ABS(x - cx) < SPACING){
+						if(ABS(x - xy.x) < SPACING){
 							f = a;
 							break;
 						}
@@ -306,9 +366,8 @@ dock_h_view(WaveformActor* _)
 	DockHView* dock = WF_NEW(DockHView,
 		.panel = {
 			.actor = {
-#ifdef AGL_DEBUG_ACTOR
+				.class = &actor_class,
 				.name = "Dock H",
-#endif
 				.program = (AGlShader*)agl->shaders.plain,
 				.init = dock_init,
 				.free = dock_free,
@@ -355,13 +414,9 @@ dock_h_move_panel_to_y (DockHView* dock, AGlActor* panel, int y)
 {
 	int find_index(DockHView* dock, int y)
 	{
-		//int i; for(i=0;i<G_N_ELEMENTS(dock->items);i++){
-		//	AGlActor* a = dock->items[i]->actor;
 		GList* l = dock->panels;
-		//AGlActor* prev = NULL;
 		int i = 0;
 		for(;l;l=l->next){
-			//PanelView* tab = l->data;
 			AGlActor* a = l->data;
 			dbg(0, "  %i", a->region.y1);
 			if(a->region.y1 > y) return i;

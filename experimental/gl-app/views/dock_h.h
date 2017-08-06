@@ -23,6 +23,8 @@ typedef struct {
    WfAnimatable* animatables[1];
 } DockHView;
 
+AGlActorClass* dock_h_get_class      ();
+
 AGlActor* dock_h_view                (WaveformActor*);
 AGlActor* dock_h_add_panel           (DockHView*, AGlActor*);
 void      dock_h_move_panel_to_index (DockHView*, AGlActor*, int);

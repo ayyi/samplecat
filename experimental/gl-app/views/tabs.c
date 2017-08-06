@@ -35,7 +35,15 @@
 
 static AGl* agl = NULL;
 static int instance_count = 0;
+static AGlActorClass actor_class = {0, "Tabs", (AGlActorNew*)tabs_view};
 static int tab_width = 50;
+
+
+AGlActorClass*
+tabs_view_get_class ()
+{
+	return &actor_class;
+}
 
 
 static void
@@ -116,6 +124,7 @@ tabs_view(WaveformActor* _)
 
 					tabs->active = active;
 					next->actor->region = (AGliRegion){0, 20, agl_actor__width(actor), agl_actor__height(actor)};
+					agl_actor__set_size(next->actor);
 					agl_actor__invalidate(actor);
 				}
 				break;
@@ -137,9 +146,8 @@ tabs_view(WaveformActor* _)
 
 	TabsView* view = WF_NEW(TabsView,
 		.actor = {
-#ifdef AGL_DEBUG_ACTOR
+			.class = &actor_class,
 			.name = "Tabs",
-#endif
 			.init = tabs_init,
 			.free = tabs_free,
 			.paint = tabs_paint,

@@ -30,7 +30,7 @@ AC_ARG_ENABLE(debug,
 	[AS_HELP_STRING(--enable-debug, [Enable debugging (false)])],
 	[debug="$enableval"])
 if test "$debug" = "yes"; then
-	CFLAGS="-O0 -g -DDEBUG"
+	CFLAGS="$CFLAGS -O0 -g -DDEBUG"
 	CXXFLAGS="$CFLAGS"
 else
 	CFLAGS="$CFLAGS -DNDEBUG"
@@ -51,7 +51,7 @@ AC_ARG_ENABLE(tracker,  AS_HELP_STRING([--enable-tracker],[build with tracker su
 AC_ARG_ENABLE(sqlite,   AS_HELP_STRING([--enable-sqlite],[build with sqlite support]),enable_sqlite=$enableval, enable_sqlite="auto")
 AC_ARG_ENABLE(mx,       AS_HELP_STRING([--enable-mx], [build with mx support -- experimental]), enable_mx=$enableval, enable_mx="auto")
 AC_ARG_ENABLE(webkit,   AS_HELP_STRING([--enable-webkit], [build with webkit support -- experimental]), enable_webkit=$enableval, enable_webkit="auto")
-AC_ARG_ENABLE(gl_app,   AS_HELP_STRING([--enable-gl_app], [build the gl application -- experimental]), enable_gl_app=$enableval, enable_gl_app="auto")
+AC_ARG_ENABLE(gl-app,   AS_HELP_STRING([--enable-gl_app], [build the gl application -- experimental]), enable_gl_app=$enableval, enable_gl_app="auto")
 AC_ARG_ENABLE(opengl,   AC_HELP_STRING([--disable-opengl], [disable use of OpenGL]),enable_opengl=$enableval,enable_opengl="auto")
 AC_ARG_ENABLE(fftw,     AC_HELP_STRING([--disable-fftw], [disable usage of FFTW ]),enable_fftw=$enableval,enable_fftw="auto")
 AC_ARG_ENABLE(libass,   AC_HELP_STRING([--disable-libass], [disable usage of libass ]),enable_libass=$enableval,enable_libass="auto")
@@ -300,6 +300,17 @@ AM_CONDITIONAL(ENABLE_GPLAYER, [test "$enable_gplayer" = "yes"])
 
 dnl -----------------------------------------------------------------------------
 
+AC_CHECK_LIB(yaml, yaml_parser_scan,
+	[
+		YAML_LIBS="-lyaml"
+		AC_CHECK_HEADERS(yaml.h)
+	],
+	[],
+	[-lyaml])
+AC_SUBST(YAML_LIBS)
+
+dnl -----------------------------------------------------------------------------
+
 if `test "$enable_nks" = "yes"`; then
 	AC_CHECK_LIB(nks, nks_open, [nks_found=yes])
 	if `test "$nks_found" = "yes"`; then
@@ -368,7 +379,7 @@ AC_SUBST(WEBKIT_LDFLAGS)
 dnl -----------------------------------------------------------------------------
 
 AS_IF([test "$enable_gl_app" = "yes"],[
-	PKG_CHECK_MODULES(WEBKIT, webkit-1.0, AC_DEFINE(USE_WEBKIT, 1, Build the experimental GL application) enable_gl_app="yes", enable_gl_app="no")
+	PKG_CHECK_MODULES(WEBKIT, gtkglext-1.0, AC_DEFINE(USE_GL_APP, 1, Build the experimental GL application) enable_gl_app="yes", enable_gl_app="no")
 	], [enable_gl_app="no"])
 AM_CONDITIONAL(ENABLE_GL_APP, test "$enable_gl_app" = "yes")
 
@@ -464,7 +475,7 @@ AC_CONFIG_FILES([experimental/Makefile])
 AC_CONFIG_FILES([experimental/webkit/Makefile])
 AC_CONFIG_FILES([experimental/mx/Makefile])
 AC_CONFIG_FILES([experimental/gl-app/Makefile])
-dnl AC_CONFIG_FILES([src/vala/Makefile])
+AC_CONFIG_FILES([experimental/gl-app/shaders/Makefile])
 AC_OUTPUT
 
 jplayer="no"
@@ -497,6 +508,7 @@ AC_MSG_RESULT([Building opengl support:      $enable_opengl])
 AC_MSG_RESULT([Building libass support:      $enable_libass])
 AC_MSG_RESULT([Building ayyi support:        $enable_ayyi])
 AC_MSG_RESULT([Building dock support:        $enable_dock])
+AC_MSG_RESULT([Extra debugging:              $enable_debug])
 AC_MSG_RESULT([])
 
 if test "$enable_mx" = "yes" -o "$enable_webkit" = "yes" -o "$enable_gl_app" = "yes" -o "$enable_sf2" = "yes" -o "$enable_nks" = "yes" -o "$enable_tracker" = "yes"; then
@@ -504,9 +516,8 @@ AC_MSG_RESULT([*** You have experimental options enabled. These are of no use ot
 AC_MSG_RESULT([  tracker support:            $enable_tracker])
 AC_MSG_RESULT([  soundfont support:          $enable_sf2])
 AC_MSG_RESULT([  nks support:                $enable_nks])
-AC_MSG_RESULT([  mx support:                 $enable_mx])
-AC_MSG_RESULT([  webkit support:             $enable_webkit])
-AC_MSG_RESULT([  webkit support:             $enable_webkit])
+AC_MSG_RESULT([  mx frontend:                $enable_mx])
+AC_MSG_RESULT([  webkit frontend:            $enable_webkit])
 AC_MSG_RESULT([  gl application:             $enable_gl_app])
 AC_MSG_RESULT([])
 fi

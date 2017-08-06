@@ -31,9 +31,17 @@
 #define FONT "Droid Sans"
 
 static AGl* agl = NULL;
+static AGlActorClass actor_class = {0, "Panel", (AGlActorNew*)panel_view};
 static int instance_count = 0;
 static AGliPt origin = {0,};
 static AGliPt mouse = {0,};
+
+
+AGlActorClass*
+panel_view_get_class ()
+{
+	return &actor_class;
+}
 
 
 static void
@@ -77,10 +85,6 @@ panel_view(WaveformActor* _)
 
 	void panel_init(AGlActor* actor)
 	{
-		PanelView* panel = (PanelView*)actor;
-
-		panel->size_req.preferred = (AGliPt){-1, -1};
-		panel->size_req.max = (AGliPt){-1, -1};
 	}
 
 	void panel_set_size(AGlActor* actor)
@@ -132,9 +136,8 @@ panel_view(WaveformActor* _)
 
 	PanelView* view = WF_NEW(PanelView,
 		.actor = {
-#ifdef AGL_DEBUG_ACTOR
+			.class = &actor_class,
 			.name = "Panel",
-#endif
 			.init = panel_init,
 			.free = panel_free,
 			.paint = panel_paint,
@@ -142,7 +145,9 @@ panel_view(WaveformActor* _)
 			.on_event = panel_event,
 		},
 		.size_req = {
-			.min = {-1, -1}
+			.min = {-1, -1},
+			.preferred = {-1, -1},
+			.max = {-1, -1}
 		}
 	);
 

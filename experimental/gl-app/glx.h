@@ -14,7 +14,7 @@
 #define __glx_utils_h__
 
 void      glx_init               (Display*);
-void      make_window            (Display*, const char* name, int x, int y, int width, int height, GLboolean fullscreen, Window* winRet, GLXContext* ctxRet);
+void      make_window            (Display*, const char* name, int x, int y, int width, int height, GLboolean fullscreen, AGlScene* scene, Window* winRet, GLXContext* ctxRet);
 void      make_extension_table   (const char*);
 GLboolean is_extension_supported (const char*);
 void      show_refresh_rate      (Display*);

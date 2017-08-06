@@ -23,7 +23,9 @@ typedef struct {
    WfAnimatable* animatables[1];
 } DockVView;
 
-AGlActor* dock_v_view                (WaveformActor*);
+AGlActorClass* dock_v_get_class      ();
+
+AGlActor* dock_v_view                (gpointer);
 AGlActor* dock_v_add_panel           (DockVView*, AGlActor*);
 void      dock_v_move_panel_to_index (DockVView*, AGlActor*, int);
 void      dock_v_move_panel_to_y     (DockVView*, AGlActor*, int);

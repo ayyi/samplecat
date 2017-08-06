@@ -39,6 +39,15 @@
 
 static AGl* agl = NULL;
 static int instance_count = 0;
+static AGlActorClass actor_class = {0, "Search", (AGlActorNew*)search_view};
+
+
+AGlActorClass*
+search_view_get_class ()
+{
+	return &actor_class;
+}
+
 
 static void
 _init()
@@ -88,7 +97,7 @@ search_view(WaveformActor* _)
 			agl_rect_((AGlRect){2 + PANGO_PIXELS(rect.x), 2, 1, agl_actor__height(actor) - 4});
 		}
 
-		agl_print_layout(2, 2, 0, 0xffffffff, view->layout);
+		agl_print_layout(3, 2, 0, view->layout_colour, view->layout);
 
 		agl_disable_stencil();
 
@@ -113,7 +122,14 @@ search_view(WaveformActor* _)
 			PangoGlRendererClass* PGRC = g_type_class_peek(PANGO_TYPE_GL_RENDERER);
 			view->layout = pango_layout_new (PGRC->context);
 		}
-		pango_layout_set_text(view->layout, view->text ? view->text : ((SamplecatFilter*)samplecat.model->filters.search)->value, -1);
+		char* text = view->text ? view->text : ((SamplecatFilter*)samplecat.model->filters.search)->value;
+		if(strlen(text)){
+			view->layout_colour = 0xffffffff;
+		}else{
+			view->layout_colour = 0x555555ff;
+			text = "Search";
+		}
+		pango_layout_set_text(view->layout, text, -1);
 
 		agl_actor__invalidate((AGlActor*)view);
 	}
@@ -200,14 +216,13 @@ search_view(WaveformActor* _)
 
 	SearchView* view = AGL_NEW(SearchView,
 		.actor = {
-#ifdef AGL_DEBUG_ACTOR
+			.class = &actor_class,
 			.name = "Search",
-#endif
 			.init = search_init,
+			.free = search_free,
 		}
 	);
 	AGlActor* actor = (AGlActor*)view;
-	actor->free = search_free;
 	actor->paint = search_paint;
 	actor->set_size = search_size;
 	actor->on_event = search_event;

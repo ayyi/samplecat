@@ -1,4 +1,6 @@
 
+SUBDIRS = shaders
+
 bin_PROGRAMS = samplecat_gl
 
 AUDIOANALYSERS_SRC = \
@@ -10,6 +12,7 @@ AUDIOANALYSERS_SRC = \
 
 samplecat_gl_SOURCES = \
 	samplecat_gl.c \
+	application.c application.h \
 	glx.c glx.h \
 	directory.c directory.h \
 	views/dock_v.c views/dock_v.h \
@@ -21,6 +24,10 @@ samplecat_gl_SOURCES = \
 	views/dirs.c views/dirs.h \
 	views/search.c views/search.h \
 	views/tabs.c views/tabs.h \
+	views/scrollbar.c views/scrollbar.h \
+	shader.c shader.h \
+	layout.c layout.h \
+	yaml_utils.c yaml_utils.h \
 	keys.h \
 	$(top_srcdir)/src/icon_theme.c $(top_srcdir)/src/icon_theme.h \
 	$(AUDIOANALYSERS_SRC)
@@ -28,12 +35,9 @@ samplecat_gl_SOURCES = \
 AM_CFLAGS = \
 	-g -Wall -O2 \
 	-DPACKAGE_DATA_DIR=\""$(datadir)"\" \
-	-DPACKAGE_LOCALE_DIR=\""$(prefix)/$(DATADIRNAME)/locale"\" \
-	-DIMAGES_DIR=\"$(imagesdir)\" \
 	-I$(top_srcdir)/lib \
 	-I$(top_srcdir)/lib/samplecat \
 	-I$(top_srcdir)/lib/waveform \
-	-I$(top_srcdir)/xdgmime \
 	-I$(top_srcdir) \
 	-I$(top_srcdir)/src \
 	-I$(top_srcdir)/experimental \
@@ -74,5 +78,8 @@ samplecat_gl_LDADD = \
 	$(FFTW3_LIBS) \
 	$(OPENGL_LIBS) \
 	$(ZLIB_LIBS) \
+	$(YAML_LIBS) \
 	$(FFMPEG_LIBS)
+
+dist_pkgdata_DATA = samplecat.yaml
 

@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2012-2016 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2012-2017 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -25,7 +25,7 @@
 #include "keys.h"
 #include "gl-app/glx.h"
 
-extern AGlRootActor* scene;
+static AGlRootActor* scene = NULL;
 extern Key keys[];
 extern GHashTable* key_handlers;
 
@@ -208,8 +208,13 @@ no_border(Display* dpy, Window w)
  * Return the window and context handles.
  */
 void
-make_window(Display *dpy, const char *name, int x, int y, int width, int height, GLboolean fullscreen, Window *winRet, GLXContext *ctxRet)
+make_window(Display* dpy, const char* name, int x, int y, int width, int height, GLboolean fullscreen, AGlRootActor* _scene, Window* winRet, GLXContext* ctxRet)
 {
+	scene = _scene;
+
+	void scene_needs_redraw(AGlScene* scene, gpointer _){ need_draw = true; }
+	scene->draw = scene_needs_redraw;
+
 	int attrib[] = {
 		GLX_RGBA,
 		GLX_RED_SIZE, 1,
@@ -286,18 +291,6 @@ event_loop(Display* dpy, Window win)
 {
 	float frame_usage = 0.0;
 
-	bool _redraw2(gpointer _)
-	{
-		need_draw = true;
-		return G_SOURCE_REMOVE;
-	}
-	bool _redraw(gpointer _)
-	{
-		need_draw = true;
-		g_timeout_add(500, _redraw2, NULL);
-		return G_SOURCE_REMOVE;
-	}
-
 	while (1) {
 		while (XPending(dpy) > 0) {
 			XEvent event;
@@ -308,9 +301,7 @@ event_loop(Display* dpy, Window win)
 					break;
 				case ConfigureNotify:
 					on_window_resize(event.xconfigure.width, event.xconfigure.height);
-								need_draw = TRUE;
-					//g_idle_add(_redraw, NULL);
-//					g_timeout_add(500, _redraw, NULL);
+					need_draw = TRUE;
 					break;
 				case KeyPress: {
 					char buffer[10];

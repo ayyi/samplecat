@@ -1,0 +1,75 @@
+---
+test_colour: '0xff00ff00'
+windows:
+  window:
+    ROOT:
+      type: 'ROOT'
+      position: [0, 0]
+      size: [640, 300]
+      Dock H:
+        type: 'Dock H'
+        position: [20, 20]
+        size: [620, 280]
+        size-req:
+          min: [0, 0]
+        Left:
+          type: 'Dock V'
+          position: [0, 0]
+          size: [257, 260]
+          size-req:
+            preferred: [80, -1]
+            max: [160, -1]
+          Panel:
+            type: 'Panel'
+            position: [0, 0]
+            size: [257, 260]
+            Directories:
+              type: 'Dirs'
+              position: [0, 8]
+              size: [257, 88]
+        Right:
+          type: 'Dock V'
+          position: [272, 0]
+          size: [600, 260]
+          size-req:
+            preferred: [320, -1]
+          Panel:
+            type: 'Panel'
+            position: [0, 0]
+            size: [328, 30]
+            size-req:
+              min: [-1, 22]
+              preferred: [-1, 22]
+              max: [-1, 22]
+            Search:
+              type: 'Search'
+              position: [0, 8]
+              size: [328, 30]
+          Panel:
+            type: 'Panel'
+            position: [0, 45]
+            size: [328, 177]
+            Tabs:
+              type: 'Tabs'
+              position: [0, 8]
+              size: [328, 132]
+              List:
+                type: 'List'
+                position: [0, 22]
+                size: [328, 124]
+              Files:
+                type: 'Files'
+                position: [0, 0]
+                size: [0, 0]
+          Panel:
+            type: 'Panel'
+            position: [0, 192]
+            size: [328, 260]
+            size-req:
+              preferred: [-1, 60]
+              max: [-1, 100]
+            Waveform:
+              type: 'Waveform'
+              position: [0, 0]
+              size: [328, 60]
+...

@@ -29,3 +29,4 @@ layouts/layout_ui.c
 layouts/layouts.c
 src/vala/*.[ch]
 experimental/gl-app/samplecat_gl
+experimental/gl-app/shaders/shaders.c

@@ -1,0 +1,38 @@
+#!/bin/bash
+
+shaders=(vscrollbar);
+out=shaders.c
+
+if [[ -s $out ]]; then
+	#file already exists, check age
+	need_regen=false
+	for s in "${shaders[@]}"; do
+		if [[ $s.frag -nt $out ]]; then
+			need_regen=true
+		fi
+		if [[ $s.vert -nt $out ]]; then
+			need_regen=true
+		fi
+	done
+
+	if [[ $need_regen == false ]]; then exit; fi;
+fi;
+
+echo "regenerating shaders.c ..."
+echo "" > $out
+
+function a {
+	echo '' >> $out
+	echo 'AGlShaderText '$1'_text = {" \' >> $out
+	cpp -P $1.vert | sed -e "s/$/ \\\/" >> $out
+	echo '",' >> $out
+	echo '" \' >> $out
+	cpp -P $1.frag | sed -e "s/$/ \\\/" >> $out
+	echo '"' >> $out
+	echo '};' >> $out
+}
+
+for s in "${shaders[@]}"; do
+	a $s
+done
+

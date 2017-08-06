@@ -14,11 +14,15 @@
 
 typedef struct {
    AGlActor    actor;
+   int         selection;
+   int         scroll_offset;
    struct {
       int      n_rows;
       int      n_rows_visible;
    } cache;
 } DirectoriesView;
+
+AGlActorClass* directories_view_get_class ();
 
 AGlActor* directories_view (WaveformActor*);
 

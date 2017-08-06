@@ -21,7 +21,8 @@ typedef struct {
    }           size_req;
 } PanelView;
 
-AGlActor* panel_view           (WaveformActor*);
+AGlActorClass* panel_view_get_class ();
+AGlActor*      panel_view           (WaveformActor*);
 
 #define PANEL_DRAG_HANDLE_HEIGHT 8
 

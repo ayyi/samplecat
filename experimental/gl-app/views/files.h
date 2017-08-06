@@ -23,6 +23,8 @@ struct _FilesView {
    int            scroll_offset;
 };
 
+AGlActorClass* files_view_get_class ();
+
 AGlActor* files_view              (WaveformActor*);
 int       files_view_row_at_coord (FilesView*, int x, int y);
 

@@ -9,6 +9,7 @@
 * +----------------------------------------------------------------------+
 *
 */
+#define __main_c__
 #include "config.h"
 #include <math.h>
 #include <stdlib.h>
@@ -29,8 +30,11 @@
 #include "samplecat.h"
 #include "utils/ayyi_utils.h"
 #include "waveform/waveform.h"
+#include "yaml_utils.h"
+#include "application.h"
 #include "glx.h"
 #include "keys.h"
+#include "layout.h"
 #include "views/dock_h.h"
 #include "views/dock_v.h"
 #include "views/panel.h"
@@ -43,16 +47,8 @@
 #include "waveform/actors/debug.h"
 #endif
 
-extern GLboolean need_draw; // TODO use scene->invalidate instead
+Application* app = NULL;
 
-typedef struct _Application {
-   ConfigContext  config_ctx;
-   Config         config;
-} Application;
-Application _app;
-Application* app = &_app;
-
-AGlRootActor* scene = NULL;
 struct Actors {AGlActor *bg, *hdock, *vdock1, *vdock2, *list, *files, *wave, *search, *tabs, *debug; } actors = {NULL,};
 
 static KeyHandler
@@ -64,7 +60,7 @@ Key keys[] = {
 	{XK_Down, nav_down},
 };
 
-static void add_key_handlers();
+static void add_key_handlers ();
 
 
 int
@@ -72,7 +68,7 @@ main(int argc, char* argv[])
 {
 	_debug_ = 0;
 
-	samplecat_init();
+	app = application_new();
 
 	gtk_init_check(&argc, &argv);
 	type_init();
@@ -84,7 +80,7 @@ main(int argc, char* argv[])
 	Window win;
 	GLXContext ctx;
 	GLboolean fullscreen = GL_FALSE;
-	static int width = 400, height = 300;
+	static int width = 640, height = 300;
 
 	int i; for (i = 1; i < argc; i++) {
 		if (strcmp(argv[i], "-verbose") == 0) {
@@ -126,20 +122,15 @@ main(int argc, char* argv[])
 		return -1;
 	}
 
+	app->scene = (AGlRootActor*)agl_actor__new_root_(CONTEXT_TYPE_GLX);
+
 	int screen = DefaultScreen(dpy);
-	make_window(dpy, "Samplcecat", (XDisplayWidth(dpy, screen) - width) / 2, (XDisplayHeight(dpy, screen) - height) / 2, width, height, fullscreen, &win, &ctx);
+	make_window(dpy, "Samplecat", (XDisplayWidth(dpy, screen) - width) / 2, (XDisplayHeight(dpy, screen) - height) / 2, width, height, fullscreen, app->scene, &win, &ctx);
 
-	agl_get_extensions();
 	agl_gl_init();
-
 	glx_init(dpy);
 
 	g_main_loop_new(NULL, true);
-
-	scene = (AGlRootActor*)agl_actor__new_root_(CONTEXT_TYPE_GLX);
-
-	void scene_needs_redraw(AGlScene* scene, gpointer _){ need_draw = true; }
-	scene->draw = scene_needs_redraw;
 
 	gboolean add_content(gpointer _)
 	{
@@ -168,44 +159,50 @@ main(int argc, char* argv[])
 
 		Waveform* w = NULL;
 
-		WaveformContext* wfc = wf_context_new(scene);
+		app->wfc = wf_context_new(app->scene);
 
 #if 0
 		agl_actor__add_child((AGlActor*)scene, actors.bg = background_actor(NULL));
 		actors.bg->region.x2 = 1;
 		actors.bg->region.y2 = 1;
 #endif
+		void on_actor_added(Application* app, AGlActor* actor, gpointer data)
+		{
+			AGlActorClass* c = actor->class;
+			if(c == wf_actor_get_class()){
+				void on_selection_change(SamplecatModel* m, Sample* sample, gpointer actor)
+				{
+					PF;
 
-		agl_actor__add_child((AGlActor*)scene, actors.hdock = dock_h_view(NULL));
-		dock_h_add_panel((DockHView*)actors.hdock, actors.vdock1 = dock_v_view(NULL));
-		((PanelView*)actors.vdock1)->size_req.preferred.x = 80;
-		((PanelView*)actors.vdock1)->size_req.max.x = 160;
-		dock_h_add_panel((DockHView*)actors.hdock, actors.vdock2 = dock_v_view(NULL));
-		((PanelView*)actors.vdock2)->size_req.preferred.x = 320;
-#ifdef AGL_DEBUG_ACTOR
-		actors.vdock1->name = "Left";
-		actors.vdock2->name = "Right";
-#endif
+					void load_file_done(WaveformActor* a, gpointer _c)
+					{
+						PF;
+						// TODO not sure if we need to redraw here or not...
+						//agl_actor__invalidate(((AGlActor*)a);
+					}
 
-		AGlActor* panell1 = dock_v_add_panel((DockVView*)actors.vdock1, panel_view(NULL));
-		agl_actor__add_child(panell1, directories_view(NULL));
+					Waveform* waveform = waveform_new(sample->full_path);
+					wf_actor_set_waveform((WaveformActor*)actor, waveform, load_file_done, actor);
+					g_object_unref(waveform);
+				}
+				g_signal_connect((gpointer)samplecat.model, "selection-changed", G_CALLBACK(on_selection_change), actor);
+			}
+		}
+		g_signal_connect(app, "actor-added", G_CALLBACK(on_actor_added), NULL);
 
-		AGlActor* panelr1 = dock_v_add_panel((DockVView*)actors.vdock2, panel_view(NULL));
-		agl_actor__add_child(panelr1, actors.search = search_view(NULL));
-		int h = search_view_height((SearchView*)actors.search);
-		((PanelView*)panelr1)->size_req.min = (AGliPt){-1, h};
-		((PanelView*)panelr1)->size_req.preferred = (AGliPt){-1, h};
-		((PanelView*)panelr1)->size_req.max = (AGliPt){-1, h};
+		if(load_settings()){
+			dbg(1, "window setting loaded ok");
+			actors.hdock = agl_actor__find_by_name((AGlActor*)app->scene, "Dock H");
+			actors.list = agl_actor__find_by_name((AGlActor*)app->scene, "List");
 
-		AGlActor* panelr2 = dock_v_add_panel((DockVView*)actors.vdock2, panel_view(NULL));
-		agl_actor__add_child(panelr2, actors.tabs = tabs_view(NULL));
-		tabs_view__add_tab((TabsView*)actors.tabs, "Library", actors.list = list_view(NULL));
-		tabs_view__add_tab((TabsView*)actors.tabs, "Files", actors.files = files_view(NULL));
+			Sample* sample = samplecat_list_store_get_sample_by_row_index(0);
+			if(sample){
+				samplecat_model_set_selection(samplecat.model, sample);
+				sample_unref(sample);
+			}
 
-		AGlActor* panelr3 = dock_v_add_panel((DockVView*)actors.vdock2, panel_view(NULL));
-		agl_actor__add_child(panelr3, actors.wave = (AGlActor*)wf_canvas_add_new_actor(wfc, w));
-		((PanelView*)panelr3)->size_req.preferred.y = 60;
-		((PanelView*)panelr3)->size_req.max.y = 100;
+			if(_debug_ > 2) agl_actor__print_tree((AGlActor*)app->scene);
+		}
 
 #ifdef SHOW_FBO_DEBUG
 		agl_actor__add_child((AGlActor*)scene, actors.debug = wf_debug_actor(NULL));
@@ -214,31 +211,25 @@ main(int argc, char* argv[])
 
 		void scene_set_size(AGlActor* scene)
 		{
+			dbg(2, "%i", ((AGlActor*)app->scene)->region.x2);
+
 			actors.hdock->region = (AGliRegion){20, 20, agl_actor__width(scene) - 20, agl_actor__height(scene) - 20};
 			agl_actor__set_size(actors.hdock);
 
+// not needed?
 			agl_actor__set_size(actors.list); // clear cache
-
-			wf_actor_set_rect((WaveformActor*)actors.wave, &(WfRectangle){
-				0.0,
-				0.0,
-				agl_actor__width(actors.wave),
-				agl_actor__height(actors.wave)
-			});
 
 #ifdef SHOW_FBO_DEBUG
 			actors.debug->region = (AGliRegion){scene->region.x2/2, 10, scene->region.x2 - 10, scene->region.x2/2};
 #endif
 
-			need_draw = true;
+			agl_actor__invalidate((AGlActor*)app->scene);
 		}
-		((AGlActor*)scene)->set_size = scene_set_size;
+		((AGlActor*)app->scene)->set_size = scene_set_size;
 
 		if(w) wf_actor_set_region((WaveformActor*)actors.wave, &(WfSampleRegion){0, waveform_get_n_frames(w)});
 
-		scene_set_size((AGlActor*)scene);
-
-		list_view_select((ListView*)actors.list, 0);
+		//scene_set_size((AGlActor*)app->scene);
 
 		// TODO how do these handlers interact with individual view key handlers?
 		add_key_handlers();
@@ -248,24 +239,6 @@ main(int argc, char* argv[])
 
 	g_idle_add(add_content, NULL);
 
-	void on_selection_change(SamplecatModel* m, Sample* sample, gpointer user_data)
-	{
-		PF;
-
-		void load_file_done(WaveformActor* a, gpointer _c)
-		{
-			PF;
-			// TODO not sure if we need to redraw here or not...
-			//agl_actor__invalidate(((AGlActor*)a);
-		}
-
-		Waveform* waveform = waveform_new(sample->full_path);
-		wf_actor_set_waveform((WaveformActor*)actors.wave, waveform, load_file_done, NULL);
-		g_object_unref(waveform);
-
-	}
-	g_signal_connect((gpointer)samplecat.model, "selection-changed", G_CALLBACK(on_selection_change), NULL);
-
 	on_window_resize(width, height);
 
 	event_loop(dpy, win);
@@ -273,6 +246,8 @@ main(int argc, char* argv[])
 	glXDestroyContext(dpy, ctx);
 	XDestroyWindow(dpy, win);
 	XCloseDisplay(dpy);
+
+	save_settings();
 
 	return 0;
 }

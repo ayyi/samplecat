@@ -27,6 +27,7 @@
 #include "file_manager/file_manager.h"
 #include "file_manager/pixmaps.h"
 #include "samplecat.h"
+#include "views/scrollbar.h"
 #include "views/files.impl.h"
 #include "views/files.h"
 
@@ -40,11 +41,19 @@
 
 static AGl* agl = NULL;
 static int instance_count = 0;
+static AGlActorClass actor_class = {0, "Files", (AGlActorNew*)files_view};
 static GHashTable* icon_textures = NULL;
 
 static gboolean files_scan_dir (AGlActor*);
 static guint    create_icon    (const char*, GdkPixbuf*);
 static guint    get_icon       (const char*, GdkPixbuf*);
+
+
+AGlActorClass*
+files_view_get_class ()
+{
+	return &actor_class;
+}
 
 
 static void
@@ -82,15 +91,16 @@ files_view(WaveformActor* _)
 
 		int col[] = {0, 24, 260, 360, 400, 440};
 		char* col_heads[] = {"Filename", "Size", "Owner", "Group"};
+		int y0 = -actor->scrollable.y1;
 		int c; for(c=0;c<G_N_ELEMENTS(col_heads);c++){
-			agl_enable_stencil(0, 0, col[c + 2] - 6, actor->region.y2);
-			agl_print(col[c + 1], 0, 0, 0xffffffff, col_heads[c]);
+			agl_enable_stencil(0, y0, col[c + 2] - 6, actor->region.y2);
+			agl_print(col[c + 1], y0, 0, 0xffffffff, col_heads[c]);
 		}
 
 		if(!items->len)
 			return agl_print(0, 0, 0, 0xffffffff, "No files"), true;
 
-		int y = row_height;
+		int y = row_height - actor->scrollable.y1;
 		int i, r; for(i = view->scroll_offset; r = i - view->scroll_offset, i < items->len && (i - view->scroll_offset < n_rows); i++){
 			if(r == view->view->selection - view->scroll_offset){
 				agl->shaders.plain->uniform.colour = 0x6677ff77;
@@ -104,7 +114,7 @@ files_view(WaveformActor* _)
 			char size[16] = {'\0'}; snprintf(size, 15, "%zu", item->size);
 			const char* val[] = {item->leafname, size, user_name(item->uid), group_name(item->gid)};
 			int c; for(c=0;c<G_N_ELEMENTS(val);c++){
-				agl_enable_stencil(0, 0, col[c + 2] - 6, actor->region.y2);
+				agl_enable_stencil(0, y0, col[c + 2] - 6, actor->region.y2);
 				agl_print(col[c + 1], y + r * row_height, 0, 0xffffffff, val[c]);
 			}
 
@@ -138,10 +148,24 @@ files_view(WaveformActor* _)
 		g_signal_connect(view->viewmodel, "row-inserted", (GCallback)files_on_row_add, a);
 	}
 
+	void files_set_scroll_position(AGlActor* actor, int scroll_offset)
+	{
+		FilesView* view = (FilesView*)actor;
+		DirectoryView* dv = view->view;
+		GPtrArray* items = dv->items;
+
+		scroll_offset = MAX(0, scroll_offset); // TODO why doesnt CLAMP do this?
+
+		view->scroll_offset = CLAMP(scroll_offset, 0, max_scroll_offset);
+		actor->scrollable.y1 = - view->scroll_offset * row_height;
+		actor->scrollable.y2 = actor->scrollable.y1 + (items->len + 1) * row_height;
+	}
+
 	void files_set_size(AGlActor* actor)
 	{
 		FilesView* view = (FilesView*)actor;
 		view->scroll_offset = MIN(view->scroll_offset, max_scroll_offset);
+		files_set_scroll_position(actor, view->scroll_offset);
 	}
 
 	bool files_event(AGlActor* actor, GdkEvent* event, AGliPt xy)
@@ -150,17 +174,16 @@ files_view(WaveformActor* _)
 
 		switch(event->type){
 			case GDK_BUTTON_PRESS:
-				dbg(0, "PRESS %i", event->button.button);
 				switch(event->button.button){
 					case 4:
 						dbg(0, "! scroll up");
-						view->scroll_offset = MAX(0, view->scroll_offset - 1);
+						files_set_scroll_position(actor, view->scroll_offset - 1);
 						agl_actor__invalidate(actor);
 						break;
 					case 5:
-						dbg(0, "! scroll down: N_ROWS_VISIBLE=%i", N_ROWS_VISIBLE(actor));
+						dbg(0, "! scroll down");
 						if(scrollable_height > N_ROWS_VISIBLE(actor)){
-							view->scroll_offset = MIN(max_scroll_offset, view->scroll_offset + 1);
+							files_set_scroll_position(actor, view->scroll_offset + 1);
 							agl_actor__invalidate(actor);
 						}
 						break;
@@ -168,7 +191,7 @@ files_view(WaveformActor* _)
 				break;
 			case GDK_BUTTON_RELEASE:
 				;int row = files_view_row_at_coord (view, 0, xy.y - actor->region.y1);
-				dbg(0, "RELEASE button=%i y=%i row=%i", event->button.button, xy.y - actor->region.y1, row);
+				dbg(1, "RELEASE button=%i y=%i row=%i", event->button.button, xy.y - actor->region.y1, row);
 				switch(event->button.button){
 					case 1:
 						VIEW_IFACE_GET_CLASS((ViewIface*)view->view)->set_selected((ViewIface*)view->view, &(ViewIter){.i = row}, true);
@@ -192,9 +215,8 @@ files_view(WaveformActor* _)
 
 	FilesView* view = WF_NEW(FilesView,
 		.actor = {
-#ifdef AGL_DEBUG_ACTOR
+			.class = &actor_class,
 			.name = "Files",
-#endif
 			.init = files_init,
 			.free = files_free,
 			.paint = files_paint,
@@ -205,6 +227,8 @@ files_view(WaveformActor* _)
 	);
 
 	view->viewmodel->view = (ViewIface*)(view->view = directory_view_new(view->viewmodel, view));
+
+	agl_actor__add_child((AGlActor*)view, scrollbar_view(NULL, GTK_ORIENTATION_VERTICAL));
 
 	return (AGlActor*)view;
 }
