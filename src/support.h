@@ -53,18 +53,6 @@ struct _accel {
 //gint         strcmp2(gconstpointer a, gconstpointer b);
 //GPtrArray*   list_dir(const guchar *path);
 
-//-----------------------------------------------------------------
-
-void         pixbuf_clear              (GdkPixbuf*, GdkColor*);
-#ifdef OLD
-void         pixbuf_draw_line          (GdkPixbuf*, struct _ArtDRect *pts, double line_width, GdkColor *colour);
-#else
-void         draw_cairo_line           (cairo_t*, DRect*, double line_width, GdkColor *colour);
-#endif
-//GdkPixbuf*   scale_pixbuf(GdkPixbuf *src, int max_w, int max_h);
-//GdkPixbuf*   scale_pixbuf_up(GdkPixbuf *src, int max_w, int max_h);
-//GdkPixbuf*   create_spotlight_pixbuf   (GdkPixbuf *src, GdkColor*);
-
 void         colour_get_style_fg       (GdkColor*, GtkStateType);
 void         colour_get_style_bg       (GdkColor*, int state);
 void         colour_get_style_base     (GdkColor*, int state);

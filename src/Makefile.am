@@ -36,9 +36,6 @@ endif
 
 if ENABLE_FFTW3
 FFT_SRC = spectrogram_widget.c spectrogram_widget.h
-FFT_ANANALYSERS_SRC = \
-	audio_analysis/spectrogram/spectrogram.c audio_analysis/spectrogram/spectrogram.h \
-	audio_analysis/spectrogram/sndfile_window.c audio_analysis/spectrogram/sndfile_window.h
 endif
 
 if ENABLE_OPENGL
@@ -69,13 +66,6 @@ endif
 if ENABLE_JACK
 AUDITIONER_JACK = jack_player.c jack_player.h ladspa_proc.c ladspa_proc.h
 endif
-
-AUDIOANALYSERS_SRC = \
-	$(FFT_ANANALYSERS_SRC) \
-	audio_analysis/meter/peak.c audio_analysis/meter/peak.h \
-	audio_analysis/waveform/waveform.c audio_analysis/waveform/waveform.h \
-	audio_analysis/ebumeter/ebur128.cc audio_analysis/ebumeter/ebur128.h \
-	audio_analysis/ebumeter/ebu_r128_proc.cc audio_analysis/ebumeter/ebu_r128_proc.h
 
 samplecat_SOURCES = \
 	typedefs.h types.h \
@@ -113,6 +103,7 @@ samplecat_LDADD = \
 	gimp/libgimpwidgets.a \
 	$(top_srcdir)/lib/waveform/waveform/.libs/libwaveform.a \
 	$(top_srcdir)/lib/waveform/decoder/.libs/libwaveformdecoder.a \
+	$(top_srcdir)/lib/audio_analysis/libaudioanalysis.a \
 	$(SAMPLECAT_LIBS) \
 	$(AYYI_LIBS) \
 	$(DBUS_LIBS) \
@@ -128,6 +119,6 @@ samplecat_LDADD = \
 	$(GMODULE_LIBS) \
 	$(X11_LDFLAGS) \
 	$(FFMPEG_LIBS) \
+	-lstdc++ \
 	-ldl
 
-#	$(top_srcdir)/lib/xdgmime/libxdgmime.a

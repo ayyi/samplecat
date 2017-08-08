@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2016 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2017 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -26,6 +26,7 @@
 #include "file_manager.h"
 #include "file_manager/menu.h"
 #include "samplecat/worker.h"
+#include "audio_analysis/waveform/waveform.h"
 #include "src/typedefs.h"
 #include "gimp/gimpaction.h"
 #include "gimp/gimpactiongroup.h"
@@ -581,14 +582,6 @@ window_on_allocate(GtkWidget* win, GtkAllocation* allocation, gpointer user_data
 		gtk_widget_set_size_request(win, 100, 100);
 	}
 
-#if 0 
-	/* XXX do those really need to be repeated? - style changes ? */
-	colour_get_style_bg(&app->bg_colour, GTK_STATE_NORMAL);
-	colour_get_style_fg(&app->fg_colour, GTK_STATE_NORMAL);
-	colour_get_style_base(&app->base_colour, GTK_STATE_NORMAL);
-	colour_get_style_text(&app->text_colour, GTK_STATE_NORMAL);
-#endif
-
 	static gboolean did_set_colours = false;
 	if (!did_set_colours) {
 		did_set_colours = true;
@@ -597,6 +590,8 @@ window_on_allocate(GtkWidget* win, GtkAllocation* allocation, gpointer user_data
 		colour_get_style_fg(&app->fg_colour, GTK_STATE_NORMAL);
 		colour_get_style_base(&app->base_colour, GTK_STATE_NORMAL);
 		colour_get_style_text(&app->text_colour, GTK_STATE_NORMAL);
+
+		set_overview_colour(&app->text_colour, &app->base_colour, &app->bg_colour);
 
 		hexstring_from_gdkcolor(app->config.colour[0], &app->bg_colour);
 

@@ -52,13 +52,13 @@
 
 #include "debug/debug.h"
 #include "decoder/ad.h"
-#include "typedefs.h"
-#include "support.h"
 
 #include "audio_analysis/spectrogram/sndfile_window.h"
-#include "application.h"
+
+extern gchar* str_replace (const gchar* string, const gchar* search, const gchar* replace);
 
 #define _g_object_unref0(var) ((var == NULL) ? NULL : (var = (g_object_unref (var), NULL)))
+#define call(FN, A, ...) if(FN) (FN)(A, ##__VA_ARGS__)
 
 typedef void (*SpectrogramReady)(const char* filename, GdkPixbuf*, gpointer);
 typedef void (*SpectrogramReadyTarget)(const char* filename, GdkPixbuf*, gpointer, void* target);
@@ -450,7 +450,7 @@ fft_thread(gpointer data)
 				render->callback(render->sndfilepath, render->pixbuf, render->user_data);
 
 				render_free(render);
-				return TIMER_STOP;
+				return G_SOURCE_REMOVE;
 			}
 
 			RENDER* render = g_list_first(msg_list)->data;
@@ -556,14 +556,14 @@ get_spectrogram(const char* path, SpectrogramReady callback, gpointer user_data)
 		void*            user_data;
 	} Closure;
 
-	gchar* cache_dir = g_build_filename(app->cache_dir, "spectrogram", NULL);
+	gchar* cache_dir = g_build_filename(g_get_home_dir(), ".config", PACKAGE, "cache", "spectrogram", NULL);
 	g_mkdir_with_parents(cache_dir, S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP);
 
 	gchar* make_cache_name(const char* path)
 	{
 		gchar* name = str_replace(path, "/", "___");
 		gchar* name2 = g_strdup_printf("%s.png", name);
-		gchar* cache_path = g_build_filename(app->cache_dir, "spectrogram", name2, NULL);
+		gchar* cache_path = g_build_filename(g_get_home_dir(), ".config", PACKAGE, "cache", "spectrogram", name2, NULL);
 		g_free(name);
 		g_free(name2);
 		return cache_path;
@@ -634,7 +634,7 @@ get_spectrogram(const char* path, SpectrogramReady callback, gpointer user_data)
 			}
 
 			if(pixbuf){
-				gchar* cache_dir = g_build_filename(app->cache_dir, "spectrogram", NULL);
+				gchar* cache_dir = g_build_filename(g_get_home_dir(), ".config", PACKAGE, "cache", "spectrogram", NULL);
 
 				maintain_cache(cache_dir);
 

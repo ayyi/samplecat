@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2016 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2017 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -18,9 +18,9 @@
 #include <gtk/gtk.h>
 #include "debug/debug.h"
 #include "samplecat.h"
-#include "src/audio_analysis/waveform/waveform.h"
-#include "src/audio_analysis/meter/peak.h"
-#include "src/audio_analysis/ebumeter/ebur128.h"
+#include "audio_analysis/waveform/waveform.h"
+#include "audio_analysis/meter/peak.h"
+#include "audio_analysis/ebumeter/ebur128.h"
 
 typedef struct
 {

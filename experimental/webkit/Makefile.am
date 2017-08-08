@@ -1,19 +1,11 @@
 
 bin_PROGRAMS = samplecat_webkit
 
-AUDIOANALYSERS_SRC = \
-	$(FFT_ANANALYSERS_SRC) \
-	$(top_srcdir)/src/audio_analysis/meter/peak.c $(top_srcdir)/src/audio_analysis/meter/peak.h \
-	$(top_srcdir)/src/audio_analysis/waveform/waveform.c $(top_srcdir)/src/audio_analysis/waveform/waveform.h \
-	$(top_srcdir)/src/audio_analysis/ebumeter/ebur128.cc $(top_srcdir)/src/audio_analysis/ebumeter/ebur128.h \
-	$(top_srcdir)/src/audio_analysis/ebumeter/ebu_r128_proc.cc $(top_srcdir)/src/audio_analysis/ebumeter/ebu_r128_proc.h
-
 samplecat_webkit_SOURCES = \
 	webkit.c \
 	util.c util.h \
 	table.c table.h \
-	$(top_srcdir)/src/icon_theme.c $(top_srcdir)/src/icon_theme.h \
-	$(AUDIOANALYSERS_SRC)
+	$(top_srcdir)/src/icon_theme.c $(top_srcdir)/src/icon_theme.h
 
 AM_CFLAGS = \
 	-g -Wall -O2 \
@@ -47,6 +39,7 @@ samplecat_webkit_LDADD = \
 	$(top_srcdir)/lib/dir_tree/libdirtree.a \
 	$(top_srcdir)/lib/samplecat/libsamplecat.a \
 	$(top_srcdir)/lib/samplecat/db/libsamplecatdb.a \
+	$(top_srcdir)/lib/audio_analysis/libaudioanalysis.a \
 	$(top_srcdir)/lib/debug/libdebug.a \
 	$(top_srcdir)/lib/utils/libutils.a \
 	$(top_srcdir)/lib/waveform/waveform/.libs/libwaveform.a \
@@ -66,5 +59,6 @@ samplecat_webkit_LDADD = \
 	$(OPENGL_LIBS) \
 	$(ZLIB_LIBS) \
 	$(FFMPEG_LIBS) \
-	$(WEBKIT_LIBS)
+	$(WEBKIT_LIBS) \
+	-lstdc++
 

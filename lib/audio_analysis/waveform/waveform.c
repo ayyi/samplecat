@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2015 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2017 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -18,17 +18,27 @@
 #include <gtk/gtk.h>
 #include <gdk-pixbuf/gdk-pixdata.h>
 #include <cairo.h>
-#include "waveform/waveform.h"
-
+#include "waveform/waveform/waveform.h"
 #include "debug/debug.h"
 #include "decoder/ad.h"
-#include "typedefs.h"
-#include "support.h"
-#include "application.h"
-#include "sample.h"
+#include "samplecat/support.h"
+#include "samplecat/sample.h"
+
+#define OVERVIEW_WIDTH (200)
+#define OVERVIEW_HEIGHT (20)
+
+static struct {
+	GdkColor bg;
+	GdkColor base;
+	GdkColor text;
+} colour = {
+	{0,},
+	{0,},
+	{.red=0xdddd, .green=0xdddd, .blue=0xdddd},
+};
 
 
-void
+static void
 draw_cairo_line(cairo_t* cr, DRect* pts, double line_width, GdkColor* colour)
 {
 	float r, g, b;
@@ -43,11 +53,20 @@ draw_cairo_line(cairo_t* cr, DRect* pts, double line_width, GdkColor* colour)
 }
 
 
-void
+static void
 pixbuf_clear(GdkPixbuf* pixbuf, GdkColor* colour)
 {
 	guint32 colour_rgba = ((colour->red/256)<< 24) | ((colour->green/256)<<16) | ((colour->blue/256)<<8) | (0x60);
 	gdk_pixbuf_fill(pixbuf, colour_rgba);
+}
+
+
+void
+set_overview_colour (GdkColor* text_colour, GdkColor* base_colour, GdkColor* bg_colour)
+{
+	colour.bg = *bg_colour;
+	colour.base = *base_colour;
+	colour.text = *text_colour;
 }
 
 
@@ -63,13 +82,13 @@ make_overview(Sample* sample)
 		// It is being tested for mp4 files as AAC is broken in the older path.
 		GdkPixbuf* pixbuf = gdk_pixbuf_new(GDK_COLORSPACE_RGB, HAS_ALPHA_FALSE, BITS_PER_CHAR_8, OVERVIEW_WIDTH, OVERVIEW_HEIGHT);
 		Waveform* waveform = waveform_load_new(sample->full_path);
-		waveform_peak_to_pixbuf(waveform, pixbuf, NULL, color_gdk_to_rgba(&app->text_colour), color_gdk_to_rgba(&app->base_colour), true);
+		waveform_peak_to_pixbuf(waveform, pixbuf, NULL, color_gdk_to_rgba(&colour.text), color_gdk_to_rgba(&colour.base), true);
 		g_object_unref(waveform);
 		return sample->overview = pixbuf;
 	}
 
 	GdkPixbuf* pixbuf = gdk_pixbuf_new(GDK_COLORSPACE_RGB, HAS_ALPHA_TRUE, BITS_PER_CHAR_8, OVERVIEW_WIDTH, OVERVIEW_HEIGHT);
-	pixbuf_clear(pixbuf, &app->bg_colour);
+	pixbuf_clear(pixbuf, &colour.bg);
 
 	cairo_format_t format;
 	if (gdk_pixbuf_get_n_channels(pixbuf) == 3) format = CAIRO_FORMAT_RGB24; else format = CAIRO_FORMAT_ARGB32;
@@ -79,7 +98,7 @@ make_overview(Sample* sample)
 
 	if (1) {
 		DRect pts = {0, OVERVIEW_HEIGHT/2, OVERVIEW_WIDTH, OVERVIEW_HEIGHT/2 + 1};
-		draw_cairo_line(cr, &pts, 1.0, &app->base_colour);
+		draw_cairo_line(cr, &pts, 1.0, &colour.base);
 	}
 	cairo_set_line_width (cr, 1.0);
 
@@ -112,7 +131,7 @@ make_overview(Sample* sample)
 		max = rint(max * OVERVIEW_HEIGHT/2.0);
 
 		DRect pts = {x, OVERVIEW_HEIGHT/2 - min, x, OVERVIEW_HEIGHT/2 - max};
-		draw_cairo_line(cr, &pts, 1.0, &app->text_colour);
+		draw_cairo_line(cr, &pts, 1.0, &colour.text);
 
 		x++;
 	}

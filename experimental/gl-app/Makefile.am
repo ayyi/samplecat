@@ -3,13 +3,6 @@ SUBDIRS = shaders
 
 bin_PROGRAMS = samplecat_gl
 
-AUDIOANALYSERS_SRC = \
-	$(FFT_ANANALYSERS_SRC) \
-	$(top_srcdir)/src/audio_analysis/meter/peak.c $(top_srcdir)/src/audio_analysis/meter/peak.h \
-	$(top_srcdir)/src/audio_analysis/waveform/waveform.c $(top_srcdir)/src/audio_analysis/waveform/waveform.h \
-	$(top_srcdir)/src/audio_analysis/ebumeter/ebur128.cc $(top_srcdir)/src/audio_analysis/ebumeter/ebur128.h \
-	$(top_srcdir)/src/audio_analysis/ebumeter/ebu_r128_proc.cc $(top_srcdir)/src/audio_analysis/ebumeter/ebu_r128_proc.h
-
 samplecat_gl_SOURCES = \
 	samplecat_gl.c \
 	application.c application.h \
@@ -29,8 +22,7 @@ samplecat_gl_SOURCES = \
 	layout.c layout.h \
 	yaml_utils.c yaml_utils.h \
 	keys.h \
-	$(top_srcdir)/src/icon_theme.c $(top_srcdir)/src/icon_theme.h \
-	$(AUDIOANALYSERS_SRC)
+	$(top_srcdir)/src/icon_theme.c $(top_srcdir)/src/icon_theme.h
 
 AM_CFLAGS = \
 	-g -Wall -O2 \
@@ -60,6 +52,7 @@ samplecat_gl_LDADD = \
 	$(top_srcdir)/lib/dir_tree/libdirtree.a \
 	$(top_srcdir)/lib/samplecat/libsamplecat.a \
 	$(top_srcdir)/lib/samplecat/db/libsamplecatdb.a \
+	$(top_srcdir)/lib/audio_analysis/libaudioanalysis.a \
 	$(top_srcdir)/lib/debug/libdebug.a \
 	$(top_srcdir)/lib/utils/libutils.a \
 	$(top_srcdir)/lib/waveform/waveform/.libs/libwaveform.a \
@@ -79,7 +72,8 @@ samplecat_gl_LDADD = \
 	$(OPENGL_LIBS) \
 	$(ZLIB_LIBS) \
 	$(YAML_LIBS) \
-	$(FFMPEG_LIBS)
+	$(FFMPEG_LIBS) \
+	-lstdc++
 
 dist_pkgdata_DATA = samplecat.yaml
 

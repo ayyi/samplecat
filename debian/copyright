@@ -5,7 +5,7 @@ Upstream-Contact: Tim Orford <tim@orford.org>
 Source: git://rg42.org/samplecat.git
 
 Copyright: 
- 2006-2016 Tim Orford <tim@orford.org>
+ 2006-2017 Tim Orford <tim@orford.org>
  2010-2011 Robin Gareus <robin@gareus.org>
 License: GPL-2
 
@@ -40,11 +40,11 @@ Files: ./src/cellrenderer_hypertext.*
  2003 Federico Mena-Quintero <federico@ximian.com>
 License: LGPL-2
 
-Files: ./src/audio_analysis/ebumeter/*
+Files: ./lib/audio_analysis/ebumeter/*
  2010-2011 Fons Adriaensen <fons@linuxaudio.org>
 License: GPL-2
 
-Files: ./src/audio_analysis/spectrogram/*
+Files: ./lib/audio_analysis/spectrogram/*
  2007-2009 Erik de Castro Lopo <erikd@mega-nerd.com>
 License: GPL-2
 

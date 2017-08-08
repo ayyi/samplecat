@@ -88,11 +88,11 @@ static void     samplecat_idle_finalize   (SamplecatIdle* obj);
 enum  {
 	SAMPLECAT_MODEL_DUMMY_PROPERTY
 };
-static gboolean samplecat_model_queue_selection_changed (SamplecatModel* self);
+static gboolean samplecat_model_queue_selection_changed (SamplecatModel*);
 static gboolean _samplecat_model_queue_selection_changed_gsource_func (gpointer self);
-static void     g_cclosure_user_marshal_VOID__POINTER_INT_POINTER (GClosure * closure, GValue * return_value, guint n_param_values, const GValue * param_values, gpointer invocation_hint, gpointer marshal_data);
-static GObject* samplecat_model_constructor (GType type, guint n_construct_properties, GObjectConstructParam * construct_properties);
-static void     samplecat_model_finalize (GObject* obj);
+static void     g_cclosure_user_marshal_VOID__POINTER_INT_POINTER (GClosure*, GValue* return_value, guint n_param_values, const GValue* param_values, gpointer invocation_hint, gpointer marshal_data);
+static GObject* samplecat_model_constructor (GType type, guint n_construct_properties, GObjectConstructParam*);
+static void     samplecat_model_finalize (GObject*);
 
 
 SamplecatFilter*
@@ -693,16 +693,11 @@ _samplecat_model_queue_selection_changed_gsource_func (gpointer self)
 void
 samplecat_model_set_selection (SamplecatModel* self, Sample* sample)
 {
-	Sample* _tmp0_;
-	Sample* _tmp1_;
 	g_return_if_fail (self);
-	_tmp0_ = sample;
-	_tmp1_ = self->selection;
-	if (_tmp0_ != _tmp1_) {
+
+	if (sample != self->selection) {
 		if (self->selection) {
-			Sample* _tmp3_;
-			_tmp3_ = self->selection;
-			sample_unref (_tmp3_);
+			sample_unref (self->selection);
 		}
 		self->selection = sample;
 		sample_ref (self->selection);
@@ -717,14 +712,11 @@ samplecat_model_set_selection (SamplecatModel* self, Sample* sample)
 static gboolean
 samplecat_model_queue_selection_changed (SamplecatModel* self)
 {
-	gboolean result = FALSE;
-	Sample* _tmp0_;
 	g_return_val_if_fail (self != NULL, FALSE);
-	self->priv->selection_change_timeout = (guint) 0;
-	_tmp0_ = self->selection;
-	g_signal_emit_by_name (self, "selection-changed", _tmp0_);
-	result = FALSE;
-	return result;
+
+	self->priv->selection_change_timeout = 0;
+	g_signal_emit_by_name (self, "selection-changed", self->selection);
+	return FALSE;
 }
 
 
@@ -1237,7 +1229,9 @@ samplecat_model_move_files(GList* list, const gchar* dest_path)
 }
 
 
-static void g_cclosure_user_marshal_VOID__POINTER_INT_POINTER (GClosure * closure, GValue * return_value, guint n_param_values, const GValue * param_values, gpointer invocation_hint, gpointer marshal_data) {
+static void
+g_cclosure_user_marshal_VOID__POINTER_INT_POINTER (GClosure* closure, GValue* return_value, guint n_param_values, const GValue* param_values, gpointer invocation_hint, gpointer marshal_data)
+{
 	typedef void (*GMarshalFunc_VOID__POINTER_INT_POINTER) (gpointer data1, gpointer arg_1, gint arg_2, gpointer arg_3, gpointer data2);
 	register GMarshalFunc_VOID__POINTER_INT_POINTER callback;
 	register GCClosure * cc;
@@ -1257,16 +1251,18 @@ static void g_cclosure_user_marshal_VOID__POINTER_INT_POINTER (GClosure * closur
 }
 
 
-static GObject * samplecat_model_constructor (GType type, guint n_construct_properties, GObjectConstructParam * construct_properties) {
-	GObject * obj;
-	GObjectClass * parent_class;
-	parent_class = G_OBJECT_CLASS (samplecat_model_parent_class);
-	obj = parent_class->constructor (type, n_construct_properties, construct_properties);
+static GObject*
+samplecat_model_constructor (GType type, guint n_construct_properties, GObjectConstructParam* construct_properties)
+{
+	GObjectClass* parent_class = G_OBJECT_CLASS (samplecat_model_parent_class);
+	GObject* obj = parent_class->constructor (type, n_construct_properties, construct_properties);
 	return obj;
 }
 
 
-static void samplecat_model_class_init (SamplecatModelClass * klass) {
+static void
+samplecat_model_class_init (SamplecatModelClass* klass)
+{
 	samplecat_model_parent_class = g_type_class_peek_parent (klass);
 	g_type_class_add_private (klass, sizeof (SamplecatModelPrivate));
 	G_OBJECT_CLASS (klass)->constructor = samplecat_model_constructor;
@@ -1277,15 +1273,18 @@ static void samplecat_model_class_init (SamplecatModelClass * klass) {
 }
 
 
-static void samplecat_model_instance_init (SamplecatModel * self) {
+static void
+samplecat_model_instance_init (SamplecatModel* self)
+{
 	self->priv = SAMPLECAT_MODEL_GET_PRIVATE (self);
 	self->state = 0;
 }
 
 
-static void samplecat_model_finalize (GObject* obj) {
-	SamplecatModel * self;
-	self = G_TYPE_CHECK_INSTANCE_CAST (obj, SAMPLECAT_TYPE_MODEL, SamplecatModel);
+static void
+samplecat_model_finalize (GObject* obj)
+{
+	SamplecatModel* self = G_TYPE_CHECK_INSTANCE_CAST (obj, SAMPLECAT_TYPE_MODEL, SamplecatModel);
 	_g_list_free0 (self->backends);
 	_g_list_free0 (self->filters_);
 	_samplecat_idle_unref0 (self->priv->idle);
@@ -1295,7 +1294,9 @@ static void samplecat_model_finalize (GObject* obj) {
 }
 
 
-GType samplecat_model_get_type (void) {
+GType
+samplecat_model_get_type (void)
+{
 	static volatile gsize samplecat_model_type_id__volatile = 0;
 	if (g_once_init_enter (&samplecat_model_type_id__volatile)) {
 		static const GTypeInfo g_define_type_info = { sizeof (SamplecatModelClass), (GBaseInitFunc) NULL, (GBaseFinalizeFunc) NULL, (GClassInitFunc) samplecat_model_class_init, (GClassFinalizeFunc) NULL, NULL, sizeof (SamplecatModel), 0, (GInstanceInitFunc) samplecat_model_instance_init, NULL };
