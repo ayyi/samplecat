@@ -157,6 +157,7 @@ application_class_init (ApplicationClass* klass)
 	G_OBJECT_CLASS (klass)->constructor = application_constructor;
 	G_OBJECT_CLASS (klass)->finalize = application_finalize;
 	g_signal_new ("config_loaded", TYPE_APPLICATION, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_VOID__VOID, G_TYPE_NONE, 0);
+	g_signal_new ("search_starting", TYPE_APPLICATION, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_VOID__VOID, G_TYPE_NONE, 0);
 	g_signal_new ("icon_theme", TYPE_APPLICATION, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_VOID__STRING, G_TYPE_NONE, 1, G_TYPE_STRING);
 	g_signal_new ("on_quit", TYPE_APPLICATION, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_VOID__VOID, G_TYPE_NONE, 0);
 	g_signal_new ("theme_changed", TYPE_APPLICATION, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_VOID__VOID, G_TYPE_NONE, 0);
@@ -373,24 +374,9 @@ application_search()
 
 	if(BACKEND_IS_NULL) return;
 
-	if(app->libraryview)
-		listview__block_motion_handler(); // TODO make private to listview.
+	g_signal_emit_by_name(app, "search-starting");
 
 	samplecat_list_store_do_search((SamplecatListStore*)samplecat.store);
-
-	bool select_first(gpointer user_data)
-	{
-		GtkTreeSelection* selection = gtk_tree_view_get_selection((GtkTreeView*)app->libraryview->widget);
-		if(!gtk_tree_selection_count_selected_rows(selection)){
-			GtkTreePath* path;
-			if(gtk_tree_view_get_visible_range((GtkTreeView*)app->libraryview->widget, &path, NULL)){
-				gtk_tree_view_set_cursor((GtkTreeView*)app->libraryview->widget, path, NULL, 0);
-				gtk_tree_path_free(path);
-			}
-		}
-		return G_SOURCE_REMOVE;
-	}
-	g_idle_add(select_first, NULL);
 }
 
 

@@ -312,3 +312,35 @@ format_smpte(char* str, int64_t t /*milliseconds*/)
 }
 
 
+float
+gain2db(float gain)
+{
+	union {float f; int i;} t;
+	t.f = gain;
+	int * const    exp_ptr =  &t.i;
+	int            x = *exp_ptr;
+	const int      log_2 = ((x >> 23) & 255) - 128;
+	x &= ~(255 << 23);
+	x += 127 << 23;
+	*exp_ptr = x;
+
+	gain = ((-1.0f/3) * t.f + 2) * t.f - 2.0f/3;
+
+	return 20.0f * (gain + log_2) * 0.69314718f;
+}
+
+
+char*
+gain2dbstring(float gain)
+{
+	//result must be freed by caller
+
+	float dB = gain2db(gain);
+
+	if(dB < -200)
+		return g_strdup("");
+
+	return g_strdup_printf("%.2f dBA", gain2db(gain));
+}
+
+

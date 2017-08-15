@@ -87,6 +87,7 @@ static const struct option long_options[] = {
   { "search",           1, NULL, 's' },
   { "cwd",              0, NULL, 'c' },
   { "add",              1, NULL, 'a' },
+  { "layout",           1, NULL, 'l' },
   { "help",             0, NULL, 'h' },
   { "version",          0, NULL, 'V' },
 };
@@ -104,6 +105,7 @@ static const char* const usage =
 	"  -h, --help             show this usage information and quit.\n"
 	"  -p, --player <name>    select audio player (jack, ayyi, cli).\n"
 	"  -s, --search <txt>     search using this phrase.\n"
+	"  -l, --layout           load the named window layout.\n"
 	"  -c, --cwd              show contents of current directory (temporary view, state not saved).\n"
 	"  -v, --verbose <level>  show more information.\n"
 	"  -V, --version          print version and exit.\n"
@@ -231,10 +233,14 @@ main(int argc, char** argv)
 				dbg(1, "add=%s", optarg);
 				app->args.add = remove_trailing_slash(g_strdup(optarg));
 				break;
+			case 'l':
+				dbg(1, "layout=%s", optarg);
+				app->args.layout = g_strdup(optarg);
+				break;
 			case 'V':
 				printf ("%s %s\n\n", basename(argv[0]), PACKAGE_VERSION);
 				printf(
-					"Copyright (C) 2007-2015 Tim Orford\n"
+					"Copyright (C) 2007-2017 Tim Orford\n"
 					"Copyright (C) 2011 Robin Gareus\n"
 					"This is free software; see the source for copying conditions.  There is NO\n"
 					"warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n"

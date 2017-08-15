@@ -36,7 +36,7 @@
 
 static gboolean     listview__on_row_clicked          (GtkWidget*, GdkEventButton*, gpointer);
 static void         listview__on_cursor_change        (GtkTreeView*, gpointer);
-static void         listview__on_store_changed        (GtkListStore*, gpointer);
+static void         listview__on_store_changed        (GtkListStore*, LibraryView*);
 static void         listview__dnd_get                 (GtkWidget*, GdkDragContext*, GtkSelectionData*, guint info, guint time, gpointer);
 static gint         listview__drag_received           (GtkWidget*, GdkDragContext*, gint x, gint y, GtkSelectionData*, guint info, guint time, gpointer);
 static void         listview__on_realise              (GtkWidget*, gpointer);
@@ -205,7 +205,7 @@ listview__new()
 
 	g_signal_connect((gpointer)view, "button-press-event", G_CALLBACK(listview__on_row_clicked), NULL);
 	g_signal_connect((gpointer)view, "cursor-changed", G_CALLBACK(listview__on_cursor_change), NULL);
-	g_signal_connect(G_OBJECT(samplecat.store), "content-changed", G_CALLBACK(listview__on_store_changed), NULL);
+	g_signal_connect(G_OBJECT(samplecat.store), "content-changed", G_CALLBACK(listview__on_store_changed), lv);
 
 #if 0
 	void on_unrealize(GtkWidget* widget, gpointer user_data)
@@ -239,6 +239,12 @@ listview__new()
 	}
 	g_signal_connect(GTK_TREE_SORTABLE(samplecat.store), "sort-column-changed", (GCallback)on_sort_order_changed, NULL);
 
+	void list_view_on_search_start()
+	{
+		listview__block_motion_handler();
+	}
+	g_signal_connect(G_OBJECT(app), "search-starting", G_CALLBACK(list_view_on_search_start), NULL);
+
 	return lv->scroll;
 }
 
@@ -249,6 +255,8 @@ listview__on_realise(GtkWidget* widget, gpointer user_data)
 	gtk_tree_view_column_set_resizable(app->libraryview->col_name, true);
 	gtk_tree_view_column_set_resizable(app->libraryview->col_path, true);
 	//gtk_tree_view_column_set_sizing(col1, GTK_TREE_VIEW_COLUMN_FIXED);
+
+	listview__on_store_changed(samplecat.store, app->libraryview);
 }
 
 
@@ -381,11 +389,27 @@ listview__on_cursor_change(GtkTreeView* widget, gpointer user_data)
 
 
 static void
-listview__on_store_changed(GtkListStore* store, gpointer data)
+listview__on_store_changed(GtkListStore* store, LibraryView* view)
 {
 	PF;
 
 	listview__unblock_motion_handler();
+
+	bool select_first(gpointer data)
+	{
+		LibraryView* view = data;
+
+		GtkTreeSelection* selection = gtk_tree_view_get_selection((GtkTreeView*)view->widget);
+		if(!gtk_tree_selection_count_selected_rows(selection)){
+			GtkTreePath* path;
+			if(gtk_tree_view_get_visible_range((GtkTreeView*)view->widget, &path, NULL)){
+				gtk_tree_view_set_cursor((GtkTreeView*)view->widget, path, NULL, 0);
+				gtk_tree_path_free(path);
+			}
+		}
+		return G_SOURCE_REMOVE;
+	}
+	g_idle_add(select_first, view);
 }
 
 
@@ -528,24 +552,32 @@ listview__dnd_get(GtkWidget* widget, GdkDragContext* context, GtkSelectionData* 
 
 
 static gint
-listview__drag_received(GtkWidget *widget, GdkDragContext *drag_context, gint x, gint y, GtkSelectionData *data, guint info, guint time, gpointer user_data)
+listview__drag_received(GtkWidget* widget, GdkDragContext* drag_context, gint x, gint y, GtkSelectionData* data, guint info, guint time, gpointer user_data)
 {
 	PF;
 	return FALSE;
 }
 
 
+static bool blocked = false;
+
+
 void
 listview__block_motion_handler()
 {
 	LibraryView* view = app->libraryview;
-	if(view && view->widget){
+
+	if(!blocked && view && view->widget){
 		gulong id1 = g_signal_handler_find(view->widget, G_SIGNAL_MATCH_FUNC, 0, 0, 0, listview__on_motion, NULL);
 		if(id1) g_signal_handler_block(app->libraryview->widget, id1);
+#ifdef DEBUG
 		else pwarn("failed to find handler.");
+#endif
 
 		gtk_tree_row_reference_free(view->mouseover_row_ref);
 		view->mouseover_row_ref = NULL;
+
+		blocked = true;
 	}
 }
 
@@ -556,10 +588,13 @@ listview__unblock_motion_handler()
 	LibraryView* view = app->libraryview;
 	g_return_if_fail(view && view->widget);
 	PF;
-	if(view->widget){
+	if(blocked){
 		gulong id1 = g_signal_handler_find(view->widget, G_SIGNAL_MATCH_FUNC, 0, 0, 0, listview__on_motion, NULL);
 		if(id1) g_signal_handler_unblock(view->widget, id1);
+#ifdef DEBUG
 		else gwarn("failed to find handler.");
+#endif
+		blocked = false;
 	}
 }
 

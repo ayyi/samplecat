@@ -95,7 +95,7 @@ static void       update_waveform_view            (Sample*);
 static void       k_delete_row                    (GtkAccelGroup*, gpointer);
 #ifdef USE_GDL
 static void       k_show_layout_manager           (GtkAccelGroup*, gpointer);
-static void       window_load_layout              ();
+static void       window_load_layout              (const char*);
 static void       window_save_layout              ();
 #endif
 static GtkWidget* make_context_menu               ();
@@ -654,7 +654,8 @@ window_on_configure(GtkWidget* widget, GdkEventConfigure* event, gpointer user_d
 		}
 
 #ifdef USE_GDL
-		window_load_layout();
+		window_load_layout(app->temp_view ? "File Manager" : app->args.layout ? app->args.layout : "__default__");
+		if(_debug_) gdl_dock_print_recursive((GdlDockMaster*)((GdlDockObject*)window.dock)->master);
 #else
 		if(app->view_options[SHOW_PLAYER].value && panels[PANEL_TYPE_PLAYER].widget){
 			show_player(true);
@@ -662,12 +663,11 @@ window_on_configure(GtkWidget* widget, GdkEventConfigure* event, gpointer user_d
 #endif
 
 #ifdef USE_GDL
-		bool window_activate_layout(gpointer data)
+		void window_activate_layout()
 		{
 			PF;
 
-			if(gdl_dock_layout_load_layout (window.layout, app->temp_view ? "File Manager" : "__default__")){
-				if(_debug_) gdl_dock_print_recursive((GdlDockMaster*)((GdlDockObject*)window.dock)->master);
+			if(app->temp_view){
 
 				void select_first_audio()
 				{
@@ -698,13 +698,9 @@ window_on_configure(GtkWidget* widget, GdkEventConfigure* event, gpointer user_d
 				}
 
 				if(app->temp_view) g_timeout_add(100, check_ready, NULL);
-			}else{
-				gwarn("load layout failed");
 			}
-
-			return TIMER_STOP;
 		}
-		window_activate_layout(NULL);
+		window_activate_layout();
 #endif
 		app->context_menu = make_context_menu();
 	}
@@ -1403,7 +1399,7 @@ show_waveform(gboolean enable)
 				show_waveform(true);
 			}
 			timer = 0;
-			return TIMER_STOP;
+			return G_SOURCE_REMOVE;
 		}
 		if(timer) g_source_remove(timer);
 		timer = g_timeout_add(500, redisplay, view);
@@ -1705,7 +1701,7 @@ k_show_layout_manager(GtkAccelGroup* _, gpointer user_data)
 
 
 static void
-window_load_layout()
+window_load_layout(const char* layout_name)
 {
 	// Try to load xml file from the users config dir, or fallback to using the built in default xml
 
@@ -1721,18 +1717,18 @@ window_load_layout()
 		return false;
 	}
 
-	bool _load_layout_from_file(const char* name)
+	bool _load_layout_from_file(const char* filename, const char* name)
 	{
 		bool ok = false;
-		char* filename = g_strdup_printf("%s/layouts/%s.xml", app->configctx.dir, name);
-		if(gdl_dock_layout_load_from_file(window.layout, filename)){
-			if(!strcmp(name, "__default__")){ // only activate one layout
+		char* path = g_strdup_printf("%s/layouts/%s", app->configctx.dir, filename);
+		if(gdl_dock_layout_load_from_file(window.layout, path)){
+			//if(!strcmp(name, "__default__")){ // only activate one layout
 				_load_layout(name);
 				ok = true;
-			}
+			//}
 		}
-		else gwarn("failed to load %s", filename);
-		g_free(filename);
+		else gwarn("failed to load %s", path);
+		g_free(path);
 		return ok;
 	}
 
@@ -1742,11 +1738,12 @@ window_load_layout()
 	if(!error) {
 		const gchar* filename;
 		while((filename = g_dir_read_name(dir))){
-			//if(g_strrstr(filename, ".xml")){
 			if(g_str_has_suffix(filename, ".xml")){
-				gchar* name = g_strndup(filename, strlen(filename) - 4);
+				gchar* name = layout_name && strlen(layout_name)
+					? g_strdup(layout_name)
+					: g_strndup(filename, strlen(filename) - 4);
 				dbg(1, "loading layout: %s", name);
-				if(_load_layout_from_file(name)) have_layout = true;
+				if(_load_layout_from_file(filename, name)) have_layout = true;
 				g_free(name);
 			}
 		}

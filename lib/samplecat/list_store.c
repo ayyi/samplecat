@@ -298,8 +298,7 @@ samplecat_list_store_instance_init (SamplecatListStore * self)
 static void
 samplecat_list_store_finalize (GObject* obj)
 {
-	SamplecatListStore * self;
-	self = G_TYPE_CHECK_INSTANCE_CAST (obj, SAMPLECAT_TYPE_LIST_STORE, SamplecatListStore);
+	SamplecatListStore* self = G_TYPE_CHECK_INSTANCE_CAST (obj, SAMPLECAT_TYPE_LIST_STORE, SamplecatListStore);
 	_gtk_tree_row_reference_free0 (self->playing);
 	G_OBJECT_CLASS (samplecat_list_store_parent_class)->finalize (obj);
 }

@@ -52,4 +52,7 @@ gchar*       dir_format                (char*);
 gchar*       format_channels           (int);
 void         format_smpte              (char*, int64_t);
 
+float        gain2db                   (float);
+char*        gain2dbstring             (float);
+
 #endif

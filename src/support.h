@@ -31,7 +31,6 @@
 #define g_list_free0(var) ((var == NULL) ? NULL : (var = (g_list_free (var), NULL)))
 
 #define TIMER_CONTINUE TRUE
-#define TIMER_STOP FALSE
 #define HANDLED TRUE
 #define NOT_HANDLED FALSE
 #define EXPAND_TRUE 1
@@ -92,9 +91,6 @@ GList*       uri_list_to_glist         (const char* uri_list);
 void         uri_list_free             (GList*);
 const gchar* vfs_get_method_string     (const gchar* substring, gchar** method_string);
 char*        vfs_unescape_string       (const gchar* escaped_string, const gchar* illegal_characters);
-
-float        gain2db                   (float);
-char*        gain2dbstring             (float);
 
 void         show_widget_if            (GtkWidget*, gboolean);
 GtkWidget*   scrolled_window_new       ();
