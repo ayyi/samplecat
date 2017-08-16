@@ -176,12 +176,12 @@ files_view(WaveformActor* _)
 			case GDK_BUTTON_PRESS:
 				switch(event->button.button){
 					case 4:
-						dbg(0, "! scroll up");
+						dbg(1, "! scroll up");
 						files_set_scroll_position(actor, view->scroll_offset - 1);
 						agl_actor__invalidate(actor);
 						break;
 					case 5:
-						dbg(0, "! scroll down");
+						dbg(1, "! scroll down");
 						if(scrollable_height > N_ROWS_VISIBLE(actor)){
 							files_set_scroll_position(actor, view->scroll_offset + 1);
 							agl_actor__invalidate(actor);

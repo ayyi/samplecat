@@ -336,7 +336,7 @@ _update_display (Directory* dir, DirAction action, GPtrArray* items, VMDirectory
 	switch (action)
 	{
 		case DIR_ADD:
-			dbg(0, "DIR_ADD...");
+			dbg(1, "DIR_ADD...");
 			VIEW_IFACE_GET_CLASS(view)->add_items(view, items);
 			break;
 		case DIR_REMOVE:
@@ -344,13 +344,13 @@ _update_display (Directory* dir, DirAction action, GPtrArray* items, VMDirectory
 			//toolbar_update_info(filer_window);
 			break;
 		case DIR_START_SCAN:
-			dbg(0, "DIR_START_SCAN");
+			dbg(1, "DIR_START_SCAN");
 //			set_scanning_display(fm, TRUE);
 //			file_manager__on_dir_changed();
 			//toolbar_update_info(filer_window);
 			break;
 		case DIR_END_SCAN:
-			dbg(0, "DIR_END_SCAN");
+			dbg(1, "DIR_END_SCAN");
 /*
 			//if (filer_window->window->window) gdk_window_set_cursor(filer_window->window->window, NULL);
 			set_scanning_display(fm, FALSE);
@@ -376,14 +376,14 @@ _update_display (Directory* dir, DirAction action, GPtrArray* items, VMDirectory
 */
 			break;
 		case DIR_UPDATE:
-			dbg(0, "DIR_UPDATE");
+			dbg(1, "DIR_UPDATE");
 //			view_update_items(view, items);
 			break;
 		case DIR_ERROR_CHANGED:
 			//filer_set_title(filer_window);
 			break;
 		case DIR_QUEUE_INTERESTING:
-			dbg(0, "DIR_QUEUE_INTERESTING");
+			dbg(1, "DIR_QUEUE_INTERESTING");
 			queue_interesting(vmd);
 			break;
 	}

@@ -4,7 +4,7 @@ SUBDIRS = shaders
 bin_PROGRAMS = samplecat_gl
 
 samplecat_gl_SOURCES = \
-	samplecat_gl.c \
+	main.c \
 	application.c application.h \
 	glx.c glx.h \
 	directory.c directory.h \
@@ -15,6 +15,7 @@ samplecat_gl_SOURCES = \
 	views/files.c views/files.h \
 	views/files.impl.c views/files.impl.h \
 	views/dirs.c views/dirs.h \
+	views/inspector.c views/inspector.h \
 	views/search.c views/search.h \
 	views/tabs.c views/tabs.h \
 	views/scrollbar.c views/scrollbar.h \

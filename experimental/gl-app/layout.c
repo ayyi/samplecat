@@ -21,7 +21,7 @@
 #include "layout.h"
 
 typedef AGlActorClass* (get_class)();
-get_class dock_v_get_class, dock_h_get_class, list_view_get_class, files_view_get_class, directories_view_get_class, search_view_get_class, scrollbar_view_get_class;
+get_class dock_v_get_class, dock_h_get_class, list_view_get_class, files_view_get_class, directories_view_get_class, inspector_view_get_class, search_view_get_class, scrollbar_view_get_class;
 #include "views/dock_v.h"
 #include "views/tabs.h"
 
@@ -322,6 +322,7 @@ load_settings ()
 		agl_actor_register_class("Dock V", dock_v_get_class());
 		agl_actor_register_class("Panel", panel_view_get_class());
 		agl_actor_register_class("Dirs", directories_view_get_class());
+		agl_actor_register_class("Inspector", inspector_view_get_class());
 		agl_actor_register_class("Search", search_view_get_class());
 		agl_actor_register_class("Tabs", tabs_view_get_class());
 		agl_actor_register_class("List", list_view_get_class());
