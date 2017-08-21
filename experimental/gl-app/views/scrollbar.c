@@ -23,10 +23,10 @@ typedef struct { int start, end; } iRange;
 #define H_SCROLLBAR_H_PADDING 3
 #define H_SCROLLBAR_V_PADDING 2
 
-static void        arr_gl_scrollbar_set_size      (AGlActor*);
-static bool        arr_gl_scrollbar_on_event      (AGlActor*, GdkEvent*, AGliPt);
-static void        arr_gl_hscrollbar_bar_position (AGlActor*, iRange*);
-static void        arr_gl_vscrollbar_bar_position (AGlActor*, iRange*);
+static void scrollbar_set_size      (AGlActor*);
+static bool scrollbar_on_event      (AGlActor*, GdkEvent*, AGliPt);
+static void hscrollbar_bar_position (AGlActor*, iRange*);
+static void vscrollbar_bar_position (AGlActor*, iRange*);
 
 
 typedef struct {
@@ -67,7 +67,7 @@ scrollbar_view(AGlActor* panel, GtkOrientation orientation)
 	{
 		if(!actor->disabled){
 			iRange bar;
-			arr_gl_hscrollbar_bar_position(actor, &bar);
+			hscrollbar_bar_position(actor, &bar);
 
 			if(((ScrollbarActor*)actor)->animation.val.f > 0.61){
 				agl->shaders.plain->uniform.colour = 0xffffff66;
@@ -88,7 +88,7 @@ scrollbar_view(AGlActor* panel, GtkOrientation orientation)
 		return true;
 	}
 
-	bool arr_gl_scrollbar_draw_v(AGlActor* actor)
+	bool scrollbar_draw_v(AGlActor* actor)
 	{
 		if(!actor->disabled){
 #if 0
@@ -99,7 +99,7 @@ scrollbar_view(AGlActor* panel, GtkOrientation orientation)
 			}
 #endif
 			iRange bar = {0,};
-			arr_gl_vscrollbar_bar_position(actor, &bar);
+			vscrollbar_bar_position(actor, &bar);
 			bar.start += -actor->parent->scrollable.y1;
 			bar.end += -actor->parent->scrollable.y1;
 
@@ -114,7 +114,7 @@ scrollbar_view(AGlActor* panel, GtkOrientation orientation)
 		return true;
 	}
 
-	void arr_gl_scrollbar_init(AGlActor* actor)
+	void scrollbar_init(AGlActor* actor)
 	{
 		if(((ScrollbarActor*)actor)->orientation == GTK_ORIENTATION_VERTICAL){
 			if(!v_scrollbar_shader.shader.program){
@@ -122,7 +122,7 @@ scrollbar_view(AGlActor* panel, GtkOrientation orientation)
 				v_scrollbar_shader.uniform.radius = 3;
 			}
 
-			actor->paint = agl->use_shaders ? arr_gl_scrollbar_draw_v : agl_actor__null_painter;
+			actor->paint = agl->use_shaders ? scrollbar_draw_v : agl_actor__null_painter;
 		}else{
 #if 0
 			if(!h_scrollbar_shader.shader.program){
@@ -138,10 +138,10 @@ scrollbar_view(AGlActor* panel, GtkOrientation orientation)
 		.actor = {
 			.class = &actor_class,
 			.name = "Scrollbar",
-			.init = arr_gl_scrollbar_init,
-			.set_size = arr_gl_scrollbar_set_size,
+			.init = scrollbar_init,
+			.set_size = scrollbar_set_size,
 			.paint = agl_actor__null_painter,
-			.on_event = arr_gl_scrollbar_on_event,
+			.on_event = scrollbar_on_event,
 			.region = (AGliRegion){0, 0, 1, 1},
 		},
 		.orientation = orientation,
@@ -160,7 +160,7 @@ scrollbar_view(AGlActor* panel, GtkOrientation orientation)
 
 
 static void
-arr_gl_scrollbar_set_size(AGlActor* actor)
+scrollbar_set_size(AGlActor* actor)
 {
 	AGlActor* root = (AGlActor*)actor->root;
 
@@ -187,14 +187,14 @@ arr_gl_scrollbar_set_size(AGlActor* actor)
 
 
 static void
-arr_gl_hscrollbar_bar_position (AGlActor* actor, iRange* pos)
+hscrollbar_bar_position (AGlActor* actor, iRange* pos)
 {
 	*pos = (iRange){0,};
 }
 
 
 static void
-arr_gl_vscrollbar_bar_position (AGlActor* actor, iRange* pos)
+vscrollbar_bar_position (AGlActor* actor, iRange* pos)
 {
 	AGlActor* parent = actor->parent;
 
@@ -215,7 +215,7 @@ arr_gl_vscrollbar_bar_position (AGlActor* actor, iRange* pos)
 
 
 static bool
-arr_gl_scrollbar_on_event(AGlActor* actor, GdkEvent* event, AGliPt xy)
+scrollbar_on_event(AGlActor* actor, GdkEvent* event, AGliPt xy)
 {
 	void animation_done (WfAnimation* animation, gpointer user_data)
 	{
@@ -238,7 +238,7 @@ arr_gl_scrollbar_on_event(AGlActor* actor, GdkEvent* event, AGliPt xy)
 				}else{
 					float pos = x - ((ScrollbarActor*)actor)->grab_offset.x;
 					/*
-					iRange bar; arr_gl_hscrollbar_bar_position (actor, &bar);
+					iRange bar; hscrollbar_bar_position (actor, &bar);
 					int total = agl_actor__width(((AGlActor*)actor->root)) - (bar.end - bar.start) - 0 * SCROLLBAR_H_PADDING;
 					float pct = MIN(1.0, pos / total);
 					*/
@@ -264,14 +264,14 @@ arr_gl_scrollbar_on_event(AGlActor* actor, GdkEvent* event, AGliPt xy)
 
 				iRange bar = {0,};
 				if(((ScrollbarActor*)actor)->orientation == GTK_ORIENTATION_VERTICAL){
-					arr_gl_vscrollbar_bar_position (actor, &bar);
+					vscrollbar_bar_position (actor, &bar);
 					if(xy.y > bar.start && xy.y < bar.end){
 						actor_context.grabbed = actor;
 						((ScrollbarActor*)actor)->grab_offset = (AGliPt){x - bar.start, xy.y - bar.start};
 						handled = true;
 					}
 				}else{
-					arr_gl_hscrollbar_bar_position (actor, &bar);
+					hscrollbar_bar_position (actor, &bar);
 					if(x > bar.start && x < bar.end){
 						actor_context.grabbed = actor;
 						((ScrollbarActor*)actor)->grab_offset = (AGliPt){x - bar.start, xy.y - bar.start};

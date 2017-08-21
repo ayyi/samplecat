@@ -25,7 +25,7 @@ ScrollbarShader v_scrollbar_shader = {{NULL, NULL, 0, NULL, _v_scrollbar_set_uni
 static inline void
 set_uniform_f(AGlShader* shader, int u, float* prev)
 {
-	AGlUniformInfo* uniform = &shader->uniforms[u];
+	//AGlUniformInfo* uniform = &shader->uniforms[u];
 	if(shader->uniforms[u].value[0] != *prev){
 		glUniform1f(shader->uniforms[u].location, shader->uniforms[u].value[0]);
 		*prev = shader->uniforms[u].value[0];

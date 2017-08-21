@@ -12,10 +12,14 @@
 #ifndef __views_inspector_h__
 #define __views_inspector_h__
 
+#define INSPECTOR_RENDER_CACHE
+
 typedef struct {
    AGlActor    actor;
    Sample*     sample;
+#ifndef INSPECTOR_RENDER_CACHE
    int         scroll_offset;
+#endif
    struct {
       int      n_rows;
       int      n_rows_visible;

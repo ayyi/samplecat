@@ -11,6 +11,7 @@ samplecat_gl_SOURCES = \
 	views/dock_v.c views/dock_v.h \
 	views/dock_h.c views/dock_h.h \
 	views/panel.c views/panel.h \
+	views/scrollable.c views/scrollable.h \
 	views/list.c views/list.h \
 	views/files.c views/files.h \
 	views/files.impl.c views/files.impl.h \

@@ -32,14 +32,12 @@
 
 #define row_height 20
 
+#define agl_actor__scrollable_height(A) (A->scrollable.y2 - A->scrollable.y1)
 #define scrollable_height (view->cache.n_rows * row_height)
-#define max_scroll_offset (scrollable_height / row_height - view->cache.n_rows_visible)
 
 static AGl* agl = NULL;
 static int instance_count = 0;
 static AGlActorClass actor_class = {0, "Inspector", (AGlActorNew*)inspector_view};
-
-static void inspector_set_scroll_position (AGlActor*, int);
 
 
 AGlActorClass*
@@ -74,11 +72,17 @@ inspector_view(gpointer _)
 		Sample* sample = view->sample;
 
 		int row = 0;
+#ifdef INSPECTOR_RENDER_CACHE
+		agl_print(0, row_height * (                      row++), 0, 0xffffffff, "Inspector");
+#else
 		agl_print(0, row_height * (view->scroll_offset + row++), 0, 0xffffffff, "Inspector");
+#endif
 
 		if(!sample) return true;
 
+#ifndef INSPECTOR_RENDER_CACHE
 		agl_enable_stencil(0, row_height * view->scroll_offset, actor->region.x2, agl_actor__height(actor));
+#endif
 
 		char* ch_str = format_channels(sample->channels);
 		char* level  = gain2dbstring(sample->peaklevel);
@@ -92,9 +96,15 @@ inspector_view(gpointer _)
 		char* keywords = (sample->keywords && strlen(sample->keywords)) ? sample->keywords : "<no tags>";
 		char* path = to_utf8(sample->full_path);
 
+#ifdef INSPECTOR_RENDER_CACHE
+#define PRINT_ROW(KEY, VAL) \
+		agl_print( 0, row_height * (                      row)  , 0, 0xffffffff, KEY); \
+		agl_print(80, row_height * (                      row++), 0, 0xffffffff, VAL);
+#else
 #define PRINT_ROW(KEY, VAL) \
 		agl_print( 0, row_height * (view->scroll_offset + row)  , 0, 0xffffffff, KEY); \
 		agl_print(80, row_height * (view->scroll_offset + row++), 0, 0xffffffff, VAL);
+#endif
 
 		struct {
 			char* name;
@@ -114,12 +124,18 @@ inspector_view(gpointer _)
 			{"Notes", sample->notes ? sample->notes : ""}
 		};
 
+#ifdef INSPECTOR_RENDER_CACHE
+		int r = 0;
+#else
 		int r = view->scroll_offset;
+#endif
 		for(;r<G_N_ELEMENTS(rows);r++){
 			PRINT_ROW(rows[r].name, rows[r].val);
 		}
 
+#ifndef INSPECTOR_RENDER_CACHE
 		agl_disable_stencil();
+#endif
 
 		g_free(path);
 		g_free(level);
@@ -130,6 +146,12 @@ inspector_view(gpointer _)
 
 	void inspector_init(AGlActor* a)
 	{
+#ifdef INSPECTOR_RENDER_CACHE
+		InspectorView* view = (InspectorView*)a;
+		a->fbo = agl_fbo_new(agl_actor__width(a), scrollable_height, 0, AGL_FBO_HAS_STENCIL);
+		a->cache.enabled = true;
+		a->cache.size_request = (AGliPt){agl_actor__width(a), agl_actor__scrollable_height(a)};
+#endif
 	}
 
 	void inspector_set_size(AGlActor* actor)
@@ -139,32 +161,15 @@ inspector_view(gpointer _)
 		#define N_ROWS_VISIBLE(A) (agl_actor__height(((AGlActor*)A)) / row_height)
 		view->cache.n_rows_visible = N_ROWS_VISIBLE(actor);
 
-		inspector_set_scroll_position(actor, -1);
+#ifdef INSPECTOR_RENDER_CACHE
+		actor->cache.size_request.x = agl_actor__width(actor);
+		agl_actor__invalidate(actor);
+#endif
 	}
 
 	bool inspector_event(AGlActor* actor, GdkEvent* event, AGliPt xy)
 	{
-		InspectorView* view = (InspectorView*)actor;
-
-		switch(event->type){
-			case GDK_BUTTON_PRESS:
-				switch(event->button.button){
-					case 4:
-						inspector_set_scroll_position(actor, view->scroll_offset - 1);
-						agl_actor__invalidate(actor);
-						break;
-					case 5:
-						if(scrollable_height > N_ROWS_VISIBLE(actor)){
-							inspector_set_scroll_position(actor, view->scroll_offset + 1);
-							agl_actor__invalidate(actor);
-						}
-						break;
-				}
-				break;
-			default:
-				break;
-		}
-		return AGL_HANDLED;
+		return AGL_NOT_HANDLED;
 	}
 
 	void inspector_free(AGlActor* actor)
@@ -181,7 +186,10 @@ inspector_view(gpointer _)
 			.free = inspector_free,
 			.paint = inspector_paint,
 			.set_size = inspector_set_size,
-			.on_event = inspector_event
+			.on_event = inspector_event,
+			.scrollable = {
+				.y2 = 13 * row_height
+			}
 		},
 		.cache = {
 			.n_rows = 13
@@ -191,35 +199,15 @@ inspector_view(gpointer _)
 	void inspector_on_selection_change(SamplecatModel* m, Sample* sample, gpointer actor)
 	{
 		InspectorView* inspector = actor;
-
 		dbg(1, "sample=%s", sample->name);
-
 		if(inspector->sample) sample_unref(inspector->sample);
 		inspector->sample = sample_ref(sample);
 		inspector->cache.n_rows = 13; // TODO really count the number of rows needed for this sample
-
 		agl_actor__invalidate(actor);
 	}
 	g_signal_connect((gpointer)samplecat.model, "selection-changed", G_CALLBACK(inspector_on_selection_change), view);
 
-	agl_actor__add_child((AGlActor*)view, scrollbar_view(NULL, GTK_ORIENTATION_VERTICAL));
-
 	return (AGlActor*)view;
 }
 
-
-/*
- *  Use -1 to preserve existing offset
- */
-static void
-inspector_set_scroll_position(AGlActor* actor, int scroll_offset)
-{
-	InspectorView* view = (InspectorView*)actor;
-
-	scroll_offset = MAX(0, scroll_offset < 0 ? view->scroll_offset : scroll_offset); // TODO why doesnt CLAMP do this?
-
-	view->scroll_offset = CLAMP(scroll_offset, 0, max_scroll_offset);
-	actor->scrollable.y1 = - view->scroll_offset * row_height;
-	actor->scrollable.y2 = actor->scrollable.y1 + scrollable_height;
-}
 

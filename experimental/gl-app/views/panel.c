@@ -9,22 +9,18 @@
 * +----------------------------------------------------------------------+
 *
 */
-#define __wf_private__
 #include "config.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <math.h>
-#include <gtk/gtk.h>
-#include <gdk/gdkkeysyms.h>
+#include <glib.h>
 #include <GL/gl.h>
 #include "agl/ext.h"
 #include "agl/utils.h"
 #include "agl/actor.h"
-#include "waveform/waveform.h"
-#include "waveform/peakgen.h"
 #include "waveform/shader.h"
-#include "waveform/actors/text.h"
+#include "debug/debug.h"
+#include "samplecat/typedefs.h"
 #include "views/dock_v.h"
 #include "views/panel.h"
 
@@ -59,7 +55,7 @@ _init()
 
 
 AGlActor*
-panel_view(WaveformActor* _)
+panel_view(gpointer _)
 {
 	instance_count++;
 
@@ -99,18 +95,17 @@ panel_view(WaveformActor* _)
 
 	bool panel_event(AGlActor* actor, GdkEvent* event, AGliPt xy)
 	{
-		// TODO why is y not relative to actor.y ?
 		switch(event->type){
 			case GDK_BUTTON_PRESS:
-				dbg(0, "PRESS %i", xy.y - actor->region.y1);
-				if(xy.y - actor->region.y1 < PANEL_DRAG_HANDLE_HEIGHT){
+				dbg(1, "PRESS %i", xy.y - actor->region.y1);
+				if(xy.y < PANEL_DRAG_HANDLE_HEIGHT){
 					actor_context.grabbed = actor;
-					origin = mouse = (AGliPt){xy.x - actor->region.x1, xy.y - actor->region.y1};
+					origin = mouse = xy;
 				}
 				break;
 			case GDK_BUTTON_RELEASE:
 				agl_actor__invalidate(actor);
-				dbg(0, "RELEASE y=%i", xy.y - actor->region.y1);
+				dbg(1, "RELEASE y=%i", xy.y);
 				if(actor_context.grabbed){
 					dock_v_move_panel_to_y((DockVView*)actor->parent, actor, xy.y);
 					actor_context.grabbed = NULL;
@@ -118,7 +113,7 @@ panel_view(WaveformActor* _)
 				break;
 			case GDK_MOTION_NOTIFY:
 				if(actor_context.grabbed == actor){
-					mouse = (AGliPt){xy.x - actor->region.x1, xy.y - actor->region.y1};
+					mouse = xy;
 					agl_actor__invalidate(actor);
 				}
 				break;
@@ -134,7 +129,7 @@ panel_view(WaveformActor* _)
 		}
 	}
 
-	PanelView* view = WF_NEW(PanelView,
+	PanelView* view = AGL_NEW(PanelView,
 		.actor = {
 			.class = &actor_class,
 			.name = "Panel",

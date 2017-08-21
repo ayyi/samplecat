@@ -129,10 +129,16 @@ list_view(WaveformActor* _)
 		switch(event->type){
 			case GDK_BUTTON_PRESS:
 			case GDK_BUTTON_RELEASE:
-				agl_actor__invalidate(actor);
-				int row = xy.y / row_height;
-				dbg(0, "y=%i row=%i", xy.y, row);
-				list_view_select((ListView*)actor, row);
+				switch(event->button.button){
+					case 1:
+						agl_actor__invalidate(actor);
+						int row = xy.y / row_height;
+						dbg(1, "y=%i row=%i", xy.y, row);
+						list_view_select((ListView*)actor, row);
+						break;
+					default:
+						break;
+				}
 				break;
 			default:
 				break;
