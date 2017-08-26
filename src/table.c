@@ -40,6 +40,7 @@
  */
 
 #include "config.h"
+#include "string.h"
 #include "debug/debug.h"
 #include "typedefs.h"
 #include "table.h"
@@ -774,6 +775,22 @@ simple_table_get_size (GtkSimpleTable *table,
     *columns = table->ncols;
 }
 
+#if 0
+void
+simple_table_empty_column (GtkSimpleTable* table, guint column)
+{
+  g_return_if_fail (GTK_IS_SIMPLE_TABLE (table));
+
+  GList* children = g_list_copy(table->children);
+  GList* l = children;
+  for (;l;l=l->next){
+    GtkSimpleTableChild* child = l->data;
+    if(child->left_attach == column) gtk_widget_destroy(child->widget);
+  }
+  g_list_free(children);
+}
+#endif
+
 static void
 simple_table_finalize (GObject *object)
 {
@@ -1394,10 +1411,22 @@ simple_table_print(GtkSimpleTable* table)
 {
 	PF0;
 
+	GtkSimpleTableChild* rows[table->nrows][table->ncols];
+	memset(rows, 0, table->nrows * table->ncols * sizeof(GtkSimpleTableChild*));
+
 	GList* l = table->children;
 	for (;l;l=l->next){
 		GtkSimpleTableChild* child = l->data;
-      	dbg(0, "  row=%i", child->top_attach);
+		rows[child->top_attach][child->left_attach] = child;
+	}
+	int x, y;
+	for(y=0;y<table->nrows;y++){
+		printf("%2i: ", y);
+		for(x=0;x<table->ncols;x++){
+			GtkSimpleTableChild* child = rows[y][x];
+			printf("%19s", child ? G_OBJECT_CLASS_NAME(G_OBJECT_GET_CLASS(child->widget)) : "");
+		}
+		printf("\n");
 	}
 }
 

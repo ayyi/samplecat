@@ -85,6 +85,7 @@ samplecat_SOURCES = \
 	console_view.c console_view.h \
 	icon_theme.c icon_theme.h \
 	table.c table.h \
+	editablelabelbutton.c editablelabelbutton.h \
 	$(AUDIOANALYSERS_SRC) \
 	$(FFT_SRC) \
 	$(OPENGL_SRC) \

@@ -847,10 +847,12 @@ left_pane2()
 #endif
 
 
+/*
+ *  Search box and tagging
+ */
 static GtkWidget*
 search_new()
 {
-	//search box and tagging
 	PF;
 
 	g_return_val_if_fail(app->window, FALSE);
@@ -1737,7 +1739,7 @@ window_load_layout(const char* layout_name)
 	GDir* dir = g_dir_open(path, 0, &error);
 	if(!error) {
 		const gchar* filename;
-		while((filename = g_dir_read_name(dir))){
+		while((filename = g_dir_read_name(dir)) && !have_layout){
 			if(g_str_has_suffix(filename, ".xml")){
 				gchar* name = layout_name && strlen(layout_name)
 					? g_strdup(layout_name)

@@ -109,6 +109,9 @@ guint      simple_table_get_default_row_spacing (GtkSimpleTable*);
 void       simple_table_set_col_spacings        (GtkSimpleTable*, guint spacing);
 guint      simple_table_get_default_col_spacing (GtkSimpleTable*);
 void       simple_table_get_size                (GtkSimpleTable*, guint* rows, guint* columns);
+#if 0
+void       simple_table_empty_column            (GtkSimpleTable*, guint column);
+#endif
 
 void       simple_table_print                   (GtkSimpleTable*);
 

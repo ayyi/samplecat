@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2016 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2017 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -24,6 +24,7 @@
 #include "mimetype.h"
 #include "sample.h"
 #include "listview.h"
+#include "editablelabelbutton.h"
 #ifdef USE_TRACKER
   #include "src/db/tracker.h"
 #endif
@@ -43,6 +44,8 @@
 #endif
 
 #include "inspector.h"
+
+#define _gtk_tree_row_reference_free0(var) ((var == NULL) ? NULL : (var = (gtk_tree_row_reference_free (var), NULL)))
 
 #define N_EBUR_ROWS 8
 #define MARGIN_LEFT 5
@@ -66,7 +69,6 @@ struct _inspector_priv
 	GtkWidget*     table;
 	GtkWidget*     filename;
 	GtkWidget*     tags;
-	GtkWidget*     tags_ev;    // event box for mouse clicks
 	GtkWidget*     length;
 	GtkWidget*     frames;
 	GtkWidget*     samplerate;
@@ -75,13 +77,14 @@ struct _inspector_priv
 	GtkWidget*     level;
 	GtkWidget*     bitrate;
 	GtkWidget*     bitdepth;
-	GtkWidget*     ebur0;     // first ebur item
+	RowRange       ebur;
 	RowRange       meta;
 	GtkWidget*     vbox;
 	GtkWidget*     text;
 	GtkTextBuffer* notes;
-	GtkWidget*     edit;
 	GtkTreeRowReference* row_ref; // TODO remove
+
+	gboolean       wide;
 };
 
 static void inspector_clear              ();
@@ -89,11 +92,9 @@ static void inspector_update             (SamplecatModel*, Sample*, gpointer);
 static void inspector_set_labels         (Sample*);
 static void hide_fields                  ();
 static void show_fields                  ();
-static bool inspector_on_tags_clicked    (GtkWidget*, GdkEventButton*, gpointer);
 static bool on_notes_focus_out           (GtkWidget*, gpointer);
-static void tag_edit_start               (int);
-static void tag_edit_stop                (GtkWidget*, GdkEventCrossing*, gpointer);
-static void inspector_remove_rows        (int, int);
+static void inspector_remove_rows        (int, int, int);
+static void inspector_remove_cells       (RowRange*);
 
 
 GtkWidget*
@@ -160,29 +161,20 @@ inspector_new()
 	};
 	int n_rows = G_N_ELEMENTS(rows);
 
-	GtkWidget* table = i->table = gtk_table_new(n_rows/* + N_EBUR_ROWS*/ + 1, 3, HOMOGENOUS);
+	GtkWidget* table = i->table = gtk_table_new(n_rows + 1, 3, HOMOGENOUS);
 
 	int s = 0;
 	//first two rows are special case - colspan=2
 
 	GtkWidget* label = i->filename = label_new("Filename");
 	gtk_misc_set_padding(GTK_MISC(label), MARGIN_LEFT, 0);
-
 	gtk_label_set_ellipsize((GtkLabel*)i->filename, PANGO_ELLIPSIZE_MIDDLE);
 	gtk_table_attach(GTK_TABLE(table), label, 0, 3, s, s+1, GTK_FILL, GTK_FILL, 0, 0);
 	s++;
 
-	{
-		//the tags label has an event box to catch mouse clicks.
-		i->tags_ev = gtk_event_box_new ();
-		g_signal_connect((gpointer)i->tags_ev, "button-release-event", G_CALLBACK(inspector_on_tags_clicked), NULL);
-
-		GtkWidget* label = i->tags = label_new("Tags");
-		gtk_misc_set_padding(GTK_MISC(label), MARGIN_LEFT, 0);
-		gtk_container_add(GTK_CONTAINER(i->tags_ev), label);
-		gtk_table_attach(GTK_TABLE(table), i->tags_ev, 0, 2, s, s+1, GTK_FILL, GTK_FILL, 0, 0);
-		s++;
-	}
+	i->tags = (GtkWidget*)editable_label_button_new("Tags");
+	gtk_table_attach(GTK_TABLE(table), i->tags, 0, 2, s, s+1, GTK_FILL, GTK_FILL, 0, 0);
+	s++;
 
 	for(;s<n_rows;s++){
 		GtkWidget* label = label_new(rows[s].description);
@@ -221,12 +213,6 @@ inspector_new()
 		gtk_text_view_set_pixels_below_lines(GTK_TEXT_VIEW(i->text), 5);
 	}
 
-	//invisible edit widget:
-	GtkWidget* edit = i->edit = gtk_entry_new();
-	gtk_entry_set_max_length(GTK_ENTRY(edit), 64);
-	gtk_entry_set_text(GTK_ENTRY(edit), "");
-	g_object_ref(edit); // stops gtk deleting the unparented widget.
-
 	g_signal_connect((gpointer)samplecat.model, "selection-changed", G_CALLBACK(inspector_update), NULL);
 
 	void sample_changed(SamplecatModel* m, Sample* sample, int what, void* data, gpointer user_data)
@@ -250,10 +236,46 @@ inspector_new()
 	void inspector_on_allocate(GtkWidget* win, GtkAllocation* allocation, gpointer user_data)
 	{
 		InspectorPriv* i = app->inspector->priv;
-		gtk_widget_set_size_request(i->filename, allocation->width -2, -1);
-		gtk_widget_set_size_request(i->name, allocation->width -2, -1);
+
+		bool wide = allocation->width > allocation->height;
+		if(wide != i->wide){
+			dbg(0, "-> allocated %i x %i wide=%i %s", allocation->width, allocation->height, wide, wide != i->wide ? "CHANGED" : "");
+			inspector_remove_cells(&i->ebur);
+			i->wide = wide;
+			if(i->row_ref){
+				Sample* sample = samplecat_list_store_get_sample_by_row_ref(i->row_ref);
+				if(sample){
+					inspector_set_labels(sample);
+					sample_unref(sample);
+				}
+			}
+		}
+
+		gtk_widget_set_size_request(i->filename, allocation->width / (wide ? 2 : 1) -2, -1);
+		gtk_widget_set_size_request(i->name, allocation->width / (wide ? 2 : 1) -2, -1);
 	}
 	g_signal_connect(G_OBJECT(scroll), "size-allocate", G_CALLBACK(inspector_on_allocate), NULL);
+
+	void track_control_on_label_changed(GtkWidget* label, const char* new_text, gpointer user_data)
+	{
+		Inspector* inspector = user_data;
+		InspectorPriv* i = inspector->priv;
+
+		g_return_if_fail(i->row_id);
+		g_return_if_fail(i->row_ref);
+
+		dbg(1, "id=%i", i->row_id);
+
+		Sample* sample = samplecat_list_store_get_sample_by_row_ref(i->row_ref);
+		g_return_if_fail(sample);
+		if(samplecat_model_update_sample (samplecat.model, sample, COL_KEYWORDS, (void*)new_text)){
+			statusbar_print(1, "keywords updated");
+		}else{
+			statusbar_print(1, "failed to update keywords");
+		}
+		sample_unref(sample);
+	}
+	g_signal_connect(G_OBJECT(i->tags), "edited", G_CALLBACK(track_control_on_label_changed), inspector);
 
 	return scroll;
 }
@@ -273,23 +295,36 @@ inspector_add_ebu_cells()
 	Inspector* inspector = app->inspector;
 	InspectorPriv* i = inspector->priv;
 
+	if(i->ebur.first_child) return;
+
 	#define SPACER_ROW 1
-	guint s = GTK_TABLE(i->table)->nrows;
-	gtk_table_resize(GTK_TABLE(i->table), s + SPACER_ROW + N_EBUR_ROWS, 3);
+	guint s = i->wide ? 2 : 11;
+	guint x;
+	if(i->wide){
+		x = 2;
+		gtk_table_resize(GTK_TABLE(i->table), GTK_TABLE(i->table)->nrows, 7);
+		simple_table_set_col_spacing(GTK_TABLE(i->table), 2, 10);
+	}else{
+		x = 0;
+	}
 
 	GtkWidget* ebur_rows[N_EBUR_ROWS];
 	int r; for(r=s+SPACER_ROW;r<N_EBUR_ROWS+s+SPACER_ROW;r++){
 		GtkWidget* row00 = ebur_rows[r - s - SPACER_ROW] = gtk_label_new("");
 		gtk_misc_set_alignment(GTK_MISC(row00), 0.0, 0.5);
 		gtk_misc_set_padding(GTK_MISC(row00), MARGIN_LEFT, 0);
-		gtk_table_attach(GTK_TABLE(i->table), row00, 0, 1, r, r+1, GTK_FILL, GTK_FILL, 0, 0);
+		gtk_table_attach(GTK_TABLE(i->table), row00, x+0, x+1, r, r+1, GTK_FILL, GTK_FILL, 0, 0);
 
 		GtkWidget* row01 = gtk_label_new("");
 		gtk_misc_set_alignment(GTK_MISC(row01), 1.0, 0.5);
-		gtk_table_attach(GTK_TABLE(i->table), row01, 1, 2, r, r+1, GTK_FILL, GTK_FILL, 0, 0);
+		gtk_table_attach(GTK_TABLE(i->table), row01, x+1, x+2, r, r+1, GTK_FILL, GTK_FILL, 0, 0);
 	}
-	i->ebur0 = ebur_rows[0];
-	i->meta.start = r + SPACER_ROW;
+	i->ebur = (RowRange){
+		.first_child = ebur_rows[0],
+		.n = N_EBUR_ROWS
+	};
+	if(!i->wide) i->meta.start = r + SPACER_ROW;
+
 	gtk_widget_show_all(i->table);
 }
 
@@ -308,22 +343,33 @@ inspector_add_meta_cells(GPtrArray* meta_data)
 	int rows_needed = meta_data->len / 2;
 	int n_to_add = rows_needed - i->meta.n;
 
+	int x;
+	if(i->wide){
+		x = 4;
+		i->meta.start = 3;
+		simple_table_set_col_spacing(GTK_TABLE(i->table), x-1, 10);
+		simple_table_set_col_spacing(GTK_TABLE(i->table), x, 10);
+	}else{
+		x = 0;
+	}
+
 	if(n_to_add > 0){
 		GtkWidget* meta_rows[n_to_add];
 		int r; for(r = i->meta.start + i->meta.n; r < i->meta.start + meta_data->len/2; r++){
-			GtkWidget* row00 = meta_rows[r - i->meta.start - i->meta.n] = gtk_label_new("");
-			gtk_misc_set_alignment(GTK_MISC(row00), 0.0, 0.5);
-			gtk_misc_set_padding(GTK_MISC(row00), MARGIN_LEFT, 0);
-			gtk_table_attach(GTK_TABLE(i->table), row00, 0, 1, r, r+1, GTK_FILL, GTK_FILL, 0, 0);
+			GtkWidget* cell1 = meta_rows[r - i->meta.start - i->meta.n] = gtk_label_new("");
+			gtk_misc_set_alignment(GTK_MISC(cell1), 0.0, 0.5);
+			gtk_misc_set_padding(GTK_MISC(cell1), MARGIN_LEFT, 0);
+			gtk_table_attach(GTK_TABLE(i->table), cell1, x, x+1, r, r+1, GTK_FILL, GTK_FILL, 0, 0);
 
-			GtkWidget* row01 = gtk_label_new("");
-			gtk_misc_set_alignment(GTK_MISC(row01), 0.0, 0.5);
-			gtk_label_set_ellipsize((GtkLabel*)row01, PANGO_ELLIPSIZE_END);
-			gtk_table_attach(GTK_TABLE(i->table), row01, 1, 2, r, r+1, GTK_FILL, GTK_FILL, 0, 0);
+			GtkWidget* cell2 = gtk_label_new("");
+			gtk_misc_set_alignment(GTK_MISC(cell2), 0.0, 0.5);
+			gtk_label_set_ellipsize((GtkLabel*)cell2, PANGO_ELLIPSIZE_END);
+			gtk_widget_set_size_request(cell2, 100, -1); // TODO
+			gtk_table_attach(GTK_TABLE(i->table), cell2, x+1, x+2, r, r+1, GTK_FILL, GTK_FILL, 0, 0);
 		}
 		i->meta.first_child = meta_rows[0];
 	}else if(n_to_add < 0){
-		inspector_remove_rows(i->meta.start + meta_data->len / 2, -n_to_add);
+		inspector_remove_rows(i->meta.start + meta_data->len / 2, -n_to_add, x);
 	}
 
 	i->meta.n = meta_data->len / 2;
@@ -332,7 +378,7 @@ inspector_add_meta_cells(GPtrArray* meta_data)
 
 
 static void
-inspector_remove_rows(int n_rows, int n_to_remove)
+inspector_remove_rows(int n_rows, int n_to_remove, int column)
 {
 	// remove rows from the end of the table
 
@@ -348,39 +394,35 @@ inspector_remove_rows(int n_rows, int n_to_remove)
 		gtk_widget_destroy(child);
 	}
 
-	gtk_table_resize(GTK_TABLE(i->table), n_rows, 3);
+	if(!i->wide) gtk_table_resize(GTK_TABLE(i->table), n_rows, 3);
 
 	g_list_free(rows);
 }
 
 
 static void
-inspector_remove_ebu_cells()
+inspector_remove_cells(RowRange* cells)
 {
-	PF;
 	Inspector* inspector = app->inspector;
 	InspectorPriv* i = inspector->priv;
 
-	guint s = 0;
-	GList* rows = g_list_reverse(gtk_container_get_children(GTK_CONTAINER(i->table)));
-	GList* l = rows; int r = 0;
-	for(;l;l=l->next, r++){
-		if((GtkWidget*)l->data == i->ebur0) break;
-		s++;
+	if(!cells->first_child) return;
+
+	GList* children = g_list_copy(((GtkTable*)i->table)->children);
+	GList* l = children;
+	for(;l;l=l->next){
+		GtkSimpleTableChild* child = l->data;
+		if(child->widget == cells->first_child){
+			int n = 0;
+			for(;l && n<(cells->n*2); l=l->prev,n++){
+				GtkSimpleTableChild* child = l->data;
+				gtk_widget_destroy(child->widget);
+			}
+			break;
+		}
 	}
-	s = s / 2;
-	for(r=0;l && r<N_EBUR_ROWS;l=l->next, r++){
-		GtkWidget* child = l->data;
-		gtk_widget_destroy(child);
-		l = l->next, child = l->data;
-		gtk_widget_destroy(child);
-	}
-
-	i->ebur0 = NULL;
-
-	gtk_table_resize(GTK_TABLE(i->table), s, 3);
-
-	g_list_free(rows);
+	g_list_free(children);
+	*cells = (RowRange){0,};
 }
 
 
@@ -391,6 +433,7 @@ inspector_set_labels(Sample* sample)
 	if(!inspector) return;
 	g_return_if_fail(sample);
 	InspectorPriv* i = inspector->priv;
+	GtkLabel* tags = ((EditableLabelButton*)i->tags)->label;
 
 	{
 		gtk_widget_set_sensitive(i->name, true);
@@ -417,10 +460,11 @@ inspector_set_labels(Sample* sample)
 	char bitdepth[32]; bitdepth_format(bitdepth, sample->bit_depth);
 
 	char* keywords = (sample->keywords && strlen(sample->keywords)) ? sample->keywords : "<no tags>";
+	char* path = to_utf8(sample->full_path);
 
 	gtk_label_set_text(GTK_LABEL(i->name),       sample->name);
-	gtk_label_set_text(GTK_LABEL(i->filename),   to_utf8(sample->full_path));
-	gtk_label_set_text(GTK_LABEL(i->tags),       keywords);
+	gtk_label_set_text(GTK_LABEL(i->filename),   path);
+	gtk_label_set_text(GTK_LABEL(tags),          keywords);
 	gtk_label_set_text(GTK_LABEL(i->length),     length);
 	gtk_label_set_text(GTK_LABEL(i->frames),     frames);
 	gtk_label_set_text(GTK_LABEL(i->samplerate), fs_str);
@@ -433,12 +477,16 @@ inspector_set_labels(Sample* sample)
 
 	char* ebu = sample->ebur ? sample->ebur : "";
 	if(ebu && strlen(ebu) > 1){
-		if(!i->ebur0) inspector_add_ebu_cells();
+		if(!i->ebur.first_child) inspector_add_ebu_cells();
 	} else{
-		if(i->ebur0) inspector_remove_ebu_cells();
+		inspector_remove_cells(&i->ebur);
 	}
 
-	inspector_add_meta_cells(sample->meta_data);
+	if(sample->meta_data && sample->meta_data->len){
+		inspector_add_meta_cells(sample->meta_data);
+	}else{
+		inspector_remove_cells(&i->meta);
+	}
 
 	GList* rows = g_list_reverse(gtk_container_get_children(GTK_CONTAINER(i->table)));
 	GList* l = rows; int r = 0;
@@ -448,7 +496,7 @@ inspector_set_labels(Sample* sample)
 		gchar** lines = g_strsplit(ebu, "\n", N_EBUR_ROWS + 1);
 
 		for(;l;l=l->next, r++){
-			if((GtkWidget*)l->data == i->ebur0) break;
+			if((GtkWidget*)l->data == i->ebur.first_child) break;
 		}
 		for(r=0;l && r<N_EBUR_ROWS;l=l->next, r++){
 			GtkWidget* child = l->data;
@@ -494,13 +542,14 @@ inspector_set_labels(Sample* sample)
 	show_fields();
 	g_free(level);
 	g_free(ch_str);
+	g_free(path);
 
 	//store a reference to the row id in the inspector widget:
 	// needed to later updated "notes" for that sample
 	// as well to check for updates
 	// *** row_ref is deprecated. use database id instead.
 	i->row_id = sample->id;
-	if(i->row_ref) gtk_tree_row_reference_free(i->row_ref);
+	_gtk_tree_row_reference_free0(i->row_ref);
 	if(sample->row_ref){
 		i->row_ref = gtk_tree_row_reference_copy(sample->row_ref);
 	} else {
@@ -535,8 +584,7 @@ inspector_update(SamplecatModel* m, Sample* sample, gpointer user_data)
 	}
 
 	// forget previous inspector item
-	if(i_->row_ref) gtk_tree_row_reference_free(i_->row_ref);
-	i_->row_ref = NULL;
+	_gtk_tree_row_reference_free0(i_->row_ref);
 	i_->row_id = 0;
 
 	#ifdef USE_TRACKER
@@ -605,16 +653,6 @@ show_fields()
 }
 
 
-/** a single click on the Tags label puts us into edit mode.*/
-static gboolean
-inspector_on_tags_clicked(GtkWidget* widget, GdkEventButton* event, gpointer user_data)
-{
-	if(event->button == 3) return false;
-	tag_edit_start(0);
-	return true;
-}
-
-
 static gboolean
 on_notes_focus_out(GtkWidget* widget, gpointer userdata)
 {
@@ -639,111 +677,4 @@ on_notes_focus_out(GtkWidget* widget, gpointer userdata)
 	return false;
 }
 
-
-static void
-tag_edit_start(int _)
-{
-	/*
-	initiate the inplace renaming of a tag label in the inspector following a double-click.
-
-	-rename widget has had an extra ref added at creation time, so we dont have to do it here.
-
-	-current strategy is too swap the non-editable gtklabel with the editable gtkentry widget.
-	-fn is fragile in that it makes too many assumptions about the widget layout (widget parent).
-
-	FIXME global keyboard shortcuts are still active during editing?
-	FIXME add ESC key to stop editing.
-	*/
-
-	PF;
-	InspectorPriv* i = app->inspector->priv;
-
-	static gulong handler1 = 0; // the edit box "focus_out" handler.
-	//static gulong handler2 = 0; // the edit box RETURN key trap.
-
-	GtkWidget* parent = i->tags_ev;
-	GtkWidget* label  = i->tags;
-	GtkWidget* edit   = i->edit;
-
-	if(!GTK_IS_WIDGET(edit)) { perr("edit widget missing.\n"); return;}
-	if(!GTK_IS_WIDGET(label)) { perr("label widget is missing.\n"); return;}
-
-	Sample* s = samplecat_list_store_get_sample_by_row_ref(i->row_ref);
-	if (!s) {
-		dbg(0,"sample not found");
-	} else {
-		//show the rename widget:
-		gtk_entry_set_text(GTK_ENTRY(i->edit), s->keywords?s->keywords:"");
-		sample_unref(s);
-	}
-	g_object_ref(label); //stops gtk deleting the widget.
-	gtk_container_remove(GTK_CONTAINER(parent), label);
-	gtk_container_add   (GTK_CONTAINER(parent), edit);
-	gtk_widget_show(edit);
-
-	//our focus-out could be improved by properly focussing other widgets when clicked on (widgets that dont catch events?).
-
-	if(handler1) g_signal_handler_disconnect((gpointer)edit, handler1);
-
-#warning handle ENTER
-	handler1 = g_signal_connect((gpointer)edit, "focus-out-event", G_CALLBACK(tag_edit_stop), GINT_TO_POINTER(0));
-
-	/*
-	if(handler2) g_signal_handler_disconnect((gpointer)arrange->wrename, handler2);
-	handler2 =   g_signal_connect(G_OBJECT(arrange->wrename), "key-press-event", 
-									G_CALLBACK(track_entry_key_press), GINT_TO_POINTER(tnum));//traps the RET key.
-	*/
-
-	//grab_focus allows us to start typing imediately. It also selects the whole string.
-	gtk_widget_grab_focus(GTK_WIDGET(edit));
-}
-
-
-static void
-tag_edit_stop(GtkWidget* widget, GdkEventCrossing* event, gpointer user_data)
-{
-	/*
-	tidy up widgets and notify core of label change.
-	called following a focus-out-event for the gtkEntry renaming widget.
-	-track number should correspond to the one being edited...???
-
-	warning: if called incorrectly, this fn can cause mysterious segfaults.
-	Is it something to do with multiple focus-out events? This function causes the
-	rename widget to lose focus, it can run a 2nd time before completing the first: segfault!
-	Currently it works ok if focus is removed before calling.
-	*/
-
-	InspectorPriv* i = app->inspector->priv;
-	GtkWidget* edit = i->edit;
-	GtkWidget* parent = i->tags_ev;
-
-	bool row_set_tags_from_id(int id, GtkTreeRowReference* row_ref, const char* tags_new)
-	{
-		g_return_val_if_fail(id, false);
-		g_return_val_if_fail(row_ref, false);
-		bool ok = false;
-
-		dbg(1, "id=%i", id);
-
-		Sample* sample = samplecat_list_store_get_sample_by_row_ref(row_ref);
-		g_return_val_if_fail(sample, false);
-		if((ok = samplecat_model_update_sample (samplecat.model, sample, COL_KEYWORDS, (void*)tags_new))){
-			statusbar_print(1, "keywords updated");
-		}else{
-			statusbar_print(1, "failed to update keywords");
-		}
-		sample_unref(sample);
-		return ok;
-	}
-
-	//update the data:
-	row_set_tags_from_id(i->row_id, i->row_ref, gtk_entry_get_text(GTK_ENTRY(edit)));
-
-	//swap back to the normal label:
-	gtk_container_remove(GTK_CONTAINER(parent), edit);
-
-	gtk_container_add(GTK_CONTAINER(parent), i->tags);
-	g_object_unref(i->tags); //remove 'artificial' ref added in edit_start.
-	dbg(0, "finished.");
-}
 
