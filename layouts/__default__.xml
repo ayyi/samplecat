@@ -85,4 +85,15 @@
 			</paned>
 		</dock>
 	</layout>
+	<layout name="Inspector">
+		<dock name="__dock_1" floating="no" width="-1" height="-1" floatx="0" floaty="0">
+			<paned orientation="vertical" locked="no" position="100">
+				<item name="Search" orientation="vertical" locked="no"/>
+				<paned orientation="vertical" locked="no" position="358">
+					<item name="Library" orientation="vertical" locked="no"/>
+					<item name="Inspector" orientation="vertical" locked="no"/>
+				</paned>
+			</paned>
+		</dock>
+	</layout>
 </dock-layout>
