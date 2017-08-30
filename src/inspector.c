@@ -123,11 +123,11 @@ inspector_new()
 		return label;
 	}
 
-	//left align the label:
+	// left align the label
 	GtkWidget* align1 = gtk_alignment_new(0.0, 0.5, 0.0, 0.0);
 	gtk_box_pack_start(GTK_BOX(i->vbox), align1, EXPAND_FALSE, FILL_FALSE, 0);
 
-	// sample name:
+	// sample name
 	GtkWidget* label1 = i->name = label_new("");
 	gtk_label_set_ellipsize((GtkLabel*)label1, PANGO_ELLIPSIZE_MIDDLE);
 	gtk_misc_set_padding(GTK_MISC(i->name), MARGIN_LEFT, 5);
@@ -164,7 +164,7 @@ inspector_new()
 	GtkWidget* table = i->table = gtk_table_new(n_rows + 1, 3, HOMOGENOUS);
 
 	int s = 0;
-	//first two rows are special case - colspan=2
+	// first two rows are special case - colspan=2
 
 	GtkWidget* label = i->filename = label_new("Filename");
 	gtk_misc_set_padding(GTK_MISC(label), MARGIN_LEFT, 0);
@@ -188,7 +188,7 @@ inspector_new()
 	gtk_box_pack_start(GTK_BOX(i->vbox), table, EXPAND_FALSE, FILL_FALSE, 0);
 
 	{
-		// notes box:
+		// notes box
 
 		i->text = gtk_text_view_new();
 		i->notes = gtk_text_view_get_buffer(GTK_TEXT_VIEW(i->text));
@@ -241,6 +241,7 @@ inspector_new()
 		if(wide != i->wide){
 			dbg(0, "-> allocated %i x %i wide=%i %s", allocation->width, allocation->height, wide, wide != i->wide ? "CHANGED" : "");
 			inspector_remove_cells(&i->ebur);
+			if(wide) i->meta.start = 3;
 			i->wide = wide;
 			if(i->row_ref){
 				Sample* sample = samplecat_list_store_get_sample_by_row_ref(i->row_ref);
@@ -256,7 +257,7 @@ inspector_new()
 	}
 	g_signal_connect(G_OBJECT(scroll), "size-allocate", G_CALLBACK(inspector_on_allocate), NULL);
 
-	void track_control_on_label_changed(GtkWidget* label, const char* new_text, gpointer user_data)
+	void on_tags_changed(GtkWidget* label, const char* new_text, gpointer user_data)
 	{
 		Inspector* inspector = user_data;
 		InspectorPriv* i = inspector->priv;
@@ -275,7 +276,7 @@ inspector_new()
 		}
 		sample_unref(sample);
 	}
-	g_signal_connect(G_OBJECT(i->tags), "edited", G_CALLBACK(track_control_on_label_changed), inspector);
+	g_signal_connect(G_OBJECT(i->tags), "edited", G_CALLBACK(on_tags_changed), inspector);
 
 	return scroll;
 }
@@ -338,7 +339,9 @@ inspector_add_meta_cells(GPtrArray* meta_data)
 	if(!meta_data) return;
 
 	// currently we are not able to add ebu cells after metadata cells so they must be added first.
-	if(!i->meta.start) inspector_add_ebu_cells();
+	if(!i->meta.start) return gwarn("start not set");
+
+	if(i->meta.first_child) inspector_remove_cells(&i->meta);
 
 	int rows_needed = meta_data->len / 2;
 	int n_to_add = rows_needed - i->meta.n;
@@ -422,7 +425,8 @@ inspector_remove_cells(RowRange* cells)
 		}
 	}
 	g_list_free(children);
-	*cells = (RowRange){0,};
+	int start = cells->start;
+	*cells = (RowRange){0, start};
 }
 
 
@@ -480,6 +484,7 @@ inspector_set_labels(Sample* sample)
 		if(!i->ebur.first_child) inspector_add_ebu_cells();
 	} else{
 		inspector_remove_cells(&i->ebur);
+		if(!i->wide) i->meta.start = 12;
 	}
 
 	if(sample->meta_data && sample->meta_data->len){
@@ -526,6 +531,10 @@ inspector_set_labels(Sample* sample)
 		}
 	}
 
+	// remove unused rows
+	// (apparently it is safe to set size too small - cells will not be removed)
+	gtk_table_resize(GTK_TABLE(i->table), i->meta.start + i->meta.n, 3);
+
 	g_list_free(rows);
 
 	if (inspector->show_waveform) {
@@ -559,13 +568,6 @@ inspector_set_labels(Sample* sample)
 		gtk_widget_hide(GTK_WIDGET(i->text));
 		gtk_widget_hide(GTK_WIDGET(i->tags));
 	}
-
-#ifndef USE_GDL
-	extern void show_player (gboolean);
-	if (/*app->auditioner->status && app->auditioner->status() != -1.0 && */app->view_options[SHOW_PLAYER].value){
-		show_player(true); // show/hide player
-	}
-#endif
 }
 
 

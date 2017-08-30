@@ -464,8 +464,9 @@ listview__get_first_selected_path()
 	return NULL;
 }
 
+
 /**
- * @return: Sample* -- must be sample_unref() after use.
+ * @return: Sample* -- must sample_unref() after use.
  */
 static Sample*
 listview__get_first_selected_sample()

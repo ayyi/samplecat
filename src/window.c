@@ -423,6 +423,10 @@ GtkWindow
 		}
 		g_list_free(items);
 
+		if(panels[PANEL_TYPE_INSPECTOR].widget){
+			app->inspector->show_waveform = !gdl_dock_item_is_active((GdlDockItem*)panels[PANEL_TYPE_WAVEFORM].dock_item);
+		}
+
 		g_signal_emit_by_name (app, "layout-changed");
 	}
 	g_signal_connect(G_OBJECT(((GdlDockObject*)window.dock)->master), "layout-changed", G_CALLBACK(_on_layout_changed), NULL);
@@ -1479,7 +1483,6 @@ show_waveform(gboolean enable)
 #else
 		show_widget_if(window.waveform, enable);
 #endif
-		if(app->inspector) app->inspector->show_waveform = !enable;
 		if(enable){
 			bool show_wave()
 			{

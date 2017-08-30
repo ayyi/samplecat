@@ -9,8 +9,8 @@
 * +----------------------------------------------------------------------+
 *
 */
-#ifndef __samplecat_window_c__
-#define __samplecat_window_c__
+#ifndef __samplecat_window_h__
+#define __samplecat_window_h__
 #include <gtk/gtk.h>
 
 gboolean    window_new            ();
