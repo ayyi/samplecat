@@ -22,18 +22,15 @@
 #include <db/db.h>
 
 #define backend samplecat.model->backend
-
 #define _g_free0(var) (var = (g_free (var), NULL))
-typedef struct _SamplecatParamSpecFilter SamplecatParamSpecFilter;
-
-typedef struct _SamplecatParamSpecIdle SamplecatParamSpecIdle;
-
-typedef struct _SamplecatSampleChange SamplecatSampleChange;
-
-typedef struct _SamplecatModelPrivate SamplecatModelPrivate;
 #define _g_list_free0(var) ((var == NULL) ? NULL : (var = (g_list_free (var), NULL)))
 #define _samplecat_idle_unref0(var) ((var == NULL) ? NULL : (var = (samplecat_idle_unref (var), NULL)))
 #define _sample_unref0(var) ((var == NULL) ? NULL : (var = (sample_unref (var), NULL)))
+
+typedef struct _SamplecatParamSpecFilter SamplecatParamSpecFilter;
+typedef struct _SamplecatParamSpecIdle SamplecatParamSpecIdle;
+typedef struct _SamplecatSampleChange SamplecatSampleChange;
+typedef struct _SamplecatModelPrivate SamplecatModelPrivate;
 
 struct _SamplecatIdlePrivate {
 	guint id;
@@ -49,13 +46,13 @@ struct _SamplecatSampleChange {
 };
 
 struct _SamplecatModelPrivate {
-	SamplecatIdle* idle;
+	SamplecatIdle* dir_idle;
 	SamplecatIdle* sample_changed_idle;
-	guint selection_change_timeout;
+	guint          selection_change_timeout;
 };
 
-static gpointer          samplecat_idle_ref (gpointer instance);
-static void              samplecat_idle_unref (gpointer instance);
+static gpointer          samplecat_idle_ref        (gpointer instance);
+static void              samplecat_idle_unref      (gpointer instance);
 static GType             samplecat_idle_get_type   (void) G_GNUC_CONST;
 static SamplecatIdle*    samplecat_idle_new        (GSourceFunc _fn, void* _fn_target);
 static SamplecatIdle*    samplecat_idle_construct  (GType object_type, GSourceFunc _fn, void* _fn_target);
@@ -82,7 +79,6 @@ static void     samplecat_filter_finalize (SamplecatFilter* obj);
 enum  {
 	SAMPLECAT_IDLE_DUMMY_PROPERTY
 };
-static gboolean ____lambda2__gsource_func (gpointer self);
 static void     samplecat_idle_finalize   (SamplecatIdle* obj);
 #define SAMPLECAT_MODEL_GET_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), SAMPLECAT_TYPE_MODEL, SamplecatModelPrivate))
 enum  {
@@ -364,34 +360,23 @@ samplecat_idle_new (GSourceFunc _fn, void* _fn_target)
 }
 
 
-static gboolean
-____lambda2__gsource_func (gpointer self)
+static void
+samplecat_idle_queue (SamplecatIdle* idle)
 {
-	gboolean ___lambda2_ (SamplecatIdle* self)
+	g_return_if_fail (idle);
+
+	gboolean ____lambda_func (gpointer self)
 	{
-		gboolean result = FALSE;
-		GSourceFunc _tmp0_;
-		void* _tmp0__target;
-		_tmp0_ = self->priv->fn;
-		_tmp0__target = self->priv->fn_target;
-		_tmp0_ (_tmp0__target);
-		self->priv->id = (guint) 0;
-		result = FALSE;
-		return result;
+		SamplecatIdle* idle = self;
+
+		idle->priv->fn (idle->priv->fn_target);
+		idle->priv->id = 0;
+
+		return G_SOURCE_REMOVE;
 	}
 
-	gboolean result;
-	result = ___lambda2_ (self);
-	return result;
-}
-
-
-static void
-samplecat_idle_queue (SamplecatIdle* self)
-{
-	g_return_if_fail (self != NULL);
-	if (!((gboolean)self->priv->id)) {
-		self->priv->id = g_idle_add_full (G_PRIORITY_DEFAULT_IDLE, ____lambda2__gsource_func, samplecat_idle_ref (self), samplecat_idle_unref);
+	if (!idle->priv->id) {
+		idle->priv->id = g_idle_add_full(G_PRIORITY_DEFAULT_IDLE, ____lambda_func, samplecat_idle_ref(idle), samplecat_idle_unref);
 	}
 }
 
@@ -607,7 +592,6 @@ samplecat_model_construct (GType object_type)
 	self->state = 1;
 	self->cache_dir = g_build_filename (g_get_home_dir(), ".config", PACKAGE, "cache", NULL, NULL);
 
-#if 0 // updating the directory list is not currently done until a consumer needs it
 
 	gboolean ___lambda__gsource_func (gpointer self)
 	{
@@ -616,10 +600,10 @@ samplecat_model_construct (GType object_type)
 		return G_SOURCE_REMOVE;
 	}
 
-	SamplecatIdle* idle = samplecat_idle_new (___lambda__gsource_func, self);
-	_samplecat_idle_unref0 (self->priv->idle);
-	self->priv->idle = idle;
-	samplecat_idle_queue (self->priv->idle);
+	_samplecat_idle_unref0 (self->priv->dir_idle);
+	self->priv->dir_idle = samplecat_idle_new (___lambda__gsource_func, self);
+#if 0 // updating the directory list is not currently done until a consumer needs it
+	samplecat_idle_queue (self->priv->dir_idle);
 #endif
 
 	gboolean __lambda (gpointer _self)
@@ -654,8 +638,10 @@ samplecat_model_new (void)
 gboolean
 samplecat_model_add (SamplecatModel* self)
 {
-	g_return_val_if_fail (self != NULL, FALSE);
-	samplecat_idle_queue (self->priv->idle);
+	g_return_val_if_fail (self, FALSE);
+
+	samplecat_idle_queue (self->priv->dir_idle);
+
 	return TRUE;
 }
 
@@ -663,8 +649,10 @@ samplecat_model_add (SamplecatModel* self)
 gboolean
 samplecat_model_remove (SamplecatModel* self, gint id)
 {
-	g_return_val_if_fail(self != NULL, FALSE);
-	samplecat_idle_queue(self->priv->idle);
+	g_return_val_if_fail(self, FALSE);
+
+	samplecat_idle_queue(self->priv->dir_idle);
+
 	return backend.remove(id);
 }
 
@@ -723,7 +711,7 @@ samplecat_model_queue_selection_changed (SamplecatModel* self)
 static void
 samplecat_model_queue_sample_changed (SamplecatModel* self, Sample* sample, gint prop, void* val)
 {
-	g_return_if_fail (self != NULL);
+	g_return_if_fail (self);
 
 	GList* l = self->modified;
 	for (;l;l=l->next) {
@@ -742,6 +730,7 @@ samplecat_model_queue_sample_changed (SamplecatModel* self, Sample* sample, gint
 		.val = val,
 	};
 	self->modified = g_list_append (self->modified, c);
+
 	samplecat_idle_queue (self->priv->sample_changed_idle);
 }
 
@@ -749,48 +738,28 @@ samplecat_model_queue_sample_changed (SamplecatModel* self, Sample* sample, gint
 void
 samplecat_model_add_filter (SamplecatModel* self, SamplecatFilter* filter)
 {
-	SamplecatFilter* _tmp0_;
-	g_return_if_fail (self != NULL);
-	_tmp0_ = filter;
-	self->filters_ = g_list_prepend (self->filters_, _tmp0_);
+	g_return_if_fail (self);
+
+	self->filters_ = g_list_prepend (self->filters_, filter);
 }
 
 
 void
 samplecat_model_refresh_sample (SamplecatModel* self, Sample* sample, gboolean force_update)
 {
-	g_return_if_fail (self != NULL);
+	g_return_if_fail (self);
 
 	gboolean online = sample->online;
-	time_t _tmp4_ = file_mtime (sample->full_path);
-	time_t mtime = _tmp4_;
-	time_t _tmp5_ = mtime;
-	if (_tmp5_ > ((time_t) 0)) {
-		gboolean _tmp6_ = FALSE;
-		Sample* _tmp7_;
-		time_t _tmp8_;
-		time_t _tmp9_;
-		gboolean _tmp11_;
-		_tmp7_ = sample;
-		_tmp8_ = _tmp7_->mtime;
-		_tmp9_ = mtime;
-		if (_tmp8_ < _tmp9_) {
-			_tmp6_ = TRUE;
-		} else {
-			gboolean _tmp10_;
-			_tmp10_ = force_update;
-			_tmp6_ = _tmp10_;
-		}
-		_tmp11_ = _tmp6_;
-		if (_tmp11_) {
+	time_t mtime = file_mtime (sample->full_path);
+	if (mtime > ((time_t) 0)) {
+		if (force_update || sample->mtime < mtime) {
 			Sample* test = sample_new_from_filename (sample->full_path, FALSE);
 			if (!(test)) {
 				_sample_unref0 (test);
 				return;
 			}
 			if (sample_get_file_info (sample)) {
-				Sample* _tmp18_ = sample;
-				_tmp18_->mtime = mtime;
+				sample->mtime = mtime;
 				g_signal_emit_by_name (self, "sample-changed", sample, COL_ALL, NULL);
 				request_peaklevel (sample);
 				request_overview (sample);
@@ -803,17 +772,11 @@ samplecat_model_refresh_sample (SamplecatModel* self, Sample* sample, gboolean f
 		sample->mtime = mtime;
 		sample->online = TRUE;
 	} else {
-		Sample* _tmp27_;
-		_tmp27_ = sample;
-		_tmp27_->online = FALSE;
+		sample->online = false;
 	}
-	Sample* _tmp28_ = sample;
-	gboolean _tmp29_ = _tmp28_->online;
-	gboolean _tmp30_ = online;
-	if (_tmp29_ != _tmp30_) {
-		Sample* _tmp31_;
-		_tmp31_ = sample;
-		samplecat_model_update_sample (self, _tmp31_, (gint) COL_ICON, NULL);
+
+	if (sample->online != online) {
+		samplecat_model_update_sample (self, sample, (gint) COL_ICON, NULL);
 	}
 }
 
@@ -821,54 +784,23 @@ samplecat_model_refresh_sample (SamplecatModel* self, Sample* sample, gboolean f
 gboolean
 samplecat_model_update_sample (SamplecatModel* self, Sample* sample, gint prop, void* val)
 {
-	gboolean result = FALSE;
-	gboolean _tmp105_;
-	g_return_val_if_fail (self != NULL, FALSE);
+	g_return_val_if_fail (self, FALSE);
+
 	gboolean ok = FALSE;
+
 	switch (prop) {
 		case COL_ICON:
 		{
-			gint _tmp5_;
-			gboolean _tmp7_ = FALSE;
-			_tmp5_ = sample->id;
-			_tmp7_ = backend.update_int (_tmp5_, "online", (guint) sample->online ? 1 : 0);
-			if (_tmp7_) {
-				Sample* _tmp8_;
-				gint _tmp9_;
-				Sample* _tmp10_;
-				time_t _tmp11_;
-				gboolean _tmp12_ = FALSE;
-				_tmp8_ = sample;
-				_tmp9_ = _tmp8_->id;
-				_tmp10_ = sample;
-				_tmp11_ = _tmp10_->mtime;
-				_tmp12_ = backend.update_int (_tmp9_, "mtime", (guint) _tmp11_);
-				ok = _tmp12_;
+			if (backend.update_int (sample->id, "online", (guint) sample->online ? 1 : 0)){
+				ok = backend.update_int (sample->id, "mtime", (guint) sample->mtime);
 			}
 			break;
 		}
 		case COL_KEYWORDS:
 		{
-			Sample* _tmp13_;
-			gint _tmp14_;
-			void* _tmp15_;
-			gboolean _tmp16_ = FALSE;
-			gboolean _tmp17_;
-			_tmp13_ = sample;
-			_tmp14_ = _tmp13_->id;
-			_tmp15_ = val;
-			_tmp16_ = backend.update_string (_tmp14_, "keywords", (gchar*) _tmp15_);
-			ok = _tmp16_;
-			_tmp17_ = ok;
-			if (_tmp17_) {
-				Sample* _tmp18_;
-				void* _tmp19_;
-				gchar* _tmp20_;
-				_tmp18_ = sample;
-				_tmp19_ = val;
-				_tmp20_ = g_strdup ((const gchar*) _tmp19_);
-				_g_free0 (_tmp18_->keywords);
-				_tmp18_->keywords = _tmp20_;
+			if((ok = backend.update_string (sample->id, "keywords", (gchar*)val))){
+				_g_free0 (sample->keywords);
+				val = sample->keywords = g_strdup ((const gchar*)val);
 			}
 			break;
 		}
@@ -883,47 +815,15 @@ samplecat_model_update_sample (SamplecatModel* self, Sample* sample, gint prop, 
 		}
 		case COL_COLOUR:
 		{
-			void* _tmp32_;
-			guint colour_index;
-			Sample* _tmp33_;
-			gint _tmp34_;
-			guint _tmp35_;
-			gboolean _tmp36_ = FALSE;
-			gboolean _tmp37_;
-			_tmp32_ = val;
-			colour_index = *((guint*) _tmp32_);
-			_tmp33_ = sample;
-			_tmp34_ = _tmp33_->id;
-			_tmp35_ = colour_index;
-			_tmp36_ = backend.update_int (_tmp34_, "colour", _tmp35_);
-			ok = _tmp36_;
-			_tmp37_ = ok;
-			if (_tmp37_) {
-				Sample* _tmp38_;
-				guint _tmp39_;
-				_tmp38_ = sample;
-				_tmp39_ = colour_index;
-				_tmp38_->colour_index = (gint) _tmp39_;
+			guint colour_index = *((guint*)val);
+			if ((ok = backend.update_int (sample->id, "colour", colour_index))){
+				sample->colour_index = (gint) colour_index;
 			}
 			break;
 		}
 		case COL_PEAKLEVEL:
 		{
-			Sample* _tmp40_;
-			gint _tmp41_;
-			Sample* _tmp42_;
-			gfloat _tmp43_;
-			gboolean _tmp44_ = FALSE;
-			gboolean _tmp45_;
-			_tmp40_ = sample;
-			_tmp41_ = _tmp40_->id;
-			_tmp42_ = sample;
-			_tmp43_ = _tmp42_->peaklevel;
-			_tmp44_ = backend.update_float (_tmp41_, "peaklevel", _tmp43_);
-			ok = _tmp44_;
-			_tmp45_ = ok;
-			if (_tmp45_) {
-			}
+			ok = backend.update_float (sample->id, "peaklevel", sample->peaklevel);
 			break;
 		}
 		case COL_X_NOTES:
@@ -953,17 +853,7 @@ samplecat_model_update_sample (SamplecatModel* self, Sample* sample, gint prop, 
 		}
 		case COL_X_EBUR:
 		{
-			Sample* _tmp54_;
-			gint _tmp55_;
-			Sample* _tmp56_;
-			gchar* _tmp57_;
-			gboolean _tmp58_ = FALSE;
-			_tmp54_ = sample;
-			_tmp55_ = _tmp54_->id;
-			_tmp56_ = sample;
-			_tmp57_ = _tmp56_->ebur;
-			_tmp58_ = backend.update_string (_tmp55_, "ebur", _tmp57_);
-			ok = _tmp58_;
+			ok = backend.update_string (sample->id, "ebur", sample->ebur);
 			break;
 		}
 		case COL_ALL:
@@ -983,27 +873,10 @@ samplecat_model_update_sample (SamplecatModel* self, Sample* sample, gint prop, 
 			gboolean _tmp73_;
 			Sample* _tmp74_;
 			gint _tmp75_;
-			Sample* _tmp76_;
-			gint64 _tmp77_;
 			gboolean _tmp78_ = FALSE;
 			gboolean _tmp79_;
-			Sample* _tmp80_;
-			gint _tmp81_;
-			Sample* _tmp82_;
-			gint64 _tmp83_;
 			gboolean _tmp84_ = FALSE;
-			gboolean _tmp85_;
-			Sample* _tmp86_;
-			gint _tmp87_;
-			Sample* _tmp88_;
-			gint _tmp89_;
-			gboolean _tmp90_ = FALSE;
-			gboolean _tmp91_;
-			Sample* _tmp92_;
-			Sample* _tmp94_;
-			gboolean _tmp96_ = FALSE;
 			gboolean _tmp97_;
-			Sample* _tmp98_;
 			gboolean _tmp101_ = FALSE;
 			gchar* metadata = sample_get_metadata_str (sample);
 			ok = TRUE;
@@ -1024,37 +897,26 @@ samplecat_model_update_sample (SamplecatModel* self, Sample* sample, gint prop, 
 			_tmp73_ = ok;
 			_tmp74_ = sample;
 			_tmp75_ = _tmp74_->id;
-			_tmp76_ = sample;
-			_tmp77_ = _tmp76_->length;
-			_tmp78_ = backend.update_int (_tmp75_, "length", (guint) _tmp77_);
+			_tmp78_ = backend.update_int (_tmp75_, "length", (guint) sample->length);
 			ok = _tmp73_ & _tmp78_;
 			_tmp79_ = ok;
-			_tmp80_ = sample;
-			_tmp81_ = _tmp80_->id;
-			_tmp82_ = sample;
-			_tmp83_ = _tmp82_->frames;
-			_tmp84_ = backend.update_int (_tmp81_, "frames", (guint) _tmp83_);
+			_tmp84_ = backend.update_int (sample->id, "frames", (guint) sample->frames);
 			ok = _tmp79_ & _tmp84_;
-			_tmp85_ = ok;
-			_tmp86_ = sample;
-			_tmp87_ = _tmp86_->id;
-			_tmp88_ = sample;
-			_tmp89_ = _tmp88_->bit_rate;
-			_tmp90_ = backend.update_int (_tmp87_, "bit_rate", (guint) _tmp89_);
-			ok = _tmp85_ & _tmp90_;
-			_tmp91_ = ok;
-			_tmp92_ = sample;
-			_tmp94_ = sample;
-			_tmp96_ = backend.update_int (_tmp92_->id, "bit_depth", (guint) _tmp94_->bit_depth);
-			ok = _tmp91_ & _tmp96_;
+
+			ok &= backend.update_int   (sample->id, "bit_rate", (guint) sample->bit_rate);
+			ok &= backend.update_int   (sample->id, "bit_depth", (guint) sample->bit_depth);
+
+			if(sample->peaklevel) ok &= backend.update_float (sample->id, "peaklevel", sample->peaklevel);
+
+			if(sample->ebur && sample->ebur[0]) ok = backend.update_string (sample->id, "ebur", sample->ebur);
+
 			if (sample->overview) {
 				guint len = 0U;
 				guint8* blob = pixbuf_to_blob (sample->overview, &len);
 				ok = backend.update_blob (sample->id, "pixbuf", blob, len);
 			}
 			_tmp97_ = ok;
-			_tmp98_ = sample;
-			_tmp101_ = backend.update_string (_tmp98_->id, "meta_data", metadata);
+			_tmp101_ = backend.update_string (sample->id, "meta_data", metadata);
 			ok = _tmp97_ & _tmp101_;
 			if (metadata) {
 				g_free(metadata);
@@ -1067,20 +929,13 @@ samplecat_model_update_sample (SamplecatModel* self, Sample* sample, gint prop, 
 			break;
 		}
 	}
-	_tmp105_ = ok;
-	if (_tmp105_) {
-		Sample* _tmp106_;
-		gint _tmp107_;
-		void* _tmp108_;
-		_tmp106_ = sample;
-		_tmp107_ = prop;
-		_tmp108_ = val;
-		samplecat_model_queue_sample_changed (self, _tmp106_, _tmp107_, _tmp108_);
+
+	if (ok) {
+		samplecat_model_queue_sample_changed (self, sample, prop, val);
 	} else {
 		warnprintf2 ("model.update_sample", "database update failed for %s", samplecat_model_print_col_name ((guint)prop), NULL);
 	}
-	result = ok;
-	return result;
+	return ok;
 }
 
 
@@ -1287,7 +1142,7 @@ samplecat_model_finalize (GObject* obj)
 	SamplecatModel* self = G_TYPE_CHECK_INSTANCE_CAST (obj, SAMPLECAT_TYPE_MODEL, SamplecatModel);
 	_g_list_free0 (self->backends);
 	_g_list_free0 (self->filters_);
-	_samplecat_idle_unref0 (self->priv->idle);
+	_samplecat_idle_unref0 (self->priv->dir_idle);
 	_samplecat_idle_unref0 (self->priv->sample_changed_idle);
 	_g_list_free0 (self->modified);
 	G_OBJECT_CLASS (samplecat_model_parent_class)->finalize (obj);

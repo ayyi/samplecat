@@ -137,7 +137,8 @@ samplecat_list_store_add (SamplecatListStore* self, Sample* sample)
 #endif
 
 #define NSTR(X) (X?X:"")
-	//icon (only shown if the sound file is currently available):
+
+	//icon (only shown if the sound file is currently available)
 	GdkPixbuf* iconbuf = sample->online ? get_iconbuf_from_mimetype(sample->mimetype) : NULL;
 
 	GtkTreeIter iter;
@@ -168,14 +169,12 @@ samplecat_list_store_add (SamplecatListStore* self, Sample* sample)
 		gtk_tree_path_free(treepath);
 	}
 
-	Sample* _tmp13_;
-	g_return_if_fail (self != NULL);
+	g_return_if_fail (self);
 	if(sample->row_ref && sample->online){
 		request_analysis(sample);
 	}
 
-	_tmp13_ = sample;
-	sample_ref (_tmp13_);
+	sample_ref (sample);
 }
 
 
@@ -316,7 +315,6 @@ samplecat_list_store_get_type (void)
 	}
 	return samplecat_list_store_type_id__volatile;
 }
-
 
 
 /** samplecat_list_store_get_sample_by_iter returns a pointer to
