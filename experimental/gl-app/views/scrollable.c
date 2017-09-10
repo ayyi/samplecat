@@ -33,8 +33,6 @@
 #include "views/scrollbar.h"
 #include "views/scrollable.h"
 
-typedef struct { int start, end; } iRange;
-
 #define R 4
 #define V_SCROLLBAR_H_PADDING 2
 #define V_SCROLLBAR_V_PADDING 3

@@ -80,7 +80,7 @@ main(int argc, char* argv[])
 	Window win;
 	GLXContext ctx;
 	GLboolean fullscreen = GL_FALSE;
-	static int width = 640, height = 300;
+	static int width = 640, height = 360;
 
 	int i; for (i = 1; i < argc; i++) {
 		if (strcmp(argv[i], "-verbose") == 0) {

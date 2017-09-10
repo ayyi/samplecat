@@ -18,8 +18,10 @@ samplecat_gl_SOURCES = \
 	views/dirs.c views/dirs.h \
 	views/inspector.c views/inspector.h \
 	views/search.c views/search.h \
+	views/filters.c views/filters.h \
 	views/tabs.c views/tabs.h \
 	views/scrollbar.c views/scrollbar.h \
+	views/spectrogram.c views/spectrogram.h \
 	shader.c shader.h \
 	layout.c layout.h \
 	yaml_utils.c yaml_utils.h \

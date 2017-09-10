@@ -22,7 +22,7 @@ typedef struct {
 
 AGlActorClass* search_view_get_class ();
 
-AGlActor* search_view        (WaveformActor*);
+AGlActor* search_view        (gpointer);
 int       search_view_height (SearchView*);
 
 #endif

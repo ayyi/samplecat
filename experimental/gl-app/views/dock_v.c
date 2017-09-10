@@ -29,6 +29,7 @@
 #define _g_free0(var) (var = (g_free (var), NULL))
 #define SPACING 15
 #define DIVIDER 5
+#define HANDLE_HEIGHT(P) (((PanelView*)P)->title ? PANEL_DRAG_HANDLE_HEIGHT : 0)
 
 static AGl* agl = NULL;
 static int instance_count = 0;
@@ -66,6 +67,7 @@ dock_v_view(gpointer _)
 	{
 		DockVView* dock = (DockVView*)actor;
 
+		// dividing lines
 		int y = 0;
 		GList* l = dock->panels;
 		for(;l;l=l->next){
@@ -137,10 +139,10 @@ dock_v_view(gpointer _)
 			a->region.x2 = panel->size_req.preferred.x > -1 ? panel->size_req.preferred.x : agl_actor__width(actor);
 
 			if(panel->size_req.preferred.y > -1){
-				item->height = panel->size_req.preferred.y + PANEL_DRAG_HANDLE_HEIGHT;
+				item->height = panel->size_req.preferred.y + HANDLE_HEIGHT(panel);
 				n_flexible --;
 			}else if(panel->size_req.min.y > -1){
-				item->height = panel->size_req.min.y + PANEL_DRAG_HANDLE_HEIGHT;
+				item->height = panel->size_req.min.y + HANDLE_HEIGHT(panel);
 				n_flexible --;
 			}
 			vspace -= item->height;

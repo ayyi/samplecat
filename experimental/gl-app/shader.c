@@ -11,15 +11,18 @@
 */
 #include <GL/gl.h>
 #include <glib.h>
+#include "debug/debug.h"
 #include "agl/ext.h"
 #include "waveform/utils.h"
 #include "gl-app/shader.h"
 #include "gl-app/shaders/shaders.c"
 
 static void _v_scrollbar_set_uniforms();
+static void _button_set_uniforms();
 
 
 ScrollbarShader v_scrollbar_shader = {{NULL, NULL, 0, NULL, _v_scrollbar_set_uniforms, &vscrollbar_text}, {}, {END_OF_UNIFORMS}};
+ButtonShader button_shader = {{NULL, NULL, 0, NULL, _button_set_uniforms, &button_text}, {}, {END_OF_UNIFORMS}};
 
 
 static inline void
@@ -65,4 +68,31 @@ _v_scrollbar_set_uniforms()
 	_scrollbar_set_uniforms(&v_scrollbar_shader);
 }
 
+
+static void
+_button_set_uniforms()
+{
+	float btn_size[2] = {button_shader.uniform.btn_size.x, button_shader.uniform.btn_size.y};
+	glUniform2fv(glGetUniformLocation(button_shader.shader.program, "btn_size"), 1, btn_size);
+
+	glUniform1f(glGetUniformLocation(button_shader.shader.program, "radius"), button_shader.uniform.radius);
+
+	SET_COLOUR(&button_shader);
+
+	GLint location = 0;
+	if(!location){
+		location = glGetUniformLocation(button_shader.shader.program, "bg_colour");
+	}
+	float bg_colour[4] = {0.0, 0.0, 0.0, ((float)(button_shader.uniform.bg_colour & 0xff)) / 0x100};
+	agl_rgba_to_float(button_shader.uniform.bg_colour, &bg_colour[0], &bg_colour[1], &bg_colour[2]);
+	glUniform4fv(location, 1, bg_colour);
+
+	location = 0;
+	if(!location){
+		location = glGetUniformLocation(button_shader.shader.program, "fill_colour");
+	}
+	float fill_colour[4] = {0.0, 0.0, 0.0, ((float)(button_shader.uniform.fill_colour & 0xff)) / 0x100};
+	agl_rgba_to_float(button_shader.uniform.fill_colour, &fill_colour[0], &fill_colour[1], &fill_colour[2]);
+	glUniform4fv(location, 1, fill_colour);
+}
 

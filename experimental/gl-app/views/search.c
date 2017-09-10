@@ -19,16 +19,13 @@
 #include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
 #include <GL/gl.h>
-#include <pango/pangofc-font.h>
-#include <pango/pangofc-fontmap.h>
+#include "debug/debug.h"
 #include "agl/ext.h"
 #include "agl/utils.h"
 #include "agl/actor.h"
+#include "agl/fbo.h"
+#include "agl/shader.h"
 #include "agl/pango_render.h"
-#include "waveform/waveform.h"
-#include "waveform/peakgen.h"
-#include "waveform/shader.h"
-#include "waveform/actors/text.h"
 #include "samplecat.h"
 #include "views/search.h"
 
@@ -63,7 +60,7 @@ _init()
 }
 
 AGlActor*
-search_view(WaveformActor* _)
+search_view(gpointer _)
 {
 	instance_count++;
 
@@ -220,22 +217,21 @@ search_view(WaveformActor* _)
 			.name = "Search",
 			.init = search_init,
 			.free = search_free,
+			.paint = search_paint,
+			.set_size = search_size,
+			.on_event = search_event
 		}
 	);
-	AGlActor* actor = (AGlActor*)view;
-	actor->paint = search_paint;
-	actor->set_size = search_size;
-	actor->on_event = search_event;
 
 	void on_search_filter_changed(GObject* _filter, gpointer _actor)
 	{
 		search_layout(_actor);
 	}
-	g_signal_connect(samplecat.model->filters.search, "changed", G_CALLBACK(on_search_filter_changed), actor);
+	g_signal_connect(samplecat.model->filters.search, "changed", G_CALLBACK(on_search_filter_changed), view);
 
 	search_layout(view);
 
-	return actor;
+	return (AGlActor*)view;
 }
 
 

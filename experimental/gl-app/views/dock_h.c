@@ -73,7 +73,7 @@ dock_h_view(WaveformActor* _)
 			AGlActor* a = l->data;
 			if(x){
 				x = a->region.x1;
-				agl_rect_((AGlRect){x - SPACING / 2 - 1, PANEL_DRAG_HANDLE_HEIGHT, 1, agl_actor__height(actor) - PANEL_DRAG_HANDLE_HEIGHT});
+				agl_rect_((AGlRect){x - SPACING / 2 - 1, 0, 1, agl_actor__height(actor)});
 			}
 			x = a->region.x2;
 		}

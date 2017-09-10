@@ -322,7 +322,7 @@ event_loop(Display* dpy, Window win)
 					if(event.xbutton.button == 1){
 						int x = event.xbutton.x;
 						int y = event.xbutton.y;
-						printf("button: %i %i\n", x, y);
+						dbg(1, "button: %i %i\n", x, y);
 					}
 					agl_actor__xevent(scene, &event);
 					break;

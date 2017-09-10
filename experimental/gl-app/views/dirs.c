@@ -72,8 +72,6 @@ directories_view(WaveformActor* _)
 
 		agl_enable_stencil(0, 0, actor->region.x2, actor->region.y2);
 
-		agl_print(0, 0, 0, 0xffffffff, "Directories");
-
 		int i = 0;
 		GNode* node = g_node_first_child (samplecat.model->dir_tree);
 		for(; node && i < view->cache.n_rows; node = g_node_next_sibling(node)){
@@ -82,10 +80,10 @@ directories_view(WaveformActor* _)
 			if(i == view->selection/* - view->scroll_offset*/){
 				agl->shaders.plain->uniform.colour = 0x6677ff77;
 				agl_use_program((AGlShader*)agl->shaders.plain);
-				agl_rect_((AGlRect){0, (i + 1) * row_height - 2, agl_actor__width(actor), row_height});
+				agl_rect_((AGlRect){0, i * row_height - 2, agl_actor__width(actor), row_height});
 			}
 
-			agl_print(0, (i + 1) * row_height, 0, 0xffffffff, strlen(link->uri) ? link->uri : link->name);
+			agl_print(0, i * row_height, 0, 0xffffffff, strlen(link->uri) ? link->uri : link->name);
 
 			gboolean node_open = false;
 			if(node_open){
@@ -128,11 +126,10 @@ directories_view(WaveformActor* _)
 	bool dirs_event(AGlActor* actor, GdkEvent* event, AGliPt xy)
 	{
 		switch(event->type){
-			//case GDK_BUTTON_PRESS:
 			case GDK_BUTTON_RELEASE:
 				{
-					int row = xy.y / row_height - 1;
-					dbg(0, "y=%i row=%i", xy.y, row);
+					int row = xy.y / row_height;
+					dbg(1, "y=%i row=%i", xy.y, row);
 					dirs_select((DirectoriesView*)actor, row);
 				}
 			default:
@@ -159,6 +156,17 @@ directories_view(WaveformActor* _)
 		},
 		.selection = -1
 	);
+
+	void dirs_on_filter_changed(GObject* _filter, gpointer _actor)
+	{
+		DirectoriesView* view = (DirectoriesView*)_actor;
+
+		if(samplecat.model->filters.dir->value[0] == '\0'){
+			view->selection = -1;
+			agl_actor__invalidate((AGlActor*)_actor);
+		}
+	}
+	g_signal_connect(samplecat.model->filters.dir, "changed", G_CALLBACK(dirs_on_filter_changed), view);
 
 	return (AGlActor*)view;
 }

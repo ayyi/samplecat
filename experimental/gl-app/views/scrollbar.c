@@ -14,8 +14,6 @@
 #include "scrollbar.h"
 #include "shader.h"
 
-typedef struct { int start, end; } iRange;
-
 #define R 2
 #define Rf 2.0
 #define V_SCROLLBAR_H_PADDING 2

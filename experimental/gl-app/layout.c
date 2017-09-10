@@ -21,7 +21,7 @@
 #include "layout.h"
 
 typedef AGlActorClass* (get_class)();
-get_class dock_v_get_class, dock_h_get_class, scrollable_view_get_class, list_view_get_class, files_view_get_class, directories_view_get_class, inspector_view_get_class, search_view_get_class, scrollbar_view_get_class;
+get_class dock_v_get_class, dock_h_get_class, scrollable_view_get_class, list_view_get_class, files_view_get_class, directories_view_get_class, inspector_view_get_class, search_view_get_class, filters_view_get_class, scrollbar_view_get_class, spectrogram_view_get_class;
 #include "views/dock_v.h"
 #include "views/tabs.h"
 
@@ -240,6 +240,19 @@ config_load_window_yaml (yaml_parser_t* parser, yaml_event_t* event)
 					AGlActorClass* parent_class = parent->class;
 					if(parent_class == dock_v_get_class() || parent_class == dock_h_get_class()){
 						dock_v_add_panel((DockVView*)stack[sp], STACK_POP());
+						{
+							if(actor->class == panel_view_get_class()){
+								g_return_val_if_fail(g_list_length(actor->children) == 1, false);
+								AGlActor* child = (AGlActor*)actor->children->data;
+								char* name = child->name;
+								if(strcmp(name, "Search") && strcmp(name, "Spectrogram") && strcmp(name, "Filters") && strcmp(name, "Tabs") && strcmp(name, "Waveform")){
+									if(!strcmp(name, "Scrollable")){
+										name = ((AGlActor*)child->children->data)->name;
+									}
+									((PanelView*)actor)->title = name;
+								}
+							}
+						}
 					}else if(parent_class == tabs_view_get_class()){
 						tabs_view__add_tab((TabsView*)parent, actor->name, STACK_POP());
 					}else{
@@ -325,11 +338,13 @@ load_settings ()
 		agl_actor_register_class("Dirs", directories_view_get_class());
 		agl_actor_register_class("Inspector", inspector_view_get_class());
 		agl_actor_register_class("Search", search_view_get_class());
+		agl_actor_register_class("Filters", filters_view_get_class());
 		agl_actor_register_class("Tabs", tabs_view_get_class());
 		agl_actor_register_class("List", list_view_get_class());
 		agl_actor_register_class("Scrollbar", scrollbar_view_get_class());
 		agl_actor_register_class("Files", files_view_get_class());
 		agl_actor_register_class("Waveform", wf_actor_get_class());
+		agl_actor_register_class("Spectrogram", spectrogram_view_get_class());
 	}
 
 	yaml_parser_t parser; yaml_parser_initialize(&parser);
@@ -482,10 +497,14 @@ save_settings ()
 
 			if(!yaml_add_key_value_pair("type", c->name)) goto error;
 
-			int vals1[2] = {actor->region.x1, actor->region.y1};
-			yaml_add_key_value_pair_array("position", vals1, 2);
-			int vals2[2] = {actor->region.x2, actor->region.y2};
-			yaml_add_key_value_pair_array("size", vals2, 2);
+			bool is_panel_child = actor->parent && actor->parent->class == panel_view_get_class();
+
+			if(!is_panel_child){
+				int vals1[2] = {actor->region.x1, actor->region.y1};
+				yaml_add_key_value_pair_array("position", vals1, 2);
+				int vals2[2] = {actor->region.x2, actor->region.y2};
+				yaml_add_key_value_pair_array("size", vals2, 2);
+			}
 
 			if(actor->class == panel_view_get_class() || actor->class == dock_v_get_class() || actor->class == dock_h_get_class()){
 				PanelView* panel = (PanelView*)actor;

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-shaders=(vscrollbar);
+shaders=(vscrollbar button);
 out=shaders.c
 
 if [[ -s $out ]]; then

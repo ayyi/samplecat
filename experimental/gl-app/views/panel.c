@@ -63,17 +63,29 @@ panel_view(gpointer _)
 
 	bool panel_paint(AGlActor* actor)
 	{
+		PanelView* view = (PanelView*)actor;
+
 #ifdef SHOW_PANEL_BACKGROUND
 		agl->shaders.plain->uniform.colour = 0xffff0033;
 		agl_use_program((AGlShader*)agl->shaders.plain);
 		agl_rect_((AGlRect){0, 0, agl_actor__width(actor), agl_actor__height(actor)});
 #endif
 
+		if(view->title){
+			agl_print(0, 0, 0, 0x777777ff, view->title);
+		}
+
 		if(actor_context.grabbed == actor){
 			AGliPt offset = {mouse.x - origin.x, mouse.y - origin.y};
-			agl->shaders.plain->uniform.colour = 0x6677ff77;
-			agl_use_program((AGlShader*)agl->shaders.plain);
-			agl_box(1, offset.x, offset.y, agl_actor__width(actor), agl_actor__height(actor));
+			if(ABS(offset.x) > 1 || ABS(offset.y) > 1){
+				agl->shaders.plain->uniform.colour = 0x6677ff77;
+				agl_use_program((AGlShader*)agl->shaders.plain);
+				agl_box(1, offset.x, offset.y, agl_actor__width(actor), agl_actor__height(actor));
+			}else{
+				agl->shaders.plain->uniform.colour = 0x6677ff33;
+				agl_use_program((AGlShader*)agl->shaders.plain);
+				agl_rect(0, 0, agl_actor__width(actor), PANEL_DRAG_HANDLE_HEIGHT);
+			}
 		}
 
 		return true;
@@ -85,10 +97,12 @@ panel_view(gpointer _)
 
 	void panel_set_size(AGlActor* actor)
 	{
+		PanelView* panel = (PanelView*)actor;
+
 		// single child takes all space of panel
 		if(g_list_length(actor->children) == 1){
 			AGlActor* child = actor->children->data;
-			child->region = (AGliRegion){0, PANEL_DRAG_HANDLE_HEIGHT, agl_actor__width(actor), agl_actor__height(actor)};
+			child->region = (AGliRegion){0, panel->title ? PANEL_DRAG_HANDLE_HEIGHT : 0, agl_actor__width(actor), agl_actor__height(actor)};
 			agl_actor__set_size(child);
 		}
 	}
@@ -97,10 +111,11 @@ panel_view(gpointer _)
 	{
 		switch(event->type){
 			case GDK_BUTTON_PRESS:
-				dbg(1, "PRESS %i", xy.y - actor->region.y1);
+				dbg(1, "PRESS %i", xy.y);
 				if(xy.y < PANEL_DRAG_HANDLE_HEIGHT){
 					actor_context.grabbed = actor;
 					origin = mouse = xy;
+					agl_actor__invalidate(actor);
 				}
 				break;
 			case GDK_BUTTON_RELEASE:
