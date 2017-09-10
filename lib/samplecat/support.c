@@ -344,3 +344,25 @@ gain2dbstring(float gain)
 }
 
 
+gchar *
+str_replace(const gchar* string, const gchar* search, const gchar* replacement)
+{
+	gchar *str, **arr;
+
+	g_return_val_if_fail (string != NULL, NULL);
+	g_return_val_if_fail (search != NULL, NULL);
+
+	if (replacement == NULL) replacement = "";
+
+	arr = g_strsplit (string, search, -1);
+	if (arr != NULL && arr[0] != NULL)
+		str = g_strjoinv (replacement, arr);
+	else
+		str = g_strdup (string);
+
+	g_strfreev (arr);
+
+	return str;
+}
+
+

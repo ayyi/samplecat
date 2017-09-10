@@ -390,7 +390,6 @@ AS_IF([test "$enable_opengl" != "no"], [
 	enable_opengl="yes"
 ])
 AC_SUBST(OPENGL_CFLAGS)
-AC_SUBST(OPENGL_LDIBS)
 AM_CONDITIONAL(ENABLE_OPENGL, test "$enable_opengl" = "yes")
 
 dnl -----------------------------------------------------------------------------

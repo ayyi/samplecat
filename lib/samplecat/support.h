@@ -55,4 +55,6 @@ void         format_smpte              (char*, int64_t);
 float        gain2db                   (float);
 char*        gain2dbstring             (float);
 
+gchar*       str_replace               (const gchar* string, const gchar* search, const gchar* replace);
+
 #endif

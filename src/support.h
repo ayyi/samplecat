@@ -84,7 +84,6 @@ const gchar* gimp_get_mod_string       (GdkModifierType modifiers);
 gchar*       gimp_strip_uline          (const gchar* str);
 gchar*       gimp_get_accel_string     (guint key, GdkModifierType modifiers);
 
-gchar*       str_replace               (const gchar* string, const gchar* search, const gchar* replace);
 char*        remove_trailing_slash     (char* path);
 
 GList*       uri_list_to_glist         (const char* uri_list);
