@@ -16,21 +16,30 @@ Currently, most basic functionality is in place and working.
 building
 --------
 
-If you are not a developer it is recommended to use the latest tarball. Building should be entirely standard.
+You *must* download the source code from git as the automatically generated tarball does not contain the `libwaveform` submodule.
 
-If you are a developer you will want to use the git repository directly. The only difficulty is the use of
-git submodules which are unfortunately not transparent. After cloning the repository, you will have to manually
-get the submodule:
+```sh
+#clone the repository
+git clone --recursive https://github.com/ayyi/samplecat	
+cd samplecat
+
+#initialize the libwaveform submodule
+git submodule update --init 
+#update libwaveform to the latest version
+git submodule foreach git pull origin master
+
 ```
-	git submodule update --init 
-	git submodule foreach git pull origin master
-```
-If you subsequently need to update the submodules as part of a git pull:
-```
+
+To update the repository later, run
+
+```sh
+	git pull
 	git submodule foreach git pull origin master
 	make clean
 ```
 
+Install the build dependencies: `libsndfile1-dev libgtkglext1-dev libxml2-dev`  
+Run the build process: `./autogen.sh && ./configure && make`  
 
 usage
 -----
