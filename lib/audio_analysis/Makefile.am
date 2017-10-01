@@ -3,6 +3,7 @@ AM_CFLAGS = \
 	-g -Wall \
 	-I../ \
 	-I$(top_srcdir)/lib \
+	-I$(top_srcdir)/lib/waveform \
 	$(FFTW3_CFLAGS) \
 	$(GTK_CFLAGS)
 
