@@ -2,7 +2,7 @@
  *
  * gdl-dock-item.c
  *
- * Author: Gustavo Gir·ldez <gustavo.giraldez@gmx.net>
+ * Author: Gustavo Gir√°ldez <gustavo.giraldez@gmx.net>
  *         Naba Kumar  <naba@gnome.org>
  *
  * Based on GnomeDockItem/BonoboDockItem.  Original copyright notice follows.
