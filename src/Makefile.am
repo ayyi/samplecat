@@ -120,6 +120,7 @@ samplecat_LDADD = \
 	$(GMODULE_LIBS) \
 	$(X11_LDFLAGS) \
 	$(FFMPEG_LIBS) \
+	$(MATH_LDFLAGS) \
 	-lstdc++ \
 	-ldl
 

@@ -451,6 +451,9 @@ AM_CONDITIONAL(ENABLE_VALA, test "$enable_vala" = "yes")
 
 dnl -----------------------------------------------------------------------------
 
+MATH_LDFLAGS=-lm
+AC_SUBST(MATH_LDFLAGS)
+
 # Bolt on a few specific flags to CXXFLAGS that should always be used
 CXXFLAGS="$CXXFLAGS -pipe -fmessage-length=139 -fdiagnostics-show-location=every-line"
 CFLAGS="$CFLAGS -pipe  -fmessage-length=139 -fdiagnostics-show-location=every-line"
