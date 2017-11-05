@@ -1,50 +1,42 @@
-/*
- * Copyright (C) 2007-2011, Tim Orford
- * Copyright (C) 2006, Thomas Leonard and others (see changelog for details).
- *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License as published by the Free
- * Software Foundation; version 3.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
- * more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 59 Temple
- * Place, Suite 330, Boston, MA  02111-1307  USA
- */
+/**
+* +----------------------------------------------------------------------+
+* | This file is part of the Ayyi project. http://www.ayyi.org           |
+* | copyright (C) 2007-2017 Tim Orford <tim@orford.org>                  |
+* +----------------------------------------------------------------------+
+* | This program is free software; you can redistribute it and/or modify |
+* | it under the terms of the GNU General Public License version 3       |
+* | as published by the Free Software Foundation.                        |
+* +----------------------------------------------------------------------+
+*
+*/
 
-//mount using gvfs ?
-//	-appear in ~/.gvfs
+// Mount the soundfound using gvfs ?
+//  -appear in ~/.gvfs
 
 #include "../file_manager.h"
 
+static void sounfont_init    ();
+static void soundfont_deinit ();
+
+static struct filetypePlugin soundfont_info = {
+	.api_version = FILETYPE_PLUGIN_API_VERSION,
+	.name        = "Soundfont",
+	.init        = sounfont_init,
+	.deinit      = soundfont_deinit,
+};
+
+
 static void
-sounfont_init (void)
+sounfont_init ()
+{
+	g_hash_table_insert(AYYI_LIBFILEMANAGER_GET_CLASS(file_manager__get())->filetypes, "sf2", &soundfont_info);
+}
+
+
+static void
+soundfont_deinit ()
 {
 }
 
-static void soundfont_deinit (void) { }
-
-static struct filetypePlugin soundfontInfo = {
-	.api_version   = FILETYPE_PLUGIN_API_VERSION,
-	.name          = "Soundfont",
-	.plugin_init   = sounfont_init,
-	.plugin_deinit = soundfont_deinit,
-	//.create		= webkit_new,
-	//.write		= webkit_write_html,
-};
-
-/*
-static struct htmlplugin pi = {
-	FILETYPE_PLUGIN_API_VERSION,
-	"Soundfont Plugin",
-	1, //type
-	&soundfontInfo
-};
-*/
-
-DECLARE_FILETYPE_PLUGIN(soundfontInfo);
+DECLARE_FILETYPE_PLUGIN(soundfont_info);
 

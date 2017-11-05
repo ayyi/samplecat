@@ -133,7 +133,8 @@ struct _AyyiLibfilemanager {
 };
 
 struct _AyyiLibfilemanagerClass {
-	GObjectClass parent_class;
+    GObjectClass parent_class;
+    GHashTable*  filetypes;
 };
 
 

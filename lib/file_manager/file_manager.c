@@ -150,12 +150,11 @@ file_manager__plugin_load (const gchar* filepath)
 			}
 
 			/* check if all mandatory symbols are provided */
-			if (!(plugin->plugin_init &&
-				  plugin->plugin_deinit)) {
+			if (!(plugin->init && plugin->deinit)) {
 				dbg(0, "'%s': mandatory symbols missing.", plugin->name);
-				return FALSE;
+				return false;
 			}
-			success = TRUE;
+			success = true;
 
 			// try to load specific plugin type symbols
 			switch(plugin->type) {
@@ -181,7 +180,7 @@ file_manager__plugin_load (const gchar* filepath)
 }
 
 
-#define plugin_path "/usr/lib/samplecat/:/usr/local/lib/samplecat/"
+#define PLUGIN_PATH PACKAGE_LIB_DIR
 static void
 file_manager__load_plugins ()
 {
@@ -192,7 +191,9 @@ file_manager__load_plugins ()
 
 	int found = 0;
 
+	char* plugin_path = g_strdup_printf("%s:%s", "../lib/file_manager/filetypes/.libs", PLUGIN_PATH);
 	gchar** paths = g_strsplit(plugin_path, ":", 0);
+	g_free(plugin_path);
 	char* path;
 	int i = 0;
 	while((path = paths[i++])){
@@ -213,6 +214,7 @@ file_manager__load_plugins ()
 						dbg(0, "'%s' failed to load.", filename);
 					} else {
 						found++;
+						plugin->init();
 						plugins = g_slist_append(plugins, plugin);
 					}
 				} else {

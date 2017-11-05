@@ -8,6 +8,7 @@ AM_CFLAGS = \
 	-g -Wall \
 	-DPACKAGE_DATA_DIR=\""$(datadir)"\" \
 	-DPACKAGE_LOCALE_DIR=\""$(prefix)/$(DATADIRNAME)/locale"\" \
+	-DPACKAGE_LIB_DIR=\"$(pkglibdir)\" \
 	-DIMAGES_DIR=\"$(imagesdir)\" \
 	-I../ \
 	-DG_LOG_DOMAIN=\"FileMan\" \

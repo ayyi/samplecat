@@ -121,6 +121,8 @@ ayyi_libfilemanager_class_init (AyyiLibfilemanagerClass * klass)
 	G_OBJECT_CLASS (klass)->constructor = ayyi_libfilemanager_constructor;
 	G_OBJECT_CLASS (klass)->finalize = ayyi_libfilemanager_finalize;
 	g_signal_new ("dir_changed", AYYI_TYPE_LIBFILEMANAGER, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_VOID__STRING, G_TYPE_NONE, 1, G_TYPE_STRING);
+
+	klass->filetypes = g_hash_table_new(g_str_hash, g_direct_equal);
 }
 
 

@@ -47,10 +47,6 @@
 #include "mimetype.h"
 #include "support.h"
 
-#ifdef OLD
-  #include <libart_lgpl/libart.h>
-#endif
-
 GFSCache *pixmap_cache = NULL;
 
 static const char * bad_xpm[] = {
@@ -239,10 +235,12 @@ pixmap_make_huge(MaskedPixmap *mp)
 	mp->huge_height = gdk_pixbuf_get_height(mp->huge_pixbuf);
 }
 
+/*
+ *  Never called
+ */
 void
 pixmap_make_small(MaskedPixmap *mp)
 {
-	dbg(0, "************************* never get here");
 	if (mp->sm_pixbuf) return;
 
 	g_return_if_fail(mp->src_pixbuf != NULL);
@@ -275,7 +273,6 @@ pixmap_background_thumb(const gchar *path, GFunc callback, gpointer data)
 
 	if (found)
 	{
-		dbg(0, "found");
 		// Thumbnail is known, or being created
 		if (image) g_object_unref(image);
 		callback(data, NULL);

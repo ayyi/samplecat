@@ -17,7 +17,7 @@ GtkWidget*      fm__make_context_menu   ();
 void            fm__add_menu_item       (GtkAction*);
 void            fm__add_submenu         (GtkWidget*);
 
-//private:
+// private
 void            fm__menu_on_view_change (GtkWidget*);
 
 #endif
