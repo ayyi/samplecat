@@ -121,6 +121,8 @@ static const char* const usage =
 	"  -      waveform zoom out\n"
 	"  LEFT   waveform scroll left\n"
 	"  RIGHT  waveform scroll right\n"
+	"  0      waveform zoom up\n"
+	"  9      waveform zoom down\n"
 	"\n"
 	"Files:\n"
 	"  samplecat stores configuration and caches data in\n"
