@@ -19,10 +19,20 @@
 
 static void _v_scrollbar_set_uniforms();
 static void _button_set_uniforms();
+static void _ring_set_uniforms();
 
 
 ScrollbarShader v_scrollbar_shader = {{NULL, NULL, 0, NULL, _v_scrollbar_set_uniforms, &vscrollbar_text}, {}, {END_OF_UNIFORMS}};
 ButtonShader button_shader = {{NULL, NULL, 0, NULL, _button_set_uniforms, &button_text}, {}, {END_OF_UNIFORMS}};
+
+static AGlUniformInfo ringuniforms[] = {
+   {"radius",    1, GL_FLOAT, {7,  }, -1},
+   {"centre",    2, GL_FLOAT, {8,8,}, -1},
+   {"colour",    4, GL_FLOAT, {0,  }, -1},
+   {"bg_colour", 4, GL_FLOAT, {0,0,0,1}, -1},
+   END_OF_UNIFORMS
+};
+AGlShader ring = {NULL, NULL, 0, (AGlUniformInfo*)&ringuniforms, _ring_set_uniforms, &ring_text};
 
 
 static inline void
@@ -94,5 +104,13 @@ _button_set_uniforms()
 	float fill_colour[4] = {0.0, 0.0, 0.0, ((float)(button_shader.uniform.fill_colour & 0xff)) / 0x100};
 	agl_rgba_to_float(button_shader.uniform.fill_colour, &fill_colour[0], &fill_colour[1], &fill_colour[2]);
 	glUniform4fv(location, 1, fill_colour);
+}
+
+
+static void
+_ring_set_uniforms()
+{
+	glUniform4fv(ring.uniforms[3].location, 1, ring.uniforms[3].value);
+	glUniform4fv(ring.uniforms[2].location, 1, ring.uniforms[2].value);
 }
 

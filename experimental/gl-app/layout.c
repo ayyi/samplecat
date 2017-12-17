@@ -149,7 +149,7 @@ load_size_req (yaml_parser_t* parser, yaml_event_t* event, AGlActor* actor)
 					}
 					break;
 				case YAML_MAPPING_END_EVENT:
-					return TRUE;
+					return true;
 				default:
 					return false;
 			}
@@ -162,7 +162,7 @@ load_size_req (yaml_parser_t* parser, yaml_event_t* event, AGlActor* actor)
 static bool
 config_load_window_yaml (yaml_parser_t* parser, yaml_event_t* event)
 {
-	//at this point in the parsing, we have just found a "ROOT" map. First event should be a YAML_SCALAR_EVENT...
+	// At this point in the parsing, we have just found a "ROOT" map. First event should be a YAML_SCALAR_EVENT...
 
 	#define STACK_SIZE 32
 	AGlActor* stack[STACK_SIZE] = {0,};
@@ -321,10 +321,81 @@ config_load_windows_yaml (yaml_parser_t* parser, yaml_event_t* event)
 }
 
 
+static FILE*
+open_settings_file ()
+{
+	char* paths[] = {
+		g_strdup_printf("%s/.config/" PACKAGE, g_get_home_dir()),
+		g_build_filename(PACKAGE_DATA_DIR "/" PACKAGE, NULL),
+		g_build_filename(g_get_current_dir(), NULL)
+	};
+
+	FILE* fp;
+	int i; for(i=0;i<G_N_ELEMENTS(paths);i++){
+		char* filename = g_strdup_printf("%s/"PACKAGE".yaml", paths[i]);
+		fp = fopen(filename, "rb");
+		g_free(filename);
+		if(fp) break;
+	}
+	for(i=0;i<G_N_ELEMENTS(paths);i++){
+		g_free(paths[i]);
+	}
+	if(!fp){
+		fprintf(stderr, "unable to load config file");
+		return NULL;
+	}
+	return fp;
+}
+
+
+static bool
+find_event(yaml_parser_t* parser, yaml_event_t* event, const char* name)
+{
+	bool found = false;
+	while(!found && yaml_parser_parse(parser, event)){
+		switch (event->type) {
+			case YAML_SCALAR_EVENT:
+				if(!strcmp((char*)event->data.scalar.value, "size")){
+					found = true;
+				}
+				break;
+			default:
+				break;
+		}
+	}
+	return found;
+}
+
+
+AGliPt
+get_window_size_from_settings ()
+{
+	AGliPt size = {640, 360};
+
+	yaml_parser_t parser; yaml_parser_initialize(&parser);
+
+	FILE* fp = open_settings_file();
+	if(fp){
+		yaml_parser_set_input_file(&parser, fp);
+
+		yaml_event_t event;
+		if(find_event(&parser, &event, "size")){
+			size = config_load_point(&parser, &event);
+		}
+		yaml_event_delete(&event);
+
+		yaml_parser_delete(&parser);
+		fclose(fp);
+	}
+
+	return size;
+}
+
+
 /*
  *  On first run, settings are loaded from /usr/share/samplecat or cwd
  */
-gboolean
+bool
 load_settings ()
 {
 	PF;
@@ -349,28 +420,10 @@ load_settings ()
 
 	yaml_parser_t parser; yaml_parser_initialize(&parser);
 
-	char* paths[] = {
-		g_strdup_printf("%s/.config/" PACKAGE, g_get_home_dir()),
-		g_build_filename(PACKAGE_DATA_DIR "/" PACKAGE, NULL),
-		g_build_filename(g_get_current_dir(), NULL)
-	};
+	FILE* fp = open_settings_file();
+	if(!fp) return false;
 
-	FILE* file_input;
-	int i; for(i=0;i<G_N_ELEMENTS(paths);i++){
-		char* filename = g_strdup_printf("%s/"PACKAGE".yaml", paths[i]);
-		file_input = fopen(filename, "rb");
-		g_free(filename);
-		if(file_input) break;
-	}
-	for(i=0;i<G_N_ELEMENTS(paths);i++){
-		g_free(paths[i]);
-	}
-	if(!file_input){
-		fprintf(stderr, "unable to load config file");
-		return false;
-	}
-
-	yaml_parser_set_input_file(&parser, file_input);
+	yaml_parser_set_input_file(&parser, fp);
 
 	int section = 0;
 	int safety = 0;
@@ -449,13 +502,15 @@ load_settings ()
 	} while(!end && safety++ < 50);
 
 	yaml_parser_delete(&parser);
+	fclose(fp);
 
-	return TRUE;
+	return true;
 
   error:
 	yaml_parser_delete(&parser);
+	fclose(fp);
 
-	return FALSE;
+	return false;
 }
 
 
@@ -465,7 +520,7 @@ save_settings ()
 	PF;
 	char value[256];
 
-	if(!yaml_emitter_initialize(&emitter)){ gerr("failed to initialise yaml writer."); return FALSE; }
+	if(!yaml_emitter_initialize(&emitter)){ gerr("failed to initialise yaml writer."); return false; }
 
 	char* filename = g_strdup_printf("%s.yaml", app->config_ctx.filename);
 	FILE* fp = fopen(filename, "wb");

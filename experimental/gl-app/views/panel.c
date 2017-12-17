@@ -18,12 +18,18 @@
 #include "agl/ext.h"
 #include "agl/utils.h"
 #include "agl/actor.h"
+#include "agl/pango_render.h"
 #include "waveform/shader.h"
 #include "debug/debug.h"
 #include "samplecat/typedefs.h"
+#include "shader.h"
+#include "materials/icon_ring.h"
 #include "views/dock_v.h"
 #include "views/panel.h"
 
+extern AGlShader ring;
+
+#define _g_object_unref0(var) ((var == NULL) ? NULL : (var = (g_object_unref (var), NULL)))
 #define FONT "Droid Sans"
 
 static AGl* agl = NULL;
@@ -31,6 +37,9 @@ static AGlActorClass actor_class = {0, "Panel", (AGlActorNew*)panel_view};
 static int instance_count = 0;
 static AGliPt origin = {0,};
 static AGliPt mouse = {0,};
+
+extern AGlMaterialClass ring_material_class;
+static AGlMaterial* ring_material = NULL;
 
 
 AGlActorClass*
@@ -49,6 +58,8 @@ _init()
 		agl = agl_get_instance();
 		agl_set_font_string("Roboto 10"); // initialise the pango context
 
+		ring_material = ring_new();
+
 		init_done = true;
 	}
 }
@@ -63,7 +74,7 @@ panel_view(gpointer _)
 
 	bool panel_paint(AGlActor* actor)
 	{
-		PanelView* view = (PanelView*)actor;
+		PanelView* panel = (PanelView*)actor;
 
 #ifdef SHOW_PANEL_BACKGROUND
 		agl->shaders.plain->uniform.colour = 0xffff0033;
@@ -71,8 +82,17 @@ panel_view(gpointer _)
 		agl_rect_((AGlRect){0, 0, agl_actor__width(actor), agl_actor__height(actor)});
 #endif
 
-		if(view->title){
-			agl_print(0, 0, 0, 0x777777ff, view->title);
+		if(panel->title){
+			IconMaterial* icon = (IconMaterial*)ring_material;
+
+			icon->chr = panel->title[0];
+			icon->colour = ((AGlActor*)actor->children->data)->colour;
+			icon->layout = panel->layout;
+
+			ring_material_class.render(ring_material);
+
+			agl_set_font_string("Roboto 10");
+			agl_print(24, 0, 0, 0x777777ff, panel->title);
 		}
 
 		if(actor_context.grabbed == actor){
@@ -93,6 +113,23 @@ panel_view(gpointer _)
 
 	void panel_init(AGlActor* actor)
 	{
+		PanelView* panel = (PanelView*)actor;
+
+		if(panel->title){
+			PangoGlRendererClass* PGRC = g_type_class_peek(PANGO_TYPE_GL_RENDERER);
+			panel->layout = pango_layout_new (PGRC->context);
+			char text[2] = {panel->title[0], 0};
+			pango_layout_set_text(panel->layout, text, -1);
+
+			PangoFontDescription* font_desc = pango_font_description_new();
+			pango_font_description_set_family(font_desc, "Sans");
+
+			pango_font_description_set_size(font_desc, 7 * PANGO_SCALE);
+			pango_font_description_set_weight(font_desc, PANGO_WEIGHT_BOLD);
+			pango_layout_set_font_description(panel->layout, font_desc);
+
+			pango_font_description_free (font_desc);
+		}
 	}
 
 	void panel_set_size(AGlActor* actor)
@@ -140,6 +177,10 @@ panel_view(gpointer _)
 
 	void panel_free(AGlActor* actor)
 	{
+		PanelView* panel = (PanelView*)actor;
+
+		_g_object_unref0(panel->layout);
+
 		if(!--instance_count){
 		}
 	}

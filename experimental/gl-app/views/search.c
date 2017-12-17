@@ -27,16 +27,20 @@
 #include "agl/shader.h"
 #include "agl/pango_render.h"
 #include "samplecat.h"
+#include "views/panel.h"
 #include "views/search.h"
 
 #define _g_object_unref0(var) ((var == NULL) ? NULL : (var = (g_object_unref (var), NULL)))
 
-#define PADDING 1
+#define PADDING 2
 #define BORDER 1
+#define MARGIN_BOTTOM 5
 
 static AGl* agl = NULL;
 static int instance_count = 0;
 static AGlActorClass actor_class = {0, "Search", (AGlActorNew*)search_view};
+
+static int search_view_height (SearchView*);
 
 
 AGlActorClass*
@@ -76,25 +80,26 @@ search_view(gpointer _)
 		// border
 		agl->shaders.plain->uniform.colour = 0x6677ff77;
 		agl_use_program((AGlShader*)agl->shaders.plain);
+		int h = agl_actor__height(actor) - MARGIN_BOTTOM;
 		agl_rect_((AGlRect){0, 0, agl_actor__width(actor), BORDER});
-		agl_rect_((AGlRect){agl_actor__width(actor) - BORDER, 0, BORDER, agl_actor__height(actor) - 2});
-		agl_rect_((AGlRect){0, agl_actor__height(actor) - 2, agl_actor__width(actor), BORDER});
-		agl_rect_((AGlRect){0, 0, BORDER, agl_actor__height(actor) - 2});
+		agl_rect_((AGlRect){agl_actor__width(actor) - BORDER, 0, BORDER, h});
+		agl_rect_((AGlRect){0, h, agl_actor__width(actor), BORDER});
+		agl_rect_((AGlRect){0, 0, BORDER, h});
 
 		if(actor->root->selected == actor){
 			agl->shaders.plain->uniform.colour = 0x777777ff;
 			agl_use_program((AGlShader*)agl->shaders.plain);
-			agl_rect_((AGlRect){0, 0, agl_actor__width(actor), agl_actor__height(actor)});
+			agl_rect_((AGlRect){0, 0, agl_actor__width(actor), h});
 
 			//cursor
   			PangoRectangle rect;
 			pango_layout_get_cursor_pos(view->layout, view->cursor_pos, &rect, NULL);
 			agl->shaders.plain->uniform.colour = 0xffffffff;
 			agl_use_program((AGlShader*)agl->shaders.plain);
-			agl_rect_((AGlRect){2 + PANGO_PIXELS(rect.x), 2, 1, agl_actor__height(actor) - 4});
+			agl_rect_((AGlRect){2 + PANGO_PIXELS(rect.x), 2, 1, h - 2});
 		}
 
-		agl_print_layout(3, 2, 0, view->layout_colour, view->layout);
+		agl_print_layout(4, BORDER + PADDING + 2, 0, view->layout_colour, view->layout);
 
 		agl_disable_stencil();
 
@@ -107,10 +112,12 @@ search_view(gpointer _)
 		a->fbo = agl_fbo_new(agl_actor__width(a), agl_actor__height(a), 0, AGL_FBO_HAS_STENCIL);
 		a->cache.enabled = true;
 #endif
-	}
+		PanelView* panel = (PanelView*)a->parent;
+		panel->no_border = true;
 
-	void search_size(AGlActor* actor)
-	{
+		// The search panel is unusual in that can only have one height
+		// which is determined by the font size
+		panel->size_req.min.y = panel->size_req.max.y = panel->size_req.preferred.y = search_view_height((SearchView*)a);
 	}
 
 	void search_layout(SearchView* view)
@@ -205,7 +212,7 @@ search_view(gpointer _)
 	{
 		SearchView* view = (SearchView*)actor;
 
-		if(view->layout) _g_object_unref0(view->layout);
+		_g_object_unref0(view->layout);
 
 		if(!--instance_count){
 		}
@@ -218,7 +225,6 @@ search_view(gpointer _)
 			.init = search_init,
 			.free = search_free,
 			.paint = search_paint,
-			.set_size = search_size,
 			.on_event = search_event
 		}
 	);
@@ -235,15 +241,13 @@ search_view(gpointer _)
 }
 
 
-int
+static int
 search_view_height(SearchView* view)
 {
-	if(view->layout){
-		PangoRectangle logical_rect;
-		pango_layout_get_pixel_extents(view->layout, NULL, &logical_rect);
-		return logical_rect.height - logical_rect.y + 2 * PADDING + 2 * BORDER;
-	}
-	return 23;
-}
+	g_return_val_if_fail(view->layout, 22);
 
+	PangoRectangle logical_rect;
+	pango_layout_get_pixel_extents(view->layout, NULL, &logical_rect);
+	return logical_rect.height - logical_rect.y + 2 * PADDING + 2 * BORDER + MARGIN_BOTTOM;
+}
 

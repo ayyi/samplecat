@@ -74,7 +74,7 @@ scrollbar_view(AGlActor* panel, GtkOrientation orientation)
 			}
 
 #if 0 // TODO define this shader
-			h_scrollbar_shader.uniform.colour = (get_style_bg_color_rgba(GTK_STATE_SELECTED) & 0xffffff00) + (int)(((ScrollbarActor*)actor)->animation.val.f * 0xff);
+			h_scrollbar_shader.uniform.colour = 0xffffff00 + (int)(((ScrollbarActor*)actor)->animation.val.f * 0xff);
 			h_scrollbar_shader.uniform.bg_colour = v_scrollbar_shader.uniform.colour & 0xffffff00;
 			h_scrollbar_shader.uniform.centre1 = (AGliPt){bar.start + 4, 6};
 			h_scrollbar_shader.uniform.centre2 = (AGliPt){bar.end   - 4, 6};

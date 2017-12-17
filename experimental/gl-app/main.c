@@ -80,7 +80,6 @@ main(int argc, char* argv[])
 	Window win;
 	GLXContext ctx;
 	GLboolean fullscreen = GL_FALSE;
-	static int width = 640, height = 360;
 
 	int i; for (i = 1; i < argc; i++) {
 		if (strcmp(argv[i], "-verbose") == 0) {
@@ -124,8 +123,9 @@ main(int argc, char* argv[])
 
 	app->scene = (AGlRootActor*)agl_actor__new_root_(CONTEXT_TYPE_GLX);
 
+	AGliPt size = get_window_size_from_settings();
 	int screen = DefaultScreen(dpy);
-	make_window(dpy, "Samplecat", (XDisplayWidth(dpy, screen) - width) / 2, (XDisplayHeight(dpy, screen) - height) / 2, width, height, fullscreen, app->scene, &win, &ctx);
+	make_window(dpy, "Samplecat", (XDisplayWidth(dpy, screen) - size.x) / 2, (XDisplayHeight(dpy, screen) - size.y) / 2, size.x, size.y, fullscreen, app->scene, &win, &ctx);
 
 	agl_gl_init();
 	glx_init(dpy);
@@ -134,7 +134,6 @@ main(int argc, char* argv[])
 
 	gboolean add_content(gpointer _)
 	{
-		app->config_ctx.filename = g_strdup_printf("%s/.config/" PACKAGE "/" PACKAGE, g_get_home_dir());
 		config_load(&app->config_ctx, &app->config);
 
 		if (app->config.database_backend && can_use(samplecat.model->backends, app->config.database_backend)) {
@@ -201,7 +200,9 @@ main(int argc, char* argv[])
 				sample_unref(sample);
 			}
 
+#ifdef DEBUG
 			if(_debug_ > 2) agl_actor__print_tree((AGlActor*)app->scene);
+#endif
 		}
 
 #ifdef SHOW_FBO_DEBUG
@@ -239,7 +240,7 @@ main(int argc, char* argv[])
 
 	g_idle_add(add_content, NULL);
 
-	on_window_resize(width, height);
+	on_window_resize(size.x, size.y);
 
 	event_loop(dpy, win);
 

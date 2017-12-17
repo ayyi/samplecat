@@ -156,6 +156,7 @@ list_view(WaveformActor* _)
 		.actor = {
 			.class = &actor_class,
 			.name = actor_class.name,
+			.colour = 0xffff99ff,
 			.init = list_init,
 			.free = list_free,
 			.paint = list_paint,

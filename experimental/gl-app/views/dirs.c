@@ -148,6 +148,7 @@ directories_view(WaveformActor* _)
 		.actor = {
 			.class = &actor_class,
 			.name = "Directories",
+			.colour = 0xaaff33ff,
 			.init = dirs_init,
 			.free = dirs_free,
 			.paint = dirs_paint,

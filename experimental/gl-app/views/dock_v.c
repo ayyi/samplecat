@@ -24,6 +24,7 @@
 #include "waveform/waveform.h"
 #include "waveform/shader.h"
 #include "samplecat.h"
+#include "views/panel.h"
 #include "views/dock_v.h"
 
 #define _g_free0(var) (var = (g_free (var), NULL))
@@ -56,6 +57,19 @@ _init()
 }
 
 
+static inline int
+get_spacing(DockVView* dock)
+{
+	int n = 0;
+	GList* l = dock->panels;
+	for(;l;l=l->next){
+		PanelView* p = l->data;
+		if(l->next && !p->no_border) n++;
+	}
+	return n * SPACING;
+}
+
+
 AGlActor*
 dock_v_view(gpointer _)
 {
@@ -73,8 +87,11 @@ dock_v_view(gpointer _)
 		for(;l;l=l->next){
 			AGlActor* a = l->data;
 			if(y){
+				AGlActor* prev = l->prev->data;
 				y = a->region.y1;
-				agl_rect_((AGlRect){0, y - SPACING / 2 - 1, agl_actor__width(actor), 1});
+				if(!((PanelView*)prev)->no_border){
+					agl_rect_((AGlRect){0, y - SPACING / 2 - 1, agl_actor__width(actor), 1});
+				}
 			}
 			y = a->region.y2;
 		}
@@ -130,7 +147,7 @@ dock_v_view(gpointer _)
 			return;
 		}
 
-		int vspace = agl_actor__height(actor) - SPACING * (g_list_length(dock->panels) - 1);
+		int vspace = agl_actor__height(actor) - get_spacing(dock);
 		int n_flexible = g_list_length(dock->panels);
 		for(i=0;i<G_N_ELEMENTS(items);i++){
 			Item* item = &items[i];
@@ -152,13 +169,14 @@ dock_v_view(gpointer _)
 		int y = 0;
 		for(i=0;i<G_N_ELEMENTS(items);i++){
 			Item* item = &items[i];
+			PanelView* panel = (PanelView*)item->actor;
 
 			if(each_unallocated > 0){
 				if(!item->height){
 					item->height = each_unallocated;
 				}
 			}
-			y += item->height + SPACING;
+			y += item->height + (panel->no_border ? 0 : SPACING);
 		}
 		y -= SPACING; // no spacing needed after last element
 
@@ -214,7 +232,7 @@ dock_v_view(gpointer _)
 			AGlActor* a = (AGlActor*)l->data;
 			a->region.y1 = y;
 			a->region.y2 = y + items[i].height;
-			y += items[i].height + SPACING;
+			y += items[i].height + (((PanelView*)a)->no_border ? 0 : SPACING);
 		}
 	}
 

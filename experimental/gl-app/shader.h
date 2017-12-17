@@ -11,6 +11,7 @@
 */
 #ifndef __arrange_shader_h__
 #define __arrange_shader_h__
+#include "agl/utils.h"
 #include "agl/shader.h"
 
 typedef struct {
@@ -37,7 +38,15 @@ typedef struct {
 	AGlUniformInfo uniforms[1];
 } ButtonShader;
 
+enum {
+    RING_RADIUS = 0,
+    RING_CENTRE,
+    RING_COLOUR,
+    RING_BG_COLOUR,
+};
+
 extern ScrollbarShader v_scrollbar_shader;
 extern ButtonShader button_shader;
+extern AGlShader ring;
 
 #endif

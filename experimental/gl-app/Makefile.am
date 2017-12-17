@@ -22,8 +22,10 @@ samplecat_gl_SOURCES = \
 	views/tabs.c views/tabs.h \
 	views/scrollbar.c views/scrollbar.h \
 	views/spectrogram.c views/spectrogram.h \
+	materials/icon_ring.c materials/icon_ring.h \
 	shader.c shader.h \
 	layout.c layout.h \
+	style.c style.h \
 	yaml_utils.c yaml_utils.h \
 	keys.h \
 	$(top_srcdir)/src/icon_theme.c $(top_srcdir)/src/icon_theme.h

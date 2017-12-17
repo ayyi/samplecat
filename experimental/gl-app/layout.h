@@ -15,4 +15,6 @@
 bool   load_settings ();
 bool   save_settings ();
 
+AGliPt get_window_size_from_settings ();
+
 #endif

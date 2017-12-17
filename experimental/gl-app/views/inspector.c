@@ -72,11 +72,6 @@ inspector_view(gpointer _)
 		Sample* sample = view->sample;
 
 		int row = 0;
-#ifdef INSPECTOR_RENDER_CACHE
-		agl_print(0, row_height * (                      row++), 0, 0xffffffff, "Inspector");
-#else
-		agl_print(0, row_height * (view->scroll_offset + row++), 0, 0xffffffff, "Inspector");
-#endif
 
 		if(!sample) return true;
 
@@ -98,11 +93,11 @@ inspector_view(gpointer _)
 
 #ifdef INSPECTOR_RENDER_CACHE
 #define PRINT_ROW(KEY, VAL) \
-		agl_print( 0, row_height * (                      row)  , 0, 0xffffffff, KEY); \
+		agl_print( 0, row_height * (                      row)  , 0, 0xffffff99, KEY); \
 		agl_print(80, row_height * (                      row++), 0, 0xffffffff, VAL);
 #else
 #define PRINT_ROW(KEY, VAL) \
-		agl_print( 0, row_height * (view->scroll_offset + row)  , 0, 0xffffffff, KEY); \
+		agl_print( 0, row_height * (view->scroll_offset + row)  , 0, 0xffffff99, KEY); \
 		agl_print(80, row_height * (view->scroll_offset + row++), 0, 0xffffffff, VAL);
 #endif
 
@@ -152,6 +147,7 @@ inspector_view(gpointer _)
 		a->cache.enabled = true;
 		a->cache.size_request = (AGliPt){agl_actor__width(a), agl_actor__scrollable_height(a)};
 #endif
+		a->parent->colour = 0xffaa33ff; // panel gets colour from its child. This assumes inspector parent is a Scrollable
 	}
 
 	void inspector_set_size(AGlActor* actor)

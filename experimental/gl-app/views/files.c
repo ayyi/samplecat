@@ -217,6 +217,7 @@ files_view(WaveformActor* _)
 		.actor = {
 			.class = &actor_class,
 			.name = "Files",
+			.colour = 0x66ff99ff,
 			.init = files_init,
 			.free = files_free,
 			.paint = files_paint,

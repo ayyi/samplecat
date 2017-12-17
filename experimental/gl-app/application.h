@@ -17,6 +17,7 @@
 #include <glib-object.h>
 #include "agl/actor.h"
 #include "waveform/typedefs.h"
+#include "style.h"
 
 G_BEGIN_DECLS
 
@@ -41,6 +42,7 @@ struct _Application
    Config               config;
    AGlRootActor*        scene;
    WaveformContext*     wfc;
+   Style                style;
 };
 
 struct _ApplicationClass

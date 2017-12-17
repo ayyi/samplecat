@@ -45,8 +45,10 @@ Application*
 application_construct (GType object_type)
 {
 	Application* app = g_object_new (object_type, NULL);
+	app->config_ctx.filename = g_strdup_printf("%s/.config/" PACKAGE "/" PACKAGE, g_get_home_dir());
 	//app->cache_dir = g_build_filename (g_get_home_dir(), ".config", PACKAGE, "cache", NULL);
 	//app->configctx.dir = g_build_filename (g_get_home_dir(), ".config", PACKAGE, NULL);
+	app->style.fg = 0x66aaffff;
 	return app;
 }
 

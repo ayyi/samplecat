@@ -9,29 +9,21 @@
 * +----------------------------------------------------------------------+
 *
 */
-#ifndef __views_tabs_h__
-#define __views_tabs_h__
-#include <GL/gl.h>
+#ifndef __materials_ring_h__
+#define __materials_ring_h__
+
+#include "agl/utils.h"
 
 typedef struct {
-   const char* name;
-   AGlActor*   actor;
-} TabsViewTab;
+    AGlMaterial  material;
 
-typedef struct {
-   AGlActor    actor;
-   GList*      tabs;   // type TabsViewTab*
-   int         active;
-   struct {
-      int          tab;
-      float        opacity;
-      WfAnimatable animatable;
-  }            hover;
-} TabsView;
+    char         chr;
+    uint32_t     colour;
+    uint32_t     bg;
 
-AGlActorClass* tabs_view_get_class ();
+    PangoLayout* layout;
+} IconMaterial;
 
-AGlActor* tabs_view          (WaveformActor*);
-void      tabs_view__add_tab (TabsView*, const char*, AGlActor*);
+AGlMaterial* ring_new ();
 
 #endif
