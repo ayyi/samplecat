@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2017 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2018 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -130,7 +130,11 @@ main(int argc, char* argv[])
 	agl_gl_init();
 	glx_init(dpy);
 
+#ifdef USE_GLIB_LOOP
+	GMainLoop* mainloop = main_loop_new(dpy, win);
+#else
 	g_main_loop_new(NULL, true);
+#endif
 
 	gboolean add_content(gpointer _)
 	{
@@ -242,7 +246,11 @@ main(int argc, char* argv[])
 
 	on_window_resize(size.x, size.y);
 
+#ifdef USE_GLIB_LOOP
+	g_main_loop_run(mainloop);
+#else
 	event_loop(dpy, win);
+#endif
 
 	glXDestroyContext(dpy, ctx);
 	XDestroyWindow(dpy, win);

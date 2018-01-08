@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2012-2017 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2012-2018 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#define XLIB_ILLEGAL_ACCESS // needed to access Display internals
 #include <X11/Xlib.h>
 #include <X11/keysym.h>
 # define GLX_GLXEXT_PROTOTYPES
@@ -46,7 +47,9 @@ typedef Bool (*PFNGLXGETMSCRATEOMLPROC) (Display*, GLXDrawable, int32_t* numerat
 typedef int (*PFNGLXGETFRAMEUSAGEMESAPROC) (Display*, GLXDrawable, float* usage);
 #endif
 
+#ifndef USE_GLIB_LOOP
 static int current_time();
+#endif
 
 #define BENCHMARK
 #define NUL '\0'
@@ -208,7 +211,7 @@ no_border(Display* dpy, Window w)
  * Return the window and context handles.
  */
 void
-make_window(Display* dpy, const char* name, int x, int y, int width, int height, GLboolean fullscreen, AGlRootActor* _scene, Window* winRet, GLXContext* ctxRet)
+make_window(Display* dpy, const char* name, int x, int y, int width, int height, bool fullscreen, AGlRootActor* _scene, Window* winRet, GLXContext* ctxRet)
 {
 	scene = _scene;
 
@@ -227,7 +230,6 @@ make_window(Display* dpy, const char* name, int x, int y, int width, int height,
 	};
 	XSetWindowAttributes attr;
 	unsigned long mask;
-	XVisualInfo *visinfo;
 
 	int scrnum = DefaultScreen(dpy);
 	Window root = RootWindow(dpy, scrnum);
@@ -238,7 +240,7 @@ make_window(Display* dpy, const char* name, int x, int y, int width, int height,
 		height = DisplayHeight(dpy, scrnum);
 	}
 
-	visinfo = glXChooseVisual( dpy, scrnum, attrib );
+	XVisualInfo* visinfo = glXChooseVisual(dpy, scrnum, attrib);
 	if (!visinfo) {
 		printf("Error: couldn't get an RGB, Double-buffered visual\n");
 		exit(1);
@@ -255,12 +257,13 @@ make_window(Display* dpy, const char* name, int x, int y, int width, int height,
 
 	/* set hints and properties */
 	{
-		XSizeHints sizehints;
-		sizehints.x = x;
-		sizehints.y = y;
-		sizehints.width  = width;
-		sizehints.height = height;
-		sizehints.flags = USSize | USPosition;
+		XSizeHints sizehints = {
+			.x = x,
+			.y = y,
+			.width  = width,
+			.height = height,
+			.flags = USSize | USPosition
+		};
 		XSetNormalHints(dpy, win, &sizehints);
 		XSetStandardProperties(dpy, win, name, name, None, (char **)NULL, 0, &sizehints);
 	}
@@ -286,12 +289,35 @@ make_window(Display* dpy, const char* name, int x, int y, int width, int height,
 }
 
 
+#ifndef USE_GLIB_LOOP
+/*
+ *  This main loop uses a select() on X events so will respond
+ *  quickly to X events, but gives lower priority to glib events
+ *  such as timeouts and idles. This may prevent animations being smooth.
+ *
+ *  Adding a source to the glib loop for the X events is better
+ *  but is not currently working.
+ */
 void
 event_loop(Display* dpy, Window win)
 {
 	float frame_usage = 0.0;
 
+	fd_set rfds;
+
 	while (1) {
+		FD_ZERO(&rfds);
+		FD_SET(dpy->fd, &rfds);
+#if 0
+		int retval =
+#endif
+		select(dpy->fd + 1, &rfds, NULL, NULL, &(struct timeval){.tv_usec = 50000});
+#if 0
+		if(retval > 0) dbg(0, "ok %i", retval);
+		if(retval == 0) dbg(0, "timeout");
+		if(retval < 0) dbg(0, "error");
+#endif
+
 		while (XPending(dpy) > 0) {
 			XEvent event;
 			XNextEvent(dpy, &event);
@@ -333,9 +359,10 @@ event_loop(Display* dpy, Window win)
 		}
 
 		if(need_draw){
+			// TODO synchronise to frame clock
 			draw();
 			glXSwapBuffers(dpy, win);
-			need_draw = FALSE;
+			need_draw = false;
 		}
 
 		if (get_frame_usage) {
@@ -375,6 +402,7 @@ event_loop(Display* dpy, Window win)
 		g_main_context_iteration(NULL, false); // update animations
 	}
 }
+#endif
 
 
 /**
@@ -438,8 +466,8 @@ make_extension_table(const char* string)
 	// Determine the length of the next extension string.
 
 		for ( i = 0 
-	    ; (string[base + i] != NUL) && (string[base + i] != ' ')
-	    ; i++ ) {
+		; (string[base + i] != NUL) && (string[base + i] != ' ')
+		; i++ ) {
 			/* empty */ ;
 		}
 
@@ -479,56 +507,162 @@ make_extension_table(const char* string)
 	num_extensions = idx;
 }
 
-    
+
 /**
- * Determine of an extension is supported.  The extension string table
+ * Determine if an extension is supported. The extension string table
  * must have already be initialized by calling \c make_extension_table.
  * 
- * \praram ext  Extension to be tested.
+ * \param ext  Extension to be tested.
  * \return GL_TRUE of the extension is supported, GL_FALSE otherwise.
  * \sa make_extension_table
  */
 GLboolean
 is_extension_supported( const char * ext )
 {
-   unsigned   i;
-   
-   for ( i = 0 ; i < num_extensions ; i++ ) {
-      if ( strcmp( ext, extension_table[i] ) == 0 ) {
-	 return GL_TRUE;
-      }
-   }
-   
-   return GL_FALSE;
+	unsigned   i;
+
+	for(i=0;i<num_extensions;i++) {
+		if(strcmp(ext, extension_table[i]) == 0){
+			return GL_TRUE;
+		}
+	}
+
+	return GL_FALSE;
 }
 
 
+#ifndef USE_GLIB_LOOP
 #ifdef BENCHMARK
 #include <sys/time.h>
 #include <unistd.h>
 
-/* return current time (in seconds) */
+/*
+ * return current time (in seconds)
+ */
 static int
-current_time(void)
+current_time (void)
 {
-   struct timeval tv;
+	struct timeval tv;
 #ifdef __VMS
-   (void) gettimeofday(&tv, NULL );
+	(void) gettimeofday(&tv, NULL );
 #else
-   struct timezone tz;
-   (void) gettimeofday(&tv, &tz);
+	struct timezone tz;
+	(void) gettimeofday(&tv, &tz);
 #endif
-   return (int) tv.tv_sec;
+	return (int) tv.tv_sec;
 }
 
 #else /*BENCHMARK*/
 
 /* dummy */
 static int
-current_time(void)
+current_time (void)
 {
-   return 0;
+	return 0;
 }
 
 #endif /*BENCHMARK*/
+#endif
 
+//------------------------------------------------------------------------------
+
+#ifdef USE_GLIB_LOOP
+// TODO why are we getting very long delays?
+// TODO look at the source added by GDK to check for x events
+// TODO look at Enlightenment:
+//     "The Ecore library uses the select system call by default in its implementation of the main loop. This select function can be replaced with a custom select function when desired. This is how the GLib main loop is integrated. A custom select function is installed, which calls the relevant phases of the GLib main loop (prepare, query, check and dispatch as described above) and performs the polling phase by calling select for the file descriptors monitored by Ecore as well as the file descriptors that need to be monitored for the event sources installed in the GLib main loop. So, in this case, the GLib main loop is a secondary main loop and is integrated with the Ecore main loop."
+
+typedef struct
+{
+    GSource  source;
+    Display* dpy;
+    Window   w;
+} X11Source;
+
+
+/*
+ *  "For file descriptor sources, the prepare function typically returns FALSE,
+ *  since it must wait until poll() has been called before it knows whether any
+ *  events need to be processed. It sets the returned timeout to -1 to indicate
+ *  that it doesn't mind how long the poll() call blocks. In the check function, it
+ *  tests the results of the poll() call to see if the required condition has been
+ *  met, and returns TRUE if so."
+ */
+
+static bool
+x11_fd_prepare (GSource* source, gint* timeout)
+{
+	*timeout = -1;
+	return false;
+}
+
+
+static bool
+x11_fd_check (GSource* source)
+{
+	// this is run after the poll has finished
+
+	return XPending(((X11Source*)source)->dpy); // this doesnt make sense - if we have to check this, what is the point of polling? timeouts?
+}
+
+
+/*
+ *  Called to dispatch the event source, after it has returned TRUE in either its prepare or its check function.
+ */
+static bool
+x11_fd_dispatch (GSource* source, GSourceFunc callback, gpointer user_data)
+{
+	Display* dpy = ((X11Source*)source)->dpy;
+	Window window = ((X11Source*)source)->w;
+
+	g_return_if_fail(XPending(dpy) > 0, G_SOURCE_CONTINUE);
+
+	while (XPending(dpy) > 0) {
+		XEvent event;
+		XNextEvent(dpy, &event);
+		switch (event.type) {
+			case Expose:
+				need_draw = true;
+				break;
+			case MotionNotify:
+				agl_actor__xevent(scene, &event);
+				break;
+		}
+	}
+	if(need_draw){
+		draw();
+		glXSwapBuffers(dpy, window);
+		need_draw = false;
+	}
+
+	return G_SOURCE_CONTINUE;
+}
+
+
+GMainLoop*
+main_loop_new (Display* dpy, Window w)
+{
+	g_return_val_if_fail(dpy, NULL);
+
+	XSelectInput(dpy, w, StructureNotifyMask|ExposureMask|ButtonPressMask|ButtonReleaseMask|PointerMotionMask|PropertyChangeMask/*|KeyPressMask|KeyReleaseMask*/);
+
+	GMainLoop* mainloop = g_main_loop_new(NULL, FALSE);
+
+	GPollFD dpy_pollfd = {dpy->fd, G_IO_IN | G_IO_HUP | G_IO_ERR, 0};
+
+	static GSourceFuncs x11_source_funcs = {
+		x11_fd_prepare,
+		x11_fd_check,
+		x11_fd_dispatch,
+		NULL
+	};
+
+	GSource* x11_source = g_source_new(&x11_source_funcs, sizeof(X11Source));
+	((X11Source*)x11_source)->dpy = dpy;
+	((X11Source*)x11_source)->w = w;
+	g_source_add_poll(x11_source, &dpy_pollfd);
+	g_source_attach(x11_source, NULL);
+
+	return mainloop;
+}
+#endif
