@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of the Ayyi project. http://ayyi.org               |
-* | copyright (C) 2011-2017 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2011-2018 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -18,19 +18,15 @@ enum {
   TARGET_TEXT_PLAIN
 };
 
-#ifdef IS_DND_C
+#ifdef __dnd_c__
 GtkTargetEntry dnd_file_drag_types[] = {
       { "text/uri-list", 0, TARGET_URI_LIST },
       { "text/plain", 0, TARGET_TEXT_PLAIN }
 };
 gint dnd_file_drag_types_count = 2;
 #else
-GtkTargetEntry dnd_file_drag_types[2];
-gint dnd_file_drag_types_count;
+extern GtkTargetEntry dnd_file_drag_types[2];
+extern gint dnd_file_drag_types_count;
 #endif
-
-void     dnd_setup    ();
-gint     drag_received(GtkWidget*, GdkDragContext*, gint x, gint y, GtkSelectionData*, guint info, guint time, gpointer user_data);
-gint     drag_motion  (GtkWidget*, GdkDragContext*, gint x, gint y, guint time, gpointer user_data);
 
 #endif

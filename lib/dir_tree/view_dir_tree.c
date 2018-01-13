@@ -14,6 +14,7 @@
 #include "debug/debug.h"
 #include "utils/mime_type.h"
 #include "utils/ayyi_utils.h"
+#include "dnd/dnd.h"
 #include "file_manager/file_manager.h"
 #include "samplecat/model.h"
 
@@ -28,7 +29,6 @@
 
 #include <gdk/gdkkeysyms.h> /* for keyboard values */
 
-#include "dnd.h"
 extern GdkPixbuf* mime_type_get_pixbuf(MIME_type*);
 
 

@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of the Ayyi project. http://ayyi.org               |
-* | copyright (C) 2011-2017 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2011-2018 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -16,9 +16,9 @@
 #include <fnmatch.h>
 #include <gtk/gtk.h>
 #include "debug/debug.h"
+#include "dnd/dnd.h"
 #include "file_manager/file_manager.h"
 #include "file_manager/mimetype.h"
-#include "file_manager/dnd.h"
 #include "file_manager/fscache.h"
 #include "pixmaps.h"
 #include "minibuffer.h"
@@ -106,7 +106,7 @@ ayyi_libfilemanager_emit_dir_changed (AyyiLibfilemanager* self)
 
 
 static GObject*
-ayyi_libfilemanager_constructor (GType type, guint n_construct_properties, GObjectConstructParam * construct_properties)
+ayyi_libfilemanager_constructor (GType type, guint n_construct_properties, GObjectConstructParam* construct_properties)
 {
 	GObjectClass* parent_class = G_OBJECT_CLASS (ayyi_libfilemanager_parent_class);
 	GObject* obj = parent_class->constructor (type, n_construct_properties, construct_properties);
@@ -115,7 +115,7 @@ ayyi_libfilemanager_constructor (GType type, guint n_construct_properties, GObje
 
 
 static void
-ayyi_libfilemanager_class_init (AyyiLibfilemanagerClass * klass)
+ayyi_libfilemanager_class_init (AyyiLibfilemanagerClass* klass)
 {
 	ayyi_libfilemanager_parent_class = g_type_class_peek_parent (klass);
 	G_OBJECT_CLASS (klass)->constructor = ayyi_libfilemanager_constructor;
@@ -127,7 +127,7 @@ ayyi_libfilemanager_class_init (AyyiLibfilemanagerClass * klass)
 
 
 static void
-ayyi_libfilemanager_instance_init (AyyiLibfilemanager * self)
+ayyi_libfilemanager_instance_init (AyyiLibfilemanager* self)
 {
 }
 

@@ -38,6 +38,5 @@ libfilemanager_a_SOURCES = \
 	dir.c dir.h \
 	minibuffer.c minibuffer.h \
 	pixmaps.h \
-	fscache.h \
-	dnd.h
+	fscache.h
 

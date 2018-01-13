@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2017 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2018 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -424,7 +424,11 @@ GtkWindow
 		g_list_free(items);
 
 		if(panels[PANEL_TYPE_INSPECTOR].widget){
+#ifdef USE_OPENGL
 			app->inspector->show_waveform = !gdl_dock_item_is_active((GdlDockItem*)panels[PANEL_TYPE_WAVEFORM].dock_item);
+#else
+			app->inspector->show_waveform = true;
+#endif
 		}
 
 		g_signal_emit_by_name (app, "layout-changed");
@@ -737,8 +741,7 @@ make_fileview_pane()
 		gint expand = TRUE;
 		ViewDirTree* dir_list = app->dir_treeview2 = vdtree_new(initial_folder, expand); 
 		vdtree_set_select_func(dir_list, dir_on_select, NULL); //callback
-		GtkWidget* fs_tree = dir_list->widget;
-		gtk_paned_add1(GTK_PANED(fman_hpaned), fs_tree);
+		gtk_paned_add1(GTK_PANED(fman_hpaned), dir_list->widget);
 
 		void icon_theme_changed(Application* a, char* theme, gpointer _dir_tree)
 		{
@@ -1379,7 +1382,7 @@ show_waveform(gboolean enable)
 		dbg(0, "!");
 		C* c = _c;
 
-		g_signal_handler_disconnect((gpointer)app, c->selection_handler);
+		g_signal_handler_disconnect((gpointer)samplecat.model, c->selection_handler);
 		g_free(c);
 		window.waveform = NULL;
 	}
@@ -1458,7 +1461,9 @@ show_waveform(gboolean enable)
 #else
 		window.waveform = waveform_panel_new();
 #endif
+#ifdef DEBUG
 		g_object_weak_ref((GObject*)window.waveform, on_waveform_view_finalize, c);
+#endif
 
 #ifndef USE_GDL
 		gtk_box_pack_start(GTK_BOX(window.vbox), window.waveform, EXPAND_FALSE, FILL_TRUE, 0);

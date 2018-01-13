@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2014 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2018 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -31,7 +31,7 @@ static bool listview_item_set_colour(GtkTreePath* path, unsigned colour_index);
 
 
 void
-dnd_setup()
+dnd_setup ()
 {
 	gtk_drag_dest_set(app->window, GTK_DEST_DEFAULT_ALL,
 	                  dnd_file_drag_types,          // const GtkTargetEntry *targets,
@@ -42,50 +42,43 @@ dnd_setup()
 
 
 gint
-drag_received(GtkWidget* widget, GdkDragContext* drag_context, gint x, gint y, GtkSelectionData* data, guint info, guint time, gpointer user_data)
+drag_received (GtkWidget* widget, GdkDragContext* drag_context, gint x, gint y, GtkSelectionData* data, guint info, guint time, gpointer user_data)
 {
-  //this receives drops for the whole window.
+	// this receives drops for the whole window.
 
-  if(!data || data->length < 0){ perr("no data!\n"); return -1; }
+	if(!data || data->length < 0){ perr("no data!\n"); return -1; }
 
-  dbg(1, "%s", data->data);
+	dbg(1, "%s", data->data);
 
-  if(g_str_has_prefix((char*)data->data, "colour:")){
+	if(g_str_has_prefix((char*)data->data, "colour:")){
 
-#if 0
-    if(listview__get_mouseover_row() > -1)
-    {
-      dbg(1, "treeview!");
-    }
-#endif
+		char* colour_string = (char*)data->data + 7;
+		unsigned colour_index = atoi(colour_string) ? atoi(colour_string) - 1 : 0;
 
-    char* colour_string = (char*)data->data + 7;
-    unsigned colour_index = atoi(colour_string) ? atoi(colour_string) - 1 : 0;
-
-    //which row are we on?
-    GtkTreePath* path;
-    GtkTreeIter iter;
-    gint tx, treeview_top;
-    gdk_window_get_position(app->libraryview->widget->window, &tx, &treeview_top);
-    dbg(2, "treeview_top=%i", y);
+		// which row are we on?
+		GtkTreePath* path;
+		GtkTreeIter iter;
+		gint tx, treeview_top;
+		gdk_window_get_position(app->libraryview->widget->window, &tx, &treeview_top);
+		dbg(2, "treeview_top=%i", y);
 
 #ifdef HAVE_GTK_2_12
-    gint bx, by;
-    gtk_tree_view_convert_widget_to_bin_window_coords(GTK_TREE_VIEW(app->libraryview->widget), x, y - treeview_top, &bx, &by);
-    dbg(2, "coords: %dx%d => %dx%d", x, y, bx, by);
+		gint bx, by;
+		gtk_tree_view_convert_widget_to_bin_window_coords(GTK_TREE_VIEW(app->libraryview->widget), x, y - treeview_top, &bx, &by);
+		dbg(2, "coords: %dx%d => %dx%d", x, y, bx, by);
 
 #else
-    gint by = y - treeview_top - 20;
+		gint by = y - treeview_top - 20;
 #endif
 
 #ifdef USE_GDL
-	GdkWindow* top_window = gdk_window_get_toplevel(gtk_widget_get_toplevel(app->libraryview->widget)->window);
-	GdkWindow* window = app->libraryview->widget->window;
-	while((window = gdk_window_get_parent(window)) != top_window){
-		gint x0, y0;
-		gdk_window_get_position(window, &x0, &y0);
-		by -= y0;
-	}
+		GdkWindow* top_window = gdk_window_get_toplevel(gtk_widget_get_toplevel(app->libraryview->widget)->window);
+		GdkWindow* window = app->libraryview->widget->window;
+		while((window = gdk_window_get_parent(window)) != top_window){
+			gint x0, y0;
+			gdk_window_get_position(window, &x0, &y0);
+			by -= y0;
+		}
 #endif
 
     if(gtk_tree_view_get_path_at_pos(GTK_TREE_VIEW(app->libraryview->widget), x, by, &path, NULL, NULL, NULL)){

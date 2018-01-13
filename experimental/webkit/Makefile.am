@@ -41,13 +41,13 @@ samplecat_webkit_LDADD = \
 	$(top_srcdir)/lib/samplecat/db/libsamplecatdb.a \
 	$(top_srcdir)/lib/audio_analysis/libaudioanalysis.a \
 	$(top_srcdir)/lib/debug/libdebug.a \
-	$(top_srcdir)/lib/utils/libutils.a \
 	$(top_srcdir)/lib/waveform/waveform/.libs/libwaveform.a \
 	$(top_srcdir)/lib/waveform/agl/.libs/libagl.a \
 	$(top_srcdir)/lib/waveform/transition/.libs/libtransition.a \
 	$(top_srcdir)/lib/waveform/decoder/.libs/libwaveformdecoder.a \
 	$(top_srcdir)/lib/file_manager/libfilemanager.a \
 	$(top_srcdir)/lib/xdgmime/libxdgmime.a \
+	$(top_srcdir)/lib/utils/libutils.a \
 	$(SAMPLECAT_LIBS) \
 	$(AYYI_LIBS) \
 	$(TRACKER_LIBS) \

@@ -1,5 +1,7 @@
 SUBDIRS = utils debug xdgmime file_manager dir_tree waveform gdl samplecat audio_analysis
 
+EXTRA_DIST = dnd/dnd.h
+
 # Override Automake's installation targets with the command ":" that does nothing.
 install:; @:
 install-exec:; @:

@@ -30,6 +30,7 @@
 #include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
 
+#include "dnd/dnd.h"
 #include "debug/debug.h"
 #include "support.h"
 #include "file_manager.h"

@@ -102,7 +102,6 @@ samplecat_LDADD = \
 	$(top_srcdir)/lib/samplecat/db/libsamplecatdb.a \
 	$(GDL_LDFLAGS) \
 	gimp/libgimpwidgets.a \
-	$(top_srcdir)/lib/waveform/waveform/.libs/libwaveform.a \
 	$(top_srcdir)/lib/waveform/decoder/.libs/libwaveformdecoder.a \
 	$(top_srcdir)/lib/audio_analysis/libaudioanalysis.a \
 	$(SAMPLECAT_LIBS) \
@@ -114,6 +113,7 @@ samplecat_LDADD = \
 	$(JACK_LIBS) $(SNDFILE_LIBS) ${SAMPLERATE_LIBS} \
 	$(GTHREAD_LIBS) \
 	$(FFTW3_LIBS) \
+	$(top_srcdir)/lib/waveform/waveform/.libs/libwaveform.a \
 	$(OPENGL_LDFLAGS) \
 	$(LIBASS_LDFLAGS) \
 	$(ZLIB_LIBS) \
