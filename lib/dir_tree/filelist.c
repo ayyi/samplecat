@@ -13,7 +13,7 @@
 #include "file_manager/file_manager.h"
 #include "file_manager/support.h"
 #include "view_dir_tree.h"
-#include "support.h"
+#include "utils/ayyi_utils.h"
 
 #include "gqview.h"
 #include "filelist.h"

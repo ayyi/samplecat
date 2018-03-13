@@ -1,11 +1,17 @@
+/*
+ * This software is released under the GNU General Public License (GNU GPL).
+ * Please read the included file COPYING for more information.
+ * This software comes with no warranty of any kind, use at your own risk!
+ */
 #include <gtk/gtk.h>
 #include "debug/debug.h"
 #include "file_manager/file_manager.h"
 #include "view_dir_tree.h"
-#include "support.h"
 #include "gqview.h"
 #include "ui_fileops.h"
 #include "utilops.h"
+
+extern void statusbar_print (int n, char* fmt, ...);
 
 static void observer__files_moved(GList* file_list, const char* dest);
 

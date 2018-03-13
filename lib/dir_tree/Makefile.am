@@ -1,12 +1,9 @@
 
 AM_CFLAGS = \
-	-g -Wall \
 	-DPACKAGE_DATA_DIR=\""$(datadir)"\" \
 	-DPACKAGE_LOCALE_DIR=\""$(prefix)/$(DATADIRNAME)/locale"\" \
 	-DIMAGES_DIR=\"$(imagesdir)\" \
 	-DG_LOG_DOMAIN=\"DirTree\" \
-	-I$(top_srcdir)/src \
-	-I$(top_srcdir)/src/xdgmime \
 	-I$(top_srcdir)/lib \
 	$(GTK_CFLAGS)
 
