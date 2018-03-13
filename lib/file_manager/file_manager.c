@@ -50,6 +50,7 @@ enum {
 static void file_manager__load_plugins();
 
 
+	static gboolean _load_plugins(gpointer user_data){ file_manager__load_plugins(); return G_SOURCE_REMOVE; }
 void
 file_manager__init ()
 {
@@ -59,7 +60,6 @@ file_manager__init ()
 	pixmaps_init();
 	dir_init();
 
-	gboolean _load_plugins(gpointer user_data){ file_manager__load_plugins(); return G_SOURCE_REMOVE; }
 	g_idle_add(_load_plugins, NULL);
 
 	initialised = TRUE;

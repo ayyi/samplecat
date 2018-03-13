@@ -317,8 +317,6 @@ gdl_dock_constructor (GType                  type,
         }
 
         if (dock->_priv->floating) {
-            GdlDockObject *controller;
-            
             /* create floating window for this dock */
             dock->_priv->window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
             g_object_set_data (G_OBJECT (dock->_priv->window), "dock", dock);

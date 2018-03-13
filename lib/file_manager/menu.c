@@ -170,6 +170,16 @@ fm_menu__item_image_from_stock(GtkWidget* menu, GtkWidget* item, char* stock_id)
 }
 
 
+	static void menu_on_dir_changed(GtkWidget* widget, char* dir, gpointer menu_item)
+	{
+		AyyiLibfilemanager* fm = file_manager__get();
+		dbg(2, "dir=%s name=%s", fm->real_path, dir);
+		g_return_if_fail(fm->real_path);
+		GtkLabel* label = (GtkLabel*)gtk_bin_get_child((GtkBin*)menu_item);
+		if(label){
+			gtk_label_set_text(label, fm->real_path);
+		}
+	}
 GtkWidget*
 fm__make_context_menu()
 {
@@ -222,16 +232,6 @@ fm__make_context_menu()
 
 	fm__menu_on_view_change(menu);
 
-	void menu_on_dir_changed(GtkWidget* widget, char* dir, gpointer menu_item)
-	{
-		AyyiLibfilemanager* fm = file_manager__get();
-		dbg(2, "dir=%s name=%s", fm->real_path, dir);
-		g_return_if_fail(fm->real_path);
-		GtkLabel* label = (GtkLabel*)gtk_bin_get_child((GtkBin*)menu_item);
-		if(label){
-			gtk_label_set_text(label, fm->real_path);
-		}
-	}
 	g_signal_connect(file_manager__get(), "dir_changed", G_CALLBACK(menu_on_dir_changed), title);
 
 	gtk_widget_show_all(menu);

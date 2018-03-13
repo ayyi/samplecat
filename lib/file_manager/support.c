@@ -821,11 +821,11 @@ strcmp2 (gconstpointer a, gconstpointer b)
 
 	gchar* aaa = g_utf8_casefold(aa, -1);
 	gchar* bbb = g_utf8_casefold(bb, -1);
-	char* diff = strcmp(aaa, bbb);
+	int diff = strcmp(aaa, bbb);
 	g_free(aaa);
 	g_free(bbb);
 
-	return diff != NULL;
+	return diff != 0;
 }
 
 

@@ -1068,7 +1068,7 @@ dir_rescan (Directory* dir)
 	dir_merge_new(dir);
 	gdk_flush();
 
-	char filepath[256];
+	char filepath[FILENAME_MAX];
 	struct dirent* ent;
 	/* Make a list of all the names in the directory */
 	while ((ent = readdir(d)))
@@ -1081,7 +1081,7 @@ dir_rescan (Directory* dir)
 				continue;		/* Ignore '..' */
 		}
 
-		snprintf(filepath, 255, "%s/%s", pathname, ent->d_name);
+		snprintf(filepath, FILENAME_MAX - 1, "%s/%s", pathname, ent->d_name);
 		dbg(3, "%s", filepath);
 		if(g_file_test(filepath, G_FILE_TEST_IS_DIR)) continue;
 

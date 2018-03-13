@@ -38,6 +38,8 @@
 #include "dnd.h"
 #include "cell_icon.h"
 
+#pragma GCC diagnostic ignored "-Wmisleading-indentation"
+
 /* These are the column numbers in the ListStore */
 #define COL_LEAF 0
 #define COL_TYPE 1

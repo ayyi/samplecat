@@ -39,6 +39,8 @@
 #include "ladspa_proc.h"
 #include "jack_player.h"
 
+#pragma GCC diagnostic ignored "-Wformat-truncation"
+
 #ifdef HAVE_JACK
 
 #ifdef __APPLE__  /* weak linking on OSX */
@@ -65,14 +67,14 @@ typedef struct {
 }
 jack_ringbuffer_t ;
 
-jack_ringbuffer_t *jack_ringbuffer_create(size_t sz) JACK_OPTIONAL_WEAK_EXPORT;
-void jack_ringbuffer_free(jack_ringbuffer_t *rb) JACK_OPTIONAL_WEAK_EXPORT;
-void jack_ringbuffer_read_advance(jack_ringbuffer_t *rb, size_t cnt) JACK_OPTIONAL_WEAK_EXPORT;
-size_t jack_ringbuffer_read_space(const jack_ringbuffer_t *rb) JACK_OPTIONAL_WEAK_EXPORT;
-int jack_ringbuffer_mlock(jack_ringbuffer_t *rb) JACK_OPTIONAL_WEAK_EXPORT;
-size_t jack_ringbuffer_write(jack_ringbuffer_t *rb, const char *src, size_t cnt) JACK_OPTIONAL_WEAK_EXPORT;
-size_t jack_ringbuffer_read(jack_ringbuffer_t *rb, char *dest, size_t cnt) JACK_OPTIONAL_WEAK_EXPORT;
-size_t jack_ringbuffer_write_space(const jack_ringbuffer_t *rb) JACK_OPTIONAL_WEAK_EXPORT;
+jack_ringbuffer_t* jack_ringbuffer_create       (size_t sz)                               JACK_OPTIONAL_WEAK_EXPORT;
+void               jack_ringbuffer_free         (jack_ringbuffer_t*)                      JACK_OPTIONAL_WEAK_EXPORT;
+void               jack_ringbuffer_read_advance (jack_ringbuffer_t*, size_t cnt)          JACK_OPTIONAL_WEAK_EXPORT;
+size_t             jack_ringbuffer_read_space   (const jack_ringbuffer_t*)                JACK_OPTIONAL_WEAK_EXPORT;
+int                jack_ringbuffer_mlock        (jack_ringbuffer_t*)                      JACK_OPTIONAL_WEAK_EXPORT;
+size_t             jack_ringbuffer_write        (jack_ringbuffer_t*, const char*, size_t) JACK_OPTIONAL_WEAK_EXPORT;
+size_t             jack_ringbuffer_read         (jack_ringbuffer_t*, char*, size_t)       JACK_OPTIONAL_WEAK_EXPORT;
+size_t             jack_ringbuffer_write_space  (const jack_ringbuffer_t*)                JACK_OPTIONAL_WEAK_EXPORT;
 #endif
 
 
@@ -83,7 +85,7 @@ static jack_ringbuffer_t *rb = NULL;
 
 
 #ifdef JACK_MIDI
-#warning COMPILING W/ JACK-MIDI PLAYER TRIGGER
+//#warning COMPILING W/ JACK-MIDI PLAYER TRIGGER
 #include <jack/midiport.h>
 static jack_port_t *jack_midi_port = NULL;
 
@@ -265,8 +267,9 @@ void jack_shutdown_callback(void *arg){
 	JACKdisconnect();
 }
 
-inline void
-update_playposition (int64_t decoder_position, float varispeed) {
+static inline void
+update_playposition (int64_t decoder_position, float varispeed)
+{
 #ifdef ENABLE_RESAMPLING
 	const int64_t latency = floor(jack_ringbuffer_read_space(rb) / myplayer->info.channels / sizeof(float) / m_fResampleRatio / varispeed);
 #else

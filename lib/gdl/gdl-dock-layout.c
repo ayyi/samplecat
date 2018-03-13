@@ -101,7 +101,7 @@ static void     gdl_dock_layout_dispose         (GObject            *object);
 
 static void     gdl_dock_layout_build_doc       (GdlDockLayout      *layout);
 
-static xmlNodePtr gdl_dock_layout_find_layout   (GdlDockLayout      *layout, 
+static xmlNodePtr gdl_dock_layout_find_layout   (GdlDockLayout      *layout,
                                                  const gchar        *name);
 
 static void     gdl_dock_layout_build_models    (GdlDockLayout      *layout);
@@ -370,7 +370,7 @@ update_items_model (GdlDockLayout *layout)
     /* add any remaining objects */
     for (l = items; l; l = l->next) {
         GdlDockObject *object = l->data;
-        
+
         g_object_get (object, 
                       "long-name", &long_name, 
                       "locked", &locked, 
@@ -384,7 +384,7 @@ update_items_model (GdlDockLayout *layout)
                             -1);
         g_free (long_name);
     }
-    
+
     g_list_free (items);
 }
 
@@ -393,7 +393,7 @@ update_layouts_model (GdlDockLayout *layout)
 {
     GList *items, *l;
     GtkTreeIter iter;
-    
+
     g_return_if_fail (layout != NULL);
     g_return_if_fail (layout->_priv->layouts_model != NULL);
 
@@ -471,7 +471,7 @@ show_item_toggled_cb (GtkCellRendererToggle *renderer,
     GdlDockItem   *item;
 
     g_return_if_fail (layout != NULL);
-    
+
     model = GTK_TREE_MODEL (layout->_priv->items_model);
     gtk_tree_model_get_iter (model, &iter, path);
     gtk_tree_model_get (model, &iter, 
@@ -495,7 +495,7 @@ all_locked_toggled_cb (GtkWidget *widget,
     GdlDockLayoutUIData *ui_data = (GdlDockLayoutUIData *) data;
     GdlDockMaster       *master;
     gboolean             locked;
-    
+
     g_return_if_fail (ui_data->layout != NULL);
     master = ui_data->layout->master;
     g_return_if_fail (master != NULL);
@@ -520,7 +520,7 @@ layout_ui_destroyed (GtkWidget *widget,
                                                       G_SIGNAL_MATCH_DATA,
                                                       0, 0, NULL, NULL,
                                                       ui_data);
-            
+
             g_object_remove_weak_pointer (G_OBJECT (ui_data->layout),
                                           (gpointer *) &ui_data->layout);
             ui_data->layout = NULL;
@@ -580,13 +580,13 @@ gdl_dock_layout_construct_items_ui (GdlDockLayout *layout)
     GtkTreeViewColumn   *column;
 
     GdlDockLayoutUIData *ui_data;
-    
+
     /* load the interface if it wasn't provided */
     gui = load_interface ();
-    
+
     if (!gui)
         return NULL;
-    
+
     /* get the container */
     dialog = GTK_WIDGET (gtk_builder_get_object (gui, "layout_dialog"));
 
@@ -616,7 +616,7 @@ gdl_dock_layout_construct_items_ui (GdlDockLayout *layout)
         /* force update now */
         master_locked_notify_cb (layout->master, NULL, ui_data);
     }
-    
+
     /* set models */
     gtk_tree_view_set_model (GTK_TREE_VIEW (items_list),
                              GTK_TREE_MODEL (layout->_priv->items_model));
@@ -722,7 +722,7 @@ gdl_dock_layout_setup_object (GdlDockMaster *master,
     GParameter    *params = NULL;
     gint           n_params = 0;
     GValue         serialized = { 0, };
-    
+
     object_name = xmlGetProp (node, BAD_CAST GDL_DOCK_NAME_PROPERTY);
     if (object_name && strlen ((char*)object_name) > 0) {
         /* the object must already be bound to the master */
@@ -741,22 +741,22 @@ gdl_dock_layout_setup_object (GdlDockMaster *master,
                          "a dock object whose nick is '%s'"), node->name);
         }
     }
-    
+
     if (object_type == G_TYPE_NONE || !G_TYPE_IS_CLASSED (object_type))
         return NULL;
 
     object_class = g_type_class_ref (object_type);
     props = g_object_class_list_properties (object_class, &n_props);
-        
+
     /* create parameter slots */
     /* extra parameter is the master */
     params = g_new0 (GParameter, n_props + 1);
     *after_params = g_new0 (GParameter, n_props);
     *n_after_params = 0;
-    
+
     /* initialize value used for transformations */
     g_value_init (&serialized, GDL_TYPE_DOCK_PARAM);
-    
+
     for (i = 0; i < n_props; i++) {
         xmlChar *xml_prop;
 
@@ -798,7 +798,7 @@ gdl_dock_layout_setup_object (GdlDockMaster *master,
         g_value_init (&params [n_params].value, GDL_TYPE_DOCK_MASTER);
         g_value_set_object (&params [n_params].value, master);
         n_params++;
-        
+
         /* construct the object if we have to */
         /* set the master, so toplevels are created correctly and
            other objects are bound */
@@ -1252,6 +1252,11 @@ gdl_dock_layout_delete_layout (GdlDockLayout *layout,
 * Runs the layout manager.
 */
 
+    static void on_dialogue_response(GtkDialog *dialog, gint response_id, gpointer user_data)
+    {
+        gtk_widget_hide((GtkWidget*)dialog); // hiding the widget causes the main loop to return to normal
+    }
+
 void
 gdl_dock_layout_run_manager (GdlDockLayout *layout)
 {
@@ -1265,11 +1270,6 @@ gdl_dock_layout_run_manager (GdlDockLayout *layout)
         return;
 
     dialog = gdl_dock_layout_construct_items_ui (layout);
-
-    void on_dialogue_response(GtkDialog *dialog, gint response_id, gpointer user_data)
-    {
-        gtk_widget_hide((GtkWidget*)dialog); // hiding the widget causes the main loop to return to normal
-    }
 
     g_signal_connect(dialog, "response", (GCallback)on_dialogue_response, NULL);
    
@@ -1326,7 +1326,7 @@ gboolean
 gdl_dock_layout_load_from_string (GdlDockLayout *layout,
                                   const gchar *str)
 {
-    g_return_if_fail(str);
+    g_return_val_if_fail(str, FALSE);
 
     gboolean retval = FALSE;
 
