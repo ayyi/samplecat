@@ -24,13 +24,17 @@ AC_SYS_LARGEFILE
 
 AC_CONFIG_SUBDIRS([lib/waveform])
 
+# At least level 2 optimisation is needed to allow GCC to
+# determine that not all nested functions require trampolines.
+CFLAGS="$CFLAGS -O2"
+
 # Check for debugging flag
 debug="no"
 AC_ARG_ENABLE(debug,
 	[AS_HELP_STRING(--enable-debug, [Enable debugging (false)])],
 	[debug="$enableval"])
 if test "$debug" = "yes"; then
-	CFLAGS="$CFLAGS -O0 -g -DDEBUG"
+	CFLAGS="$CFLAGS -g -DDEBUG"
 	CXXFLAGS="$CFLAGS"
 else
 	CFLAGS="$CFLAGS -DNDEBUG"
@@ -454,9 +458,8 @@ dnl ----------------------------------------------------------------------------
 MATH_LDFLAGS=-lm
 AC_SUBST(MATH_LDFLAGS)
 
-# Bolt on a few specific flags to CXXFLAGS that should always be used
-CXXFLAGS="$CXXFLAGS -pipe -fmessage-length=139 -fdiagnostics-show-location=every-line"
-CFLAGS="$CFLAGS -pipe  -fmessage-length=139 -fdiagnostics-show-location=every-line"
+CXXFLAGS="$CXXFLAGS -pipe -fmessage-length=200 -fdiagnostics-show-location=every-line"
+CFLAGS="$CFLAGS -pipe -fmessage-length=200 -fdiagnostics-show-location=every-line -Wno-misleading-indentation"
 
 AC_CONFIG_FILES([Makefile])
 AC_CONFIG_FILES([lib/Makefile])
