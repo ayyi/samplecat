@@ -3,7 +3,6 @@
 SUBDIRS =
 
 AM_CFLAGS = \
-	-g -Wall -O2 \
 	-DPACKAGE_DATA_DIR=\""$(datadir)"\" \
 	-DPACKAGE_LOCALE_DIR=\""$(prefix)/$(DATADIRNAME)/locale"\" \
 	-I$(top_srcdir)/lib \

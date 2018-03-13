@@ -1780,13 +1780,11 @@ ViewDirTree *vdtree_new(const gchar *path, gint expand)
 	vdt->treeview = gtk_tree_view_new_with_model(GTK_TREE_MODEL(store));
 	g_object_unref(store);
 
-//#ifdef HAVE_GTK_2_10
 	//use treeview lines:
 	GValue gval = {0,};
 	g_value_init(&gval, G_TYPE_CHAR);
-	g_value_set_char(&gval, '1');
+	g_value_set_schar(&gval, '1');
 	g_object_set_property(G_OBJECT(vdt->treeview), "enable-tree-lines", &gval);
-//#endif
 
 	gtk_tree_view_set_headers_visible(GTK_TREE_VIEW(vdt->treeview), FALSE);
 	gtk_tree_view_set_enable_search(GTK_TREE_VIEW(vdt->treeview), FALSE);

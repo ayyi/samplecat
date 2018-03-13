@@ -51,8 +51,6 @@ enum  {
 };
 void spectrogram_widget_image_ready (SpectrogramWidget* self, gchar* filename, GdkPixbuf* _pixbuf, void* user_data);
 void spectrogram_widget_set_file (SpectrogramWidget* self, gchar* filename);
-static void __lambda2_ (SpectrogramWidget* self, gchar* filename, GdkPixbuf* a, void* b);
-static void ___lambda2__render_done_func (gchar* filename, GdkPixbuf* a, void* user_data_, gpointer self);
 static void _spectrogram_widget_image_ready_render_done_func (gchar* filename, GdkPixbuf* a, void* user_data_, gpointer self);
 static void spectrogram_widget_real_realize (GtkWidget* base);
 static void spectrogram_widget_real_unrealize (GtkWidget* base);
@@ -70,7 +68,7 @@ void spectrogram_widget_image_ready (SpectrogramWidget* self, gchar* filename, G
 	GdkPixbuf* _tmp2_;
 	g_return_if_fail (self != NULL);
 	_tmp0_ = self->priv->pixbuf;
-	if ((gboolean) _tmp0_) {
+	if (_tmp0_) {
 		GdkPixbuf* _tmp1_;
 		_tmp1_ = self->priv->pixbuf;
 		g_object_unref ((GObject*) _tmp1_);
@@ -78,20 +76,6 @@ void spectrogram_widget_image_ready (SpectrogramWidget* self, gchar* filename, G
 	_tmp2_ = _pixbuf;
 	self->priv->pixbuf = _tmp2_;
 	gtk_widget_queue_draw ((GtkWidget*) self);
-}
-
-
-static void __lambda2_ (SpectrogramWidget* self, gchar* filename, GdkPixbuf* a, void* b) {
-	GdkPixbuf* _tmp0_;
-	_tmp0_ = a;
-	self->priv->pixbuf = _tmp0_;
-	g_print ("%s: got callback!\n", "SpectrogramWidget.set_file._lambda2_");
-	gtk_widget_queue_draw ((GtkWidget*) self);
-}
-
-
-static void ___lambda2__render_done_func (gchar* filename, GdkPixbuf* a, void* user_data_, gpointer self) {
-	__lambda2_ (self, filename, a, user_data_);
 }
 
 
@@ -104,7 +88,6 @@ void spectrogram_widget_set_file (SpectrogramWidget* self, gchar* filename) {
 	gchar* _tmp0_;
 	gchar* _tmp1_ = NULL;
 	GdkPixbuf* _tmp2_;
-	RenderDoneFunc p1;
 	void* p1_target;
 	GDestroyNotify p1_target_destroy_notify;
 	gchar* _tmp4_;
@@ -114,19 +97,17 @@ void spectrogram_widget_set_file (SpectrogramWidget* self, gchar* filename) {
 	_g_free0 (self->priv->_filename);
 	self->priv->_filename = _tmp1_;
 	_tmp2_ = self->priv->pixbuf;
-	if ((gboolean) _tmp2_) {
+	if (_tmp2_) {
 		GdkPixbuf* _tmp3_;
 		_tmp3_ = self->priv->pixbuf;
 		gdk_pixbuf_fill (_tmp3_, (guint32) 0x0);
 	}
 	cancel_spectrogram (NULL);
-	p1 = ___lambda2__render_done_func;
 	p1_target = g_object_ref (self);
 	p1_target_destroy_notify = g_object_unref;
 	_tmp4_ = filename;
 	get_spectrogram_with_target (_tmp4_, _spectrogram_widget_image_ready_render_done_func, self, NULL);
 	(p1_target_destroy_notify == NULL) ? NULL : (p1_target_destroy_notify (p1_target), NULL);
-	p1 = NULL;
 	p1_target = NULL;
 	p1_target_destroy_notify = NULL;
 }
@@ -284,7 +265,6 @@ static gboolean spectrogram_widget_real_expose_event (GtkWidget* base, GdkEventE
 	GtkStyle* _tmp14_;
 	GtkStyle* _tmp15_;
 	GdkGC** _tmp16_;
-	gint _tmp16__length1;
 	GdkGC* _tmp17_;
 	gint _tmp18_;
 	gint _tmp19_;
@@ -318,7 +298,6 @@ static gboolean spectrogram_widget_real_expose_event (GtkWidget* base, GdkEventE
 	_tmp14_ = gtk_widget_get_style ((GtkWidget*) self);
 	_tmp15_ = _tmp14_;
 	_tmp16_ = _tmp15_->fg_gc;
-	_tmp16__length1 = -1;
 	_tmp17_ = _tmp16_[GTK_STATE_NORMAL];
 	_tmp18_ = width;
 	_tmp19_ = height;
@@ -346,10 +325,8 @@ SpectrogramWidget* spectrogram_widget_new (void) {
 static GObject * spectrogram_widget_constructor (GType type, guint n_construct_properties, GObjectConstructParam * construct_properties) {
 	GObject * obj;
 	GObjectClass * parent_class;
-	SpectrogramWidget * self;
 	parent_class = G_OBJECT_CLASS (spectrogram_widget_parent_class);
 	obj = parent_class->constructor (type, n_construct_properties, construct_properties);
-	self = G_TYPE_CHECK_INSTANCE_CAST (obj, TYPE_SPECTROGRAM_WIDGET, SpectrogramWidget);
 	return obj;
 }
 

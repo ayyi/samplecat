@@ -33,6 +33,8 @@
 #endif
 #include "db/db.h"
 
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+
 #define backend samplecat.model->backend
 
 static SamplecatDBConfig* mysql_config;

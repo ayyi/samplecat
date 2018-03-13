@@ -1,7 +1,6 @@
 SUBDIRS = db
 
 AM_CFLAGS = \
-	-g -Wall \
 	-DPACKAGE_DATA_DIR=\""$(datadir)"\" \
 	-DPACKAGE_LOCALE_DIR=\""$(prefix)/$(DATADIRNAME)/locale"\" \
 	-DIMAGES_DIR=\"$(imagesdir)\" \

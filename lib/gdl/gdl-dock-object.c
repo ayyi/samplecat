@@ -104,12 +104,10 @@ gdl_dock_object_class_init (GdlDockObjectClass *klass)
     GObjectClass      *g_object_class;
     GtkObjectClass    *object_class;
     GtkWidgetClass    *widget_class;
-    GtkContainerClass *container_class;
 
     g_object_class = G_OBJECT_CLASS (klass);
     object_class = GTK_OBJECT_CLASS (klass);
     widget_class = GTK_WIDGET_CLASS (klass);
-    container_class = GTK_CONTAINER_CLASS (klass);
 
     g_object_class->set_property = gdl_dock_object_set_property;
     g_object_class->get_property = gdl_dock_object_get_property;

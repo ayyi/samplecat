@@ -283,8 +283,8 @@ static void gl_spectrogram_set_projection (GlSpectrogram* self) {
 
 
 static void _lambda0_ (gchar* filename, GdkPixbuf* _pixbuf, void* b, GlSpectrogram* self) {
-	if ((gboolean) _pixbuf) {
-		if ((gboolean) self->priv->pixbuf) {
+	if (_pixbuf) {
+		if (self->priv->pixbuf) {
 			g_object_unref ((GObject*) self->priv->pixbuf);
 		}
 		self->priv->pixbuf = _pixbuf;

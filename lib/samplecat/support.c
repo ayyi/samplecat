@@ -24,6 +24,8 @@
 
 #include "samplecat/support.h"
 
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+
 
 void
 p_(int level, const char* format, ...)
