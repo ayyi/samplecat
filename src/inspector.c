@@ -237,9 +237,9 @@ inspector_new()
 	{
 		InspectorPriv* i = app->inspector->priv;
 
-		bool wide = allocation->width > allocation->height;
+		bool wide = allocation->width > 320 && allocation->width > allocation->height;
 		if(wide != i->wide){
-			dbg(0, "-> allocated %i x %i wide=%i %s", allocation->width, allocation->height, wide, wide != i->wide ? "CHANGED" : "");
+			dbg(1, "-> allocated %i x %i wide=%i %s", allocation->width, allocation->height, wide, wide != i->wide ? "CHANGED" : "");
 			inspector_remove_cells(&i->ebur);
 			if(wide) i->meta.start = 3;
 			i->wide = wide;
