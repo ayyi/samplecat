@@ -57,10 +57,10 @@ enum {SET_MEDIA, SET_TYPE};
 char theme_name[64] = {'\0',};
 
 static MIME_type* get_mime_type    (const gchar* type_name, gboolean can_create);
+#if 0
 #ifdef DEBUG
 static void       print_icon_list  ();
 #endif
-#if 0
 static void      _set_icon_theme   (const char*);
 #endif
 
@@ -728,6 +728,7 @@ get_xdg_data_dirs (int *n_dirs)
 #endif
 
 
+#if 0
 #ifdef DEBUG
 static void
 print_icon_list()
@@ -749,7 +750,6 @@ print_icon_list()
 #endif
 
 
-#if 0
 /*static*/ void
 _set_icon_theme(const char* name)
 {
