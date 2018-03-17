@@ -222,7 +222,7 @@ config_save(ConfigContext* ctx)
 	}
 
 	AyyiLibfilemanager* fm = file_manager__get();
-	if(fm){
+	if(fm && fm->real_path){
 		g_key_file_set_value(ctx->key_file, "Samplecat", "browse_dir", fm->real_path);
 	}
 

@@ -145,9 +145,15 @@ sqlite__connect()
 	int rows, columns;
 	char** table = NULL;
 	char* errmsg = NULL;
-	int n = sqlite3_get_table(db, "SELECT name, sql FROM sqlite_master WHERE type='table' AND name='samples';",
-			&table, &rows, &columns, &errmsg);
-	if(n==SQLITE_OK && (table != NULL) && (rows==1) && (columns==2)) {
+	int n = sqlite3_get_table(
+		db,
+		"SELECT name, sql FROM sqlite_master WHERE type='table' AND name='samples';",
+		&table,
+		&rows,
+		&columns,
+		&errmsg
+	);
+	if(n == SQLITE_OK && table && (rows == 1) && (columns == 2)) {
 		if (!strcmp(table[2], "samples")) {
 			dbg(2, "found table 'samples'");
 			table_exists = TRUE;
@@ -188,7 +194,7 @@ sqlite__connect()
 			}
 		}
 	} else {
-		dbg(0, "SQL: %s", errmsg?errmsg:"-");
+		if(errmsg) dbg(0, "SQL: %s", errmsg);
 	}
 	if (table) sqlite3_free_table(table);
 	if (errmsg) sqlite3_free(errmsg);
