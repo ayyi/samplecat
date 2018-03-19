@@ -63,6 +63,7 @@ _init()
 	}
 }
 
+
 AGlActor*
 search_view(gpointer _)
 {
@@ -143,9 +144,21 @@ search_view(gpointer _)
 		SearchView* view = (SearchView*)actor;
 
 		switch(event->type){
+			case GDK_BUTTON_PRESS: {
+					int index;
+					pango_layout_xy_to_index (view->layout, xy.x * PANGO_SCALE, xy.y * PANGO_SCALE, &index, NULL);
+					if(view->cursor_pos != index){
+						view->cursor_pos = index;
+						agl_actor__invalidate(actor);
+					}
+				}
+				break;
 			case GDK_KEY_PRESS:
 				g_return_val_if_fail(actor->root->selected, AGL_NOT_HANDLED);
 				dbg(0, "Keypress");
+				if(!view->text){
+					view->text = g_strdup(((SamplecatFilter*)samplecat.model->filters.search)->value);
+				}
 				int val = ((GdkEventKey*)event)->keyval;
 				switch(val){
 					case XK_Left:
@@ -187,15 +200,16 @@ search_view(gpointer _)
 						samplecat_list_store_do_search((SamplecatListStore*)samplecat.store);
 						break;
 					default:
-						;char str[1] = {val};
+						;char str[2] = {val,};
 						if(g_utf8_validate(str, 1, NULL)){
-							if(view->text){
-								char* t = view->text;
-								view->text = g_strdup_printf("%s%c", view->text, val);
-								g_free(t);
-							}else{
-								view->text = g_strdup_printf("%s%c", ((SamplecatFilter*)samplecat.model->filters.search)->value, val);
-							}
+							char* a = g_strndup(view->text, view->cursor_pos);
+							char* b = g_strndup(view->text + view->cursor_pos, strlen(view->text) - view->cursor_pos);
+
+							view->text = g_strconcat(a, str, b, NULL);
+
+							g_free(a);
+							g_free(b);
+
 							view->cursor_pos ++;
 							search_layout(view);
 						}
