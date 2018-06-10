@@ -704,8 +704,7 @@ select_lasso_cb(ViewIter *iter, gpointer data)
 	if (fn == GDK_SET)
 		return TRUE;
 
-	return !gtk_tree_selection_iter_is_selected(view_details->selection,
-						    &titer);
+	return !gtk_tree_selection_iter_is_selected(view_details->selection, &titer);
 }
 
 
@@ -984,7 +983,7 @@ test_can_change_selection(GtkTreeSelection* sel, GtkTreeModel* model, GtkTreePat
 static void
 selection_changed(GtkTreeSelection* selection, gpointer user_data)
 {
-	ViewDetails *view_details = VIEW_DETAILS(user_data);
+	ViewDetails* view_details = VIEW_DETAILS(user_data);
 
 	fm__selection_changed(view_details->filer_window, gtk_get_current_event_time());
 }
@@ -1170,14 +1169,11 @@ resort(ViewDetails *view_details)
 
 	for (i = len - 1; i >= 0; i--) items[i]->old_pos = i;
 
-	switch (view_details->filer_window->sort_type)
-	{
+	switch (view_details->filer_window->sort_type){
 		case SORT_NAME: view_details->sort_fn = sort_by_name; break;
-		//case SORT_NAME: { view_details->sort_fn = sort_by_name; dbg(0, "SORT_NAME"); } break;
 		case SORT_TYPE: view_details->sort_fn = sort_by_type; break;
 		case SORT_DATE: view_details->sort_fn = sort_by_date; break;
 		case SORT_SIZE: view_details->sort_fn = sort_by_size; break;
-		//case SORT_SIZE: { view_details->sort_fn = sort_by_size; dbg(0, "SORT_SIZE"); }break;
 		case SORT_OWNER: view_details->sort_fn = sort_by_owner; break;
 		case SORT_GROUP: view_details->sort_fn = sort_by_group; break;
 		default:

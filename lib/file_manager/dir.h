@@ -46,7 +46,7 @@ typedef enum {
 typedef struct _DirUser DirUser;
 typedef void (*DirCallback)(Directory *dir, DirAction action, GPtrArray *items, gpointer data);
 
-extern GFSCache *dir_cache;
+extern GFSCache* dir_cache;
 
 struct _DirUser
 {
@@ -120,5 +120,12 @@ void     dir_force_update_path  (const gchar* path);
 void     dnotify_wakeup         ();
 void     dir_drop_all_dnotifies ();
 void     dir_queue_recheck      (Directory*, DirItem*);
+
+int      sort_by_name           (const void* item1, const void* item2);
+int      sort_by_type           (const void* item1, const void* item2);
+int      sort_by_date           (const void* item1, const void* item2);
+int      sort_by_size           (const void* item1, const void* item2);
+int      sort_by_owner          (const void* item1, const void* item2);
+int      sort_by_group          (const void* item1, const void* item2);
 
 #endif

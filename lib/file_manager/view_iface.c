@@ -22,7 +22,6 @@
 #include "config.h"
 
 #include <string.h>
-#include <sys/stat.h>
 #include <gtk/gtk.h>
 #include "debug/debug.h"
 #include "support.h"

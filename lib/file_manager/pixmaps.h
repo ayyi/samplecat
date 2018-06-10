@@ -13,7 +13,8 @@
 #ifndef __pixmap_h__
 #define __pixmap_h__
 
-#include <gtk/gtk.h>
+#include <glib.h>
+#include <gdk-pixbuf/gdk-pixbuf.h>
 
 extern GFSCache *pixmap_cache;
 

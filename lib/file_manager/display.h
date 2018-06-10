@@ -53,12 +53,6 @@ void display_set_filter    (AyyiLibfilemanager*, FilterType, const gchar* filter
 #if 0
 void display_set_thumbs(FilerWindow *filer_window, gboolean thumbs);
 #endif
-int sort_by_name(const void *item1, const void *item2);
-int sort_by_type(const void *item1, const void *item2);
-int sort_by_date(const void *item1, const void *item2);
-int sort_by_size(const void *item1, const void *item2);
-int sort_by_owner(const void *item1, const void *item2);
-int sort_by_group(const void *item1, const void *item2);
 void display_set_sort_type(AyyiLibfilemanager*, FmSortType, GtkSortType order);
 #if 0
 void display_set_autoselect(FilerWindow *filer_window, const gchar *leaf);

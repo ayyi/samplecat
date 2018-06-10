@@ -68,7 +68,7 @@ static const char * bad_xpm[] = {
 "            "};
 
 MaskedPixmap *im_error;
-MaskedPixmap *im_unknown;
+MaskedPixmap *im_unknown = NULL;
 MaskedPixmap *im_symlink;
 
 MaskedPixmap *im_unmounted;
@@ -188,17 +188,15 @@ MaskedPixmap *load_pixmap(const char *name)
 /* Create a MaskedPixmap from a GTK stock ID. Always returns
  * a valid image.
  */
-static MaskedPixmap *mp_from_stock(const char *stock_id, int size)
+static MaskedPixmap*
+mp_from_stock(const char *stock_id, int size)
 {
-	//printf("mp_from_stock()...\n");
-	GtkIconSet *icon_set;
-	GdkPixbuf  *pixbuf;
 	MaskedPixmap *retval;
 
-	icon_set = gtk_icon_factory_lookup_default(stock_id);
+	GtkIconSet* icon_set = gtk_icon_factory_lookup_default(stock_id);
 	if (!icon_set) return get_bad_image();
 	
-	pixbuf = gtk_icon_set_render_icon(icon_set,
+	GdkPixbuf* pixbuf = gtk_icon_set_render_icon(icon_set,
                                      gtk_widget_get_default_style(), /* Gtk bug */
                                      GTK_TEXT_DIR_LTR,
                                      GTK_STATE_NORMAL,
@@ -712,13 +710,10 @@ static GdkPixbuf *scale_pixbuf_up(GdkPixbuf *src, int max_w, int max_h)
  * that the image is never freed.
  */
 static MaskedPixmap*
-get_bad_image(void)
+get_bad_image()
 {
-	printf("get_bad_image()...\n");
-	GdkPixbuf *bad;
-	
-	bad = gdk_pixbuf_new_from_xpm_data(bad_xpm);
-	MaskedPixmap *mp = masked_pixmap_new(bad);
+	GdkPixbuf* bad = gdk_pixbuf_new_from_xpm_data(bad_xpm);
+	MaskedPixmap* mp = masked_pixmap_new(bad);
 	g_object_unref(bad);
 
 	return mp;
@@ -847,14 +842,15 @@ masked_pixmap_new(GdkPixbuf *full_size)
 	g_return_val_if_fail(full_size != NULL, NULL);
 
 	GdkPixbuf* src_pixbuf = scale_pixbuf(full_size, HUGE_WIDTH, HUGE_HEIGHT);
-	g_return_val_if_fail(src_pixbuf != NULL, NULL);
+	g_return_val_if_fail(src_pixbuf, NULL);
 
 	GdkPixbuf* normal_pixbuf = scale_pixbuf(src_pixbuf, ICON_WIDTH, ICON_HEIGHT);
-	g_return_val_if_fail(normal_pixbuf != NULL, NULL);
+	g_return_val_if_fail(normal_pixbuf, NULL);
 
 	//small pixbuf added by Tim - where does rox do this?
 	GdkPixbuf* small_pixbuf = scale_pixbuf(src_pixbuf, SMALL_WIDTH, SMALL_HEIGHT);
 	g_return_val_if_fail(small_pixbuf, NULL);
+	g_return_val_if_fail(GDK_IS_PIXBUF(small_pixbuf), NULL);
 
 	MaskedPixmap* mp = g_object_new(masked_pixmap_get_type(), NULL);
 
@@ -942,7 +938,6 @@ load_default_pixmaps(void)
 	im_error = mp_from_stock(GTK_STOCK_DIALOG_WARNING, GTK_ICON_SIZE_DIALOG);
 	im_unknown = mp_from_stock(GTK_STOCK_DIALOG_QUESTION, GTK_ICON_SIZE_DIALOG);
 /*
-	GdkPixbuf *pixbuf;
 	GError *error = NULL;
 
 	im_symlink = load_pixmap("symlink");
@@ -954,7 +949,7 @@ load_default_pixmaps(void)
 
 	im_dirs = load_pixmap("dirs");
 
-	pixbuf = gdk_pixbuf_new_from_file(make_path(app_dir, ".DirIcon"), &error);
+	GdkPixbuf* pixbuf = gdk_pixbuf_new_from_file(make_path(app_dir, ".DirIcon"), &error);
 	if (pixbuf)
 	{
 		GList *icon_list;

@@ -147,9 +147,7 @@ g_fscache_lookup(GFSCache *cache, const char *pathname)
 void g_fscache_insert(GFSCache *cache, const char *pathname, gpointer obj, gboolean update_details)
 {
 	PF;
-	GFSCacheData* data = lookup_internal(cache, pathname,
-			update_details ? FSCACHE_LOOKUP_INIT
-				       : FSCACHE_LOOKUP_INSERT);
+	GFSCacheData* data = lookup_internal(cache, pathname, update_details ? FSCACHE_LOOKUP_INIT : FSCACHE_LOOKUP_INSERT);
 
 	if (!data)
 		return;

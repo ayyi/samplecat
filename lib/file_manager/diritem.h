@@ -14,6 +14,7 @@
 #define _DIRITEM_H
 
 #include <sys/types.h>
+#include <sys/stat.h>
 
 extern time_t diritem_recent_time;
 

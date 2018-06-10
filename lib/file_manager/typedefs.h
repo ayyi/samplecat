@@ -205,8 +205,6 @@ struct _MaskedPixmap
 */
 typedef struct _MaskedPixmap MaskedPixmap;
 
-MaskedPixmap *im_unknown;
-
 typedef enum {
 	SORT_NONE = 0,
 	SORT_NAME,
@@ -218,6 +216,21 @@ typedef enum {
 	SORT_NUMBER,
 	SORT_PATH
 } FmSortType;
+
+typedef enum
+{
+    FILER_SHOW_ALL,             // Show all files, modified by show_hidden
+    FILER_SHOW_GLOB,            // Show files that match a glob pattern
+} FilterType;
+
+typedef struct _ViewItem ViewItem;
+
+struct _ViewItem {
+    DirItem*      item;
+    MaskedPixmap* image;
+    int           old_pos;	    /* Used while sorting */
+    gchar*        utf8_name;	/* NULL => leafname is valid */
+};
 
 
 #endif //__file_manager_typedefs_h__

@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of the Ayyi project. http://ayyi.org               |
-* | copyright (C) 2011-2017 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2011-2018 Tim Orford <tim@orford.org>                  |
 * | copyright (C) 2006, Thomas Leonard and others                        |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
@@ -17,17 +17,8 @@
 
 typedef struct _ViewDetailsClass ViewDetailsClass;
 
-typedef struct _ViewItem ViewItem;
-
-struct _ViewItem {
-	DirItem*      item;
-	MaskedPixmap* image;
-	int	          old_pos;	    /* Used while sorting */
-	gchar*        utf8_name;	/* NULL => leafname is valid */
-};
-
 /*
- *  ViewDetails implements the interfaces for both GtkTreeView and GtkTreeModel.
+ *  ViewDetails inherits from GtkTreeView and implements the GtkTreeModel interface.
  */
 typedef struct _ViewDetails {
     GtkTreeView       treeview;

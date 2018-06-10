@@ -56,12 +56,6 @@ typedef enum
 	VIEW_TYPE_DETAILS = 1		// TreeView details list
 } ViewType;
 
-typedef enum
-{
-    FILER_SHOW_ALL,             // Show all files, modified by show_hidden
-    FILER_SHOW_GLOB,            // Show files that match a glob pattern
-} FilterType;
-
 typedef struct {
     GtkWidget* area;            // The hbox to show/hide
     GtkWidget* label;           // The operation name

@@ -471,7 +471,7 @@ recheck_callback (gpointer data)
 
 	g_free(leaf);
 
-	if (dir->recheck_list) return TRUE;	/* Call again */
+	if (dir->recheck_list) return G_SOURCE_CONTINUE;
 
 	/* The recheck_list list is empty. Stop scanning, unless
 	 * needs_update, in which case we start scanning again.
@@ -485,7 +485,7 @@ recheck_callback (gpointer data)
 
 	if (dir->needs_update) dir_rescan(dir);
 
-	return FALSE;
+	return G_SOURCE_REMOVE;
 }
 
 
@@ -578,7 +578,7 @@ dir_rescan_soon(Directory *dir)
 {
 	if (dir->rescan_timeout != -1)
 		return;
-	dir->rescan_timeout = g_timeout_add(500, rescan_soon_timeout, dir);
+	dir->rescan_timeout = g_timeout_add(1500, rescan_soon_timeout, dir);
 }
 #endif
 
@@ -704,7 +704,7 @@ delayed_notify (Directory* dir)
 {
 	if (dir->notify_active) return;
 	g_object_ref(dir);
-	g_timeout_add(1500, notify_timeout, dir);
+	g_timeout_add(1000, notify_timeout, dir);
 	dir->notify_active = TRUE;
 }
 
@@ -1192,3 +1192,127 @@ inotify_handler (GIOChannel* source, GIOCondition condition, gpointer udata)
 	return TRUE;
 }
 #endif
+
+#define display_dirs_first TRUE
+#define display_caps_first FALSE
+
+#define IS_A_DIR(item) (item->base_type == TYPE_DIRECTORY)
+
+#define SORT_DIRS                    \
+	if (display_dirs_first) {        \
+		gboolean id1 = IS_A_DIR(i1); \
+		gboolean id2 = IS_A_DIR(i2); \
+		if (id1 && !id2) return -1;  \
+		if (id2 && !id1) return 1;   \
+	}
+
+int
+sort_by_name (const void* item1, const void* item2)
+{
+	const DirItem* i1 = (DirItem*)item1;
+	const DirItem* i2 = (DirItem*)item2;
+	CollateKey* n1 = i1->leafname_collate;
+	CollateKey* n2 = i2->leafname_collate;
+	g_return_val_if_fail(n1, 0);
+	int retval;
+
+	SORT_DIRS;
+
+	retval = collate_key_cmp(n1, n2, display_caps_first);
+
+	return retval ? retval : strcmp(i1->leafname, i2->leafname);
+}
+
+
+int
+sort_by_type(const void* item1, const void* item2)
+{
+	const DirItem* i1 = (DirItem*)item1;
+	const DirItem* i2 = (DirItem*)item2;
+
+	int	 diff = i1->base_type - i2->base_type;
+
+	if (diff)
+		return diff > 0 ? 1 : -1;
+
+	MIME_type* m1 = i1->mime_type;
+	MIME_type* m2 = i2->mime_type;
+
+	if (m1 && m2)
+	{
+		diff = strcmp(m1->media_type, m2->media_type);
+		if (!diff)
+			diff = strcmp(m1->subtype, m2->subtype);
+	}
+	else if (m1 || m2)
+		diff = m1 ? 1 : -1;
+	else
+		diff = 0;
+
+	if (diff)
+		return diff > 0 ? 1 : -1;
+
+	return sort_by_name(item1, item2);
+}
+
+
+int
+sort_by_owner (const void* item1, const void* item2)
+{
+	const DirItem* i1 = (DirItem*)item1;
+	const DirItem* i2 = (DirItem*)item2;
+
+	if(i1->uid==i2->uid)
+		return sort_by_name(item1, item2);
+
+	const gchar* name1 = user_name(i1->uid);
+	const gchar* name2 = user_name(i2->uid);
+
+	return strcmp(name1, name2);
+}
+
+
+int
+sort_by_group (const void* item1, const void* item2)
+{
+	const DirItem* i1 = (DirItem*)item1;
+	const DirItem* i2 = (DirItem*)item2;
+
+	if(i1->gid==i2->gid)
+		return sort_by_name(item1, item2);
+
+	const gchar* name1 = group_name(i1->gid);
+	const gchar *name2 = group_name(i2->gid);
+
+	return strcmp(name1, name2);
+}
+
+
+int
+sort_by_date (const void *item1, const void *item2)
+{
+	const DirItem* i1 = (DirItem*)item1;
+	const DirItem* i2 = (DirItem*)item2;
+
+	/* SORT_DIRS; -- too confusing! */
+
+	return i1->mtime < i2->mtime ? -1 :
+		i1->mtime > i2->mtime ? 1 :
+		sort_by_name(item1, item2);
+}
+
+
+int
+sort_by_size (const void* item1, const void* item2)
+{
+	const DirItem *i1 = (DirItem *) item1;
+	const DirItem *i2 = (DirItem *) item2;
+
+	SORT_DIRS;
+
+	return i1->size < i2->size ? -1 :
+		i1->size > i2->size ? 1 :
+		sort_by_name(item1, item2);
+}
+
+

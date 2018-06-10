@@ -15,7 +15,7 @@
 #ifndef __mimetype_h__
 #define __mimetype_h__
 
-#include <gtk/gtk.h>
+#include <glib.h>
 #include "file_manager/typedefs.h"
 
 extern MIME_type* text_plain;		// often used as a default type

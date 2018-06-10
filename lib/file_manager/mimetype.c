@@ -494,7 +494,7 @@ type_to_icon (MIME_type* type)
 
 out:
 	if (!type->image) {
-		dbg(2, "%s/% failed! using im_unknown.", type->media_type, type->subtype);
+		dbg(2, "%s/%s failed! using im_unknown.", type->media_type, type->subtype);
 		/* One ref from the type structure, one returned */
 		type->image = im_unknown;
 		g_object_ref(im_unknown);
