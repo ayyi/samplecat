@@ -119,6 +119,7 @@ struct _window {
 #endif
 #ifdef USE_OPENGL
    struct {
+      AGlActor*   text;
       AGlActor*   spp;
       AGlActor*   spinner;
    }              layers;
@@ -505,6 +506,16 @@ GtkWindow
 	void window_on_quit(Application* a, gpointer user_data)
 	{
 		window_save_layout();
+
+#ifdef DEBUG
+		// free memory for valgrind testing
+
+		#define widget_destroy0(var) ((var == NULL) ? NULL : (var = (gtk_widget_destroy (var), NULL)))
+		if(window.waveform) gtk_widget_destroy(window.waveform);
+		widget_destroy0(window.file_man);
+
+		gtk_widget_destroy(app->window);
+#endif
 	}
 	g_signal_connect((gpointer)app, "on-quit", G_CALLBACK(window_on_quit), NULL);
 #endif
@@ -1353,8 +1364,8 @@ waveform_panel_new()
 	waveform_view_plus_set_gl(agl_get_gl_context());
 	WaveformViewPlus* view = waveform_view_plus_new(NULL);
 
-	AGlActor* text_layer = waveform_view_plus_add_layer(view, text_actor(NULL), 3);
-	text_actor_set_colour((TextActor*)text_layer, 0x000000bb, 0xffffffbb);
+	window.layers.text = waveform_view_plus_add_layer(view, text_actor(NULL), 3);
+	text_actor_set_colour((TextActor*)window.layers.text, 0x000000bb, 0xffffffbb);
 
 	window.layers.spp = waveform_view_plus_add_layer(view, wf_spp_actor(waveform_view_plus_get_actor(view)), 0);
 
@@ -1375,17 +1386,36 @@ show_waveform(gboolean enable)
 		gulong selection_handler;
 	} C;
 
+#ifdef DEBUG
 	void on_waveform_view_finalize(gpointer _c, GObject* was)
 	{
-		// it is not expected for the waveform to be finalised, but just in case
+		// in normal use, the waveform will never be finalised
+		// if DEBUG is enabled, it will occur at program exit.
 
 		dbg(0, "!");
 		C* c = _c;
+		if(window.layers.spinner){
+			//agl_actor__remove_child(window.waveform, window.layers.spinner);
+			waveform_view_plus_remove_layer((WaveformViewPlus*)window.waveform, window.layers.spinner);
+			window.layers.spinner = NULL;
+		}
+		if(window.layers.spp){
+			waveform_view_plus_remove_layer((WaveformViewPlus*)window.waveform, window.layers.spp);
+			window.layers.spp = NULL;
+		}
+		AGlActor** layers[] = {&window.layers.text};
+		int i; for(i=0;i<G_N_ELEMENTS(layers);i++){
+			if(*layers[i]){
+				waveform_view_plus_remove_layer((WaveformViewPlus*)window.waveform, *layers[i]);
+				*layers[i] = NULL;
+			}
+		}
 
 		g_signal_handler_disconnect((gpointer)samplecat.model, c->selection_handler);
 		g_free(c);
 		window.waveform = NULL;
 	}
+#endif
 
 	void on_waveform_view_realise(GtkWidget* widget, gpointer user_data)
 	{
