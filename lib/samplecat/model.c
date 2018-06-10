@@ -585,28 +585,14 @@ samplecat_idle_unref (gpointer instance)
 }
 
 
-SamplecatModel*
-samplecat_model_construct (GType object_type)
-{
-	SamplecatModel* self = (SamplecatModel*) g_object_new (object_type, NULL);
-	self->state = 1;
-	self->cache_dir = g_build_filename (g_get_home_dir(), ".config", PACKAGE, "cache", NULL, NULL);
-
-
-	gboolean ___lambda__gsource_func (gpointer self)
+	static gboolean ___lambda__gsource_func (gpointer self)
 	{
 		dir_list_update();
 		g_signal_emit_by_name ((SamplecatModel*)self, "dir-list-changed");
 		return G_SOURCE_REMOVE;
 	}
 
-	_samplecat_idle_unref0 (self->priv->dir_idle);
-	self->priv->dir_idle = samplecat_idle_new (___lambda__gsource_func, self);
-#if 0 // updating the directory list is not currently done until a consumer needs it
-	samplecat_idle_queue (self->priv->dir_idle);
-#endif
-
-	gboolean __lambda (gpointer _self)
+	static gboolean __lambda (gpointer _self)
 	{
 		SamplecatModel* self = _self;
 
@@ -621,6 +607,20 @@ samplecat_model_construct (GType object_type)
 
 		return FALSE;
 	}
+
+SamplecatModel*
+samplecat_model_construct (GType object_type)
+{
+	SamplecatModel* self = (SamplecatModel*) g_object_new (object_type, NULL);
+	self->state = 1;
+	self->cache_dir = g_build_filename (g_get_home_dir(), ".config", PACKAGE, "cache", NULL, NULL);
+
+
+	_samplecat_idle_unref0 (self->priv->dir_idle);
+	self->priv->dir_idle = samplecat_idle_new (___lambda__gsource_func, self);
+#if 0 // updating the directory list is not currently done until a consumer needs it
+	samplecat_idle_queue (self->priv->dir_idle);
+#endif
 
 	self->priv->sample_changed_idle = samplecat_idle_new(__lambda, self);
 
