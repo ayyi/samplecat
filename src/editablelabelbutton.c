@@ -31,8 +31,8 @@
 #define IS_EDITABLE_LABEL_BUTTON_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), TYPE_EDITABLE_LABEL_BUTTON))
 #define EDITABLE_LABEL_BUTTON_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), TYPE_EDITABLE_LABEL_BUTTON, EditableLabelButtonClass))
 
-static void     editable_label_button_finalize  (GObject*);
-static gboolean editable_label_button_stop_edit (GtkWidget*, GdkEventCrossing*, gpointer);
+static void editable_label_button_finalize  (GObject*);
+static bool editable_label_button_stop_edit (GtkWidget*, GdkEventCrossing*, gpointer);
 
 struct _EditableLabelButtonPrivate {
 	GtkWidget* align;
@@ -72,6 +72,18 @@ editable_label_button_construct (GType object_type)
 }
 
 
+static bool
+editable_label_on_buttonpress (GtkWidget* widget, GdkEventButton* event, gpointer user_data)
+{
+	if(event->type == GDK_BUTTON_PRESS){
+		editable_label_button_start_edit((EditableLabelButton*)widget);
+		return TRUE;
+	}
+
+	return FALSE;
+}
+
+
 EditableLabelButton*
 editable_label_button_new (const char* name)
 {
@@ -86,16 +98,7 @@ editable_label_button_new (const char* name)
 	gtk_container_add(GTK_CONTAINER(left_align), (GtkWidget*)self->label);
 	gtk_container_add(GTK_CONTAINER(self), left_align);
 
-	gboolean label_on_buttonpress(GtkWidget* widget, GdkEventButton* event, gpointer user_data)
-	{
-		if(event->type == GDK_BUTTON_PRESS){
-			editable_label_button_start_edit((EditableLabelButton*)widget);
-			return TRUE;
-		}
-
-		return FALSE;
-	}
-	g_signal_connect(self, "button-press-event", G_CALLBACK(label_on_buttonpress), NULL);
+	g_signal_connect(self, "button-press-event", G_CALLBACK(editable_label_on_buttonpress), NULL);
 
 	return self;
 }
@@ -152,25 +155,27 @@ struct _editor
 } editor;
 
 static gulong focus_handler_id = 0;
-static bool abort = false;
+static bool need_abort = false;
+
+
+static bool
+stop (gpointer widget)
+{
+	g_signal_emit_by_name (G_OBJECT(widget), "focus-out-event");
+	return G_SOURCE_REMOVE;
+}
 
 
 /*
  *  Trap the RET and ESC keys and stop editing.
  */
-static gboolean
-track_entry_key_press(GtkWidget* widget, GdkEventKey* event, gpointer user_data)
+static bool
+track_entry_key_press (GtkWidget* widget, GdkEventKey* event, gpointer user_data)
 {
-	gboolean stop(gpointer widget)
-	{
-		g_signal_emit_by_name (G_OBJECT(widget), "focus-out-event");
-		return G_SOURCE_REMOVE;
-	}
-
 	if(event->type == GDK_KEY_PRESS){
 		switch(event->keyval){
 			case GDK_Escape:
-				abort = true;
+				need_abort = true;
 			case 0xFF0D/*GDK_KP_Return*/:
 				g_idle_add(stop, widget);
 				return true;
@@ -186,7 +191,7 @@ track_entry_key_press(GtkWidget* widget, GdkEventKey* event, gpointer user_data)
  *   - w_rename has had an extra ref added at creation time, so we dont have to do it here.
  */
 void
-editable_label_button_start_edit(EditableLabelButton* self)
+editable_label_button_start_edit (EditableLabelButton* self)
 {
 	PF;
 	EditableLabelButtonPrivate* _self = self->priv;
@@ -225,7 +230,7 @@ editable_label_button_start_edit(EditableLabelButton* self)
 
 
 static gboolean
-editable_label_button_stop_edit(GtkWidget* entry, GdkEventCrossing* event, gpointer user_data)
+editable_label_button_stop_edit (GtkWidget* entry, GdkEventCrossing* event, gpointer user_data)
 {
 	EditableLabelButton* self = user_data;
 	g_return_val_if_fail(self, FALSE);
@@ -238,7 +243,7 @@ editable_label_button_stop_edit(GtkWidget* entry, GdkEventCrossing* event, gpoin
 	accels_connect((GtkWidget*)self);
 
 	const char* new_text = gtk_entry_get_text(GTK_ENTRY(w_rename));
-	if(!abort){
+	if(!need_abort){
 		gtk_label_set_text(GTK_LABEL(self->label), new_text); // change the text in the label
 	}
 
@@ -248,11 +253,11 @@ editable_label_button_stop_edit(GtkWidget* entry, GdkEventCrossing* event, gpoin
 	gtk_container_add(GTK_CONTAINER(self->priv->align), (GtkWidget*)self->label);
 	g_object_unref(self->label); // remove temporary ref added in edit_start.
 
-	if(!abort){
+	if(!need_abort){
 		g_signal_emit_by_name(self, "edited", new_text);
 	}
 
-	abort = false;
+	need_abort = false;
 
 	return false;
 }
