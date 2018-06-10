@@ -3,7 +3,6 @@
 #define __mimetype_h__
 
 #include <gtk/gtk.h>
-#include "utils/pixmaps.h"
 
 struct _MIME_type
 {

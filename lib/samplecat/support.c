@@ -167,9 +167,10 @@ mimetype_is_unsupported(MIME_type* mime_type, char* mime_string)
 }
 
 
-#include "utils/pixmaps.h"
 #include "file_manager/support.h"
 #include "file_manager/mimetype.h"
+#include "file_manager/pixmaps.h"
+
 GdkPixbuf*
 get_iconbuf_from_mimetype(char* mimetype)
 {
@@ -223,25 +224,27 @@ pixbuf_to_blob(GdkPixbuf* in, guint *len)
 		if (len) *len = 0;
 		return NULL;
 	}
-	//serialise the pixbuf:
+
+	// Serialise the pixbuf
 	GdkPixdata pixdata;
 	gdk_pixdata_from_pixbuf(&pixdata, in, 0);
 	guint length;
 	guint8* ser = gdk_pixdata_serialize(&pixdata, &length);
 #ifdef HAVE_ZLIB
-	unsigned long dsize=compressBound(length);
-	unsigned char* dst= malloc(dsize*sizeof(char));
-	int rv = compress(dst, &dsize, (const unsigned char *)ser, length);
-	if(rv == Z_OK) {
+	unsigned long dsize = compressBound(length);
+	unsigned char* dst = g_malloc(dsize * sizeof(char));
+	int rv = compress(dst, &dsize, (const unsigned char*)ser, length);
+	if (rv == Z_OK) {
 		dbg(1, "compressed pixbuf %d -> %d", length, dsize);
 		if (len) *len = dsize;
-		free(ser);
+		g_free(ser);
 		return dst;
 	} else {
 		dbg(2, "compression error");
 	}
 #endif
 	if (len) *len = length;
+
 	return ser;
 }
 

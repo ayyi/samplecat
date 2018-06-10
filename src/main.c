@@ -30,8 +30,8 @@ char * program_name;
 #include "debug/debug.h"
 #include "waveform/utils.h"
 #include "utils/ayyi_utils.h"
-#include "utils/pixmaps.h"
 #include "file_manager.h"
+#include "file_manager/pixmaps.h"
 #include "samplecat.h"
 #ifdef USE_AYYI
   #include "ayyi.h"

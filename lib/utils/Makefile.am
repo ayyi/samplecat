@@ -5,9 +5,8 @@ AM_CFLAGS = \
 	-DPACKAGE_LOCALE_DIR=\""$(prefix)/$(DATADIRNAME)/locale"\" \
 	-DIMAGES_DIR=\"$(imagesdir)\" \
 	-I../ \
-	-DG_LOG_DOMAIN=\"FileMan\" \
+	-DG_LOG_DOMAIN=\"Utils\" \
 	-I$(top_srcdir)/src \
-	-I$(top_srcdir)/src/xdgmime \
 	-I$(top_srcdir)/lib \
 	$(GTK_CFLAGS)
 
@@ -18,6 +17,5 @@ CLEANFILES =
 libutils_a_SOURCES = \
 	ayyi_utils.c ayyi_utils.h \
 	fscache.c fscache.h \
-	mime_type.c mime_type.h \
-	pixmaps.c pixmaps.h
+	mime_type.c mime_type.h
 
