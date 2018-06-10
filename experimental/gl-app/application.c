@@ -23,8 +23,6 @@
 #include "db/db.h"
 #include "samplecat.h"
 #include "list_store.h"
-#include "listview.h"
-#include "progress_dialog.h"
 #ifndef USE_GDL
 #include "window.h"
 #endif

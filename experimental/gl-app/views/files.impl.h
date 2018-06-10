@@ -13,7 +13,7 @@
 * | It is a 'model view' object, representing a particular view          |
 * | of a Directory object.                                               |
 * | It should be the same object as the FileView actor, but is separate  |
-* | for now because AGlActor is not a GObject so does not support.       |
+* | for now because AGlActor is not a GObject so does not support        |
 * | GInterface.                                                          |
 * +----------------------------------------------------------------------+
 */

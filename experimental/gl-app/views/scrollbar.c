@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of the Ayyi project. http://www.ayyi.org           |
-* | copyright (C) 2013-2017 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2013-2018 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -9,6 +9,7 @@
 * +----------------------------------------------------------------------+
 *
 */
+#include "config.h"
 #include "debug/debug.h"
 #include "samplecat/typedefs.h"
 #include "scrollbar.h"
@@ -61,6 +62,7 @@ scrollbar_view(AGlActor* panel, GtkOrientation orientation)
 		return true;
 	}
 
+#if 0
 	bool arr_gl_scrollbar_draw_h(AGlActor* actor)
 	{
 		if(!actor->disabled){
@@ -85,6 +87,7 @@ scrollbar_view(AGlActor* panel, GtkOrientation orientation)
 		}
 		return true;
 	}
+#endif
 
 	bool scrollbar_draw_v(AGlActor* actor)
 	{

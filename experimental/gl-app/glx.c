@@ -9,6 +9,7 @@
 * +----------------------------------------------------------------------+
 *
 */
+#include "config.h"
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -16,7 +17,7 @@
 #define XLIB_ILLEGAL_ACCESS // needed to access Display internals
 #include <X11/Xlib.h>
 #include <X11/keysym.h>
-# define GLX_GLXEXT_PROTOTYPES
+#define GLX_GLXEXT_PROTOTYPES
 #include <GL/gl.h>
 #include <GL/glx.h>
 #include "debug/debug.h"
