@@ -125,6 +125,8 @@ else
   HAVE_GTK_2_10="no"
 fi;
 
+AC_DEFINE(USE_GTK,1,[Enable GTK in libwaveform])
+
 GMODULE_LIBS=`pkg-config gmodule-2.0 --libs`
 AC_SUBST(GMODULE_LIBS)
 
