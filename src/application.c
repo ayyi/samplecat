@@ -69,21 +69,12 @@ application_construct (GType object_type)
 }
 
 
-typedef enum {
-   CONFIG_WINDOW_WIDTH = 0,
-   CONFIG_WINDOW_HEIGHT,
-   CONFIG_MAX = 9
-} ConfigOptionType;
-
-
 Application*
 application_new ()
 {
 	app = application_construct (TYPE_APPLICATION);
 
 	colour_box_init();
-
-	memset(app->config.colour, 0, PALETTE_SIZE * 8);
 
 	app->configctx.filename = g_strdup_printf("%s/.config/" PACKAGE "/" PACKAGE, g_get_home_dir());
 
@@ -97,6 +88,17 @@ application_new ()
 #endif
 
 	samplecat_init();
+
+	{
+		ConfigContext* ctx = &app->configctx;
+		app->configctx.options = g_malloc0(CONFIG_MAX * sizeof(ConfigOption*));
+
+		void get_theme_name(ConfigOption* option)
+		{
+			g_value_set_string(&option->val, theme_name);
+		}
+		ctx->options[CONFIG_ICON_THEME] = config_option_new_string("icon_theme", get_theme_name);
+	}
 
 	void on_filter_changed(GObject* _filter, gpointer user_data)
 	{
@@ -216,7 +218,6 @@ application_set_ready()
 	// note that this is not done until the application is fully loaded
 	{
 		ConfigContext* ctx = &app->configctx;
-		ctx->options = g_malloc0(CONFIG_MAX * sizeof(ConfigOption*));
 
 		void get_width(ConfigOption* option)
 		{
@@ -238,18 +239,12 @@ application_set_ready()
 		}
 		ctx->options[CONFIG_WINDOW_HEIGHT] = config_option_new_int("window_height", get_height, 20, 4096);
 
-		void get_theme_name(ConfigOption* option)
-		{
-			g_value_set_string(&option->val, theme_name);
-		}
-		ctx->options[2] = config_option_new_string("icon_theme", get_theme_name);
-
 		void get_col1_width(ConfigOption* option)
 		{
 			GtkTreeViewColumn* column = gtk_tree_view_get_column(GTK_TREE_VIEW(app->libraryview->widget), 1);
 			g_value_set_int(&option->val, gtk_tree_view_column_get_width(column));
 		}
-		ctx->options[3] = config_option_new_int("col1_width", get_col1_width, 10, 1024);
+		ctx->options[CONFIG_COL1_WIDTH] = config_option_new_int("col1_width", get_col1_width, 10, 1024);
 
 		void get_auditioner(ConfigOption* option)
 		{

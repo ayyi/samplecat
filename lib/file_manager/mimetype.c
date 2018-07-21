@@ -1,29 +1,17 @@
-/*
- * $Id: type.c,v 1.169 2005/07/24 10:19:31 tal197 Exp $
- *
- * ROX-Filer, filer for the ROX desktop project, v2.3
- * Copyright (C) 2005, the ROX-Filer team.
- *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License as published by the Free
- * Software Foundation; either version 2 of the License, or (at your option)
- * any later version.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
- * more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 59 Temple
- * Place, Suite 330, Boston, MA  02111-1307  USA
- */
-
-
-/* type.c - code for dealing with filetypes */
-
-#define USE_GICON // using GIcon avoids missing icons with old method
-
+/**
+* +----------------------------------------------------------------------+
+* | This file is part of the Ayyi project. http://ayyi.org               |
+* | copyright (C) 2011-2018 Tim Orford <tim@orford.org>                  |
+* +----------------------------------------------------------------------+
+* | ROX-Filer, filer for the ROX desktop project, v2.3                   |
+* | Copyright (C) 2005, the ROX-Filer team.                              |
+* +----------------------------------------------------------------------+
+* | This program is free software; you can redistribute it and/or modify |
+* | it under the terms of the GNU General Public License version 3       |
+* | as published by the Free Software Foundation.                        |
+* +----------------------------------------------------------------------+
+*
+*/
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -45,9 +33,6 @@
 #include "pixmaps.h"
 #include "mimetype.h"
 #include "diritem.h"
-#ifndef USE_GICON
-#include "xdgmime.h"
-#endif
 #include "support.h"
 
 #define _g_object_unref0(var) ((var == NULL) ? NULL : (var = (g_object_unref (var), NULL)))
@@ -55,6 +40,7 @@
 enum {SET_MEDIA, SET_TYPE};
 
 char theme_name[64] = {'\0',};
+GtkIconTheme* icon_theme = NULL;
 
 static MIME_type* get_mime_type    (const gchar* type_name, gboolean can_create);
 #if 0
@@ -85,12 +71,12 @@ MIME_type* application_x_desktop;
 MIME_type* inode_unknown;
 MIME_type* inode_door;
 
-/*static*/ GtkIconTheme* icon_theme = NULL;
-
 
 void
 type_init(void)
 {
+	if(icon_theme) return;
+
 	icon_theme = gtk_icon_theme_get_default();
 
 #ifdef DEBUG
@@ -156,20 +142,6 @@ mime_type_on_theme_select(GtkMenuItem* menuitem, gpointer user_data)
 #endif
 
 
-/* Read-load all the glob patterns.
- * Note: calls filer_update_all.
- */
-#ifndef USE_GICON
-void
-reread_mime_files(void)
-{
-	//gtk_icon_theme_rescan_if_needed(icon_theme);
-
-	xdg_mime_shutdown();
-}
-#endif
-
-
 #if 0
 gboolean
 can_be_executable()
@@ -208,12 +180,7 @@ get_mime_type (const gchar* type_name, gboolean can_create)
 	mtype->media_type = g_strndup(type_name, slash - type_name);
 	mtype->subtype = g_strdup(slash + 1);
 	mtype->image = NULL;
-	mtype->executable =
-#ifdef USE_GICON
-		g_content_type_can_be_executable(type_name);
-#else
-		xdg_mime_mime_type_subclass(type_name, "application/x-executable");
-#endif
+	mtype->executable = g_content_type_can_be_executable(type_name);
 
 	g_hash_table_insert(type_hash, g_strdup(type_name), mtype);
 
@@ -286,7 +253,6 @@ type_get_type (const guchar* path)
 MIME_type*
 type_from_path (const char* path)
 {
-#ifdef USE_GICON
 	MIME_type* mtype = NULL;
 
 	gboolean uncertain;
@@ -296,15 +262,6 @@ type_from_path (const char* path)
 		g_free(type_name);
 	}
 	return mtype;
-
-#else
-	const char* type_name = xdg_mime_get_mime_type_for_file(path, NULL);
-	dbg(2, "type_name=%s.", type_name);
-
-	if (type_name) return get_mime_type(type_name, TRUE);
-
-	return NULL;
-#endif
 }
 
 
@@ -425,7 +382,6 @@ type_to_icon (MIME_type* type)
 
 	if (type->image) goto out;
 
-#ifdef USE_GICON
 	char* type_name = g_strconcat(type->media_type, "/", type->subtype, NULL);
 	GIcon* icon = g_content_type_get_icon (type_name);
 					if(!strcmp(type_name, "inode/directory")){
@@ -436,49 +392,10 @@ type_to_icon (MIME_type* type)
 					}
 	GtkIconInfo* info = gtk_icon_theme_lookup_by_gicon((*theme_name) ? icon_theme : gtk_icon_theme_get_default(), icon, 16, GTK_ICON_LOOKUP_FORCE_SIZE);
 
+	dbg(2, "theme=%s typename=%-20s gicon=%p info=%p", theme_name, type_name, icon, info);
+
 	g_free(type_name);
-#else
-	#define icon_height 16;
 
-	char* get_icon0(MIME_type* type)
-	{
-		return g_strconcat("mime-", type->media_type, ":", type->subtype, NULL);
-	}
-	char* get_icon1(MIME_type* type)
-	{
-		return (type == inode_directory)
-			? g_strdup("gnome-fs-directory")
-			: g_strconcat("gnome-mime-", type->media_type, "-", type->subtype, NULL);
-	}
-	char* get_icon2(MIME_type* type)
-	{
-		return g_strconcat("mime-", type->media_type, NULL);
-	}
-	char* get_icon3(MIME_type* type)
-	{
-		return g_strconcat("gnome-mime-", type->media_type, NULL);
-	}
-	char* get_icon4(MIME_type* type)
-	{
-		return g_strconcat(type->media_type, "-x-generic", NULL);
-	}
-	char* get_icon5(MIME_type* type)
-	{
-		// try any old non-standard rubbish
-		return g_strconcat("gnome-fs-regular", NULL);
-	}
-
-	typedef char* (*get_icon)(MIME_type*);
-	get_icon fns[] = { get_icon0, get_icon1, get_icon2, get_icon3, get_icon4, get_icon5 };
-
-	GtkIconInfo* info = NULL;
-
-	int i=0; for(;i < G_N_ELEMENTS(fns) && !info;i++) {
-		char* type_name = fns[i](type);
-		info = gtk_icon_theme_lookup_icon(icon_theme, type_name, icon_height, 0);
-		g_free(type_name);
-	}
-#endif
 	if (info) {
 		/* Get the actual icon through our cache, not through GTK, because
 		 * GTK doesn't cache icons.
@@ -733,11 +650,20 @@ get_xdg_data_dirs (int *n_dirs)
 static void
 print_icon_list()
 {
+	GList* contexts = gtk_icon_theme_list_contexts(icon_theme);
+	GList* l = contexts;
+	for(;l;l=l->next){
+		dbg(0, "  %s", l->data);
+		g_free(l->data);
+	}
+	g_list_free(contexts);
+
 	GList* icon_list = gtk_icon_theme_list_icons(icon_theme, "MimeTypes");
 	if(icon_list){
+		GList* l = icon_list;
 		dbg(0, "%s----------------------------------", theme_name);
-		for(;icon_list;icon_list=icon_list->next){
-			char* icon = icon_list->data;
+		for(;l;l=l->next){
+			char* icon = l->data;
 			printf("%s\n", icon);
 			g_free(icon);
 		}

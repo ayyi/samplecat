@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2015 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2018 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -32,6 +32,14 @@ typedef struct {
    GKeyFile*         key_file;  // loaded data.
    ConfigOption**    options;   // null terminated.
 } ConfigContext;
+
+typedef enum {
+   CONFIG_WINDOW_WIDTH = 0,
+   CONFIG_WINDOW_HEIGHT,
+   CONFIG_ICON_THEME,
+   CONFIG_COL1_WIDTH,
+   CONFIG_MAX = 9
+} ConfigOptionType;
 
 struct _Config
 {

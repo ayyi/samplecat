@@ -12,7 +12,6 @@ AM_CFLAGS = \
 	-I$(top_srcdir)/lib/samplecat \
 	-I$(top_srcdir)/lib/file_manager \
 	-I$(top_srcdir)/lib/waveform \
-	-I$(top_srcdir)/xdgmime \
 	-I./dir_tree \
 	-I./gimp \
 	$(SAMPLECAT_CFLAGS) \

@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2016 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2018 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -78,10 +78,16 @@ config_load(ConfigContext* ctx, Config* config)
 		gchar* groupname = g_key_file_get_start_group(ctx->key_file);
 		dbg (2, "group=%s.", groupname);
 		if(!strcmp(groupname, "Samplecat")){
+			int c; for(c=0;c<CONFIG_MAX;c++){
+				if(c == CONFIG_ICON_THEME){
+					ConfigOption* o = ctx->options[c];
+					g_value_set_string(&ctx->options[CONFIG_ICON_THEME]->val, g_key_file_get_string(ctx->key_file, groupname, o->name, &error));
+				}
+			}
 #ifdef USE_MYSQL
-#define num_keys (16)
+#define num_keys (15)
 #else
-#define num_keys (12)
+#define num_keys (11)
 #endif
 #define ADD_CONFIG_KEY(VAR, NAME) \
 			strcpy(keys[i], NAME); \
@@ -103,7 +109,6 @@ config_load(ConfigContext* ctx, Config* config)
 #endif
 			ADD_CONFIG_KEY (config->window_height,    "window_height");
 			ADD_CONFIG_KEY (config->window_width,     "window_width");
-			ADD_CONFIG_KEY (theme_name,               "icon_theme");
 			ADD_CONFIG_KEY (config->column_widths[0], "col1_width");
 			ADD_CONFIG_KEY (config->browse_dir,       "browse_dir");
 			ADD_CONFIG_KEY (config->show_player,      "show_player");

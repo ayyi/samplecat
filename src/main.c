@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2015 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2018 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -67,8 +67,6 @@ void on_quit (GtkMenuItem*, gpointer);
 
 Application*     app = NULL;
 Palette          palette;
-
-extern char theme_name[64];
 
 static gboolean  search_pending = false;
 
@@ -242,7 +240,7 @@ main(int argc, char** argv)
 			case 'V':
 				printf ("%s %s\n\n", basename(argv[0]), PACKAGE_VERSION);
 				printf(
-					"Copyright (C) 2007-2017 Tim Orford\n"
+					"Copyright (C) 2007-2018 Tim Orford\n"
 					"Copyright (C) 2011 Robin Gareus\n"
 					"This is free software; see the source for copying conditions.  There is NO\n"
 					"warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n"
@@ -262,6 +260,8 @@ main(int argc, char** argv)
 
 	config_load(&app->configctx, &app->config);
 	g_signal_emit_by_name (app, "config-loaded");
+
+	icon_theme_set_theme(g_value_get_string(&app->configctx.options[CONFIG_ICON_THEME]->val));
 
 	db_init(
 #ifdef USE_MYSQL

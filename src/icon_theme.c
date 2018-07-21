@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2017 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2018 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -31,14 +31,9 @@
 #include "application.h"
 #include "icon_theme.h"
 
-GList* themes = NULL;
-#if 0
-char theme_name[64] = {0,};
-#else
-extern char theme_name[];
-#endif
-extern GtkIconTheme* icon_theme;
 extern Application* application;
+
+GList* themes = NULL;
 
 static void get_theme_names      (GPtrArray*);
 static void icon_theme_on_select (GtkMenuItem*, gpointer);
@@ -50,7 +45,7 @@ static void print_icon_list      ();
 GList*
 icon_theme_init()
 {
-	//-build a menu list of available themes.
+	// Build a menu list of available themes.
 
 	icon_theme_set_theme(NULL);
 
@@ -180,46 +175,6 @@ icon_theme_set_theme(const char* name)
 
 	if(!strlen(theme_name))
 		g_idle_add(check_default_theme, NULL);
-
-#if 0 // test is disabled as it is not reliable
-	while (1)
-	{
-		GtkIconInfo* info = gtk_icon_theme_lookup_icon(icon_theme, "mime-application:postscript", ICON_HEIGHT, 0);
-		if (!info)
-		{
-			//dbg(1, "looking up test icon...");
-			info = gtk_icon_theme_lookup_icon(icon_theme, "gnome-mime-application-postscript", ICON_HEIGHT, 0);
-		}
-		if (info)
-		{
-			dbg(0, "got test icon ok. Using theme '%s'", theme_name);
-			//print_icon_list();
-			g_object_unref(info);
-			return;
-		}
-
-		if (strcmp(theme_name, DEFAULT_THEME) == 0) break;
-
-		warnprintf("Icon theme '%s' does not contain MIME icons. Using default theme instead.\n", theme_name);
-		
-		strcpy(theme_name, DEFAULT_THEME);
-	}
-#endif
-
-#if 0
-	const char *home_dir = g_get_home_dir();
-	char *icon_home = g_build_filename(home_dir, ".icons", NULL);
-	if (!file_exists(icon_home)) mkdir(icon_home, 0755);
-	g_free(icon_home);
-#endif
-
-	//icon_home = g_build_filename(home_dir, ".icons", "ROX", NULL);
-	//if (symlink(make_path(app_dir, "ROX"), icon_home))
-	//	errprintf("Failed to create symlink '%s':\n%s\n\n"
-	//	"(this may mean that the ROX theme already exists there, but "
-	//	"the 'mime-application:postscript' icon couldn't be loaded for "
-	//	"some reason)", icon_home, g_strerror(errno));
-	//g_free(icon_home);
 
 	gtk_icon_theme_rescan_if_needed(icon_theme);
 }

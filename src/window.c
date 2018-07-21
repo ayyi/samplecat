@@ -27,9 +27,9 @@
 #include "file_manager/menu.h"
 #include "samplecat/worker.h"
 #include "audio_analysis/waveform/waveform.h"
-#include "src/typedefs.h"
 #include "gimp/gimpaction.h"
 #include "gimp/gimpactiongroup.h"
+#include "src/typedefs.h"
 #include "sample.h"
 #include "support.h"
 #include "model.h"
@@ -39,6 +39,7 @@
 #include "inspector.h"
 #include "progress_dialog.h"
 #include "player_control.h"
+#include "icon_theme.h"
 #ifdef USE_OPENGL
 #include <GL/gl.h>
 #include "waveform/view_plus.h"
@@ -60,7 +61,6 @@
 
 #include "../layouts/layouts.c"
 
-extern GList*     themes; 
 #define BACKEND samplecat.model->backend
  
 extern void       view_details_dnd_get            (GtkWidget*, GdkDragContext*, GtkSelectionData*, guint info, guint time, gpointer data);
