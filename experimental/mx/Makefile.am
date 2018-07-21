@@ -13,7 +13,6 @@ LDADD = \
 	$(top_srcdir)/lib/waveform/transition/.libs/libtransition.a \
 	$(top_srcdir)/lib/waveform/decoder/.libs/libwaveformdecoder.a \
 	$(top_srcdir)/lib/file_manager/libfilemanager.a \
-	$(top_srcdir)/lib/xdgmime/libxdgmime.a \
 	$(MX_LDFLAGS) $(MX_LIBS) \
 	$(GTK_LIBS) \
 	$(OPENGL_LIBS) \

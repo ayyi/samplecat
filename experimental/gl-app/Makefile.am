@@ -31,15 +31,12 @@ samplecat_gl_SOURCES = \
 	$(top_srcdir)/src/icon_theme.c $(top_srcdir)/src/icon_theme.h
 
 AM_CFLAGS = \
-	-g -Wall -O2 \
 	-DPACKAGE_DATA_DIR=\""$(datadir)"\" \
 	-I$(top_srcdir)/lib \
 	-I$(top_srcdir)/lib/samplecat \
 	-I$(top_srcdir)/lib/waveform \
-	-I$(top_srcdir) \
-	-I$(top_srcdir)/src \
 	-I$(top_srcdir)/experimental \
-	-I./gimp \
+	-I$(top_srcdir) \
 	$(SAMPLECAT_CFLAGS) \
 	$(FFTW3_CFLAGS) \
 	$(OPENGL_CFLAGS) \
@@ -66,7 +63,6 @@ samplecat_gl_LDADD = \
 	$(top_srcdir)/lib/waveform/transition/.libs/libtransition.a \
 	$(top_srcdir)/lib/waveform/decoder/.libs/libwaveformdecoder.a \
 	$(top_srcdir)/lib/file_manager/libfilemanager.a \
-	$(top_srcdir)/lib/xdgmime/libxdgmime.a \
 	$(SAMPLECAT_LIBS) \
 	$(AYYI_LIBS) \
 	$(TRACKER_LIBS) \

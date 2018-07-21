@@ -1,4 +1,4 @@
-SUBDIRS = utils debug xdgmime file_manager dir_tree waveform gdl samplecat audio_analysis
+SUBDIRS = utils debug file_manager dir_tree waveform gdl samplecat audio_analysis
 
 EXTRA_DIST = dnd/dnd.h
 

@@ -6,7 +6,6 @@ AM_CFLAGS = \
 	-DIMAGES_DIR=\"$(imagesdir)\" \
 	-I../ \
 	-DG_LOG_DOMAIN=\"Utils\" \
-	-I$(top_srcdir)/src \
 	-I$(top_srcdir)/lib \
 	$(GTK_CFLAGS)
 

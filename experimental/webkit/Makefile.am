@@ -15,7 +15,6 @@ AM_CFLAGS = \
 	-I$(top_srcdir)/lib \
 	-I$(top_srcdir)/lib/samplecat \
 	-I$(top_srcdir)/lib/waveform \
-	-I$(top_srcdir)/xdgmime \
 	-I$(top_srcdir) \
 	-I$(top_srcdir)/src \
 	-I./gimp \
@@ -46,7 +45,6 @@ samplecat_webkit_LDADD = \
 	$(top_srcdir)/lib/waveform/transition/.libs/libtransition.a \
 	$(top_srcdir)/lib/waveform/decoder/.libs/libwaveformdecoder.a \
 	$(top_srcdir)/lib/file_manager/libfilemanager.a \
-	$(top_srcdir)/lib/xdgmime/libxdgmime.a \
 	$(top_srcdir)/lib/utils/libutils.a \
 	$(SAMPLECAT_LIBS) \
 	$(AYYI_LIBS) \
