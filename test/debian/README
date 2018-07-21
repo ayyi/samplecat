@@ -1,0 +1,11 @@
+
+# build a new image called "samplecat-debian-8"
+docker build -t samplecat-debian-8 .
+
+# run the container
+docker run -it samplecat-debian-8
+
+# run the container and run a specific command (overrides CMD)
+docker run -it samplecat-debian-8 bash
+
+XSOCK=/tmp/.X11-unix/X0 docker run -it -v $XSOCK:$XSOCK samplecat-debian-8 bash

@@ -1,0 +1,13 @@
+#!/bin/sh
+
+container=samplecat-debian-9
+
+# run git build script
+docker run -it $container
+
+# run the container and run a specific command (overrides CMD)
+#docker run -it $container bash
+
+# run with X forwarding
+# (dont forget to run xhost to allow the container to connect)
+#XSOCK=/tmp/.X11-unix/X0 docker run -it -v $XSOCK:$XSOCK $container bash
