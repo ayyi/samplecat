@@ -41,9 +41,7 @@
 #include "player_control.h"
 #include "icon_theme.h"
 #ifdef USE_OPENGL
-#include <GL/gl.h>
 #include "waveform/view_plus.h"
-#include "waveform/actor.h"
 #endif
 #ifdef HAVE_FFTW3
 #ifdef USE_OPENGL
@@ -511,7 +509,7 @@ GtkWindow
 		// free memory for valgrind testing
 
 		#define widget_destroy0(var) ((var == NULL) ? NULL : (var = (gtk_widget_destroy (var), NULL)))
-		if(window.waveform) gtk_widget_destroy(window.waveform);
+		widget_destroy0(window.waveform);
 		widget_destroy0(window.file_man);
 
 		gtk_widget_destroy(app->window);
@@ -1648,6 +1646,20 @@ show_player(gboolean enable)
 
 
 #ifdef USE_OPENGL
+	static void on_loaded(Waveform* w, GError* error, gpointer _view)
+	{
+		WaveformViewPlus* view = _view;
+
+		wf_spinner_stop((WfSpinner*)window.layers.spinner);
+
+		if(error){
+			AGlActor* text_layer = waveform_view_plus_get_layer(view, 3);
+			if(text_layer){
+				text_actor_set_text((TextActor*)text_layer, NULL, g_strdup(error->message));
+			}
+		}
+	}
+
 static void
 update_waveform_view(Sample* sample)
 {
@@ -1658,12 +1670,7 @@ update_waveform_view(Sample* sample)
 
 	wf_spinner_start((WfSpinner*)window.layers.spinner);
 
-	void on_loaded(Waveform* w, gpointer _)
-	{
-		wf_spinner_stop((WfSpinner*)window.layers.spinner);
-	}
-
-	waveform_view_plus_load_file(view, sample->online ? sample->full_path : NULL, on_loaded, NULL);
+	waveform_view_plus_load_file(view, sample->online ? sample->full_path : NULL, on_loaded, view);
 
 #if 0
 	void on_waveform_finalize(gpointer _c, GObject* was)
