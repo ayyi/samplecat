@@ -59,9 +59,9 @@ AC_ARG_ENABLE(gl-app,   AS_HELP_STRING([--enable-gl_app], [build the gl applicat
 AC_ARG_ENABLE(opengl,   AC_HELP_STRING([--disable-opengl], [disable use of OpenGL]),enable_opengl=$enableval,enable_opengl="auto")
 AC_ARG_ENABLE(fftw,     AC_HELP_STRING([--disable-fftw], [disable usage of FFTW ]),enable_fftw=$enableval,enable_fftw="auto")
 AC_ARG_ENABLE(libass,   AC_HELP_STRING([--disable-libass], [disable usage of libass ]),enable_libass=$enableval,enable_libass="auto")
-AC_ARG_ENABLE(vala,     AC_HELP_STRING([--disable-vala], [disable usage of Vala. Vala is only needed for developers ]), enable_vala=$enableval, enable_vala="auto")
 AC_ARG_ENABLE(dock,     AC_HELP_STRING([--disable-dock], [disable usage of Gdl-dock ]), enable_dock=$enableval, enable_dock="auto")
 AC_ARG_ENABLE(aubio,    AC_HELP_STRING([--enable-aubio], [enable use of aubio for bpm detection]), enable_aubio=$enableval, enable_aubio="auto")
+AC_ARG_ENABLE(system-gtkglext, AC_HELP_STRING([--enable-system-gtkglext], [disable local opengl extension for gtk]), enable_system_gtkglext=$enableval, enable_system_gtkglext="no")
 
 case $target_os in
 	*darwin*)
@@ -139,6 +139,11 @@ dnl ----------------------------------------------------------------------------
 dnl added for suse-42
 X11_LDFLAGS=`pkg-config --libs x11`
 AC_SUBST(X11_LDFLAGS)
+
+dnl -----------------------------------------------------------------------------
+
+FILEMANAGER_LDFLAGS=`pkg-config --libs-only-l gmodule-2.0`
+AC_SUBST(FILEMANAGER_LDFLAGS)
 
 dnl -----------------------------------------------------------------------------
 
@@ -385,18 +390,33 @@ AC_SUBST(WEBKIT_LDFLAGS)
 dnl -----------------------------------------------------------------------------
 
 AS_IF([test "$enable_gl_app" = "yes"],[
-	PKG_CHECK_MODULES(WEBKIT, gtkglext-1.0, AC_DEFINE(USE_GL_APP, 1, Build the experimental GL application) enable_gl_app="yes", enable_gl_app="no")
+	dnl PKG_CHECK_MODULES(WEBKIT, gtkglext-1.0, AC_DEFINE(USE_GL_APP, 1, Build the experimental GL application) enable_gl_app="yes", enable_gl_app="no")
+	enable_gl_app="yes"
 	], [enable_gl_app="no"])
 AM_CONDITIONAL(ENABLE_GL_APP, test "$enable_gl_app" = "yes")
 
 dnl -----------------------------------------------------------------------------
 
 AS_IF([test "$enable_opengl" != "no"], [
-	PKG_CHECK_MODULES(OPENGL, gtkglext-1.0, [AC_DEFINE(USE_OPENGL, 1, Opengl features are enabled)])
 	enable_opengl="yes"
+	AC_DEFINE(USE_OPENGL, 1, Gtk Opengl features are enabled)
 ])
+
+# Local version of Gtkglext only works with X11.
+# For systems other than X11, the system gtkglext must be used.
+AS_IF([test "$enable_system_gtkglext" = "yes"], [
+	AC_DEFINE(USE_SYSTEM_GTKGLEXT, 1, [do not use the internal Gtkglext library])
+	PKG_CHECK_MODULES(OPENGL, gtkglext-1.0, [AC_DEFINE(USE_OPENGL, 1, Opengl features are enabled)])
+	GL_LDFLAGS=`pkg-config --libs gtkglext-1.0`
+],[
+	dnl glu is used for mipmapping in spectrogram widget
+	GL_LDFLAGS=`pkg-config --libs glu`
+])
+
 AC_SUBST(OPENGL_CFLAGS)
+AC_SUBST(GL_LDFLAGS)
 AM_CONDITIONAL(ENABLE_OPENGL, test "$enable_opengl" = "yes")
+AM_CONDITIONAL(ENABLE_SYSTEM_GTKGLEXT, test "$enable_system_gtkglext" = "yes")
 
 dnl -----------------------------------------------------------------------------
 
@@ -448,15 +468,6 @@ AC_SUBST(AUBIO_LDFLAGS)
 
 dnl -----------------------------------------------------------------------------
 
-dnl TODO vala is not needed when compiling from tarball so this should probably be used in conjunction with --enable-maintainer-mode
-
-AS_IF([test "$enable_vala" != "no"], [
-	PKG_CHECK_MODULES(VALA, vala-0.10, [AC_DEFINE([HAVE_VALA], 1, [Set to 1 if you have vala.]) enable_vala=yes], enable_vala=no)
-])
-AM_CONDITIONAL(ENABLE_VALA, test "$enable_vala" = "yes")
-
-dnl -----------------------------------------------------------------------------
-
 MATH_LDFLAGS=-lm
 AC_SUBST(MATH_LDFLAGS)
 
@@ -469,7 +480,6 @@ AC_CONFIG_FILES([lib/utils/Makefile])
 AC_CONFIG_FILES([lib/debug/Makefile])
 AC_CONFIG_FILES([lib/file_manager/Makefile])
 AC_CONFIG_FILES([lib/file_manager/filetypes/Makefile])
-AC_CONFIG_FILES([lib/file_manager/vala/Makefile])
 AC_CONFIG_FILES([lib/dir_tree/Makefile])
 AC_CONFIG_FILES([lib/samplecat/Makefile])
 AC_CONFIG_FILES([lib/samplecat/db/Makefile])
@@ -516,6 +526,7 @@ AC_MSG_RESULT([Building libass support:      $enable_libass])
 AC_MSG_RESULT([Building ayyi support:        $enable_ayyi])
 AC_MSG_RESULT([Building dock support:        $enable_dock])
 AC_MSG_RESULT([Extra debugging:              $enable_debug])
+AC_MSG_RESULT([Use system Gtk OpenGL:        $enable_system_gtkglext])
 AC_MSG_RESULT([])
 
 if test "$enable_mx" = "yes" -o "$enable_webkit" = "yes" -o "$enable_gl_app" = "yes" -o "$enable_sf2" = "yes" -o "$enable_nks" = "yes" -o "$enable_tracker" = "yes"; then

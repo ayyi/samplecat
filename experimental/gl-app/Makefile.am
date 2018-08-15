@@ -31,10 +31,13 @@ samplecat_gl_SOURCES = \
 	$(top_srcdir)/src/icon_theme.c $(top_srcdir)/src/icon_theme.h
 
 AM_CFLAGS = \
+	-no-pie \
+	-Wl,-z,noexecstack \
 	-DPACKAGE_DATA_DIR=\""$(datadir)"\" \
 	-I$(top_srcdir)/lib \
 	-I$(top_srcdir)/lib/samplecat \
 	-I$(top_srcdir)/lib/waveform \
+	-I$(top_srcdir)/lib/waveform/gtkglext-1.0 \
 	-I$(top_srcdir)/experimental \
 	-I$(top_srcdir) \
 	$(SAMPLECAT_CFLAGS) \
@@ -46,9 +49,17 @@ AM_CFLAGS = \
 	$(FFMPEG_CFLAGS) \
 	$(ZLIB_CFLAGS) \
 	$(GTK_CFLAGS) \
-	$(MYSQL_CFLAGS)
+	$(MYSQL_CFLAGS) \
+	$(FILEMANAGER_LDFLAGS) \
+	$(X11_LDFLAGS)
 
 AM_CXXFLAGS = $(AM_CFLAGS)
+
+if !ENABLE_SYSTEM_GTKGLEXT
+LOCAL_GTK_LIBS = \
+	$(top_srcdir)/lib/waveform/gtkglext-1.0/gtk/.libs/libgtkglext-x11-1.0.a \
+	$(top_srcdir)/lib/waveform/gtkglext-1.0/gdk/.libs/libgdkglext-x11-1.0.a
+endif
 
 samplecat_gl_LDADD = \
 	$(top_srcdir)/lib/utils/libutils.a \
@@ -63,6 +74,7 @@ samplecat_gl_LDADD = \
 	$(top_srcdir)/lib/waveform/transition/.libs/libtransition.a \
 	$(top_srcdir)/lib/waveform/decoder/.libs/libwaveformdecoder.a \
 	$(top_srcdir)/lib/file_manager/libfilemanager.a \
+	$(LOCAL_GTK_LIBS) \
 	$(SAMPLECAT_LIBS) \
 	$(AYYI_LIBS) \
 	$(TRACKER_LIBS) \
@@ -71,7 +83,7 @@ samplecat_gl_LDADD = \
 	$(JACK_LIBS) $(SNDFILE_LIBS) ${SAMPLERATE_LIBS} \
 	$(GTHREAD_LIBS) \
 	$(FFTW3_LIBS) \
-	$(OPENGL_LIBS) \
+	$(GL_LDFLAGS) \
 	$(ZLIB_LIBS) \
 	$(YAML_LIBS) \
 	$(FFMPEG_LIBS) \

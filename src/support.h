@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2017 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2018 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -20,7 +20,9 @@
 #include "samplecat/support.h"
 
 #ifndef __ayyi_h__
-#define g_error_free0(E) (g_error_free(E), E = NULL)
+#ifndef g_error_free0
+#define g_error_free0(var) ((var == NULL) ? NULL : (var = (g_error_free (var), NULL)))
+#endif
 #define PF_DONE printf("%s(): done.\n", __func__);
 #endif
 #define list_clear(L) g_list_free(L); L = NULL;

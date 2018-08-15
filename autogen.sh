@@ -33,8 +33,8 @@ if [ ! -f lib/waveform/autogen.sh ]; then
 	fi
 fi
 
-cd lib/waveform &&
-./autogen.sh &&
-cd ../..
+cd lib/waveform && \
+	./autogen.sh && \
+	cd ../..
 
 #test -n "$NOCONFIGURE" || "$srcdir/configure" --enable-maintainer-mode "$@"

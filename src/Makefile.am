@@ -3,6 +3,11 @@
 VALA_DIR =
 SUBDIRS = gimp $(VALA_DIR)
 
+if !ENABLE_SYSTEM_GTKGLEXT
+LOCAL_GTKGLEXT_CFLAGS = \
+	-I$(top_srcdir)/lib/waveform/gtkglext-1.0
+endif
+
 AM_CFLAGS = \
 	-g -Wall -O2 \
 	-DPACKAGE_DATA_DIR=\""$(datadir)"\" \
@@ -12,6 +17,7 @@ AM_CFLAGS = \
 	-I$(top_srcdir)/lib/samplecat \
 	-I$(top_srcdir)/lib/file_manager \
 	-I$(top_srcdir)/lib/waveform \
+	$(LOCAL_GTKGLEXT_CFLAGS) \
 	-I./dir_tree \
 	-I./gimp \
 	$(SAMPLECAT_CFLAGS) \
@@ -41,13 +47,20 @@ if ENABLE_OPENGL
 if ENABLE_FFTW3
 OPENGL_FFTW_SRC = gl_spectrogram_view.c gl_spectrogram_view.h
 endif
+if ENABLE_SYSTEM_GTKGLEXT
+else
+GTKGLEXT_LDFLAGS = \
+	$(top_srcdir)/lib/waveform/gtkglext-1.0/gtk/.libs/libgtkglext-x11-1.0.a \
+	$(top_srcdir)/lib/waveform/gtkglext-1.0/gdk/.libs/libgdkglext-x11-1.0.a
+endif
 OPENGL_SRC = \
 	$(OPENGL_FFTW_SRC) \
 	rotator.c rotator.h
 OPENGL_LDFLAGS = \
 	$(top_srcdir)/lib/waveform/agl/.libs/libagl.a \
 	$(top_srcdir)/lib/waveform/transition/.libs/libtransition.a \
-	$(OPENGL_LIBS)
+	$(GTKGLEXT_LDFLAGS) \
+	$(GL_LDFLAGS)
 endif
 
 if ENABLE_GDL

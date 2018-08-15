@@ -7,6 +7,12 @@ samplecat_webkit_SOURCES = \
 	table.c table.h \
 	$(top_srcdir)/src/icon_theme.c $(top_srcdir)/src/icon_theme.h
 
+if !ENABLE_SYSTEM_GTKGLEXT
+LOCAL_GTK_LIBS = \
+	$(top_srcdir)/lib/waveform/gtkglext-1.0/gtk/.libs/libgtkglext-x11-1.0.a \
+	$(top_srcdir)/lib/waveform/gtkglext-1.0/gdk/.libs/libgdkglext-x11-1.0.a
+endif
+
 AM_CFLAGS = \
 	-g -Wall -O2 \
 	-DPACKAGE_DATA_DIR=\""$(datadir)"\" \
@@ -46,7 +52,7 @@ samplecat_webkit_LDADD = \
 	$(top_srcdir)/lib/waveform/decoder/.libs/libwaveformdecoder.a \
 	$(top_srcdir)/lib/file_manager/libfilemanager.a \
 	$(top_srcdir)/lib/utils/libutils.a \
-	$(SAMPLECAT_LIBS) \
+	$(LOCAL_GTK_LIBS) \
 	$(AYYI_LIBS) \
 	$(TRACKER_LIBS) \
 	$(SQLITE_LIBS) \
@@ -54,9 +60,10 @@ samplecat_webkit_LDADD = \
 	$(JACK_LIBS) $(SNDFILE_LIBS) ${SAMPLERATE_LIBS} \
 	$(GTHREAD_LIBS) \
 	$(FFTW3_LIBS) \
-	$(OPENGL_LIBS) \
+	$(GL_LDFLAGS) \
 	$(ZLIB_LIBS) \
 	$(FFMPEG_LIBS) \
 	$(WEBKIT_LIBS) \
+	$(X11_LDFLAGS) \
 	-lstdc++
 

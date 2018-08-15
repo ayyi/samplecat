@@ -43,6 +43,17 @@
 #include "list_store.h"
 #include "listview.h"
 #include "rotator.h"
+
+#ifndef USE_SYSTEM_GTKGLEXT
+#undef gdk_gl_drawable_make_current
+
+#define gdk_gl_drawable_make_current(DRAWABLE, CONTEXT) \
+	((G_OBJECT_TYPE(DRAWABLE) == GDK_TYPE_GL_PIXMAP) \
+		? gdk_gl_pixmap_make_context_current (DRAWABLE, CONTEXT) \
+		: gdk_gl_window_make_context_current (DRAWABLE, CONTEXT) \
+	)
+#endif
+
 #if 0
 #define GTK_ROTATOR_PRIORITY_VALIDATE (GDK_PRIORITY_REDRAW + 5)
 #define GTK_ROTATOR_PRIORITY_SCROLL_SYNC (GTK_ROTATOR_PRIORITY_VALIDATE + 2)
@@ -1388,7 +1399,11 @@ __init (Rotator* tree_view)
 		gtk_gl_init(NULL, NULL);
 		if(wf_debug){
 			gint major, minor;
+#ifdef USE_SYSTEM_GTKGLEXT
 			gdk_gl_query_version (&major, &minor);
+#else
+			glXQueryVersion (GDK_DISPLAY_XDISPLAY(gdk_display_get_default()), &major, &minor);
+#endif
 			g_print ("GtkGLExt version %d.%d\n", major, minor);
 		}
 	}
@@ -4201,14 +4216,13 @@ rotator_expose (GtkWidget* widget, GdkEventExpose* event)
 
 	if(!gl_initialised) return true;
 
-	if(gdk_gl_drawable_gl_begin (_r->gl_drawable, _r->gl_context)) {
+	if(gdk_gl_drawable_make_current (_r->gl_drawable, _r->gl_context)) {
 		glClearColor(0.0, 0.0, 0.0, 1.0);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		draw((Rotator*)widget);
 
 		gdk_gl_drawable_swap_buffers(_r->gl_drawable);
-		gdk_gl_drawable_gl_end(_r->gl_drawable);
 	}
 
 	return true;

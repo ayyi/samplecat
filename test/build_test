@@ -10,6 +10,7 @@ tmpdir=/tmp/${package}_build
 options=(
 " "
 --enable-debug
+--enable-system-gtkglext
 --disable-mysql
 --disable-dock
 --disable-ffmpeg
@@ -28,6 +29,8 @@ options=(
 --enable-ayyi
 )
 
+set -e
+
 declare -i n_tests_complete=0;
 
 SETCOLOR_GREEN="echo -en \\033[1;32m"
@@ -36,7 +39,7 @@ SETCOLOR_FAILURE="echo -en \\033[1;31m"
 SETCOLOR_NORMAL="echo -en \\033[0;39m"
 
 function get_tarball {
-	make dist
+	make dist || exit $?
 	cp $tarball $tmpdir;
 }
 
@@ -88,7 +91,7 @@ if [ "$abort" = "true" ]
 then
 	echo "complete: "$n_tests_complete" / "${#options[@]}
 else
-	${SETCOLOR_YELLOW} && echo "all builds completed successfully" && ${SETCOLOR_NORMAL};
+	${SETCOLOR_YELLOW} && echo "All builds completed successfully" && ${SETCOLOR_NORMAL};
 	echo "complete="$n_tests_complete
 fi
 
