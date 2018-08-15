@@ -77,10 +77,12 @@ typedef struct
 	gpointer           user_data;
 } RENDER;
 
+
 static int
 get_colour_map_value (float value, double spec_floor_db, unsigned char colour [3])
-{	static unsigned char map [][3] =
-	{	/* These values were originally calculated for a dynamic range of 180dB. */
+{
+	static unsigned char map [][3] = {
+		/* These values were originally calculated for a dynamic range of 180dB. */
 		{	255, 255, 255 },  /* -0dB */
 		{	240, 254, 216 },  /* -10dB */
 		{	242, 251, 185 },  /* -20dB */
@@ -102,10 +104,10 @@ get_colour_map_value (float value, double spec_floor_db, unsigned char colour [3
 		{	  0,   0,   0 },  /* -180dB */
 	};
 
-	float rem;
+	g_return_val_if_fail(!isnan(value), -1);
 
-	if (value >= 0.0)
-	{	colour = map [0];
+	if (!(value < 0.0)) { // this also checks for NaN
+		colour = map [0];
 		return 0;
 	};
 
@@ -123,14 +125,14 @@ get_colour_map_value (float value, double spec_floor_db, unsigned char colour [3
 		return 0;
 	};
 
-	rem = fmod (value, 1.0);
+	float rem = fmod (value, 1.0);
 
 	colour [0] = lrintf ((1.0 - rem) * map [indx][0] + rem * map [indx + 1][0]);
 	colour [1] = lrintf ((1.0 - rem) * map [indx][1] + rem * map [indx + 1][1]);
 	colour [2] = lrintf ((1.0 - rem) * map [indx][2] + rem * map [indx + 1][2]);
 
 	return 0;
-} /* get_colour_map_value */
+}
 
 
 static int
@@ -199,14 +201,13 @@ static int
 _render_spectrogram_to_pixbuf (GdkPixbuf* pixbuf, double spec_floor_db, float mag2d [SG_WIDTH][MAX_HEIGHT], double maxval)
 {
 	unsigned char colour [3] = { 0, 0, 0 };
-	double linear_spec_floor;
 
 	int stride = gdk_pixbuf_get_rowstride (pixbuf);
 	int n_channels = gdk_pixbuf_get_n_channels(pixbuf);
 
 	unsigned char* data = gdk_pixbuf_get_pixels(pixbuf);
 
-	linear_spec_floor = pow (10.0, spec_floor_db / 20.0);
+	double linear_spec_floor = pow (10.0, spec_floor_db / 20.0);
 
 	int w, h;
 	for (w = 0; w < SG_WIDTH; w ++) {
@@ -214,19 +215,23 @@ _render_spectrogram_to_pixbuf (GdkPixbuf* pixbuf, double spec_floor_db, float ma
 			mag2d [w][h] = mag2d [w][h] / maxval;
 			mag2d [w][h] = (mag2d [w][h] < linear_spec_floor) ? spec_floor_db : 20.0 * log10 (mag2d [w][h]);
 
-			if (get_colour_map_value (mag2d [w][h], spec_floor_db, colour)) return -1;
+			if (get_colour_map_value (mag2d [w][h], spec_floor_db, colour))
+				return -1;
 
 			int y = SG_HEIGHT - 1 - h;
 			int x = w * n_channels;
-			data [y * stride + x + 0] = colour [0];
-			data [y * stride + x + 1] = colour [1];
-			data [y * stride + x + 2] = colour [2];
+
+			data[y * stride + x + 0] = colour[0];
+			data[y * stride + x + 1] = colour[1];
+			data[y * stride + x + 2] = colour[2];
+
 			if (n_channels == 4) 
 				data [y * stride + x + 3] = 0;
 		}
 	}
 	return 0;
 }
+
 
 static void
 interp_spec (float * mag, int maglen, const double *spec, int speclen)
@@ -252,57 +257,58 @@ interp_spec (float * mag, int maglen, const double *spec, int speclen)
 	return;
 } /* interp_spec */
 
+
 static int
 spectrogram_render_to_pixbuf (WfDecoder* infile, GdkPixbuf* pixbuf)
 {
 	int rv = 0; /* OK */
+
 	static double time_domain [10 * MAX_HEIGHT];
 	static double freq_domain [10 * MAX_HEIGHT];
 	static double single_mag_spec [5 * MAX_HEIGHT];
+
 	static float mag_spec [SG_WIDTH][MAX_HEIGHT];
+	memset(mag_spec, 0, SG_WIDTH * MAX_HEIGHT * sizeof(float));
 
 	double max_mag = 0;
-	int w, h, speclen;
-	for (w=0;w<SG_WIDTH; w++) for (h=0;h<MAX_HEIGHT; h++) mag_spec[w][h] = 0;
 
 	/*
 	**	Choose a speclen value that is long enough to represent frequencies down
 	**	to 20Hz, and then increase it slightly so it is a multiple of 0x40 so that
 	**	FFTW calculations will be quicker.
 	*/
-	speclen = SG_HEIGHT * (infile->info.sample_rate / 20 / SG_HEIGHT + 1);
+	int speclen = SG_HEIGHT * (infile->info.sample_rate / 20 / SG_HEIGHT + 1);
 	speclen += 0x40 - (speclen & 0x3f);
 
 	if (2 * speclen > G_N_ELEMENTS (time_domain)) {
 		printf ("%s : 2 * speclen > G_N_ELEMENTS (time_domain) (%d > %li)\n", __func__, 2 * speclen, G_N_ELEMENTS (time_domain));
 		return -1;
-	};
+	}
 
 	fftw_plan plan = fftw_plan_r2r_1d (2 * speclen, time_domain, freq_domain, FFTW_R2HC, FFTW_MEASURE | FFTW_PRESERVE_INPUT);
-	if (plan == NULL) {
+	if (!plan) {
 		printf ("%s : line %d : create plan failed.\n", __FILE__, __LINE__);
 		return -1;
-	};
+	}
 
-	for (w = 0; w < SG_WIDTH; w++) {
-		double single_max;
-
+	int w; for (w = 0; w < SG_WIDTH; w++) {
 		if (read_mono_audio(infile, time_domain, 2 * speclen, w, SG_WIDTH) < 0) {
 			dbg(1, "read failed before EOF");
 			break;
 		}
 
 		if (apply_window (time_domain, 2 * speclen)) {
-			rv = -1; break;
+			rv = -1;
+			break;
 		}
 
 		fftw_execute (plan);
 
-		single_max = calc_magnitude (freq_domain, 2 * speclen, single_mag_spec);
+		double single_max = calc_magnitude (freq_domain, 2 * speclen, single_mag_spec);
 		max_mag = MAX (max_mag, single_max);
 
-		interp_spec (mag_spec [w], SG_HEIGHT, single_mag_spec, speclen);
-	};
+		interp_spec (mag_spec[w], SG_HEIGHT, single_mag_spec, speclen);
+	}
 
 	/* FIXME: there's some worm in here - on OSX i386 max_mag can become NaN
 	 * it's also been seen but more rarely on OSX x86_64.
@@ -311,8 +317,14 @@ spectrogram_render_to_pixbuf (WfDecoder* infile, GdkPixbuf* pixbuf)
 
 	fftw_destroy_plan (plan);
 
-	if (!rv) 
+	if (!rv){
+		if(!(max_mag > 0.0)){
+			dbg(1, "no signal");
+			return -1;
+		}
+
 		rv = _render_spectrogram_to_pixbuf (pixbuf, SPEC_FLOOR_DB, mag_spec, max_mag);
+	}
 
 	return rv;
 }
