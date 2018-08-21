@@ -18,6 +18,7 @@ options=(
 --disable-jack
 --disable-ayyidbus
 --enable-ayyi
+--enable-test
 --disable-fftw
 --disable-libass
 --disable-dnotify
@@ -26,7 +27,6 @@ options=(
 --enable-mx
 --enable-aubio
 --disable-opengl
---enable-ayyi
 )
 
 set -e
