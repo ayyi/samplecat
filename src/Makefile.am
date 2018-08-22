@@ -121,12 +121,13 @@ samplecat_LDADD = \
 	$(DBUS_LIBS) \
 	$(TRACKER_LIBS) \
 	$(SQLITE_LIBS) \
-	$(GTK_LIBS) $(MYSQL_LDFLAGS) \
+	$(MYSQL_LDFLAGS) \
 	$(JACK_LIBS) $(SNDFILE_LIBS) ${SAMPLERATE_LIBS} \
 	$(GTHREAD_LIBS) \
 	$(FFTW3_LIBS) \
 	$(top_srcdir)/lib/waveform/waveform/.libs/libwaveform.a \
 	$(OPENGL_LDFLAGS) \
+	$(GTK_LIBS) \
 	$(LIBASS_LDFLAGS) \
 	$(ZLIB_LIBS) \
 	$(GMODULE_LIBS) \
