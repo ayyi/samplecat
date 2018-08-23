@@ -1,19 +1,26 @@
-FROM ubuntu:16.04
+# gcc-8.2
+FROM fedora:29
 
-RUN apt-get update && apt-get install -y \
-	openssh-client \
-	gcc make automake libtool pkg-config \
-	gdb \
-	git \
-	vim \
-	libsndfile1-dev \
-	libgtkglext1-dev \
-	libxml2-dev \
-	libsqlite3-dev
+RUN dnf -y update && \
+	dnf -y install \
+		make \
+		libtool \
+		autoconf \
+		gcc \
+		gcc-c++ \
+		git \
+		sqlite-devel \
+		libsndfile-devel \
+		gtk2-devel \
+		libxml2-devel \
+		libGLU-devel \
+		fftw-devel
 
 RUN echo "alias ll='ls -l'" >> /root/.bashrc
 ENV DISPLAY :0
 WORKDIR /root
+
+ADD add_samples /root/add_samples
 ADD compile /root/compile
 
 CMD git clone https://github.com/ayyi/samplecat.git && cd samplecat && \

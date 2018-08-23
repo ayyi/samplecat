@@ -2,6 +2,22 @@
 
 container=samplecat-ubuntu-16
 
+usage="run [OPTIONS]\n\noptions:\n  -i interactive (bash shell)\n\nWithout options, default samplecat build will run\n"
+
+while getopts ":i" opt; do
+    case $opt in
+        i  )
+			# privileged is needed for opengl
+			#             docker run --privileged -e "DISPLAY=unix:0.0" -v="/tmp/.X11-unix:/tmp/.X11-unix:rw" -i -t $container bash
+			docker run --privileged -v="/tmp/.X11-unix:/tmp/.X11-unix:rw" -i -t $container bash
+			exit
+			;;
+        \? ) echo -e $usage
+            exit 1
+    esac
+done
+shift $(($OPTIND - 1))
+
 # run git build script
 docker run -it $container
 
