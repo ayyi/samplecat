@@ -157,9 +157,7 @@ diritem_restat (const guchar* path, DirItem* item, struct stat* parent)
 		{
 			guchar *link_path;
 			link_path = pathdup(path);
-			item->mime_type = type_from_path(link_path
-					? link_path
-					: path);
+			item->mime_type = type_from_path(link_path ? link_path : path);
 			g_free(link_path);
 		}
 		*/

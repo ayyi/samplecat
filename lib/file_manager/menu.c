@@ -549,9 +549,6 @@ delete(AyyiLibfilemanager* fm)
 static void
 file_op (gpointer data, FileOp action, GtkWidget* unused)
 {
-	DirItem	*item;
-	ViewIter iter;
-
 	AyyiLibfilemanager* fm = file_manager__get();
 	int n_selected = view_count_selected(fm->view);
 
@@ -665,9 +662,10 @@ file_op (gpointer data, FileOp action, GtkWidget* unused)
 		return;
 	}
 
+	ViewIter iter;
 	view_get_iter(fm->view, &iter, VIEW_ITER_SELECTED);
 
-	item = iter.next(&iter);
+	DirItem* item = iter.next(&iter);
 	g_return_if_fail(item);
 	// iter may be passed to filer_openitem...
 

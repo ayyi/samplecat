@@ -267,16 +267,13 @@ static void
 details_get_value (GtkTreeModel* tree_model, GtkTreeIter* iter, gint column, GValue* value)
 {
 	ViewDetails* view_details = (ViewDetails *) tree_model;
-	gint i;
 	GPtrArray* items = view_details->items;
-	ViewItem* view_item;
-	mode_t m;
 
 	g_return_if_fail(column >= 0 && column < N_COLUMNS);
 
-	i = GPOINTER_TO_INT(iter->user_data);
+	gint i = GPOINTER_TO_INT(iter->user_data);
 	g_return_if_fail(i >= 0 && i < items->len);
-	view_item = (ViewItem *) items->pdata[i];
+	ViewItem* view_item = (ViewItem *) items->pdata[i];
 	DirItem* item = view_item->item;
 
 	if (column == COL_LEAF)
@@ -314,7 +311,7 @@ details_get_value (GtkTreeModel* tree_model, GtkTreeIter* iter, gint column, GVa
 			     
 		return;
 	}
-	m = item->mode;
+	mode_t m = item->mode;
 
 	switch (column)
 	{
@@ -1333,21 +1330,20 @@ view_details_update_items(ViewIface* view, GPtrArray* items)
 
 
 static void
-view_details_delete_if(ViewIface *view, gboolean (*test)(gpointer item, gpointer data), gpointer data)
+view_details_delete_if(ViewIface* view, gboolean (*test)(gpointer item, gpointer data), gpointer data)
 {
-	GtkTreePath *path;
-	ViewDetails *view_details = (ViewDetails *) view;
+	ViewDetails* view_details = (ViewDetails*)view;
 	int i = 0;
-	GPtrArray *items = view_details->items;
-	GtkTreeModel *model = (GtkTreeModel *) view;
+	GPtrArray* items = view_details->items;
+	GtkTreeModel* model = (GtkTreeModel*)view;
 
-	path = gtk_tree_path_new();
+	GtkTreePath* path = gtk_tree_path_new();
 
 	gtk_tree_path_append_index(path, i);
 
 	while (i < items->len)
 	{
-		ViewItem *item = items->pdata[i];
+		ViewItem* item = items->pdata[i];
 
 		if (test(item->item, data))
 		{
@@ -1367,10 +1363,10 @@ view_details_delete_if(ViewIface *view, gboolean (*test)(gpointer item, gpointer
 
 
 static void
-view_details_clear(ViewIface *view)
+view_details_clear(ViewIface* view)
 {
-	GPtrArray *items = ((ViewDetails *) view)->items;
-	GtkTreeModel *model = (GtkTreeModel *) view;
+	GPtrArray* items = ((ViewDetails*)view)->items;
+	GtkTreeModel* model = (GtkTreeModel*)view;
 
 	GtkTreePath* path = gtk_tree_path_new();
 	gtk_tree_path_append_index(path, items->len);
