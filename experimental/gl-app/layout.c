@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2017 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2018 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -186,13 +186,15 @@ config_load_window_yaml (yaml_parser_t* parser, yaml_event_t* event)
 
 					if(!strcmp(key, "size")){
 						AGliPt p = config_load_point(parser, event);
-						stack[sp]->region.x2 = p.x;
-						stack[sp]->region.y2 = p.y;
+						stack[sp]->region.x2 = stack[sp]->region.x1 + p.x;
+						stack[sp]->region.y2 = stack[sp]->region.y1 + p.y;
 						key[0] = '\0';
 					} else if(!strcmp(key, "position")){
 						AGliPt p = config_load_point(parser, event);
 						stack[sp]->region.x1 = p.x;
 						stack[sp]->region.y1 = p.y;
+						stack[sp]->region.x2 += p.x;
+						stack[sp]->region.y2 += p.y;
 						key[0] = '\0';
 					} else if(!strcmp(key, "size-req")){
 						load_size_req(parser, event, stack[sp]);
@@ -211,7 +213,7 @@ config_load_window_yaml (yaml_parser_t* parser, yaml_event_t* event)
 							if(c){
 								if(c->new){
 									STACK_PUSH(c->new(NULL));
-									stack[sp]->name = g_strdup_printf(name);
+									stack[sp]->name = g_strdup(name);
 								}
 							}else{
 								gwarn("             type not found: %s", event->data.scalar.value);
@@ -312,6 +314,44 @@ config_load_windows_yaml (yaml_parser_t* parser, yaml_event_t* event)
 		}
 	}
 
+#if 0
+#ifdef DEBUG
+	bool check_dock_layout(AGlActor* actor)
+	{
+		int height = agl_actor__height(actor);
+
+		int yl = 0;
+		if(!strcmp(actor->name, "Dock H")){
+			GList* l = actor->children;
+			for(;l;l=l->next){
+				AGlActor* child = l->data;
+				yl = child->region.y2;
+			}
+		}
+		dbg(0, "-> %i %i parent=%i", height, yl, actor->parent->region.y2);
+		return true;
+	}
+
+	bool check_layout(AGlActor* actor)
+	{
+		GList* l = actor->children;
+		for(;l;l=l->next){
+			AGlActor* child = l->data;
+			dbg(0, "  %s", child->name);
+			if(!strcmp(child->name, "Dock H") || !strcmp(child->name, "Dock V")){
+				check_dock_layout(child);
+			}else{
+				check_layout(child);
+			}
+		}
+		return true;
+	}
+	check_layout((AGlActor*)app->scene);
+#endif
+#endif
+
+	if(!g_list_length(((AGlActor*)app->scene)->children)) return gwarn("layout did not load - pls check config file");
+
 	bool layout_set_size(gpointer data)
 	{
 		agl_actor__set_size((AGlActor*)app->scene);
@@ -337,12 +377,11 @@ open_settings_file ()
 		g_free(filename);
 		if(fp) break;
 	}
+	if(!fp){
+		fprintf(stderr, "unable to load config file %s/"PACKAGE".yaml\n", paths[0]);
+	}
 	for(i=0;i<G_N_ELEMENTS(paths);i++){
 		g_free(paths[i]);
-	}
-	if(!fp){
-		fprintf(stderr, "unable to load config file");
-		return NULL;
 	}
 	return fp;
 }
@@ -518,7 +557,6 @@ gboolean
 save_settings ()
 {
 	PF;
-	char value[256];
 
 	if(!yaml_emitter_initialize(&emitter)){ gerr("failed to initialise yaml writer."); return false; }
 
@@ -538,6 +576,7 @@ save_settings ()
 	EMIT(yaml_document_start_event_initialize(&event, NULL, NULL, NULL, 0));
 	EMIT(yaml_mapping_start_event_initialize(&event, NULL, (guchar*)"tag:yaml.org,2002:map", 1, YAML_BLOCK_MAPPING_STYLE));
 
+	char value[256];
 	snprintf(value, 255, "0x%08x", 0xff00ff00);
 	if(!yaml_add_key_value_pair("test_colour", value)) goto error;
 
@@ -557,7 +596,7 @@ save_settings ()
 			if(!is_panel_child){
 				int vals1[2] = {actor->region.x1, actor->region.y1};
 				yaml_add_key_value_pair_array("position", vals1, 2);
-				int vals2[2] = {actor->region.x2, actor->region.y2};
+				int vals2[2] = {agl_actor__width(actor), agl_actor__height(actor)};
 				yaml_add_key_value_pair_array("size", vals2, 2);
 			}
 

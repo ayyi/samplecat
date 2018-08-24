@@ -1,11 +1,14 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2016-2017 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2016-2018 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
 * | as published by the Free Software Foundation.                        |
+* +----------------------------------------------------------------------+
+* | DockH                                                                |
+* | A container with 2 or more children arranged in a horizontal row     |
 * +----------------------------------------------------------------------+
 *
 */
@@ -15,7 +18,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
-#include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
 #include <GL/gl.h>
 #include "agl/ext.h"
@@ -109,6 +111,7 @@ dock_h_view(WaveformActor* _)
 	void dock_h_set_size(AGlActor* actor)
 	{
 		DockHView* dock = (DockHView*)actor;
+		int height = agl_actor__height(actor);
 
 		typedef struct {
 			AGlActor* actor;
@@ -129,11 +132,10 @@ dock_h_view(WaveformActor* _)
 		if(items[G_N_ELEMENTS(items) - 1].actor->region.x2 == agl_actor__width(actor)){
 			dbg(2, "width already correct: %i", agl_actor__width(actor));
 
-			int height = agl_actor__height(actor);
 			GList* l = actor->children;
 			for(;l;l=l->next){
 				AGlActor* child = l->data;
-				child->region.y2 = child->region.y1 + height;
+				child->region.y2 = height;
 				agl_actor__set_size(child);
 			}
 			return;
@@ -261,7 +263,7 @@ dock_h_view(WaveformActor* _)
 				.x1 = x,
 				.y1 = 0,
 				.x2 = x + items[i].width,
-				.y2 = panel->size_req.preferred.y > -1 ? panel->size_req.preferred.y : agl_actor__height(actor)
+				.y2 = panel->size_req.preferred.y > -1 ? panel->size_req.preferred.y : height
 			};
 			x += items[i].width + SPACING;
 		}
@@ -271,7 +273,7 @@ dock_h_view(WaveformActor* _)
 		// single child takes all space of panel
 		if(g_list_length(actor->children) == 1){
 			AGlActor* child = actor->children->data;
-			child->region = (AGliRegion){0, PANEL_DRAG_HANDLE_HEIGHT, agl_actor__width(actor), agl_actor__height(actor)};
+			child->region = (AGliRegion){0, PANEL_DRAG_HANDLE_HEIGHT, agl_actor__width(actor), height};
 			agl_actor__set_size(child);
 		}
 	}

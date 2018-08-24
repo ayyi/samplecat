@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2017 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2018 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -46,6 +46,9 @@ application_construct (GType object_type)
 	app->config_ctx.filename = g_strdup_printf("%s/.config/" PACKAGE "/" PACKAGE, g_get_home_dir());
 	//app->cache_dir = g_build_filename (g_get_home_dir(), ".config", PACKAGE, "cache", NULL);
 	//app->configctx.dir = g_build_filename (g_get_home_dir(), ".config", PACKAGE, NULL);
+	app->style.bg = 0x111111ff;
+	app->style.bg = 0x444444ff;
+	app->style.bg_selected = 0x777777ff;
 	app->style.fg = 0x66aaffff;
 	return app;
 }
@@ -57,6 +60,17 @@ application_new ()
 	app = application_construct (TYPE_APPLICATION);
 
 	samplecat_init();
+
+	{
+		ConfigContext* ctx = &app->config_ctx;
+		ctx->options = g_malloc0(CONFIG_MAX * sizeof(ConfigOption*));
+
+		void get_theme_name(ConfigOption* option)
+		{
+			g_value_set_string(&option->val, theme_name);
+		}
+		ctx->options[CONFIG_ICON_THEME] = config_option_new_string("icon_theme", get_theme_name);
+	}
 
 	void on_filter_changed(GObject* _filter, gpointer user_data)
 	{
