@@ -63,80 +63,47 @@ Key keys[] = {
 static void add_key_handlers ();
 
 
-int
-main(int argc, char* argv[])
-{
-	_debug_ = 0;
+					static void load_file_done(WaveformActor* a, gpointer _c)
+					{
+						// TODO not sure if we need to redraw here or not...
+						//agl_actor__invalidate(((AGlActor*)a);
+					}
 
-	app = application_new();
+				static void on_selection_change(SamplecatModel* m, Sample* sample, gpointer actor)
+				{
+					PF;
 
-	gtk_init_check(&argc, &argv);
-	type_init();
-	pixmaps_init();
-#if 0
-	icon_theme_init();
+					Waveform* waveform = waveform_new(sample->full_path);
+					wf_actor_set_waveform((WaveformActor*)actor, waveform, load_file_done, actor);
+					g_object_unref(waveform);
+				}
+
+		static void on_actor_added(Application* app, AGlActor* actor, gpointer data)
+		{
+			AGlActorClass* c = actor->class;
+			if(c == wf_actor_get_class()){
+				g_signal_connect((gpointer)samplecat.model, "selection-changed", G_CALLBACK(on_selection_change), actor);
+			}
+		}
+
+		static void scene_set_size(AGlActor* scene)
+		{
+			dbg(2, "%i", ((AGlActor*)app->scene)->region.x2);
+
+			actors.hdock->region = (AGliRegion){20, 20, agl_actor__width(scene) - 20, agl_actor__height(scene) - 20};
+			agl_actor__set_size(actors.hdock);
+
+// not needed?
+			agl_actor__set_size(actors.list); // clear cache
+
+#ifdef SHOW_FBO_DEBUG
+			actors.debug->region = (AGliRegion){scene->region.x2/2, 10, scene->region.x2 - 10, scene->region.x2/2};
 #endif
 
-	Window win;
-	GLXContext ctx;
-	GLboolean fullscreen = GL_FALSE;
-
-	int i; for (i = 1; i < argc; i++) {
-		if (strcmp(argv[i], "-verbose") == 0) {
-			_debug_ = 1;
+			agl_actor__invalidate((AGlActor*)app->scene);
 		}
-#if 0
-		else if (strcmp(argv[i], "-swap") == 0 && i + 1 < argc) {
-			swap_interval = atoi( argv[i+1] );
-			do_swap_interval = GL_TRUE;
-			i++;
-		}
-		else if (strcmp(argv[i], "-forcegetrate") == 0) {
-			/* This option was put in because some DRI drivers don't support the
-			 * full GLX_OML_sync_control extension, but they do support
-			 * glXGetMscRateOML.
-			 */
-			force_get_rate = GL_TRUE;
-		}
-#endif
-		else if (strcmp(argv[i], "-fullscreen") == 0) {
-			fullscreen = GL_TRUE;
-		}
-		else if (strcmp(argv[i], "-help") == 0) {
-			printf("Usage:\n");
-			printf("  glx [options]\n");
-			printf("Options:\n");
-			printf("  -help                   Print this information\n");
-			printf("  -verbose                Output info to stdout\n");
-			printf("  -swap N                 Swap no more than once per N vertical refreshes\n");
-			printf("  -forcegetrate           Try to use glXGetMscRateOML function\n");
-			printf("  -fullscreen             Full-screen window\n");
-			return 0;
-		}
-	}
 
-	Display* dpy = XOpenDisplay(NULL);
-	if(!dpy){
-		printf("Error: couldn't open display %s\n", XDisplayName(NULL));
-		return -1;
-	}
-
-	app->scene = (AGlRootActor*)agl_actor__new_root_(CONTEXT_TYPE_GLX);
-
-	AGliPt size = get_window_size_from_settings();
-	int screen = DefaultScreen(dpy);
-	make_window(dpy, "Samplecat", (XDisplayWidth(dpy, screen) - size.x) / 2, (XDisplayHeight(dpy, screen) - size.y) / 2, size.x, size.y, fullscreen, app->scene, &win, &ctx);
-
-	agl_gl_init();
-	glx_init(dpy);
-
-#ifdef USE_GLIB_LOOP
-	GMainLoop* mainloop = main_loop_new(dpy, win);
-#else
-	g_main_loop_new(NULL, true);
-#endif
-
-	gboolean add_content(gpointer _)
+	static gboolean add_content(gpointer _)
 	{
 		config_load(&app->config_ctx, &app->config);
 
@@ -169,28 +136,6 @@ main(int argc, char* argv[])
 		actors.bg->region.x2 = 1;
 		actors.bg->region.y2 = 1;
 #endif
-		void on_actor_added(Application* app, AGlActor* actor, gpointer data)
-		{
-			AGlActorClass* c = actor->class;
-			if(c == wf_actor_get_class()){
-				void on_selection_change(SamplecatModel* m, Sample* sample, gpointer actor)
-				{
-					PF;
-
-					void load_file_done(WaveformActor* a, gpointer _c)
-					{
-						PF;
-						// TODO not sure if we need to redraw here or not...
-						//agl_actor__invalidate(((AGlActor*)a);
-					}
-
-					Waveform* waveform = waveform_new(sample->full_path);
-					wf_actor_set_waveform((WaveformActor*)actor, waveform, load_file_done, actor);
-					g_object_unref(waveform);
-				}
-				g_signal_connect((gpointer)samplecat.model, "selection-changed", G_CALLBACK(on_selection_change), actor);
-			}
-		}
 		g_signal_connect(app, "actor-added", G_CALLBACK(on_actor_added), NULL);
 
 		if(load_settings()){
@@ -214,22 +159,6 @@ main(int argc, char* argv[])
 		wf_debug_actor_set_actor((DebugActor*)actors.debug, actors.list);
 #endif
 
-		void scene_set_size(AGlActor* scene)
-		{
-			dbg(2, "%i", ((AGlActor*)app->scene)->region.x2);
-
-			actors.hdock->region = (AGliRegion){20, 20, agl_actor__width(scene) - 20, agl_actor__height(scene) - 20};
-			agl_actor__set_size(actors.hdock);
-
-// not needed?
-			agl_actor__set_size(actors.list); // clear cache
-
-#ifdef SHOW_FBO_DEBUG
-			actors.debug->region = (AGliRegion){scene->region.x2/2, 10, scene->region.x2 - 10, scene->region.x2/2};
-#endif
-
-			agl_actor__invalidate((AGlActor*)app->scene);
-		}
 		((AGlActor*)app->scene)->set_size = scene_set_size;
 
 		if(w) wf_actor_set_region((WaveformActor*)actors.wave, &(WfSampleRegion){0, waveform_get_n_frames(w)});
@@ -242,21 +171,84 @@ main(int argc, char* argv[])
 		return G_SOURCE_REMOVE;
 	}
 
+int
+main(int argc, char* argv[])
+{
+	_debug_ = 0;
+
+	app = application_new();
+
+	gtk_init_check(&argc, &argv);
+	type_init();
+	pixmaps_init();
+#if 0
+	icon_theme_init();
+#endif
+
+	GLXContext ctx;
+
+	int i; for (i = 1; i < argc; i++) {
+		if (strcmp(argv[i], "-verbose") == 0) {
+			_debug_ = 1;
+		}
+#if 0
+		else if (strcmp(argv[i], "-swap") == 0 && i + 1 < argc) {
+			swap_interval = atoi( argv[i+1] );
+			do_swap_interval = GL_TRUE;
+			i++;
+		}
+		else if (strcmp(argv[i], "-forcegetrate") == 0) {
+			/* This option was put in because some DRI drivers don't support the
+			 * full GLX_OML_sync_control extension, but they do support
+			 * glXGetMscRateOML.
+			 */
+			force_get_rate = GL_TRUE;
+		}
+#endif
+		else if (strcmp(argv[i], "-help") == 0) {
+			printf("Usage:\n");
+			printf("  glx [options]\n");
+			printf("Options:\n");
+			printf("  -help                   Print this information\n");
+			printf("  -verbose                Output info to stdout\n");
+			printf("  -swap N                 Swap no more than once per N vertical refreshes\n");
+			printf("  -forcegetrate           Try to use glXGetMscRateOML function\n");
+			return 0;
+		}
+	}
+
+	Display* dpy = XOpenDisplay(NULL);
+	if(!dpy){
+		printf("Error: couldn't open display %s\n", XDisplayName(NULL));
+		return -1;
+	}
+
+	app->scene = (AGlScene*)agl_actor__new_root_(CONTEXT_TYPE_GLX);
+
+	AGliPt size = get_window_size_from_settings();
+	int screen = DefaultScreen(dpy);
+	AGlWindow* window = agl_make_window(dpy, "Samplecat", (XDisplayWidth(dpy, screen) - size.x) / 2, (XDisplayHeight(dpy, screen) - size.y) / 2, size.x, size.y, app->scene);
+
+#ifdef USE_GLIB_LOOP
+	GMainLoop* mainloop = main_loop_new(dpy, window->window);
+#else
+	g_main_loop_new(NULL, true);
+#endif
+
 	g_idle_add(add_content, NULL);
 
-	on_window_resize(size.x, size.y);
+	on_window_resize(dpy, window, size.x, size.y);
 
 #ifdef USE_GLIB_LOOP
 	g_main_loop_run(mainloop);
 #else
-	event_loop(dpy, win);
+	event_loop(dpy);
 #endif
 
-	glXDestroyContext(dpy, ctx);
-	XDestroyWindow(dpy, win);
-	XCloseDisplay(dpy);
-
 	save_settings();
+
+	agl_window_destroy(dpy, &window);
+	XCloseDisplay(dpy);
 
 	return 0;
 }

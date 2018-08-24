@@ -23,15 +23,13 @@
 #include "debug/debug.h"
 #include "agl/ext.h"
 #include "agl/actor.h"
+#include "waveform/utils.h"
 #include "samplecat/typedefs.h"
 #include "keys.h"
 #include "gl-app/glx.h"
 
-static AGlRootActor* scene = NULL;
 extern Key keys[];
 extern GHashTable* key_handlers;
-
-GLboolean need_draw = GL_TRUE;
 
 #ifndef GLX_MESA_swap_control
 typedef GLint (*PFNGLXSWAPINTERVALMESAPROC)    (unsigned interval);
@@ -62,12 +60,18 @@ static GLboolean has_SGI_swap_control = GL_FALSE;
 static GLboolean has_MESA_swap_control = GL_FALSE;
 static GLboolean has_MESA_swap_frame_usage = GL_FALSE;
 
-
 static char** extension_table = NULL;
 static unsigned num_extensions;
 
+static void       make_extension_table   (const char*);
+static void       glx_init               (Display*);
+static AGlWindow* window_lookup          (Window);
 
-void
+static GList* windows = NULL;
+static GLXContext ctx = {0,};
+
+
+static void
 glx_init(Display* dpy)
 {
 	PFNGLXSWAPINTERVALMESAPROC set_swap_interval = NULL;
@@ -129,18 +133,53 @@ glx_init(Display* dpy)
 }
 
 
-static void
-draw(void)
+static int
+find_window_instance_number(AGlWindow* window)
 {
+	GList* l = windows;
+	int i = 0;
+	for(;l;l=l->next){
+		AGlWindow* w = l->data;
+		if(w->window == window->window) return i + 1;
+		i++;
+	}
+	return -1;
+}
+
+
+static void
+draw(Display* dpy, AGlWindow* window)
+{
+	AGlActor* scene = (AGlActor*)window->scene;
+
+	static long unsigned current = 0;
+
+	if(window->window != current){
+		glXMakeCurrent(dpy, window->window, window->scene->gl.glx.context);
+
+		int width = scene->region.x2;
+		int height = scene->region.y2;
+		glViewport(0, 0, width, height);
+		glMatrixMode(GL_PROJECTION);
+		glLoadIdentity();
+
+		double left   = 0;
+		double right  = width;
+		double bottom = height;
+		double top    = 0;
+		glOrtho (left, right, bottom, top, 1.0, -1.0);
+	}
+	current = window->window;
+
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	agl_actor__paint((AGlActor*)scene);
+	agl_actor__paint(scene);
 }
 
 
 /* new window size or exposure */
 void
-on_window_resize(int width, int height)
+on_window_resize(Display* dpy, AGlWindow* window, int width, int height)
 {
 	glViewport(0, 0, width, height);
 	dbg (2, "viewport: %i %i %i %i", 0, 0, width, height);
@@ -153,11 +192,11 @@ on_window_resize(int width, int height)
 	double top    = 0;
 	glOrtho (left, right, bottom, top, 1.0, -1.0);
 
-	((AGlActor*)scene)->region = (AGliRegion){
+	((AGlActor*)window->scene)->region = (AGliRegion){
 		.x2 = width,
 		.y2 = height,
 	};
-	agl_actor__set_size((AGlActor*)scene);
+	agl_actor__set_size((AGlActor*)window->scene);
 }
 
 
@@ -180,7 +219,6 @@ no_border(Display* dpy, Window w)
    } PropMotifWmHints;
 
    PropMotifWmHints motif_hints;
-   Atom prop, proptype;
    unsigned long flags = 0;
 
    /* setup the property */
@@ -188,14 +226,14 @@ no_border(Display* dpy, Window w)
    motif_hints.decorations = flags;
 
    /* get the atom for the property */
-   prop = XInternAtom( dpy, "_MOTIF_WM_HINTS", True );
+   Atom prop = XInternAtom(dpy, "_MOTIF_WM_HINTS", True);
    if (!prop) {
       /* something went wrong! */
       return;
    }
 
    /* not sure this is correct, seems to work, XA_WM_HINTS didn't work */
-   proptype = prop;
+   Atom proptype = prop;
 
    XChangeProperty(dpy, w,                         /* display, window */
                    prop, proptype,                 /* property, type */
@@ -207,16 +245,17 @@ no_border(Display* dpy, Window w)
 }
 
 
+static void scene_needs_redraw(AGlScene* scene, gpointer _){ scene->gl.glx.needs_draw = True; }
+static Atom wm_protocol;
+static Atom wm_close;
+
 /*
  * Create an RGB, double-buffered window.
  * Return the window and context handles.
  */
-void
-make_window(Display* dpy, const char* name, int x, int y, int width, int height, bool fullscreen, AGlRootActor* _scene, Window* winRet, GLXContext* ctxRet)
+AGlWindow*
+agl_make_window(Display* dpy, const char* name, int x, int y, int width, int height, AGlRootActor* scene)
 {
-	scene = _scene;
-
-	void scene_needs_redraw(AGlScene* scene, gpointer _){ need_draw = true; }
 	scene->draw = scene_needs_redraw;
 
 	int attrib[] = {
@@ -229,12 +268,11 @@ make_window(Display* dpy, const char* name, int x, int y, int width, int height,
 		GLX_STENCIL_SIZE, 8,
 		None
 	};
-	XSetWindowAttributes attr;
-	unsigned long mask;
 
 	int scrnum = DefaultScreen(dpy);
 	Window root = RootWindow(dpy, scrnum);
 
+	bool fullscreen = false;
 	if (fullscreen) {
 		x = y = 0;
 		width = DisplayWidth(dpy, scrnum);
@@ -247,12 +285,14 @@ make_window(Display* dpy, const char* name, int x, int y, int width, int height,
 		exit(1);
 	}
 
-	/* window attributes */
-	attr.background_pixel = 0;
-	attr.border_pixel = 0;
-	attr.colormap = XCreateColormap(dpy, root, visinfo->visual, AllocNone);
-	attr.event_mask = StructureNotifyMask | ExposureMask | KeyPressMask | ButtonPressMask | ButtonReleaseMask | PointerMotionMask;
-	mask = CWBackPixel | CWBorderPixel | CWColormap | CWEventMask;
+	// Window attributes
+	XSetWindowAttributes attr = {
+		.background_pixel = 0,
+		.border_pixel = 0,
+		.colormap = XCreateColormap(dpy, root, visinfo->visual, AllocNone),
+		.event_mask = StructureNotifyMask | ExposureMask | KeyPressMask | KeyReleaseMask| ButtonPressMask | ButtonReleaseMask | PointerMotionMask,
+	};
+	unsigned long mask = CWBackPixel | CWBorderPixel | CWColormap | CWEventMask;
 
 	Window win = XCreateWindow(dpy, root, 0, 0, width, height, 0, visinfo->depth, InputOutput, visinfo->visual, mask, &attr);
 
@@ -266,27 +306,82 @@ make_window(Display* dpy, const char* name, int x, int y, int width, int height,
 			.flags = USSize | USPosition
 		};
 		XSetNormalHints(dpy, win, &sizehints);
-		XSetStandardProperties(dpy, win, name, name, None, (char **)NULL, 0, &sizehints);
+		XSetStandardProperties(dpy, win, name, name, None, (char**)NULL, 0, &sizehints);
 	}
+
+	wm_protocol = XInternAtom(dpy, "WM_PROTOCOLS", False);
+	wm_close = XInternAtom(dpy, "WM_DELETE_WINDOW", False);
+	// Receive the 'close' event from the WM
+	XSetWMProtocols(dpy, win, &wm_close, 1);
 
 	XMoveWindow(dpy, win, x, y);
 
 	if (fullscreen)
 		no_border(dpy, win);
 
-	GLXContext ctx = glXCreateContext(dpy, visinfo, NULL, True);
-	if (!ctx) {
-		printf("Error: glXCreateContext failed\n");
-		exit(1);
+	if(!windows){
+		GLXContext sharelist = NULL;
+		ctx = glXCreateContext(dpy, visinfo, sharelist, True);
+		if (!ctx) {
+			printf("Error: glXCreateContext failed\n");
+			exit(1);
+		}
 	}
 
 	XFree(visinfo);
 
-	*winRet = win;
-	*ctxRet = ctx;
+	scene->gl.glx.window = win;
+	scene->gl.glx.context = ctx;
 
 	XMapWindow(dpy, win);
-	glXMakeCurrent(dpy, win, ctx);
+
+	if(!windows){
+		glXMakeCurrent(dpy, win, ctx);
+		glx_init(dpy);
+		agl_gl_init();
+	}
+
+	AGlWindow* agl_window = AGL_NEW(AGlWindow,
+		.window = win,
+		.scene = scene
+	);
+	windows = g_list_append(windows, agl_window);
+
+	return agl_window;
+}
+
+
+void
+agl_window_destroy (Display* dpy, AGlWindow** window)
+{
+	dbg(1, "%i/%i", find_window_instance_number(*window), g_list_length(windows));
+
+	windows = g_list_remove(windows, *window);
+
+	if(!windows) glXDestroyContext(dpy, (*window)->scene->gl.glx.context);
+	XDestroyWindow(dpy, (*window)->window);
+
+	agl_actor__free((AGlActor*)(*window)->scene);
+
+	g_free0(*window);
+
+	// temporary fix for glviewport/glortho getting changed for remaining windows
+	GList* l = windows;
+	for(;l;l=l->next){
+		AGlWindow* w = l->data;
+		w->scene->gl.glx.needs_draw = true;
+	}
+}
+
+
+static AGlWindow*
+window_lookup (Window window)
+{
+	GList* l = windows;
+	for(;l;l=l->next){
+		if(((AGlWindow*)l->data)->window == window) return l->data;
+	}
+	return NULL;
 }
 
 
@@ -300,7 +395,7 @@ make_window(Display* dpy, const char* name, int x, int y, int width, int height,
  *  but is not currently working.
  */
 void
-event_loop(Display* dpy, Window win)
+event_loop(Display* dpy)
 {
 	float frame_usage = 0.0;
 
@@ -322,54 +417,88 @@ event_loop(Display* dpy, Window win)
 		while (XPending(dpy) > 0) {
 			XEvent event;
 			XNextEvent(dpy, &event);
-			switch (event.type) {
-				case Expose:
-					need_draw = TRUE;
-					break;
-				case ConfigureNotify:
-					on_window_resize(event.xconfigure.width, event.xconfigure.height);
-					need_draw = TRUE;
-					break;
-				case KeyPress: {
-					char buffer[10];
-					int code = XLookupKeysym(&event.xkey, 0);
+			AGlWindow* window = window_lookup(((XAnyEvent*)&event)->window);
+			if(window){
+				switch (event.type) {
+					case ClientMessage:
+						dbg(1, "client message");
+						if ((event.xclient.message_type == wm_protocol) // OK, it's comming from the WM
+								&& ((Atom)event.xclient.data.l[0] == wm_close)) {
+							agl_window_destroy(dpy, &window);
+						}
+						break;
+					case Expose:
+						window->scene->gl.glx.needs_draw = True;
+						break;
+					case ConfigureNotify:
+						// There was a change to size, position, border, or stacking order.
+						dbg(1, "Configure");
+						if(event.xconfigure.width != agl_actor__width((AGlActor*)window->scene) || event.xconfigure.height != agl_actor__height((AGlActor*)window->scene)){
+							on_window_resize(dpy, window, event.xconfigure.width, event.xconfigure.height);
+						}
+						window->scene->gl.glx.needs_draw = True;
+						break;
+					case KeyPress: {
+						char buffer[10];
+						int code = XLookupKeysym(&event.xkey, 0);
 
-					KeyHandler* handler = g_hash_table_lookup(key_handlers, &code);
-					if(handler) handler();
+						KeyHandler* handler = g_hash_table_lookup(key_handlers, &code);
+						if(handler) handler();
 
-					XLookupString(&event.xkey, buffer, sizeof(buffer), NULL, NULL);
-					if (buffer[0] == 27 /* ESC */|| buffer[0] == 'q') {
-						return;
-					}
-					else agl_actor__xevent(scene, &event);
+#if 0
+						bool shift = ((XKeyEvent*)&event)->state & ShiftMask;
+						bool control = ((XKeyEvent*)&event)->state & ControlMask;
+#endif
+						XLookupString(&event.xkey, buffer, sizeof(buffer), NULL, NULL);
+						switch(buffer[0]){
+							case 27: // ESC
+								if(g_list_length(windows) > 1 && window != ((AGlWindow*)windows->data)){
+									agl_window_destroy(dpy, &window);
+								}else{
+									return; // exit
+								}
+								break;
+							case 'q':
+								return;
+							default:
+								agl_actor__xevent(window->scene, &event);
+						}
 
-					} break;
-				case ButtonPress:
-				case ButtonRelease:
-					if(event.xbutton.button == 1){
-						int x = event.xbutton.x;
-						int y = event.xbutton.y;
-						dbg(1, "button: %i %i\n", x, y);
-					}
-					agl_actor__xevent(scene, &event);
-					break;
-				case MotionNotify:
-					agl_actor__xevent(scene, &event);
-					break;
+						} break;
+					case KeyRelease: {
+							agl_actor__xevent(window->scene, &event);
+						} break;
+					case ButtonPress:
+					case ButtonRelease:
+						if(event.xbutton.button == 1){
+							int x = event.xbutton.x;
+							int y = event.xbutton.y;
+							dbg(1, "button: %i %i\n", x, y);
+						}
+						agl_actor__xevent(window->scene, &event);
+						break;
+					case MotionNotify:
+						agl_actor__xevent(window->scene, &event);
+						break;
+				}
 			}
 		}
 
-		if(need_draw){
-			// TODO synchronise to frame clock
-			draw();
-			glXSwapBuffers(dpy, win);
-			need_draw = false;
+		GList* l = windows;
+		for(;l;l=l->next){
+			AGlWindow* w = l->data;
+			if(w->scene->gl.glx.needs_draw){
+				// TODO synchronise to frame clock
+				draw(dpy, w);
+				glXSwapBuffers(dpy, w->window);
+				w->scene->gl.glx.needs_draw = false;
+			}
 		}
 
 		if (get_frame_usage) {
 			GLfloat temp;
 
-			(*get_frame_usage)(dpy, win, & temp);
+			(*get_frame_usage)(dpy, ((AGlWindow*)windows->data)->window, & temp);
 			frame_usage += temp;
 		}
 
@@ -400,7 +529,8 @@ event_loop(Display* dpy, Window win)
 			}
 		}
 
-		g_main_context_iteration(NULL, false); // update animations
+		int i = 0;
+		while(g_main_context_iteration(NULL, false) && i++ < 32); // update animations, idle callbacks etc
 	}
 }
 #endif
@@ -435,7 +565,7 @@ show_refresh_rate(Display* dpy)
  * \param string   String of GLX extensions.
  * \sa is_extension_supported
  */
-void
+static void
 make_extension_table(const char* string)
 {
 	char** string_tab;

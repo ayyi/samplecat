@@ -13,18 +13,23 @@
 #ifndef __glx_utils_h__
 #define __glx_utils_h__
 
-void      glx_init               (Display*);
-void      make_window            (Display*, const char* name, int x, int y, int width, int height, bool fullscreen, AGlScene* scene, Window* winRet, GLXContext* ctxRet);
-void      make_extension_table   (const char*);
-GLboolean is_extension_supported (const char*);
-void      show_refresh_rate      (Display*);
-void      on_window_resize       (int width, int height);
+typedef struct {
+    Window    window;
+    AGlScene* scene;
+} AGlWindow;
+
+AGlWindow* agl_make_window        (Display*, const char* name, int x, int y, int width, int height, AGlScene* scene);
+void       agl_window_destroy     (Display*, AGlWindow**);
+
+void       on_window_resize       (Display*, AGlWindow*, int width, int height);
+GLboolean  is_extension_supported (const char*);
+void       show_refresh_rate      (Display*);
 
 #undef USE_GLIB_LOOP
 #ifdef USE_GLIB_LOOP
 GMainLoop*main_loop_new          (Display*, Window);
 #else
-void      event_loop             (Display*, Window);
+void      event_loop             (Display*);
 #endif
 
 #endif
