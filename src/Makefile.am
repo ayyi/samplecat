@@ -50,15 +50,12 @@ endif
 if ENABLE_SYSTEM_GTKGLEXT
 else
 GTKGLEXT_LDFLAGS = \
-	$(top_srcdir)/lib/waveform/gtkglext-1.0/gtk/.libs/libgtkglext-x11-1.0.a \
-	$(top_srcdir)/lib/waveform/gtkglext-1.0/gdk/.libs/libgdkglext-x11-1.0.a
+	$(top_srcdir)/lib/waveform/gtkglext-1.0/.libs/libgtkglext.a
 endif
 OPENGL_SRC = \
 	$(OPENGL_FFTW_SRC) \
 	rotator.c rotator.h
 OPENGL_LDFLAGS = \
-	$(top_srcdir)/lib/waveform/agl/.libs/libagl.a \
-	$(top_srcdir)/lib/waveform/transition/.libs/libtransition.a \
 	$(GTKGLEXT_LDFLAGS) \
 	$(GL_LDFLAGS)
 endif
@@ -114,7 +111,6 @@ samplecat_LDADD = \
 	$(top_srcdir)/lib/samplecat/db/libsamplecatdb.a \
 	$(GDL_LDFLAGS) \
 	gimp/libgimpwidgets.a \
-	$(top_srcdir)/lib/waveform/decoder/.libs/libwaveformdecoder.a \
 	$(top_srcdir)/lib/audio_analysis/libaudioanalysis.a \
 	$(SAMPLECAT_LIBS) \
 	$(AYYI_LIBS) \
@@ -125,7 +121,7 @@ samplecat_LDADD = \
 	$(JACK_LIBS) $(SNDFILE_LIBS) ${SAMPLERATE_LIBS} \
 	$(GTHREAD_LIBS) \
 	$(FFTW3_LIBS) \
-	$(top_srcdir)/lib/waveform/waveform/.libs/libwaveform.a \
+	$(top_srcdir)/lib/waveform/.libs/libwaveform.a \
 	$(OPENGL_LDFLAGS) \
 	$(GTK_LIBS) \
 	$(LIBASS_LDFLAGS) \
