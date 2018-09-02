@@ -12,7 +12,7 @@
 #ifndef __samplecat_support_h__
 #define __samplecat_support_h__
 #include <stdint.h>
-#include <gtk/gtk.h>
+#include <gdk/gdk.h>
 #include "utils/ayyi_utils.h"
 #include "file_manager/mimetype.h"
 #include "samplecat/typedefs.h"

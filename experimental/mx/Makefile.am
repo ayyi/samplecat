@@ -1,6 +1,16 @@
 NULL =
 
-AM_CFLAGS = -g -Wall $(MX_CFLAGS) $(MX_MAINTAINER_CFLAGS)
+AM_CFLAGS = -g -Wall \
+	-I$(top_srcdir) \
+	-I$(top_srcdir)/lib \
+	-I$(top_srcdir)/lib/samplecat \
+	-I$(top_srcdir)/lib/waveform \
+	-I$(top_srcdir)/src \
+	-I$(top_builddir) \
+	$(MX_CFLAGS) \
+	$(MX_MAINTAINER_CFLAGS)
+	$(GTK_CFLAGS)
+
 
 LDADD = \
 	$(top_srcdir)/lib/samplecat/db/libsamplecatdb.a \
@@ -22,15 +32,6 @@ LDADD = \
 	$(SQLITE_LIBS) \
 	-lstdc++ \
 	-lz
-
-INCLUDES = \
-	-I$(top_srcdir) \
-	-I$(top_srcdir)/lib \
-	-I$(top_srcdir)/lib/samplecat \
-	-I$(top_srcdir)/lib/waveform \
-	-I$(top_srcdir)/src \
-	-I$(top_builddir) \
-	$(GTK_CFLAGS)
 
 noinst_PROGRAMS = \
 	mx_test \

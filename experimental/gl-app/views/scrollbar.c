@@ -30,7 +30,7 @@ static void vscrollbar_bar_position (AGlActor*, iRange*);
 
 typedef struct {
     AGlActor       actor;
-    GtkOrientation orientation;
+    AGlOrientation orientation;
     AGliPt         grab_offset; // TODO this should probably be part of the actor_context
     float          opacity;
     WfAnimatable   animation;
@@ -53,7 +53,7 @@ scrollbar_view_get_class ()
 
 
 AGlActor*
-scrollbar_view(AGlActor* panel, GtkOrientation orientation)
+scrollbar_view(AGlActor* panel, AGlOrientation orientation)
 {
 	agl = agl_get_instance();
 
@@ -117,7 +117,7 @@ scrollbar_view(AGlActor* panel, GtkOrientation orientation)
 
 	void scrollbar_init(AGlActor* actor)
 	{
-		if(((ScrollbarActor*)actor)->orientation == GTK_ORIENTATION_VERTICAL){
+		if(((ScrollbarActor*)actor)->orientation == AGL_ORIENTATION_VERTICAL){
 			if(!v_scrollbar_shader.shader.program){
 				agl_create_program(&v_scrollbar_shader.shader);
 				v_scrollbar_shader.uniform.radius = 3;
@@ -166,7 +166,7 @@ scrollbar_set_size(AGlActor* actor)
 	AGlActor* root = (AGlActor*)actor->root;
 
 	if(actor->parent->region.x2 > 0/* && actor->region.x2 > 0*/){
-		if(((ScrollbarActor*)actor)->orientation == GTK_ORIENTATION_VERTICAL){
+		if(((ScrollbarActor*)actor)->orientation == AGL_ORIENTATION_VERTICAL){
 			actor->region = (AGliRegion){
 				.x1 = actor->parent->region.x2/* - V_SCROLLBAR_H_PADDING*/ - 2 * R - 8,
 				.x2 = actor->parent->region.x2/* - V_SCROLLBAR_H_PADDING*/,
@@ -231,7 +231,7 @@ scrollbar_on_event(AGlActor* actor, GdkEvent* event, AGliPt xy)
 	switch (event->type){
 		case GDK_MOTION_NOTIFY:
 			if(actor_context.grabbed == actor){
-				if(((ScrollbarActor*)actor)->orientation == GTK_ORIENTATION_VERTICAL){
+				if(((ScrollbarActor*)actor)->orientation == AGL_ORIENTATION_VERTICAL){
 					//int dy = xy.y - press.pt.y;
 					//double scale = (actor->parent->scrollable.y2 - actor->parent->scrollable.y1) / (double)agl_actor__height(actor);
 					//int new = ((int)-press.viewport.y1) + dy * scale;
@@ -264,7 +264,7 @@ scrollbar_on_event(AGlActor* actor, GdkEvent* event, AGliPt xy)
 				press = (struct Press){.pt = xy};
 
 				iRange bar = {0,};
-				if(((ScrollbarActor*)actor)->orientation == GTK_ORIENTATION_VERTICAL){
+				if(((ScrollbarActor*)actor)->orientation == AGL_ORIENTATION_VERTICAL){
 					vscrollbar_bar_position (actor, &bar);
 					if(xy.y > bar.start && xy.y < bar.end){
 						actor_context.grabbed = actor;

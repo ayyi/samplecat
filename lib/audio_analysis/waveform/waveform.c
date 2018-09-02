@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2017 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2018 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -18,8 +18,8 @@
 #include <gtk/gtk.h>
 #include <gdk-pixbuf/gdk-pixdata.h>
 #include <cairo.h>
-#include "waveform/waveform/waveform.h"
 #include "debug/debug.h"
+#include "waveform/waveform/waveform.h"
 #include "decoder/ad.h"
 #include "samplecat/support.h"
 #include "samplecat/sample.h"

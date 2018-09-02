@@ -1,5 +1,5 @@
 
-SUBDIRS = shaders
+SUBDIRS = shaders views
 
 bin_PROGRAMS = samplecat_gl
 
@@ -8,20 +8,6 @@ samplecat_gl_SOURCES = \
 	application.c application.h \
 	glx.c glx.h \
 	directory.c directory.h \
-	views/dock_v.c views/dock_v.h \
-	views/dock_h.c views/dock_h.h \
-	views/panel.c views/panel.h \
-	views/scrollable.c views/scrollable.h \
-	views/list.c views/list.h \
-	views/files.c views/files.h \
-	views/files.impl.c views/files.impl.h \
-	views/dirs.c views/dirs.h \
-	views/inspector.c views/inspector.h \
-	views/search.c views/search.h \
-	views/filters.c views/filters.h \
-	views/tabs.c views/tabs.h \
-	views/scrollbar.c views/scrollbar.h \
-	views/spectrogram.c views/spectrogram.h \
 	materials/icon_ring.c materials/icon_ring.h \
 	shader.c shader.h \
 	layout.c layout.h \
@@ -49,30 +35,25 @@ AM_CFLAGS = \
 	$(FFMPEG_CFLAGS) \
 	$(ZLIB_CFLAGS) \
 	$(GTK_CFLAGS) \
-	$(MYSQL_CFLAGS) \
-	$(FILEMANAGER_LDFLAGS) \
-	$(X11_LDFLAGS)
+	$(MYSQL_CFLAGS)
 
 AM_CXXFLAGS = $(AM_CFLAGS)
 
 if !ENABLE_SYSTEM_GTKGLEXT
 LOCAL_GTK_LIBS = \
-	$(top_srcdir)/lib/waveform/gtkglext-1.0/gtk/.libs/libgtkglext-x11-1.0.a \
-	$(top_srcdir)/lib/waveform/gtkglext-1.0/gdk/.libs/libgdkglext-x11-1.0.a
+	$(top_srcdir)/lib/waveform/gtkglext-1.0/libgtkglext.la
 endif
 
 samplecat_gl_LDADD = \
+	views/libviews.la \
 	$(top_srcdir)/lib/utils/libutils.a \
 	$(top_srcdir)/lib/dir_tree/libdirtree.a \
 	$(top_srcdir)/lib/samplecat/libsamplecat.a \
 	$(top_srcdir)/lib/samplecat/db/libsamplecatdb.a \
-	$(top_srcdir)/lib/audio_analysis/libaudioanalysis.a \
+	$(top_srcdir)/lib/audio_analysis/libaudioanalysis.la \
 	$(top_srcdir)/lib/debug/libdebug.a \
 	$(top_srcdir)/lib/utils/libutils.a \
-	$(top_srcdir)/lib/waveform/waveform/.libs/libwaveform.a \
-	$(top_srcdir)/lib/waveform/agl/.libs/libagl.a \
-	$(top_srcdir)/lib/waveform/transition/.libs/libtransition.a \
-	$(top_srcdir)/lib/waveform/decoder/.libs/libwaveformdecoder.a \
+	$(top_srcdir)/lib/waveform/libwaveform.la \
 	$(top_srcdir)/lib/file_manager/libfilemanager.a \
 	$(LOCAL_GTK_LIBS) \
 	$(SAMPLECAT_LIBS) \
@@ -87,6 +68,9 @@ samplecat_gl_LDADD = \
 	$(ZLIB_LIBS) \
 	$(YAML_LIBS) \
 	$(FFMPEG_LIBS) \
+	$(LIBASS_LDFLAGS) \
+	$(FILEMANAGER_LDFLAGS) \
+	$(X11_LDFLAGS) \
 	-lstdc++
 
 dist_pkgdata_DATA = samplecat.yaml

@@ -12,7 +12,7 @@
 #ifndef __views_files_h__
 #define __views_files_h__
 #include "waveform/actor.h"
-#include "gl-app/directory.h"
+#include "../directory.h"
 typedef struct _FilesView FilesView;
 #include "views/files.impl.h"
 

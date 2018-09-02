@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2017 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2018 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -20,7 +20,7 @@
 #ifndef __files_impl_h__
 #define __files_impl_h__
 #include <glib.h>
-#include "gl-app/directory.h"
+#include "../directory.h"
 typedef struct _DirectoryView DirectoryView;
 #include "views/files.h"
 

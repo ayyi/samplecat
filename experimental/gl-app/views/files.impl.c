@@ -12,7 +12,6 @@
 #include "config.h"
 #include <glib.h>
 #include <glib-object.h>
-#include <gtk/gtk.h>
 #include "debug/debug.h"
 #include "file_manager/file_manager.h"
 #include "agl/utils.h"
@@ -30,11 +29,11 @@
 typedef struct _DirectoryViewClass DirectoryViewClass;
 
 struct _DirectoryViewClass {
-	GObjectClass parent_class;
+    GObjectClass parent_class;
 };
 
 struct _DirectoryViewPrivate {
-	gboolean needs_update;
+    gboolean needs_update;
     int      cursor_base;      // Cursor when minibuffer opened
 };
 

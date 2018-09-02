@@ -10,6 +10,7 @@
 *
 */
 #include "config.h"
+#undef USE_GTK
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

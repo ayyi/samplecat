@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2016-2017 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2016-2018 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -11,11 +11,11 @@
 */
 #define __wf_private__
 #include "config.h"
+#undef USE_GTK
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
-#include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
 #include <GL/gl.h>
 #include "agl/ext.h"
@@ -23,7 +23,6 @@
 #include "agl/actor.h"
 #include "waveform/waveform.h"
 #include "waveform/shader.h"
-#include "samplecat.h"
 #include "views/panel.h"
 #include "views/dock_v.h"
 

@@ -9,8 +9,7 @@ samplecat_webkit_SOURCES = \
 
 if !ENABLE_SYSTEM_GTKGLEXT
 LOCAL_GTK_LIBS = \
-	$(top_srcdir)/lib/waveform/gtkglext-1.0/gtk/.libs/libgtkglext-x11-1.0.a \
-	$(top_srcdir)/lib/waveform/gtkglext-1.0/gdk/.libs/libgdkglext-x11-1.0.a
+	$(top_srcdir)/lib/waveform/gtkglext-1.0/libgtkglext.la
 endif
 
 AM_CFLAGS = \
@@ -46,10 +45,7 @@ samplecat_webkit_LDADD = \
 	$(top_srcdir)/lib/samplecat/db/libsamplecatdb.a \
 	$(top_srcdir)/lib/audio_analysis/libaudioanalysis.a \
 	$(top_srcdir)/lib/debug/libdebug.a \
-	$(top_srcdir)/lib/waveform/waveform/.libs/libwaveform.a \
-	$(top_srcdir)/lib/waveform/agl/.libs/libagl.a \
-	$(top_srcdir)/lib/waveform/transition/.libs/libtransition.a \
-	$(top_srcdir)/lib/waveform/decoder/.libs/libwaveformdecoder.a \
+	$(top_srcdir)/lib/waveform/libwaveform.la \
 	$(top_srcdir)/lib/file_manager/libfilemanager.a \
 	$(top_srcdir)/lib/utils/libutils.a \
 	$(LOCAL_GTK_LIBS) \
@@ -57,7 +53,7 @@ samplecat_webkit_LDADD = \
 	$(TRACKER_LIBS) \
 	$(SQLITE_LIBS) \
 	$(GTK_LIBS) $(MYSQL_LDFLAGS) \
-	$(JACK_LIBS) $(SNDFILE_LIBS) ${SAMPLERATE_LIBS} \
+	$(SNDFILE_LIBS) ${SAMPLERATE_LIBS} \
 	$(GTHREAD_LIBS) \
 	$(FFTW3_LIBS) \
 	$(GL_LDFLAGS) \
@@ -65,5 +61,6 @@ samplecat_webkit_LDADD = \
 	$(FFMPEG_LIBS) \
 	$(WEBKIT_LIBS) \
 	$(X11_LDFLAGS) \
+	$(LIBASS_LDFLAGS) \
 	-lstdc++
 

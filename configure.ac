@@ -147,6 +147,12 @@ AC_SUBST(FILEMANAGER_LDFLAGS)
 
 dnl -----------------------------------------------------------------------------
 
+GLIB_CFLAGS=`pkg-config --cflags glib-2.0`
+AC_SUBST(GLIB_CFLAGS)
+
+GDK_CFLAGS=`pkg-config --cflags gdk-2.0`
+AC_SUBST(GDK_CFLAGS)
+
 PKG_CHECK_MODULES(GTHREAD, gthread-2.0,, [true])
 AC_SUBST(GTHREAD_CFLAGS)
 AC_SUBST(GTHREAD_LIBS)
@@ -484,6 +490,10 @@ AC_CONFIG_FILES([lib/dir_tree/Makefile])
 AC_CONFIG_FILES([lib/samplecat/Makefile])
 AC_CONFIG_FILES([lib/samplecat/db/Makefile])
 AC_CONFIG_FILES([lib/audio_analysis/Makefile])
+AC_CONFIG_FILES([lib/audio_analysis/ebumeter/Makefile])
+AC_CONFIG_FILES([lib/audio_analysis/meter/Makefile])
+AC_CONFIG_FILES([lib/audio_analysis/spectrogram/Makefile])
+AC_CONFIG_FILES([lib/audio_analysis/waveform/Makefile])
 AC_CONFIG_FILES([lib/gdl/Makefile])
 AC_CONFIG_FILES([layouts/Makefile])
 AC_CONFIG_FILES([src/Makefile])
@@ -493,6 +503,7 @@ AC_CONFIG_FILES([experimental/webkit/Makefile])
 AC_CONFIG_FILES([experimental/mx/Makefile])
 AC_CONFIG_FILES([experimental/gl-app/Makefile])
 AC_CONFIG_FILES([experimental/gl-app/shaders/Makefile])
+AC_CONFIG_FILES([experimental/gl-app/views/Makefile])
 AC_OUTPUT
 
 jplayer="no"

@@ -11,7 +11,9 @@
 */
 #ifndef __samplecat_typedefs_h__
 #define __samplecat_typedefs_h__
+#ifdef USE_GTK
 #include "gtk/gtk.h"
+#endif
 
 #ifndef __PRI64_PREFIX
 #if (defined __X86_64__ || defined __LP64__)
@@ -47,7 +49,11 @@ typedef void   (*SampleCallback) (Sample*, gpointer);
 
 struct _Samplecat {
    SamplecatModel*      model;
+#ifdef USE_GTK
    GtkListStore*        store;
+#else
+   gpointer             store;
+#endif
    Logger*              logger;
 };
 #ifdef __samplecat_c__

@@ -111,7 +111,6 @@ samplecat_LDADD = \
 	$(top_srcdir)/lib/samplecat/db/libsamplecatdb.a \
 	$(GDL_LDFLAGS) \
 	gimp/libgimpwidgets.a \
-	$(top_srcdir)/lib/audio_analysis/libaudioanalysis.a \
 	$(SAMPLECAT_LIBS) \
 	$(AYYI_LIBS) \
 	$(DBUS_LIBS) \
@@ -130,6 +129,7 @@ samplecat_LDADD = \
 	$(X11_LDFLAGS) \
 	$(FFMPEG_LIBS) \
 	$(MATH_LDFLAGS) \
+	$(top_srcdir)/lib/audio_analysis/libaudioanalysis.la \
 	-lstdc++ \
 	-ldl
 

@@ -14,6 +14,7 @@
 */
 #define __wf_private__
 #include "config.h"
+#undef USE_GTK
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -26,7 +27,6 @@
 #include "waveform/waveform.h"
 #include "waveform/peakgen.h"
 #include "waveform/shader.h"
-#include "samplecat.h"
 #include "views/dock_h.h"
 
 #define _g_free0(var) (var = (g_free (var), NULL))
