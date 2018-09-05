@@ -289,8 +289,14 @@ bitdepth_format(char* str, int bitdepth)
 char*
 dir_format(char* dir)
 {
-	if(dir && (strstr(dir, g_get_home_dir()) == dir)) return dir + strlen(g_get_home_dir()) + 1;
-	else return dir;
+	if(dir){
+		if(!strcmp(dir, g_get_home_dir()))
+			return dir + strlen(g_get_home_dir());
+		else if(strstr(dir, g_get_home_dir()) == dir)
+			return dir + strlen(g_get_home_dir()) + 1;
+	}
+
+	return dir;
 }
 
 
