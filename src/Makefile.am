@@ -101,7 +101,6 @@ samplecat_SOURCES = \
 	$(AYYI_SRC) \
 	$(AUDITIONER_AYYI) $(AUDITIONER_GPLAYER) $(AUDITIONER_JACK)
 
-# to restore, copy Makefile.am.orig
 samplecat_LDADD = \
 	$(top_srcdir)/lib/utils/libutils.a \
 	$(top_srcdir)/lib/file_manager/libfilemanager.a \
@@ -117,10 +116,12 @@ samplecat_LDADD = \
 	$(TRACKER_LIBS) \
 	$(SQLITE_LIBS) \
 	$(MYSQL_LDFLAGS) \
-	$(JACK_LIBS) $(SNDFILE_LIBS) ${SAMPLERATE_LIBS} \
+	$(JACK_LIBS) \
+	$(top_srcdir)/lib/waveform/.libs/libwaveform.a \
+	$(SNDFILE_LIBS) \
+	${SAMPLERATE_LIBS} \
 	$(GTHREAD_LIBS) \
 	$(FFTW3_LIBS) \
-	$(top_srcdir)/lib/waveform/.libs/libwaveform.a \
 	$(OPENGL_LDFLAGS) \
 	$(GTK_LIBS) \
 	$(LIBASS_LDFLAGS) \
