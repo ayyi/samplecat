@@ -122,6 +122,8 @@ static GdkPixbuf *get_thumbnail_for(const char *path);
 
 void pixmaps_init(void)
 {
+	if(pixmap_cache) return;
+
 	gtk_widget_push_colormap(gdk_rgb_get_colormap());
 
 	pixmap_cache = g_fscache_new((GFSLoadFunc) image_from_file, NULL, NULL);
