@@ -416,7 +416,7 @@ AS_IF([test "$enable_system_gtkglext" = "yes"], [
 	GL_LDFLAGS=`pkg-config --libs gtkglext-1.0`
 ],[
 	dnl glu is used for mipmapping in spectrogram widget
-	GL_LDFLAGS=`pkg-config --libs glu`
+	GL_LDFLAGS=`pkg-config --libs gl`
 ])
 
 AC_SUBST(OPENGL_CFLAGS)
