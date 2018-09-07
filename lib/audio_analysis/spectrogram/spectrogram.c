@@ -53,6 +53,7 @@
 #include "debug/debug.h"
 #include "decoder/ad.h"
 
+#include "audio_analysis/spectrogram/spectrogram.h"
 #include "audio_analysis/spectrogram/sndfile_window.h"
 
 extern gchar* str_replace (const gchar* string, const gchar* search, const gchar* replace);
@@ -60,13 +61,12 @@ extern gchar* str_replace (const gchar* string, const gchar* search, const gchar
 #define _g_object_unref0(var) ((var == NULL) ? NULL : (var = (g_object_unref (var), NULL)))
 #define call(FN, A, ...) if(FN) (FN)(A, ##__VA_ARGS__)
 
-typedef void (*SpectrogramReady)(const char* filename, GdkPixbuf*, gpointer);
 typedef void (*SpectrogramReadyTarget)(const char* filename, GdkPixbuf*, gpointer, void* target);
 
 #define SG_WIDTH  (1024)
 #define SG_HEIGHT (364)
-#define MAX_HEIGHT (2048) // due to speclen depending on sample-rate, max samplerate that can be analysed is MAX_HEIGHT*100;
-#define	SPEC_FLOOR_DB		-120.0
+#define MAX_HEIGHT (2048) // due to speclen depending on sample-rate, max samplerate that can be analysed is MAX_HEIGHT*100 so this value allows 192k
+#define SPEC_FLOOR_DB -120.0
 
 
 typedef struct
@@ -199,6 +199,7 @@ calc_magnitude (const double * freq, int freqlen, double * magnitude)
 
 static int
 _render_spectrogram_to_pixbuf (GdkPixbuf* pixbuf, double spec_floor_db, float mag2d [SG_WIDTH][MAX_HEIGHT], double maxval)
+//_render_spectrogram_to_pixbuf (GdkPixbuf* pixbuf, double spec_floor_db, float** mag2d, double maxval)
 {
 	unsigned char colour [3] = { 0, 0, 0 };
 
@@ -547,6 +548,7 @@ render_spectrogram(const char* path, SpectrogramReady callback, gpointer user_da
 	send_message(m);
 }
 
+/* SampleCat API */
 
 void
 cancel_spectrogram(const char* path)
@@ -674,8 +676,11 @@ get_spectrogram(const char* path, SpectrogramReady callback, gpointer user_data)
 	g_free(cache_path);
 }
 
-/* SampleCat API */
 
+/*
+ *  get_spectrogram_with_target provides an extra argument for api compatibility with vala code.
+ */
+#if 0
 void
 get_spectrogram_with_target(const char* path, SpectrogramReady callback, void* target, gpointer user_data)
 {
@@ -702,4 +707,5 @@ get_spectrogram_with_target(const char* path, SpectrogramReady callback, void* t
 
 	get_spectrogram(path, ready, closure);
 }
+#endif
 

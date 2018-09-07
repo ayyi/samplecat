@@ -26,8 +26,8 @@
 #include "agl/shader.h"
 #include "gl_spectrogram_view.h"
 
-typedef struct _GlSpectrogram GlSpectrogram;
-typedef struct _GlSpectrogramClass GlSpectrogramClass;
+typedef struct _GlSpectrogram        GlSpectrogram;
+typedef struct _GlSpectrogramClass   GlSpectrogramClass;
 typedef struct _GlSpectrogramPrivate GlSpectrogramPrivate;
 
 #define _g_free0(var) (var = (g_free (var), NULL))
@@ -41,8 +41,6 @@ typedef struct _GlSpectrogramPrivate GlSpectrogramPrivate;
 		: gdk_gl_window_make_context_current (DRAWABLE, CONTEXT) \
 	)
 #endif
-
-typedef void (*SpectrogramReady) (gchar* filename, GdkPixbuf* a, void* user_data_, void* user_data);
 
 struct _GlSpectrogramPrivate {
     AGl*       agl;
@@ -67,13 +65,13 @@ enum  {
 #define GL_SPECTROGRAM_far (-100.0)
 
 GlSpectrogram*  gl_spectrogram_new                  (void);
-GlSpectrogram*  gl_spectrogram_construct            (GType object_type);
-void            gl_spectrogram_set_gl_context       (GdkGLContext* _glcontext);
-static void     gl_spectrogram_load_texture         (GlSpectrogram* self);
-static gboolean gl_spectrogram_real_configure_event (GtkWidget* base, GdkEventConfigure* event);
-static gboolean gl_spectrogram_real_expose_event    (GtkWidget* base, GdkEventExpose* event);
-static void     gl_spectrogram_set_projection       (GlSpectrogram* self);
-void            gl_spectrogram_set_file             (GlSpectrogram* self, gchar* filename);
+GlSpectrogram*  gl_spectrogram_construct            (GType);
+void            gl_spectrogram_set_gl_context       (GdkGLContext*);
+static void     gl_spectrogram_load_texture         (GlSpectrogram*);
+static gboolean gl_spectrogram_real_configure_event (GtkWidget*, GdkEventConfigure*);
+static gboolean gl_spectrogram_real_expose_event    (GtkWidget*, GdkEventExpose*);
+static void     gl_spectrogram_set_projection       (GlSpectrogram*);
+void            gl_spectrogram_set_file             (GlSpectrogram*, gchar* filename);
 static void     gl_spectrogram_real_unrealize       (GtkWidget*);
 static void     gl_spectrogram_finalize             (GObject*);
 
@@ -93,9 +91,9 @@ gl_spectrogram_construct (GType object_type)
 	gtk_widget_set_size_request ((GtkWidget*) self, 200, 100);
 	GdkGLConfig* glconfig = gdk_gl_config_new_by_mode (GDK_GL_MODE_RGB | GDK_GL_MODE_DOUBLE);
 	gtk_widget_set_gl_capability ((GtkWidget*) self, glconfig, gl_spectrogram_glcontext, TRUE, (gint) GDK_GL_RGBA_TYPE);
-	GlSpectrogram* _tmp1_ = _g_object_ref (self);
+	g_object_ref (self);
 	_g_object_unref0 (gl_spectrogram_instance);
-	gl_spectrogram_instance = _tmp1_;
+	gl_spectrogram_instance = self;
 	_g_object_unref0 (glconfig);
 
 	return self;
@@ -109,13 +107,13 @@ gl_spectrogram_new (void) {
 
 
 void
-gl_spectrogram_set_gl_context (GdkGLContext* _glcontext)
+gl_spectrogram_set_gl_context (GdkGLContext* glcontext)
 {
-	g_return_if_fail (_glcontext != NULL);
+	g_return_if_fail (glcontext);
 
-	GdkGLContext* _tmp0_ = _g_object_ref (_glcontext);
+	g_object_ref (glcontext);
 	_g_object_unref0 (gl_spectrogram_glcontext);
-	gl_spectrogram_glcontext = _tmp0_;
+	gl_spectrogram_glcontext = glcontext;
 }
 
 
@@ -123,6 +121,8 @@ static void
 gl_spectrogram_load_texture (GlSpectrogram* self)
 {
 	g_return_if_fail (self);
+
+	GlSpectrogramPrivate* p = self->priv;
 
 	GdkGLDrawable* gldrawable = _g_object_ref (gtk_widget_get_gl_drawable ((GtkWidget*) self));
 	gboolean _tmp3_ = gdk_gl_drawable_make_current (gldrawable, agl_get_gl_context());
@@ -132,28 +132,24 @@ gl_spectrogram_load_texture (GlSpectrogram* self)
 		return;
 	}
 	glBindTexture (GL_TEXTURE_2D, self->priv->Textures[0]);
+#if USE_GLU
 	GdkPixbuf* scaled = gdk_pixbuf_scale_simple (self->priv->pixbuf, 256, 256, GDK_INTERP_BILINEAR);
 	glTexParameterf (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, (GLfloat) GL_LINEAR_MIPMAP_LINEAR);
 	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, (GLint) GL_LINEAR);
 	GLint n_colour_components = (GLint)gdk_pixbuf_get_n_channels (scaled);
-	gint _tmp7_ = gdk_pixbuf_get_n_channels (scaled);
-	GLenum _tmp6_ = 0U;
-	if (_tmp7_ == 4) {
-		_tmp6_ = GL_RGBA;
-	} else {
-		_tmp6_ = GL_RGB;
-	}
-	GLenum format = _tmp6_;
-	gint _tmp8_;
-	_tmp8_ = gdk_pixbuf_get_width (scaled);
-	gint _tmp9_;
-	_tmp9_ = gdk_pixbuf_get_height (scaled);
-	GLint _tmp11_;
-	_tmp11_ = gluBuild2DMipmaps (GL_TEXTURE_2D, n_colour_components, (GLsizei) _tmp8_, (GLsizei) _tmp9_, format, GL_UNSIGNED_BYTE, gdk_pixbuf_get_pixels (scaled));
-	if ((gboolean) _tmp11_) {
+	GLenum format = (gdk_pixbuf_get_n_channels (scaled) == 4) ? GL_RGBA : GL_RGB;
+	if(gluBuild2DMipmaps (GL_TEXTURE_2D, n_colour_components, gdk_pixbuf_get_width(scaled), (GLsizei)gdk_pixbuf_get_height (scaled), format, GL_UNSIGNED_BYTE, gdk_pixbuf_get_pixels (scaled))){
 		g_print ("mipmap generation failed!\n");
 	}
 	g_object_unref ((GObject*) scaled);
+#else
+	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	GLint n_colour_components = (GLint)gdk_pixbuf_get_n_channels(p->pixbuf);
+	glTexImage2D (GL_TEXTURE_2D, 0, n_colour_components, gdk_pixbuf_get_width(p->pixbuf), gdk_pixbuf_get_height(p->pixbuf), 0, gdk_pixbuf_get_n_channels (p->pixbuf) == 4 ? GL_RGBA : GL_RGB, GL_UNSIGNED_BYTE, gdk_pixbuf_get_pixels(p->pixbuf));
+#endif
 
 	_g_object_unref0 (gldrawable);
 }
@@ -262,7 +258,7 @@ gl_spectrogram_set_projection (GlSpectrogram* self)
 
 
 static void
-__lambda0__spectrogram_ready (gchar* filename, GdkPixbuf* pixbuf, void* user_data_, gpointer _self)
+__lambda0__spectrogram_ready (const char* filename, GdkPixbuf* pixbuf, gpointer _self)
 {
 	GlSpectrogram* self = _self;
 
@@ -285,15 +281,17 @@ gl_spectrogram_set_file (GlSpectrogram* self, gchar* filename)
 	_g_free0 (self->priv->_filename);
 	self->priv->_filename = g_strdup ((const gchar*) filename);
 	cancel_spectrogram (NULL);
-	get_spectrogram_with_target (filename, __lambda0__spectrogram_ready, self, NULL);
+	get_spectrogram (filename, __lambda0__spectrogram_ready, self);
 }
 
 
 static void
-gl_spectrogram_real_unrealize (GtkWidget* base)
+gl_spectrogram_real_unrealize (GtkWidget* widget)
 {
-	GlSpectrogram* self = (GlSpectrogram*)base;
+	GlSpectrogram* self = (GlSpectrogram*)widget;
+
 	cancel_spectrogram (NULL);
+
 	GTK_WIDGET_CLASS (gl_spectrogram_parent_class)->unrealize ((GtkWidget*) G_TYPE_CHECK_INSTANCE_CAST (self, GTK_TYPE_DRAWING_AREA, GtkDrawingArea));
 }
 

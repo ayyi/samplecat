@@ -15,6 +15,7 @@
 #include <glib.h>
 #include <gdk-pixbuf/gdk-pixdata.h>
 #include <gtk/gtk.h>
+#include "audio_analysis/spectrogram/spectrogram.h"
 
 G_BEGIN_DECLS
 
@@ -28,8 +29,6 @@ G_BEGIN_DECLS
 typedef struct _GlSpectrogram GlSpectrogram;
 typedef struct _GlSpectrogramClass GlSpectrogramClass;
 typedef struct _GlSpectrogramPrivate GlSpectrogramPrivate;
-
-typedef void (*SpectrogramReady) (gchar* filename, GdkPixbuf* a, void* user_data_, void* user_data);
 
 struct _GlSpectrogram {
     GtkDrawingArea        parent_instance;
@@ -45,9 +44,6 @@ GlSpectrogram* gl_spectrogram_new            (void);
 GlSpectrogram* gl_spectrogram_construct      (GType);
 void           gl_spectrogram_set_gl_context (GdkGLContext*);
 void           gl_spectrogram_set_file       (GlSpectrogram*, gchar* filename);
-
-void           get_spectrogram_with_target   (gchar* path, SpectrogramReady, void* on_ready_target, void* user_data);
-void           cancel_spectrogram            (gchar* path);
 
 G_END_DECLS
 
