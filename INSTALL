@@ -9,6 +9,10 @@ Please report any problems at https://github.com/ayyi/samplecat
 
     The configure script will report missing dependencies.
 
+    For some distributions the list of package dependencies
+    can be seen in the Docker files in the test directory.
+    Currently Debian, Ubuntu and Fedora are included.
+
 2 - if you are using Mysql, you need to setup the database.
     (Sqlite setup is done automatically)
 

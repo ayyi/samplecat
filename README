@@ -31,6 +31,8 @@ If you subsequently need to update the submodules as part of a git pull:
 	make clean
 ```
 
+See the file INSTALL more more details.
+
 
 usage
 -----
