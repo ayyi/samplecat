@@ -1,5 +1,5 @@
 AC_PREREQ(2.59)
-AC_INIT([Samplecat],[0.2.5],[tim@orford.org])
+AC_INIT([Samplecat],[0.3.0],[tim@orford.org])
 AC_CONFIG_SRCDIR([src/main.c])
 AC_CONFIG_HEADER([config.h])
 AC_CANONICAL_HOST
@@ -415,7 +415,6 @@ AS_IF([test "$enable_system_gtkglext" = "yes"], [
 	PKG_CHECK_MODULES(OPENGL, gtkglext-1.0, [AC_DEFINE(USE_OPENGL, 1, Opengl features are enabled)])
 	GL_LDFLAGS=`pkg-config --libs gtkglext-1.0`
 ],[
-	dnl glu is used for mipmapping in spectrogram widget
 	GL_LDFLAGS=`pkg-config --libs gl`
 ])
 

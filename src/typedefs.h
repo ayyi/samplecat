@@ -27,7 +27,6 @@ typedef struct _inspector_priv    InspectorPriv;
 typedef struct _PlayCtrl          PlayCtrl;
 typedef struct _auditioner        Auditioner;
 typedef struct _view_option       ViewOption;
-typedef struct _palette           Palette;
 typedef struct _accel             Accel;
 typedef struct _ScanResults       ScanResults;
 typedef struct _GimpActionGroup   GimpActionGroup;

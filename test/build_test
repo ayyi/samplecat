@@ -3,7 +3,7 @@
 # build with each configure option
 #
 package=samplecat
-version=0.2.5
+version=0.3.0
 tarball=${package}-${version}.tar.gz
 tmpdir=/tmp/${package}_build
 

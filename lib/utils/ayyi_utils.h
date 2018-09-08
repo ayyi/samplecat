@@ -31,36 +31,36 @@ char err [32];
 char warn[32];
 
 #ifdef __ayyi_utils_c__
-char white    [16] = "\x1b[0;39m"; // 0 = normal
-char bold     [16] = "\x1b[1;39m"; // 1 = bright
-char grey     [16] = "\x1b[2;39m"; // 2 = dim
-char yellow   [16] = "\x1b[1;33m";
-char yellow_r [16] = "\x1b[30;43m";
-char white__r [16] = "\x1b[30;47m";
-char cyan___r [16] = "\x1b[30;46m";
-char magent_r [16] = "\x1b[30;45m";
-char blue_r   [16] = "\x1b[30;44m";
-char red      [16] = "\x1b[1;31m";
-char red_r    [16] = "\x1b[30;41m";
-char green    [16] = "\x1b[1;32m";
-char green_r  [16] = "\x1b[30;42m";
+char white    [10] = "\x1b[0;39m"; // 0 = normal
+char bold     [10] = "\x1b[1;39m"; // 1 = bright
+char grey     [10] = "\x1b[2;39m"; // 2 = dim
+char yellow   [10] = "\x1b[1;33m";
+char yellow_r [10] = "\x1b[30;43m";
+char white__r [10] = "\x1b[30;47m";
+char cyan___r [10] = "\x1b[30;46m";
+char magent_r [10] = "\x1b[30;45m";
+char blue_r   [10] = "\x1b[30;44m";
+char red      [10] = "\x1b[1;31m";
+char red_r    [10] = "\x1b[30;41m";
+char green    [10] = "\x1b[1;32m";
+char green_r  [10] = "\x1b[30;42m";
 char go_rhs   [32] = "\x1b[A\x1b[50C"; //go up one line, then goto column 60
 char ok       [32] = " [ \x1b[1;32mok\x1b[0;39m ]";
 char fail     [32] = " [\x1b[1;31mFAIL\x1b[0;39m]";
 #else
-extern char white    [16];
-extern char bold     [16];
-extern char grey     [16];
-extern char yellow   [16];
-extern char yellow_r [16];
-extern char white__r [16];
-extern char cyan___r [16];
-extern char magent_r [16];
-extern char blue_r   [16];
-extern char red      [16];
-extern char red_r    [16];
-extern char green    [16];
-extern char green_r  [16];
+extern char white    [10];
+extern char bold     [10];
+extern char grey     [10];
+extern char yellow   [10];
+extern char yellow_r [10];
+extern char white__r [10];
+extern char cyan___r [10];
+extern char magent_r [10];
+extern char blue_r   [10];
+extern char red      [10];
+extern char red_r    [10];
+extern char green    [10];
+extern char green_r  [10];
 extern char go_rhs   [32];
 extern char ok       [];
 extern char fail     [];

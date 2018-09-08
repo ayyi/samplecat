@@ -65,17 +65,9 @@ char * program_name;
 
 void on_quit (GtkMenuItem*, gpointer);
 
-Application*     app = NULL;
-Palette          palette;
+Application* app = NULL;
 
-static gboolean  search_pending = false;
-
-//strings for console output:
-char white [16];
-char red   [16];
-char green [16];
-char yellow[16];
-char bold  [16];
+static bool  search_pending = false;
 
 static const struct option long_options[] = {
   { "backend",          1, NULL, 'b' },
@@ -137,12 +129,8 @@ main(int argc, char** argv)
 #ifdef __APPLE__
 	program_name = argv[0];
 #endif
-	//init console escape commands:
-	sprintf(white,  "%c[0;39m", 0x1b);
-	sprintf(red,    "%c[1;31m", 0x1b);
-	sprintf(green,  "%c[1;32m", 0x1b);
-	sprintf(yellow, "%c[1;33m", 0x1b);
-	sprintf(bold,   "%c[1;39m", 0x1b);
+
+	// init console escape commands
 	sprintf(err,    "%serror!%s", red, white);
 	sprintf(warn,   "%swarning:%s", yellow, white);
 
@@ -154,7 +142,7 @@ main(int argc, char** argv)
 	gdk_threads_init();
 	gtk_init_check(&argc, &argv);
 
-	printf("%s"PACKAGE_NAME". Version "PACKAGE_VERSION"%s\n", yellow, white);
+	printf("%s"PACKAGE_NAME" "PACKAGE_VERSION"%s\n", yellow, white);
 
 	app = application_new();
 	SamplecatModel* model = samplecat.model;
