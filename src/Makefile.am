@@ -117,6 +117,7 @@ samplecat_LDADD = \
 	$(SQLITE_LIBS) \
 	$(MYSQL_LDFLAGS) \
 	$(JACK_LIBS) \
+	$(top_srcdir)/lib/audio_analysis/libaudioanalysis.la \
 	$(top_srcdir)/lib/waveform/.libs/libwaveform.a \
 	$(SNDFILE_LIBS) \
 	${SAMPLERATE_LIBS} \
@@ -130,7 +131,6 @@ samplecat_LDADD = \
 	$(X11_LDFLAGS) \
 	$(FFMPEG_LIBS) \
 	$(MATH_LDFLAGS) \
-	$(top_srcdir)/lib/audio_analysis/libaudioanalysis.la \
 	-lstdc++ \
 	-ldl
 
