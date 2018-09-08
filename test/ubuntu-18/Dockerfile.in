@@ -1,0 +1,18 @@
+/* gcc 7.3 */
+FROM ubuntu:18.04
+
+/* - includes support for running Opengl applications */
+/* - ffmpeg included for creating test data (adds ~100MB to image size) */
+RUN apt-get -y update && DEBIAN_FRONTEND=noninteractive apt-get install -y \\
+
+#include "dependencies"
+
+RUN echo "alias ll='ls -l'" >> /root/.bashrc
+ENV DISPLAY :0
+WORKDIR /root
+ADD add_samples /root/add_samples
+ADD compile /root/compile
+
+CMD git clone https://github.com/ayyi/samplecat.git && cd samplecat && \
+ git submodule update --init && git submodule foreach git pull origin master && \
+ ./autogen.sh && ./configure && make

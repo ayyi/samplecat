@@ -1,0 +1,11 @@
+openssh-client \
+gcc make automake libtool pkg-config gdb \
+git \
+libsndfile1-dev \
+ffmpeg \
+vim \
+libgtkglext1-dev \
+libxml2-dev \
+libsqlite3-dev \
+mesa-utils \
+xserver-xorg-video-all
