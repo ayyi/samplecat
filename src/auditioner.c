@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2015 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2018 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -28,7 +28,7 @@
 
 typedef struct
 {
-	DBusGProxy*    proxy;
+	DBusGProxy* proxy;
 } AyyiConnection;
 
 #define APPLICATION_SERVICE_NAME "org.ayyi.Auditioner.Daemon"
@@ -66,9 +66,6 @@ auditioner_connect(Callback callback, gpointer user_data)
 		Callback callback;
 		gpointer user_data;
 	} C;
-	C* c = g_new(C, 1);
-	c->callback = callback;
-	c->user_data = user_data;
 
 	gboolean _auditioner_connect(gpointer user_data)
 	{
@@ -79,14 +76,14 @@ auditioner_connect(Callback callback, gpointer user_data)
 		if(!auditioner){ 
 			errprintf("failed to get dbus connection\n");
 			return FALSE;
-		}   
+		}
 		if(!(adbus->proxy = dbus_g_proxy_new_for_name (auditioner, APPLICATION_SERVICE_NAME, DBUS_APP_PATH, DBUS_INTERFACE))){
 			errprintf("failed to get Auditioner\n");
 			return FALSE;
 		}
 
-		dbus_g_proxy_add_signal(adbus->proxy, "PlaybackStopped", G_TYPE_INVALID);                                                             
-		dbus_g_proxy_add_signal(adbus->proxy, "Position", G_TYPE_INT, G_TYPE_INVALID);                                                             
+		dbus_g_proxy_add_signal(adbus->proxy, "PlaybackStopped", G_TYPE_INVALID);
+		dbus_g_proxy_add_signal(adbus->proxy, "Position", G_TYPE_INT, G_TYPE_DOUBLE, G_TYPE_INVALID);
 
 		void on_stopped(DBusGProxy* proxy, gpointer user_data)
 		{
@@ -96,9 +93,9 @@ auditioner_connect(Callback callback, gpointer user_data)
 		}
 		dbus_g_proxy_connect_signal (adbus->proxy, "PlaybackStopped", G_CALLBACK(on_stopped), NULL, NULL);
 
-		void on_position(DBusGProxy* proxy, int position, gpointer user_data)
+		void on_position(DBusGProxy* proxy, int position, double seconds, gpointer user_data)
 		{
-			application_set_position(position);
+			application_set_position_seconds(seconds);
 		}
 		dbus_g_proxy_connect_signal (adbus->proxy, "Position", G_CALLBACK(on_position), NULL, NULL);
 
@@ -107,7 +104,11 @@ auditioner_connect(Callback callback, gpointer user_data)
 		g_free(c);
 		return G_SOURCE_REMOVE;
 	}
-	g_idle_add(_auditioner_connect, c);
+
+	g_idle_add(_auditioner_connect, SC_NEW(C,
+		.callback = callback,
+		.user_data = user_data
+	));
 }
 
 

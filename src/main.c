@@ -181,8 +181,7 @@ main(int argc, char** argv)
 					list_clear(model->backends);
 					samplecat_model_add_backend(optarg);
 					dbg(1, "n_backends=%i", g_list_length(model->backends));
-				}
-				else{
+				}else{
 					warnprintf("requested backend not available: '%s'\navailable backends:\n", optarg);
 					GList* l = model->backends;
 					for(;l;l=l->next){
@@ -196,7 +195,7 @@ main(int argc, char** argv)
 					list_clear(app->players);
 					ADD_PLAYER(optarg);
 					player_opt = true;
-				} else{
+				}else{
 					warnprintf("requested player is not available: '%s'\navailable backends:\n", optarg);
 					GList* l = app->players;
 					for(;l;l=l->next) printf("  %s\n", (char*)l->data);
@@ -410,7 +409,14 @@ on_quit(GtkMenuItem* menuitem, gpointer user_data)
 		application_quit(app); // emit signal
 	}
 
-	app->auditioner->stop();
+#ifdef HAVE_AYYIDBUS
+	extern Auditioner a_ayyidbus;
+	if(app->auditioner != & a_ayyidbus){
+#else
+	if(true){
+#endif
+		app->auditioner->stop();
+	}
 	app->auditioner->disconnect();
 
 	if(samplecat.model->backend.disconnect) samplecat.model->backend.disconnect();

@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2016 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2018 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -286,7 +286,8 @@ static bool auditioner_nullS(Sample* s) {return true;}
 static void
 _set_auditioner()
 {
-	printf("auditioner: "); fflush(stdout);
+	if(!app->no_gui) printf("auditioner: "); fflush(stdout);
+
 	const static Auditioner a_null = {
 		&auditioner_nullC,
 		&auditioner_null,
@@ -312,7 +313,7 @@ _set_auditioner()
 		app->auditioner = & a_ayyidbus;
 		if (!app->auditioner->check()) {
 			connected = true;
-			printf("ayyi_audition.\n");
+			if(!app->no_gui) printf("ayyi_audition.\n");
 		}
 	}
 #endif
@@ -396,13 +397,12 @@ application_scan(const char* path, ScanResults* results)
 }
 
 
+/*
+ *  uri must be "unescaped" before calling this fn. Method string must be removed.
+ */
 bool
 application_add_file(const char* path, ScanResults* result)
 {
-	/*
-	 *  uri must be "unescaped" before calling this fn. Method string must be removed.
-	 */
-
 	/* check if file already exists in the store
 	 * -> don't add it again
 	 */
@@ -434,7 +434,7 @@ application_add_file(const char* path, ScanResults* result)
 		return false;
 	}
 
-	if(app->no_gui){ printf("%s\n", path); fflush(stdout); }
+	if(_debug_ && app->no_gui){ printf("%s\n", path); fflush(stdout); }
 
 	if(!sample_get_file_info(sample)){
 		gwarn("cannot add file: reading file info failed. type=%s", sample->mimetype);
@@ -442,8 +442,9 @@ application_add_file(const char* path, ScanResults* result)
 		sample_unref(sample);
 		return false;
 	}
+
 #ifdef CHECK_SIMILAR
-	/* check if /same/ file already exists w/ different path */
+	/* check if same file already exists with different path */
 	GList* existing;
 	if((existing = samplecat.model->backend.filter_by_audio(sample))) {
 		GList* l = existing; int i;
@@ -463,6 +464,7 @@ application_add_file(const char* path, ScanResults* result)
 #ifdef INTERACTIVE_IMPORT
 		if (i > 9)
 			g_string_append_printf(note, "..\n and %d more.", i - 9);
+
 		g_string_append_printf(note, "Add this file: '%s' ?", sample->full_path);
 		if (do_progress_question(note->str) != 1) {
 			// 0, aborted: -> whole add_file loop is aborted on next do_progress() call.
@@ -477,7 +479,7 @@ application_add_file(const char* path, ScanResults* result)
 		g_list_foreach(existing, (GFunc)g_free, NULL);
 		g_list_free(existing);
 	}
-#endif /* END check for similar files on import */
+#endif // END CHECK_SIMILAR
 
 	sample->online = 1;
 	sample->id = samplecat.model->backend.insert(sample);
@@ -485,6 +487,9 @@ application_add_file(const char* path, ScanResults* result)
 		sample_unref(sample);
 		return false;
 	}
+	dbg(1, "       %s", sample->name);
+	dbg(1, "       %s", sample->sample_dir);
+	dbg(1, "       %s", sample->full_path);
 
 	samplecat_list_store_add((SamplecatListStore*)samplecat.store, sample);
 
@@ -701,6 +706,16 @@ application_set_position (gint64 frames)
 {
 	if(app->play.sample && app->play.sample->sample_rate){
 		app->play.position = (frames * 1000) / app->play.sample->sample_rate;
+		g_signal_emit_by_name (app, "play-position");
+	}
+}
+
+
+void
+application_set_position_seconds (float seconds)
+{
+	if(app->play.sample){
+		app->play.position = seconds * 1000;
 		g_signal_emit_by_name (app, "play-position");
 	}
 }

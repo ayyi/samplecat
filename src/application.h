@@ -146,6 +146,7 @@ void         application_play_all                ();
 void         application_play_next               ();
 void         application_play_path               (const char*);
 void         application_set_position            (gint64);
+void         application_set_position_seconds    (float);
 void         application_on_play_finished        ();
 
 void         application_emit_icon_theme_changed (Application*, const gchar*);
