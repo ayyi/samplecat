@@ -29,13 +29,21 @@ G_BEGIN_DECLS
 typedef struct _DirectoryViewPrivate DirectoryViewPrivate;
 
 struct _DirectoryView {
-	GObject               parent_instance;
+    GObject               parent_instance;
     FilesView*            view;
-	VMDirectory*          model;
-    GPtrArray*            items;            // array of ViewItem*
-	int                   selection;
-	DirectoryViewPrivate* priv;
+    VMDirectory*          model;
+    GPtrArray*            items;            // array of WavViewItem*
+    int                   selection;
+    DirectoryViewPrivate* priv;
 };
+
+typedef struct {
+    DirItem*      item;
+    MaskedPixmap* image;
+    int           old_pos;     // Used while sorting
+    gchar*        utf8_name;   // NULL => leafname is valid
+    AGlActor*     wav;
+} WavViewItem;
 
 DirectoryView* directory_view_new       (VMDirectory*, FilesView*);
 DirectoryView* directory_view_construct (GType);

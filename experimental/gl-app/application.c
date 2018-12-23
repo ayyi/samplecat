@@ -44,12 +44,19 @@ application_construct (GType object_type)
 {
 	Application* app = g_object_new (object_type, NULL);
 	app->config_ctx.filename = g_strdup_printf("%s/.config/" PACKAGE "/" PACKAGE, g_get_home_dir());
+
 	//app->cache_dir = g_build_filename (g_get_home_dir(), ".config", PACKAGE, "cache", NULL);
 	//app->configctx.dir = g_build_filename (g_get_home_dir(), ".config", PACKAGE, NULL);
-	app->style.bg = 0x111111ff;
-	app->style.bg = 0x444444ff;
-	app->style.bg_selected = 0x777777ff;
-	app->style.fg = 0x66aaffff;
+
+	app->style = (Style){
+		.bg = 0x000000ff,
+		.bg_alt = 0x181818ff,
+		.bg_selected = 0x777777ff,
+		.fg = 0x66aaffff,
+		.text = 0xbbbbbbff,
+		.selection = 0x6677ff77,
+	};
+
 	return app;
 }
 

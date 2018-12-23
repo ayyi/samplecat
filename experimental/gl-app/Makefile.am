@@ -41,7 +41,7 @@ AM_CXXFLAGS = $(AM_CFLAGS)
 
 if !ENABLE_SYSTEM_GTKGLEXT
 LOCAL_GTK_LIBS = \
-	$(top_srcdir)/lib/waveform/gtkglext-1.0/libgtkglext.la
+	$(top_srcdir)/lib/waveform/gtkglext-1.0/.libs/libgtkglext.a
 endif
 
 samplecat_gl_LDADD = \
@@ -50,10 +50,11 @@ samplecat_gl_LDADD = \
 	$(top_srcdir)/lib/dir_tree/libdirtree.a \
 	$(top_srcdir)/lib/samplecat/libsamplecat.a \
 	$(top_srcdir)/lib/samplecat/db/libsamplecatdb.a \
-	$(top_srcdir)/lib/audio_analysis/libaudioanalysis.la \
+	$(top_srcdir)/lib/audio_analysis/.libs/libaudioanalysis.a \
 	$(top_srcdir)/lib/debug/libdebug.a \
+	$(top_srcdir)/lib/icon/libicon.a \
 	$(top_srcdir)/lib/utils/libutils.a \
-	$(top_srcdir)/lib/waveform/libwaveform.la \
+	$(top_srcdir)/lib/waveform/.libs/libwaveform.a \
 	$(top_srcdir)/lib/file_manager/libfilemanager.a \
 	$(LOCAL_GTK_LIBS) \
 	$(SAMPLECAT_LIBS) \

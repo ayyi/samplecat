@@ -12,6 +12,22 @@
 #ifndef __views_scrollbar_h__
 #define __views_scrollbar_h__
 #include "agl/actor.h"
+#include "utils/observable.h"
+
+typedef struct {
+    AGlActor       actor;
+    AGlOrientation orientation;
+    Observable*    scroll;
+    struct {
+      float        opacity;
+      WfAnimatable animation;
+    }              handle;
+    struct {
+      float        opacity;
+      WfAnimatable animation;
+    }              trough;
+} ScrollbarActor;
+
 
 AGlActorClass* scrollbar_view_get_class ();
 

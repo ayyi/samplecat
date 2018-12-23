@@ -9,25 +9,23 @@
 * +----------------------------------------------------------------------+
 *
 */
-#ifndef __views_files_h__
-#define __views_files_h__
+#ifndef __views_files_with_wav_h__
+#define __views_files_with_wav_h__
 #include "waveform/actor.h"
 #include "../directory.h"
 typedef struct _FilesView FilesView;
 #include "views/files.impl.h"
 
-struct _FilesView {
-   AGlActor       actor;
-   VMDirectory*   viewmodel;
-   DirectoryView* view;
-   char*          path;
-   AGlActor*      scrollbar;
-};
+typedef struct _FilesWithWav {
+   FilesView      files;
+   WaveformContext* wfc;
+} FilesWithWav;
 
-AGlActorClass* files_view_get_class ();
+AGlActorClass* files_with_wav_get_class ();
 
-AGlActor* files_view              (gpointer);
-void      files_view_set_path     (FilesView*, const char*);
-int       files_view_row_at_coord (FilesView*, int x, int y);
+AGlActor* files_with_wav              (gpointer);
+void      files_with_wav_set_path     (FilesWithWav*, const char*);
+int       files_with_wav_row_at_coord (FilesWithWav*, int x, int y);
+void      files_with_wav_select       (FilesWithWav*, int);
 
 #endif

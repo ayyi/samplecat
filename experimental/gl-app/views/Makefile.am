@@ -9,6 +9,7 @@ libviews_la_SOURCES = \
 	list.c list.h \
 	files.c files.h \
 	files.impl.c files.impl.h \
+	files.with_wav.c files.with_wav.h \
 	dirs.c dirs.h \
 	inspector.c inspector.h \
 	search.c search.h \

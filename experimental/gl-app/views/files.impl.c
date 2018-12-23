@@ -33,8 +33,11 @@ struct _DirectoryViewClass {
 };
 
 struct _DirectoryViewPrivate {
-    gboolean needs_update;
-    int      cursor_base;      // Cursor when minibuffer opened
+    gboolean    needs_update;
+    int         cursor_base;      // Cursor when minibuffer opened
+    FmSortType  sort_type;
+    GtkSortType sort_order;
+    int         (*sort_fn)(const void*, const void*);
 };
 
 
@@ -235,6 +238,56 @@ free_view_item (ViewItem *view_item)
 }
 
 
+static gint
+wrap_sort(gconstpointer a, gconstpointer b, DirectoryView* view)
+{
+	DirectoryViewPrivate* v = view->priv;
+
+	ViewItem* ia = *(ViewItem **) a;
+	ViewItem* ib = *(ViewItem **) b;
+
+	return v->sort_order == GTK_SORT_ASCENDING
+		? v->sort_fn(ia->item, ib->item)
+		: -v->sort_fn(ia->item, ib->item);
+}
+
+
+static void
+resort(DirectoryView* view)
+{
+	DirectoryViewPrivate* v = view->priv;
+	ViewItem** items = (ViewItem**)view->items->pdata;
+	gint len = view->items->len;
+
+	if (!len) return;
+
+	gint i;	for (i = len - 1; i >= 0; i--) items[i]->old_pos = i;
+
+	switch (v->sort_type) {
+		case SORT_NAME: v->sort_fn = sort_by_name; break;
+		case SORT_TYPE: v->sort_fn = sort_by_type; break;
+		case SORT_DATE: v->sort_fn = sort_by_date; break;
+		case SORT_SIZE: v->sort_fn = sort_by_size; break;
+		case SORT_OWNER: v->sort_fn = sort_by_owner; break;
+		case SORT_GROUP: v->sort_fn = sort_by_group; break;
+		default:
+			g_assert_not_reached();
+	}
+
+	g_ptr_array_sort_with_data(view->items, (GCompareDataFunc)wrap_sort, view);
+
+	guint* new_order = g_new(guint, len);
+	for (i = len - 1; i >= 0; i--) {
+		new_order[i] = items[i]->old_pos;
+	}
+
+	GtkTreePath* path = gtk_tree_path_new();
+	gtk_tree_model_rows_reordered((GtkTreeModel*)view->model, path, NULL, (int*)new_order);
+	gtk_tree_path_free(path);
+	g_free(new_order);
+}
+
+
 // ------------------------ start iface implementation -------------------
 
 static void
@@ -295,7 +348,7 @@ directory_view_add_items (ViewIface* _view, GPtrArray* new_items)
 				continue; // never show '..'
 		}
 
-		ViewItem* vitem = AGL_NEW(ViewItem,
+		WavViewItem* vitem = AGL_NEW(WavViewItem,
 			.item = item,
 			.utf8_name = g_utf8_validate(leafname, -1, NULL)
 				? NULL
@@ -319,9 +372,41 @@ directory_view_add_items (ViewIface* _view, GPtrArray* new_items)
 static void
 directory_view_update_items (ViewIface* view, GPtrArray* items)
 {
-#if 0
-	DirectoryView	*dv = (DirectoryView *) view;
-	GtkTreeModel *model = (GtkTreeModel *) dv;
+	/* Find an item in the sorted array.
+	 * Returns the item number, or -1 if not found.
+	 */
+	int view_find_item(DirectoryView* view, DirItem *item)
+	{
+		g_return_val_if_fail(view, -1);
+		g_return_val_if_fail(item, -1);
+
+		ViewItem tmp = {.item = item};
+		ViewItem* tmpp = &tmp;
+
+		ViewItem** items = (ViewItem**)view->items->pdata;
+
+		/* If item is here, then: lower <= i < upper */
+		int lower = 0;
+		int upper = view->items->len;
+
+		while (lower < upper) {
+			int i = (lower + upper) >> 1;
+
+			int cmp = wrap_sort(&items[i], &tmpp, view);
+			if (cmp == 0)
+				return i;
+
+			if (cmp > 0)
+				upper = i;
+			else
+				lower = i + 1;
+		}
+
+		return -1;
+	}
+
+	DirectoryView* dv = (DirectoryView*) view;
+	GtkTreeModel* model = (GtkTreeModel*) dv->model;
 
 	g_return_if_fail(items->len > 0);
 
@@ -333,30 +418,32 @@ directory_view_update_items (ViewIface* view, GPtrArray* items)
 	int i;
 	for (i = 0; i < items->len; i++)
 	{
-		DirItem *item = (DirItem *) items->pdata[i];
-		const gchar *leafname = item->leafname;
+		DirItem* item = (DirItem *) items->pdata[i];
+		const gchar* leafname = item->leafname;
 
-		if (!fm__match_filter(dv->filer_window2, item)) continue;
+// TODO
+//		if (!fm__match_filter(dv->filer_window2, item)) continue;
 
-		int j = details_find_item(dv, item);
+		int j = view_find_item(dv, item);
 
-		if (j < 0) g_warning("Failed to find '%s'\n", leafname);
-		else
-		{
+		if (j < 0)
+			g_warning("Failed to find '%s'\n", leafname);
+		else {
 			GtkTreeIter iter;
-			ViewItem *view_item = dv->items->pdata[j];
-			if (view_item->image)
-			{
-				g_object_unref(G_OBJECT(view_item->image));
-				view_item->image = NULL;
+			ViewItem* view_item = dv->items->pdata[j];
+			if (view_item->image) {
+				_g_object_unref0(view_item->image);
 			}
-			GtkTreePath *path = gtk_tree_path_new();
+			GtkTreePath* path = gtk_tree_path_new();
 			gtk_tree_path_append_index(path, j);
 			iter.user_data = GINT_TO_POINTER(j);
 			gtk_tree_model_row_changed(model, path, &iter);
+
+			gtk_tree_path_free(path);
+
+			agl_actor__invalidate((AGlActor*)dv->view); // TODO probably should update via the model row change instead
 		}
 	}
-#endif
 }
 
 
@@ -623,6 +710,7 @@ directory_view_new (VMDirectory* model, FilesView* view)
 	DirectoryView* dv = directory_view_construct (TYPE_DIRECTORY_VIEW);
 	dv->model = model;
 	dv->view = view;
+	dv->priv->sort_type = SORT_NAME;
 	return dv;
 }
 

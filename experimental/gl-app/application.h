@@ -45,6 +45,7 @@ struct _Application
    AGlRootActor*        scene;
    WaveformContext*     wfc;
    Style                style;
+   gboolean             temp_view;
 };
 
 struct _ApplicationClass

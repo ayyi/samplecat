@@ -29,31 +29,34 @@
 #include "application.h"
 #include "views/scrollbar.h"
 #include "views/files.impl.h"
-#include "views/files.h"
+#include "views/files.with_wav.h"
 
 #define _g_free0(var) (var = (g_free (var), NULL))
 
-#define FONT "Droid Sans"
-#define row_height 20
-#define RHS_PADDING 20 // dont draw under scrollbar
-#define N_ROWS_VISIBLE(A) (agl_actor__height(((AGlActor*)A)) / row_height - 1)
-#define scrollable_height (view->view->items->len)
+#define row_height0 20
+#define wav_height 30
+#define row_spacing 8
+#define row_height (row_height0 + wav_height + row_spacing)
+#define N_ROWS_VISIBLE(A) (agl_actor__height(((AGlActor*)A)) / row_height)
+#define scrollable_height (FILES->view->items->len)
 #define max_scroll_offset (scrollable_height - N_ROWS_VISIBLE(actor) + 2)
+
+#define FILES ((FilesView*)view)
 #define SCROLLBAR ((ScrollbarActor*)((FilesView*)actor)->scrollbar)
 
 static AGl* agl = NULL;
 static int instance_count = 0;
-static AGlActorClass actor_class = {0, "Files", (AGlActorNew*)files_view};
+static AGlActorClass actor_class = {0, "Files", (AGlActorNew*)files_with_wav};
 static GHashTable* icon_textures = NULL;
 
-static gboolean files_scan_dir  (AGlActor*);
-static void     files_on_scroll (Observable*, int row, gpointer view);
-static guint    create_icon     (const char*, GdkPixbuf*);
-static guint    get_icon        (const char*, GdkPixbuf*);
+static gboolean files_scan_dir           (AGlActor*);
+static void     files_with_wav_on_scroll (Observable*, int row, gpointer view);
+static guint    create_icon              (const char*, GdkPixbuf*);
+static guint    get_icon                 (const char*, GdkPixbuf*);
 
 
 AGlActorClass*
-files_view_get_class ()
+files_with_wav_get_class ()
 {
 	return &actor_class;
 }
@@ -76,7 +79,6 @@ _init()
 	}
 }
 
-
 // TODO this is a copy of private AGlActor fn.
 //      In this particular case we can just check the state of the Scrollbar child
 static bool
@@ -93,7 +95,7 @@ agl_actor__is_animating(AGlActor* a)
 
 
 AGlActor*
-files_view(gpointer _)
+files_with_wav(gpointer _)
 {
 	instance_count++;
 
@@ -101,24 +103,27 @@ files_view(gpointer _)
 
 	bool files_paint(AGlActor* actor)
 	{
-		FilesView* view = (FilesView*)actor;
-		DirectoryView* dv = view->view;
+		FilesWithWav* view = (FilesWithWav*)actor;
+		DirectoryView* dv = FILES->view;
 		GPtrArray* items = dv->items;
 
 		int n_rows = N_ROWS_VISIBLE(actor);
 
-		int col[] = {0, 24, 260, 360, 400, 440};
-		char* col_heads[] = {"Filename", "Size", "Owner", "Group"};
+		int col[] = {0, 24, 260, 360, 400, 440, 480};
+		char* col_heads[] = {"Filename", "Size", "Date", "Owner", "Group"};
+		int sort_column = 1;
 
-#undef AGL_ACTOR_RENDER_CACHE // TODO scrollbar issues
 #ifdef AGL_ACTOR_RENDER_CACHE
+		int y0 = 0;
 		bool is_animating = agl_actor__is_animating(actor);
-		int y0 = is_animating
-			? -actor->scrollable.y1
-			: 0;
+		if(is_animating) y0 = -actor->scrollable.y1;
 #else
 		int y0 = -actor->scrollable.y1;
 #endif
+
+		agl->shaders.plain->uniform.colour = 0x222222ff;
+		agl_use_program((AGlShader*)agl->shaders.plain);
+		agl_rect_((AGlRect){col[sort_column], y0 - 2, col[sort_column + 1] - col[sort_column], row_height0});
 
 		int c; for(c=0;c<G_N_ELEMENTS(col_heads);c++){
 			agl_enable_stencil(0, y0, col[c + 2] - 6, actor->region.y2);
@@ -128,31 +133,55 @@ files_view(gpointer _)
 		if(!items->len)
 			return agl_print(0, 0, 0, app->style.text, "No files"), true;
 
-		int y = y0 + row_height;
-		int scroll_offset = SCROLLBAR->scroll->value;
-		int i, r; for(i = scroll_offset; r = i - scroll_offset, i < items->len && (i - scroll_offset < n_rows); i++){
-			if(r == view->view->selection - scroll_offset){
+		y0 += row_height0;
+		int offset = SCROLLBAR->scroll->value;
+		int i, r; for(i = offset; r = i - offset, i < items->len && (i - offset < n_rows); i++){
+			int y = y0 + r * row_height;
+			if(r == FILES->view->selection - offset){
 				agl->shaders.plain->uniform.colour = app->style.selection;
 				agl_use_program((AGlShader*)agl->shaders.plain);
-				agl_rect_((AGlRect){0, y + r * row_height - 2, agl_actor__width(actor), row_height});
+				agl_disable_stencil();
+				agl_rect_((AGlRect){0, y - 2, agl_actor__width(actor) - 20, row_height0 + wav_height + 4});
+			}else{
+				// waveform background
+				agl_disable_stencil();
+				agl->shaders.plain->uniform.colour = app->style.bg_alt;
+				agl_use_program((AGlShader*)agl->shaders.plain);
+				agl_rect_((AGlRect){0, y + row_height0, agl_actor__width(actor) - 20, wav_height});
 			}
 
-			ViewItem* vitem = items->pdata[i];
+			WavViewItem* vitem = items->pdata[i];
 			DirItem* item = vitem->item;
-			//dbg(0, "  %i: %zu %s", i, item->size, item->leafname);
 			char size[16] = {'\0'}; snprintf(size, 15, "%zu", item->size);
 			const char* val[] = {item->leafname, size, user_name(item->uid), group_name(item->gid)};
 			int c; for(c=0;c<G_N_ELEMENTS(val);c++){
 				agl_enable_stencil(0, y0, col[c + 2] - 6, actor->region.y2);
-				agl_print(col[c + 1], y + r * row_height, 0, app->style.text, val[c]);
+				agl_print(col[c + 1], y, 0, app->style.text, val[c]);
+			}
+
+			if(!vitem->wav){
+				DirItem* item = vitem->item;
+				char* name = item->leafname;
+				WaveformActor* wa = wf_canvas_add_new_actor(view->wfc, NULL);
+				agl_actor__add_child(actor, (AGlActor*)wa);
+				Waveform* waveform = waveform_new(g_strdup_printf("%s/%s", FILES->path, name));
+				wf_actor_set_waveform(wa, waveform, NULL, NULL);
+				wf_actor_set_colour(wa, app->style.fg);
+				wf_actor_set_rect(wa, &(WfRectangle){0, y + row_height0, agl_actor__width(actor) - 20, wav_height});
+				vitem->wav = (AGlActor*)wa;
 			}
 
 			// TODO dont do this in paint
 			if(item->mime_type){
 				GdkPixbuf* pixbuf = mime_type_get_pixbuf(item->mime_type);
-				guint t = get_icon(item->mime_type->subtype, pixbuf);
-				agl_use_program((AGlShader*)agl->shaders.texture);
-				agl_textured_rect(t, 0, y + r * row_height, 16, 16, NULL);
+				if(GDK_IS_PIXBUF(pixbuf)){
+					guint t = get_icon(item->mime_type->subtype, pixbuf);
+					agl->shaders.texture->uniform.fg_colour = 0xffffffff;
+					agl_use_program((AGlShader*)agl->shaders.texture);
+					agl_textured_rect(t, 0, y, 16, 16, NULL);
+				}else{
+					gwarn("failed to get icon for %s", item->mime_type->subtype);
+				}
 			}
 		}
 
@@ -163,24 +192,49 @@ files_view(gpointer _)
 
 	void files_init(AGlActor* a)
 	{
-		FilesView* view = (FilesView*)a;
+		FilesWithWav* view = (FilesWithWav*)a;
+		AGlActor* actor = a;
 
 #ifdef AGL_ACTOR_RENDER_CACHE
 		a->fbo = agl_fbo_new(agl_actor__width(a), agl_actor__height(a), 0, AGL_FBO_HAS_STENCIL);
 		a->cache.enabled = true;
 #endif
+
+		observable_set(SCROLLBAR->scroll, 0);
+
 		g_idle_add((GSourceFunc)files_scan_dir, a);
 
 		void files_on_row_add (GtkTreeModel* tree_model, GtkTreePath* path, GtkTreeIter* iter, AGlActor* actor)
 		{
+			DirectoryView* dv = ((FilesView*)actor)->view;
+			GPtrArray* items = dv->items;
+
+			actor->scrollable.y2 = actor->scrollable.y1 + (items->len + 1) * row_height;
+
 			agl_actor__invalidate(actor);
 		}
-		g_signal_connect(view->viewmodel, "row-inserted", (GCallback)files_on_row_add, a);
+		g_signal_connect(FILES->viewmodel, "row-inserted", (GCallback)files_on_row_add, a);
+
+		void files_on_row_change (GtkTreeModel* tree_model, GtkTreePath* path, GtkTreeIter* iter, AGlActor* actor)
+		{
+			FilesWithWav* view = (FilesWithWav*)actor;
+			DirectoryView* dv = FILES->view;
+			GPtrArray* items = dv->items;
+
+			int r = GPOINTER_TO_INT(iter->user_data);
+			if(r < 5){
+				WavViewItem* vitem = items->pdata[r];
+				DirItem* item = vitem->item;
+				char* name = item->leafname;
+			}
+		}
+		g_signal_connect(FILES->viewmodel, "row-changed", (GCallback)files_on_row_change, a);
 	}
 
 	void files_set_size(AGlActor* actor)
 	{
-		FilesView* view = (FilesView*)actor;
+		FilesWithWav* view = (FilesWithWav*)actor;
+		DirectoryView* dv = FILES->view;
 
 		if(SCROLLBAR->scroll->value > max_scroll_offset){
 			observable_set(SCROLLBAR->scroll, max_scroll_offset);
@@ -189,7 +243,7 @@ files_view(gpointer _)
 
 	bool files_event(AGlActor* actor, GdkEvent* event, AGliPt xy)
 	{
-		FilesView* view = (FilesView*)actor;
+		FilesWithWav* view = (FilesWithWav*)actor;
 
 		switch(event->type){
 			case GDK_SCROLL:
@@ -214,11 +268,11 @@ files_view(gpointer _)
 				}
 				break;
 			case GDK_BUTTON_RELEASE:
-				;int row = files_view_row_at_coord (view, 0, xy.y - actor->region.y1);
+				;int row = files_with_wav_row_at_coord (view, 0, xy.y - actor->region.y1);
 				dbg(1, "RELEASE button=%i y=%i row=%i", event->button.button, xy.y - actor->region.y1, row);
 				switch(event->button.button){
 					case 1:
-						VIEW_IFACE_GET_CLASS((ViewIface*)view->view)->set_selected((ViewIface*)view->view, &(ViewIter){.i = row}, true);
+						VIEW_IFACE_GET_CLASS((ViewIface*)FILES->view)->set_selected((ViewIface*)FILES->view, &(ViewIter){.i = row}, true);
 				}
 				break;
 			default:
@@ -229,43 +283,45 @@ files_view(gpointer _)
 
 	void files_free(AGlActor* actor)
 	{
-		FilesView* view = (FilesView*)actor;
+		FilesWithWav* view = (FilesWithWav*)actor;
 
-		g_object_unref(view->view);
+		g_object_unref(FILES->view);
 
 		if(!--instance_count){
 		}
 	}
 
-	FilesView* view = WF_NEW(FilesView,
-		.actor = {
-			.class = &actor_class,
-			.name = "Files",
-			.colour = 0x66ff99ff,
-			.init = files_init,
-			.free = files_free,
-			.paint = files_paint,
-			.set_size = files_set_size,
-			.on_event = files_event,
-		},
-		.viewmodel = vm_directory_new()
+	FilesWithWav* view = WF_NEW(FilesWithWav,
+		.files = {
+			.actor = {
+				.class = &actor_class,
+				.name = "Files",
+				.colour = 0x66ff99ff,
+				.init = files_init,
+				.free = files_free,
+				.paint = files_paint,
+				.set_size = files_set_size,
+				.on_event = files_event,
+			},
+			.viewmodel = vm_directory_new()
+		}
 	);
 	AGlActor* actor = (AGlActor*)view;
 
-	view->viewmodel->view = (ViewIface*)(view->view = directory_view_new(view->viewmodel, view));
+	FILES->viewmodel->view = (ViewIface*)(FILES->view = directory_view_new(FILES->viewmodel, (FilesView*)view));
 
-	agl_actor__add_child((AGlActor*)view, view->scrollbar = scrollbar_view(NULL, GTK_ORIENTATION_VERTICAL));
+	agl_actor__add_child((AGlActor*)view, FILES->scrollbar = scrollbar_view(NULL, GTK_ORIENTATION_VERTICAL));
 
-	observable_subscribe(SCROLLBAR->scroll, files_on_scroll, view);
+	observable_subscribe(SCROLLBAR->scroll, files_with_wav_on_scroll, view);
 
 	return (AGlActor*)view;
 }
 
 
 void
-files_view_set_path (FilesView* view, const char* path)
+files_with_wav_set_path (FilesWithWav* view, const char* path)
 {
-	view->path = g_strdup(path);
+	FILES->path = g_strdup(path);
 	g_idle_add((GSourceFunc)files_scan_dir, (gpointer)view);
 }
 
@@ -273,9 +329,9 @@ files_view_set_path (FilesView* view, const char* path)
 static gboolean
 files_scan_dir(AGlActor* a)
 {
-	FilesView* view = (FilesView*)a;
+	FilesWithWav* view = (FilesWithWav*)a;
 
-	vm_directory_set_path(view->viewmodel, view->path ? view->path : g_get_home_dir());
+	vm_directory_set_path(FILES->viewmodel, FILES->path ? FILES->path : g_get_home_dir());
 	agl_actor__invalidate(a);
 
 	return G_SOURCE_REMOVE;
@@ -283,7 +339,7 @@ files_scan_dir(AGlActor* a)
 
 
 int
-files_view_row_at_coord (FilesView* view, int x, int y)
+files_with_wav_row_at_coord (FilesWithWav* view, int x, int y)
 {
 	AGlActor* actor = (AGlActor*)view;
 
@@ -292,23 +348,77 @@ files_view_row_at_coord (FilesView* view, int x, int y)
 	y += SCROLLBAR->scroll->value * row_height - header_height;
 	if(y < 0) return -1;
 	int r = y / row_height;
-	GPtrArray* items = view->view->items;
+	GPtrArray* items = FILES->view->items;
 	if(r > items->len) return -1;
-
 	return r;
 }
 
 
+void
+files_with_wav_select (FilesWithWav* view, int row)
+{
+	AGlActor* actor = (AGlActor*)view;
+	DirectoryView* dv = FILES->view;
+
+	if(row > -1 && row < FILES->view->items->len && row != view->files.view->selection){
+		GPtrArray* items = dv->items;
+		{
+			WavViewItem* vitem = items->pdata[view->files.view->selection];
+			if(vitem->wav){
+				wf_actor_set_colour((WaveformActor*)vitem->wav, 0x66ff66ff);
+			}
+		}
+
+		view->files.view->selection = row;
+
+		WavViewItem* vitem = items->pdata[row];
+		if(vitem->wav){
+			wf_actor_set_colour((WaveformActor*)vitem->wav, 0xff6666ff);
+		}
+
+		iRange range = {SCROLLBAR->scroll->value, SCROLLBAR->scroll->value + N_ROWS_VISIBLE(view) - 1};
+		if(row > range.end){
+			observable_set(SCROLLBAR->scroll, row - N_ROWS_VISIBLE(view) + 1);
+		}
+		if(row < range.start){
+			observable_set(SCROLLBAR->scroll, row);
+		}
+
+		agl_actor__invalidate((AGlActor*)view);
+	}
+}
+
+
+#define HIDE_ITEM(N) \
+	if(N > 0 && N < items->len){ \
+		WavViewItem* vitem = items->pdata[N]; \
+		if(vitem->wav){ \
+			wf_actor_set_rect((WaveformActor*)vitem->wav, &(WfRectangle){0,}); \
+		} \
+	}
+
+
 static void
-files_on_scroll (Observable* observable, int row, gpointer _view)
+files_with_wav_on_scroll (Observable* observable, int row, gpointer _view)
 {
 	AGlActor* actor = (AGlActor*)_view;
-	FilesView* view = (FilesView*)_view;
-	DirectoryView* dv = view->view;
+	FilesWithWav* view = (FilesWithWav*)_view;
+	DirectoryView* dv = FILES->view;
 	GPtrArray* items = dv->items;
 
 	actor->scrollable.y1 = - SCROLLBAR->scroll->value * row_height;
 	actor->scrollable.y2 = actor->scrollable.y1 + (items->len + 1) * row_height;
+
+	HIDE_ITEM(row - 1);
+	HIDE_ITEM(SCROLLBAR->scroll->value + N_ROWS_VISIBLE(actor));
+
+	int last = MIN(items->len, SCROLLBAR->scroll->value + N_ROWS_VISIBLE(actor));
+	for(int r = SCROLLBAR->scroll->value; r < last ; r++){
+		WavViewItem* vitem = items->pdata[r];
+		if(vitem->wav){
+			wf_actor_set_rect((WaveformActor*)vitem->wav, &(WfRectangle){0, row_height0 + r * row_height + row_height0, agl_actor__width(actor) - 20, wav_height});
+		}
+	}
 
 	agl_actor__invalidate(actor);
 }

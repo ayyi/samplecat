@@ -377,7 +377,7 @@ _update_display (Directory* dir, DirAction action, GPtrArray* items, VMDirectory
 			break;
 		case DIR_UPDATE:
 			dbg(1, "DIR_UPDATE");
-//			view_update_items(view, items);
+			VIEW_IFACE_GET_CLASS(view)->update_items(view, items);
 			break;
 		case DIR_ERROR_CHANGED:
 			//filer_set_title(filer_window);

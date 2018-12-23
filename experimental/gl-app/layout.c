@@ -281,6 +281,14 @@ config_load_window_yaml (yaml_parser_t* parser, yaml_event_t* event)
 }
 
 
+static bool
+layout_set_size(gpointer data)
+{
+	agl_actor__set_size((AGlActor*)app->scene);
+	return G_SOURCE_REMOVE;
+}
+
+
 static void
 config_load_windows_yaml (yaml_parser_t* parser, yaml_event_t* event)
 {
@@ -352,11 +360,6 @@ config_load_windows_yaml (yaml_parser_t* parser, yaml_event_t* event)
 
 	if(!g_list_length(((AGlActor*)app->scene)->children)) return gwarn("layout did not load - pls check config file");
 
-	bool layout_set_size(gpointer data)
-	{
-		agl_actor__set_size((AGlActor*)app->scene);
-		return G_SOURCE_REMOVE;
-	}
 	g_idle_add(layout_set_size, NULL);
 }
 
