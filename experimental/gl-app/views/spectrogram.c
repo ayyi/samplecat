@@ -19,7 +19,9 @@
 #include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
 #include <GL/gl.h>
+#if USE_GLU
 #include <GL/glu.h>
+#endif
 #include "debug/debug.h"
 #include "agl/actor.h"
 #include "agl/fbo.h"
@@ -153,6 +155,7 @@ load_texture(SpectrogramView* view)
 {
 	glBindTexture(GL_TEXTURE_2D, view->textures[0]);
 
+#if USE_GLU
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
@@ -162,5 +165,14 @@ load_texture(SpectrogramView* view)
 		gwarn("mipmap generation failed");
 		return false;
 	}
+#else
+	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	GLint n_colour_components = (GLint)gdk_pixbuf_get_n_channels(view->pixbuf);
+	glTexImage2D (GL_TEXTURE_2D, 0, n_colour_components, gdk_pixbuf_get_width(view->pixbuf), gdk_pixbuf_get_height(view->pixbuf), 0, gdk_pixbuf_get_n_channels (view->pixbuf) == 4 ? GL_RGBA : GL_RGB, GL_UNSIGNED_BYTE, gdk_pixbuf_get_pixels(view->pixbuf));
+#endif
+
 	return true;
 }
