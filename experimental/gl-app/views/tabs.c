@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2016-2018 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2016-2019 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -15,13 +15,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <GL/gl.h>
+#include "debug/debug.h"
 #include "agl/ext.h"
 #include "agl/utils.h"
-#include "agl/actor.h"
-#include "waveform/waveform.h"
-#include "waveform/peakgen.h"
-#include "waveform/shader.h"
-#include "waveform/actors/text.h"
 #include "materials/icon_ring.h"
 #include "application.h"
 #include "shader.h"
@@ -39,6 +35,9 @@ static int tab_width = 80;
 
 static AGlMaterial* ring_material = NULL;
 extern AGlMaterialClass ring_material_class;
+
+static void tabs_select_tab (TabsView*, int);
+
 
 AGlActorClass*
 tabs_view_get_class ()
@@ -64,7 +63,7 @@ _init()
 
 
 AGlActor*
-tabs_view(WaveformActor* _)
+tabs_view(gpointer _)
 {
 	instance_count++;
 
@@ -137,24 +136,9 @@ tabs_view(WaveformActor* _)
 		switch(event->type){
 			case GDK_BUTTON_PRESS:
 			case GDK_BUTTON_RELEASE:;
-				/*
-				agl_actor__invalidate(actor);
-				int row = (xy.y - actor->region.y1) / row_height;
-				*/
 				int active = xy.x / tab_width;
-				dbg(0, "x=%i y=%i active=%i", xy.x, xy.y - actor->region.y1, active);
-				if(active < g_list_length(tabs->tabs) && active != tabs->active){
-					TabsViewTab* prev = g_list_nth_data(tabs->tabs, tabs->active);
-					TabsViewTab* next = g_list_nth_data(tabs->tabs, active);
-
-					dbg(0, "selecting... %s", prev->actor->name);
-					prev->actor->region.x2 = 0;
-
-					tabs->active = active;
-					next->actor->region = (AGliRegion){0, TAB_HEIGHT, agl_actor__width(actor), agl_actor__height(actor)};
-					agl_actor__set_size(next->actor);
-					agl_actor__invalidate(actor);
-				}
+				dbg(1, "x=%i y=%i active=%i", xy.x, xy.y, active);
+				tabs_select_tab(tabs, active);
 				break;
 
 			case GDK_LEAVE_NOTIFY:
@@ -192,7 +176,7 @@ tabs_view(WaveformActor* _)
 		}
 	}
 
-	TabsView* view = WF_NEW(TabsView,
+	TabsView* view = AGL_NEW(TabsView,
 		.actor = {
 			.class = &actor_class,
 			.name = "Tabs",
@@ -201,7 +185,8 @@ tabs_view(WaveformActor* _)
 			.paint = tabs_paint,
 			.set_size = tabs_set_size,
 			.on_event = tabs_event,
-		}
+		},
+		.active = -1
 	);
 
 	view->hover.animatable = (WfAnimatable){
@@ -218,10 +203,36 @@ tabs_view(WaveformActor* _)
 void
 tabs_view__add_tab(TabsView* tabs, const char* name, AGlActor* child)
 {
-	TabsViewTab* tab = WF_NEW(TabsViewTab, .actor=child, .name=name);
+	TabsViewTab* tab = AGL_NEW(TabsViewTab, .actor=child, .name=name);
 
 	tabs->tabs = g_list_append(tabs->tabs, tab);
 	agl_actor__add_child((AGlActor*)tabs, child);
+
+	child->region.x2 = 0; // hide until active
+
+	if(tabs->active < 0){
+		tabs_select_tab(tabs, 0);
+	}
 }
 
 
+static void
+tabs_select_tab(TabsView* tabs, int active)
+{
+	AGlActor* actor = (AGlActor*)tabs;
+
+	if(active < g_list_length(tabs->tabs) && active != tabs->active){
+		TabsViewTab* prev;
+		TabsViewTab* next = g_list_nth_data(tabs->tabs, active);
+
+		if(tabs->active > -1){
+			prev = g_list_nth_data(tabs->tabs, tabs->active);
+			prev->actor->region.x2 = 0;
+		}
+
+		tabs->active = active;
+		next->actor->region = (AGliRegion){0, TAB_HEIGHT, agl_actor__width(actor), agl_actor__height(actor)};
+		agl_actor__set_size(next->actor);
+		agl_actor__invalidate(actor);
+	}
+}
