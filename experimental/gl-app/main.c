@@ -63,6 +63,7 @@ static KeyHandler
 Key keys[] = {
 	{XK_Up,   nav_up},
 	{XK_Down, nav_down},
+	{0,}
 };
 
 static void add_key_handlers ();

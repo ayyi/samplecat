@@ -187,3 +187,22 @@ application_search()
 }
 
 
+void
+application_play(Sample* sample)
+{
+	if(sample) dbg(1, "%s", sample->name);
+}
+
+
+void
+application_play_selected()
+{
+	Sample* sample = samplecat.model->selection;
+	if (!sample) {
+		return;
+	}
+	dbg(1, "PLAY %s", sample->full_path);
+
+	application_play(sample);
+}
+

@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2015-2019 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2019-2019 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -9,18 +9,29 @@
 * +----------------------------------------------------------------------+
 *
 */
-#ifndef __views_list_h__
-#define __views_list_h__
+#ifndef __views_context_menu_h__
+#define __views_context_menu_h__
+#include "agl/actor.h"
+#include "waveform/promise.h"
+#include "../glx.h"
 
 typedef struct {
-   AGlActor    actor;
-   int         selection;
-   int         scroll_offset;
-} ListView;
+    int modifier;
+    int code;
+} Key;
 
-AGlActorClass* list_view_get_class ();
+typedef struct {
+    char* title;
+    Key key;
+    void (*action)(gpointer);
+} MenuItem;
 
-AGlActor* list_view             (gpointer);
-void      list_view_select      (ListView*, int);
+typedef struct {
+    int len;
+    MenuItem items[];
+} Menu;
+
+AGlWindow* context_menu_open_new (AGlScene*, AGliPt, Menu*, AMPromise*);
+AGlActor*  context_menu          (gpointer);
 
 #endif

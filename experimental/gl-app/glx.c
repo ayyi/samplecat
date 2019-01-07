@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2012-2018 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2012-2019 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -81,7 +81,7 @@ glx_init(Display* dpy)
 	int swap_interval = 1;
 
 	// TODO is make_extension_table needed as well as agl_get_extensions ?
-	make_extension_table((char*)glXQueryExtensionsString(dpy,DefaultScreen(dpy)));
+	make_extension_table((char*)glXQueryExtensionsString(dpy, DefaultScreen(dpy)));
 	has_OML_sync_control = is_extension_supported("GLX_OML_sync_control");
 	has_SGI_swap_control = is_extension_supported("GLX_SGI_swap_control");
 	has_MESA_swap_control = is_extension_supported("GLX_MESA_swap_control");
@@ -290,7 +290,7 @@ agl_make_window(Display* dpy, const char* name, int x, int y, int width, int hei
 		.background_pixel = 0,
 		.border_pixel = 0,
 		.colormap = XCreateColormap(dpy, root, visinfo->visual, AllocNone),
-		.event_mask = StructureNotifyMask | ExposureMask | KeyPressMask | KeyReleaseMask| ButtonPressMask | ButtonReleaseMask | PointerMotionMask,
+		.event_mask = StructureNotifyMask | ExposureMask | KeyPressMask | KeyReleaseMask| ButtonPressMask | ButtonReleaseMask | PointerMotionMask | FocusChangeMask | EnterWindowMask | LeaveWindowMask,
 	};
 	unsigned long mask = CWBackPixel | CWBorderPixel | CWColormap | CWEventMask;
 
@@ -316,7 +316,7 @@ agl_make_window(Display* dpy, const char* name, int x, int y, int width, int hei
 
 	XMoveWindow(dpy, win, x, y);
 
-	if (fullscreen)
+	if (fullscreen || !strcmp(name, "Popup"))
 		no_border(dpy, win);
 
 	if(!windows){
@@ -465,9 +465,9 @@ event_loop(Display* dpy)
 						}
 
 						} break;
-					case KeyRelease: {
-							agl_actor__xevent(window->scene, &event);
-						} break;
+					case KeyRelease:
+						agl_actor__xevent(window->scene, &event);
+						break;
 					case ButtonPress:
 					case ButtonRelease:
 						if(event.xbutton.button == 1){
@@ -478,6 +478,7 @@ event_loop(Display* dpy)
 						agl_actor__xevent(window->scene, &event);
 						break;
 					case MotionNotify:
+					case FocusOut:
 						agl_actor__xevent(window->scene, &event);
 						break;
 				}
@@ -746,24 +747,31 @@ x11_fd_dispatch (GSource* source, GSourceFunc callback, gpointer user_data)
 	Display* dpy = ((X11Source*)source)->dpy;
 	Window window = ((X11Source*)source)->w;
 
-	g_return_if_fail(XPending(dpy) > 0, G_SOURCE_CONTINUE);
+	g_return_val_if_fail(XPending(dpy) > 0, G_SOURCE_CONTINUE);
+
+	g_assert(g_list_length(windows) == 1);
+	AGlWindow* w;
+	GList* l = windows;
+	for(;l;l=l->next)
+		w = l->data;
 
 	while (XPending(dpy) > 0) {
 		XEvent event;
 		XNextEvent(dpy, &event);
 		switch (event.type) {
 			case Expose:
-				need_draw = true;
+				w->scene->gl.glx.needs_draw = true;
 				break;
 			case MotionNotify:
-				agl_actor__xevent(scene, &event);
+				agl_actor__xevent(w->scene, &event);
 				break;
 		}
 	}
-	if(need_draw){
-		draw();
-		glXSwapBuffers(dpy, window);
-		need_draw = false;
+
+	if(w->scene->gl.glx.needs_draw){
+		draw(dpy, w);
+		glXSwapBuffers(dpy, w->window);
+		w->scene->gl.glx.needs_draw = false;
 	}
 
 	return G_SOURCE_CONTINUE;

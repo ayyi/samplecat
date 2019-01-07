@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2012-2017 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2012-2019 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -26,7 +26,9 @@
 #include "waveform/shader.h"
 #include "waveform/actors/text.h"
 #include "samplecat.h"
+#include "application.h"
 #include "views/list.h"
+#include "views/context_menu.h"
 
 extern int need_draw;
 
@@ -60,8 +62,39 @@ _init()
 }
 
 
+static void
+action_play (gpointer _)
+{
+	application_play_selected();
+}
+
+
+static void
+action_delete (gpointer _)
+{
+}
+
+
+Menu menu = {
+	2,
+	{
+		{"Play", {0}, action_play},
+		{"Delete", {0}, action_delete},
+	}
+};
+
+
+static void
+_on_context_menu_selection (gpointer _view, gpointer _promise)
+{
+	AMPromise* promise = _promise;
+
+	am_promise_unref(promise);
+}
+
+
 AGlActor*
-list_view(WaveformActor* _)
+list_view(gpointer _)
 {
 	instance_count++;
 
@@ -128,6 +161,17 @@ list_view(WaveformActor* _)
 	{
 		switch(event->type){
 			case GDK_BUTTON_PRESS:
+				switch(event->button.button){
+					case 3:
+						AMPromise* promise = am_promise_new(actor);
+						am_promise_add_callback(promise, _on_context_menu_selection, promise);
+
+						AGliPt offset = agl_actor__find_offset(actor);
+						context_menu_open_new(actor->root, (AGliPt){xy.x + offset.x, xy.y + offset.y}, &menu, promise);
+
+						break;
+				}
+				// falling through ...
 			case GDK_BUTTON_RELEASE:
 				switch(event->button.button){
 					case 1:

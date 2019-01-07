@@ -16,6 +16,7 @@ libviews_la_SOURCES = \
 	filters.c filters.h \
 	tabs.c tabs.h \
 	scrollbar.c scrollbar.h \
+	context_menu.c context_menu.h \
 	spectrogram.c spectrogram.h
 
 AM_CFLAGS = \

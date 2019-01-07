@@ -1,8 +1,7 @@
-
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2015-2018 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2015-2019 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -18,7 +17,7 @@ typedef struct {
     AGlScene* scene;
 } AGlWindow;
 
-AGlWindow* agl_make_window        (Display*, const char* name, int x, int y, int width, int height, AGlScene* scene);
+AGlWindow* agl_make_window        (Display*, const char* name, int x, int y, int width, int height, AGlScene*);
 void       agl_window_destroy     (Display*, AGlWindow**);
 
 void       on_window_resize       (Display*, AGlWindow*, int width, int height);
@@ -27,9 +26,9 @@ void       show_refresh_rate      (Display*);
 
 #undef USE_GLIB_LOOP
 #ifdef USE_GLIB_LOOP
-GMainLoop*main_loop_new          (Display*, Window);
+GMainLoop* main_loop_new          (Display*, Window);
 #else
-void      event_loop             (Display*);
+void       event_loop             (Display*);
 #endif
 
 #endif

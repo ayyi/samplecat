@@ -63,6 +63,9 @@ Application* application_new                     ();
 Application* application_construct               (GType);
 void         application_quit                    (Application*);
 
+void         application_play                    (Sample*);
+void         application_play_selected           ();
+
 G_END_DECLS
 
 #endif
