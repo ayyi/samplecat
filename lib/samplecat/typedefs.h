@@ -13,6 +13,8 @@
 #define __samplecat_typedefs_h__
 #ifdef USE_GTK
 #include "gtk/gtk.h"
+#else
+#include "glib.h"
 #endif
 
 #ifndef __PRI64_PREFIX
@@ -46,6 +48,7 @@ typedef struct _Logger            Logger;
 
 typedef void   (*Callback)       (gpointer);
 typedef void   (*SampleCallback) (Sample*, gpointer);
+typedef void   (*ErrorCallback)  (GError*, gpointer);
 
 struct _Samplecat {
    SamplecatModel*      model;

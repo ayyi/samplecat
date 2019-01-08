@@ -39,7 +39,9 @@
 #include "ladspa_proc.h"
 #include "jack_player.h"
 
+#if __GNUC__ > 6
 #pragma GCC diagnostic ignored "-Wformat-truncation"
+#endif
 
 #ifdef HAVE_JACK
 
@@ -110,7 +112,7 @@ static int midi_octave = 0;
 
 static int   jplay__check      ();
 static void  jplay__stop       ();
-static void  jplay__connect    (Callback, gpointer);
+static void  jplay__connect    (ErrorCallback, gpointer);
 static void  jplay__disconnect ();
 static bool  jplay__play       (Sample*);
 
@@ -738,9 +740,9 @@ jplay__play_pathX(const char* path, int reset_pitch)
 
 /* SampleCat API */
 
-static void jplay__connect(Callback callback, gpointer user_data) {
+static void jplay__connect(ErrorCallback callback, gpointer user_data) {
 	JACKconnect();
-	callback(user_data);
+	callback(NULL, user_data);
 }
 
 static void jplay__disconnect() {

@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2015 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2019 Tim Orford <tim@orford.org>                  |
 * | copyright (C) 2011 Robin Gareus <robin@gareus.org>                   |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
@@ -363,7 +363,9 @@ player_control_on_show_hide(bool enable)
 			}
 			gtk_widget_set_sensitive(pc->slider1, true);
 		}
-		gtk_widget_set_sensitive(pc->pbctrl, true);
+		if(pc->pbctrl){
+			gtk_widget_set_sensitive(pc->pbctrl, true);
+		}
 	}
 
 	void pc_on_stop(GObject* _app, gpointer _pc)

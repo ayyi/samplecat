@@ -65,6 +65,7 @@ application_construct (GType object_type)
 	Application* app = g_object_new (object_type, NULL);
 	app->cache_dir = g_build_filename (g_get_home_dir(), ".config", PACKAGE, "cache", NULL);
 	app->configctx.dir = g_build_filename (g_get_home_dir(), ".config", PACKAGE, NULL);
+
 	return app;
 }
 
@@ -341,9 +342,13 @@ application_set_auditioner(Application* a)
 
 	// TODO starting jack can block the gui so this needs to be moved to another thread.
 
-	void set_auditioner_on_connected(gpointer _)
+	void set_auditioner_on_connected(GError* error, gpointer _)
 	{
-		g_signal_emit_by_name (app, "audio-ready");
+		if(error){
+			statusbar_print(1, "Player: %s", error->message);
+		}else{
+			g_signal_emit_by_name (app, "audio-ready");
+		}
 	}
 
 	bool set_auditioner_on_idle(gpointer data)

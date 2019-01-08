@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2018 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2019 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -38,11 +38,12 @@ typedef struct
 static AyyiConnection* adbus;
 
 static int  auditioner_check      ();
-static void auditioner_connect    (Callback, gpointer);
+static void auditioner_connect    (ErrorCallback, gpointer);
 static void auditioner_disconnect ();
 static bool auditioner_play       (Sample*);
 static void auditioner_stop       ();
 static void auditioner_play_all   ();
+static bool auditioner_status     (char** status, int* len, GError**);
 
 const Auditioner a_ayyidbus = {
 	&auditioner_check,
@@ -58,12 +59,12 @@ const Auditioner a_ayyidbus = {
 
 
 void
-auditioner_connect(Callback callback, gpointer user_data)
+auditioner_connect(ErrorCallback callback, gpointer user_data)
 {
 	adbus = g_new0(AyyiConnection, 1);
 
 	typedef struct {
-		Callback callback;
+		ErrorCallback callback;
 		gpointer user_data;
 	} C;
 
@@ -72,14 +73,24 @@ auditioner_connect(Callback callback, gpointer user_data)
 		C* c = user_data;
 
 		GError* error = NULL;
-		DBusGConnection* auditioner = dbus_g_bus_get(DBUS_BUS_SESSION, &error);
-		if(!auditioner){ 
+		DBusGConnection* bus = dbus_g_bus_get(DBUS_BUS_SESSION, &error);
+		if(!bus){
 			errprintf("failed to get dbus connection\n");
 			return FALSE;
 		}
-		if(!(adbus->proxy = dbus_g_proxy_new_for_name (auditioner, APPLICATION_SERVICE_NAME, DBUS_APP_PATH, DBUS_INTERFACE))){
+		if(!(adbus->proxy = dbus_g_proxy_new_for_name (bus, APPLICATION_SERVICE_NAME, DBUS_APP_PATH, DBUS_INTERFACE))){
 			errprintf("failed to get Auditioner\n");
-			return FALSE;
+			return G_SOURCE_REMOVE;
+		}
+
+		// Even if we get here, it doesn't mean the service is running,
+		// so query the service to really check...
+		char* status;
+		int len;
+		if(!auditioner_status(&status, &len, &error)){
+			c->callback(error, c->user_data);
+			g_error_free(error);
+			return G_SOURCE_REMOVE;
 		}
 
 		dbus_g_proxy_add_signal(adbus->proxy, "PlaybackStopped", G_TYPE_INVALID);
@@ -99,7 +110,7 @@ auditioner_connect(Callback callback, gpointer user_data)
 		}
 		dbus_g_proxy_connect_signal (adbus->proxy, "Position", G_CALLBACK(on_position), NULL, NULL);
 
-		c->callback(c->user_data);
+		c->callback(NULL, c->user_data);
 
 		g_free(c);
 		return G_SOURCE_REMOVE;
@@ -163,6 +174,23 @@ auditioner_play_all()
 	stop = playall__on_stopped;
 
 	dbus_g_proxy_connect_signal (adbus->proxy, "PlaybackStopped", G_CALLBACK(playall__on_stopped), NULL, NULL);
+}
+
+
+static gboolean
+auditioner_status (char** _status, int* len, GError** error)
+{
+	char* status;
+	int queue_size;
+	dbus_g_proxy_call(adbus->proxy, "getStatus", error, G_TYPE_INVALID, G_TYPE_STRING, &status, G_TYPE_INT, &queue_size, G_TYPE_INVALID);
+	if(error && *error){
+		dbg(1, "Auditioner: %s", (*error)->message);
+		*_status = NULL;
+		return FALSE;
+	}
+	*_status = status;
+	*len = queue_size;
+	return TRUE;
 }
 
 
