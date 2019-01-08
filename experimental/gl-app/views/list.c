@@ -162,7 +162,7 @@ list_view(gpointer _)
 		switch(event->type){
 			case GDK_BUTTON_PRESS:
 				switch(event->button.button){
-					case 3:
+					case 3:;
 						AMPromise* promise = am_promise_new(actor);
 						am_promise_add_callback(promise, _on_context_menu_selection, promise);
 
