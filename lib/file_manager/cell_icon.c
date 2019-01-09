@@ -200,7 +200,7 @@ get_style(GtkCellRenderer *cell)
 
 	if (!view_item->image)
 	{
-		AyyiLibfilemanager* fm = icon->view_details->filer_window;
+		AyyiFilemanager* fm = icon->view_details->filer_window;
 
 		if (fm->show_thumbs && item->base_type == TYPE_FILE)
 		{

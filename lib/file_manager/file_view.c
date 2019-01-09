@@ -33,7 +33,6 @@
 #include "dnd/dnd.h"
 #include "debug/debug.h"
 #include "support.h"
-#include "file_manager.h"
 #include "display.h"
 #include "dnd.h"
 #include "cell_icon.h"
@@ -125,7 +124,7 @@ gboolean had_cursor = 0;
  ****************************************************************/
 
 GtkWidget*
-view_details_new (AyyiLibfilemanager* fm)
+view_details_new (AyyiFilemanager* fm)
 {
 	PF;
 	ViewDetails* view_details = g_object_new(view_details_get_type(), NULL);
@@ -508,7 +507,7 @@ static gboolean
 details_get_sort_column_id (GtkTreeSortable* sortable, gint* sort_column_id, GtkSortType* order)
 {
 	ViewDetails* view_details = (ViewDetails*)sortable;
-	AyyiLibfilemanager* filer_window = view_details->filer_window;
+	AyyiFilemanager* filer_window = view_details->filer_window;
 
 	if (!filer_window) return FALSE;	/* Not yet initialised */
 
@@ -535,7 +534,7 @@ static void
 details_set_sort_column_id (GtkTreeSortable* sortable, gint sort_column_id, GtkSortType order)
 {
 	ViewDetails* view_details = (ViewDetails*)sortable;
-	AyyiLibfilemanager* filer_window = view_details->filer_window;
+	AyyiFilemanager* filer_window = view_details->filer_window;
 
 	if (!filer_window) return; /* Not yet initialised */
 

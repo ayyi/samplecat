@@ -43,13 +43,13 @@
 static GList* shell_history = NULL;
 #endif
 
-static gint         mini_key_press_event (GtkWidget*, GdkEventKey*, AyyiLibfilemanager*);
-static void         changed              (GtkEditable*, AyyiLibfilemanager*);
-static gboolean     find_next_match      (AyyiLibfilemanager*, const char* pattern, int dir);
-static gboolean     find_exact_match     (AyyiLibfilemanager*, const gchar* pattern);
+static gint         mini_key_press_event (GtkWidget*, GdkEventKey*, AyyiFilemanager*);
+static void         changed              (GtkEditable*, AyyiFilemanager*);
+static gboolean     find_next_match      (AyyiFilemanager*, const char* pattern, int dir);
+static gboolean     find_exact_match     (AyyiFilemanager*, const gchar* pattern);
 static gboolean     matches              (ViewIter*, const char* pattern);
-static void         search_in_dir        (AyyiLibfilemanager*, int dir);
-static const gchar* mini_contents        (AyyiLibfilemanager*);
+static void         search_in_dir        (AyyiFilemanager*, int dir);
+static const gchar* mini_contents        (AyyiFilemanager*);
 static gboolean     grab_focus           (GtkWidget*);
 static gboolean     select_if_glob       (ViewIter*, gpointer data);
 
@@ -68,7 +68,7 @@ minibuffer_init (void)
  * in filer_window.
  */
 void
-create_minibuffer (AyyiLibfilemanager* fm)
+create_minibuffer (AyyiFilemanager* fm)
 {
 	GtkWidget* hbox = gtk_hbox_new(FALSE, 0);
 	gtk_widget_set_no_show_all(hbox, TRUE);
@@ -96,7 +96,7 @@ create_minibuffer (AyyiLibfilemanager* fm)
 
 
 void
-minibuffer_show(AyyiLibfilemanager* fm, MiniType mini_type)
+minibuffer_show(AyyiFilemanager* fm, MiniType mini_type)
 {
 	int pos = -1;
 	ViewIter cursor;
@@ -190,7 +190,7 @@ minibuffer_show(AyyiLibfilemanager* fm, MiniType mini_type)
 
 
 void
-minibuffer_hide (AyyiLibfilemanager* fm)
+minibuffer_hide (AyyiFilemanager* fm)
 {
 	fm->mini.type = MINI_NONE;
 
@@ -216,7 +216,7 @@ minibuffer_hide (AyyiLibfilemanager* fm)
  * Must be in SHELL mode.
  */
 void
-minibuffer_add (AyyiLibfilemanager* fm, const gchar* leafname)
+minibuffer_add (AyyiFilemanager* fm, const gchar* leafname)
 {
 	GtkEditable* edit = GTK_EDITABLE(fm->mini.entry);
 	GtkEntry* entry = GTK_ENTRY(edit);
@@ -288,7 +288,7 @@ static void show_help(Filer* filer_window)
 /*			PATH ENTRY			*/
 
 static void
-path_return_pressed (AyyiLibfilemanager* fm, GdkEventKey* event)
+path_return_pressed (AyyiFilemanager* fm, GdkEventKey* event)
 {
 	int flags = OPEN_FROM_MINI | OPEN_SAME_WINDOW;
 
@@ -320,7 +320,7 @@ path_return_pressed (AyyiLibfilemanager* fm, GdkEventKey* event)
  * (possibly) beep.
  */
 static void
-complete (AyyiLibfilemanager* fm)
+complete (AyyiFilemanager* fm)
 {
 	GtkEntry* entry;
 	DirItem* other;
@@ -426,7 +426,7 @@ complete (AyyiLibfilemanager* fm)
 
 
 static void
-path_changed (AyyiLibfilemanager* fm)
+path_changed (AyyiFilemanager* fm)
 {
 	GtkWidget* mini = fm->mini.entry;
 	char* path;
@@ -534,7 +534,7 @@ path_changed (AyyiLibfilemanager* fm)
  * TRUE on success.
  */
 static gboolean
-find_exact_match (AyyiLibfilemanager* fm, const gchar *pattern)
+find_exact_match (AyyiFilemanager* fm, const gchar *pattern)
 {
 	DirItem* item;
 	ViewIface* view = fm->view;
@@ -564,7 +564,7 @@ find_exact_match (AyyiLibfilemanager* fm, const gchar *pattern)
  * Returns TRUE if a match is found.
  */
 static gboolean
-find_next_match (AyyiLibfilemanager* fm, const char *pattern, int dir)
+find_next_match (AyyiFilemanager* fm, const char *pattern, int dir)
 {
 	ViewIface* view = fm->view;
 	ViewIter iter;
@@ -610,7 +610,7 @@ static gboolean matches(ViewIter *iter, const char *pattern)
 
 /* Find next match and set base for future matches. */
 static void
-search_in_dir (AyyiLibfilemanager* fm, int dir)
+search_in_dir (AyyiFilemanager* fm, int dir)
 {
 	ViewIter iter;
 
@@ -646,7 +646,7 @@ add_to_history (const gchar* line)
 
 
 static void
-shell_done (AyyiLibfilemanager* fm)
+shell_done (AyyiFilemanager* fm)
 {
 	if (fm__exists(fm))
 		fm__update_dir(fm, TRUE);
@@ -660,7 +660,7 @@ shell_done (AyyiLibfilemanager* fm)
  */
 #ifdef SHELL
 static guchar*
-best_match (AyyiLibfilemanager* fm, glob_t *matches)
+best_match (AyyiFilemanager* fm, glob_t *matches)
 {
 	gchar* first = matches->gl_pathv[0];
 	gchar* path;
@@ -702,7 +702,7 @@ best_match (AyyiLibfilemanager* fm, glob_t *matches)
 
 #ifdef SHELL
 static void
-shell_tab (AyyiLibfilemanager* fm)
+shell_tab (AyyiFilemanager* fm)
 {
 	glob_t matches;
 	int	leaf_start;
@@ -795,7 +795,7 @@ run_child (gpointer unused)
 
 /* Either execute the command or make it the default run action */
 static void
-shell_return_pressed (AyyiLibfilemanager* fm)
+shell_return_pressed (AyyiFilemanager* fm)
 {
 	const gchar* entry = mini_contents(fm);
 
@@ -887,7 +887,7 @@ shell_recall (Filer* filer_window, int dir)
 
 typedef struct {
 	FindInfo info;
-	AyyiLibfilemanager* fm;
+	AyyiFilemanager* fm;
 	FindCondition* cond;
 } SelectData;
 
@@ -908,7 +908,7 @@ select_if_test(ViewIter* iter, gpointer user_data)
 
 
 static void
-select_return_pressed (AyyiLibfilemanager* fm, guint etime)
+select_return_pressed (AyyiFilemanager* fm, guint etime)
 {
 	SelectData	data;
 
@@ -940,7 +940,7 @@ out:
 
 
 static void
-filter_return_pressed (AyyiLibfilemanager* fm, guint etime)
+filter_return_pressed (AyyiFilemanager* fm, guint etime)
 {
 	const gchar* entry = mini_contents(fm);
 
@@ -957,7 +957,7 @@ filter_return_pressed (AyyiLibfilemanager* fm, guint etime)
 
 
 static gint
-mini_key_press_event(GtkWidget* widget, GdkEventKey* event, AyyiLibfilemanager* fm)
+mini_key_press_event(GtkWidget* widget, GdkEventKey* event, AyyiFilemanager* fm)
 {
 	if (event->keyval == GDK_Escape)
 	{
@@ -1091,7 +1091,7 @@ select_if_glob (ViewIter* iter, gpointer data)
 
 
 static void
-changed (GtkEditable* mini, AyyiLibfilemanager* fm)
+changed (GtkEditable* mini, AyyiFilemanager* fm)
 {
 #if 0
 	// from action.c
@@ -1130,7 +1130,7 @@ changed (GtkEditable* mini, AyyiLibfilemanager* fm)
  * is blank (whitespace only).
  */
 static const gchar*
-mini_contents (AyyiLibfilemanager* fm)
+mini_contents (AyyiFilemanager* fm)
 {
 	const gchar* c;
 

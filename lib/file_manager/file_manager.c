@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2017, Tim Orford
+ * Copyright (C) 2007-2018, Tim Orford
  * Copyright (C) 2006, Thomas Leonard and others (see changelog for details).
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -36,7 +36,7 @@
 #include "pixmaps.h"
 
 GList* all_filer_windows = NULL;
-static AyyiLibfilemanager* new_file_manager = NULL;
+static AyyiFilemanager* new_file_manager = NULL;
 static gboolean initialised = FALSE;
 extern char theme_name[];
 
@@ -54,7 +54,7 @@ static void file_manager__load_plugins();
 void
 file_manager__init ()
 {
-	new_file_manager = ayyi_libfilemanager_new();
+	new_file_manager = ayyi_filemanager_new();
 
 	type_init();
 	pixmaps_init();
@@ -90,7 +90,7 @@ file_manager__update_all (void)
 
 	while (next)
 	{
-		AyyiLibfilemanager* fm = (AyyiLibfilemanager*)next->data;
+		AyyiFilemanager* fm = (AyyiFilemanager*)next->data;
 
 		/* Updating directory may remove it from list -- stop sending
 		 * patches to move this line!
@@ -111,11 +111,11 @@ file_manager__update_all (void)
 void
 file_manager__on_dir_changed ()
 {
-	ayyi_libfilemanager_emit_dir_changed(new_file_manager);
+	ayyi_filemanager_emit_dir_changed(new_file_manager);
 }
 
 
-AyyiLibfilemanager*
+AyyiFilemanager*
 file_manager__get ()
 {
 	if(!initialised) file_manager__init();

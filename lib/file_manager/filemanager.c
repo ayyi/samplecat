@@ -31,27 +31,27 @@ extern char theme_name[];
 #define _g_object_unref0(var) ((var == NULL) ? NULL : (var = (g_object_unref (var), NULL)))
 #define g_source_remove0(S) {if(S) g_source_remove(S); S = 0;}
 
-static gpointer ayyi_libfilemanager_parent_class = NULL;
+static gpointer ayyi_filemanager_parent_class = NULL;
 
 enum  {
 	AYYI_LIBFILEMANAGER_DUMMY_PROPERTY
 };
-static GObject* ayyi_libfilemanager_constructor (GType, guint n_construct_properties, GObjectConstructParam*);
-static void     ayyi_libfilemanager_finalize    (GObject*);
+static GObject* ayyi_filemanager_constructor (GType, guint n_construct_properties, GObjectConstructParam*);
+static void     ayyi_filemanager_finalize    (GObject*);
 
-static void     detach                          (AyyiLibfilemanager*);
+static void     detach                          (AyyiFilemanager*);
 static void     tidy_sympath                    (gchar*);
 static void     fm_next_thumb                   (GObject*, const gchar* path);
-static void     start_thumb_scanning            (AyyiLibfilemanager*);
-static void     fm_add_signals                  (AyyiLibfilemanager*);
+static void     start_thumb_scanning            (AyyiFilemanager*);
+static void     fm_add_signals                  (AyyiFilemanager*);
 
 static GdkCursor* crosshair = NULL; // TODO is never set
 
 
-AyyiLibfilemanager*
-ayyi_libfilemanager_construct (GType object_type)
+AyyiFilemanager*
+ayyi_filemanager_construct (GType object_type)
 {
-	AyyiLibfilemanager* self = (AyyiLibfilemanager*) g_object_new(object_type, NULL);
+	AyyiFilemanager* self = (AyyiFilemanager*) g_object_new(object_type, NULL);
 	self->sort_type = SORT_NAME;
 	self->display_style_wanted = SMALL_ICONS;
 	self->filter = FILER_SHOW_ALL;
@@ -67,26 +67,15 @@ ayyi_libfilemanager_construct (GType object_type)
 }
 
 
-AyyiLibfilemanager*
-ayyi_libfilemanager_new ()
+AyyiFilemanager*
+ayyi_filemanager_new ()
 {
-	return ayyi_libfilemanager_construct (AYYI_TYPE_LIBFILEMANAGER);
-}
-
-
-void
-ayyi_libfilemanager_set_icon_theme (AyyiLibfilemanager* self, const gchar* theme)
-{
-	g_return_if_fail (self);
-	g_return_if_fail (theme);
-
-	dbg(1, "theme=%s", theme);
-	//_set_icon_theme (theme);
+	return ayyi_filemanager_construct (AYYI_TYPE_FILEMANAGER);
 }
 
 
 GtkWidget*
-ayyi_libfilemanager_new_window (AyyiLibfilemanager* self, const gchar* path)
+ayyi_filemanager_new_window (AyyiFilemanager* self, const gchar* path)
 {
 	g_return_val_if_fail (self, NULL);
 	g_return_val_if_fail (path, NULL);
@@ -98,7 +87,7 @@ ayyi_libfilemanager_new_window (AyyiLibfilemanager* self, const gchar* path)
 
 
 void
-ayyi_libfilemanager_emit_dir_changed (AyyiLibfilemanager* self)
+ayyi_filemanager_emit_dir_changed (AyyiFilemanager* self)
 {
 	g_return_if_fail (self != NULL);
 	g_signal_emit_by_name (self, "dir-changed", self->real_path);
@@ -106,50 +95,50 @@ ayyi_libfilemanager_emit_dir_changed (AyyiLibfilemanager* self)
 
 
 static GObject*
-ayyi_libfilemanager_constructor (GType type, guint n_construct_properties, GObjectConstructParam* construct_properties)
+ayyi_filemanager_constructor (GType type, guint n_construct_properties, GObjectConstructParam* construct_properties)
 {
-	GObjectClass* parent_class = G_OBJECT_CLASS (ayyi_libfilemanager_parent_class);
+	GObjectClass* parent_class = G_OBJECT_CLASS (ayyi_filemanager_parent_class);
 	GObject* obj = parent_class->constructor (type, n_construct_properties, construct_properties);
 	return obj;
 }
 
 
 static void
-ayyi_libfilemanager_class_init (AyyiLibfilemanagerClass* klass)
+ayyi_filemanager_class_init (AyyiFilemanagerClass* klass)
 {
-	ayyi_libfilemanager_parent_class = g_type_class_peek_parent (klass);
-	G_OBJECT_CLASS (klass)->constructor = ayyi_libfilemanager_constructor;
-	G_OBJECT_CLASS (klass)->finalize = ayyi_libfilemanager_finalize;
-	g_signal_new ("dir_changed", AYYI_TYPE_LIBFILEMANAGER, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_VOID__STRING, G_TYPE_NONE, 1, G_TYPE_STRING);
+	ayyi_filemanager_parent_class = g_type_class_peek_parent (klass);
+	G_OBJECT_CLASS (klass)->constructor = ayyi_filemanager_constructor;
+	G_OBJECT_CLASS (klass)->finalize = ayyi_filemanager_finalize;
+	g_signal_new ("dir_changed", AYYI_TYPE_FILEMANAGER, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_VOID__STRING, G_TYPE_NONE, 1, G_TYPE_STRING);
 
 	klass->filetypes = g_hash_table_new(g_str_hash, g_direct_equal);
 }
 
 
 static void
-ayyi_libfilemanager_instance_init (AyyiLibfilemanager* self)
+ayyi_filemanager_instance_init (AyyiFilemanager* self)
 {
 }
 
 
 static void
-ayyi_libfilemanager_finalize (GObject* obj)
+ayyi_filemanager_finalize (GObject* obj)
 {
-	G_OBJECT_CLASS (ayyi_libfilemanager_parent_class)->finalize (obj);
+	G_OBJECT_CLASS (ayyi_filemanager_parent_class)->finalize (obj);
 }
 
 
 GType
-ayyi_libfilemanager_get_type (void)
+ayyi_filemanager_get_type (void)
 {
-	static volatile gsize ayyi_libfilemanager_type_id__volatile = 0;
-	if (g_once_init_enter (&ayyi_libfilemanager_type_id__volatile)) {
-		static const GTypeInfo g_define_type_info = { sizeof (AyyiLibfilemanagerClass), (GBaseInitFunc) NULL, (GBaseFinalizeFunc) NULL, (GClassInitFunc) ayyi_libfilemanager_class_init, (GClassFinalizeFunc) NULL, NULL, sizeof (AyyiLibfilemanager), 0, (GInstanceInitFunc) ayyi_libfilemanager_instance_init, NULL };
-		GType ayyi_libfilemanager_type_id;
-		ayyi_libfilemanager_type_id = g_type_register_static (G_TYPE_OBJECT, "AyyiLibfilemanager", &g_define_type_info, 0);
-		g_once_init_leave (&ayyi_libfilemanager_type_id__volatile, ayyi_libfilemanager_type_id);
+	static volatile gsize ayyi_filemanager_type_id__volatile = 0;
+	if (g_once_init_enter (&ayyi_filemanager_type_id__volatile)) {
+		static const GTypeInfo g_define_type_info = { sizeof (AyyiFilemanagerClass), (GBaseInitFunc) NULL, (GBaseFinalizeFunc) NULL, (GClassInitFunc) ayyi_filemanager_class_init, (GClassFinalizeFunc) NULL, NULL, sizeof (AyyiFilemanager), 0, (GInstanceInitFunc) ayyi_filemanager_instance_init, NULL };
+		GType ayyi_filemanager_type_id;
+		ayyi_filemanager_type_id = g_type_register_static (G_TYPE_OBJECT, "AyyiFilemanager", &g_define_type_info, 0);
+		g_once_init_leave (&ayyi_filemanager_type_id__volatile, ayyi_filemanager_type_id);
 	}
-	return ayyi_libfilemanager_type_id__volatile;
+	return ayyi_filemanager_type_id__volatile;
 }
 
 
@@ -160,7 +149,7 @@ ayyi_libfilemanager_get_type (void)
  *   If the cause was a key event and we resize, warp the pointer.
  */
 void
-fm__change_to(AyyiLibfilemanager* fm, const char* path, const char* from)
+fm__change_to(AyyiFilemanager* fm, const char* path, const char* from)
 {
 	dbg(2, "%s", path);
 	g_return_if_fail(fm);
@@ -222,7 +211,7 @@ fm__change_to(AyyiLibfilemanager* fm, const char* path, const char* from)
 
 
 void
-fm__change_to_parent(AyyiLibfilemanager* fm)
+fm__change_to_parent(AyyiFilemanager* fm)
 {
 	const char* current = fm->sym_path;
 
@@ -239,7 +228,7 @@ fm__change_to_parent(AyyiLibfilemanager* fm)
 
 
 static void
-set_selection_state (AyyiLibfilemanager* fm, gboolean normal)
+set_selection_state (AyyiFilemanager* fm, gboolean normal)
 {
 	GtkStateType old_state = fm->selection_state;
 
@@ -257,7 +246,7 @@ set_selection_state (AyyiLibfilemanager* fm, gboolean normal)
  * Also updates toolbar info.
  */
 void
-fm__selection_changed (AyyiLibfilemanager* fm, gint time)
+fm__selection_changed (AyyiFilemanager* fm, gint time)
 {
 	g_return_if_fail(fm);
 
@@ -282,7 +271,7 @@ fm__selection_changed (AyyiLibfilemanager* fm, gint time)
  * You must g_free() each item in the list.
  */
 GList*
-fm__selected_items(AyyiLibfilemanager* fm)
+fm__selected_items(AyyiFilemanager* fm)
 {
 	GList* retval = NULL;
 	guchar* dir = (guchar*)fm->sym_path;
@@ -303,7 +292,7 @@ fm__selected_items(AyyiLibfilemanager* fm)
  * (+1 or -1).
  */
 void
-fm__next_selected(AyyiLibfilemanager* fm, int dir)
+fm__next_selected(AyyiFilemanager* fm, int dir)
 {
 	ViewIter iter, cursor;
 	ViewIface* view = fm->view;
@@ -333,7 +322,7 @@ fm__next_selected(AyyiLibfilemanager* fm, int dir)
  * Returns TRUE if the directory still exists.
  */
 gboolean
-fm__update_dir (AyyiLibfilemanager* fm, gboolean warning)
+fm__update_dir (AyyiFilemanager* fm, gboolean warning)
 {
 	/*gboolean still_exists = may_rescan(filer_window, warning);
 
@@ -345,7 +334,7 @@ fm__update_dir (AyyiLibfilemanager* fm, gboolean warning)
 
 
 void
-fm__cancel_thumbnails (AyyiLibfilemanager* fm)
+fm__cancel_thumbnails (AyyiFilemanager* fm)
 {
 	//gtk_widget_hide(filer_window->thumb_bar);
 
@@ -358,7 +347,7 @@ fm__cancel_thumbnails (AyyiLibfilemanager* fm)
  *  Open the item (or add it to the shell command minibuffer)
  */
 void
-fm__open_item (AyyiLibfilemanager* fm, ViewIter *iter, OpenFlags flags)
+fm__open_item (AyyiFilemanager* fm, ViewIter *iter, OpenFlags flags)
 {
 #if 0
 	gboolean shift = (flags & OPEN_SHIFT) != 0;
@@ -417,7 +406,7 @@ fm__open_item (AyyiLibfilemanager* fm, ViewIter *iter, OpenFlags flags)
  *  Use fn == NULL to cancel target mode.
  */
 void
-fm__target_mode(AyyiLibfilemanager* fm, TargetFunc fn, gpointer data, const char *reason)
+fm__target_mode(AyyiFilemanager* fm, TargetFunc fn, gpointer data, const char *reason)
 {
 	TargetFunc old_fn = fm->target_cb;
 
@@ -455,7 +444,7 @@ is_hidden(const char* dir, DirItem* item)
 
 
 gboolean
-fm__match_filter (AyyiLibfilemanager* fm, DirItem* item)
+fm__match_filter (AyyiFilemanager* fm, DirItem* item)
 {
 	g_return_val_if_fail(item, FALSE);
 
@@ -480,7 +469,7 @@ fm__match_filter (AyyiLibfilemanager* fm, DirItem* item)
  *   (must call filer_detach_rescan).
  */
 gboolean
-fm__set_filter(AyyiLibfilemanager* fm, FilterType type, const gchar* filter_string)
+fm__set_filter(AyyiFilemanager* fm, FilterType type, const gchar* filter_string)
 {
 	// Is this new filter the same as the old one?
 	if (fm->filter == type)
@@ -527,7 +516,7 @@ fm__set_filter(AyyiLibfilemanager* fm, FilterType type, const gchar* filter_stri
 
 /* Set this image to be loaded some time in the future */
 void
-fm__create_thumb(AyyiLibfilemanager* fm, const gchar *path)
+fm__create_thumb(AyyiFilemanager* fm, const gchar *path)
 {
 	dbg(0, "%s", path);
 	if (g_list_find_custom(fm->thumb_queue, path, (GCompareFunc) strcmp))	return;
@@ -547,7 +536,7 @@ fm__create_thumb(AyyiLibfilemanager* fm, const gchar *path)
  * and start creating or updating the thumbnails as needed.
  */
 void
-fm__create_thumbs(AyyiLibfilemanager* fm)
+fm__create_thumbs(AyyiFilemanager* fm)
 {
 	if (!fm->show_thumbs) return;
 
@@ -583,7 +572,7 @@ fm__create_thumbs(AyyiLibfilemanager* fm)
 
 
 /*static */void
-attach(AyyiLibfilemanager* fm)
+attach(AyyiFilemanager* fm)
 {
 	//gdk_window_set_cursor(filer_window->window->window, busy_cursor);
 	view_clear(fm->view);
@@ -608,7 +597,7 @@ attach(AyyiLibfilemanager* fm)
 
 
 static void
-detach (AyyiLibfilemanager* fm)
+detach (AyyiFilemanager* fm)
 {
 	g_return_if_fail(fm->directory);
 
@@ -623,7 +612,7 @@ detach (AyyiLibfilemanager* fm)
  *   toggled). This has the side-effect of updating the window title.
  */
 void
-filer_detach_rescan (AyyiLibfilemanager* fm)
+filer_detach_rescan (AyyiFilemanager* fm)
 {
 	Directory* dir = fm->directory;
 
@@ -655,7 +644,7 @@ tidy_sympath (gchar* path)
  *   that require it.
  */
 static void
-queue_interesting (AyyiLibfilemanager* fm)
+queue_interesting (AyyiFilemanager* fm)
 {
 	DirItem* item;
 	ViewIter iter;
@@ -674,7 +663,7 @@ queue_interesting (AyyiLibfilemanager* fm)
 static gboolean
 fm_next_thumb_real(GObject* window)
 {
-	AyyiLibfilemanager* fm = g_object_get_data(window, "file_window");
+	AyyiFilemanager* fm = g_object_get_data(window, "file_window");
 
 	if (!fm) {
 		g_object_unref(window);
@@ -718,7 +707,7 @@ fm_next_thumb(GObject* window, const gchar *path)
 
 
 static void
-start_thumb_scanning(AyyiLibfilemanager* fm)
+start_thumb_scanning(AyyiFilemanager* fm)
 {
 	dbg(0, "FIXME add scanning flag");
 	//if (GTK_WIDGET_VISIBLE(filer_window->thumb_bar)) return; /* Already scanning */
@@ -734,7 +723,7 @@ start_thumb_scanning(AyyiLibfilemanager* fm)
  * (whichever happens first).
  */
 static gboolean
-open_filer_window(AyyiLibfilemanager* fm)
+open_filer_window(AyyiFilemanager* fm)
 {
 	PF;
 
@@ -778,7 +767,7 @@ if_deleted(gpointer item, gpointer removed)
 
 
 static void
-set_scanning_display(AyyiLibfilemanager* fm, gboolean scanning)
+set_scanning_display(AyyiFilemanager* fm, gboolean scanning)
 {
 	if (scanning == fm->scanning) return;
 	fm->scanning = scanning;
@@ -792,7 +781,7 @@ set_scanning_display(AyyiLibfilemanager* fm, gboolean scanning)
 
 //static
 void
-update_display (Directory* dir, DirAction action, GPtrArray* items, AyyiLibfilemanager* fm)
+update_display (Directory* dir, DirAction action, GPtrArray* items, AyyiFilemanager* fm)
 {
 	ViewIface* view = (ViewIface*)fm->view;
 	g_return_if_fail(view);
@@ -856,7 +845,7 @@ update_display (Directory* dir, DirAction action, GPtrArray* items, AyyiLibfilem
 static void
 selection_get (GtkWidget* widget, GtkSelectionData* selection_data, guint info, guint time, gpointer data)
 {
-	AyyiLibfilemanager* fm = (AyyiLibfilemanager*)data;
+	AyyiFilemanager* fm = (AyyiFilemanager*)data;
 	ViewIter iter;
 
 	GString* reply = g_string_new(NULL);
@@ -895,7 +884,7 @@ selection_get (GtkWidget* widget, GtkSelectionData* selection_data, guint info, 
 
 
 static void
-filer_window_destroyed (GtkWidget* widget, AyyiLibfilemanager* fm)
+filer_window_destroyed (GtkWidget* widget, AyyiFilemanager* fm)
 {
 	all_filer_windows = g_list_remove(all_filer_windows, fm);
 
@@ -944,7 +933,7 @@ filer_window_destroyed (GtkWidget* widget, AyyiLibfilemanager* fm)
 }
 
 static void
-fm_add_signals(AyyiLibfilemanager* fm)
+fm_add_signals(AyyiFilemanager* fm)
 {
 #if 0
 	GtkTargetEntry 	target_table[] =
@@ -983,12 +972,12 @@ fm_add_signals(AyyiLibfilemanager* fm)
  * structure.
  */
 gboolean
-fm__exists(AyyiLibfilemanager* fm)
+fm__exists(AyyiFilemanager* fm)
 {
 	GList* next;
 
 	for (next = all_filer_windows; next; next = next->next) {
-		AyyiLibfilemanager* fw = (AyyiLibfilemanager*) next->data;
+		AyyiFilemanager* fw = (AyyiFilemanager*) next->data;
 
 		if (fw == fm)
 			return TRUE;

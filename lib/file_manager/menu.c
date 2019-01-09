@@ -57,7 +57,7 @@ typedef enum {
 static void       menu__go_down_dir    (GtkMenuItem*, gpointer);
 static void       menu__go_up_dir      (GtkMenuItem*, gpointer);
 static void       fm_menu__refresh     (GtkMenuItem*, gpointer);
-static GtkWidget* fm__make_subdir_menu (AyyiLibfilemanager*);
+static GtkWidget* fm__make_subdir_menu (AyyiFilemanager*);
 static void       fm_menu__set_sort    (GtkMenuItem*, gpointer);
 static void       fm_menu__reverse_sort(GtkMenuItem*, gpointer);
 static void       mini_buffer          (GtkMenuItem*, gpointer);
@@ -172,7 +172,7 @@ fm_menu__item_image_from_stock(GtkWidget* menu, GtkWidget* item, char* stock_id)
 
 	static void menu_on_dir_changed(GtkWidget* widget, char* dir, gpointer menu_item)
 	{
-		AyyiLibfilemanager* fm = file_manager__get();
+		AyyiFilemanager* fm = file_manager__get();
 		dbg(2, "dir=%s name=%s", fm->real_path, dir);
 		g_return_if_fail(fm->real_path);
 		GtkLabel* label = (GtkLabel*)gtk_bin_get_child((GtkBin*)menu_item);
@@ -187,7 +187,7 @@ fm__make_context_menu()
 
 	//show the current directory name
 	//FIXME initially the dir path is not set. We need to set it in a callback.
-	AyyiLibfilemanager* fm = file_manager__get();
+	AyyiFilemanager* fm = file_manager__get();
 	const char* name = fm->real_path ? fm->real_path : "Directory";
 	GtkWidget* title = gtk_menu_item_new_with_label(name);
 	gtk_container_add(GTK_CONTAINER(menu), title);
@@ -257,7 +257,7 @@ temp(gpointer key, gpointer value, gpointer data)
  *  Add a sub-menu showing the sub-directories in the current directory.
  */
 static GtkWidget*
-fm__make_subdir_menu(AyyiLibfilemanager* fm)
+fm__make_subdir_menu(AyyiFilemanager* fm)
 {
 	GtkWidget* submenu = gtk_menu_new();
 
@@ -314,7 +314,7 @@ fm__make_subdir_menu(AyyiLibfilemanager* fm)
 void
 fm__add_menu_item(GtkAction* action)
 {
-	AyyiLibfilemanager* fm = file_manager__get();
+	AyyiFilemanager* fm = file_manager__get();
 
 	GtkWidget* menu_item = gtk_action_create_menu_item(action);
 	gtk_menu_shell_append(GTK_MENU_SHELL(fm->menu), menu_item);
@@ -329,7 +329,7 @@ fm__add_menu_item(GtkAction* action)
 void
 fm__add_submenu(GtkWidget* menu_item)
 {
-	AyyiLibfilemanager* fm = file_manager__get();
+	AyyiFilemanager* fm = file_manager__get();
 
 	gtk_container_add(GTK_CONTAINER(fm->menu), menu_item);
 	gtk_widget_show(menu_item);
@@ -356,7 +356,7 @@ fm__menu_on_view_change(GtkWidget* menu)
 static void
 menu__go_down_dir(GtkMenuItem* menuitem, gpointer user_data)
 {
-	AyyiLibfilemanager* fm = file_manager__get();
+	AyyiFilemanager* fm = file_manager__get();
 
 	GList* children = gtk_container_get_children(GTK_CONTAINER(menuitem));
 	for (;children;children=children->next) {
@@ -487,7 +487,7 @@ fm_menu__reverse_sort (GtkMenuItem* menuitem, gpointer user_data)
 
 	//if (updating_menu) return;
 
-	AyyiLibfilemanager* fm = file_manager__get();
+	AyyiFilemanager* fm = file_manager__get();
 
 	GtkSortType order = fm->sort_order;
 	if (order == GTK_SORT_ASCENDING)
@@ -504,7 +504,7 @@ mini_buffer (GtkMenuItem* menuitem, gpointer user_data)
 {
 	MiniType type = (MiniType)GPOINTER_TO_INT(user_data);
 
-	AyyiLibfilemanager* fm = file_manager__get();
+	AyyiFilemanager* fm = file_manager__get();
 
 	// Item needs to remain selected...
 	if (type == MINI_SHELL)
@@ -515,7 +515,7 @@ mini_buffer (GtkMenuItem* menuitem, gpointer user_data)
 
 
 static void
-target_callback(AyyiLibfilemanager* fm, ViewIter* iter, gpointer action)
+target_callback(AyyiFilemanager* fm, ViewIter* iter, gpointer action)
 {
 	g_return_if_fail(fm);
 
@@ -534,7 +534,7 @@ target_callback(AyyiLibfilemanager* fm, ViewIter* iter, gpointer action)
 
 
 static void
-delete(AyyiLibfilemanager* fm)
+delete(AyyiFilemanager* fm)
 {
 	GList* paths = fm__selected_items(fm);
 	GList* l = paths;
@@ -549,7 +549,7 @@ delete(AyyiLibfilemanager* fm)
 static void
 file_op (gpointer data, FileOp action, GtkWidget* unused)
 {
-	AyyiLibfilemanager* fm = file_manager__get();
+	AyyiFilemanager* fm = file_manager__get();
 	int n_selected = view_count_selected(fm->view);
 
 	if (n_selected < 1)

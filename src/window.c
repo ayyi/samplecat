@@ -691,7 +691,7 @@ window_on_configure(GtkWidget* widget, GdkEventConfigure* event, gpointer user_d
 					bool done = false;
 					DirItem* item;
 					ViewIter iter;
-					AyyiLibfilemanager* fm = file_manager__get();
+					AyyiFilemanager* fm = file_manager__get();
 					view_get_iter(fm->view, &iter, 0);
 					while(!done && (item = iter.next(&iter))){
 						MIME_type* mime_type = item->mime_type;
@@ -764,7 +764,7 @@ make_fileview_pane()
 	void fman_right(const char* initial_folder)
 	{
 		GtkWidget* file_view = app->fm_view = file_manager__new_window(initial_folder);
-		AyyiLibfilemanager* fm = file_manager__get();
+		AyyiFilemanager* fm = file_manager__get();
 		gtk_paned_add2(GTK_PANED(fman_hpaned), file_view);
 		g_signal_connect(G_OBJECT(fm->view), "cursor-changed", G_CALLBACK(window_on_fileview_row_selected), NULL);
 
@@ -1181,7 +1181,7 @@ window_on_fileview_row_selected(GtkTreeView* treeview, gpointer user_data)
 	//a filesystem file has been clicked on.
 	PF;
 
-	AyyiLibfilemanager* fm = file_manager__get();
+	AyyiFilemanager* fm = file_manager__get();
 
 	gchar* full_path = NULL;
 	DirItem* item;
@@ -1222,7 +1222,7 @@ static void
 menu__add_to_db(GtkMenuItem* menuitem, gpointer user_data)
 {
 	PF;
-	AyyiLibfilemanager* fm = file_manager__get();
+	AyyiFilemanager* fm = file_manager__get();
 
 	DirItem* item;
 	ViewIter iter;
@@ -1259,7 +1259,7 @@ void
 menu__play(GtkMenuItem* menuitem, gpointer user_data)
 {
 	PF;
-	AyyiLibfilemanager* fm = file_manager__get();
+	AyyiFilemanager* fm = file_manager__get();
 
 	GList* selected = fm__selected_items(fm);
 	GList* l = selected;

@@ -25,7 +25,7 @@ typedef struct _ViewDetails {
     GtkTreeSelection* selection;
     GtkWidget*        scroll_win;
 
-    AyyiLibfilemanager* filer_window;   // Used for styles, etc
+    AyyiFilemanager*  filer_window;     // Used for styles, etc
 
     GPtrArray*        items;            // ViewItem
 
@@ -56,7 +56,7 @@ typedef struct _ViewDetails {
 
 #define VIEW_DETAILS(obj) (GTK_CHECK_CAST((obj), view_details_get_type(), ViewDetails))
 
-GtkWidget* view_details_new      (AyyiLibfilemanager* filer_window);
+GtkWidget* view_details_new      (AyyiFilemanager* filer_window);
 GType      view_details_get_type ();
 
 void       view_details_dnd_get  (GtkWidget*, GdkDragContext*, GtkSelectionData*, guint info, guint time, gpointer data);

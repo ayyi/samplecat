@@ -23,16 +23,16 @@
 G_BEGIN_DECLS
 
 
-#define AYYI_TYPE_LIBFILEMANAGER            (ayyi_libfilemanager_get_type ())
-#define AYYI_LIBFILEMANAGER(obj)            (G_TYPE_CHECK_INSTANCE_CAST ((obj), AYYI_TYPE_LIBFILEMANAGER, AyyiLibfilemanager))
-#define AYYI_LIBFILEMANAGER_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST ((klass), AYYI_TYPE_LIBFILEMANAGER, AyyiLibfilemanagerClass))
-#define AYYI_IS_LIBFILEMANAGER(obj)         (G_TYPE_CHECK_INSTANCE_TYPE ((obj), AYYI_TYPE_LIBFILEMANAGER))
-#define AYYI_IS_LIBFILEMANAGER_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), AYYI_TYPE_LIBFILEMANAGER))
-#define AYYI_LIBFILEMANAGER_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS ((obj), AYYI_TYPE_LIBFILEMANAGER, AyyiLibfilemanagerClass))
+#define AYYI_TYPE_FILEMANAGER            (ayyi_filemanager_get_type ())
+#define AYYI_FILEMANAGER(obj)            (G_TYPE_CHECK_INSTANCE_CAST ((obj), AYYI_TYPE_FILEMANAGER, AyyiFilemanager))
+#define AYYI_FILEMANAGER_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST ((klass), AYYI_TYPE_FILEMANAGER, AyyiFilemanagerClass))
+#define AYYI_IS_FILEMANAGER(obj)         (G_TYPE_CHECK_INSTANCE_TYPE ((obj), AYYI_TYPE_FILEMANAGER))
+#define AYYI_IS_FILEMANAGER_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), AYYI_TYPE_FILEMANAGER))
+#define AYYI_FILEMANAGER_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS ((obj), AYYI_TYPE_FILEMANAGER, AyyiFilemanagerClass))
 
-typedef struct _AyyiLibfilemanager        AyyiLibfilemanager;
-typedef struct _AyyiLibfilemanagerClass   AyyiLibfilemanagerClass;
-typedef struct _AyyiLibfilemanagerPrivate AyyiLibfilemanagerPrivate;
+typedef struct _AyyiFilemanager        AyyiFilemanager;
+typedef struct _AyyiFilemanagerClass   AyyiFilemanagerClass;
+typedef struct _AyyiFilemanagerPrivate AyyiFilemanagerPrivate;
 
 typedef enum
 {
@@ -64,9 +64,9 @@ typedef struct {
     MiniType   type;
 } Mini;
 
-typedef void (*TargetFunc)(AyyiLibfilemanager*, ViewIter*, gpointer); // iter's next method has just returned the clicked item
+typedef void (*TargetFunc)(AyyiFilemanager*, ViewIter*, gpointer); // iter's next method has just returned the clicked item
 
-struct _AyyiLibfilemanager {
+struct _AyyiFilemanager {
     GObject                    parent_instance;
     GtkWidget*                 window;          // TODO rename to 'widget'
     gboolean	               scanning;        // State of the 'scanning' indicator
@@ -123,41 +123,40 @@ struct _AyyiLibfilemanager {
     char*                      window_id;       // For remote control
 #endif
 
-    AyyiLibfilemanagerPrivate* priv;
+    AyyiFilemanagerPrivate* priv;
 };
 
-struct _AyyiLibfilemanagerClass {
+struct _AyyiFilemanagerClass {
     GObjectClass parent_class;
     GHashTable*  filetypes;
 };
 
 
-GType               ayyi_libfilemanager_get_type         (void) G_GNUC_CONST;
-AyyiLibfilemanager* ayyi_libfilemanager_new              ();
-AyyiLibfilemanager* ayyi_libfilemanager_construct        (GType);
-void                ayyi_libfilemanager_set_icon_theme   (AyyiLibfilemanager*, const gchar* theme);
-GtkWidget*          ayyi_libfilemanager_new_window       (AyyiLibfilemanager*, const gchar* path);
-void                fm__change_to                        (AyyiLibfilemanager*, const char* path, const char* from);
-void                fm__change_to_parent                 (AyyiLibfilemanager*);
-GList*              fm__selected_items                   (AyyiLibfilemanager*);
-void                fm__selection_changed                (AyyiLibfilemanager*, gint time);
-void                fm__next_selected                    (AyyiLibfilemanager*, int direction);
-gboolean            fm__update_dir                       (AyyiLibfilemanager*, gboolean warning);
-gboolean            fm__match_filter                     (AyyiLibfilemanager*, DirItem*);
-gboolean            fm__set_filter                       (AyyiLibfilemanager*, FilterType, const gchar* filter_string);
-void                fm__create_thumb                     (AyyiLibfilemanager*, const gchar* pathname);
-void                fm__cancel_thumbnails                (AyyiLibfilemanager*);
-void                fm__create_thumbs                    (AyyiLibfilemanager*);
-void                fm__open_item                        (AyyiLibfilemanager*, ViewIter*, OpenFlags);
-void                fm__target_mode                      (AyyiLibfilemanager*, TargetFunc, gpointer, const char* reason);
-void                filer_detach_rescan                  (AyyiLibfilemanager*);
+GType            ayyi_filemanager_get_type         (void) G_GNUC_CONST;
+AyyiFilemanager* ayyi_filemanager_new              ();
+AyyiFilemanager* ayyi_filemanager_construct        (GType);
+GtkWidget*       ayyi_filemanager_new_window       (AyyiFilemanager*, const gchar* path);
+void             fm__change_to                     (AyyiFilemanager*, const char* path, const char* from);
+void             fm__change_to_parent              (AyyiFilemanager*);
+GList*           fm__selected_items                (AyyiFilemanager*);
+void             fm__selection_changed             (AyyiFilemanager*, gint time);
+void             fm__next_selected                 (AyyiFilemanager*, int direction);
+gboolean         fm__update_dir                    (AyyiFilemanager*, gboolean warning);
+gboolean         fm__match_filter                  (AyyiFilemanager*, DirItem*);
+gboolean         fm__set_filter                    (AyyiFilemanager*, FilterType, const gchar* filter_string);
+void             fm__create_thumb                  (AyyiFilemanager*, const gchar* pathname);
+void             fm__cancel_thumbnails             (AyyiFilemanager*);
+void             fm__create_thumbs                 (AyyiFilemanager*);
+void             fm__open_item                     (AyyiFilemanager*, ViewIter*, OpenFlags);
+void             fm__target_mode                   (AyyiFilemanager*, TargetFunc, gpointer, const char* reason);
+void             filer_detach_rescan               (AyyiFilemanager*);
 
-void                update_display                       (Directory*, DirAction, GPtrArray*, AyyiLibfilemanager*);
-/*static */void     attach                               (AyyiLibfilemanager*);
+void             update_display                    (Directory*, DirAction, GPtrArray*, AyyiFilemanager*);
+/*static */void  attach                            (AyyiFilemanager*);
 
-void                ayyi_libfilemanager_emit_dir_changed (AyyiLibfilemanager*);
+void             ayyi_filemanager_emit_dir_changed (AyyiFilemanager*);
 
-gboolean            fm__exists                           (AyyiLibfilemanager*);
+gboolean         fm__exists                        (AyyiFilemanager*);
 
 G_END_DECLS
 

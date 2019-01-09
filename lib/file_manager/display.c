@@ -248,7 +248,7 @@ draw_small_icon (GdkWindow* window, GdkRectangle* area, DirItem* item, MaskedPix
 
 
 void
-display_set_sort_type (AyyiLibfilemanager* fm, FmSortType sort_type, GtkSortType order)
+display_set_sort_type (AyyiFilemanager* fm, FmSortType sort_type, GtkSortType order)
 {
 	if (fm->sort_type == sort_type && fm->sort_order == order){
 		return;
@@ -314,7 +314,7 @@ void display_set_thumbs(FilerWindow *filer_window, gboolean thumbs)
 
 
 void
-display_update_hidden (AyyiLibfilemanager* fm)
+display_update_hidden (AyyiFilemanager* fm)
 {
 	filer_detach_rescan(fm);	// update titlebar
 
@@ -354,7 +354,7 @@ void display_set_filter_directories(FilerWindow *filer_window, gboolean filter_d
 
 
 void
-display_set_filter (AyyiLibfilemanager* fm, FilterType type, const gchar *filter_string)
+display_set_filter (AyyiFilemanager* fm, FilterType type, const gchar *filter_string)
 {
 	if (fm__set_filter(fm, type, filter_string))
 		display_update_hidden(fm);
@@ -433,7 +433,7 @@ ViewData *display_create_viewdata(FilerWindow *filer_window, DirItem *item)
  * window, if requested.
  */
 void
-display_set_actual_size (AyyiLibfilemanager* fm, gboolean force_resize)
+display_set_actual_size (AyyiFilemanager* fm, gboolean force_resize)
 {
 #if 0
 	display_set_layout(fm->file_window, fm->file_window->display_style_wanted,
@@ -454,7 +454,7 @@ options_changed(void)
 
 	for (next = all_filer_windows; next; next = next->next)
 	{
-		AyyiLibfilemanager* fm = (AyyiLibfilemanager*) next->data;
+		AyyiFilemanager* fm = (AyyiFilemanager*) next->data;
 		int flags = 0;
 
 		if (o_display_dirs_first.has_changed ||

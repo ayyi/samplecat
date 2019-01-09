@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of the Ayyi project. http://ayyi.org               |
-* | copyright (C) 2011-2017 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2011-2018 Tim Orford <tim@orford.org>                  |
 * | copyright (C) 2006, Thomas Leonard and others                        |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
@@ -12,6 +12,8 @@
 */
 #ifndef _DISPLAY_H
 #define _DISPLAY_H
+
+#include "file_manager.h"
 
 #if 0
 #define ROW_HEIGHT_LARGE 64
@@ -48,12 +50,12 @@ void display_set_layout(FilerWindow *filer_window, DisplayStyle style, DetailsTy
 void display_set_hidden(FilerWindow *filer_window, gboolean hidden);
 void display_set_filter_directories(FilerWindow *filer_window, gboolean filter_directories);
 #endif
-void display_update_hidden (AyyiLibfilemanager*);
-void display_set_filter    (AyyiLibfilemanager*, FilterType, const gchar* filter_string);
+void display_update_hidden (AyyiFilemanager*);
+void display_set_filter    (AyyiFilemanager*, FilterType, const gchar* filter_string);
 #if 0
 void display_set_thumbs(FilerWindow *filer_window, gboolean thumbs);
 #endif
-void display_set_sort_type(AyyiLibfilemanager*, FmSortType, GtkSortType order);
+void display_set_sort_type(AyyiFilemanager*, FmSortType, GtkSortType order);
 #if 0
 void display_set_autoselect(FilerWindow *filer_window, const gchar *leaf);
 
@@ -81,6 +83,6 @@ void draw_huge_icon(GdkWindow *window, GdkRectangle *area, DirItem *item,
 			   MaskedPixmap *image, gboolean selected,
 			   GdkColor *color);
 #endif
-void display_set_actual_size(AyyiLibfilemanager*, gboolean force_resize);
+void display_set_actual_size(AyyiFilemanager*, gboolean force_resize);
 
 #endif /* _DISPLAY_H */
