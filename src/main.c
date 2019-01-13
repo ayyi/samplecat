@@ -227,7 +227,7 @@ main(int argc, char** argv)
 			case 'V':
 				printf ("%s %s\n\n", basename(argv[0]), PACKAGE_VERSION);
 				printf(
-					"Copyright (C) 2007-2018 Tim Orford\n"
+					"Copyright (C) 2007-2019 Tim Orford\n"
 					"Copyright (C) 2011 Robin Gareus\n"
 					"This is free software; see the source for copying conditions.  There is NO\n"
 					"warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n"
@@ -391,8 +391,8 @@ main(int argc, char** argv)
 #endif
 	gtk_main();
 
-	app->auditioner->stop();
-	app->auditioner->disconnect();
+	play->auditioner->stop();
+	play->auditioner->disconnect();
 
 	exit(EXIT_SUCCESS);
 }
@@ -411,13 +411,13 @@ on_quit(GtkMenuItem* menuitem, gpointer user_data)
 
 #ifdef HAVE_AYYIDBUS
 	extern Auditioner a_ayyidbus;
-	if(app->auditioner != & a_ayyidbus){
+	if(play->auditioner != & a_ayyidbus){
 #else
 	if(true){
 #endif
-		app->auditioner->stop();
+		play->auditioner->stop();
 	}
-	app->auditioner->disconnect();
+	play->auditioner->disconnect();
 
 	if(samplecat.model->backend.disconnect) samplecat.model->backend.disconnect();
 

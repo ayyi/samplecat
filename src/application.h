@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2017 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2019 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -13,8 +13,8 @@
 #define __application_h__
 
 #include "config.h"
-#include <glib.h>
 #include <glib-object.h>
+#include "samplecat/samplecat.h"
 #include "types.h"
 #include "dir_tree/view_dir_tree.h"
 #include "settings.h"
@@ -58,14 +58,6 @@ struct _Application
    Config               config;
 
    pthread_t            gui_thread;
-   Auditioner const*    auditioner;
-#if (defined HAVE_JACK)
-   gboolean             enable_effect;
-   gboolean             effect_enabled;         // read-only set by jack_player.c
-   float                effect_param[3];
-   float                playback_speed;
-   gboolean             link_speed_pitch;
-#endif
    gboolean             no_gui;
    gboolean             temp_view;
    struct _args {
@@ -84,13 +76,6 @@ struct _Application
 #endif
 
    GList*               players;
-
-   struct {
-      PlayStatus        status;
-      Sample*           sample;
-      GList*            queue;
-      guint             position;
-   }                    play;
 
    LibraryView*         libraryview;
    Inspector*           inspector;
@@ -139,15 +124,10 @@ bool         application_add_file                (const char* path, ScanResults*
 void         application_add_dir                 (const char* path, ScanResults*);
 
 void         application_play                    (Sample*);
-void         application_stop                    ();
 void         application_pause                   ();
 void         application_play_selected           ();
 void         application_play_all                ();
-void         application_play_next               ();
 void         application_play_path               (const char*);
-void         application_set_position            (gint64);
-void         application_set_position_seconds    (float);
-void         application_on_play_finished        ();
 
 void         application_emit_icon_theme_changed (Application*, const gchar*);
 G_END_DECLS

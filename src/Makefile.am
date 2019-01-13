@@ -64,18 +64,6 @@ if ENABLE_GDL
 GDL_LDFLAGS=$(top_srcdir)/lib/gdl/libgdl.a $(XML_LIBS)
 endif
 
-if ENABLE_AYYIDBUS
-AUDITIONER_AYYI = auditioner.c
-endif
-
-if ENABLE_GPLAYER
-AUDITIONER_GPLAYER = gplayer.c
-endif
-
-if ENABLE_JACK
-AUDITIONER_JACK = jack_player.c jack_player.h ladspa_proc.c ladspa_proc.h
-endif
-
 samplecat_SOURCES = \
 	typedefs.h types.h \
 	main.c \
@@ -98,15 +86,14 @@ samplecat_SOURCES = \
 	$(AUDIOANALYSERS_SRC) \
 	$(FFT_SRC) \
 	$(OPENGL_SRC) \
-	$(AYYI_SRC) \
-	$(AUDITIONER_AYYI) $(AUDITIONER_GPLAYER) $(AUDITIONER_JACK)
+	$(AYYI_SRC)
 
 samplecat_LDADD = \
 	$(top_srcdir)/lib/utils/libutils.a \
 	$(top_srcdir)/lib/file_manager/libfilemanager.a \
 	$(top_srcdir)/lib/dir_tree/libdirtree.a \
 	$(top_srcdir)/lib/debug/libdebug.a \
-	$(top_srcdir)/lib/samplecat/libsamplecat.a \
+	$(top_srcdir)/lib/samplecat/.libs/libsamplecat.a \
 	$(top_srcdir)/lib/samplecat/db/libsamplecatdb.a \
 	$(GDL_LDFLAGS) \
 	gimp/libgimpwidgets.a \

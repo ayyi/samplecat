@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2018 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2019 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -14,7 +14,6 @@
 #include "config.h"
 #include <stdio.h>
 #include <string.h>
-#include <glib.h>
 #include <glib-object.h>
 #include "debug/debug.h"
 #include <sample.h>
@@ -56,7 +55,7 @@ static GObject* application_constructor    (GType, guint n_construct_properties,
 static void     application_finalize       (GObject*);
 static void     application_set_auditioner (Application*);
 
-static guint    play_timeout_id;
+static void     application_play_next      ();
 
 
 Application*
@@ -80,12 +79,12 @@ application_new ()
 	app->configctx.filename = g_strdup_printf("%s/.config/" PACKAGE "/" PACKAGE, g_get_home_dir());
 
 #if (defined HAVE_JACK)
-	app->enable_effect = true;
-	app->link_speed_pitch = true;
-	app->effect_param[0] = 0.0; /* cent transpose [-100 .. 100] */
-	app->effect_param[1] = 0.0; /* semitone transpose [-12 .. 12] */
-	app->effect_param[2] = 0.0; /* octave [-3 .. 3] */
-	app->playback_speed = 1.0;
+	play->enable_effect = true;
+	play->link_speed_pitch = true;
+	play->effect_param[0] = 0.0; /* cent transpose [-100 .. 100] */
+	play->effect_param[1] = 0.0; /* semitone transpose [-12 .. 12] */
+	play->effect_param[2] = 0.0; /* octave [-3 .. 3] */
+	play->playback_speed = 1.0;
 #endif
 
 	samplecat_init();
@@ -159,16 +158,13 @@ application_class_init (ApplicationClass* klass)
 	application_parent_class = g_type_class_peek_parent (klass);
 	G_OBJECT_CLASS (klass)->constructor = application_constructor;
 	G_OBJECT_CLASS (klass)->finalize = application_finalize;
+
 	g_signal_new ("config_loaded", TYPE_APPLICATION, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_VOID__VOID, G_TYPE_NONE, 0);
 	g_signal_new ("search_starting", TYPE_APPLICATION, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_VOID__VOID, G_TYPE_NONE, 0);
 	g_signal_new ("icon_theme", TYPE_APPLICATION, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_VOID__STRING, G_TYPE_NONE, 1, G_TYPE_STRING);
 	g_signal_new ("on_quit", TYPE_APPLICATION, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_VOID__VOID, G_TYPE_NONE, 0);
 	g_signal_new ("theme_changed", TYPE_APPLICATION, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_VOID__VOID, G_TYPE_NONE, 0);
 	g_signal_new ("layout_changed", TYPE_APPLICATION, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_VOID__VOID, G_TYPE_NONE, 0);
-	g_signal_new ("audio_ready", TYPE_APPLICATION, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_VOID__VOID, G_TYPE_NONE, 0);
-	g_signal_new ("play_start", TYPE_APPLICATION, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_VOID__VOID, G_TYPE_NONE, 0);
-	g_signal_new ("play_stop", TYPE_APPLICATION, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_VOID__VOID, G_TYPE_NONE, 0);
-	g_signal_new ("play_position", TYPE_APPLICATION, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_VOID__VOID, G_TYPE_NONE, 0);
 }
 
 
@@ -176,13 +172,18 @@ static void
 application_instance_init (Application* self)
 {
 	self->state = NONE;
+
+	play = player_new();
+
+	play->next = application_play_next;
+	play->play_selected = application_play_selected;
 }
 
 
 static void
 application_finalize (GObject* obj)
 {
-	G_OBJECT_CLASS (application_parent_class)->finalize (obj);
+	G_OBJECT_CLASS (application_parent_class)->finalize(obj);
 }
 
 
@@ -204,7 +205,7 @@ void
 application_quit(Application* app)
 {
 	PF;
-	application_stop();
+	player_stop();
 	g_signal_emit_by_name (app, "on-quit");
 }
 
@@ -273,7 +274,7 @@ application_set_ready()
 
 		void get_loop_playback(ConfigOption* option)
 		{
-			g_value_set_boolean(&option->val, app->config.loop_playback);
+			g_value_set_boolean(&option->val, play->config.loop);
 		}
 		ctx->options[7] = config_option_new_bool("loop_playback", get_loop_playback);
 	}
@@ -302,8 +303,8 @@ _set_auditioner()
 	gboolean connected = false;
 #ifdef HAVE_JACK
 	if(!connected && can_use(app->players, "jack")){
-		app->auditioner = & a_jack;
-		if (!app->auditioner->check()) {
+		play->auditioner = & a_jack;
+		if (!play->auditioner->check()) {
 			connected = true;
 			printf("JACK playback.\n");
 		}
@@ -311,8 +312,8 @@ _set_auditioner()
 #endif
 #ifdef HAVE_AYYIDBUS
 	if(!connected && can_use(app->players, "ayyi")){
-		app->auditioner = & a_ayyidbus;
-		if (!app->auditioner->check()) {
+		play->auditioner = & a_ayyidbus;
+		if (!play->auditioner->check()) {
 			connected = true;
 			if(!app->no_gui) printf("ayyi_audition.\n");
 		}
@@ -320,8 +321,8 @@ _set_auditioner()
 #endif
 #ifdef HAVE_GPLAYER
 	if(!connected && can_use(app->players, "cli")){
-		app->auditioner = & a_gplayer;
-		if (!app->auditioner->check()) {
+		play->auditioner = & a_gplayer;
+		if (!play->auditioner->check()) {
 			connected = true;
 			printf("using CLI player.\n");
 		}
@@ -329,7 +330,7 @@ _set_auditioner()
 #endif
 	if (!connected) {
 		printf("no playback support.\n");
-		app->auditioner = & a_null;
+		play->auditioner = & a_null;
 	}
 }
 
@@ -340,14 +341,13 @@ application_set_auditioner(Application* a)
 	// The gui is allowed to load before connecting the audio.
 	// Connecting the audio can sometimes be very slow.
 
-	// TODO starting jack can block the gui so this needs to be moved to another thread.
+	// TODO In the case of jack_player, starting jack can block the gui
+	//      so this needs to be made properly asynchronous.
 
 	void set_auditioner_on_connected(GError* error, gpointer _)
 	{
 		if(error){
 			statusbar_print(1, "Player: %s", error->message);
-		}else{
-			g_signal_emit_by_name (app, "audio-ready");
 		}
 	}
 
@@ -355,7 +355,7 @@ application_set_auditioner(Application* a)
 	{
 		_set_auditioner();
 
-		app->auditioner->connect(set_auditioner_on_connected, data);
+		player_connect(set_auditioner_on_connected, data);
 
 		return G_SOURCE_REMOVE;
 	}
@@ -559,46 +559,25 @@ application_add_dir(const char* path, ScanResults* result)
 void
 application_play(Sample* sample)
 {
-	bool play_update(gpointer _)
-	{
-		if(app->auditioner->position) app->play.position = app->auditioner->position();
-		if(app->play.position != UINT_MAX) g_signal_emit_by_name (app, "play-position");
-		return TIMER_CONTINUE;
-	}
-
-	if(app->play.status == PLAY_PAUSED){
-		if(app->auditioner->playpause){
-			app->auditioner->playpause(false);
+	if(play->status == PLAY_PAUSED){
+		if(play->auditioner->playpause){
+			play->auditioner->playpause(false);
 		}
-		app->play.status = PLAY_PLAYING;
-		// TODO
+		play->status = PLAY_PLAYING;
 		return;
 	}
 
 	if(sample) dbg(1, "%s", sample->name);
-  	app->play.status = PLAY_PLAY_PENDING;
 
-	if(app->auditioner->play(sample)){
-		sample_unref0(app->play.sample);
-
-  		app->play.status = PLAY_PLAYING;
-		app->play.sample = sample_ref(sample);
-		app->play.position = UINT_MAX;
-
-		if(app->play.queue)
-			statusbar_print(1, "playing 1 of %i ...", g_list_length(app->play.queue));
+	if(player_play(sample)){
+		if(play->queue)
+			statusbar_print(1, "playing 1 of %i ...", g_list_length(play->queue));
 		else
 			statusbar_print(1, "");
 #ifndef USE_GDL
 		if(app->view_options[SHOW_PLAYER].value) show_player(true);
 #endif
-		g_signal_emit_by_name (app, "play-start");
 
-		if(app->auditioner->position && !play_timeout_id) {
-			GSource* source = g_timeout_source_new (50);
-			g_source_set_callback (source, play_update, NULL, NULL);
-			play_timeout_id = g_source_attach (source, NULL);
-		}
 	}else{
 		statusbar_print(1, "File not playable");
 	}
@@ -606,28 +585,12 @@ application_play(Sample* sample)
 
 
 void
-application_stop()
-{
-	PF;
-	if (app->play.queue) {
-		g_list_foreach(app->play.queue, (GFunc)sample_unref, NULL);
-		g_list_free0(app->play.queue);
-	}
-
-	app->auditioner->stop();
-  	app->play.status = PLAY_STOPPED;
-
-	application_on_play_finished();
-}
-
-
-void
 application_pause()
 {
-	if(app->auditioner->playpause){
-		app->auditioner->playpause(true);
+	if(play->auditioner->playpause){
+		play->auditioner->playpause(true);
 	}
-  	app->play.status = PLAY_PAUSED;
+	play->status = PLAY_PAUSED;
 }
 
 
@@ -645,27 +608,31 @@ application_play_selected()
 	application_play(sample);
 }
 
-#define ADD_TO_QUEUE(S) (app->play.queue = g_list_append(app->play.queue, sample_ref(S)))
-#define REMOVE_FROM_QUEUE(S) (app->play.queue = g_list_remove(app->play.queue, S), sample_unref(S))
+
+#define ADD_TO_QUEUE(S) \
+	(app->play.queue = g_list_append(app->play.queue, sample_ref(S)))
+#define REMOVE_FROM_QUEUE(S) \
+	(play->queue = g_list_remove(play->queue, S), sample_unref(S))
+
 
 void
 application_play_all ()
 {
-	if(app->play.queue){
+	if(play->queue){
 		pwarn("already playing");
 		return;
 	}
 
 	bool foreach_func(GtkTreeModel* model, GtkTreePath* path, GtkTreeIter* iter, gpointer user_data)
 	{
-		//ADD_TO_QUEUE(sample_get_from_model(path));
-		app->play.queue = g_list_append(app->play.queue, sample_get_from_model(path)); // there is a ref already added, so another one is not needed when adding to the queue.
+		//ADD_TO_QUEUE(samplecat_list_store_get_sample_by_path(path));
+		play->queue = g_list_append(play->queue, samplecat_list_store_get_sample_by_path(path)); // there is a ref already added, so another one is not needed when adding to the queue.
 		return false; // continue
 	}
 	gtk_tree_model_foreach(GTK_TREE_MODEL(samplecat.store), foreach_func, NULL);
 
-	if(app->play.queue){
-		if(app->auditioner->play_all) app->auditioner->play_all(); // TODO remove this fn.
+	if(play->queue){
+		if(play->auditioner->play_all) play->auditioner->play_all(); // TODO remove this fn.
 		application_play_next();
 	}
 }
@@ -675,20 +642,20 @@ void
 application_play_next ()
 {
 	PF;
-	if(app->play.queue){
-		Sample* next = app->play.queue->data;
+	if(play->queue){
+		Sample* next = play->queue->data;
 		REMOVE_FROM_QUEUE(next);
 		dbg(1, "%s", next->full_path);
 
-		if(app->play.sample){
-			app->play.position = UINT32_MAX;
-			g_signal_emit_by_name (app, "play-position");
+		if(play->sample){
+			play->position = UINT32_MAX;
+			g_signal_emit_by_name (play, "position");
 		}
 
 		application_play(next);
 	}else{
 		dbg(1, "play_all finished.");
-		application_stop();
+		player_stop();
 	}
 }
 
@@ -696,7 +663,7 @@ application_play_next ()
 void
 application_play_path (const char* path)
 {
-	if(app->play.sample) application_stop();
+	if(play->sample) player_stop();
 
 	Sample* s = sample_new_from_filename((char*)path, false);
 	g_assert(s->ref_count == 1); // will be unreffed and freed in application_on_play_finished()
@@ -705,39 +672,4 @@ application_play_path (const char* path)
 	}
 }
 
-
-void
-application_set_position (gint64 frames)
-{
-	if(app->play.sample && app->play.sample->sample_rate){
-		app->play.position = (frames * 1000) / app->play.sample->sample_rate;
-		g_signal_emit_by_name (app, "play-position");
-	}
-}
-
-
-void
-application_set_position_seconds (float seconds)
-{
-	if(app->play.sample){
-		app->play.position = seconds * 1000;
-		g_signal_emit_by_name (app, "play-position");
-	}
-}
-
-
-void
-application_on_play_finished ()
-{
-	if (play_timeout_id) {
-		g_source_destroy(g_main_context_find_source_by_id(NULL, play_timeout_id));
-		play_timeout_id = 0;
-	}
-
-	if(_debug_) printf("PLAY STOP\n");
-
-	g_signal_emit_by_name (app, "play-stop");
-
-	sample_unref0(app->play.sample);
-}
 

@@ -28,9 +28,6 @@
 #ifdef USE_TRACKER
   #include "src/db/tracker.h"
 #endif
-#if (defined HAVE_JACK)
-  #include "jack_player.h"
-#endif
 
 #define USE_SIMPLE_TABLE
 #ifdef USE_SIMPLE_TABLE

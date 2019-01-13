@@ -11,7 +11,7 @@
 */
 #ifndef __samplecat_types_h__
 #define __samplecat_types_h__
-#include <gtk/gtk.h>
+#include <glib.h>
 #include "typedefs.h"
 
 #define PALETTE_SIZE 17
@@ -22,19 +22,6 @@ struct _menu_def
 	GCallback  callback;
 	char*      stock_id;
 	gboolean   sensitive;
-};
-
-struct _auditioner {
-	int     (*check)      ();
-	void    (*connect)    (ErrorCallback, gpointer);
-	void    (*disconnect) ();
-	bool    (*play)       (Sample*);
-	void    (*play_all)   ();
-	void    (*stop)       ();
-/* extended API */
-	int     (*playpause)  (int);
-	void    (*seek)       (double);
-	guint   (*position)   ();
 };
 
 struct _palette {
@@ -48,13 +35,6 @@ struct _ScanResults {
    int n_failed;
    int n_dupes;
 };
-
-typedef enum {
-   PLAY_STOPPED = 0,
-   PLAY_PAUSED,
-   PLAY_PLAY_PENDING,
-   PLAY_PLAYING
-} PlayStatus;
 
 #define HOMOGENOUS 1
 #define NON_HOMOGENOUS 0

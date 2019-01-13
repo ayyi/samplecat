@@ -81,8 +81,7 @@ console__show_result(Sample* result)
 
 	#define DIR_MAX (35)
 	char dir[DIR_MAX];
-	strncpy(dir, dir_format(result->sample_dir), DIR_MAX-1);
-	dir[DIR_MAX-1] = '\0';
+	g_strlcpy(dir, dir_format(result->sample_dir), DIR_MAX);
 
 	#define SNAME_MAX (20)
 	int max = SNAME_MAX + (w > 100 ? 10 : 0);

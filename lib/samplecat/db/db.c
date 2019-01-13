@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2017 Tim Orford <tim@orford.org> and others       |
+* | copyright (C) 2007-2019 Tim Orford <tim@orford.org> and others       |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -18,7 +18,8 @@
 #include <gtk/gtk.h>
 #include <gdk-pixbuf/gdk-pixdata.h>
 #include "debug/debug.h"
-#include "samplecat/samplecat.h"
+#include "samplecat/support.h"
+#include "samplecat/model.h"
 #ifdef USE_MYSQL
 #include "db/mysql.h"
 #endif
@@ -88,7 +89,7 @@ samplecat_set_backend(BackendType type)
 			#ifdef USE_SQLITE
 			sqlite__set_as_backend(&backend);
 
-			printf("database is sqlite.\n");
+			if(_debug_) printf("database is sqlite.\n");
 			#endif
 			break;
 		case BACKEND_TRACKER:

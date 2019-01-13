@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://samplecat.orford.org          |
-* | copyright (C) 2007-2017 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2019 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -7349,7 +7349,7 @@ rotator_row_deleted (GtkTreeModel* model, GtkTreePath* path, gpointer data)
 	if (selection_changed) g_signal_emit_by_name (tree_view->priv->selection, "changed");
 	*/
 
-	Sample* sample = sample_get_from_model(path);
+	Sample* sample = samplecat_list_store_get_sample_by_path(path);
 	if(sample){
 		dbg(0, "sample=%s", sample->name);
 

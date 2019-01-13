@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2015-2016 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2015-2019 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -12,6 +12,7 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include <logger.h>
 
@@ -20,8 +21,9 @@ static gpointer logger_parent_class = NULL;
 enum  {
 	LOGGER_DUMMY_PROPERTY
 };
-static GObject * logger_constructor (GType type, guint n_construct_properties, GObjectConstructParam * construct_properties);
-static void logger_finalize (GObject* obj);
+
+static GObject* logger_constructor (GType, guint n_construct_properties, GObjectConstructParam*);
+static void     logger_finalize    (GObject*);
 
 
 Logger* logger_construct (GType object_type) {

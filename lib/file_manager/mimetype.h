@@ -19,7 +19,9 @@
 #include "file_manager/typedefs.h"
 
 extern char theme_name[];
+#ifdef __GTK_H__
 extern GtkIconTheme* icon_theme;
+#endif
 
 extern MIME_type* text_plain;		// often used as a default type
 extern MIME_type* application_octet_stream;

@@ -1,21 +1,30 @@
+/**
+* +----------------------------------------------------------------------+
+* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
+* +----------------------------------------------------------------------+
+* | This program is free software; you can redistribute it and/or modify |
+* | it under the terms of the GNU General Public License version 3       |
+* | as published by the Free Software Foundation.                        |
+* +----------------------------------------------------------------------+
+*
+*/
 #include "config.h"
+#undef USE_GTK
 #include <stdio.h>
 #include <stdlib.h>
 #define __USE_GNU
 #include <string.h>
 #include <unistd.h>
-#include <gtk/gtk.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 
 #include "debug/debug.h"
-#include "typedefs.h"
-#include "support.h"
-#include "sample.h"
-#include "application.h"
+#include "samplecat/support.h"
+#include "samplecat/sample.h"
+#include "player.h"
 
 static int  gplayer_check      ();
-static void gplayer_connect    (Callback, gpointer);
+static void gplayer_connect    (ErrorCallback, gpointer);
 static void gplayer_disconnect ();
 static bool gplayer_play       (Sample*);
 static void gplayer_stop       ();
@@ -32,15 +41,27 @@ const Auditioner a_gplayer = {
 	NULL
 };
 
-static int gplayer_check() {
+
+static int
+gplayer_check()
+{
 	char *c;
-	if ((c=g_find_program_in_path ("afplay"))) {free(c); return 0;}
-	if ((c=g_find_program_in_path ("gst-launch-0.10"))) {free(c); return 0;}
-	if ((c=g_find_program_in_path ("totem-audio-preview"))) {free(c); return 0;}
+	if (
+		(c = g_find_program_in_path ("afplay")) ||
+		(c = g_find_program_in_path ("mplayer")) ||
+		(c = g_find_program_in_path ("gst-launch-0.10")) ||
+		(c = g_find_program_in_path ("totem-audio-preview"))
+	) {
+		g_free(c);
+		return 0;
+	}
 	return -1; /* FAIL */
 }
 
-static char ** get_preview_argv (const char *path) {
+
+static char**
+get_preview_argv (const char *path)
+{
 	char *command;
 	char **argv;
 	int i;
@@ -48,6 +69,15 @@ static char ** get_preview_argv (const char *path) {
 	/* OSX: afplay - Audio File Play */
 	command = g_find_program_in_path ("afplay");
 	if (command) {
+		argv = g_new (char *, 3);
+		argv[0] = command;
+		argv[1] = g_strdup (path);
+		argv[2] = NULL;
+
+		return argv;
+	}
+
+	if((command = g_find_program_in_path ("mplayer"))){
 		argv = g_new (char *, 3);
 		argv[0] = command;
 		argv[1] = g_strdup (path);
@@ -69,6 +99,7 @@ static char ** get_preview_argv (const char *path) {
 		argv[i++] = g_strdup ("current-video=-1");
 		argv[i++] = NULL;
 		g_free (uri);
+
 		return argv;
 	}
 
@@ -89,10 +120,12 @@ static char ** get_preview_argv (const char *path) {
 }
 
 
-static int audio_preview_child_watch =0;
-static GPid audio_preview_child_pid =0;
+static int audio_preview_child_watch = 0;
+static GPid audio_preview_child_pid = 0;
 
-static void stop_playback () {
+static void
+stop_playback ()
+{
 	if (audio_preview_child_pid == 0)  return;
 
 	kill (audio_preview_child_pid, SIGTERM);
@@ -102,29 +135,32 @@ static void stop_playback () {
 }
 
 
-static void audio_child_died (GPid pid, gint status, gpointer data) {
+static void
+audio_child_died (GPid pid, gint status, gpointer data)
+{
 	dbg(1, "pid:%d status:%d", pid, status);
 	audio_preview_child_watch = 0;
 	audio_preview_child_pid = 0;
 
-	if(app->play.queue)
-		application_play_next();
+	if(play->queue)
+		play->next();
 	else
-		application_on_play_finished();
+		player_on_play_finished();
 }
 
-static gboolean play_file (const char * path) {
+
+static bool
+play_file (const char * path)
+{
 	GPid child_pid;
 	char **argv;
-	GError *error;
+	GError *error = NULL;
 
-	argv = get_preview_argv (path);
-	if (argv == NULL) {
-		gwarn("audio preview is unavailable: install either of afplay, totem-audio-preview or gstreamer\n");
+	if(!(argv = get_preview_argv (path))){
+		gwarn("audio preview is unavailable: install either of afplay, mplayer, totem-audio-preview or gstreamer");
 		return FALSE;
 	}
 
-	error = NULL;
 	if (!g_spawn_async_with_pipes (NULL,
 				       argv,
 				       NULL, 
@@ -148,7 +184,9 @@ static gboolean play_file (const char * path) {
 }
 
 
-static void gplayer_play_path(const char* path) {
+static void
+gplayer_play_path (const char* path)
+{
 	dbg(1, "%s", path);
 	stop_playback();
 	play_file(path);
@@ -164,20 +202,26 @@ static void gplayer_toggle(Sample* sample) {
 }
 #endif
 
-static bool gplayer_play(Sample* sample) {
+static bool
+gplayer_play (Sample* sample)
+{
 	dbg(1, "%s", sample->full_path);
 	gplayer_play_path(sample->full_path);
 	return true;
 }
 
-static void gplayer_connect(Callback callback, gpointer user_data)
+
+static void
+gplayer_connect (ErrorCallback callback, gpointer user_data)
 {
-	callback(user_data);
+	callback(NULL, user_data);
 }
 
 static void gplayer_disconnect() {;}
 
-static void gplayer_stop() {
+static void
+gplayer_stop ()
+{
 	dbg(1, "stop audition..");
 	stop_playback();
 }

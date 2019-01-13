@@ -195,21 +195,6 @@ ensure_config_dir()
 }
 
 
-void
-colour_get_float(GdkColor* c, float* r, float* g, float* b, const unsigned char alpha)
-{
-	//convert GdkColor for use with Cairo.
-
-	double _r = c->red;
-	double _g = c->green;
-	double _b = c->blue;
-
-	*r = _r / 0xffff;
-	*g = _g / 0xffff;
-	*b = _b / 0xffff;
-}
-
-
 uint32_t
 color_gdk_to_rgba(GdkColor* color)
 {

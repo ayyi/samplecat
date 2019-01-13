@@ -115,8 +115,9 @@ config_load(ConfigContext* ctx, Config* config)
 			ADD_CONFIG_KEY (config->show_waveform,    "show_waveform");
 			ADD_CONFIG_KEY (config->show_spectrogram, "show_spectrogram");
 			ADD_CONFIG_KEY (config->auditioner,       "auditioner");
-			ADD_CONFIG_KEY (config->jack_autoconnect, "jack_autoconnect");
-			ADD_CONFIG_KEY (config->jack_midiconnect, "jack_midiconnect");
+
+			ADD_CONFIG_KEY (play->config.jack_autoconnect, "jack_autoconnect");
+			ADD_CONFIG_KEY (play->config.jack_midiconnect, "jack_midiconnect");
 
 			int k;
 			for (k=0;k<PALETTE_SIZE-1;k++) {
@@ -161,7 +162,7 @@ config_load(ConfigContext* ctx, Config* config)
 					if(error->code == 3) g_error_clear(error)
 					else { GERR_WARN; }
 				}else{
-					config->loop_playback = keyval;
+					play->config.loop = keyval;
 				}
 			}
 

@@ -2,7 +2,7 @@
   JACK audio player
   This file is part of the Samplecat project.
 
-  copyright (C) 2006-2016 Tim Orford <tim@orford.org>
+  copyright (C) 2006-2019 Tim Orford <tim@orford.org>
   copyright (C) 2011 Robin Gareus <robin@gareus.org>
 
   written by Robin Gareus
@@ -22,6 +22,7 @@
   Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 */
 #include "config.h"
+#undef USE_GTK
 #include <stdio.h>
 #include <errno.h>
 #include <unistd.h>
@@ -32,10 +33,9 @@
 
 #include "debug/debug.h"
 #include "decoder/ad.h"
-#include "support.h"
-#include "application.h"
-#include "model.h"
-#include "sample.h"
+#include "samplecat/support.h"
+#include "samplecat/sample.h"
+#include "player.h"
 #include "ladspa_proc.h"
 #include "jack_player.h"
 
@@ -163,7 +163,7 @@ float m_fResampleRatio = 1.0;
 #define DEFAULT_RB_SIZE 24575
 
 static void JACKclose();
-static void JACKconnect();
+static void JACKconnect(GError**);
 static void JACKdisconnect();
 
 
@@ -228,7 +228,8 @@ int jack_audio_callback(jack_nframes_t nframes, void *arg) {
 
 #ifdef JACK_MIDI
 gboolean idle_play(gpointer data) {
-	application_play_selected();
+	play->play_selected();
+
 	return G_SOURCE_REMOVE;
 }
 
@@ -277,7 +278,7 @@ update_playposition (int64_t decoder_position, float varispeed)
 #else
 	const int64_t latency = floor(jack_ringbuffer_read_space(rb) / myplayer->info.channels);
 #endif
-	if (!app->config.loop_playback || decoder_position>latency)
+	if (!play->config.loop || decoder_position > latency)
 		play_position = decoder_position - latency;
 	else
 		play_position = m_frames + decoder_position - latency;
@@ -315,7 +316,7 @@ void *jack_player_thread(void *unused){
 
 	int ladspaerr = 0;
 #if (defined ENABLE_LADSPA)
-	if (m_use_effect && app->enable_effect) {
+	if (m_use_effect && play->enable_effect) {
 		int i;
 		for(i=0;i<nfo->channels;i++) {
 			ladspaerr |= ladspah_init(myplugin[i], m_use_effect, m_effectno, 
@@ -327,7 +328,7 @@ void *jack_player_thread(void *unused){
 	} else {
 		ladspaerr = 1;
 	}
-	app->effect_enabled = ladspaerr ? false : true; // read-only for GUI
+	play->effect_enabled = ladspaerr ? false : true; // read-only for GUI
 #endif
 
 	size_t rbchunk = nframes_r * nfo->channels * sizeof(float);
@@ -345,12 +346,12 @@ void *jack_player_thread(void *unused){
 		if (rv > 0) decoder_position += rv / nfo->channels;
 
 #ifdef JACK_MIDI
-		const float pp[3] = {app->effect_param[0], app->effect_param[1] + midi_note, app->effect_param[2] + midi_octave};
+		const float pp[3] = {play->effect_param[0], play->effect_param[1] + midi_note, play->effect_param[2] + midi_octave};
 #else
-		const float pp[3] = {app->effect_param[0], app->effect_param[1], app->effect_param[2]};
+		const float pp[3] = {play->effect_param[0], play->effect_param[1], play->effect_param[2]};
 #endif
 #if (defined ENABLE_RESAMPLING) && (defined VARISPEED)
-		const float varispeed = app->playback_speed;
+		const float varispeed = play->playback_speed;
 #if 0
 		/* note: libsamplerate slowly approaches a new sample-rate slowly
 		 * src_set_ratio() allow for immediate updates at loss of quality */
@@ -383,7 +384,7 @@ void *jack_player_thread(void *unused){
 #else
 					src_data.output_frames = floorf((float)(rv / nfo->channels) * m_fResampleRatio);
 #endif
-					src_data.end_of_input = app->config.loop_playback ? 0 : 1;
+					src_data.end_of_input = play->config.loop ? 0 : 1;
 					src_process(src_state, &src_data);
 					bufptr = smpbuf;
 					rv = src_data.output_frames_gen * nfo->channels;
@@ -397,7 +398,7 @@ void *jack_player_thread(void *unused){
 				}
 				jack_ringbuffer_write(rb, (char *) bufptr, rv *  sizeof(float));
 			}
-			if (app->config.loop_playback) {
+			if (play->config.loop) {
 				ad_seek(myplayer, 0);
 				decoder_position = 0;
 #ifdef ENABLE_RESAMPLING
@@ -484,7 +485,7 @@ void *jack_player_thread(void *unused){
 
 	/** END OF PLAYBACK **/
 #if (defined ENABLE_RESAMPLING) && (defined VARISPEED)
-	const float varispeed = app->playback_speed;
+	const float varispeed = play->playback_speed;
 #else
 	const float varispeed = 1.0;
 #endif
@@ -498,7 +499,7 @@ void *jack_player_thread(void *unused){
 		}
 		thread_run = 0;
 		player_active = 0;
-		app->effect_enabled = false;
+		play->effect_enabled = false;
 		int i;
 		for(i=0;i<nfo->channels;i++) {
 			ladspah_deinit(myplugin[i]);
@@ -511,8 +512,8 @@ void *jack_player_thread(void *unused){
 	free(smpbuf);
 #endif
 	player_active = 0;
-  	if(app->play.status != PLAY_PLAY_PENDING){
-		application_play_next();
+	if(play->status != PLAY_PLAY_PENDING){
+		play->next();
 	}
 	return NULL;
 }
@@ -523,7 +524,7 @@ JACKaudiooutputinit(WfDecoder* d)
 {
 	int i;
 
-	if(!j_client) JACKconnect();
+	if(!j_client) JACKconnect(NULL);
 	if(!j_client) return;
 
 	if(thread_run || rb) {
@@ -586,7 +587,7 @@ JACKaudiooutputinit(WfDecoder* d)
 	sched_yield();
 
 #if 1
-	char *jack_autoconnect = app->config.jack_autoconnect;
+	char *jack_autoconnect = play->config.jack_autoconnect;
 	if(!jack_autoconnect || strlen(jack_autoconnect)<1) {
 		jack_autoconnect = (char*) "system:playback_";
 	} else if(!strncmp(jack_autoconnect,"DISABLE", 7)) {
@@ -646,13 +647,13 @@ static void JACKclose() {
 	myplugin = NULL;
 };
 
-static void JACKconnect() {
+static void JACKconnect(GError** error) {
 	dbg(1, "...");
 
 	j_client = jack_client_open("samplecat", (jack_options_t) 0, NULL);
 
 	if(!j_client) {
-		dbg(0, "could not connect to JACK.");
+		*error = g_error_new_literal(g_quark_from_static_string(AUDITIONER_DOMAIN), 1, "could not connect to JACK");
 		return;
 	}
 
@@ -674,10 +675,10 @@ static void JACKconnect() {
 	if(_debug_) printf("jack activated\n");
 
 #ifdef JACK_MIDI
-	char *jack_midiconnect = app->config.jack_midiconnect;
-	if(!jack_midiconnect || strlen(jack_midiconnect)<1) {
+	char *jack_midiconnect = play->config.jack_midiconnect;
+	if(!jack_midiconnect || strlen(jack_midiconnect) < 1) {
 		jack_midiconnect = NULL;
-	} else if(!strncmp(jack_midiconnect,"DISABLE", 7)) {
+	} else if(!strncmp(jack_midiconnect, "DISABLE", 7)) {
 		jack_midiconnect = NULL;
 	}
 	if(jack_midiconnect) {
@@ -741,8 +742,10 @@ jplay__play_pathX(const char* path, int reset_pitch)
 /* SampleCat API */
 
 static void jplay__connect(ErrorCallback callback, gpointer user_data) {
-	JACKconnect();
-	callback(NULL, user_data);
+	GError* error = NULL;
+	JACKconnect(&error);
+	callback(error, user_data);
+	if(error) g_error_free(error);
 }
 
 static void jplay__disconnect() {
@@ -762,9 +765,9 @@ jplay__stop()
 }
 
 void jplay__seek (double pos) {
-	if(!app->play.sample) return;
+	if(!play->sample) return;
 	if(!myplayer) return;
-	seek_request = pos * app->play.sample->sample_rate / (1000 * app->play.sample->frames);
+	seek_request = pos * play->sample->sample_rate / (1000 * play->sample->frames);
 }
 
 
@@ -780,14 +783,14 @@ int jplay__pause (int on) {
 }
 
 guint jplay__getposition() {
-	if(!app->play.sample) return -1;
+	if(!play->sample) return -1;
 	if(seek_request != -1.0) return UINT_MAX;
 	if(!myplayer) return -1;
 	if(m_frames < 1) return -1;
 
-	if(!app->play.sample->sample_rate) return UINT_MAX;
+	if(!play->sample->sample_rate) return UINT_MAX;
 
-	return MAX(0, (play_position * 1000 / app->play.sample->sample_rate));
+	return MAX(0, (play_position * 1000 / play->sample->sample_rate));
 }
 
 static int jplay__check() {

@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2016 Tim Orford <tim@orford.org> and others       |
+* | copyright (C) 2007-2019 Tim Orford <tim@orford.org> and others       |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -19,7 +19,7 @@
 #include <gdk-pixbuf/gdk-pixdata.h>
 #include <mysql/errmsg.h>
 #include "debug/debug.h"
-#include "samplecat.h"
+#include "samplecat/model.h"
 #include "model.h"
 #include "sample.h"
 #include "db/db.h"

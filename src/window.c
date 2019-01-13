@@ -26,6 +26,7 @@
 #include "file_manager.h"
 #include "file_manager/menu.h"
 #include "samplecat/worker.h"
+#include "player/player.h"
 #include "audio_analysis/waveform/waveform.h"
 #include "gimp/gimpaction.h"
 #include "gimp/gimpactiongroup.h"
@@ -344,7 +345,7 @@ GtkWindow
 
 	gtk_paned_add1(GTK_PANED(pcpaned), window.dir_tree);
 
-	if (app->auditioner && app->auditioner->position && app->auditioner->seek){
+	if (play->auditioner && play->auditioner->position && play->auditioner->seek){
 		gtk_paned_add2(GTK_PANED(pcpaned), panels[PANEL_TYPE_PLAYER].widget);
 	}
 
@@ -711,7 +712,7 @@ window_on_configure(GtkWidget* widget, GdkEventConfigure* event, gpointer user_d
 				{
 					return file_manager__get()->directory->have_scanned
 						? (select_first_audio(), G_SOURCE_REMOVE)
-						: TIMER_CONTINUE;
+						: G_SOURCE_CONTINUE;
 				}
 
 				if(app->temp_view) g_timeout_add(100, check_ready, NULL);
@@ -1390,7 +1391,7 @@ show_waveform(gboolean enable)
 		// in normal use, the waveform will never be finalised
 		// if DEBUG is enabled, it will occur at program exit.
 
-		dbg(0, "!");
+		PF;
 		C* c = _c;
 		if(window.layers.spinner){
 			//agl_actor__remove_child(window.waveform, window.layers.spinner);
@@ -1451,29 +1452,29 @@ show_waveform(gboolean enable)
 
 	bool waveform_is_playing()
 	{
-		if(!app->play.sample) return false;
+		if(!play->sample) return false;
 		if(!((WaveformViewPlus*)window.waveform)->waveform) return false;
 
 		char* path = ((WaveformViewPlus*)window.waveform)->waveform->filename;
-		return !strcmp(path, app->play.sample->full_path);
+		return !strcmp(path, play->sample->full_path);
 	}
 
-	void waveform_on_position(GObject* _app, gpointer _)
+	void waveform_on_position(GObject* _player, gpointer _)
 	{
-		g_return_if_fail(app->play.sample);
+		g_return_if_fail(play->sample);
 		if(!((WaveformViewPlus*)window.waveform)->waveform) return;
 
 		if(window.layers.spp){
-			wf_spp_actor_set_time((SppActor*)window.layers.spp, waveform_is_playing() ? app->play.position : UINT32_MAX);
+			wf_spp_actor_set_time((SppActor*)window.layers.spp, waveform_is_playing() ? play->position : UINT32_MAX);
 		}
 	}
 
-	void waveform_on_play(GObject* _app, gpointer _)
+	void waveform_on_play(GObject* player, gpointer _)
 	{
-		waveform_on_position(_app, _);
+		waveform_on_position(player, _);
 	}
 
-	void waveform_on_stop(GObject* _app, gpointer _)
+	void waveform_on_stop(GObject* _player, gpointer _)
 	{
 		AGlActor* spp = waveform_view_plus_get_layer((WaveformViewPlus*)window.waveform, 5);
 		if(spp){
@@ -1501,13 +1502,13 @@ show_waveform(gboolean enable)
 		c->selection_handler = g_signal_connect((gpointer)samplecat.model, "selection-changed", G_CALLBACK(_waveform_on_selection_change), c);
 		g_signal_connect((gpointer)window.waveform, "realize", G_CALLBACK(on_waveform_view_realise), NULL);
 
-		void waveform_on_audio_ready(GObject* _app, gpointer _)
+		void waveform_on_audio_ready(gpointer _, gpointer __)
 		{
-			g_signal_connect(app, "play-start", (GCallback)waveform_on_play, NULL);
-			g_signal_connect(app, "play-stop", (GCallback)waveform_on_stop, NULL);
-			g_signal_connect(app, "play-position", (GCallback)waveform_on_position, NULL);
+			g_signal_connect(play, "play", (GCallback)waveform_on_play, NULL);
+			g_signal_connect(play, "stop", (GCallback)waveform_on_stop, NULL);
+			g_signal_connect(play, "position", (GCallback)waveform_on_position, NULL);
 		}
-		g_signal_connect(app, "audio-ready", (GCallback)waveform_on_audio_ready, NULL);
+		am_promise_add_callback(play->ready, waveform_on_audio_ready, NULL);
 	}
 
 	if(window.waveform){
@@ -1854,7 +1855,7 @@ make_context_menu()
 		int i;
 		for(i=0;i<g_list_length(selectionlist);i++){
 			GtkTreePath* treepath = g_list_nth_data(selectionlist, i);
-			Sample* sample = sample_get_from_model(treepath);
+			Sample* sample = samplecat_list_store_get_sample_by_path(treepath);
 			if(do_progress(0, 0)) break; // TODO: set progress title to "updating"
 			samplecat_model_refresh_sample (samplecat.model, sample, force_update);
 			statusbar_print(1, "online status updated (%s)", sample->online ? "online" : "not online");
@@ -1871,14 +1872,14 @@ make_context_menu()
 
 	void menu_play_stop(GtkWidget* widget, gpointer user_data)
 	{
-		application_stop();
+		player_stop();
 	}
 
 	void
 	toggle_loop_playback(GtkMenuItem* widget, gpointer user_data)
 	{
 		PF;
-		app->config.loop_playback = !app->config.loop_playback;
+		play->config.loop = !play->config.loop;
 	}
 
 	void toggle_recursive_add(GtkMenuItem* widget, gpointer user_data)
@@ -2067,7 +2068,7 @@ make_context_menu()
 
 	widgets.loop_playback = menu_item = gtk_check_menu_item_new_with_mnemonic("Loop Playback");
 	gtk_menu_shell_append(GTK_MENU_SHELL(sub), menu_item);
-	gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menu_item), app->config.loop_playback);
+	gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menu_item), play->config.loop);
 	g_signal_connect(G_OBJECT(menu_item), "activate", G_CALLBACK(toggle_loop_playback), NULL);
 	gtk_widget_set_no_show_all(menu_item, true);
 
@@ -2079,15 +2080,15 @@ make_context_menu()
 		gtk_menu_item_set_submenu(GTK_MENU_ITEM(theme_menu), sub_menu);
 	}
 
-	void menu_on_audio_ready(GObject* _app, gpointer _)
+	void menu_on_audio_ready(gpointer _, gpointer __)
 	{
 		gtk_widget_set_sensitive(widgets.play_all, true);
 		gtk_widget_set_sensitive(widgets.stop_playback, true);
-		if (app->auditioner->seek) {
+		if (play->auditioner->seek) {
 			gtk_widget_show(widgets.loop_playback);
 		}
 	}
-	g_signal_connect(app, "audio-ready", (GCallback)menu_on_audio_ready, NULL);
+	am_promise_add_callback(play->ready, menu_on_audio_ready, NULL);
 
 	gtk_widget_show_all(menu);
 	g_list_free(menu_items);

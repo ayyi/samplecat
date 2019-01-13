@@ -1,20 +1,16 @@
-SUBDIRS = db
+SUBDIRS = db player
 
 AM_CFLAGS = \
 	-DPACKAGE_DATA_DIR=\""$(datadir)"\" \
 	-DPACKAGE_LOCALE_DIR=\""$(prefix)/$(DATADIRNAME)/locale"\" \
-	-DIMAGES_DIR=\"$(imagesdir)\" \
-	-I../ \
 	-DG_LOG_DOMAIN=\"Samplecat\" \
 	-I$(top_srcdir)/lib \
 	-I$(top_srcdir)/lib/waveform \
 	$(GTK_CFLAGS)
 
-noinst_LIBRARIES = libsamplecat.a
+noinst_LTLIBRARIES = libsamplecat.la
 
-CLEANFILES =
-
-libsamplecat_a_SOURCES = \
+libsamplecat_la_SOURCES = \
 	typedefs.h \
 	samplecat.c samplecat.h \
 	model.c model.h \
@@ -27,4 +23,7 @@ libsamplecat_a_SOURCES = \
 	logger.c logger.h \
 	settings.c settings.h \
 	support.c support.h
+
+libsamplecat_la_LIBADD = \
+	player/libplayer.la
 

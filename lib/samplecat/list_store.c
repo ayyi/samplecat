@@ -339,7 +339,7 @@ samplecat_list_store_get_sample_by_row_index (int row)
 {
 	GtkTreePath* path = gtk_tree_path_new_from_indices (row, -1);
 	if(path){
-		Sample* sample = sample_get_from_model(path);
+		Sample* sample = samplecat_list_store_get_sample_by_path(path);
 		gtk_tree_path_free(path);
 		return sample;
 	}
@@ -358,8 +358,29 @@ samplecat_list_store_get_sample_by_row_ref(GtkTreeRowReference* ref)
 	GtkTreePath* path;
 	if (!ref || !gtk_tree_row_reference_valid(ref)) return NULL;
 	if(!(path = gtk_tree_row_reference_get_path(ref))) return NULL;
-	Sample* sample = sample_get_from_model(path);
+
+	Sample* sample = samplecat_list_store_get_sample_by_path(path);
+
 	gtk_tree_path_free(path);
+
+	return sample;
+}
+
+
+/** return a reference to the existing sample in the tree.
+ * implies sample_ref()
+ * @return needs to be sample_unref();
+ */
+Sample*
+samplecat_list_store_get_sample_by_path(GtkTreePath* path)
+{
+	GtkTreeModel* model = GTK_TREE_MODEL(samplecat.store);
+	GtkTreeIter iter;
+	if(!gtk_tree_model_get_iter(model, &iter, path)) return NULL;
+
+	Sample* sample = samplecat_list_store_get_sample_by_iter(&iter);
+	if (sample && !sample->row_ref) sample->row_ref = gtk_tree_row_reference_new(GTK_TREE_MODEL(samplecat.store), path);
+
 	return sample;
 }
 

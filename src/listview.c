@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2018 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2019 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -215,14 +215,14 @@ listview__new()
 	g_signal_connect((gpointer)view, "unrealize", G_CALLBACK(on_unrealize), NULL);
 #endif
 
-	void listview_on_play(GObject* _app, gpointer _)
+	void listview_on_play(GObject* _player, gpointer _)
 	{
-		if(app->play.sample->row_ref){
-			listview__highlight_playing_by_ref(app->play.sample->row_ref);
+		if(play->sample->row_ref){
+			listview__highlight_playing_by_ref(play->sample->row_ref);
 		}
 	}
 
-	g_signal_connect(app, "play-start", (GCallback)listview_on_play, NULL);
+	g_signal_connect(play, "play", (GCallback)listview_on_play, NULL);
 
 	void on_sort_order_changed(GtkTreeSortable* sortable, gpointer user_data)
 	{
@@ -310,11 +310,11 @@ listview__on_row_clicked(GtkWidget* widget, GdkEventButton* event, gpointer user
 
 				//overview column:
 				dbg(2, "overview. column rect: %i %i %i %i", rect.x, rect.y, rect.width, rect.height);
-				if(app->auditioner){
-					Sample* sample = sample_get_from_model(path);
-					if(app->play.sample){
-						(sample->id == app->play.sample->id)
-							? application_stop(sample)
+				if(play->auditioner){
+					Sample* sample = samplecat_list_store_get_sample_by_path(path);
+					if(play->sample){
+						(sample->id == play->sample->id)
+							? player_stop(sample)
 							: application_play(sample);
 					}else{
 						application_play(sample);
@@ -473,7 +473,7 @@ listview__get_first_selected_sample()
 {
 	GtkTreePath* path = listview__get_first_selected_path();
 	if(path){
-		Sample* result = sample_get_from_model(path);
+		Sample* result = samplecat_list_store_get_sample_by_path(path);
 		gtk_tree_path_free(path);
 		return result;
 	}
@@ -513,7 +513,7 @@ listview__get_first_selected_filepath()
 static void
 listview__dnd_get(GtkWidget* widget, GdkDragContext* context, GtkSelectionData* selection_data, guint info, guint time, gpointer data)
 {
-	//outgoing drop. provide the dropee with info on which samples were dropped.
+	// Outgoing drop. provide the dropee with info on which samples were dropped.
 
 	GtkTreeModel* model = GTK_TREE_MODEL(samplecat.store);
 	GtkTreeSelection* selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(app->libraryview->widget));
@@ -524,14 +524,14 @@ listview__dnd_get(GtkWidget* widget, GdkDragContext* context, GtkSelectionData* 
 
 	for(; row; row=row->next){
 		GtkTreePath* treepath_selection = row->data;
-		Sample *s = sample_get_from_model(treepath_selection);
+		Sample* s = samplecat_list_store_get_sample_by_path(treepath_selection);
 		//append is slow, but g_list_prepend() is wrong order :(
 		list = g_list_append(list, g_strdup(s->full_path));
 		sample_unref(s);
 		gtk_tree_path_free(treepath_selection);
 	}
 
-	gchar *uri_text = NULL;
+	gchar* uri_text = NULL;
 	gint length = 0;
 	switch (info) {
 		case TARGET_URI_LIST:

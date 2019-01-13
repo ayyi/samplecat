@@ -43,9 +43,9 @@ samplecat_webkit_LDADD = \
 	$(top_srcdir)/lib/dir_tree/libdirtree.a \
 	$(top_srcdir)/lib/samplecat/libsamplecat.a \
 	$(top_srcdir)/lib/samplecat/db/libsamplecatdb.a \
-	$(top_srcdir)/lib/audio_analysis/libaudioanalysis.a \
+	$(top_srcdir)/lib/audio_analysis/.libs/libaudioanalysis.a \
 	$(top_srcdir)/lib/debug/libdebug.a \
-	$(top_srcdir)/lib/waveform/libwaveform.la \
+	$(top_srcdir)/lib/waveform/.libs/libwaveform.a \
 	$(top_srcdir)/lib/file_manager/libfilemanager.a \
 	$(top_srcdir)/lib/utils/libutils.a \
 	$(LOCAL_GTK_LIBS) \

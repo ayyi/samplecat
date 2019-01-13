@@ -53,14 +53,11 @@ struct _Config
 	char      window_height[8];
 	char      colour[/*PALETTE_SIZE*/17][8];
 	bool      add_recursive;
-	bool      loop_playback;
 	char      column_widths[4][8];
 	char      browse_dir[PATH_MAX];
 	char      show_player[8];
 	char      show_waveform[8];
 	char      show_spectrogram[8];
-	char      jack_autoconnect[1024];
-	char      jack_midiconnect[1024];
 };
 
 bool          config_load              (ConfigContext*, Config*);

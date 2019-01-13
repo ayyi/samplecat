@@ -26,6 +26,14 @@
 #define g_error_clear(E) { if(E){ g_error_free(E); E = NULL; }}
 #endif
 
+#ifndef g_free0
+#define g_free0(A) (A = (g_free(A), NULL))
+#endif
+
+#ifndef g_list_free0
+#define g_list_free0(var) ((var == NULL) ? NULL : (var = (g_list_free (var), NULL)))
+#endif
+
 void         p_                        (int level, const char* format, ...);
 
 gboolean     file_exists               (const char*);
@@ -40,7 +48,6 @@ GdkPixbuf*   get_iconbuf_from_mimetype (char* mimetype);
 
 bool         ensure_config_dir         ();
 
-void         colour_get_float          (GdkColor*, float* r, float* g, float* b, const unsigned char alpha);
 uint32_t     color_gdk_to_rgba         (GdkColor*);
 
 uint8_t*     pixbuf_to_blob            (GdkPixbuf* in, guint* len);

@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2018 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2019 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -27,12 +27,7 @@
 #endif
 #define list_clear(L) g_list_free(L); L = NULL;
 #define call(FN, A, ...) if(FN) (FN)(A, ##__VA_ARGS__)
-#ifndef g_free0
-#define g_free0(A) (A = (g_free(A), NULL))
-#endif
-#define g_list_free0(var) ((var == NULL) ? NULL : (var = (g_list_free (var), NULL)))
 
-#define TIMER_CONTINUE TRUE
 #define HANDLED TRUE
 #define NOT_HANDLED FALSE
 #define EXPAND_TRUE 1

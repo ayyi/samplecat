@@ -196,18 +196,6 @@ sample_get_file_info(Sample* sample)
 
 
 Sample*
-sample_get_from_model(GtkTreePath* path)
-{
-	GtkTreeModel* model = GTK_TREE_MODEL(samplecat.store);
-	GtkTreeIter iter;
-	if(!gtk_tree_model_get_iter(model, &iter, path)) return NULL;
-	Sample* sample = samplecat_list_store_get_sample_by_iter(&iter);
-	if (sample && !sample->row_ref) sample->row_ref = gtk_tree_row_reference_new(GTK_TREE_MODEL(samplecat.store), path);
-	return sample;
-}
-
-
-Sample*
 sample_get_by_filename(const char* abspath)
 {
 	struct find_sample {

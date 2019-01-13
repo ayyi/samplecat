@@ -133,6 +133,7 @@ void             samplecat_list_store_do_search               (SamplecatListStor
 Sample*          samplecat_list_store_get_sample_by_iter      (GtkTreeIter*);
 Sample*          samplecat_list_store_get_sample_by_row_index (int);
 Sample*          samplecat_list_store_get_sample_by_row_ref   (GtkTreeRowReference*);
+Sample*          samplecat_list_store_get_sample_by_path      (GtkTreePath*);
 
 
 G_END_DECLS

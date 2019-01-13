@@ -3,22 +3,25 @@
 
 #include <stdlib.h>
 #include <stdint.h>
+#ifdef USE_GTK
 #include <gtk/gtk.h>
+#else
+#include <gdk/gdk.h>
+#endif
 #include "typedefs.h"
 
 struct _Sample
 {
-	int                  id;          // database index or -1 for external file.
-	int                  ref_count;
-	GtkTreeRowReference* row_ref;
+	int          id;            // database index or -1 for external file.
+	int          ref_count;
 
-	char*                name;        ///< basename UTF8
-	char*                sample_dir;  ///< directory UTF8
-	char*                full_path;   ///< filename as native to system
+	char*        name;          ///< basename UTF8
+	char*        sample_dir;    ///< directory UTF8
+	char*        full_path;     ///< filename as native to system
 
 	unsigned int sample_rate;
-	int64_t      length;        //milliseconds
-	int64_t      frames;        //total number of frames (eg a frame for 16bit stereo is 4 bytes).
+	int64_t      length;        // milliseconds
+	int64_t      frames;        // total number of frames (eg a frame for 16bit stereo is 4 bytes).
 	unsigned int channels;
 	int          bit_depth;
 	int          bit_rate;
@@ -35,6 +38,8 @@ struct _Sample
 	char*        mimetype;
 
 	GdkPixbuf*   overview;
+
+	void*        row_ref;
 };
 
 
@@ -46,12 +51,6 @@ struct _Sample
 Sample*     sample_new               ();
 Sample*     sample_new_from_filename (char* path, gboolean path_alloced);
 Sample*     sample_dup               (Sample*);
-
-/** return a reference to the existing sample in the tree.
- * implies sample_ref() 
- * @return needs to be sample_unref();
- */
-Sample*     sample_get_from_model    (GtkTreePath*);
 
 Sample*     sample_get_by_filename   (const char* abspath);
 

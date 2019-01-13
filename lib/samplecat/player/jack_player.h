@@ -23,7 +23,7 @@
 */
 #ifndef __SAMPLEJACK_H_
 #define __SAMPLEJACK_H_
-#include "typedefs.h"
+#include "samplecat/typedefs.h"
 
 #define VARISPEED 1 ///< allow to change speed while playing
 #define JACK_MIDI 1 ///< use JACK midi to trigger and - if LADSPA/rubberband is avail: pitch-shift
