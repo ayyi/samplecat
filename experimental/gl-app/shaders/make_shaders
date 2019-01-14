@@ -1,10 +1,10 @@
 #!/bin/bash
 
-shaders=(vscrollbar button ring);
+shaders=(vscrollbar button ring circle);
 out=shaders.c
 
 if [[ -s $out ]]; then
-	#file already exists, check age
+	# file already exists, check age
 	need_regen=false
 	for s in "${shaders[@]}"; do
 		if [[ $s.frag -nt $out ]]; then

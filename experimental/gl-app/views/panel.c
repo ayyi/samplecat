@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2016-2017 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2016-2019 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -14,30 +14,28 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <glib.h>
-#include <GL/gl.h>
 #include "agl/ext.h"
 #include "agl/utils.h"
-#include "agl/actor.h"
 #include "agl/pango_render.h"
-#include "waveform/shader.h"
 #include "debug/debug.h"
+#include "waveform/shader.h"
 #include "samplecat/typedefs.h"
 #include "shader.h"
 #include "materials/icon_ring.h"
+#include "application.h"
 #include "views/dock_v.h"
 #include "views/panel.h"
 
 extern AGlShader ring;
 
 #define _g_object_unref0(var) ((var == NULL) ? NULL : (var = (g_object_unref (var), NULL)))
-#define FONT "Droid Sans"
 
 static AGl* agl = NULL;
 static AGlActorClass actor_class = {0, "Panel", (AGlActorNew*)panel_view};
 static int instance_count = 0;
 static AGliPt origin = {0,};
 static AGliPt mouse = {0,};
+static char* font = NULL;
 
 extern AGlMaterialClass ring_material_class;
 static AGlMaterial* ring_material = NULL;
@@ -57,7 +55,9 @@ _init()
 
 	if(!init_done){
 		agl = agl_get_instance();
-		agl_set_font_string("Roboto 10"); // initialise the pango context
+
+		font = g_strdup_printf("%s 10", app->style.font);
+		agl_set_font_string(font); // initialise the pango context
 
 		ring_material = ring_new();
 
@@ -92,7 +92,7 @@ panel_view(gpointer _)
 
 			ring_material_class.render(ring_material);
 
-			agl_set_font_string("Roboto 10");
+			agl_set_font_string(font);
 			agl_print(24, 0, 0, 0x777777ff, panel->title);
 		}
 

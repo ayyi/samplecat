@@ -12,6 +12,7 @@ samplecat_gl_SOURCES = \
 	shader.c shader.h \
 	layout.c layout.h \
 	style.c style.h \
+	utils.c utils.h \
 	yaml_utils.c yaml_utils.h \
 	keys.h \
 	$(top_srcdir)/src/icon_theme.c $(top_srcdir)/src/icon_theme.h
@@ -72,6 +73,7 @@ samplecat_gl_LDADD = \
 	$(LIBASS_LDFLAGS) \
 	$(FILEMANAGER_LDFLAGS) \
 	$(X11_LDFLAGS) \
+	$(DBUS_LIBS) \
 	-lstdc++
 
 dist_pkgdata_DATA = samplecat.yaml

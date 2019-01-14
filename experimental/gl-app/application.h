@@ -63,6 +63,7 @@ Application* application_new                     ();
 Application* application_construct               (GType);
 void         application_quit                    (Application*);
 
+void         application_set_auditioner          ();
 void         application_play                    (Sample*);
 void         application_play_selected           ();
 

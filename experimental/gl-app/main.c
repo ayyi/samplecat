@@ -232,6 +232,8 @@ add_content(gpointer _)
 
 	samplecat_list_store_do_search((SamplecatListStore*)samplecat.store);
 
+	application_set_auditioner();
+
 	Waveform* w = NULL;
 
 	app->wfc = wf_context_new(app->scene);

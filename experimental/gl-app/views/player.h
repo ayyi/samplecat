@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2016-2019 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2019-2019 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -9,26 +9,16 @@
 * +----------------------------------------------------------------------+
 *
 */
-#ifndef __views_panel_h__
-#define __views_panel_h__
+#ifndef __views_player_h__
+#define __views_player_h__
 
+#include "glib.h"
 #include "agl/actor.h"
 
-typedef struct {
-   AGlActor    actor;
-   char*       title;
-   bool        no_border;
-   struct {
-      AGliPt   min;
-      AGliPt   preferred;
-      AGliPt   max;
-   }           size_req;
-   PangoLayout*layout;
-} PanelView;
+#define PLAYER_ICON_SIZE 24
 
-AGlActorClass* panel_view_get_class ();
-AGlActor*      panel_view           (gpointer);
+AGlActorClass* player_view_get_class ();
 
-#define PANEL_DRAG_HANDLE_HEIGHT 22
+AGlActor* player_view (gpointer);
 
 #endif

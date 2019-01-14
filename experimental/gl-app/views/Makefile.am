@@ -14,10 +14,12 @@ libviews_la_SOURCES = \
 	inspector.c inspector.h \
 	search.c search.h \
 	filters.c filters.h \
+	player.c player.h \
 	tabs.c tabs.h \
 	scrollbar.c scrollbar.h \
 	context_menu.c context_menu.h \
-	spectrogram.c spectrogram.h
+	spectrogram.c spectrogram.h \
+	button.c button.h
 
 AM_CFLAGS = \
 	-no-pie \

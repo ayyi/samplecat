@@ -45,8 +45,20 @@ enum {
     RING_BG_COLOUR,
 };
 
+typedef struct {
+	AGlShader      shader;
+	struct {
+		uint32_t   colour;
+		uint32_t   bg_colour;
+		AGliPt     centre;
+		float      radius;
+	}              uniform;
+	AGlUniformInfo uniforms[1];
+} CircleShader;
+
 extern ScrollbarShader v_scrollbar_shader;
 extern ButtonShader button_shader;
 extern AGlShader ring;
+extern CircleShader circle_shader;
 
 #endif

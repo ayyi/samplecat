@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2018 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2019 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -14,18 +14,13 @@
 #include "config.h"
 #include <stdio.h>
 #include <string.h>
-#include <glib.h>
 #include <glib-object.h>
 #include "debug/debug.h"
-#include <sample.h>
 #include "support.h"
 #include "model.h"
 #include "db/db.h"
 #include "samplecat.h"
 #include "list_store.h"
-#ifndef USE_GDL
-#include "window.h"
-#endif
 #include "application.h"
 
 
@@ -37,6 +32,10 @@ enum  {
 static GObject* application_constructor    (GType, guint n_construct_properties, GObjectConstructParam*);
 static void     application_finalize       (GObject*);
 static void     application_search         ();
+
+#ifdef HAVE_AYYIDBUS
+extern Auditioner a_ayyidbus;
+#endif
 
 
 Application*
@@ -55,6 +54,7 @@ application_construct (GType object_type)
 		.fg = 0x66aaffff,
 		.text = 0xbbbbbbff,
 		.selection = 0x6677ff77,
+		.font = "Roboto"
 	};
 
 	return app;
@@ -130,9 +130,6 @@ application_class_init (ApplicationClass* klass)
 	g_signal_new ("theme_changed", TYPE_APPLICATION, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_VOID__VOID, G_TYPE_NONE, 0);
 	g_signal_new ("layout_changed", TYPE_APPLICATION, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_VOID__VOID, G_TYPE_NONE, 0);
 	g_signal_new ("audio_ready", TYPE_APPLICATION, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_VOID__VOID, G_TYPE_NONE, 0);
-	g_signal_new ("play_start", TYPE_APPLICATION, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_VOID__VOID, G_TYPE_NONE, 0);
-	g_signal_new ("play_stop", TYPE_APPLICATION, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_VOID__VOID, G_TYPE_NONE, 0);
-	g_signal_new ("play_position", TYPE_APPLICATION, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_VOID__VOID, G_TYPE_NONE, 0);
 	*/
 	g_signal_new ("actor-added", TYPE_APPLICATION, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_VOID__POINTER, G_TYPE_NONE, 1, G_TYPE_POINTER);
 }
@@ -141,7 +138,7 @@ application_class_init (ApplicationClass* klass)
 static void
 application_instance_init (Application* self)
 {
-	//self->state = NONE;
+	play = player_new();
 }
 
 
@@ -188,9 +185,51 @@ application_search()
 
 
 void
+application_set_auditioner()
+{
+	play->auditioner = &a_ayyidbus;
+
+	bool set_auditioner_on_idle(gpointer data)
+	{
+		//_set_auditioner();
+
+		player_connect(NULL, data);
+
+		return G_SOURCE_REMOVE;
+	}
+	g_idle_add_full(G_PRIORITY_LOW, set_auditioner_on_idle, NULL, NULL);
+
+	void application_on_player_ready(gpointer user_data, gpointer _)
+	{
+		dbg(0, "player ready");
+	}
+	am_promise_add_callback(play->ready, application_on_player_ready, NULL);
+}
+
+
+void
 application_play(Sample* sample)
 {
+	if(play->status == PLAY_PAUSED){
+		if(play->auditioner->playpause){
+			play->auditioner->playpause(false);
+		}
+		play->status = PLAY_PLAYING;
+		return;
+	}
+
 	if(sample) dbg(1, "%s", sample->name);
+
+	if(player_play(sample)){
+#if 0
+		if(app->play.queue)
+			statusbar_print(1, "playing 1 of %i ...", g_list_length(app->play.queue));
+		else
+			statusbar_print(1, "");
+	}else{
+		statusbar_print(1, "File not playable");
+#endif
+	}
 }
 
 

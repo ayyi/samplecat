@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2016-2018 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2016-2019 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -15,9 +15,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <math.h>
-#include <gdk/gdkkeysyms.h>
-#include <GL/gl.h>
 #include "agl/ext.h"
 #include "agl/utils.h"
 #include "agl/actor.h"
@@ -254,6 +251,7 @@ dock_v_view(gpointer _)
 
 					AGlActor* a2 = dock->handle.actor;
 					GList* l = g_list_find(dock->panels, a2);
+					g_return_val_if_fail(l->prev, false);
 					AGlActor* a1 = l->prev->data;
 
 					int min_diff = -agl_actor__height(a1);

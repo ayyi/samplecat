@@ -21,7 +21,7 @@
 #include "layout.h"
 
 typedef AGlActorClass* (get_class)();
-get_class dock_v_get_class, dock_h_get_class, scrollable_view_get_class, list_view_get_class, files_view_get_class, directories_view_get_class, inspector_view_get_class, search_view_get_class, filters_view_get_class, scrollbar_view_get_class, spectrogram_view_get_class;
+get_class dock_v_get_class, dock_h_get_class, scrollable_view_get_class, list_view_get_class, files_view_get_class, directories_view_get_class, inspector_view_get_class, search_view_get_class, filters_view_get_class, player_view_get_class, scrollbar_view_get_class, button_get_class, spectrogram_view_get_class;
 #include "views/dock_v.h"
 #include "views/tabs.h"
 
@@ -452,6 +452,7 @@ load_settings ()
 		agl_actor_register_class("Inspector", inspector_view_get_class());
 		agl_actor_register_class("Search", search_view_get_class());
 		agl_actor_register_class("Filters", filters_view_get_class());
+		agl_actor_register_class("Player", player_view_get_class());
 		agl_actor_register_class("Tabs", tabs_view_get_class());
 		agl_actor_register_class("List", list_view_get_class());
 		agl_actor_register_class("Scrollbar", scrollbar_view_get_class());
@@ -583,12 +584,12 @@ save_settings ()
 	snprintf(value, 255, "0x%08x", 0xff00ff00);
 	if(!yaml_add_key_value_pair("test_colour", value)) goto error;
 
-	void add_child(yaml_event_t* event, AGlActor* actor)
+	bool add_child(yaml_event_t* event, AGlActor* actor)
 	{
 		AGlActorClass* c = actor->class;
-		g_return_if_fail(c);
-		if(c != scrollbar_view_get_class()){
-			g_return_if_fail(actor->name);
+		g_return_val_if_fail(c, false);
+		if(c != scrollbar_view_get_class() && c != button_get_class()){
+			g_return_val_if_fail(actor->name, false);
 
 			map_open_(event, actor->name);
 
@@ -624,19 +625,19 @@ save_settings ()
 
 			GList* l = actor->children;
 			for(;l;l=l->next){
-				add_child(event, l->data);
+				if(!add_child(event, l->data)) goto error;
 			}
 
 			end_map_(event);
 		}
-		return;
+		return true;
 	  error:
-		return;
+		return false;
 	}
 
 	map_open_(&event, "windows");
 	map_open_(&event, "window");
-	add_child(&event, (AGlActor*)app->scene);
+	if(!add_child(&event, (AGlActor*)app->scene)) return false;
 	end_map_(&event);
 	end_map_(&event);
 

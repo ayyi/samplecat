@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2012-2017 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2012-2019 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -14,11 +14,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <math.h>
 #include <X11/keysym.h>
-#include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
-#include <GL/gl.h>
 #include "debug/debug.h"
 #include "agl/ext.h"
 #include "agl/utils.h"
@@ -27,6 +24,7 @@
 #include "agl/shader.h"
 #include "agl/pango_render.h"
 #include "samplecat.h"
+#include "application.h"
 #include "views/panel.h"
 #include "views/search.h"
 
@@ -36,9 +34,11 @@
 #define BORDER 1
 #define MARGIN_BOTTOM 5
 
-static AGl* agl = NULL;
 static int instance_count = 0;
 static AGlActorClass actor_class = {0, "Search", (AGlActorNew*)search_view};
+
+static AGl* agl = NULL;
+static char* font = NULL;
 
 static int search_view_height (SearchView*);
 
@@ -57,7 +57,9 @@ _init()
 
 	if(!init_done){
 		agl = agl_get_instance();
-		agl_set_font_string("Roboto 10"); // initialise the pango context
+
+		font = g_strdup_printf("%s 10", app->style.font);
+		agl_set_font_string(font); // initialise the pango context
 
 		init_done = true;
 	}

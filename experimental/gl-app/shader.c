@@ -20,10 +20,12 @@
 static void _v_scrollbar_set_uniforms();
 static void _button_set_uniforms();
 static void _ring_set_uniforms();
+static void _circle_set_uniforms();
 
 
 ScrollbarShader v_scrollbar_shader = {{NULL, NULL, 0, NULL, _v_scrollbar_set_uniforms, &vscrollbar_text}, {}, {END_OF_UNIFORMS}};
 ButtonShader button_shader = {{NULL, NULL, 0, NULL, _button_set_uniforms, &button_text}, {}, {END_OF_UNIFORMS}};
+CircleShader circle_shader = {{NULL, NULL, 0, NULL, _circle_set_uniforms, &circle_text}, {}, {END_OF_UNIFORMS}};
 
 static AGlUniformInfo ringuniforms[] = {
    {"radius",    1, GL_FLOAT, {7,  }, -1},
@@ -114,3 +116,26 @@ _ring_set_uniforms()
 	glUniform4fv(ring.uniforms[2].location, 1, ring.uniforms[2].value);
 }
 
+
+#define SET_COLOUR(SHADER) \
+	float colour[4] = {0.0, 0.0, 0.0, ((float)((SHADER)->uniform.colour & 0xff)) / 0x100}; \
+	agl_rgba_to_float((SHADER)->uniform.colour, &colour[0], &colour[1], &colour[2]); \
+	glUniform4fv(glGetUniformLocation((SHADER)->shader.program, "colour"), 1, colour);
+
+static void
+_circle_set_uniforms()
+{
+	float centre[2] = {circle_shader.uniform.centre.x, circle_shader.uniform.centre.y};
+	glUniform2fv(glGetUniformLocation(circle_shader.shader.program, "centre"), 1, centre);
+	glUniform1f(glGetUniformLocation(circle_shader.shader.program, "radius"), circle_shader.uniform.radius);
+
+	SET_COLOUR(&circle_shader);
+
+	GLint location = 0;
+	if(!location){
+		location = glGetUniformLocation(circle_shader.shader.program, "bg_colour");
+	}
+	float bg_colour[4] = {0.0, 0.0, 0.0, ((float)(circle_shader.uniform.bg_colour & 0xff)) / 0x100};
+	agl_rgba_to_float(circle_shader.uniform.bg_colour, &bg_colour[0], &bg_colour[1], &bg_colour[2]);
+	glUniform4fv(location, 1, bg_colour);
+}
