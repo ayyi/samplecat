@@ -6,7 +6,7 @@ AM_CFLAGS = \
 	-DPACKAGE_DATA_DIR=\""$(datadir)"\" \
 	-I$(includedir) \
 	-I$(top_srcdir)/libs \
-	$(GTK_CFLAGS)
+	$(GLIB_CFLAGS)
 
 noinst_LIBRARIES = libdebug.a
 
