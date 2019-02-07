@@ -117,16 +117,9 @@ AC_SUBST(GTK_LIBS)
 
 if `pkg-config gtk+-2.0 --atleast-version=2.12`; then
   HAVE_GTK_2_12="yes"
-  AC_DEFINE(HAVE_GTK_2_12, 1, "we have at least gtk version 2.12")
+  AC_DEFINE(HAVE_GTK_2_12, 1, [We have at least gtk version 2.12])
 else
   HAVE_GTK_2_12="no"
-fi;
-
-if `pkg-config gtk+-2.0 --atleast-version=2.10`; then
-  HAVE_GTK_2_10="yes"
-  AC_DEFINE(HAVE_GTK_2_10, 1, "we have at least gtk version 2.10")
-else
-  HAVE_GTK_2_10="no"
 fi;
 
 AC_DEFINE(USE_GTK,1,[Enable GTK in libwaveform])
@@ -214,6 +207,13 @@ else
 	enable_mysql="no"
 fi
 AM_CONDITIONAL(ENABLE_MYSQL, test "$enable_mysql" = "yes")
+
+dnl This test is used to determine whether to use API
+dnl that is removed in mysql version 8.
+dnl It is currently always set because it is hopefully
+dnl safe to do so.
+HAVE_MYSQL_8="yes"
+AC_DEFINE(HAVE_MYSQL_8, 1, [We have at least mysql version 8])
 
 dnl -----------------------------------------------------------------------------
 

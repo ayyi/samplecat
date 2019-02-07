@@ -168,7 +168,13 @@ mysql__connect()
 		}
 	}
 	dbg (1, "MySQL Client Version is %s", mysql_get_client_info());
+
+#ifdef HAVE_MYSQL_8
+	gboolean reconnect = true;
+	mysql_options(&mysql, MYSQL_OPT_RECONNECT, &reconnect);
+#else
 	mysql.reconnect = true;
+#endif
 
 	if(!mysql_real_connect(&mysql, config->host, config->user, config->pass, config->name, 0, NULL, 0)){
 		if(mysql_errno(&mysql) == CR_CONNECTION_ERROR){
