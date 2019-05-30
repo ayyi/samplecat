@@ -7360,7 +7360,7 @@ rotator_row_deleted (GtkTreeModel* model, GtkTreePath* path, gpointer data)
 			if(sa->sample == sample){
 				dbg(0, "   found!");
 				_r->actors = g_list_remove(_r->actors, sa);
-				wf_canvas_remove_actor(wfc, sa->actor);
+				agl_actor__remove_child((AGlActor*)_r->scene, (AGlActor*)sa->actor);
 				g_free(sa);
 				break;
 			}
@@ -7372,7 +7372,7 @@ rotator_row_deleted (GtkTreeModel* model, GtkTreePath* path, gpointer data)
 		GList* l = _r->actors;
 		for(;l;l=l->next){
 			SampleActor* sa = l->data;
-			wf_canvas_remove_actor(wfc, sa->actor);
+			agl_actor__remove_child((AGlActor*)_r->scene, (AGlActor*)sa->actor);
 			g_free(sa);
 		}
 		g_list_free0(_r->actors);
