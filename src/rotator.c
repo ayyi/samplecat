@@ -153,8 +153,8 @@ enum {
 
 /* object signals */
 static void     rotator_finalize             (GObject*);
-static void     rotator_set_property         (GObject*, guint            prop_id, const GValue    *value, GParamSpec      *pspec);
-static void     rotator_get_property         (GObject*, guint            prop_id, GValue          *value, GParamSpec      *pspec);
+static void     rotator_set_property         (GObject*, guint prop_id, const GValue*, GParamSpec*);
+static void     rotator_get_property         (GObject*, guint prop_id, GValue*, GParamSpec*);
 
 /* gtkobject signals */
 static void     rotator_destroy              (GtkObject*);
@@ -183,29 +183,29 @@ static gboolean rotator_grab_broken          (GtkWidget*, GdkEventGrabBroken *ev
 static gboolean rotator_configure            (GtkWidget*, GdkEventConfigure *event);
 #endif
 
-static void     rotator_set_focus_child      (GtkContainer     *container, GtkWidget        *child);
-static gint     rotator_focus_out            (GtkWidget        *widget, GdkEventFocus    *event);
-static gint     rotator_focus                (GtkWidget        *widget, GtkDirectionType  direction);
-static void     rotator_grab_focus           (GtkWidget        *widget);
-static void     rotator_style_set            (GtkWidget        *widget, GtkStyle         *previous_style);
-static void     rotator_grab_notify          (GtkWidget        *widget, gboolean          was_grabbed);
-static void     rotator_state_changed        (GtkWidget        *widget, GtkStateType      previous_state);
+static void     rotator_set_focus_child      (GtkContainer*, GtkWidget* child);
+static gint     rotator_focus_out            (GtkWidget*, GdkEventFocus*);
+static gint     rotator_focus                (GtkWidget*, GtkDirectionType);
+static void     rotator_grab_focus           (GtkWidget*);
+static void     rotator_style_set            (GtkWidget*, GtkStyle* previous_style);
+static void     rotator_grab_notify          (GtkWidget*, gboolean was_grabbed);
+static void     rotator_state_changed        (GtkWidget*, GtkStateType previous_state);
 
 /* container signals */
-static void     rotator_remove               (GtkContainer     *container, GtkWidget        *widget);
-static void     rotator_forall               (GtkContainer     *container, gboolean          include_internals, GtkCallback       callback, gpointer          callback_data);
+static void     rotator_remove               (GtkContainer*, GtkWidget*);
+static void     rotator_forall               (GtkContainer*, gboolean include_internals, GtkCallback, gpointer);
 
 /* Source side drag signals */
-static void rotator_drag_begin       (GtkWidget        *widget, GdkDragContext   *context);
-static void rotator_drag_end         (GtkWidget        *widget, GdkDragContext   *context);
-static void rotator_drag_data_get    (GtkWidget        *widget, GdkDragContext   *context, GtkSelectionData *selection_data, guint             info, guint             time);
-static void rotator_drag_data_delete (GtkWidget        *widget, GdkDragContext   *context);
+static void rotator_drag_begin               (GtkWidget*, GdkDragContext*);
+static void rotator_drag_end                 (GtkWidget*, GdkDragContext*);
+static void rotator_drag_data_get            (GtkWidget*, GdkDragContext*, GtkSelectionData*, guint info, guint time);
+static void rotator_drag_data_delete         (GtkWidget*, GdkDragContext*);
 
 /* Target side drag signals */
-static void     rotator_drag_leave         (GtkWidget        *widget, GdkDragContext   *context, guint             time);
-static gboolean rotator_drag_motion        (GtkWidget        *widget, GdkDragContext   *context, gint              x, gint              y, guint             time);
-static gboolean rotator_drag_drop          (GtkWidget        *widget, GdkDragContext   *context, gint              x, gint              y, guint             time);
-static void     rotator_drag_data_received (GtkWidget        *widget, GdkDragContext   *context, gint              x, gint              y, GtkSelectionData *selection_data, guint             info, guint             time);
+static void     rotator_drag_leave           (GtkWidget*, GdkDragContext*, guint time);
+static gboolean rotator_drag_motion          (GtkWidget*, GdkDragContext*, gint x, gint y, guint time);
+static gboolean rotator_drag_drop            (GtkWidget*, GdkDragContext*, gint x, gint y, guint time);
+static void     rotator_drag_data_received   (GtkWidget*, GdkDragContext*, gint x, gint y, GtkSelectionData*, guint info, guint time);
 
 /* tree_model signals */
 static void rotator_set_adjustments                 (Rotator     *tree_view, GtkAdjustment   *hadj, GtkAdjustment   *vadj);
@@ -224,19 +224,19 @@ static void rotator_row_changed                     (GtkTreeModel*, GtkTreePath*
 static void rotator_row_inserted                    (GtkTreeModel*, GtkTreePath*, GtkTreeIter*, gpointer);
 static void rotator_row_deleted                     (GtkTreeModel*, GtkTreePath*, gpointer);
 #if 0
-static void rotator_row_has_child_toggled           (GtkTreeModel*, GtkTreePath*, GtkTreeIter     *iter, gpointer         data);
-static void rotator_rows_reordered                  (GtkTreeModel*, GtkTreePath*, GtkTreeIter     *iter, gint            *new_order, gpointer         data);
+static void rotator_row_has_child_toggled           (GtkTreeModel*, GtkTreePath*, GtkTreeIter*, gpointer);
+static void rotator_rows_reordered                  (GtkTreeModel*, GtkTreePath*, GtkTreeIter*, gint* new_order, gpointer);
 
 /* Incremental reflow */
-static gboolean validate_row                (Rotator*, GtkRBTree   *tree, GtkRBNode   *node, GtkTreeIter *iter, GtkTreePath *path);
+static gboolean validate_row                (Rotator*, GtkRBTree*, GtkRBNode*, GtkTreeIter*, GtkTreePath*);
 static void     validate_visible_area       (Rotator*);
 static gboolean validate_rows_handler       (Rotator*);
-static gboolean do_validate_rows            (Rotator*, gboolean     size_request);
+static gboolean do_validate_rows            (Rotator*, gboolean size_request);
 static gboolean validate_rows               (Rotator*);
 static gboolean presize_handler_callback    (gpointer);
 static void     install_presize_handler     (Rotator *tree_view);
 static void     install_scroll_sync_handler (Rotator *tree_view);
-static void     rotator_set_top_row         (Rotator *tree_view, GtkTreePath *path, gint         offset);
+static void     rotator_set_top_row         (Rotator *tree_view, GtkTreePath*, gint offset);
 static void     rotator_top_row_to_dy       (Rotator *tree_view);
 static void     invalidate_empty_focus      (Rotator *tree_view);
 
@@ -248,24 +248,24 @@ static void     rotator_queue_draw_path                (Rotator        *tree_vie
 static void     rotator_queue_draw_arrow               (Rotator        *tree_view, GtkRBTree          *tree, GtkRBNode          *node, const GdkRectangle *clip_rect);
 static void     rotator_draw_arrow                     (Rotator        *tree_view, GtkRBTree          *tree, GtkRBNode          *node, gint                x, gint                y);
 static void     rotator_get_arrow_xrange               (Rotator        *tree_view, GtkRBTree          *tree, gint               *x1, gint               *x2);
-static gint     rotator_new_column_width               (Rotator        *tree_view, gint                i, gint               *x);
-static void     rotator_adjustment_changed             (GtkAdjustment      *adjustment, Rotator        *tree_view);
-static void     rotator_build_tree                     (Rotator        *tree_view, GtkRBTree          *tree, GtkTreeIter        *iter, gint                depth, gboolean            recurse);
-static gboolean rotator_discover_dirty_iter            (Rotator        *tree_view, GtkTreeIter        *iter, gint                depth, gint               *height, GtkRBNode          *node);
-static void     rotator_discover_dirty                 (Rotator        *tree_view, GtkRBTree          *tree, GtkTreeIter        *iter, gint                depth);
-static void     rotator_clamp_node_visible             (Rotator        *tree_view, GtkRBTree          *tree, GtkRBNode          *node);
-static void     rotator_clamp_column_visible           (Rotator        *tree_view, RotatorColumn  *column, gboolean            focus_to_cell);
-static gboolean rotator_maybe_begin_dragging_row       (Rotator        *tree_view, GdkEventMotion     *event);
-static void     rotator_focus_to_cursor                (Rotator        *tree_view);
-static void     rotator_move_cursor_up_down            (Rotator        *tree_view, gint                count);
-static void     rotator_move_cursor_page_up_down       (Rotator        *tree_view, gint                count);
-static void     rotator_move_cursor_left_right         (Rotator        *tree_view, gint                count);
-static void     rotator_move_cursor_start_end          (Rotator        *tree_view, gint                count);
-static gboolean rotator_real_collapse_row              (Rotator        *tree_view, GtkTreePath        *path, GtkRBTree          *tree, GtkRBNode          *node, gboolean            animate);
-static gboolean rotator_real_expand_row                (Rotator        *tree_view, GtkTreePath        *path, GtkRBTree          *tree, GtkRBNode          *node, gboolean            open_all, gboolean            animate);
-static void     rotator_real_set_cursor                (Rotator        *tree_view, GtkTreePath        *path, gboolean            clear_and_select, gboolean            clamp_node);
-static gboolean rotator_has_special_cell               (Rotator        *tree_view);
-static void     column_sizing_notify                         (GObject            *object, GParamSpec         *pspec, gpointer            data);
+static gint     rotator_new_column_width               (Rotator        *tree_view, gint i, gint *x);
+static void     rotator_adjustment_changed             (GtkAdjustment*, Rotator        *tree_view);
+static void     rotator_build_tree                     (Rotator*, GtkRBTree          *tree, GtkTreeIter        *iter, gint                depth, gboolean            recurse);
+static gboolean rotator_discover_dirty_iter            (Rotator*, GtkTreeIter        *iter, gint                depth, gint               *height, GtkRBNode          *node);
+static void     rotator_discover_dirty                 (Rotator*, GtkRBTree          *tree, GtkTreeIter        *iter, gint                depth);
+static void     rotator_clamp_node_visible             (Rotator*, GtkRBTree          *tree, GtkRBNode          *node);
+static void     rotator_clamp_column_visible           (Rotator*, RotatorColumn  *column, gboolean            focus_to_cell);
+static gboolean rotator_maybe_begin_dragging_row       (Rotator*, GdkEventMotion     *event);
+static void     rotator_focus_to_cursor                (Rotator*);
+static void     rotator_move_cursor_up_down            (Rotator*, gint count);
+static void     rotator_move_cursor_page_up_down       (Rotator*, gint count);
+static void     rotator_move_cursor_left_right         (Rotator*, gint count);
+static void     rotator_move_cursor_start_end          (Rotator*, gint count);
+static gboolean rotator_real_collapse_row              (Rotator*, GtkTreePath*, GtkRBTree          *tree, GtkRBNode          *node, gboolean            animate);
+static gboolean rotator_real_expand_row                (Rotator*, GtkTreePath*, GtkRBTree          *tree, GtkRBNode          *node, gboolean            open_all, gboolean            animate);
+static void     rotator_real_set_cursor                (Rotator*, GtkTreePath*, gboolean            clear_and_select, gboolean            clamp_node);
+static gboolean rotator_has_special_cell               (Rotator*);
+static void     column_sizing_notify                   (GObject*, GParamSpec*, gpointer);
 static gboolean expand_collapse_timeout                      (gpointer            data);
 static void     add_expand_collapse_timeout                  (Rotator        *tree_view,
                                                               GtkRBTree          *tree,
@@ -283,17 +283,17 @@ static void     rotator_search_disable_popdown    (GtkEntry         *entry, GtkM
 static void     rotator_search_preedit_changed    (GtkIMContext     *im_context, Rotator      *tree_view);
 static void     rotator_search_activate           (GtkEntry         *entry, Rotator      *tree_view);
 static gboolean rotator_real_search_enable_popdown(gpointer          data);
-static void     rotator_search_enable_popdown     (GtkWidget        *widget, gpointer          data);
-static gboolean rotator_search_delete_event       (GtkWidget        *widget, GdkEventAny      *event, Rotator      *tree_view);
-static gboolean rotator_search_scroll_event       (GtkWidget        *entry, GdkEventScroll   *event, Rotator      *tree_view);
-static gboolean rotator_search_key_press_event    (GtkWidget        *entry, GdkEventKey      *event, Rotator      *tree_view);
-static gboolean rotator_search_move               (GtkWidget        *window, Rotator      *tree_view, gboolean          up);
-static gboolean rotator_search_equal_func         (GtkTreeModel     *model, gint              column, const gchar      *key, GtkTreeIter      *iter, gpointer          search_data);
-static gboolean rotator_search_iter               (GtkTreeModel     *model, GtkTreeSelection *selection, GtkTreeIter      *iter, const gchar      *text, gint             *count, gint              n);
+static void     rotator_search_enable_popdown     (GtkWidget*, gpointer          data);
+static gboolean rotator_search_delete_event       (GtkWidget*, GdkEventAny *event, Rotator *tree_view);
+static gboolean rotator_search_scroll_event       (GtkWidget*, GdkEventScroll *event, Rotator *tree_view);
+static gboolean rotator_search_key_press_event    (GtkWidget*, GdkEventKey *event, Rotator *tree_view);
+static gboolean rotator_search_move               (GtkWidget*, Rotator*, gboolean up);
+static gboolean rotator_search_equal_func         (GtkTreeModel*, gint column, const gchar *key, GtkTreeIter *iter, gpointer          search_data);
+static gboolean rotator_search_iter               (GtkTreeModel*, GtkTreeSelection *selection, GtkTreeIter *iter, const gchar      *text, gint             *count, gint              n);
 static void     rotator_search_init               (GtkWidget        *entry, Rotator      *tree_view);
-static void     rotator_put                       (Rotator      *tree_view, GtkWidget        *child_widget, gint              x, gint              y, gint              width, gint              height);
-static gboolean rotator_start_editing             (Rotator      *tree_view, GtkTreePath      *cursor_path);
-static void     rotator_real_start_editing        (Rotator       *tree_view, RotatorColumn *column, GtkTreePath       *path, GtkCellEditable   *cell_editable, GdkRectangle      *cell_area, GdkEvent          *event, guint              flags);
+static void     rotator_put                       (Rotator*, GtkWidget* child_widget, gint x, gint y, gint width, gint height);
+static gboolean rotator_start_editing             (Rotator*, GtkTreePath* cursor);
+static void     rotator_real_start_editing        (Rotator*, RotatorColumn*, GtkTreePath*, GtkCellEditable   *cell_editable, GdkRectangle      *cell_area, GdkEvent          *event, guint              flags);
 static void     rotator_stop_editing                  (Rotator*, gboolean cancel_editing);
 static gboolean rotator_real_start_interactive_search (Rotator*, gboolean keybinding);
 static gboolean rotator_start_interactive_search      (Rotator*);
@@ -323,13 +323,9 @@ typedef struct
 	WaveformActor* actor;
 } SampleActor;
 
-#define GL_WIDTH 256.0
-#define GL_HEIGHT 256.0
-#define HBORDER 5.0
-#define VBORDER 5.0
 static void on_canvas_realise        (GtkWidget*, gpointer);
 static void on_allocate              (GtkWidget*, GtkAllocation*, gpointer);
-static void rotator_setup_projection (GtkWidget*);
+static void rotator_setup_projection (AGlActor*);
 static void start_zoom               (Rotator*, float target_zoom);
 static void set_position             (WaveformActor*, int j);
 
@@ -337,8 +333,6 @@ float rotate[3] = {30.0, 30.0, 30.0};
 float isometric_rotation[3] = {35.264f, 45.0f, 0.0f};
 GdkGLConfig*     glconfig       = NULL;
 static gboolean  gl_initialised = false;
-WaveformContext* wfc            = NULL;
-Waveform*        w1             = NULL;
 float            dz             = 20.0;
 float            zoom           = 1.0;
 
@@ -348,12 +342,11 @@ struct _RotatorPrivate
 	GtkTreeModel* model;
 
 	GList*          actors;       // SampleActor*
-	GList*          pending_rows; //added but empty
+	GList*          pending_rows; // added but empty
 
-	GdkGLDrawable*  gl_drawable;
-	GdkGLContext*   gl_context;
+	AGlScene*        scene;
+	WaveformContext* wfc;
 
-	AGlScene*       scene;
 #if 0
   guint flags;
   /* tree information */
@@ -532,9 +525,6 @@ struct _RotatorPrivate
   RotatorGridLines grid_lines;
   GdkGC *grid_line_gc;
 
-  gboolean tree_lines_enabled;
-  GdkGC *tree_line_gc;
-
   gint tooltip_column;
 
   gint last_extra_space;
@@ -543,14 +533,17 @@ struct _RotatorPrivate
 #endif
 };
 
+
 
 
 /* GType Methods
  */
 
 G_DEFINE_TYPE_WITH_CODE (Rotator, rotator, GTK_TYPE_CONTAINER,
-			 G_IMPLEMENT_INTERFACE (GTK_TYPE_BUILDABLE,
-						rotator_buildable_init))
+	G_ADD_PRIVATE (Rotator)
+	G_IMPLEMENT_INTERFACE (GTK_TYPE_BUILDABLE, rotator_buildable_init)
+)
+
 
 static void
 rotator_class_init (RotatorClass* class)
@@ -1377,8 +1370,6 @@ rotator_class_init (RotatorClass* class)
 
   gtk_binding_entry_add_signal (binding_set, GDK_F, GDK_CONTROL_MASK, "start-interactive-search", 0);
 #endif
-
-  g_type_class_add_private (o_class, sizeof (RotatorPrivate));
 }
 
 static void
@@ -1393,9 +1384,8 @@ static gboolean
 __init (Rotator* tree_view)
 {
 	dbg(2, "...");
-	RotatorPrivate* _r = tree_view->priv;
 
-	if(!_r->gl_context){
+	{
 		gtk_gl_init(NULL, NULL);
 		if(wf_debug){
 			gint major, minor;
@@ -1408,8 +1398,10 @@ __init (Rotator* tree_view)
 		}
 	}
 
-	glconfig = gdk_gl_config_new_by_mode( GDK_GL_MODE_RGBA | GDK_GL_MODE_DEPTH | GDK_GL_MODE_DOUBLE );
-	if (!glconfig) { gerr ("Cannot initialise gtkglext."); return false; }
+	if(!(glconfig = gdk_gl_config_new_by_mode(GDK_GL_MODE_RGBA | GDK_GL_MODE_DEPTH | GDK_GL_MODE_DOUBLE))){
+		gerr ("Cannot initialise gtkglext.");
+		return false;
+	}
 
 	return true;
 }
@@ -1420,7 +1412,7 @@ rotator_init (Rotator* tree_view)
 {
 	GtkWidget* widget = (GtkWidget*)tree_view;
 
-	/*RotatorPrivate* _r = */tree_view->priv = G_TYPE_INSTANCE_GET_PRIVATE (tree_view, GTK_TYPE_ROTATOR, RotatorPrivate);
+	RotatorPrivate* _r = tree_view->priv = rotator_get_instance_private(tree_view);
 
 	GTK_WIDGET_SET_FLAGS (tree_view, GTK_CAN_FOCUS);
 
@@ -1474,20 +1466,45 @@ rotator_init (Rotator* tree_view)
 #endif
 
 	g_return_if_fail(glconfig || __init(tree_view));
-#if 0
-	if(!gtk_widget_set_gl_capability((GtkWidget*)widget, glconfig, _r->gl_context, 1, GDK_GL_RGBA_TYPE)){
-		gwarn("failed to set gl capability");
-	}
-#else
 	gtk_widget_set_gl_capability((GtkWidget*)widget, glconfig, agl_get_gl_context(), 1, GDK_GL_RGBA_TYPE);
-#endif
 
-	void rotator_on_selection_change(SamplecatModel* m, Sample* sample, gpointer user_data)
+	_r->wfc = wf_context_new(_r->scene = (AGlScene*)agl_actor__new_root(widget));
+
+	_r->scene->user_data = widget;
+
+	GList* g_list_move_to_front(GList* list, GList* front)
 	{
-		PF0;
+		if(!front || !front->prev) return list;
+
+		GList* prev = front->prev;
+		prev->next = NULL;
+		front->prev = NULL;
+
+		return g_list_concat(front, list);
 	}
 
-	g_signal_connect((gpointer)samplecat.model, "selection-changed", G_CALLBACK(rotator_on_selection_change), NULL);
+	void rotator_on_selection_change(SamplecatModel* m, Sample* sample, gpointer _rotator)
+	{
+		PF;
+		Rotator* r = _rotator;
+		RotatorPrivate* _r = r->priv;
+
+		int compare (gconstpointer item, gconstpointer sample)
+		{
+			const SampleActor* sa = item;
+			if(sa->sample == sample) return 0; else return 1;
+		}
+
+		GList* front = g_list_find_custom(_r->actors, sample, compare);
+		_r->actors = g_list_move_to_front(_r->actors, front);
+
+		int i = 0;
+		for(GList* l=_r->actors;l;i++,l=l->next){
+			wf_actor_set_z (((SampleActor*)l->data)->actor, -i * dz);
+		}
+	}
+
+	g_signal_connect((gpointer)samplecat.model, "selection-changed", G_CALLBACK(rotator_on_selection_change), tree_view);
 }
 
 
@@ -1877,6 +1894,9 @@ rotator_map (GtkWidget *widget)
 static void
 _add_by_iter(Rotator* tree_view, GtkTreeIter* iter)
 {
+	static int i = 0;
+	static uint32_t colours[] = {0x66eeffff, 0xffff00ff, 0xff9933ff, 0x66ff66ff, 0xccccccff, 0x0000ffff};
+
 	RotatorPrivate* _r = tree_view->priv;
 
 	Sample* sample = samplecat_list_store_get_sample_by_iter(iter);
@@ -1884,29 +1904,31 @@ _add_by_iter(Rotator* tree_view, GtkTreeIter* iter)
 	if(!sample->online) return;
 
 	Waveform* w = waveform_load_new(sample->full_path);
-if(waveform_get_n_frames(w) < 31000) return;
-	dbg(0, "  %s %i", sample->name, waveform_get_n_frames(w));
-	WaveformActor* a = wf_canvas_add_new_actor(wfc, w);
-	SampleActor* sa = g_new0(SampleActor, 1);
-	sa->sample = sample;
-	sa->actor = a;
-	_r->actors = g_list_append(_r->actors, sa);
-
 	int n_frames = waveform_get_n_frames(w);
-	WfSampleRegion region = {0, n_frames};
-	uint32_t colours[2] = {0x66eeffff, 0x0000ffff}; // blue
+	dbg(0, "  %s %i", sample->name, n_frames);
+	WaveformActor* a = wf_canvas_add_new_actor(_r->wfc, w);
+	if(a){
+		agl_actor__add_child((AGlActor*)_r->scene, (AGlActor*)a);
 
-	wf_actor_set_region (a, &region); //TODO just use default?
-	wf_actor_set_colour (a, colours[0]);
-	wf_actor_set_z      (a, g_list_length(_r->actors) * dz);
-	sample_unref(sample);
+		_r->actors = g_list_append(_r->actors, (SampleActor*)AGL_NEW(SampleActor,
+			.sample = sample,
+			.actor = a
+		));
+
+		WfSampleRegion region = {0, n_frames};
+
+		wf_actor_set_region (a, &region); // TODO why needed? why doesnt it have a default?
+		wf_actor_set_colour (a, colours[i++ % G_N_ELEMENTS(colours)]);
+
+		sample_unref(sample);
+	}
 
 	start_zoom(tree_view, zoom);
 }
 
 
 static void
-_add_all(Rotator* rotator)
+_add_all (Rotator* rotator)
 {
 	GtkTreeIter iter;
 	if(gtk_tree_model_get_iter_first(rotator->priv->model, &iter)){
@@ -1925,19 +1947,19 @@ rotator_realize (GtkWidget* widget)
 	GTK_WIDGET_SET_FLAGS (widget, GTK_REALIZED);
 
 	/* Make the main, clipping window */
-	GdkWindowAttr attributes;
-	gint attributes_mask;
-	attributes.window_type = GDK_WINDOW_CHILD;
-	attributes.x = widget->allocation.x;
-	attributes.y = widget->allocation.y;
-	attributes.width = widget->allocation.width;
-	attributes.height = widget->allocation.height;
-	attributes.wclass = GDK_INPUT_OUTPUT;
-	attributes.visual = gtk_widget_get_visual (widget);
-	attributes.colormap = gtk_widget_get_colormap (widget);
-	attributes.event_mask = (GDK_VISIBILITY_NOTIFY_MASK | GDK_EXPOSURE_MASK | GDK_POINTER_MOTION_MASK | GDK_ENTER_NOTIFY_MASK | GDK_LEAVE_NOTIFY_MASK | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK | gtk_widget_get_events (widget));
+	GdkWindowAttr attributes = {
+		.window_type = GDK_WINDOW_CHILD,
+		.x = widget->allocation.x,
+		.y = widget->allocation.y,
+		.width = widget->allocation.width,
+		.height = widget->allocation.height,
+		.wclass = GDK_INPUT_OUTPUT,
+		.visual = gtk_widget_get_visual (widget),
+		.colormap = gtk_widget_get_colormap (widget),
+		.event_mask = (GDK_VISIBILITY_NOTIFY_MASK | GDK_EXPOSURE_MASK | GDK_POINTER_MOTION_MASK | GDK_ENTER_NOTIFY_MASK | GDK_LEAVE_NOTIFY_MASK | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK | gtk_widget_get_events (widget))
+	};
 
-	attributes_mask = GDK_WA_X | GDK_WA_Y | GDK_WA_VISUAL | GDK_WA_COLORMAP;
+	gint attributes_mask = GDK_WA_X | GDK_WA_Y | GDK_WA_VISUAL | GDK_WA_COLORMAP;
 
 	widget->window = gdk_window_new (gtk_widget_get_parent_window (widget), &attributes, attributes_mask);
 	gdk_window_set_user_data (widget->window, widget);
@@ -1982,23 +2004,17 @@ rotator_realize (GtkWidget* widget)
 #ifdef HAVE_GTK_2_18
 	gtk_widget_set_can_focus(canvas, true);
 #endif
-	//gtk_widget_set_size_request  (canvas, 320, 128);
 
-	//g_signal_connect((gpointer)canvas, "realize", G_CALLBACK(on_canvas_realise), NULL);
 	gboolean waveform_view_load_new_on_idle(gpointer _view)
 	{
 		GtkWidget* view = _view;
 		Rotator* rotator = GTK_ROTATOR (view);
 		g_return_val_if_fail(view, G_SOURCE_REMOVE);
-		//if(!canvas_init_done){
-			//waveform_view_init_drawable(view);
-			on_canvas_realise(view, NULL);
-	//wf_debug = 1;
+		on_canvas_realise(view, NULL);
 
-			_add_all(rotator);
+		_add_all(rotator);
 
-			gtk_widget_queue_draw(view); //testing.
-		//}
+		gtk_widget_queue_draw(view); //testing.
 		return G_SOURCE_REMOVE;
 	}
 	g_idle_add(waveform_view_load_new_on_idle, widget);
@@ -2078,12 +2094,6 @@ rotator_unrealize (GtkWidget *widget)
       gdk_window_set_user_data (priv->drag_highlight_window, NULL);
       gdk_window_destroy (priv->drag_highlight_window);
       priv->drag_highlight_window = NULL;
-    }
-
-  if (priv->tree_line_gc)
-    {
-      g_object_unref (priv->tree_line_gc);
-      priv->tree_line_gc = NULL;
     }
 
   if (priv->grid_line_gc)
@@ -2484,22 +2494,19 @@ rotator_size_allocate_columns (GtkWidget *widget,
 static void
 rotator_size_allocate (GtkWidget* widget, GtkAllocation* allocation)
 {
-  //Rotatorxp *tree_view = GTK_ROTATOR (widget);
-  //gboolean width_changed = FALSE;
-  //gint old_width = widget->allocation.width;
+	Rotator* tree_view = GTK_ROTATOR (widget);
+	AGlActor* scene = (AGlActor*)tree_view->priv->scene;
 
-  //if (allocation->width != widget->allocation.width)
-  //  width_changed = TRUE;
+	widget->allocation = *allocation;
 
-  widget->allocation = *allocation;
-
-	//tmp_list = tree_view->priv->children;
+	scene->region = (AGliRegion){
+		.x2 = allocation->width,
+		.y2 = allocation->height
+	};
 
 	if (GTK_WIDGET_REALIZED (widget)){
 		gdk_window_move_resize (widget->window, allocation->x, allocation->y, allocation->width, allocation->height);
 	}
-
-	rotator_setup_projection(widget);
 
 #if 0
   if (tree_view->priv->tree == NULL)
@@ -2507,6 +2514,8 @@ rotator_size_allocate (GtkWidget* widget, GtkAllocation* allocation)
 #endif
 
 	if (GTK_WIDGET_REALIZED(widget)) gtk_widget_queue_draw (widget);
+
+	start_zoom(tree_view, zoom);
 }
 
 
@@ -2549,7 +2558,6 @@ row_is_separator (Rotator *tree_view,
 static gboolean
 rotator_button_press (GtkWidget* widget, GdkEventButton* event)
 {
-	PF0;
 #if 0
   Rotator *tree_view = GTK_ROTATOR (widget);
   GList *list;
@@ -4163,66 +4171,52 @@ draw_empty_focus (Rotator *tree_view, GdkRectangle *clip_area)
 
 
 static void
-draw(Rotator* rotator)
+draw (Rotator* rotator)
 {
 	RotatorPrivate* _r = rotator->priv;
 
-	glEnable(GL_BLEND); glEnable(GL_DEPTH_TEST); glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glEnable(GL_BLEND);
+	glEnable(GL_DEPTH_TEST); // is needed because?
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	//if the gl_context is shared, this must be done on every draw
-	rotator_setup_projection((GtkWidget*)rotator);
+	// If the gl_context is shared, this must be done on every draw
+	rotator_setup_projection((AGlActor*)_r->scene);
 
-	glPushMatrix(); /* modelview matrix */
-		//int i; for(i=0;i<G_N_ELEMENTS(a);i++){
-		GList* l = _r->actors;
-		for(;l;l=l->next){
-			//WaveformActor* actor = a[(i + a_front + 1) % G_N_ELEMENTS(a)];
+	glPushMatrix(); // modelview matrix
+	{
+		GList* l = g_list_last(_r->actors);
+		for(;l;l=l->prev){
 			SampleActor* sa = l->data;
 			AGlActor* actor = (AGlActor*)sa->actor;
-			actor->paint(actor);
+			agl_actor__paint(actor);
 		}
+	}
 	glPopMatrix();
 
-#undef SHOW_BOUNDING_BOX
-#ifdef SHOW_BOUNDING_BOX
-	wf_canvas_use_program(wfc, 0);
-	glPushMatrix(); /* modelview matrix */
-		glTranslatef(0.0, 0.0, 0.0);
-		glNormal3f(0, 0, 1);
-		glDisable(GL_TEXTURE_2D);
-		glDisable(GL_BLEND);
-		glLineWidth(1);
-
-		int w = 100;
-		int h = 100;
-		float x = 10.0;
-		float y = 10.0;
-		glBegin(GL_QUADS);
-		glVertex3f(x,     y,     1); glVertex3f(x + w, y,     1);
-		glVertex3f(x + w, y + h, 1); glVertex3f(x,     y + h, 1);
-		glEnd();
-		glEnable(GL_TEXTURE_2D);
-	glPopMatrix();
-#endif
+	glDisable(GL_DEPTH_TEST);
 }
 
 
 static gboolean
 rotator_expose (GtkWidget* widget, GdkEventExpose* event)
 {
-	PF0;
 	Rotator* tree_view = GTK_ROTATOR (widget);
 	RotatorPrivate* _r = tree_view->priv;
 
-	if(!gl_initialised) return true;
-
-	if(gdk_gl_drawable_make_current (_r->gl_drawable, _r->gl_context)) {
+	if (_r->scene && gdk_gl_drawable_make_current (_r->scene->gl.gdk.drawable, _r->scene->gl.gdk.context)) {
 		glClearColor(0.0, 0.0, 0.0, 1.0);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		draw((Rotator*)widget);
 
-		gdk_gl_drawable_swap_buffers(_r->gl_drawable);
+		glMatrixMode(GL_MODELVIEW);
+		glLoadIdentity();
+
+#ifdef USE_SYSTEM_GTKGLEXT
+		gdk_gl_drawable_swap_buffers(((AGlRootActor*)view->priv->root)->gl.gdk.drawable);
+#else
+		gdk_gl_window_swap_buffers(_r->scene->gl.gdk.drawable);
+#endif
 	}
 
 	return true;
@@ -6918,16 +6912,6 @@ rotator_style_set (GtkWidget *widget,
   GList *list;
   RotatorColumn *column;
 
-  if (GTK_WIDGET_REALIZED (widget))
-    {
-      gdk_window_set_back_pixmap (widget->window, NULL, FALSE);
-      gdk_window_set_background (tree_view->priv->bin_window, &widget->style->base[widget->state]);
-      gtk_style_set_background (widget->style, tree_view->priv->header_window, GTK_STATE_NORMAL);
-
-      rotator_set_grid_lines (tree_view, tree_view->priv->grid_lines);
-      rotator_set_enable_tree_lines (tree_view, tree_view->priv->tree_lines_enabled);
-    }
-
   gtk_widget_style_get (widget,
 			"expander-size", &tree_view->priv->expander_size,
 			NULL);
@@ -7206,11 +7190,12 @@ rotator_row_inserted (GtkTreeModel* model, GtkTreePath* path, GtkTreeIter* iter,
 {
 	PF0;
 	Rotator* tree_view = (Rotator*)data;
+	RotatorPrivate* _r = tree_view->priv;
 	gboolean free_path = false;
 
 	g_return_if_fail (path || iter);
 
-	if(!wfc) return; //cannot add until the canvas is fully created.
+	if(!_r->wfc) return; //cannot add until the canvas is fully created.
 
 	if (!path) {
 		path = gtk_tree_model_get_path (model, iter);
@@ -13989,92 +13974,6 @@ rotator_set_grid_lines (Rotator           *tree_view,
 }
 
 /**
- * rotator_get_enable_tree_lines:
- * @tree_view: a #Rotator.
- *
- * Returns whether or not tree lines are drawn in @tree_view.
- *
- * Return value: %TRUE if tree lines are drawn in @tree_view, %FALSE
- * otherwise.
- *
- * Since: 2.10
- */
-gboolean
-rotator_get_enable_tree_lines (Rotator *tree_view)
-{
-  g_return_val_if_fail (GTK_IS_ROTATOR (tree_view), FALSE);
-
-  return tree_view->priv->tree_lines_enabled;
-}
-
-/**
- * rotator_set_enable_tree_lines:
- * @tree_view: a #Rotator
- * @enabled: %TRUE to enable tree line drawing, %FALSE otherwise.
- *
- * Sets whether to draw lines interconnecting the expanders in @tree_view.
- * This does not have any visible effects for lists.
- *
- * Since: 2.10
- */
-void
-rotator_set_enable_tree_lines (Rotator *tree_view,
-				     gboolean     enabled)
-{
-  RotatorPrivate *priv;
-  GtkWidget *widget;
-  gboolean was_enabled;
-
-  g_return_if_fail (GTK_IS_ROTATOR (tree_view));
-
-  enabled = enabled != FALSE;
-
-  priv = tree_view->priv;
-  widget = GTK_WIDGET (tree_view);
-
-  was_enabled = priv->tree_lines_enabled;
-
-  priv->tree_lines_enabled = enabled;
-
-  if (GTK_WIDGET_REALIZED (widget))
-    {
-      if (!enabled && priv->tree_line_gc)
-	{
-	  g_object_unref (priv->tree_line_gc);
-	  priv->tree_line_gc = NULL;
-	}
-      
-      if (enabled && !priv->tree_line_gc)
-	{
-	  gint line_width;
-	  gint8 *dash_list;
-	  gtk_widget_style_get (widget,
-				"tree-line-width", &line_width,
-				"tree-line-pattern", (gchar *)&dash_list,
-				NULL);
-	  
-	  priv->tree_line_gc = gdk_gc_new (widget->window);
-	  gdk_gc_copy (priv->tree_line_gc, widget->style->black_gc);
-	  
-	  gdk_gc_set_line_attributes (priv->tree_line_gc, line_width,
-				      GDK_LINE_ON_OFF_DASH,
-				      GDK_CAP_BUTT, GDK_JOIN_MITER);
-	  gdk_gc_set_dashes (priv->tree_line_gc, 0, dash_list, 2);
-
-	  g_free (dash_list);
-	}
-    }
-
-  if (was_enabled != enabled)
-    {
-      gtk_widget_queue_draw (GTK_WIDGET (tree_view));
-
-      g_object_notify (G_OBJECT (tree_view), "enable-tree-lines");
-    }
-}
-
-
-/**
  * rotator_set_show_expanders:
  * @tree_view: a #Rotator
  * @enabled: %TRUE to enable expander drawing, %FALSE otherwise.
@@ -14488,58 +14387,26 @@ rotator_get_tooltip_column (Rotator *tree_view)
 
 static gboolean canvas_init_done = false;
 static void
-on_canvas_realise(GtkWidget* _canvas, gpointer user_data)
+on_canvas_realise (GtkWidget* widget, gpointer user_data)
 {
 	PF;
-	RotatorPrivate* _r = ((Rotator*)_canvas)->priv;
+	RotatorPrivate* _r = ((Rotator*)widget)->priv;
 	if(canvas_init_done) return;
-	if(!GTK_WIDGET_REALIZED (_canvas)) return;
-
-	_r->gl_drawable = gtk_widget_get_gl_drawable(_canvas);
-	/*GdkGLContext* context = */_r->gl_context = agl_get_gl_context();
-	//_r->gl_context  = gtk_widget_get_gl_context(_canvas);
+	if(!GTK_WIDGET_REALIZED (widget)) return;
 
 	gl_initialised = true;
 
-	wfc = wf_context_new(_r->scene = (AGlScene*)agl_actor__new_root(_canvas));
-	_r->scene->user_data = _canvas;
+	((AGlActor*)_r->scene)->region = ((AGlActor*)_r->scene)->scrollable = (AGliRegion){
+		.x2 = widget->allocation.width,
+		.y2 = widget->allocation.height
+	};
 
 	canvas_init_done = true;
 
-#if 0
-	char* filename = g_build_filename(g_get_current_dir(), "test/data/mono_1.wav", NULL);
-	w1 = waveform_load_new(filename);
-	g_free(filename);
+	on_allocate(widget, &widget->allocation, user_data);
 
-	int n_frames = waveform_get_n_frames(w1);
-
-	WfSampleRegion region[] = {
-		{0,            n_frames    },
-		{0,            n_frames / 2},
-		{n_frames / 4, n_frames / 4},
-		{n_frames / 2, n_frames / 2},
-	};
-
-	uint32_t colours[4][2] = {
-		{0x66eeffff, 0x0000ffff}, // blue
-		{0xffffff77, 0x0000ffff}, // grey
-		{0xffdd66ff, 0x0000ffff}, // orange
-		{0x66ff66ff, 0x0000ffff}, // green
-	};
-
-	int i; for(i=0;i<G_N_ELEMENTS(a);i++){
-		a[i] = wf_canvas_add_new_actor(wfc, w1);
-
-		wf_actor_set_region (a[i], &region[i]);
-		wf_actor_set_colour (a[i], colours[i][0], colours[i][1]);
-		wf_actor_set_z      (a[i], i * dz);
-	}
-#endif
-
-	on_allocate(_canvas, &_canvas->allocation, user_data);
-
-	//allow the WaveformCanvas to initiate redraws
-	void _on_scene_requests_redraw(AGlScene* wfc, gpointer __canvas)
+	// Allow the WaveformCanvas to initiate redraws
+	void _on_scene_requests_redraw (AGlScene* wfc, gpointer __canvas)
 	{
 		gdk_window_invalidate_rect(((GtkWidget*)__canvas)->window, NULL, false);
 	}
@@ -14548,32 +14415,34 @@ on_canvas_realise(GtkWidget* _canvas, gpointer user_data)
 
 
 static void
-on_allocate(GtkWidget* widget, GtkAllocation* allocation, gpointer user_data)
+on_allocate (GtkWidget* widget, GtkAllocation* allocation, gpointer user_data)
 {
 	if(!gl_initialised) return;
-
-	rotator_setup_projection(widget);
 
 	start_zoom((Rotator*)widget, zoom);
 }
 
 
 static void
-rotator_setup_projection(GtkWidget* widget)
+rotator_setup_projection (AGlActor* scene)
 {
+	if(!scene) return;
+
 	int vx = 0;
 	int vy = 0;
-	int vw = widget->allocation.width;
-	int vh = widget->allocation.height;
+	int vw = scene->region.x2;
+	int vh = scene->region.y2;
 	glViewport(vx, vy, vw, vh);
-	dbg (0, "viewport: %i %i %i %i", vx, vy, vw, vh);
+
+	dbg (1, "viewport: %i %i %i %i", vx, vy, vw, vh);
+
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 
-	double left = -HBORDER;
-	double right = GL_WIDTH + HBORDER;
-	double bottom = GL_HEIGHT + VBORDER;
-	double top = -VBORDER;
+	double left = 0;
+	double right = scene->region.x2;
+	double bottom = scene->region.y2;
+	double top = 0;
 	glOrtho (left, right, bottom, top, 512.0, -512.0);
 
 	glMatrixMode(GL_MODELVIEW);
@@ -14585,38 +14454,37 @@ rotator_setup_projection(GtkWidget* widget)
 
 
 static void
-start_zoom(Rotator* tree_view, float target_zoom)
+start_zoom (Rotator* tree_view, float target_zoom)
 {
-	//when zooming in, the Region is preserved so the box gets bigger. Drawing is clipped by the Viewport.
+	// When zooming in, the Region is preserved so the box gets bigger. Drawing is clipped by the Viewport.
 
 	PF0;
-	//RotatorPrivate* _r = tree_view->priv;
 	zoom = MAX(0.1, target_zoom);
 
-//if(gdk_gl_drawable_gl_begin (_r->gl_drawable, _r->gl_context)) {
-//printf("[[[\n");
 	int i = 0;
 	GList* l = tree_view->priv->actors;
 	for(;l;l=l->next){
 		set_position(((SampleActor*)l->data)->actor, i);
 		i++;
 	}
-//	gdk_gl_drawable_gl_end(_r->gl_drawable);
-//printf("]]]\n");
-//}
 }
 
 
 static void
-set_position(WaveformActor* actor, int j)
+set_position (WaveformActor* actor, int j)
 {
 	#define Y_FACTOR 0.0f //0.5f //currently set to zero to simplify changing stack order
 
+	float width = ((AGlActor*)actor)->parent->region.x2;
+	float height = ((AGlActor*)actor)->parent->region.y2;
+
+	int h = height / 4;
+
 	if(actor) wf_actor_set_rect(actor, &(WfRectangle){
-		40.0,
-		((float)j) * GL_HEIGHT * Y_FACTOR / 4 + 10.0f,
-		GL_WIDTH * zoom,
-		GL_HEIGHT / 4 * 0.95
+		20.0,
+		height - h + ((float)j) * height * Y_FACTOR / 4 - 10.0f - 0.25 * width,
+		width * zoom,
+		h
 	});
 }
 

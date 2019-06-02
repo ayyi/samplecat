@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2018 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2019 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -125,6 +125,8 @@ struct _window {
 #endif
 } window = {0,};
 
+#undef ROTATOR
+
 typedef enum {
    PANEL_TYPE_LIBRARY,
    PANEL_TYPE_SEARCH,
@@ -139,6 +141,9 @@ typedef enum {
 #ifdef HAVE_FFTW3
    PANEL_TYPE_SPECTROGRAM,
 #endif
+#ifdef ROTATOR
+   PANEL_TYPE_ROTATOR,
+#endif
    PANEL_TYPE_MAX
 } PanelType;
 
@@ -151,8 +156,14 @@ static NewPanelFn
 	spectrogram_new, search_new, filters_new, make_fileview_pane;
 extern NewPanelFn dir_panel_new;
 
+GtkWidget*
+_rotator_new ()
+{
+	return rotator_new_with_model(GTK_TREE_MODEL(samplecat.store));
+}
+
 typedef struct {
-   char        name[16];
+   char*       name;
    NewPanelFn* new;
    GtkWidget*  widget;
    GtkWidget*  dock_item;
@@ -174,6 +185,9 @@ Panel_ panels[] = {
 #endif
 #ifdef HAVE_FFTW3
    {"Spectrogram", spectrogram_new},
+#endif
+#ifdef ROTATOR
+   {"Rotator",     _rotator_new},
 #endif
 };
 
@@ -316,20 +330,13 @@ GtkWindow
 
 	gtk_box_pack_start(GTK_BOX(rhs_vbox), message_panel__new(), EXPAND_FALSE, FILL_FALSE, 0);
 
-	//split the rhs in two:
+	// Split the rhs in two
 	GtkWidget* r_vpaned = gtk_vpaned_new();
 	gtk_paned_set_position(GTK_PANED(r_vpaned), 300);
 	gtk_box_pack_start(GTK_BOX(rhs_vbox), r_vpaned, EXPAND_TRUE, TRUE, 0);
 
 	listview__new();
 	if(0 && BACKEND_IS_NULL) gtk_widget_set_no_show_all(app->libraryview->widget, true); //dont show main view if no database.
-
-#if 0
-	GtkWidget* rotator = rotator_new_with_model(GTK_TREE_MODEL(samplecat.store));
-	gtk_widget_show(rotator);
-	gtk_box_pack_start(GTK_BOX(rhs_vbox), rotator, EXPAND_FALSE, FALSE, 0);
-	gtk_widget_set_size_request(rotator, -1, 100);
-#endif
 
 	dbg(2, "making fileview pane...");
 	make_fileview_pane();
