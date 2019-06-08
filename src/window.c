@@ -9,6 +9,8 @@
 * +----------------------------------------------------------------------+
 *
 */
+#undef ROTATOR
+
 #include "config.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -52,7 +54,9 @@
 #endif
 #endif
 #include "colour_box.h"
+#ifdef ROTATOR
 #include "rotator.h"
+#endif
 #include "window.h"
 #ifndef __APPLE__
 #include "icons/samplecat.xpm"
@@ -125,8 +129,6 @@ struct _window {
 #endif
 } window = {0,};
 
-#undef ROTATOR
-
 typedef enum {
    PANEL_TYPE_LIBRARY,
    PANEL_TYPE_SEARCH,
@@ -156,11 +158,13 @@ static NewPanelFn
 	spectrogram_new, search_new, filters_new, make_fileview_pane;
 extern NewPanelFn dir_panel_new;
 
+#ifdef ROTATOR
 GtkWidget*
 _rotator_new ()
 {
 	return rotator_new_with_model(GTK_TREE_MODEL(samplecat.store));
 }
+#endif
 
 typedef struct {
    char*       name;

@@ -241,40 +241,37 @@ static void     rotator_top_row_to_dy       (Rotator *tree_view);
 static void     invalidate_empty_focus      (Rotator *tree_view);
 
 /* Internal functions */
-static gboolean rotator_is_expander_column             (Rotator        *tree_view, RotatorColumn  *column);
-static void     rotator_add_move_binding               (GtkBindingSet      *binding_set, guint               keyval, guint               modmask, gboolean            add_shifted_binding, GtkMovementStep     step, gint                count);
-static gint     rotator_unref_and_check_selection_tree (Rotator        *tree_view, GtkRBTree          *tree);
-static void     rotator_queue_draw_path                (Rotator        *tree_view, GtkTreePath        *path, const GdkRectangle *clip_rect);
-static void     rotator_queue_draw_arrow               (Rotator        *tree_view, GtkRBTree          *tree, GtkRBNode          *node, const GdkRectangle *clip_rect);
-static void     rotator_draw_arrow                     (Rotator        *tree_view, GtkRBTree          *tree, GtkRBNode          *node, gint                x, gint                y);
-static void     rotator_get_arrow_xrange               (Rotator        *tree_view, GtkRBTree          *tree, gint               *x1, gint               *x2);
-static gint     rotator_new_column_width               (Rotator        *tree_view, gint i, gint *x);
-static void     rotator_adjustment_changed             (GtkAdjustment*, Rotator        *tree_view);
-static void     rotator_build_tree                     (Rotator*, GtkRBTree          *tree, GtkTreeIter        *iter, gint                depth, gboolean            recurse);
-static gboolean rotator_discover_dirty_iter            (Rotator*, GtkTreeIter        *iter, gint                depth, gint               *height, GtkRBNode          *node);
-static void     rotator_discover_dirty                 (Rotator*, GtkRBTree          *tree, GtkTreeIter        *iter, gint                depth);
-static void     rotator_clamp_node_visible             (Rotator*, GtkRBTree          *tree, GtkRBNode          *node);
-static void     rotator_clamp_column_visible           (Rotator*, RotatorColumn  *column, gboolean            focus_to_cell);
-static gboolean rotator_maybe_begin_dragging_row       (Rotator*, GdkEventMotion     *event);
+static gboolean rotator_is_expander_column             (Rotator*, RotatorColumn*);
+static void     rotator_add_move_binding               (GtkBindingSet*, guint keyval, guint modmask, gboolean add_shifted_binding, GtkMovementStep step, gint count);
+static gint     rotator_unref_and_check_selection_tree (Rotator*, GtkRBTree*);
+static void     rotator_queue_draw_path                (Rotator*, GtkTreePath*, const GdkRectangle* clip_rect);
+static void     rotator_queue_draw_arrow               (Rotator*, GtkRBTree*, GtkRBNode*, const GdkRectangle* clip_rect);
+static void     rotator_draw_arrow                     (Rotator*, GtkRBTree*, GtkRBNode*, gint x, gint y);
+static void     rotator_get_arrow_xrange               (Rotator*, GtkRBTree*, gint* x1, gint* x2);
+static gint     rotator_new_column_width               (Rotator*, gint i, gint* x);
+static void     rotator_adjustment_changed             (GtkAdjustment*, Rotator*);
+static void     rotator_build_tree                     (Rotator*, GtkRBTree*, GtkTreeIter*, gint depth, gboolean recurse);
+static gboolean rotator_discover_dirty_iter            (Rotator*, GtkTreeIter*, gint depth, gint* height, GtkRBNode* node);
+static void     rotator_discover_dirty                 (Rotator*, GtkRBTree*, GtkTreeIter*, gint depth);
+static void     rotator_clamp_node_visible             (Rotator*, GtkRBTree*, GtkRBNode*);
+static void     rotator_clamp_column_visible           (Rotator*, RotatorColumn*, gboolean focus_to_cell);
+static gboolean rotator_maybe_begin_dragging_row       (Rotator*, GdkEventMotion*);
 static void     rotator_focus_to_cursor                (Rotator*);
 static void     rotator_move_cursor_up_down            (Rotator*, gint count);
 static void     rotator_move_cursor_page_up_down       (Rotator*, gint count);
 static void     rotator_move_cursor_left_right         (Rotator*, gint count);
 static void     rotator_move_cursor_start_end          (Rotator*, gint count);
-static gboolean rotator_real_collapse_row              (Rotator*, GtkTreePath*, GtkRBTree          *tree, GtkRBNode          *node, gboolean            animate);
-static gboolean rotator_real_expand_row                (Rotator*, GtkTreePath*, GtkRBTree          *tree, GtkRBNode          *node, gboolean            open_all, gboolean            animate);
-static void     rotator_real_set_cursor                (Rotator*, GtkTreePath*, gboolean            clear_and_select, gboolean            clamp_node);
+static gboolean rotator_real_collapse_row              (Rotator*, GtkTreePath*, GtkRBTree*, GtkRBNode*, gboolean animate);
+static gboolean rotator_real_expand_row                (Rotator*, GtkTreePath*, GtkRBTree*, GtkRBNode*, gboolean open_all, gboolean animate);
+static void     rotator_real_set_cursor                (Rotator*, GtkTreePath*, gboolean clear_and_select, gboolean clamp_node);
 static gboolean rotator_has_special_cell               (Rotator*);
 static void     column_sizing_notify                   (GObject*, GParamSpec*, gpointer);
-static gboolean expand_collapse_timeout                      (gpointer            data);
-static void     add_expand_collapse_timeout                  (Rotator        *tree_view,
-                                                              GtkRBTree          *tree,
-                                                              GtkRBNode          *node,
-                                                              gboolean            expand);
-static void     remove_expand_collapse_timeout               (Rotator        *tree_view);
-static void     cancel_arrow_animation                       (Rotator        *tree_view);
-static gboolean do_expand_collapse                           (Rotator        *tree_view);
-static void     rotator_stop_rubber_band               (Rotator        *tree_view);
+static gboolean expand_collapse_timeout                (gpointer);
+static void     add_expand_collapse_timeout            (Rotator*, GtkRBTree*, GtkRBNode*, gboolean expand);
+static void     remove_expand_collapse_timeout         (Rotator*);
+static void     cancel_arrow_animation                 (Rotator*);
+static gboolean do_expand_collapse                     (Rotator*);
+static void     rotator_stop_rubber_band               (Rotator*);
 
 /* interactive search */
 static void     rotator_ensure_interactive_directory (Rotator *tree_view);
@@ -1472,7 +1469,12 @@ rotator_init (Rotator* tree_view)
 
 	_r->scene->user_data = widget;
 
-	GList* g_list_move_to_front(GList* list, GList* front)
+	typedef struct {
+		Rotator* rotator;
+		WaveformActor* actor;
+	} C;
+
+	GList* g_list_move_to_front (GList* list, GList* front)
 	{
 		if(!front || !front->prev) return list;
 
@@ -1483,25 +1485,71 @@ rotator_init (Rotator* tree_view)
 		return g_list_concat(front, list);
 	}
 
-	void rotator_on_selection_change(SamplecatModel* m, Sample* sample, gpointer _rotator)
+	void fade_out_done (WaveformActor* actor, gpointer user_data)
+	{
+		Rotator* rotator = user_data;
+
+		bool fade_out_really_done (C* c)
+		{
+			Rotator* r = c->rotator;
+			WaveformActor* actor = c->actor;
+
+			((AGlActor*)actor)->root->enable_animations = false;
+			int i = 0;
+			for(GList* l=r->priv->actors;l;i++,l=l->next){
+				wf_actor_set_z (((SampleActor*)l->data)->actor, -i * dz);
+			}
+			((AGlActor*)actor)->root->enable_animations = true;
+
+			wf_actor_fade_in(c->actor, NULL, 1.0f, NULL, NULL);
+
+			g_free(c);
+
+			return G_SOURCE_REMOVE;
+		}
+		g_idle_add((GSourceFunc)fade_out_really_done, AGL_NEW(C, .rotator = rotator, .actor = actor));
+	}
+
+	void rotator_on_selection_change (SamplecatModel* m, Sample* sample, gpointer _rotator)
 	{
 		PF;
-		Rotator* r = _rotator;
-		RotatorPrivate* _r = r->priv;
+		Rotator* rotator = _rotator;
+		RotatorPrivate* _r = rotator->priv;
 
 		int compare (gconstpointer item, gconstpointer sample)
 		{
-			const SampleActor* sa = item;
-			if(sa->sample == sample) return 0; else return 1;
+			return (((SampleActor*)item)->sample == sample) ? 0 : 1;
 		}
 
 		GList* front = g_list_find_custom(_r->actors, sample, compare);
-		_r->actors = g_list_move_to_front(_r->actors, front);
+
+		int j = 0;
+		for(GList* l = _r->actors;l!=front;l=l->next) j++;
+
+		float _dz = 0;
+		bool forward = j < g_list_length(_r->actors) / 2;
+		if(forward){
+			// rotating forward
+
+			for(GList* l = _r->actors; l != front; l = l->next){
+				wf_actor_fade_out(((SampleActor*)l->data)->actor, fade_out_done, rotator);
+				_dz += dz;
+			}
+		}else{
+			// rotating backward
+
+			for(GList* l = front; l; l = l->next){
+				wf_actor_fade_out(((SampleActor*)l->data)->actor, fade_out_done, rotator);
+				_dz += dz;
+			}
+		}
 
 		int i = 0;
 		for(GList* l=_r->actors;l;i++,l=l->next){
-			wf_actor_set_z (((SampleActor*)l->data)->actor, -i * dz);
+			wf_actor_set_z (((SampleActor*)l->data)->actor, (forward ? _dz : -_dz) - i * dz);
 		}
+
+		_r->actors = g_list_move_to_front(_r->actors, front);
 	}
 
 	g_signal_connect((gpointer)samplecat.model, "selection-changed", G_CALLBACK(rotator_on_selection_change), tree_view);
@@ -4188,7 +4236,10 @@ draw (Rotator* rotator)
 		for(;l;l=l->prev){
 			SampleActor* sa = l->data;
 			AGlActor* actor = (AGlActor*)sa->actor;
+			WfAnimatable* z = wf_actor_get_z((WaveformActor*)actor);
+			glTranslatef(0, 0, z->val.f);
 			agl_actor__paint(actor);
+			glTranslatef(0, 0, -z->val.f);
 		}
 	}
 	glPopMatrix();
@@ -14458,7 +14509,6 @@ start_zoom (Rotator* tree_view, float target_zoom)
 {
 	// When zooming in, the Region is preserved so the box gets bigger. Drawing is clipped by the Viewport.
 
-	PF0;
 	zoom = MAX(0.1, target_zoom);
 
 	int i = 0;
