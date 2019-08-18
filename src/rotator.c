@@ -4264,7 +4264,7 @@ rotator_expose (GtkWidget* widget, GdkEventExpose* event)
 		glLoadIdentity();
 
 #ifdef USE_SYSTEM_GTKGLEXT
-		gdk_gl_drawable_swap_buffers(((AGlRootActor*)view->priv->root)->gl.gdk.drawable);
+		gdk_gl_drawable_swap_buffers(_r->scene->gl.gdk.drawable);
 #else
 		gdk_gl_window_swap_buffers(_r->scene->gl.gdk.drawable);
 #endif
