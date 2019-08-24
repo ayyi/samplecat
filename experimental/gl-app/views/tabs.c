@@ -47,7 +47,7 @@ tabs_view_get_class ()
 
 
 static void
-_init()
+_init ()
 {
 	static bool init_done = false;
 
@@ -63,21 +63,20 @@ _init()
 
 
 AGlActor*
-tabs_view(gpointer _)
+tabs_view (gpointer _)
 {
 	instance_count++;
 
 	_init();
 
-	bool tabs_paint(AGlActor* actor)
+	bool tabs_paint (AGlActor* actor)
 	{
 		TabsView* tabs = (TabsView*)actor;
 		IconMaterial* icon = (IconMaterial*)ring_material;
 
-		GList* l = tabs->tabs;
 		int x = 0;
 		int i = 0;
-		for(;l;l=l->next){
+		for(GList* l = tabs->tabs;l;l=l->next){
 			TabsViewTab* tab = l->data;
 
 			icon->bg = 0x000000ff;
@@ -106,14 +105,27 @@ tabs_view(gpointer _)
 		agl_use_program((AGlShader*)agl->shaders.plain);
 		agl_rect_((AGlRect){tabs->active * tab_width, TAB_HEIGHT - 10, tab_width - 10, 2});
 
+		// set content position
+		if(ABS(tabs->x.val.f) > 0.01){
+			// there should be 2 content panes to position
+			for(GList* l = actor->children; l; l = l->next){
+				AGlActor* a = l->data;
+				if(agl_actor__width(a)){
+					int w = agl_actor__width(a);
+					a->region.x1 = tabs->x.val.f;
+					a->region.x2 = a->region.x1 + w;
+				}
+			}
+		}
+
 		return true;
 	}
 
-	void tabs_init(AGlActor* a)
+	void tabs_init (AGlActor* a)
 	{
 	}
 
-	void tabs_set_size(AGlActor* actor)
+	void tabs_set_size (AGlActor* actor)
 	{
 		TabsView* tabs = (TabsView*)actor;
 
@@ -123,7 +135,7 @@ tabs_view(gpointer _)
 		}
 	}
 
-	bool tabs_event(AGlActor* actor, GdkEvent* event, AGliPt xy)
+	bool tabs_event (AGlActor* actor, GdkEvent* event, AGliPt xy)
 	{
 		TabsView* tabs = (TabsView*)actor;
 
@@ -164,7 +176,7 @@ tabs_view(gpointer _)
 		return AGL_HANDLED;
 	}
 
-	void tabs_free(AGlActor* actor)
+	void tabs_free (AGlActor* actor)
 	{
 		TabsView* tabs = (TabsView*)actor;
 
@@ -196,12 +208,17 @@ tabs_view(gpointer _)
 		.type        = WF_FLOAT
 	};
 
+	view->x = (WfAnimatable){
+		.model_val.f = &view->_x,
+		.type        = WF_FLOAT
+	};
+
 	return (AGlActor*)view;
 }
 
 
 void
-tabs_view__add_tab(TabsView* tabs, const char* name, AGlActor* child)
+tabs_view__add_tab (TabsView* tabs, const char* name, AGlActor* child)
 {
 	TabsViewTab* tab = AGL_NEW(TabsViewTab, .actor=child, .name=name);
 
@@ -217,9 +234,27 @@ tabs_view__add_tab(TabsView* tabs, const char* name, AGlActor* child)
 
 
 static void
-tabs_select_tab(TabsView* tabs, int active)
+tabs_select_tab (TabsView* tabs, int active)
 {
 	AGlActor* actor = (AGlActor*)tabs;
+
+	void slide_done (WfAnimation* animation, gpointer _)
+	{
+		TabsView* tabs = _;
+		AGlActor* actor = (AGlActor*)tabs;
+		dbg(0, "%s", actor->name);
+		// hide non-active
+		int i = 0;
+		for(GList* l = actor->children; l; l = l->next, i++){
+			AGlActor* a = l->data;
+			if(i == tabs->active){
+				a->region.x1 = 0;
+				a->region.x2 = agl_actor__width(actor);
+			}else{
+				a->region.x1 = a->region.x2 = 0;
+			}
+		}
+	}
 
 	if(active < g_list_length(tabs->tabs) && active != tabs->active){
 		TabsViewTab* prev;
@@ -234,5 +269,11 @@ tabs_select_tab(TabsView* tabs, int active)
 		next->actor->region = (AGliRegion){0, TAB_HEIGHT, agl_actor__width(actor), agl_actor__height(actor)};
 		agl_actor__set_size(next->actor);
 		agl_actor__invalidate(actor);
+
+		// TODO for smooth animation, ensure children are cached
+		//      ... or even better, just cache the result and scroll it
+		tabs->x.val.f = -100;
+		tabs->_x = 0;
+		agl_actor__start_transition(actor, g_list_append(NULL, &tabs->x), slide_done, tabs);
 	}
 }

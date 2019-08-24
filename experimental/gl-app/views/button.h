@@ -29,7 +29,8 @@ typedef struct {
     gpointer       user_data;
 } ButtonActor;
 
-AGlActorClass* button_get_class ();
-AGlActor*      button           (int* icon, ButtonAction, ButtonGetState, gpointer);
+AGlActorClass* button_get_class     ();
+AGlActor*      button               (int* icon, ButtonAction, ButtonGetState, gpointer);
+void           button_set_sensitive (AGlActor*, bool);
 
 #endif

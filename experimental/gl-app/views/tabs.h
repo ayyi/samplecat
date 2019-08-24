@@ -26,7 +26,10 @@ typedef struct {
       int          tab;
       float        opacity;
       WfAnimatable animatable;
-  }            hover;
+   }            hover;
+
+   float       _x;
+   WfAnimatable x;     // position of active tab content
 } TabsView;
 
 AGlActorClass* tabs_view_get_class ();

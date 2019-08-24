@@ -269,7 +269,7 @@ button_on_event(AGlActor* actor, GdkEvent* event, AGliPt xy)
 
 
 void
-gl_button_set_sensitive(AGlActor* actor, gboolean sensitive)
+button_set_sensitive(AGlActor* actor, bool sensitive)
 {
 #ifdef AGL_DEBUG_ACTOR
 	dbg(0, "%s: %i", actor->name, sensitive);

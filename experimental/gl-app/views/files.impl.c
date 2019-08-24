@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2017-2018 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2017-2019 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -40,11 +40,16 @@ struct _DirectoryViewPrivate {
     int         (*sort_fn)(const void*, const void*);
 };
 
+static void directory_view_interface_init (gpointer giface, gpointer iface_data);
 
-static gpointer directory_view_parent_class = NULL;
+G_DEFINE_TYPE_WITH_CODE (
+	DirectoryView,
+	directory_view,
+	G_TYPE_OBJECT,
+	G_ADD_PRIVATE (DirectoryView)
+	G_IMPLEMENT_INTERFACE (VIEW_TYPE_IFACE, directory_view_interface_init)
+)
 
-GType directory_view_get_type (void) G_GNUC_CONST;
-#define DIRECTORY_VIEW_GET_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), TYPE_DIRECTORY_VIEW, DirectoryViewPrivate))
 enum  {
 	DIRECTORY_VIEW_DUMMY_PROPERTY
 };
@@ -719,7 +724,6 @@ static void
 directory_view_class_init (DirectoryViewClass * klass)
 {
 	directory_view_parent_class = g_type_class_peek_parent (klass);
-	g_type_class_add_private (klass, sizeof (DirectoryViewPrivate));
 	G_OBJECT_CLASS (klass)->finalize = directory_view_finalize;
 }
 
@@ -758,9 +762,9 @@ directory_view_interface_init (gpointer giface, gpointer iface_data)
 
 
 static void
-directory_view_instance_init (DirectoryView* self)
+directory_view_init (DirectoryView* self)
 {
-	self->priv = DIRECTORY_VIEW_GET_PRIVATE (self);
+	self->priv = directory_view_get_instance_private(self);
 	self->items = g_ptr_array_new();
 }
 
@@ -770,19 +774,3 @@ directory_view_finalize (GObject* obj)
 {
 	G_OBJECT_CLASS (directory_view_parent_class)->finalize (obj);
 }
-
-
-GType
-directory_view_get_type ()
-{
-	static volatile gsize directory_type_id__volatile = 0;
-	if (g_once_init_enter (&directory_type_id__volatile)) {
-		static const GTypeInfo g_define_type_info = { sizeof(DirectoryViewClass), (GBaseInitFunc)NULL, (GBaseFinalizeFunc)NULL, (GClassInitFunc)directory_view_class_init, (GClassFinalizeFunc)NULL, NULL, sizeof(DirectoryView), 0, (GInstanceInitFunc)directory_view_instance_init, NULL};
-		static const GInterfaceInfo view_iface_info = { directory_view_interface_init, (GInterfaceFinalizeFunc)NULL, NULL};
-		GType directory_view_type_id = g_type_register_static (G_TYPE_OBJECT, "DirectoryView", &g_define_type_info, 0);
-		g_type_add_interface_static (directory_view_type_id, VIEW_TYPE_IFACE, &view_iface_info);
-		g_once_init_leave (&directory_type_id__volatile, directory_view_type_id);
-	}
-	return directory_type_id__volatile;
-}
-
