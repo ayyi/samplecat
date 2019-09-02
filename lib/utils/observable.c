@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2018-2018 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2018-2019 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -23,7 +23,9 @@ typedef struct {
 Observable*
 observable_new ()
 {
-	return g_new0(Observable, 1);
+	Observable* observable = g_new0(Observable, 1);
+	observable->max = INT_MAX;
+	return observable;
 }
 
 
@@ -38,12 +40,15 @@ observable_free(Observable* observable)
 void
 observable_set (Observable* observable, int value)
 {
-	observable->value = value;
+	if(value >= observable->min && value <= observable->max){
 
-	GList* l = observable->subscriptions;
-	for(;l;l=l->next){
-		Subscription* subscription = l->data;
-		subscription->fn(observable, value, subscription->user);
+		observable->value = value;
+
+		GList* l = observable->subscriptions;
+		for(;l;l=l->next){
+			Subscription* subscription = l->data;
+			subscription->fn(observable, value, subscription->user);
+		}
 	}
 }
 
