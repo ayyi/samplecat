@@ -1,5 +1,5 @@
 
-SUBDIRS = shaders views
+SUBDIRS = shaders views behaviours
 
 bin_PROGRAMS = samplecat_gl
 
@@ -15,6 +15,7 @@ samplecat_gl_SOURCES = \
 	utils.c utils.h \
 	yaml_utils.c yaml_utils.h \
 	keys.h \
+	action.h \
 	$(top_srcdir)/src/icon_theme.c $(top_srcdir)/src/icon_theme.h
 
 AM_CFLAGS = \
@@ -47,6 +48,7 @@ endif
 
 samplecat_gl_LDADD = \
 	views/libviews.la \
+	behaviours/libbehaviours.la \
 	$(top_srcdir)/lib/utils/libutils.a \
 	$(top_srcdir)/lib/dir_tree/libdirtree.a \
 	$(top_srcdir)/lib/samplecat/.libs/libsamplecat.a \

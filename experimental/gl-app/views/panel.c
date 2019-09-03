@@ -20,6 +20,7 @@
 #include "debug/debug.h"
 #include "waveform/shader.h"
 #include "samplecat/typedefs.h"
+#include "keys.h"
 #include "shader.h"
 #include "materials/icon_ring.h"
 #include "application.h"
@@ -147,6 +148,8 @@ panel_view(gpointer _)
 
 	bool panel_event(AGlActor* actor, GdkEvent* event, AGliPt xy)
 	{
+		PanelView* panel = (PanelView*)actor;
+
 		switch(event->type){
 			case GDK_BUTTON_PRESS:
 				dbg(1, "PRESS %i", xy.y);
@@ -169,6 +172,12 @@ panel_view(gpointer _)
 					mouse = xy;
 					agl_actor__invalidate(actor);
 				}
+				break;
+			case GDK_KEY_RELEASE:;
+				GdkEventKey* e = (GdkEventKey*)event;
+				int keyval = e->keyval;
+				KeyHandler* handler = g_hash_table_lookup(panel->actions.actions, &keyval);
+				if(handler) handler();
 				break;
 			default:
 				break;

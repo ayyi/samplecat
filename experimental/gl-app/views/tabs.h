@@ -19,17 +19,24 @@ typedef struct {
 } TabsViewTab;
 
 typedef struct {
+   WfAnimatable animatable;
+   float x;
+   AGlActor* next;
+   AGlActor* prev;
+} TabTransition;
+
+typedef struct {
    AGlActor    actor;
    GList*      tabs;   // type TabsViewTab*
    int         active;
+
    struct {
       int          tab;
       float        opacity;
       WfAnimatable animatable;
-   }            hover;
+   }           hover;
 
-   float       _x;
-   WfAnimatable x;     // position of active tab content
+   TabTransition slide; // position of active tab content
 } TabsView;
 
 AGlActorClass* tabs_view_get_class ();

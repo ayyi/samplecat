@@ -1,0 +1,18 @@
+
+noinst_LTLIBRARIES = libbehaviours.la
+
+libbehaviours_la_SOURCES = \
+	selectable.c selectable.h
+
+AM_CFLAGS = \
+	-no-pie \
+	-Wl,-z,noexecstack \
+	-I$(top_srcdir)/lib \
+	-I$(top_srcdir)/lib/samplecat \
+	-I$(top_srcdir)/lib/waveform \
+	-I$(top_srcdir) \
+	$(SAMPLECAT_CFLAGS) \
+	$(OPENGL_CFLAGS) \
+	$(FFMPEG_CFLAGS) \
+	$(GTK_CFLAGS) \
+	$(ZLIB_CFLAGS)

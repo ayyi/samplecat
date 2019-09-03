@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of the Ayyi project. http://www.ayyi.org           |
-* | copyright (C) 2013-2018 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2013-2019 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -55,7 +55,7 @@ scrollbar_on_scroll (Observable* observable, int row, gpointer scrollbar)
 
 
 AGlActor*
-scrollbar_view(AGlActor* panel, AGlOrientation orientation)
+scrollbar_view (AGlActor* panel, AGlOrientation orientation)
 {
 	agl = agl_get_instance();
 

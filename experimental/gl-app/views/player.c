@@ -97,7 +97,7 @@ player_view (gpointer _)
 
 	AGlActor* b[2];
 	for(int i=0;i<2;i++){
-		agl_actor__add_child(view, b[i] = button(&textures[i], buttons[i].action, buttons[i].state, NULL));
+		agl_actor__add_child(view, b[i] = button((int*)&textures[i], buttons[i].action, buttons[i].state, NULL));
 		b[i]->region = (AGliRegion){
 			.x1 = (PLAYER_ICON_SIZE + 4) * i,
 			.x2 = (PLAYER_ICON_SIZE + 4) * i + PLAYER_ICON_SIZE,

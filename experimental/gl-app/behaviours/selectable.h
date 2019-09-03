@@ -9,27 +9,28 @@
 * +----------------------------------------------------------------------+
 *
 */
-#ifndef __views_files_h__
-#define __views_files_h__
-#include "waveform/actor.h"
-#include "../directory.h"
-typedef struct _FilesView FilesView;
-#include "views/files.impl.h"
-#include "behaviours/selectable.h"
+#ifndef __selectable_h__
+#define __selectable_h__
 
-struct _FilesView {
-   AGlActor       actor;
-   VMDirectory*   viewmodel;
-   DirectoryView* view;
-   char*          path;
-   AGlActor*      scrollbar;
-   Behaviour*     behaviours[1];
+#include "glib.h"
+#include "utils/observable.h"
+#include "agl/actor.h"
+
+typedef struct _Behaviour Behaviour;
+
+typedef void (*BehaviourInit) (Behaviour*, AGlActor*);
+
+struct _Behaviour {
+   BehaviourInit init;
 };
 
-AGlActorClass* files_view_get_class ();
+typedef struct {
+   Behaviour   behaviour;
+   Observable* observable;
+   ObservableFn on_select;
+} SelectBehaviour;
 
-AGlActor* files_view              (gpointer);
-void      files_view_set_path     (FilesView*, const char*);
-int       files_view_row_at_coord (FilesView*, int x, int y);
+Behaviour* selectable      ();
+void       selectable_init (Behaviour*, AGlActor*);
 
 #endif

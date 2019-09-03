@@ -191,7 +191,7 @@ button(int* icon, ButtonAction action, ButtonGetState get_state, gpointer user_d
 			.set_size = button_set_size,
 			.on_event = button_on_event,
 		},
-		.icon      = icon,
+		.icon      = (guint*)icon,
 		.action    = action,
 		.get_state = get_state,
 		.user_data = user_data,

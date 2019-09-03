@@ -29,7 +29,6 @@ static AGl* agl = NULL;
 static AGlActorClass actor_class = {0, "Context menu", (AGlActorNew*)context_menu};
 static AMPromise* _promise = NULL;
 static AGlWindow* popup = NULL;
-static MenuItem* menu_items = NULL;
 static Menu* _menu = NULL;
 
 static float hover_opacity = 0;
@@ -50,7 +49,6 @@ context_menu_open_new (AGlScene* parent, AGliPt xy, Menu* menu, AMPromise* promi
 	_menu = menu;
 
 	Display* dpy = glXGetCurrentDisplay();
-	int screen = DefaultScreen(dpy);
 	AGliPt size = {240, menu->len * 16 + 2 * BORDER};
 
 	int x, y;
@@ -142,7 +140,7 @@ context_menu_event (AGlActor* actor, GdkEvent* event, AGliPt xy)
 					}
 
 					g_idle_add(popup_destroy, NULL);
-					break;
+					return AGL_HANDLED;
 			}
 			break;
 		case GDK_ENTER_NOTIFY:
@@ -164,7 +162,10 @@ context_menu_event (AGlActor* actor, GdkEvent* event, AGliPt xy)
 		case GDK_FOCUS_CHANGE:
 			g_idle_add(popup_destroy, NULL);
 			break;
+		default:
+			break;
 	}
+	return AGL_NOT_HANDLED;
 }
 
 

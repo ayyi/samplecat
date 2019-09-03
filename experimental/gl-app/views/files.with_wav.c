@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2016-2018 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2016-2019 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -217,6 +217,7 @@ files_with_wav(gpointer _)
 
 		void files_on_row_change (GtkTreeModel* tree_model, GtkTreePath* path, GtkTreeIter* iter, AGlActor* actor)
 		{
+#if 0
 			FilesWithWav* view = (FilesWithWav*)actor;
 			DirectoryView* dv = FILES->view;
 			GPtrArray* items = dv->items;
@@ -227,6 +228,7 @@ files_with_wav(gpointer _)
 				DirItem* item = vitem->item;
 				char* name = item->leafname;
 			}
+#endif
 		}
 		g_signal_connect(FILES->viewmodel, "row-changed", (GCallback)files_on_row_change, a);
 	}
@@ -234,7 +236,6 @@ files_with_wav(gpointer _)
 	void files_set_size(AGlActor* actor)
 	{
 		FilesWithWav* view = (FilesWithWav*)actor;
-		DirectoryView* dv = FILES->view;
 
 		if(SCROLLBAR->scroll->value > max_scroll_offset){
 			observable_set(SCROLLBAR->scroll, max_scroll_offset);

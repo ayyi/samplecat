@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2018 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2019 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -20,8 +20,6 @@
 #include <X11/Xlib.h>
 #include <X11/keysym.h>
 #define GLX_GLXEXT_PROTOTYPES
-#include <GL/gl.h>
-#include <GL/glx.h>
 #include <gtk/gtk.h>
 #include <debug/debug.h>
 #include "agl/actor.h"
@@ -60,7 +58,7 @@ static KeyHandler
 	nav_up,
 	nav_down;
 
-Key keys[] = {
+static Key keys[] = {
 	{XK_Up,   nav_up},
 	{XK_Down, nav_down},
 	{0,}
@@ -321,18 +319,10 @@ show_directory(gpointer _)
 static void
 nav_up()
 {
-	PF0;
+	PF;
 	if(actors.list){
 		ListView* list = (ListView*)actors.list;
 		list_view_select(list, list->selection - 1);
-	}
-
-	if(app->scene->selected){
-		if(app->scene->selected == actors.files){
-
-			FilesView* files = (FilesView*)actors.files;
-			files_with_wav_select((FilesWithWav*)files, files->view->selection - 1);
-		}
 	}
 }
 
@@ -340,18 +330,10 @@ nav_up()
 static void
 nav_down()
 {
-	PF0;
+	PF;
 	if(actors.list){
 		ListView* list = (ListView*)actors.list;
 		list_view_select(list, list->selection + 1);
-	}else{
-		if(app->scene->selected){
-			if(app->scene->selected == actors.files){
-
-				FilesView* files = (FilesView*)actors.files;
-				files_with_wav_select((FilesWithWav*)files, files->view->selection + 1);
-			}
-		}
 	}
 }
 
