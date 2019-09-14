@@ -225,7 +225,7 @@ AC_SUBST(SNDFILE_LIBS)
 dnl -----------------------------------------------------------------------------
 
 AS_IF([test "$enable_ffmpeg" != "no"], [
-	PKG_CHECK_MODULES(FFMPEG, [libavformat >= 51.0.0 libavcodec >= 51.0.0 libavutil >= 50.0.0], enable_ffmpeg=yes, enable_ffmpeg=no)
+	PKG_CHECK_MODULES(FFMPEG, [libavformat >= 51.0.0 libavcodec >= 51.0.0 libavutil >= 50.0.0 libavfilter >= 7.0.0], enable_ffmpeg=yes, enable_ffmpeg=no)
 	])
 
 if test "$enable_ffmpeg" = "yes"; then
