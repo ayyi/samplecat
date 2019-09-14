@@ -256,7 +256,8 @@ samplecat_list_store_do_search (SamplecatListStore* self)
 
 	samplecat_list_store_clear_(self);
 
-	if(!samplecat.model->backend.search_iter_new(NULL)) {
+	int n_results = 0;
+	if(!samplecat.model->backend.search_iter_new(&n_results)) {
 		return;
 	}
 
@@ -272,7 +273,7 @@ samplecat_list_store_do_search (SamplecatListStore* self)
 
 	samplecat.model->backend.search_iter_free();
 
-	((SamplecatListStore*)samplecat.store)->row_count = row_count;
+	((SamplecatListStore*)samplecat.store)->row_count = MAX(n_results, row_count);
 
 	g_signal_emit_by_name (self, "content-changed");
 }
