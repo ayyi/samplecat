@@ -285,7 +285,7 @@ main(int argc, char** argv)
 
 
 	if (!db_connect()) {
-		g_warning("cannot connect to any database.\n");
+		g_warning("cannot connect to any database.");
 #ifdef QUIT_WITHOUT_DB
 		on_quit(NULL, GINT_TO_POINTER(EXIT_FAILURE));
 #endif

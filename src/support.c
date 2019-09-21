@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2014 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2019 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -42,7 +42,7 @@
 #if 0
 /* Used as the sort function for sorting GPtrArrays */
 gint 
-strcmp2(gconstpointer a, gconstpointer b)
+_strcmp (gconstpointer a, gconstpointer b)
 {
 	const char *aa = *(char **) a;
 	const char *bb = *(char **) b;
@@ -56,7 +56,7 @@ strcmp2(gconstpointer a, gconstpointer b)
  * On error, the error is reported with g_warning and NULL is returned.
  */
 GPtrArray*
-list_dir(const guchar *path)
+list_dir (const guchar *path)
 {
 	GDir *dir;
 	GError *error = NULL;
@@ -80,14 +80,15 @@ list_dir(const guchar *path)
 
 	g_dir_close(dir);
 
-	g_ptr_array_sort(names, strcmp2);
+	g_ptr_array_sort(names, _strcmp);
 
 	return names;
 }
-#endif //0
+#endif
+
 
 void
-colour_get_style_fg(GdkColor* color, GtkStateType state)
+colour_get_style_fg (GdkColor* color, GtkStateType state)
 {
 	//gives the default style foreground colour for the given widget state.
 
@@ -97,8 +98,9 @@ colour_get_style_fg(GdkColor* color, GtkStateType state)
 	color->blue  = style->fg[state].blue;
 }
 
+
 void
-colour_get_style_bg(GdkColor* color, int state)
+colour_get_style_bg (GdkColor* color, int state)
 {
 	//gives the default style foreground colour for the given widget state.
 
@@ -110,7 +112,7 @@ colour_get_style_bg(GdkColor* color, int state)
 
 
 void
-colour_get_style_base(GdkColor* color, int state)
+colour_get_style_base (GdkColor* color, int state)
 {
 	//gives the default style base colour for the given widget state.
 
@@ -122,7 +124,7 @@ colour_get_style_base(GdkColor* color, int state)
 
 
 void
-colour_get_style_text(GdkColor* color, int state)
+colour_get_style_text (GdkColor* color, int state)
 {
 	//gives the default style text colour for the given widget state.
 
@@ -134,21 +136,21 @@ colour_get_style_text(GdkColor* color, int state)
 
 
 gchar*
-gdkcolor_get_hexstring(GdkColor* c)
+gdkcolor_get_hexstring (GdkColor* c)
 {
 	return g_strdup_printf("%02x%02x%02x", c->red >> 8, c->green >> 8, c->blue >> 8);
 }
 
 
 void
-hexstring_from_gdkcolor(char* hexstring, GdkColor* c)
+hexstring_from_gdkcolor (char* hexstring, GdkColor* c)
 {
 	snprintf(hexstring, 7, "%02x%02x%02x", c->red >> 8, c->green >> 8, c->blue >> 8);
 }
 
 #if NEVER
 void
-color_rgba_to_gdk(GdkColor* colour, uint32_t rgba)
+color_rgba_to_gdk (GdkColor* colour, uint32_t rgba)
 {
 	g_return_if_fail(colour, "colour");
 
@@ -160,7 +162,7 @@ color_rgba_to_gdk(GdkColor* colour, uint32_t rgba)
 
 
 gboolean
-colour_lighter(GdkColor* lighter, GdkColor* colour)
+colour_lighter (GdkColor* lighter, GdkColor* colour)
 {
 	lighter->red   = MIN(colour->red   * 1.2 + 0x600, 0xffff);
 	lighter->green = MIN(colour->green * 1.2 + 0x600, 0xffff);
@@ -171,7 +173,7 @@ colour_lighter(GdkColor* lighter, GdkColor* colour)
 
 
 gboolean
-colour_darker(GdkColor* darker, GdkColor* colour)
+colour_darker (GdkColor* darker, GdkColor* colour)
 {
 	darker->red   = MAX(colour->red   * 0.8, 0x0000);
 	darker->green = MAX(colour->green * 0.8, 0x0000);
@@ -182,7 +184,7 @@ colour_darker(GdkColor* darker, GdkColor* colour)
 
 
 gboolean
-is_white(GdkColor* colour)
+is_white (GdkColor* colour)
 {
 	if(colour->red >= 0xffff && colour->green >= 0xffff && colour->blue >= 0xffff) return TRUE;
 	else return FALSE;
@@ -190,7 +192,7 @@ is_white(GdkColor* colour)
 
 
 gboolean
-is_black(GdkColor* colour)
+is_black (GdkColor* colour)
 {
 	if(colour->red < 1 && colour->green < 1 && colour->blue < 1) return TRUE;
 	else return FALSE;
@@ -198,7 +200,7 @@ is_black(GdkColor* colour)
 
 
 gboolean
-is_dark(GdkColor* colour)
+is_dark (GdkColor* colour)
 {
 	int average = (colour->red + colour->green + colour->blue) / 3;
 	return (average < 0x7fff);
@@ -206,7 +208,7 @@ is_dark(GdkColor* colour)
 
 #if NEVER
 gboolean
-is_similar(GdkColor* colour1, GdkColor* colour2, int min_diff)
+is_similar (GdkColor* colour1, GdkColor* colour2, int min_diff)
 {
 	GdkColor difference;
 	difference.red   = ABS(colour1->red   - colour2->red);
@@ -223,8 +225,8 @@ is_similar(GdkColor* colour1, GdkColor* colour2, int min_diff)
 }
 
 
-gboolean
-is_similar_rgb(unsigned colour1, unsigned colour2)
+bool
+is_similar_rgb (unsigned colour1, unsigned colour2)
 {
 	char r1 = (colour1 & 0xff000000 ) >> 24; 
 	char g1 = (colour1 & 0x00ff0000 ) >> 16; 
@@ -248,7 +250,7 @@ is_similar_rgb(unsigned colour1, unsigned colour2)
 
 
 char*
-str_array_join(const char** array, const char* separator)
+str_array_join (const char** array, const char* separator)
 {
 	//result must be freed using g_free()
 	g_return_val_if_fail(separator, NULL);
@@ -274,7 +276,7 @@ str_array_join(const char** array, const char* separator)
 
 
 gint
-treecell_get_row(GtkWidget* treeview, GdkRectangle* cell_area)
+treecell_get_row (GtkWidget* treeview, GdkRectangle* cell_area)
 {
 	//return the row number for the cell with the given area.
 
@@ -297,7 +299,7 @@ treecell_get_row(GtkWidget* treeview, GdkRectangle* cell_area)
 
 
 void
-statusbar_print(int n, char* fmt, ...)
+statusbar_print (int n, char* fmt, ...)
 {
 	if(n<1||n>3) n = 1;
 
@@ -325,7 +327,7 @@ statusbar_print(int n, char* fmt, ...)
 
 
 static void
-shortcuts_add_action(GtkAction* action, GimpActionGroup* action_group)
+shortcuts_add_action (GtkAction* action, GimpActionGroup* action_group)
 {
 	g_return_if_fail(action_group);
 
@@ -340,7 +342,7 @@ shortcuts_add_action(GtkAction* action, GimpActionGroup* action_group)
  *  @param action_group - if NULL, global group is used.
  */
 void
-make_accels(GtkAccelGroup* accel_group, GimpActionGroup* action_group, Accel* keys, int count, gpointer user_data)
+make_accels (GtkAccelGroup* accel_group, GimpActionGroup* action_group, Accel* keys, int count, gpointer user_data)
 {
 	g_return_if_fail(accel_group);
 	g_return_if_fail(keys);
@@ -386,7 +388,7 @@ make_accels(GtkAccelGroup* accel_group, GimpActionGroup* action_group, Accel* ke
 
 
 void
-add_menu_items_from_defn(GtkWidget* menu, MenuDef* menu_def, int n)
+add_menu_items_from_defn (GtkWidget* menu, MenuDef* menu_def, int n)
 {
 	int i; for(i=0;i<n;i++){
 		MenuDef* item = &menu_def[i];
@@ -671,7 +673,7 @@ gimp_get_accel_string (guint key, GdkModifierType modifiers)
 
 
 char*
-remove_trailing_slash(char* path)
+remove_trailing_slash (char* path)
 {
 	size_t len = strlen(path);
 	if((len > 0) && (path[len-1] == '/')) path[len-1] = '\0';
@@ -687,7 +689,7 @@ remove_trailing_slash(char* path)
  * The text block passed in is zero terminated (after the final CRLF)
  */
 GList*
-uri_list_to_glist(const char* uri_list)
+uri_list_to_glist (const char* uri_list)
 {
 	GList* list = NULL;
 
@@ -716,7 +718,7 @@ uri_list_to_glist(const char* uri_list)
 
 
 void
-uri_list_free(GList* list)
+uri_list_free (GList* list)
 {
   GList* l = list;
   for(;l;l=l->next){
@@ -727,7 +729,7 @@ uri_list_free(GList* list)
 
 
 const gchar*
-vfs_get_method_string(const gchar *substring, gchar **method_string)
+vfs_get_method_string (const gchar *substring, gchar **method_string)
 {
 	const gchar *p;
 	char *method;
@@ -831,7 +833,7 @@ vfs_unescape_string (const gchar *escaped_string, const gchar *illegal_character
 
 
 void
-show_widget_if(GtkWidget* widget, gboolean show)
+show_widget_if (GtkWidget* widget, gboolean show)
 {
 	if(show) gtk_widget_show(widget);
 	else gtk_widget_hide(widget);
@@ -839,7 +841,7 @@ show_widget_if(GtkWidget* widget, gboolean show)
 
 
 GtkWidget*
-scrolled_window_new()
+scrolled_window_new ()
 {
 	GtkWidget* scroll = gtk_scrolled_window_new(NULL, NULL); //adjustments created automatically.
 	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
@@ -848,7 +850,7 @@ scrolled_window_new()
 
 
 gboolean
-keyword_is_dupe(const char* new, const char* existing)
+keyword_is_dupe (const char* new, const char* existing)
 {
 	//return true if the word 'new' is contained in the 'existing' string.
 
@@ -885,7 +887,7 @@ keyword_is_dupe(const char* new, const char* existing)
  *  It is probably not useful other for use with signals.
  */
 Idle*
-idle_new(ObjectCallback fn, gpointer user_data)
+idle_new (ObjectCallback fn, gpointer user_data)
 {
 	bool run(gpointer _idle)
 	{
@@ -911,7 +913,7 @@ idle_new(ObjectCallback fn, gpointer user_data)
 
 
 void
-idle_free(Idle* idle)
+idle_free (Idle* idle)
 {
 	if(idle->id) g_source_remove(idle->id);
 	g_free(idle);
@@ -920,7 +922,7 @@ idle_free(Idle* idle)
 
 #if 0
 void
-print_widget_tree(GtkWidget* widget)
+print_widget_tree (GtkWidget* widget)
 {
 	UNDERLINE;
 	g_return_if_fail(widget);
