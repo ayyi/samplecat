@@ -3,6 +3,8 @@
 # add a test file to the database so that the
 # gui has something to show
 
+set -e
+
 cd /root/samplecat/
 ./configure --enable-test
 make

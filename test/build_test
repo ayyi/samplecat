@@ -38,20 +38,24 @@ SETCOLOR_YELLOW="echo -en \\033[1;32m"
 SETCOLOR_FAILURE="echo -en \\033[1;31m"
 SETCOLOR_NORMAL="echo -en \\033[0;39m"
 
-function get_tarball {
+function get_tarball_1 {
 	make dist || exit $?
 	cp $tarball $tmpdir;
 }
 
-function get_tarball1 {
-	if [[ ! -f $tarball ]]; then
-		if `wget http://ayyi.org/files/$tarball`; then
+function get_tarball_2 {
+	cd ${tmpdir}
+
+	if [ ! -f $tarball ]; then
+		if `wget http://www.orford.org/assets/$tarball`; then
 			echo "wget exit status non-zero ?"
 			:
 		else
 			echo "wget exit status 0 ?"
 			exit;
 		fi;
+	else
+		echo tarball found
 	fi;
 }
 
@@ -75,9 +79,7 @@ function compile {
 	return $exit_status
 }
 
-#TODO script carries on if configure fails
-
-get_tarball && \
+get_tarball_1 && \
 	cd ${tmpdir} && \
 	echo "got tarball. extracting..." && \
 	echo "" && \

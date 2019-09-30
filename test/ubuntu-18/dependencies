@@ -3,6 +3,7 @@ gcc make automake libtool pkg-config gdb \
 git \
 libsndfile1-dev \
 ffmpeg \
+libavcodec-dev libavformat-dev libavutil-dev libavfilter-dev \
 vim \
 libgtkglext1-dev \
 libxml2-dev \
