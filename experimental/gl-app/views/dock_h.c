@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2016-2018 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2016-2019 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -81,7 +81,7 @@ dock_h_view(WaveformActor* _)
 		}
 
 		if(dock->handle.opacity > 0.0){
-			float alpha = dock->animatables[0]->val.f;
+			float alpha = dock->handle.opacity;
 			agl->shaders.plain->uniform.colour = (0x999999ff & 0xffffff00) + (uint32_t)(alpha * 0xff);
 			agl_use_program((AGlShader*)agl->shaders.plain);
 			agl_rect_((AGlRect){dock->handle.actor->region.x1 - SPACING / 2 - DIVIDER / 2, 0, DIVIDER, agl_actor__height(actor)});
@@ -259,7 +259,7 @@ dock_h_view(WaveformActor* _)
 			AGlActor* a = (AGlActor*)l->data;
 			Item* item = &items[i];
 			PanelView* panel = (PanelView*)item->actor;
-			a->region = (AGliRegion){
+			a->region = (AGlfRegion){
 				.x1 = x,
 				.y1 = 0,
 				.x2 = x + items[i].width,
@@ -273,7 +273,7 @@ dock_h_view(WaveformActor* _)
 		// single child takes all space of panel
 		if(g_list_length(actor->children) == 1){
 			AGlActor* child = actor->children->data;
-			child->region = (AGliRegion){0, PANEL_DRAG_HANDLE_HEIGHT, agl_actor__width(actor), height};
+			child->region = (AGlfRegion){0, PANEL_DRAG_HANDLE_HEIGHT, agl_actor__width(actor), height};
 			agl_actor__set_size(child);
 		}
 	}
@@ -329,13 +329,13 @@ dock_h_view(WaveformActor* _)
 					}
 					if(f){
 						if(!dock->handle.opacity){
-							dock->handle.opacity = 1.0;
+							dock->animatables[0]->target_val.f = 1.0;
 							dock->handle.actor = f;
 							agl_actor__start_transition(actor, g_list_append(NULL, dock->animatables[0]), animation_done, NULL);
 						}
 					}else{
 						if(dock->handle.opacity){
-							dock->handle.opacity = 0.0;
+							dock->animatables[0]->target_val.f = 0.0;
 							agl_actor__start_transition(actor, g_list_append(NULL, dock->animatables[0]), animation_done, NULL);
 						}
 					}
@@ -344,7 +344,7 @@ dock_h_view(WaveformActor* _)
 			case GDK_LEAVE_NOTIFY:
 				dbg (1, "LEAVE_NOTIFY");
 				if(dock->handle.opacity > 0.0){
-					dock->handle.opacity = 0.0;
+					dock->animatables[0]->target_val.f = 0.0;
 					agl_actor__start_transition(actor, g_list_append(NULL, dock->animatables[0]), animation_done, NULL);
 				}
 				break;
@@ -382,9 +382,9 @@ dock_h_view(WaveformActor* _)
 	);
 
 	dock->animatables[0] = AGL_NEW(WfAnimatable,
-		.model_val.f = &dock->handle.opacity,
+		.val.f       = &dock->handle.opacity,
 		.start_val.f = 0.0,
-		.val.f       = 0.0,
+		.target_val.f= 0.0,
 		.type        = WF_FLOAT
 	);
 

@@ -37,7 +37,7 @@
 #define wav_height 30
 #define row_spacing 8
 #define row_height (row_height0 + wav_height + row_spacing)
-#define N_ROWS_VISIBLE(A) (agl_actor__height(((AGlActor*)A)) / row_height)
+#define N_ROWS_VISIBLE(A) ((int)agl_actor__height(((AGlActor*)A)) / row_height)
 #define scrollable_height (FILES->view->items->len)
 #define max_scroll_offset (scrollable_height - N_ROWS_VISIBLE(actor) + 2)
 

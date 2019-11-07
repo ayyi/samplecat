@@ -192,7 +192,7 @@ on_window_resize(Display* dpy, AGlWindow* window, int width, int height)
 	double top    = 0;
 	glOrtho (left, right, bottom, top, 1.0, -1.0);
 
-	((AGlActor*)window->scene)->region = (AGliRegion){
+	((AGlActor*)window->scene)->region = (AGlfRegion){
 		.x2 = width,
 		.y2 = height,
 	};

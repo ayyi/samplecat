@@ -93,7 +93,7 @@ dock_v_view(gpointer _)
 		}
 
 		if(dock->handle.opacity > 0.0){
-			float alpha = dock->animatables[0]->val.f;
+			float alpha = dock->handle.opacity;
 			agl->shaders.plain->uniform.colour = (0x999999ff & 0xffffff00) + (uint32_t)(alpha * 0xff);
 			agl_use_program((AGlShader*)agl->shaders.plain);
 			agl_rect_((AGlRect){0, dock->handle.actor->region.y1 - SPACING / 2 - DIVIDER / 2 , agl_actor__width(actor), DIVIDER});
@@ -287,13 +287,13 @@ dock_v_view(gpointer _)
 					if(f){
 						if(!dock->handle.opacity){
 							//set_cursor(arrange->canvas->widget->window, CURSOR_H_DOUBLE_ARROW);
-							dock->handle.opacity = 1.0;
+							dock->animatables[0]->target_val.f = 1.0;
 							dock->handle.actor = f;
 							agl_actor__start_transition(actor, g_list_append(NULL, dock->animatables[0]), animation_done, NULL);
 						}
 					}else{
 						if(dock->handle.opacity){
-							dock->handle.opacity = 0.0;
+							dock->animatables[0]->target_val.f = 0.0;
 							agl_actor__start_transition(actor, g_list_append(NULL, dock->animatables[0]), animation_done, NULL);
 						}
 					}
@@ -302,7 +302,7 @@ dock_v_view(gpointer _)
 			case GDK_LEAVE_NOTIFY:
 				dbg (1, "LEAVE_NOTIFY");
 				if(dock->handle.opacity > 0.0){
-					dock->handle.opacity = 0.0;
+					dock->animatables[0]->target_val.f = 0.0;
 					agl_actor__start_transition(actor, g_list_append(NULL, dock->animatables[0]), animation_done, NULL);
 				}
 				break;
@@ -345,9 +345,9 @@ dock_v_view(gpointer _)
 	);
 
 	dock->animatables[0] = AGL_NEW(WfAnimatable,
-		.model_val.f = &dock->handle.opacity,
+		.val.f       = &dock->handle.opacity,
 		.start_val.f = 0.0,
-		.val.f       = 0.0,
+		.target_val.f= 0.0,
 		.type        = WF_FLOAT
 	);
 

@@ -1,6 +1,8 @@
 *.in
 *.o
 *.a
+*.la
+*.lo
 *.swp
 *.bak
 *~

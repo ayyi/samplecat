@@ -7,21 +7,9 @@ all:
 application.c: application.vala
 	valac -C -H application.h $(packages) --pkg samplecat $(vapidir) application.vala
 
-Xmodel.c: model.vala
-	valac -C -H model.h $(packages) --pkg samplecat $(vapidir)
-	@sed -i -e "/\#include <gobject\/gvaluecollector.h>/a#include <model.h>" model.c # append
-	@sed -i -e "/\#include <gobject\/gvaluecollector.h>/a#include <application.h>" model.c # append
-	@sed -i -e "/typedef struct _SamplecatModel SamplecatModel/d" model.h
-	@sed -i -e "/^typedef struct _SamplecatModel/d" model.c
-	@sed -i -e "s/^struct _/struct x_/" model.c
-	@sed -i -e "s/^struct x_SamplecatParamSpecFilter/struct SamplecatParamSpecFilter/" model.c
-	@sed -i -e "s/^struct x_SamplecatModelPrivate/struct SamplecatModelPrivate/" model.c
-	mv model.c model.h ..
-
 model.c: model.vala
 	valac -C -H model.h $(packages) --pkg samplecat $(vapidir)
 	@sed -i -e "/\#include <gobject\/gvaluecollector.h>/a#include <application.h>" model.c # append
-	#mv model.c model.h ..
 
 list_store.c: list_store.vala
 	valac -C -H list_store.h $(packages) --pkg samplecat $(vapidir) list_store.vala

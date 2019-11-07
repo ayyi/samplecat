@@ -155,7 +155,10 @@ static NewPanelFn
 #ifdef USE_OPENGL
 	waveform_panel_new,
 #endif
-	spectrogram_new, search_new, filters_new, make_fileview_pane;
+#ifdef HAVE_FFTW3
+	spectrogram_new,
+#endif
+	search_new, filters_new, make_fileview_pane;
 extern NewPanelFn dir_panel_new;
 
 #ifdef ROTATOR

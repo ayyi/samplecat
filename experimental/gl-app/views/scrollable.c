@@ -85,7 +85,7 @@ scrollable_view(gpointer _)
 		// first scrollable view child takes up all available space
 
 		AGlActor* child = actor->children->data;
-		child->region = (AGliRegion){0, 0, agl_actor__width(actor), agl_actor__height(actor)};
+		child->region = (AGlfRegion){0, 0, agl_actor__width(actor), agl_actor__height(actor)};
 		agl_actor__set_size(child);
 
 		scrollable_set_scroll_position(actor, -1);

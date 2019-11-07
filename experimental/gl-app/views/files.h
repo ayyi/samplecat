@@ -17,6 +17,19 @@ typedef struct _FilesView FilesView;
 #include "views/files.impl.h"
 #include "behaviours/selectable.h"
 
+typedef void (*BehaviourInit) (AGlActor*);
+
+typedef struct {
+   int a;
+   BehaviourInit init;
+} Behaviour;
+
+#include "utils/observable.h"
+typedef struct {
+   Behaviour   behaviour;
+   Observable* observable;
+} ScrollBehaviour;
+
 struct _FilesView {
    AGlActor       actor;
    VMDirectory*   viewmodel;

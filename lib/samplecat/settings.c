@@ -135,8 +135,9 @@ config_load(ConfigContext* ctx, Config* config)
 					dbg(2, "%s=%s", keys[k], keyval);
 					g_free(keyval);
 				}else{
-					if(error->code == 3) g_error_clear(error)
-					else { GERR_WARN; }
+					if(error->code != 3)
+						GERR_WARN;
+					g_error_clear(error);
 					if (!loc[k] || strlen(loc[k])==0) strcpy(loc[k], "");
 				}
 			}
@@ -151,8 +152,9 @@ config_load(ConfigContext* ctx, Config* config)
 			{
 				bool keyval = g_key_file_get_boolean(ctx->key_file, groupname, "add_recursive", &error);
 				if(error){
-					if(error->code == 3) g_error_clear(error)
-					else { GERR_WARN; }
+					if(error->code != 3)
+						GERR_WARN;
+					g_error_clear(error)
 				}else{
 					config->add_recursive = keyval;
 				}

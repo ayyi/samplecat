@@ -157,7 +157,7 @@ web_view_on_loaded (WebKitWebView* view, WebKitWebFrame* frame, gpointer user_da
 	}
 
 	if(!db_connect()){
-		g_warning("cannot connect to any database.\n");
+		g_warning("cannot connect to any database.");
 		exit(1);
 	}
 

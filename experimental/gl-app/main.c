@@ -19,8 +19,6 @@
 #include <libgen.h>
 #include <X11/Xlib.h>
 #include <X11/keysym.h>
-#define GLX_GLXEXT_PROTOTYPES
-#include <gtk/gtk.h>
 #include <debug/debug.h>
 #include "agl/actor.h"
 #include "agl/ext.h"
@@ -134,6 +132,7 @@ main(int argc, char* argv[])
 	AGlWindow* window = agl_make_window(dpy, "Samplecat", (XDisplayWidth(dpy, screen) - size.x) / 2, (XDisplayHeight(dpy, screen) - size.y) / 2, size.x, size.y, app->scene);
 
 	if(app->temp_view){
+
 		g_idle_add(show_directory, NULL);
 	}else{
 		g_idle_add(add_content, NULL);
@@ -191,14 +190,14 @@ main(int argc, char* argv[])
 		{
 			dbg(2, "%i", ((AGlActor*)app->scene)->region.x2);
 
-			actors.hdock->region = (AGliRegion){20, 20, agl_actor__width(scene) - 20, agl_actor__height(scene) - 20};
+			actors.hdock->region = (AGlfRegion){20, 20, agl_actor__width(scene) - 20, agl_actor__height(scene) - 20};
 			agl_actor__set_size(actors.hdock);
 
 // not needed?
 			agl_actor__set_size(actors.list); // clear cache
 
 #ifdef SHOW_FBO_DEBUG
-			actors.debug->region = (AGliRegion){scene->region.x2/2, 10, scene->region.x2 - 10, scene->region.x2/2};
+			actors.debug->region = (AGlfRegion){scene->region.x2/2, 10, scene->region.x2 - 10, scene->region.x2/2};
 #endif
 
 			agl_actor__invalidate((AGlActor*)app->scene);
@@ -224,7 +223,7 @@ add_content(gpointer _)
 #endif
 	);
 	if (!db_connect()) {
-		g_warning("cannot connect to any database.\n");
+		g_warning("cannot connect to any database.");
 		return EXIT_FAILURE;
 	}
 
@@ -234,7 +233,7 @@ add_content(gpointer _)
 
 	Waveform* w = NULL;
 
-	app->wfc = wf_context_new(app->scene);
+	app->wfc = wf_context_new((AGlActor*)app->scene);
 
 #if 0
 	agl_actor__add_child((AGlActor*)scene, actors.bg = background_actor(NULL));
@@ -284,10 +283,10 @@ add_content(gpointer _)
 		{
 			dbg(2, "%i", ((AGlActor*)app->scene)->region.x2);
 
-			actors.files->region = (AGliRegion){20, 20, agl_actor__width(scene) - 10, agl_actor__height(scene) - 20};
+			actors.files->region = (AGlfRegion){20, 20, agl_actor__width(scene) - 10, agl_actor__height(scene) - 20};
 
 #ifdef SHOW_FBO_DEBUG
-			actors.debug->region = (AGliRegion){scene->region.x2/2, 10, scene->region.x2 - 10, scene->region.x2/2};
+			actors.debug->region = (AGlfRegion){scene->region.x2/2, 10, scene->region.x2 - 10, scene->region.x2/2};
 #endif
 
 			agl_actor__invalidate((AGlActor*)app->scene);
@@ -298,7 +297,7 @@ show_directory(gpointer _)
 {
 	AGlActor* root = (AGlActor*)app->scene;
 
-	app->wfc = wf_context_new(app->scene);
+	app->wfc = wf_context_new((AGlActor*)app->scene);
 	((AGlActor*)app->scene)->set_size = scene_set_size2;
 
 	AGlActor* view = actors.files = files_with_wav(NULL);

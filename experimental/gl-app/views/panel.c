@@ -141,7 +141,7 @@ panel_view(gpointer _)
 		// single child takes all space of panel
 		if(g_list_length(actor->children) == 1){
 			AGlActor* child = actor->children->data;
-			child->region = (AGliRegion){0, panel->title ? PANEL_DRAG_HANDLE_HEIGHT : 0, agl_actor__width(actor), agl_actor__height(actor)};
+			child->region = (AGlfRegion){0, panel->title ? PANEL_DRAG_HANDLE_HEIGHT : 0, agl_actor__width(actor), agl_actor__height(actor)};
 			agl_actor__set_size(child);
 		}
 	}

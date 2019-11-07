@@ -557,7 +557,7 @@ load_settings ()
 }
 
 
-gboolean
+bool
 save_settings ()
 {
 	PF;
@@ -599,7 +599,9 @@ save_settings ()
 
 			if(!is_panel_child){
 				int vals1[2] = {actor->region.x1, actor->region.y1};
-				yaml_add_key_value_pair_array("position", vals1, 2);
+				if(vals1[0] || vals1[1]){
+					yaml_add_key_value_pair_array("position", vals1, 2);
+				}
 				int vals2[2] = {agl_actor__width(actor), agl_actor__height(actor)};
 				yaml_add_key_value_pair_array("size", vals2, 2);
 			}

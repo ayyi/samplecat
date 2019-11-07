@@ -98,7 +98,7 @@ player_view (gpointer _)
 	AGlActor* b[2];
 	for(int i=0;i<2;i++){
 		agl_actor__add_child(view, b[i] = button((int*)&textures[i], buttons[i].action, buttons[i].state, NULL));
-		b[i]->region = (AGliRegion){
+		b[i]->region = (AGlfRegion){
 			.x1 = (PLAYER_ICON_SIZE + 4) * i,
 			.x2 = (PLAYER_ICON_SIZE + 4) * i + PLAYER_ICON_SIZE,
 			.y2 = PLAYER_ICON_SIZE,
@@ -110,7 +110,7 @@ player_view (gpointer _)
 
 
 static GdkPixbuf*
-get_icon(const char* name)
+get_icon (const char* name)
 {
 	GError* error = NULL;
 
@@ -121,9 +121,9 @@ get_icon(const char* name)
 
 
 static guint
-icon_to_texture(GdkPixbuf* icon)
+icon_to_texture (GdkPixbuf* icon)
 {
-	dbg(0, "icon: pixbuf=%ix%i %ibytes/px", gdk_pixbuf_get_width(icon), gdk_pixbuf_get_height(icon), gdk_pixbuf_get_n_channels(icon));
+	dbg(1, "icon: pixbuf=%ix%i %ibytes/px", gdk_pixbuf_get_width(icon), gdk_pixbuf_get_height(icon), gdk_pixbuf_get_n_channels(icon));
 	glBindTexture   (GL_TEXTURE_2D, textures[t_idx++]);
 	glTexParameterf (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameterf (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -152,10 +152,10 @@ player_init (AGlActor* actor)
 	glGenTextures(G_N_ELEMENTS(textures), textures);
 	for(int i=0;i<G_N_ELEMENTS(icons);i++){
 		GdkPixbuf* icon = get_icon(icons[i]);
-		dbg(0, "icon=%p", icon);
+		dbg(1, "icon=%p", icon);
 		if(icon){
 			guint t = icon_to_texture(icon);
-			dbg(0, "texture=%u", t);
+			dbg(1, "texture=%u", t);
 		}
 	}
 }

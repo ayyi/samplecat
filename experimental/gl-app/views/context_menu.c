@@ -34,10 +34,10 @@ static Menu* _menu = NULL;
 static float hover_opacity = 0;
 static int hover_row = 0;
 static WfAnimatable animatable = {
-	.start_val.f = 0.0,
-	.val.f       = 0.0,
-	.type        = WF_FLOAT,
-	.model_val.f = &hover_opacity
+	.start_val.f  = 0.0,
+	.target_val.f = 0.0,
+	.type         = WF_FLOAT,
+	.val.f        = &hover_opacity
 };
 
 
@@ -100,7 +100,7 @@ context_menu_paint (AGlActor* actor)
 {
 	agl_set_font_string("Roboto 10");
 
-	agl->shaders.plain->uniform.colour = 0xffffff00 + (int)(31.0 * animatable.val.f);
+	agl->shaders.plain->uniform.colour = 0xffffff00 + (int)(31.0 * hover_opacity);
 	agl_use_program((AGlShader*)agl->shaders.plain);
 	agl_rect(-BORDER, hover_row * 16, agl_actor__width(actor), 16);
 
@@ -145,11 +145,11 @@ context_menu_event (AGlActor* actor, GdkEvent* event, AGliPt xy)
 			break;
 		case GDK_ENTER_NOTIFY:
 			hover_row = xy.y / 16;
-			hover_opacity = 1.0;
+			animatable.target_val.f = 1.0;
 			agl_actor__start_transition(actor, g_list_append(NULL, &animatable), NULL, NULL);
 			break;
 		case GDK_LEAVE_NOTIFY:
-			hover_opacity = 0.0;
+			animatable.target_val.f = 0.0;
 			agl_actor__start_transition(actor, g_list_append(NULL, &animatable), NULL, NULL);
 			break;
 		case GDK_MOTION_NOTIFY:;
