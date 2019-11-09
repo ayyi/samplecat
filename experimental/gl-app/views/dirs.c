@@ -29,9 +29,11 @@
 
 #define row_height 20
 
+static void dirs_free (AGlActor*);
+
 static AGl* agl = NULL;
 static int instance_count = 0;
-static AGlActorClass actor_class = {0, "Dirs", (AGlActorNew*)directories_view};
+static AGlActorClass actor_class = {0, "Dirs", (AGlActorNew*)directories_view, dirs_free};
 
 static void dirs_select(DirectoriesView*, int);
 
@@ -137,19 +139,12 @@ directories_view(WaveformActor* _)
 		return AGL_HANDLED;
 	}
 
-	void dirs_free(AGlActor* actor)
-	{
-		if(!--instance_count){
-		}
-	}
-
 	DirectoriesView* view = WF_NEW(DirectoriesView,
 		.actor = {
 			.class = &actor_class,
 			.name = "Directories",
 			.colour = 0xaaff33ff,
 			.init = dirs_init,
-			.free = dirs_free,
 			.paint = dirs_paint,
 			.set_size = dirs_set_size,
 			.on_event = dirs_event
@@ -169,6 +164,16 @@ directories_view(WaveformActor* _)
 	g_signal_connect(samplecat.model->filters.dir, "changed", G_CALLBACK(dirs_on_filter_changed), view);
 
 	return (AGlActor*)view;
+}
+
+
+static void
+dirs_free (AGlActor* actor)
+{
+	if(!--instance_count){
+	}
+
+	g_free(actor);
 }
 
 

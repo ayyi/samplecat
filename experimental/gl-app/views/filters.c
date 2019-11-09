@@ -32,9 +32,11 @@
 #define PADDING 1
 #define BORDER 1
 
+static void filters_free (AGlActor*);
+
 static AGl* agl = NULL;
 static int instance_count = 0;
-static AGlActorClass actor_class = {0, "Filters", (AGlActorNew*)filters_view};
+static AGlActorClass actor_class = {0, "Filters", (AGlActorNew*)filters_view, filters_free};
 static int mouse = 0;
 
 
@@ -195,22 +197,11 @@ filters_view(gpointer _)
 		return AGL_NOT_HANDLED;
 	}
 
-	void filters_free(AGlActor* actor)
-	{
-		FiltersView* view = (FiltersView*)actor;
-
-		int i; for(i=0;i<3;i++) if(view->filters[i].layout) _g_object_unref0(view->filters[i].layout);
-
-		if(!--instance_count){
-		}
-	}
-
 	FiltersView* view = AGL_NEW(FiltersView,
 		.actor = {
 			.class = &actor_class,
 			.name = "Search",
 			.init = filters_init,
-			.free = filters_free,
 			.paint = filters_paint,
 			.set_size = filters_size,
 			.on_event = filters_event,
@@ -227,5 +218,19 @@ filters_view(gpointer _)
 	g_signal_connect(samplecat.model->filters.category, "changed", G_CALLBACK(filters_on_filter_changed), view);
 
 	return (AGlActor*)view;
+}
+
+
+static void
+filters_free (AGlActor* actor)
+{
+	FiltersView* view = (FiltersView*)actor;
+
+	int i; for(i=0;i<3;i++) if(view->filters[i].layout) _g_object_unref0(view->filters[i].layout);
+
+	if(!--instance_count){
+	}
+
+	g_free(actor);
 }
 

@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2018 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2019 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -10,6 +10,7 @@
 *
 */
 #include "config.h"
+#include <glib/gstdio.h>
 #include <debug/debug.h>
 #include "agl/actor.h"
 #include "src/typedefs.h"
@@ -18,6 +19,7 @@
 #include "waveform/waveform.h"
 #include "yaml_utils.h"
 #include "application.h"
+#include "behaviours/state.h"
 #include "layout.h"
 
 typedef AGlActorClass* (get_class)();
@@ -220,7 +222,9 @@ config_load_window_yaml (yaml_parser_t* parser, yaml_event_t* event)
 							}
 						}
 					}else{
-						dbg(0, "  ignoring: %s=%s", key, event->data.scalar.value);
+						if(!state_set_named_parameter(stack[sp], key, event->data.scalar.value)){
+							dbg(0, "  ignoring: %s=%s", key, event->data.scalar.value);
+						}
 					}
 					key[0] = '\0';
 				}
@@ -513,7 +517,6 @@ load_settings ()
 						if(!strcmp(key, "windows")){
 							dbg(2, "found Windows section");
 							config_load_windows_yaml(&parser, &event);
-
 						}
 						else gwarn("unexpected section: %s", key);
 					}
@@ -564,9 +567,8 @@ save_settings ()
 
 	if(!yaml_emitter_initialize(&emitter)){ gerr("failed to initialise yaml writer."); return false; }
 
-	char* filename = g_strdup_printf("%s.yaml", app->config_ctx.filename);
-	FILE* fp = fopen(filename, "wb");
-	g_free(filename);
+	char* tmp = g_strdup_printf("%s/samplecat.yaml", g_get_tmp_dir());
+	FILE* fp = fopen(tmp, "wb");
 	if(!fp){
 		printf("cannot open config file for writing (%s)\n", app->config_ctx.filename);
 		return FALSE;
@@ -625,6 +627,25 @@ save_settings ()
 				}
 			}
 
+			for(int i = 0; i < AGL_ACTOR_N_BEHAVIOURS; i++){
+				AGlBehaviour* behaviour = actor->behaviours[i];
+				if(!behaviour) break;
+				if(behaviour->klass == state_get_class()){
+					StateBehaviour* b = (StateBehaviour*)behaviour;
+					ParamArray* params = b->params;
+					for(int i = 0; i< params->size; i++){
+						ConfigParam* param = &params->params[i];
+						switch(param->utype){
+							case G_TYPE_STRING:
+								if(!yaml_add_key_value_pair(param->name, param->val.c)) goto error;
+								break;
+							default:
+								break;
+						}
+					}
+				}
+			}
+
 			GList* l = actor->children;
 			for(;l;l=l->next){
 				if(!add_child(event, l->data)) goto error;
@@ -651,6 +672,13 @@ save_settings ()
 	fclose(fp);
 	dbg(1, "yaml write finished ok.");
 
+	char* filename = g_strdup_printf("%s.yaml", app->config_ctx.filename);
+	if(g_rename (tmp, filename)){
+		gwarn("failed to save config");
+	}
+	g_free(filename);
+	g_free(tmp);
+
 	return true;
 
   error:
@@ -671,6 +699,7 @@ save_settings ()
 	yaml_event_delete(&event);
 	yaml_emitter_delete(&emitter);
 	fclose(fp);
+	g_free(tmp);
 
 	return false;
 }

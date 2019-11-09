@@ -36,9 +36,11 @@ extern int need_draw;
 
 #define FONT "Droid Sans"
 
+static void list_view_free (AGlActor*);
+
 static AGl* agl = NULL;
 static int instance_count = 0;
-static AGlActorClass actor_class = {0, "List", (AGlActorNew*)list_view};
+static AGlActorClass actor_class = {0, "List", (AGlActorNew*)list_view, list_view_free};
 
 
 AGlActorClass*
@@ -190,19 +192,12 @@ list_view(gpointer _)
 		return AGL_HANDLED;
 	}
 
-	void list_free(AGlActor* actor)
-	{
-		if(!--instance_count){
-		}
-	}
-
 	ListView* view = WF_NEW(ListView,
 		.actor = {
 			.class = &actor_class,
 			.name = actor_class.name,
 			.colour = 0xffff99ff,
 			.init = list_init,
-			.free = list_free,
 			.paint = list_paint,
 			.set_size = list_set_size,
 			.on_event = list_event,
@@ -224,6 +219,16 @@ list_view(gpointer _)
 	g_signal_connect(samplecat.store, "content-changed", G_CALLBACK(list_on_search_filter_changed), actor);
 
 	return actor;
+}
+
+
+static void
+list_view_free (AGlActor* actor)
+{
+	if(!--instance_count){
+	}
+
+	g_free(actor);
 }
 
 

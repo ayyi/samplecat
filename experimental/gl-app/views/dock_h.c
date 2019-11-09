@@ -33,20 +33,22 @@
 #define SPACING 15
 #define DIVIDER 5
 
+static void dock_free (AGlActor*);
+
 static AGl* agl = NULL;
 static int instance_count = 0;
-static AGlActorClass actor_class = {0, "Dock H", (AGlActorNew*)dock_h_view};
+static AGlActorClass actor_class = {0, "Dock H", (AGlActorNew*)dock_h_view, dock_free};
 
 
 AGlActorClass*
-dock_h_get_class()
+dock_h_get_class ()
 {
 	return &actor_class;
 }
 
 
 static void
-_init()
+_init ()
 {
 	static bool init_done = false;
 
@@ -355,16 +357,6 @@ dock_h_view(WaveformActor* _)
 		return AGL_HANDLED;
 	}
 
-	void dock_free(AGlActor* actor)
-	{
-		DockHView* dock = (DockHView*)actor;
-
-		g_list_free0(dock->panels);
-
-		if(!--instance_count){
-		}
-	}
-
 	DockHView* dock = WF_NEW(DockHView,
 		.panel = {
 			.actor = {
@@ -372,7 +364,6 @@ dock_h_view(WaveformActor* _)
 				.name = "Dock H",
 				.program = (AGlShader*)agl->shaders.plain,
 				.init = dock_init,
-				.free = dock_free,
 				.paint = dock_h_paint,
 				.set_state = dock_set_state,
 				.set_size = dock_h_set_size,
@@ -389,6 +380,18 @@ dock_h_view(WaveformActor* _)
 	);
 
 	return (AGlActor*)dock;
+}
+
+
+static void
+dock_free (AGlActor* actor)
+{
+	DockHView* dock = (DockHView*)actor;
+
+	g_list_free0(dock->panels);
+
+	if(!--instance_count){
+	}
 }
 
 

@@ -31,8 +31,10 @@ extern AGlShader ring;
 
 #define _g_object_unref0(var) ((var == NULL) ? NULL : (var = (g_object_unref (var), NULL)))
 
+static void panel_free (AGlActor*);
+
 static AGl* agl = NULL;
-static AGlActorClass actor_class = {0, "Panel", (AGlActorNew*)panel_view};
+static AGlActorClass actor_class = {0, "Panel", (AGlActorNew*)panel_view, panel_free};
 static int instance_count = 0;
 static AGliPt origin = {0,};
 static AGliPt mouse = {0,};
@@ -185,22 +187,11 @@ panel_view(gpointer _)
 		return AGL_HANDLED;
 	}
 
-	void panel_free(AGlActor* actor)
-	{
-		PanelView* panel = (PanelView*)actor;
-
-		_g_object_unref0(panel->layout);
-
-		if(!--instance_count){
-		}
-	}
-
 	PanelView* view = AGL_NEW(PanelView,
 		.actor = {
 			.class = &actor_class,
 			.name = "Panel",
 			.init = panel_init,
-			.free = panel_free,
 			.paint = panel_paint,
 			.set_size = panel_set_size,
 			.on_event = panel_event,
@@ -215,4 +206,15 @@ panel_view(gpointer _)
 	return (AGlActor*)view;
 }
 
+
+static void
+panel_free (AGlActor* actor)
+{
+	PanelView* panel = (PanelView*)actor;
+
+	_g_object_unref0(panel->layout);
+
+	if(!--instance_count){
+	}
+}
 

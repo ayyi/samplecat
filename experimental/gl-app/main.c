@@ -11,9 +11,6 @@
 */
 #define __main_c__
 #include "config.h"
-#include <math.h>
-#include <stdlib.h>
-#include <stdio.h>
 #include <string.h>
 #include <getopt.h>
 #include <libgen.h>
@@ -21,7 +18,6 @@
 #include <X11/keysym.h>
 #include <debug/debug.h>
 #include "agl/actor.h"
-#include "agl/ext.h"
 #include "file_manager/mimetype.h"
 #include "file_manager/pixmaps.h"
 #include "src/typedefs.h"
@@ -132,7 +128,6 @@ main(int argc, char* argv[])
 	AGlWindow* window = agl_make_window(dpy, "Samplecat", (XDisplayWidth(dpy, screen) - size.x) / 2, (XDisplayHeight(dpy, screen) - size.y) / 2, size.x, size.y, app->scene);
 
 	if(app->temp_view){
-
 		g_idle_add(show_directory, NULL);
 	}else{
 		g_idle_add(add_content, NULL);
@@ -204,8 +199,8 @@ main(int argc, char* argv[])
 		}
 
 
-static gboolean
-add_content(gpointer _)
+static bool
+add_content (gpointer _)
 {
 	config_load(&app->config_ctx, &app->config);
 

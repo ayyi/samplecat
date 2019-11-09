@@ -28,9 +28,10 @@ struct {
 	AGliPt pt;
 } GlButtonPress;
 
-static AGlActorClass actor_class = {0, "Button", (AGlActorNew*)button};
-
+static void button_free     (AGlActor*);
 static bool button_on_event (AGlActor*, GdkEvent*, AGliPt);
+
+static AGlActorClass actor_class = {0, "Button", (AGlActorNew*)button, button_free};
 
 
 AGlActorClass*
@@ -175,18 +176,11 @@ button(int* icon, ButtonAction action, ButtonGetState get_state, gpointer user_d
 		actor->paint = agl->use_shaders ? gl_button_paint : gl_button_paint_gl1;
 	}
 
-	void button_free(AGlActor* actor)
-	{
-		g_free(((ButtonActor*)actor)->animatables[0]);
-		g_free(((ButtonActor*)actor)->animatables[1]);
-	}
-
 	ButtonActor* button = AGL_NEW(ButtonActor,
 		.actor = {
 			.class    = &actor_class,
 			.name     = "Button",
 			.init     = button_init,
-			.free     = button_free,
 			.paint    = agl_actor__null_painter,
 			.set_size = button_set_size,
 			.on_event = button_on_event,
@@ -212,6 +206,14 @@ button(int* icon, ButtonAction action, ButtonGetState get_state, gpointer user_d
 	);
 
 	return (AGlActor*)button;
+}
+
+
+static void
+button_free (AGlActor* actor)
+{
+	g_free(((ButtonActor*)actor)->animatables[0]);
+	g_free(((ButtonActor*)actor)->animatables[1]);
 }
 
 

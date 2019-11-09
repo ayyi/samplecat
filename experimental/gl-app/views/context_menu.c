@@ -24,9 +24,11 @@
 
 #define BORDER 4
 
+static void context_menu_free (AGlActor*);
+
 static AGl* agl = NULL;
 
-static AGlActorClass actor_class = {0, "Context menu", (AGlActorNew*)context_menu};
+static AGlActorClass actor_class = {0, "Context menu", (AGlActorNew*)context_menu, context_menu_free};
 static AMPromise* _promise = NULL;
 static AGlWindow* popup = NULL;
 static Menu* _menu = NULL;
@@ -179,7 +181,6 @@ context_menu (gpointer _)
 		.name = "Context menu",
 		.region = {BORDER, BORDER, BORDER + 240, BORDER + _menu->len * 16},
 		.init = context_menu_init,
-		.free = context_menu_free,
 		.paint = context_menu_paint,
 		.on_event = context_menu_event
 	);

@@ -152,7 +152,7 @@ scrollbar_view (AGlActor* panel, AGlOrientation orientation)
 			.on_event = scrollbar_on_event,
 		},
 		.orientation = orientation,
-		.scroll = observable_new(),
+		.scroll = agl_observable_new(),
 		.handle = {
 			.opacity = 0.5,
 			.animation = {
@@ -173,7 +173,7 @@ scrollbar_view (AGlActor* panel, AGlOrientation orientation)
 	scrollbar->handle.animation.val.f = &scrollbar->handle.opacity;
 	scrollbar->trough.animation.val.f = &scrollbar->trough.opacity;
 
-	observable_subscribe(scrollbar->scroll, scrollbar_on_scroll, scrollbar);
+	agl_observable_subscribe(scrollbar->scroll, scrollbar_on_scroll, scrollbar);
 
 	return (AGlActor*)scrollbar;
 }

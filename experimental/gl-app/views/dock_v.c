@@ -28,9 +28,11 @@
 #define DIVIDER 5
 #define HANDLE_HEIGHT(P) (((PanelView*)P)->title ? PANEL_DRAG_HANDLE_HEIGHT : 0)
 
+static void dock_free (AGlActor*);
+
 static AGl* agl = NULL;
 static int instance_count = 0;
-static AGlActorClass actor_class = {0, "Dock V", (AGlActorNew*)dock_v_view};
+static AGlActorClass actor_class = {0, "Dock V", (AGlActorNew*)dock_v_view, dock_free};
 
 
 AGlActorClass*
@@ -313,16 +315,6 @@ dock_v_view(gpointer _)
 		return AGL_HANDLED;
 	}
 
-	void dock_free(AGlActor* actor)
-	{
-		DockVView* dock = (DockVView*)actor;
-
-		g_list_free0(dock->panels);
-
-		if(!--instance_count){
-		}
-	}
-
 	DockVView* dock = AGL_NEW(DockVView,
 		.panel = {
 			.actor = {
@@ -330,7 +322,6 @@ dock_v_view(gpointer _)
 				.name = "Dock V",
 				.program = (AGlShader*)agl->shaders.plain,
 				.init = dock_init,
-				.free = dock_free,
 				.paint = dock_v_paint,
 				.set_state = dock_set_state,
 				.set_size = dock_v_set_size,
@@ -352,6 +343,18 @@ dock_v_view(gpointer _)
 	);
 
 	return (AGlActor*)dock;
+}
+
+
+static void
+dock_free (AGlActor* actor)
+{
+	DockVView* dock = (DockVView*)actor;
+
+	g_list_free0(dock->panels);
+
+	if(!--instance_count){
+	}
 }
 
 

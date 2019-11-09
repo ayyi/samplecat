@@ -35,9 +35,11 @@
 #define agl_actor__scrollable_height(A) (A->scrollable.y2 - A->scrollable.y1)
 #define scrollable_height (view->cache.n_rows * row_height)
 
+static void inspector_free (AGlActor*);
+
 static AGl* agl = NULL;
 static int instance_count = 0;
-static AGlActorClass actor_class = {0, "Inspector", (AGlActorNew*)inspector_view};
+static AGlActorClass actor_class = {0, "Inspector", (AGlActorNew*)inspector_view, inspector_free};
 
 
 AGlActorClass*
@@ -168,18 +170,11 @@ inspector_view(gpointer _)
 		return AGL_NOT_HANDLED;
 	}
 
-	void inspector_free(AGlActor* actor)
-	{
-		if(!--instance_count){
-		}
-	}
-
 	InspectorView* view = AGL_NEW(InspectorView,
 		.actor = {
 			.class = &actor_class,
 			.name = actor_class.name,
 			.init = inspector_init,
-			.free = inspector_free,
 			.paint = inspector_paint,
 			.set_size = inspector_set_size,
 			.on_event = inspector_event,
@@ -206,4 +201,13 @@ inspector_view(gpointer _)
 	return (AGlActor*)view;
 }
 
+
+static void
+inspector_free (AGlActor* actor)
+{
+	if(!--instance_count){
+	}
+
+	g_free(actor);
+}
 

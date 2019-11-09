@@ -30,9 +30,11 @@ extern void agl_actor__render_from_fbo (AGlActor*);
 #define FONT "Droid Sans"
 #define TAB_HEIGHT 30
 
+static void tabs_free (AGlActor*);
+
 static AGl* agl = NULL;
 static int instance_count = 0;
-static AGlActorClass actor_class = {0, "Tabs", (AGlActorNew*)tabs_view};
+static AGlActorClass actor_class = {0, "Tabs", (AGlActorNew*)tabs_view, tabs_free};
 static int tab_width = 80;
 
 static AGlMaterial* ring_material = NULL;
@@ -118,12 +120,12 @@ tabs_view (gpointer _)
 			 */
 			AGlActor* items[] = {slide->prev, slide->next};
 			float x = slide->x;
-			int w = agl_actor__width(actor);
+			float w = agl_actor__width(actor);
 			for(int i=0; i<G_N_ELEMENTS(items); i++){
 				AGlActor* a = items[i];
 				if(a->cache.valid){
 					glTranslatef(x, TAB_HEIGHT, 0);
-					int xt = a->region.x2;
+					float xt = a->region.x2;
 					a->region.x2 = agl_actor__width(actor);
 
 					agl_actor__render_from_fbo(a);
@@ -204,24 +206,11 @@ tabs_view (gpointer _)
 		return AGL_NOT_HANDLED;
 	}
 
-	void tabs_free (AGlActor* actor)
-	{
-		TabsView* tabs = (TabsView*)actor;
-
-		g_list_free_full(tabs->tabs, g_free);
-
-		ring_material_class.free(ring_material);
-
-		if(!--instance_count){
-		}
-	}
-
 	TabsView* view = AGL_NEW(TabsView,
 		.actor = {
 			.class = &actor_class,
 			.name = "Tabs",
 			.init = tabs_init,
-			.free = tabs_free,
 			.paint = tabs_paint,
 			.set_size = tabs_set_size,
 			.on_event = tabs_event,
@@ -244,6 +233,20 @@ tabs_view (gpointer _)
 	};
 
 	return (AGlActor*)view;
+}
+
+
+static void
+tabs_free (AGlActor* actor)
+{
+	TabsView* tabs = (TabsView*)actor;
+
+	g_list_free_full(tabs->tabs, g_free);
+
+	ring_material_class.free(ring_material);
+
+	if(!--instance_count){
+	}
 }
 
 

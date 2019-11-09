@@ -34,8 +34,10 @@
 #define BORDER 1
 #define MARGIN_BOTTOM 5
 
+static void search_free (AGlActor*);
+
 static int instance_count = 0;
-static AGlActorClass actor_class = {0, "Search", (AGlActorNew*)search_view};
+static AGlActorClass actor_class = {0, "Search", (AGlActorNew*)search_view, search_free};
 
 static AGl* agl = NULL;
 static char* font = NULL;
@@ -224,22 +226,11 @@ search_view(gpointer _)
 		return AGL_HANDLED;
 	}
 
-	void search_free(AGlActor* actor)
-	{
-		SearchView* view = (SearchView*)actor;
-
-		_g_object_unref0(view->layout);
-
-		if(!--instance_count){
-		}
-	}
-
 	SearchView* view = AGL_NEW(SearchView,
 		.actor = {
 			.class = &actor_class,
 			.name = "Search",
 			.init = search_init,
-			.free = search_free,
 			.paint = search_paint,
 			.on_event = search_event
 		}
@@ -254,6 +245,20 @@ search_view(gpointer _)
 	search_layout(view);
 
 	return (AGlActor*)view;
+}
+
+
+static void
+search_free (AGlActor* actor)
+{
+	SearchView* view = (SearchView*)actor;
+
+	_g_object_unref0(view->layout);
+
+	if(!--instance_count){
+	}
+
+	g_free(actor);
 }
 
 
