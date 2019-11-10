@@ -555,7 +555,6 @@ static GtkBuilder *
 load_interface ()
 {
     GtkBuilder *gui;
-    gchar    *gui_file;
     GError* error = NULL;
 
     /* load ui */
@@ -646,6 +645,7 @@ gdl_dock_layout_construct_items_ui (GdlDockLayout *layout)
     return dialog;
 }
 
+#if 0
 static void
 cell_edited_cb (GtkCellRendererText *cell,
                 const gchar         *path_string,
@@ -677,6 +677,7 @@ cell_edited_cb (GtkCellRendererText *cell,
 
     gtk_tree_path_free (path);
 }
+#endif
 
 static void
 gdl_dock_layout_build_tree(GdlDockLayout *layout, GdlDockLayoutUIData* ui_data, GtkWidget* layouts_view)
@@ -1261,7 +1262,6 @@ void
 gdl_dock_layout_run_manager (GdlDockLayout *layout)
 {
     GtkWidget *dialog;
-    GtkWidget *parent = NULL;
     
     g_return_if_fail (layout != NULL);
 

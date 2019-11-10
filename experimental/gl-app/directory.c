@@ -47,9 +47,8 @@ struct _VMDirectoryClass {
     GObjectClass parent_class;
 };
 
-
-static gpointer vm_directory_parent_class = NULL;
 static GtkTreeModelIface* directory_gtk_tree_model_parent_iface = NULL;
+static void directory_gtk_tree_model_interface_init (GtkTreeModelIface*);
 
 GType vm_directory_get_type (void) G_GNUC_CONST;
 enum  {
@@ -88,7 +87,14 @@ struct _VMDirectoryPrivate {
     gchar*                     filter_string;   // Glob or regexp pattern
     gboolean                   filter_directories;
 };
-#define DIRECTORY_GET_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), TYPE_DIRECTORY, VMDirectoryPrivate))
+
+G_DEFINE_TYPE_WITH_CODE (
+	VMDirectory,
+	vm_directory,
+	G_TYPE_OBJECT,
+	G_ADD_PRIVATE (VMDirectory)
+	G_IMPLEMENT_INTERFACE (GTK_TYPE_TREE_MODEL, directory_gtk_tree_model_interface_init)
+);
 
 static GType             directory_real_get_column_type (GtkTreeModel*, gint index);
 static GtkTreeModelFlags directory_real_get_flags       (GtkTreeModel*);
@@ -250,10 +256,9 @@ vm_directory_new (void)
 
 
 static void
-directory_class_init (VMDirectoryClass* klass)
+vm_directory_class_init (VMDirectoryClass* klass)
 {
 	vm_directory_parent_class = g_type_class_peek_parent (klass);
-	g_type_class_add_private (klass, sizeof (VMDirectoryPrivate));
 	G_OBJECT_CLASS (klass)->finalize = directory_finalize;
 }
 
@@ -279,9 +284,9 @@ directory_gtk_tree_model_interface_init (GtkTreeModelIface* iface)
 
 
 static void
-directory_instance_init (VMDirectory* self)
+vm_directory_init (VMDirectory* self)
 {
-	self->priv = DIRECTORY_GET_PRIVATE (self);
+	self->priv = vm_directory_get_instance_private(self);
 }
 
 
@@ -290,22 +295,6 @@ directory_finalize (GObject* obj)
 {
 	//VMDirectory* self = G_TYPE_CHECK_INSTANCE_CAST (obj, TYPE_DIRECTORY, VMDirectory);
 	G_OBJECT_CLASS (vm_directory_parent_class)->finalize (obj);
-}
-
-
-GType
-vm_directory_get_type (void)
-{
-	static volatile gsize directory_type_id__volatile = 0;
-	if (g_once_init_enter (&directory_type_id__volatile)) {
-		static const GTypeInfo g_define_type_info = { sizeof (VMDirectoryClass), (GBaseInitFunc) NULL, (GBaseFinalizeFunc) NULL, (GClassInitFunc) directory_class_init, (GClassFinalizeFunc) NULL, NULL, sizeof (VMDirectory), 0, (GInstanceInitFunc) directory_instance_init, NULL };
-		static const GInterfaceInfo gtk_tree_model_info = { (GInterfaceInitFunc) directory_gtk_tree_model_interface_init, (GInterfaceFinalizeFunc) NULL, NULL};
-		GType directory_type_id;
-		directory_type_id = g_type_register_static (G_TYPE_OBJECT, "VMDirectory", &g_define_type_info, 0);
-		g_type_add_interface_static (directory_type_id, GTK_TYPE_TREE_MODEL, &gtk_tree_model_info);
-		g_once_init_leave (&directory_type_id__volatile, directory_type_id);
-	}
-	return directory_type_id__volatile;
 }
 
 

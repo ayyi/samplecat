@@ -741,7 +741,6 @@ gdl_switcher_add_button (GdlSwitcher *switcher, const gchar *label,
                          const gchar *tooltips, const gchar *stock_id,
                          gint switcher_id)
 {
-    GtkWidget *event_box;
     GtkWidget *button_widget;
     GtkWidget *hbox;
     GtkWidget *icon_widget;

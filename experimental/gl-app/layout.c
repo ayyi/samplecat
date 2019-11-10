@@ -222,7 +222,7 @@ config_load_window_yaml (yaml_parser_t* parser, yaml_event_t* event)
 							}
 						}
 					}else{
-						if(!state_set_named_parameter(stack[sp], key, event->data.scalar.value)){
+						if(!state_set_named_parameter(stack[sp], key, (char*)event->data.scalar.value)){
 							dbg(0, "  ignoring: %s=%s", key, event->data.scalar.value);
 						}
 					}

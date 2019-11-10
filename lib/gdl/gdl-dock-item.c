@@ -899,10 +899,6 @@ static void
 gdl_dock_item_paint (GtkWidget      *widget,
                      GdkEventExpose *event)
 {
-    GdlDockItem  *item;
-
-    item = GDL_DOCK_ITEM (widget);
-
     gtk_paint_box (widget->style,
                    widget->window,
                    GTK_WIDGET_STATE (widget),
@@ -1567,11 +1563,8 @@ static void
 gdl_dock_item_hide_cb (GtkWidget   *widget, 
                        GdlDockItem *item)
 {
-    GdlDockMaster *master;
-    
     g_return_if_fail (item != NULL);
 
-    master = GDL_DOCK_OBJECT_GET_MASTER (item);
     gdl_dock_item_hide_item (item);
 }
 
