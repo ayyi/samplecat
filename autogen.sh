@@ -11,7 +11,6 @@ autoheader -Wall
 automake --gnu --add-missing -Wall
 autoconf
 
-# github does not support tarballs with submodules. This is a workaround
 if [ ! -f lib/waveform/autogen.sh ]; then
 	${SETCOLOR_WARN}
 	echo "libwaveform submodule missing"
@@ -29,7 +28,8 @@ if [ ! -f lib/waveform/autogen.sh ]; then
 		mv libwaveform/* libwaveform/.git . && rmdir libwaveform
 		cd "$dir"
 	else
-		exit 1
+		git submodule update --init
+		git submodule foreach git pull origin master
 	fi
 fi
 

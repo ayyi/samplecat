@@ -11,6 +11,7 @@
 *.diff
 src/samplecat
 configure
+compile
 Makefile
 aclocal.m4
 config.*
