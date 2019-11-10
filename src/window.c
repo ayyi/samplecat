@@ -1580,15 +1580,14 @@ show_spectrogram(gboolean enable)
 		gtk_box_pack_start(GTK_BOX(window.vbox), window.spectrogram, EXPAND_TRUE, FILL_TRUE, 0);
 #endif
 
-		gchar* filename = listview__get_first_selected_filepath();
-		if(filename){
-			dbg(1, "file=%s", filename);
+		Sample* selection = samplecat.model->selection;
+		if(selection){
+			dbg(0, "selection=%s", selection->full_path);
 #ifdef USE_OPENGL
-			gl_spectrogram_set_file((GlSpectrogram*)window.spectrogram, filename);
+			gl_spectrogram_set_file((GlSpectrogram*)window.spectrogram, selection->full_path);
 #else
-			spectrogram_widget_set_file((SpectrogramWidget*)window.spectrogram, filename);
+			spectrogram_widget_set_file((SpectrogramWidget*)window.spectrogram, selection->full_path);
 #endif
-			g_free(filename);
 		}
 	}
 

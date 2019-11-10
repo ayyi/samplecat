@@ -45,7 +45,6 @@ static void         listview__on_keywords_edited      (GtkCellRendererText*, gch
 static void         listview__path_cell_data          (GtkTreeViewColumn*, GtkCellRenderer*, GtkTreeModel*, GtkTreeIter*, gpointer);
 static void         listview__tag_cell_data           (GtkTreeViewColumn*, GtkCellRenderer*, GtkTreeModel*, GtkTreeIter*, gpointer);
 static void         listview__cell_data_bg            (GtkTreeViewColumn*, GtkCellRenderer*, GtkTreeModel*, GtkTreeIter*, gpointer);
-static gboolean     listview__get_first_selected_iter (GtkTreeIter*);
 static GtkTreePath* listview__get_first_selected_path ();
 static Sample*      listview__get_first_selected_sample();
 static void         listview__unblock_motion_handler  ();
@@ -413,6 +412,7 @@ listview__on_store_changed(GtkListStore* store, LibraryView* view)
 }
 
 
+#if 0
 static gboolean
 listview__get_first_selected_iter(GtkTreeIter* iter)
 {
@@ -431,6 +431,7 @@ listview__get_first_selected_iter(GtkTreeIter* iter)
 	}
 	return false;
 }
+#endif
 
 
 void
@@ -481,6 +482,7 @@ listview__get_first_selected_sample()
 }
 
 
+#if 0
 gchar*
 listview__get_first_selected_filename()
 {
@@ -492,8 +494,10 @@ listview__get_first_selected_filename()
 	}
 	return NULL;
 }
+#endif
 
 
+#if 0
 gchar*
 listview__get_first_selected_filepath()
 {
@@ -508,6 +512,7 @@ listview__get_first_selected_filepath()
 	}
 	return NULL;
 }
+#endif
 
 
 static void

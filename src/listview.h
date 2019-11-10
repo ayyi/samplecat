@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2015 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2019 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -31,17 +31,15 @@ struct _libraryview {
    GtkTreeRowReference* mouseover_row_ref;
 };
 
-GtkWidget*  listview__new                        ();
-void        listview__show_db_missing            ();
-void        listview__add_item                   ();
-gchar*      listview__get_first_selected_filename();
-gchar*      listview__get_first_selected_filepath();
+GtkWidget*  listview__new                  ();
+void        listview__show_db_missing      ();
+void        listview__add_item             ();
 
-void        listview__reset_colours              ();
-void        listview__edit_row                   (GtkWidget*, gpointer);
+void        listview__reset_colours        ();
+void        listview__edit_row             (GtkWidget*, gpointer);
 
-void        listview__block_motion_handler       ();
-gint        listview__get_mouseover_row          ();
+void        listview__block_motion_handler ();
+gint        listview__get_mouseover_row    ();
 
 
 #endif
