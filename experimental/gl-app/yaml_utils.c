@@ -23,9 +23,12 @@ yaml_emitter_t emitter;
 	if(!A) return FALSE; \
 	if(!yaml_emitter_emit(&emitter, &event)) return FALSE;
 
+#define get_expected_event(parser, event, EVENT_TYPE) \
+	if(!yaml_parser_parse(parser, event)) return false; \
+	if((event)->type != EVENT_TYPE) return false;
 
-gboolean
-yaml_add_key_value_pair(const char* key, const char* value)
+bool
+yaml_add_key_value_pair (const char* key, const char* value)
 {
 	yaml_event_t event;
 
@@ -38,8 +41,8 @@ yaml_add_key_value_pair(const char* key, const char* value)
 }
 
 
-gboolean
-yaml_add_key_value_pair_int(const char* key, int ival)
+bool
+yaml_add_key_value_pair_int (const char* key, int ival)
 {
 	yaml_event_t event;
 	char value[256];
@@ -52,8 +55,8 @@ yaml_add_key_value_pair_int(const char* key, int ival)
 }
 
 
-gboolean
-yaml_add_key_value_pair_float(const char* key, float fval)
+bool
+yaml_add_key_value_pair_float (const char* key, float fval)
 {
 	yaml_event_t event;
 	char value[256];
@@ -67,8 +70,8 @@ yaml_add_key_value_pair_float(const char* key, float fval)
 }
 
 
-gboolean
-yaml_add_key_value_pair_bool(const char* key, gboolean val)
+bool
+yaml_add_key_value_pair_bool (const char* key, bool val)
 {
 	yaml_event_t event;
 	char value[256];
@@ -101,8 +104,8 @@ yaml_add_key_value_pair_bool(const char* key, gboolean val)
 	(EVENT_INIT((event), YAML_SEQUENCE_END_EVENT, (start_mark), (end_mark)),   \
 	TRUE)
 
-gboolean
-yaml_add_key_value_pair_array(const char* key, int val[], int size)
+bool
+yaml_add_key_value_pair_array (const char* key, int val[], int size)
 {
 	yaml_event_t event;
 	yaml_mark_t mark = {0, 0, 0};
@@ -127,8 +130,8 @@ yaml_add_key_value_pair_array(const char* key, int val[], int size)
 }
 
 
-gboolean
-yaml_add_key_value_pair_pt(const char* key, AGliPt* pt)
+bool
+yaml_add_key_value_pair_pt (const char* key, AGliPt* pt)
 {
 	yaml_event_t event;
 	yaml_mark_t mark = {0, 0, 0};
@@ -153,24 +156,129 @@ yaml_add_key_value_pair_pt(const char* key, AGliPt* pt)
 }
 
 
-void yaml_set_string(yaml_event_t* event, gpointer data)
+/*
+ *  Each top-level section in the yaml file is passed to its matching handler
+ */
+bool
+yaml_load (FILE* fp, YamlHandler handlers[])
+{
+	yaml_parser_t parser; yaml_parser_initialize(&parser);
+
+	yaml_parser_set_input_file(&parser, fp);
+
+	int section = 0;
+
+	// read the event sequence.
+	int safety = 0;
+	int depth = 0;
+	char key[64] = "";
+	bool end = FALSE;
+	yaml_event_t event;
+
+	get_expected_event(&parser, &event, YAML_STREAM_START_EVENT);
+	get_expected_event(&parser, &event, YAML_DOCUMENT_START_EVENT);
+
+	do {
+		if (!yaml_parser_parse(&parser, &event)) goto error; // Get the next event.
+
+		switch (event.type) {
+			case YAML_STREAM_START_EVENT:
+				dbg(2, "YAML_STREAM_START_EVENT");
+				break;
+			case YAML_STREAM_END_EVENT:
+				end = TRUE;
+				dbg(2, "YAML_STREAM_END_EVENT");
+				break;
+			case YAML_DOCUMENT_START_EVENT:
+				dbg(2, "YAML_DOCUMENT_START_EVENT");
+				break;
+			case YAML_DOCUMENT_END_EVENT:
+				end = TRUE;
+				dbg(2, "YAML_DOCUMENT_END_EVENT");
+				break;
+			case YAML_ALIAS_EVENT:
+				dbg(0, "YAML_ALIAS_EVENT");
+				break;
+			case YAML_SCALAR_EVENT:
+				//dbg(0, "YAML_SCALAR_EVENT: value=%s %i plain=%i style=%i", event.data.scalar.value, event.data.scalar.length, event.data.scalar.plain_implicit, event.data.scalar.style);
+
+				if(!key[0]){ // 1st half of a pair
+					strncpy(key, (char*)event.data.scalar.value, 63);
+				}else{
+					// 2nd half of a pair
+					dbg(2, "      %s=%s", key, event.data.scalar.value);
+					key[0] = '\0';
+				}
+				break;
+			case YAML_SEQUENCE_START_EVENT:
+				dbg(2, "YAML_SEQUENCE_START_EVENT");
+				break;
+			case YAML_SEQUENCE_END_EVENT:
+				dbg(2, "YAML_SEQUENCE_END_EVENT");
+				break;
+			case YAML_MAPPING_START_EVENT:
+				depth++;
+				if(key[0]){
+					if(!section){
+						dbg(2, "found section! %s", key);
+						int i = 0;
+						YamlHandler* h;
+						while((h = &handlers[i]) && h->key ){
+							if(!strcmp(h->key, key)){
+								h->callback(&parser, &event, h->data);
+								break;
+							}
+							i++;
+						}
+					}
+					else dbg(2, "new section: %s", key);
+					key[0] = '\0';
+				}
+				else dbg(2, "YAML_MAPPING_START_EVENT");
+				break;
+			case YAML_MAPPING_END_EVENT:
+				dbg(2, "YAML_MAPPING_END_EVENT");
+				if(--depth < 0) gwarn("too many YAML_MAPPING_END_EVENT's.");
+				break;
+			case YAML_NO_EVENT:
+				dbg(0, "YAML_NO_EVENT");
+				break;
+		}
+
+		//the application is responsible for destroying the event object.
+		yaml_event_delete(&event);
+
+	} while(!end && safety++ < 1024);
+
+	yaml_parser_delete(&parser);
+	fclose(fp);
+
+	return TRUE;
+
+  error:
+	yaml_parser_delete(&parser);
+	fclose(fp);
+
+	return FALSE;
+}
+
+
+void yaml_set_string (yaml_event_t* event, gpointer data)
 {
 	g_return_if_fail(event->type == YAML_SCALAR_EVENT);
 	*((char**)data) = g_strdup((char*)event->data.scalar.value);
 }
 
 void
-yaml_set_int(yaml_event_t* event, gpointer data)
+yaml_set_int (yaml_event_t* event, gpointer data)
 {
 	g_return_if_fail(event->type == YAML_SCALAR_EVENT);
 	*((int*)data) = atoi((char*)event->data.scalar.value);
 }
 
 void
-yaml_set_uint64(yaml_event_t* event, gpointer data)
+yaml_set_uint64 (yaml_event_t* event, gpointer data)
 {
 	g_return_if_fail(event->type == YAML_SCALAR_EVENT);
 	*((uint64_t*)data) = strtoull((char*)(event->data.scalar.value), NULL, 10);
 }
-
-

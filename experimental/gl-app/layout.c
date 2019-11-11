@@ -286,7 +286,7 @@ config_load_window_yaml (yaml_parser_t* parser, yaml_event_t* event)
 
 
 static bool
-layout_set_size(gpointer data)
+layout_set_size (gpointer data)
 {
 	agl_actor__set_size((AGlActor*)app->scene);
 	return G_SOURCE_REMOVE;
@@ -294,7 +294,7 @@ layout_set_size(gpointer data)
 
 
 static void
-config_load_windows_yaml (yaml_parser_t* parser, yaml_event_t* event)
+config_load_windows_yaml (yaml_parser_t* parser, yaml_event_t* event, gpointer user_data)
 {
 	// TODO use start_wrapper ?
 
@@ -395,7 +395,7 @@ open_settings_file ()
 
 
 static bool
-find_event(yaml_parser_t* parser, yaml_event_t* event, const char* name)
+find_event (yaml_parser_t* parser, yaml_event_t* event, const char* name)
 {
 	bool found = false;
 	while(!found && yaml_parser_parse(parser, event)){
@@ -470,93 +470,10 @@ load_settings ()
 	FILE* fp = open_settings_file();
 	if(!fp) return false;
 
-	yaml_parser_set_input_file(&parser, fp);
-
-	int section = 0;
-	int safety = 0;
-	int depth = 0;
-	char key[64] = {0,};
-	gboolean end = FALSE;
-	yaml_event_t event;
-
-	get_expected_event(&parser, &event, YAML_STREAM_START_EVENT);
-	get_expected_event(&parser, &event, YAML_DOCUMENT_START_EVENT);
-
-	do {
-		if (!yaml_parser_parse(&parser, &event)) goto error; // Get the next event.
-
-		switch (event.type) {
-			case YAML_DOCUMENT_END_EVENT:
-				end = TRUE;
-				dbg(2, "YAML_DOCUMENT_END_EVENT");
-				break;
-			case YAML_SCALAR_EVENT:
-				dbg(2, "YAML_SCALAR_EVENT: value=%s %i plain=%i style=%i", event.data.scalar.value, event.data.scalar.length, event.data.scalar.plain_implicit, event.data.scalar.style);
-
-				if(!key[0]){ // first half of a pair
-					g_strlcpy(key, (char*)event.data.scalar.value, 64);
-				}else{
-					// second half of a pair
-					dbg(2, "      %s=%s", key, event.data.scalar.value);
-					if(!strcmp(key, "example-1")){
-						long long colour = strtoll((char*)event.data.scalar.value, NULL, 16);
-						dbg(0, "%Li", colour);
-					}
-					else if(!strcmp(key, "example-2")){
-						long long colour = strtoll((char*)event.data.scalar.value, NULL, 16);
-						dbg(0, "%Li", colour);
-					}
-
-					key[0] = '\0';
-				}
-				break;
-			case YAML_MAPPING_START_EVENT:
-				depth++;
-				if(key[0]){
-					if(!section){
-						if(!strcmp(key, "windows")){
-							dbg(2, "found Windows section");
-							config_load_windows_yaml(&parser, &event);
-						}
-						else gwarn("unexpected section: %s", key);
-					}
-					else dbg(2, "new section: %s", key);
-					key[0] = '\0';
-				}
-				else dbg(2, "YAML_MAPPING_START_EVENT");
-				break;
-			case YAML_MAPPING_END_EVENT:
-				dbg(2, "YAML_MAPPING_END_EVENT");
-				if(--depth < 0) gwarn("too many YAML_MAPPING_END_EVENT's.");
-				break;
-			case YAML_STREAM_END_EVENT:
-				end = TRUE;
-				dbg(2, "YAML_STREAM_END_EVENT");
-				break;
-			case YAML_SEQUENCE_START_EVENT:
-			case YAML_SEQUENCE_END_EVENT:
-			case YAML_ALIAS_EVENT:
-			case YAML_NO_EVENT:
-			default:
-				gwarn("unexpected event: %i", event.type);
-				break;
-		}
-
-		//the application is responsible for destroying the event object.
-		yaml_event_delete(&event);
-
-	} while(!end && safety++ < 50);
-
-	yaml_parser_delete(&parser);
-	fclose(fp);
-
-	return true;
-
-  error:
-	yaml_parser_delete(&parser);
-	fclose(fp);
-
-	return false;
+	return yaml_load(fp, (YamlHandler[]){
+		{"windows", config_load_windows_yaml},
+		{NULL}
+	});
 }
 
 
