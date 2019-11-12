@@ -33,3 +33,6 @@ logger.c: logger.vala
 
 directory: directory.vala
 	valac -C -H directory.h --pkg config --pkg gtk+-2.0 --pkg gdk-2.0 --pkg gmodule-2.0 --pkg debug --vapidir=. --vapidir=../../lib/debug directory.vala
+
+inspector: inspector.vala
+	valac -C -H inspector.h --pkg config --pkg gtk+-2.0 --pkg gdk-2.0 --pkg gmodule-2.0 --pkg debug --vapidir=. --vapidir=../../lib/debug inspector.vala

@@ -81,69 +81,69 @@ drag_received (GtkWidget* widget, GdkDragContext* drag_context, gint x, gint y, 
 		}
 #endif
 
-    if(gtk_tree_view_get_path_at_pos(GTK_TREE_VIEW(app->libraryview->widget), x, by, &path, NULL, NULL, NULL)){
+		if(gtk_tree_view_get_path_at_pos(GTK_TREE_VIEW(app->libraryview->widget), x, by, &path, NULL, NULL, NULL)){
 
-      gtk_tree_model_get_iter(GTK_TREE_MODEL(samplecat.store), &iter, path);
-      gchar* path_str = gtk_tree_model_get_string_from_iter(GTK_TREE_MODEL(samplecat.store), &iter);
-      dbg(2, "path=%s y=%i final_y=%i", path_str, y, y - treeview_top);
+			gtk_tree_model_get_iter(GTK_TREE_MODEL(samplecat.store), &iter, path);
+			gchar* path_str = gtk_tree_model_get_string_from_iter(GTK_TREE_MODEL(samplecat.store), &iter);
+			dbg(2, "path=%s y=%i final_y=%i", path_str, y, y - treeview_top);
 
-      listview_item_set_colour(path, colour_index);
+			listview_item_set_colour(path, colour_index);
 
-      gtk_tree_path_free(path);
-    }
-    else dbg(0, "path not found.");
+			gtk_tree_path_free(path);
+		}
+		else dbg(0, "path not found.");
 
-    return FALSE;
-  }
+		return FALSE;
+	}
 
-  if(info == GPOINTER_TO_INT(GDK_SELECTION_TYPE_STRING)) printf(" type=string.\n");
+	if(info == GPOINTER_TO_INT(GDK_SELECTION_TYPE_STRING)) printf(" type=string.\n");
 
-  if(info == GPOINTER_TO_INT(TARGET_URI_LIST)){
-    dbg(1, "type=uri_list. len=%i", data->length);
-    GList* list = uri_list_to_glist((char*)data->data);
-    if(g_list_length(list) < 1) pwarn("drag drop: uri list parsing found no uri's.\n");
-    int i = 0;
-    ScanResults result = {0,};
-    GList* l = list;
+	if(info == GPOINTER_TO_INT(TARGET_URI_LIST)){
+		dbg(1, "type=uri_list. len=%i", data->length);
+		GList* list = uri_list_to_glist((char*)data->data);
+		if(g_list_length(list) < 1) pwarn("drag drop: uri list parsing found no uri's.\n");
+		int i = 0;
+		ScanResults result = {0,};
+		GList* l = list;
 #ifdef __APPLE__
-    gdk_threads_enter();
+		gdk_threads_enter();
 #endif
-    for(;l;l=l->next){
-      char* u = l->data;
+		for(;l;l=l->next){
+			char* u = l->data;
 
-      gchar* method_string;
-      vfs_get_method_string(u, &method_string);
-      dbg(2, "%i: %s method=%s", i, u, method_string);
+			gchar* method_string;
+			vfs_get_method_string(u, &method_string);
+			dbg(2, "%i: %s method=%s", i, u, method_string);
 
-      if(!strcmp(method_string, "file")){
-        //we could probably better use g_filename_from_uri() here
-        //http://10.0.0.151/man/glib-2.0/glib-Character-Set-Conversion.html#g-filename-from-uri
-        //-or perhaps get_local_path() from rox/src/support.c
+			if(!strcmp(method_string, "file")){
+				//we could probably better use g_filename_from_uri() here
+				//http://10.0.0.151/man/glib-2.0/glib-Character-Set-Conversion.html#g-filename-from-uri
+				//-or perhaps get_local_path() from rox/src/support.c
 
-        char* uri_unescaped = vfs_unescape_string(u + strlen(method_string) + 1, NULL);
+				char* uri_unescaped = vfs_unescape_string(u + strlen(method_string) + 1, NULL);
 
-        char* uri = (strstr(uri_unescaped, "///") == uri_unescaped) ? uri_unescaped + 2 : uri_unescaped;
+				char* uri = (strstr(uri_unescaped, "///") == uri_unescaped) ? uri_unescaped + 2 : uri_unescaped;
 
-        if(do_progress(0,0)) break;
-        if(is_dir(uri)) application_add_dir(uri, &result);
-        else application_add_file(uri, &result);
+				if(do_progress(0,0)) break;
+				if(is_dir(uri)) application_add_dir(uri, &result);
+				else application_add_file(uri, &result);
 
-        g_free(uri_unescaped);
-      }
-      else pwarn("drag drop: unknown format: '%s'. Ignoring.\n", u);
-      i++;
-    }
-    hide_progress();
+				g_free(uri_unescaped);
+			}
+			else pwarn("drag drop: unknown format: '%s'. Ignoring.\n", u);
+			i++;
+		}
+		hide_progress();
 #ifdef __APPLE__
-    gdk_threads_leave();
+		gdk_threads_leave();
 #endif
 
-    statusbar_print(1, "import complete. %i files added", result.n_added);
+		statusbar_print(1, "import complete. %i files added", result.n_added);
 
-    uri_list_free(list);
-  }
+		uri_list_free(list);
+	}
 
-  return FALSE;
+	return FALSE;
 }
 
 

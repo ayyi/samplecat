@@ -73,12 +73,13 @@ struct _Application
       gboolean          value;
       GtkWidget*        menu_item;
    }                    view_options[MAX_VIEW_OPTIONS];
+
+   Inspector*           inspector;
 #endif
 
    GList*               players;
 
    LibraryView*         libraryview;
-   Inspector*           inspector;
    PlayCtrl*            playercontrol;
 
    GtkWidget*           window;

@@ -57,7 +57,7 @@ typedef struct
     int            n;
 } RowRange;
 
-struct _inspector_priv
+struct _InspectorPrivate
 {
 	unsigned       row_id;
 
@@ -81,32 +81,58 @@ struct _inspector_priv
 	GtkTextBuffer* notes;
 	GtkTreeRowReference* row_ref; // TODO remove
 
-	gboolean       wide;
+	bool           wide;
 };
 
-static void inspector_clear              ();
+static GObject* inspector_constructor   (GType, guint, GObjectConstructParam*);
+static void     inspector_finalize      (GObject*);
+static void     inspector_class_init    (InspectorClass*);
+static void     inspector_size_allocate (GtkWidget*, GdkRectangle*);
+
+G_DEFINE_TYPE_WITH_PRIVATE (Inspector, inspector, GTK_TYPE_SCROLLED_WINDOW)
+
+static void inspector_clear              (Inspector*);
 static void inspector_update             (SamplecatModel*, Sample*, gpointer);
-static void inspector_set_labels         (Sample*);
-static void hide_fields                  ();
-static void show_fields                  ();
+static void inspector_set_labels         (Inspector*, Sample*);
+static void hide_fields                  (Inspector*);
+static void show_fields                  (Inspector*);
+static void inspector_remove_rows        (Inspector*, int, int, int);
+static void inspector_remove_cells       (Inspector*, RowRange*);
 static bool on_notes_focus_out           (GtkWidget*, gpointer);
-static void inspector_remove_rows        (int, int, int);
-static void inspector_remove_cells       (RowRange*);
+
+
+static void
+inspector_init (Inspector * self)
+{
+	self->priv = inspector_get_instance_private(self);
+}
+
+
+static void
+inspector_finalize (GObject * obj)
+{
+	G_OBJECT_CLASS (inspector_parent_class)->finalize (obj);
+}
+
+
+Inspector*
+construct (GType object_type)
+{
+	return (Inspector*) g_object_new (object_type, NULL);
+}
 
 
 GtkWidget*
-inspector_new()
+inspector_new ()
 {
 	// detailed information on a single sample. LHS of main window.
 
-	g_return_val_if_fail(!app->inspector, NULL);
-
-	Inspector* inspector = app->inspector = g_new0(Inspector, 1);
-	InspectorPriv* i = inspector->priv = g_new0(InspectorPriv, 1);
+	Inspector* inspector = construct (TYPE_INSPECTOR);
 	inspector->preferred_height = 200;
 	inspector->show_waveform = true;
+	InspectorPrivate* i = inspector->priv;
 
-	GtkWidget* scroll = inspector->widget = gtk_scrolled_window_new(NULL, NULL);
+	GtkWidget* scroll = (GtkWidget*)inspector;
 	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
 
 	i->vbox = gtk_vbox_new(false, 0);
@@ -197,7 +223,7 @@ inspector_new()
 			gtk_widget_set_no_show_all(i->text, true);
 		}
 #endif
-		g_signal_connect(G_OBJECT(i->text), "focus-out-event", G_CALLBACK(on_notes_focus_out), NULL);
+		g_signal_connect(G_OBJECT(i->text), "focus-out-event", G_CALLBACK(on_notes_focus_out), inspector);
 		gtk_box_pack_start(GTK_BOX(i->vbox), i->text, false, true, 2);
 
 		GValue gval = {0,};
@@ -210,16 +236,16 @@ inspector_new()
 		gtk_text_view_set_pixels_below_lines(GTK_TEXT_VIEW(i->text), 5);
 	}
 
-	g_signal_connect((gpointer)samplecat.model, "selection-changed", G_CALLBACK(inspector_update), NULL);
+	g_signal_connect((gpointer)samplecat.model, "selection-changed", G_CALLBACK(inspector_update), inspector);
 
-	void sample_changed(SamplecatModel* m, Sample* sample, int what, void* data, gpointer user_data)
+	void sample_changed(SamplecatModel* m, Sample* sample, int what, void* data, gpointer _inspector)
 	{
-		if (sample->id == app->inspector->priv->row_id)
-			inspector_update(m, sample, NULL);
+		if (sample->id == ((Inspector*)_inspector)->priv->row_id)
+			inspector_update(m, sample, _inspector);
 	}
-	g_signal_connect((gpointer)samplecat.model, "sample-changed", G_CALLBACK(sample_changed), NULL);
+	g_signal_connect((gpointer)samplecat.model, "sample-changed", G_CALLBACK(sample_changed), inspector);
 
-	gtk_widget_set_size_request(inspector->widget, 20, 20);
+	gtk_widget_set_size_request((GtkWidget*)inspector, 20, 20);
 
 #ifdef USE_GDL
 	void _inspector_on_layout_changed(GObject* object, gpointer user_data)
@@ -230,34 +256,11 @@ inspector_new()
 	g_signal_connect(app, "layout-changed", (GCallback)idle->run, idle);
 #endif
 
-	void inspector_on_allocate(GtkWidget* win, GtkAllocation* allocation, gpointer user_data)
-	{
-		InspectorPriv* i = app->inspector->priv;
-
-		bool wide = allocation->width > 320 && allocation->width > allocation->height;
-		if(wide != i->wide){
-			dbg(1, "-> allocated %i x %i wide=%i %s", allocation->width, allocation->height, wide, wide != i->wide ? "CHANGED" : "");
-			inspector_remove_cells(&i->ebur);
-			if(wide) i->meta.start = 3;
-			i->wide = wide;
-			if(i->row_ref){
-				Sample* sample = samplecat_list_store_get_sample_by_row_ref(i->row_ref);
-				if(sample){
-					inspector_set_labels(sample);
-					sample_unref(sample);
-				}
-			}
-		}
-
-		gtk_widget_set_size_request(i->filename, allocation->width / (wide ? 2 : 1) -2, -1);
-		gtk_widget_set_size_request(i->name, allocation->width / (wide ? 2 : 1) -2, -1);
-	}
-	g_signal_connect(G_OBJECT(scroll), "size-allocate", G_CALLBACK(inspector_on_allocate), NULL);
 
 	void on_tags_changed(GtkWidget* label, const char* new_text, gpointer user_data)
 	{
 		Inspector* inspector = user_data;
-		InspectorPriv* i = inspector->priv;
+		InspectorPrivate* i = inspector->priv;
 
 		g_return_if_fail(i->row_id);
 		g_return_if_fail(i->row_ref);
@@ -279,19 +282,59 @@ inspector_new()
 }
 
 
-void
-inspector_free(Inspector* inspector)
+static GObject *
+inspector_constructor (GType type, guint n_construct_properties, GObjectConstructParam * construct_properties)
 {
-	g_free(inspector->priv);
-	g_free(inspector);
+	GObjectClass* parent_class = G_OBJECT_CLASS (inspector_parent_class);
+	return parent_class->constructor (type, n_construct_properties, construct_properties);
 }
 
 
 static void
-inspector_add_ebu_cells()
+inspector_class_init (InspectorClass * klass)
 {
-	Inspector* inspector = app->inspector;
-	InspectorPriv* i = inspector->priv;
+	inspector_parent_class = g_type_class_peek_parent (klass);
+
+	((GtkWidgetClass *) klass)->size_allocate = (void (*) (GtkWidget*, GdkRectangle*)) inspector_size_allocate;
+
+	G_OBJECT_CLASS (klass)->constructor = inspector_constructor;
+	G_OBJECT_CLASS (klass)->finalize = inspector_finalize;
+}
+
+
+static void
+inspector_size_allocate (GtkWidget* base, GdkRectangle* allocation)
+{
+	Inspector* inspector = (Inspector*) base;
+	InspectorPrivate* i = inspector->priv;
+	g_return_if_fail (allocation);
+
+	GTK_WIDGET_CLASS (inspector_parent_class)->size_allocate ((GtkWidget*) G_TYPE_CHECK_INSTANCE_CAST (inspector, GTK_TYPE_SCROLLED_WINDOW, GtkScrolledWindow), allocation);
+
+	bool wide = allocation->width > 320 && allocation->width > allocation->height;
+	if(wide != i->wide){
+		dbg(1, "-> allocated %i x %i wide=%i %s", allocation->width, allocation->height, wide, wide != i->wide ? "CHANGED" : "");
+		inspector_remove_cells(inspector, &i->ebur);
+		if(wide) i->meta.start = 3;
+		i->wide = wide;
+		if(i->row_ref){
+			Sample* sample = samplecat_list_store_get_sample_by_row_ref(i->row_ref);
+			if(sample){
+				inspector_set_labels(inspector, sample);
+				sample_unref(sample);
+			}
+		}
+	}
+
+	gtk_widget_set_size_request(i->filename, allocation->width / (wide ? 2 : 1) -2, -1);
+	gtk_widget_set_size_request(i->name, allocation->width / (wide ? 2 : 1) -2, -1);
+}
+
+
+static void
+inspector_add_ebu_cells (Inspector* inspector)
+{
+	InspectorPrivate* i = inspector->priv;
 
 	if(i->ebur.first_child) return;
 
@@ -328,17 +371,16 @@ inspector_add_ebu_cells()
 
 
 static void
-inspector_add_meta_cells(GPtrArray* meta_data)
+inspector_add_meta_cells (Inspector* inspector, GPtrArray* meta_data)
 {
-	Inspector* inspector = app->inspector;
-	InspectorPriv* i = inspector->priv;
+	InspectorPrivate* i = inspector->priv;
 
 	if(!meta_data) return;
 
 	// currently we are not able to add ebu cells after metadata cells so they must be added first.
 	if(!i->meta.start) return gwarn("start not set");
 
-	if(i->meta.first_child) inspector_remove_cells(&i->meta);
+	if(i->meta.first_child) inspector_remove_cells(inspector, &i->meta);
 
 	int rows_needed = meta_data->len / 2;
 	int n_to_add = rows_needed - i->meta.n;
@@ -369,7 +411,7 @@ inspector_add_meta_cells(GPtrArray* meta_data)
 		}
 		i->meta.first_child = meta_rows[0];
 	}else if(n_to_add < 0){
-		inspector_remove_rows(i->meta.start + meta_data->len / 2, -n_to_add, x);
+		inspector_remove_rows(inspector, i->meta.start + meta_data->len / 2, -n_to_add, x);
 	}
 
 	i->meta.n = meta_data->len / 2;
@@ -378,12 +420,11 @@ inspector_add_meta_cells(GPtrArray* meta_data)
 
 
 static void
-inspector_remove_rows(int n_rows, int n_to_remove, int column)
+inspector_remove_rows (Inspector* inspector, int n_rows, int n_to_remove, int column)
 {
 	// remove rows from the end of the table
 
-	Inspector* inspector = app->inspector;
-	InspectorPriv* i = inspector->priv;
+	InspectorPrivate* i = inspector->priv;
 
 	GList* rows = gtk_container_get_children(GTK_CONTAINER(i->table));
 	GList* l = rows; int r = 0;
@@ -401,10 +442,9 @@ inspector_remove_rows(int n_rows, int n_to_remove, int column)
 
 
 static void
-inspector_remove_cells(RowRange* cells)
+inspector_remove_cells (Inspector* inspector, RowRange* cells)
 {
-	Inspector* inspector = app->inspector;
-	InspectorPriv* i = inspector->priv;
+	InspectorPrivate* i = inspector->priv;
 
 	if(!cells->first_child) return;
 
@@ -428,12 +468,10 @@ inspector_remove_cells(RowRange* cells)
 
 
 static void
-inspector_set_labels(Sample* sample)
+inspector_set_labels (Inspector* inspector, Sample* sample)
 {
-	Inspector* inspector = app->inspector;
-	if(!inspector) return;
 	g_return_if_fail(sample);
-	InspectorPriv* i = inspector->priv;
+	InspectorPrivate* i = inspector->priv;
 	GtkLabel* tags = ((EditableLabelButton*)i->tags)->label;
 
 	{
@@ -478,16 +516,16 @@ inspector_set_labels(Sample* sample)
 
 	char* ebu = sample->ebur ? sample->ebur : "";
 	if(ebu && strlen(ebu) > 1){
-		if(!i->ebur.first_child) inspector_add_ebu_cells();
+		if(!i->ebur.first_child) inspector_add_ebu_cells(inspector);
 	} else{
-		inspector_remove_cells(&i->ebur);
+		inspector_remove_cells(inspector, &i->ebur);
 		if(!i->wide) i->meta.start = 12;
 	}
 
 	if(sample->meta_data && sample->meta_data->len){
-		inspector_add_meta_cells(sample->meta_data);
+		inspector_add_meta_cells(inspector, sample->meta_data);
 	}else{
-		inspector_remove_cells(&i->meta);
+		inspector_remove_cells(inspector, &i->meta);
 	}
 
 	GList* rows = g_list_reverse(gtk_container_get_children(GTK_CONTAINER(i->table)));
@@ -545,7 +583,7 @@ inspector_set_labels(Sample* sample)
 		gtk_widget_hide(i->image);
 	}
 
-	show_fields();
+	show_fields(inspector);
 	g_free(level);
 	g_free(ch_str);
 	g_free(path);
@@ -569,24 +607,23 @@ inspector_set_labels(Sample* sample)
 
 
 static void
-inspector_update(SamplecatModel* m, Sample* sample, gpointer user_data)
+inspector_update (SamplecatModel* m, Sample* sample, gpointer user_data)
 {
 	PF;
-	Inspector* i = app->inspector;
-	if(!i) return;
-	InspectorPriv* i_ = i->priv;
+	Inspector* inspector = (Inspector*)user_data;
+	InspectorPrivate* i = inspector->priv;
 
 	if(!sample){
-		inspector_clear();
-		gtk_label_set_text(GTK_LABEL(i->priv->name), "");
+		inspector_clear(inspector);
+		gtk_label_set_text(GTK_LABEL(i->name), "");
 		return;
 	}
 
 	// forget previous inspector item
-	_gtk_tree_row_reference_free0(i_->row_ref);
-	i_->row_id = 0;
+	_gtk_tree_row_reference_free0(i->row_ref);
+	i->row_id = 0;
 
-	#ifdef USE_TRACKER
+#ifdef USE_TRACKER
 	if(BACKEND_IS_TRACKER){
 		if(!sample->length){
 			//this sample hasnt been previously selected, and non-db info isnt available.
@@ -595,7 +632,7 @@ inspector_update(SamplecatModel* m, Sample* sample, gpointer user_data)
 			char mime_string[64];
 			snprintf(mime_string, 64, "%s/%s", mime_type->media_type, mime_type->subtype);
 			if(mimestring_is_unsupported(mime_string)){
-				inspector_clear();
+				inspector_clear(inspector);
 				gtk_label_set_text(GTK_LABEL(i->filename), basename(sample->name));
 				return;
 			}
@@ -605,35 +642,33 @@ inspector_update(SamplecatModel* m, Sample* sample, gpointer user_data)
 			}
 		}
 	}
-	#endif
+#endif
 
 	// - check if file is already in DB -> load sample-info
 	// - check if file is an audio-file -> read basic info directly from file
 	// - else just display the base-name in the inspector..
 	if(sample->id > -1 || sample_get_file_info(sample)){
-		inspector_set_labels(sample);
+		inspector_set_labels(inspector, sample);
 	} else {
-		inspector_clear();
-		gtk_label_set_text(GTK_LABEL(i->priv->name), sample->name);
+		inspector_clear(inspector);
+		gtk_label_set_text(GTK_LABEL(i->name), sample->name);
 	}
 }
 
 
 static void
-inspector_clear()
+inspector_clear (Inspector* inspector)
 {
-	Inspector* i = app->inspector;
-	if(!i) return;
-
-	hide_fields();
-	gtk_image_clear(GTK_IMAGE(i->priv->image));
+	hide_fields(inspector);
+	gtk_image_clear(GTK_IMAGE(inspector->priv->image));
 }
 
 
 static void
-hide_fields()
+hide_fields (Inspector* inspector)
 {
-	InspectorPriv* i = app->inspector->priv;
+	InspectorPrivate* i = inspector->priv;
+
 	GtkWidget* fields[] = {i->filename, i->tags, i->length, i->samplerate, i->channels, i->mimetype, i->table, i->level, i->text, i->bitdepth, i->bitrate};
 	int f = 0; for(;f<G_N_ELEMENTS(fields);f++){
 		gtk_widget_hide(GTK_WIDGET(fields[f]));
@@ -642,9 +677,10 @@ hide_fields()
 
 
 static void
-show_fields()
+show_fields (Inspector* inspector)
 {
-	InspectorPriv* i = app->inspector->priv;
+	InspectorPrivate* i = inspector->priv;
+
 	GtkWidget* fields[] = {i->filename, i->tags, i->length, i->samplerate, i->channels, i->mimetype, i->table, i->level, i->text, i->bitdepth, i->bitrate};
 	int f = 0; for(;f<G_N_ELEMENTS(fields);f++){
 		gtk_widget_show(GTK_WIDGET(fields[f]));
@@ -652,10 +688,11 @@ show_fields()
 }
 
 
-static gboolean
-on_notes_focus_out(GtkWidget* widget, gpointer userdata)
+static bool
+on_notes_focus_out (GtkWidget* widget, gpointer userdata)
 {
-	InspectorPriv* i = app->inspector->priv;
+	Inspector* inspector = (Inspector*)userdata;
+	InspectorPrivate* i = inspector->priv;
 
 	GtkTextBuffer* textbuf = gtk_text_view_get_buffer(GTK_TEXT_VIEW(widget));
 	g_return_val_if_fail(textbuf, false);
