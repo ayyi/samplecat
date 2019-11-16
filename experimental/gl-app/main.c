@@ -60,8 +60,8 @@ static Key keys[] = {
 
 static void add_key_handlers ();
 
-static gboolean show_directory (gpointer);
-static gboolean add_content    (gpointer);
+static bool show_directory   (gpointer);
+static bool add_content      (gpointer);
 
 
 static const struct option long_options[] = {
@@ -79,7 +79,7 @@ static const char* const usage =
 	"  -d, --dir              show contents of filesystem directory (temporary view, state not saved).\n";
 
 int
-main(int argc, char* argv[])
+main (int argc, char* argv[])
 {
 	_debug_ = 0;
 
@@ -111,9 +111,13 @@ main(int argc, char* argv[])
 
 	type_init();
 	pixmaps_init();
-#if 0
-	icon_theme_init();
-#endif
+
+	g_log_set_default_handler(log_handler, NULL);
+
+	const char* themes[] = {"breeze", NULL};
+	const char* theme = find_icon_theme(themes);
+	if(theme)
+		set_icon_theme(theme);
 
 	Display* dpy = XOpenDisplay(NULL);
 	if(!dpy){
@@ -189,7 +193,7 @@ main(int argc, char* argv[])
 			agl_actor__set_size(actors.hdock);
 
 // not needed?
-			agl_actor__set_size(actors.list); // clear cache
+			if(actors.list) agl_actor__set_size(actors.list); // clear cache
 
 #ifdef SHOW_FBO_DEBUG
 			actors.debug->region = (AGlfRegion){scene->region.x2/2, 10, scene->region.x2 - 10, scene->region.x2/2};
@@ -290,8 +294,6 @@ add_content (gpointer _)
 static gboolean
 show_directory(gpointer _)
 {
-	AGlActor* root = (AGlActor*)app->scene;
-
 	app->wfc = wf_context_new((AGlActor*)app->scene);
 	((AGlActor*)app->scene)->set_size = scene_set_size2;
 

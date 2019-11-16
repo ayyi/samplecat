@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2018 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2019 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -11,19 +11,6 @@
 */
 
 #include "config.h"
-#include <stdlib.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <string.h>
-#include <errno.h>
-#include <ctype.h>
-#include <time.h>
-#include <sys/param.h>
-#include <fnmatch.h>
-#include <sys/types.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <sys/stat.h>
 #include <gtk/gtk.h>
 #include "debug/debug.h"
 #include "file_manager/file_manager.h"
@@ -43,7 +30,7 @@ static void print_icon_list      ();
 
 
 GList*
-icon_theme_init()
+icon_theme_init ()
 {
 	// Build a menu list of available themes.
 
@@ -86,8 +73,46 @@ icon_theme_init()
 }
 
 
+const char*
+find_icon_theme (const char* themes[])
+{
+	gboolean exists (const char* theme, char** paths)
+	{
+		gboolean found = FALSE;
+		char* p;
+		for(int i=0;(p=paths[i]);i++){
+			char* dir = g_build_filename(p, theme, NULL);
+			found = g_file_test (dir, G_FILE_TEST_EXISTS);
+			g_free(dir);
+			if(found){
+				break;
+			}
+		}
+		return found;
+	}
+
+	gchar** paths = NULL;
+	int n_elements = 0;
+	gtk_icon_theme_get_search_path(icon_theme, &paths, &n_elements);
+	if(paths){
+		const char* theme = NULL;
+
+		for(int t = 0; themes[t]; t++){
+			if(exists(themes[t], paths)){
+				theme = themes[t];
+				break;
+			}
+		}
+
+		g_strfreev(paths);
+		return theme;
+	}
+	return NULL;
+}
+
+
 static void
-get_theme_names(GPtrArray* names)
+get_theme_names (GPtrArray* names)
 {
 	void add_themes_from_dir(GPtrArray* names, const char* dir)
 	{
@@ -114,7 +139,8 @@ get_theme_names(GPtrArray* names)
 	gint n_dirs = 0;
 	gchar** theme_dirs = NULL;
 	gtk_icon_theme_get_search_path(icon_theme, &theme_dirs, &n_dirs); // dir list is derived from XDG_DATA_DIRS
-	int i; for (i = 0; i < n_dirs; i++) add_themes_from_dir(names, theme_dirs[i]);
+	for (int i = 0; i < n_dirs; i++)
+		add_themes_from_dir(names, theme_dirs[i]);
 	g_strfreev(theme_dirs);
 
 	g_ptr_array_sort(names, strcmp2);
@@ -122,7 +148,7 @@ get_theme_names(GPtrArray* names)
 
 
 static void
-icon_theme_on_select(GtkMenuItem* menuitem, gpointer user_data)
+icon_theme_on_select (GtkMenuItem* menuitem, gpointer user_data)
 {
 	g_return_if_fail(menuitem);
 
@@ -138,7 +164,7 @@ icon_theme_on_select(GtkMenuItem* menuitem, gpointer user_data)
 
 
 bool
-check_default_theme(gpointer data)
+check_default_theme (gpointer data)
 {
 	// The default gtk icon theme "hi-color" does not contain any mimetype icons.
 
@@ -161,7 +187,7 @@ check_default_theme(gpointer data)
 
 
 void
-icon_theme_set_theme(const char* name)
+icon_theme_set_theme (const char* name)
 {
 	mime_type_clear();
 
@@ -182,17 +208,16 @@ icon_theme_set_theme(const char* name)
 
 #ifdef DEBUG
 static void
-print_icon_list()
+print_icon_list ()
 {
-	GList* icon_list = gtk_icon_theme_list_icons(icon_theme, "MimeTypes");
-	if(icon_list){
+	GList* icons = gtk_icon_theme_list_icons(icon_theme, "MimeTypes");
+	if(icons){
 		dbg(0, "%s----------------------------------", theme_name);
-		for(;icon_list;icon_list=icon_list->next){
-			char* icon = icon_list->data;
-			printf("%s\n", icon);
-			g_free(icon);
+		for(GList* l=icons;l;l=l->next){
+			printf("%s\n", (char*)l->data);
+			g_free(l->data);
 		}
-		g_list_free(icon_list);
+		g_list_free(icons);
 		printf("-------------------------------------------------\n");
 	}
 	else warnprintf("icon_theme has no mimetype icons?\n");

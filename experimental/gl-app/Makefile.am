@@ -15,8 +15,7 @@ samplecat_gl_SOURCES = \
 	utils.c utils.h \
 	yaml_utils.c yaml_utils.h \
 	keys.h \
-	action.h \
-	$(top_srcdir)/src/icon_theme.c $(top_srcdir)/src/icon_theme.h
+	action.h
 
 AM_CFLAGS = \
 	-no-pie \
