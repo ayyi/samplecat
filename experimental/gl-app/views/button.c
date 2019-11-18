@@ -62,7 +62,7 @@ button(int* icon, ButtonAction action, ButtonGetState get_state, gpointer user_d
 	bool gl_button_paint(AGlActor* actor)
 	{
 		ButtonActor* button = (ButtonActor*)actor;
-		Style* style = &app->style;
+		StyleBehaviour* style = &STYLE;
 
 		bool state = button->get_state ? button->get_state(actor, button->user_data) : false;
 
@@ -145,7 +145,7 @@ button(int* icon, ButtonAction action, ButtonGetState get_state, gpointer user_d
 
 		agl_enable(0/* !AGL_ENABLE_TEXTURE_2D*/);
 		if(state){
-			agl_colour_rbga(app->style.bg_selected);
+			agl_colour_rbga(STYLE.bg_selected);
 			agl_rect_(r);
 		}
 		if(!button->disabled && agl_actor__is_hovered(actor)){

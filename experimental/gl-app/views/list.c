@@ -11,14 +11,8 @@
 */
 #define __wf_private__
 #include "config.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <math.h>
 #include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
-#include <GL/gl.h>
-#include "agl/ext.h"
 #include "agl/utils.h"
 #include "agl/actor.h"
 #include "waveform/waveform.h"
@@ -27,10 +21,12 @@
 #include "waveform/actors/text.h"
 #include "samplecat.h"
 #include "application.h"
+#include "behaviours/panel.h"
 #include "views/list.h"
 #include "views/context_menu.h"
 
 extern int need_draw;
+extern Menu menu;
 
 #define _g_free0(var) (var = (g_free (var), NULL))
 
@@ -46,44 +42,18 @@ static AGlActorClass actor_class = {0, "List", (AGlActorNew*)list_view, list_vie
 AGlActorClass*
 list_view_get_class ()
 {
-	return &actor_class;
-}
-
-
-static void
-_init()
-{
 	static bool init_done = false;
 
 	if(!init_done){
 		agl = agl_get_instance();
-		agl_set_font_string("Roboto 10"); // initialise the pango context
+
+		agl_actor_class__add_behaviour(&actor_class, panel_get_class());
 
 		init_done = true;
 	}
+
+	return &actor_class;
 }
-
-
-static void
-action_play (gpointer _)
-{
-	application_play_selected();
-}
-
-
-static void
-action_delete (gpointer _)
-{
-}
-
-
-Menu menu = {
-	2,
-	{
-		{"Play", {0}, action_play},
-		{"Delete", {0}, action_delete},
-	}
-};
 
 
 static void
@@ -96,13 +66,13 @@ _on_context_menu_selection (gpointer _view, gpointer _promise)
 
 
 AGlActor*
-list_view(gpointer _)
+list_view (gpointer _)
 {
 	instance_count++;
 
-	_init();
+	list_view_get_class();
 
-	bool list_paint(AGlActor* actor)
+	bool list_paint (AGlActor* actor)
 	{
 		ListView* view = (ListView*)actor;
 
@@ -122,7 +92,7 @@ list_view(gpointer _)
 		int row_count = 0;
 		do {
 			if(row_count == view->selection - view->scroll_offset){
-				agl->shaders.plain->uniform.colour = 0x6677ff77;
+				agl->shaders.plain->uniform.colour = STYLE.selection;
 				agl_use_program((AGlShader*)agl->shaders.plain);
 				agl_rect_((AGlRect){0, row_count * row_height - 2, agl_actor__width(actor), row_height});
 			}
@@ -136,7 +106,7 @@ list_view(gpointer _)
 
 				int c; for(c=0;c<G_N_ELEMENTS(val);c++){
 					agl_enable_stencil(0, 0, col[c + 1] - 6, actor->region.y2);
-					agl_print(col[c], row_count * row_height, 0, 0xffffffff, val[c]);
+					agl_print(col[c], row_count * row_height, 0, STYLE.text, val[c]);
 				}
 				sample_unref(sample);
 			}
@@ -155,11 +125,11 @@ list_view(gpointer _)
 #endif
 	}
 
-	void list_set_size(AGlActor* actor)
+	void list_set_size (AGlActor* actor)
 	{
 	}
 
-	bool list_event(AGlActor* actor, GdkEvent* event, AGliPt xy)
+	bool list_event (AGlActor* actor, GdkEvent* event, AGliPt xy)
 	{
 		switch(event->type){
 			case GDK_BUTTON_PRESS:
@@ -170,7 +140,6 @@ list_view(gpointer _)
 
 						AGliPt offset = agl_actor__find_offset(actor);
 						context_menu_open_new(actor->root, (AGliPt){xy.x + offset.x, xy.y + offset.y}, &menu, promise);
-
 						break;
 				}
 				// falling through ...
@@ -192,7 +161,7 @@ list_view(gpointer _)
 		return AGL_HANDLED;
 	}
 
-	ListView* view = WF_NEW(ListView,
+	ListView* view = AGL_NEW(ListView,
 		.actor = {
 			.class = &actor_class,
 			.name = actor_class.name,

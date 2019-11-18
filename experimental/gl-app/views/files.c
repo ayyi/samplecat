@@ -11,10 +11,6 @@
 */
 #define __wf_private__
 #include "config.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <math.h>
 #include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
 #include "agl/ext.h"
@@ -23,6 +19,7 @@
 #include "waveform/waveform.h"
 #include "file_manager/file_manager.h"
 #include "file_manager/pixmaps.h"
+#include "icon/utils.h"
 #include "samplecat.h"
 #include "application.h"
 #include "keys.h"
@@ -48,13 +45,10 @@ static void files_free (AGlActor*);
 static AGl* agl = NULL;
 static int instance_count = 0;
 static AGlActorClass actor_class = {0, "Files", (AGlActorNew*)files_view, files_free};
-static GHashTable* icon_textures = NULL;
 static GHashTable* key_handlers = NULL;
 
 static bool  files_scan_dir  (AGlActor*);
 static void  files_on_scroll (Observable*, int row, gpointer view);
-static guint create_icon     (const char*, GdkPixbuf*);
-static guint get_icon        (const char*, GdkPixbuf*);
 
 typedef bool (ActorKeyHandler)(AGlActor*);
 
@@ -117,9 +111,6 @@ _init()
 	if(!init_done){
 		agl = agl_get_instance();
 
-		icon_textures = g_hash_table_new(NULL, NULL);
-		agl_set_font_string("Roboto 10"); // initialise the pango context
-
 		key_handlers = g_hash_table_new(g_int_hash, g_int_equal);
 		int i = 0; while(true){
 			ActorKey* key = &keys[i];
@@ -142,7 +133,7 @@ files_add_behaviours (FilesView* view)
 
 	actor->behaviours[0] = selectable();
 	SELECTABLE->on_select = on_select;
-	actor->behaviours[0]->klass->init(actor->behaviours[0], (AGlActor*)view);
+	agl_behaviour_init(actor->behaviours[0], (AGlActor*)view);
 
 	void set_path (AGlActor* actor, const char* path)
 	{
@@ -159,7 +150,7 @@ files_add_behaviours (FilesView* view)
 		.utype = G_TYPE_STRING,
 		.set.c = set_path
 	};
-	actor->behaviours[1]->klass->init(actor->behaviours[1], (AGlActor*)view);
+	agl_behaviour_init(actor->behaviours[1], (AGlActor*)view);
 }
 
 
@@ -189,17 +180,17 @@ files_view (gpointer _)
 
 		int c; for(c=0;c<G_N_ELEMENTS(col_heads);c++){
 			agl_enable_stencil(0, y0, MIN(col[c + 2] - 6, agl_actor__width(actor)), actor->region.y2);
-			agl_print(col[c + 1], y0, 0, app->style.text, col_heads[c]);
+			agl_print(col[c + 1], y0, 0, STYLE.text, col_heads[c]);
 		}
 
 		int y = y0 + row_height;
 		if(!items->len)
-			return agl_print(col[1], y, 0, app->style.text, "No files"), true;
+			return agl_print(col[1], y, 0, STYLE.text, "No files"), true;
 
 		int scroll_offset = SCROLLBAR->scroll->value;
 		int i, r; for(i = scroll_offset; r = i - scroll_offset, i < items->len && (i - scroll_offset < n_rows); i++){
 			if(r == view->view->selection - scroll_offset){
-				agl->shaders.plain->uniform.colour = app->style.selection;
+				agl->shaders.plain->uniform.colour = STYLE.selection;
 				agl_use_program((AGlShader*)agl->shaders.plain);
 				agl_rect_((AGlRect){0, y + r * row_height - 2, agl_actor__width(actor), row_height});
 			}
@@ -211,13 +202,12 @@ files_view (gpointer _)
 			const char* val[] = {item->leafname, size, user_name(item->uid), group_name(item->gid)};
 			int c; for(c=0;c<G_N_ELEMENTS(val);c++){
 				agl_enable_stencil(0, y0, col[c + 2] - 6, actor->region.y2);
-				agl_print(col[c + 1], y + r * row_height, 0, app->style.text, val[c]);
+				agl_print(col[c + 1], y + r * row_height, 0, STYLE.text, val[c]);
 			}
 
-			// TODO dont do this in paint
 			if(item->mime_type){
-				GdkPixbuf* pixbuf = mime_type_get_pixbuf(item->mime_type);
-				guint t = get_icon(item->mime_type->subtype, pixbuf);
+				guint t = get_icon_texture_by_mimetype (item->mime_type);
+
 				agl_use_program((AGlShader*)agl->shaders.texture);
 				agl_textured_rect(t, 0, y + r * row_height, 16, 16, NULL);
 			}
@@ -421,37 +411,3 @@ files_nav_down (AGlActor* actor)
 
 	return AGL_HANDLED;
 }
-
-
-static guint
-create_icon (const char* name, GdkPixbuf* pixbuf)
-{
-	g_return_val_if_fail(pixbuf, 0);
-
-	guint textures[1];
-	glGenTextures(1, textures);
-
-	dbg(2, "icon: pixbuf=%ix%i %ibytes/px", gdk_pixbuf_get_width(pixbuf), gdk_pixbuf_get_height(pixbuf), gdk_pixbuf_get_n_channels(pixbuf));
-	glBindTexture   (GL_TEXTURE_2D, textures[0]);
-	glTexParameterf (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameterf (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexImage2D    (GL_TEXTURE_2D, 0, GL_RGBA, gdk_pixbuf_get_width(pixbuf), gdk_pixbuf_get_height(pixbuf), 0, GL_RGBA, GL_UNSIGNED_BYTE, gdk_pixbuf_get_pixels(pixbuf));
-	gl_warn("texture bind");
-	g_object_unref(pixbuf);
-
-	return textures[0];
-}
-
-
-static guint
-get_icon (const char* name, GdkPixbuf* pixbuf)
-{
-	guint t = GPOINTER_TO_INT(g_hash_table_lookup(icon_textures, name));
-	if(!t){
-		t = create_icon(name, pixbuf);
-		g_hash_table_insert(icon_textures, (gpointer)name, GINT_TO_POINTER(t));
-
-	}
-	return t;
-}
-

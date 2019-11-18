@@ -11,7 +11,6 @@ samplecat_gl_SOURCES = \
 	materials/icon_ring.c materials/icon_ring.h \
 	shader.c shader.h \
 	layout.c layout.h \
-	style.c style.h \
 	utils.c utils.h \
 	yaml_utils.c yaml_utils.h \
 	keys.h \
@@ -26,7 +25,6 @@ AM_CFLAGS = \
 	-I$(top_srcdir)/lib/waveform \
 	-I$(top_srcdir)/lib/waveform/gtkglext-1.0 \
 	-I$(top_srcdir)/experimental \
-	-I$(top_srcdir) \
 	$(SAMPLECAT_CFLAGS) \
 	$(FFTW3_CFLAGS) \
 	$(OPENGL_CFLAGS) \

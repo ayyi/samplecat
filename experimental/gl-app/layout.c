@@ -13,13 +13,13 @@
 #include <glib/gstdio.h>
 #include <debug/debug.h>
 #include "agl/actor.h"
-#include "src/typedefs.h"
 #include "samplecat.h"
 #include "utils/ayyi_utils.h"
 #include "waveform/waveform.h"
 #include "yaml_utils.h"
 #include "application.h"
 #include "behaviours/state.h"
+#include "behaviours/panel.h"
 #include "layout.h"
 
 typedef AGlActorClass* (get_class)();
@@ -463,6 +463,13 @@ load_settings ()
 		agl_actor_register_class("Files", files_view_get_class());
 		agl_actor_register_class("Waveform", wf_actor_get_class());
 		agl_actor_register_class("Spectrogram", spectrogram_view_get_class());
+
+		agl_actor_class__add_behaviour(files_view_get_class(), panel_get_class());
+		agl_actor_class__add_behaviour(search_view_get_class(), panel_get_class());
+		agl_actor_class__add_behaviour(inspector_view_get_class(), panel_get_class());
+		agl_actor_class__add_behaviour(spectrogram_view_get_class(), panel_get_class());
+		agl_actor_class__add_behaviour(directories_view_get_class(), panel_get_class());
+		agl_actor_class__add_behaviour(wf_actor_get_class(), panel_get_class());
 	}
 
 	yaml_parser_t parser; yaml_parser_initialize(&parser);

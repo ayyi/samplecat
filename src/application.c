@@ -672,4 +672,3 @@ application_play_path (const char* path)
 	}
 }
 
-

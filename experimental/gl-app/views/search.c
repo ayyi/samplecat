@@ -11,13 +11,9 @@
 */
 #define __wf_private__
 #include "config.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <X11/keysym.h>
 #include <gdk/gdkkeysyms.h>
 #include "debug/debug.h"
-#include "agl/ext.h"
 #include "agl/utils.h"
 #include "agl/actor.h"
 #include "agl/fbo.h"
@@ -60,8 +56,7 @@ _init()
 	if(!init_done){
 		agl = agl_get_instance();
 
-		font = g_strdup_printf("%s 10", app->style.font);
-		agl_set_font_string(font); // initialise the pango context
+		font = g_strdup_printf("%s 10", APP_STYLE.font);
 
 		init_done = true;
 	}

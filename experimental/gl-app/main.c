@@ -125,6 +125,7 @@ main (int argc, char* argv[])
 		return -1;
 	}
 
+	agl_scene_get_class()->behaviour_classes[0] = style_get_class();
 	app->scene = (AGlScene*)agl_actor__new_root_(CONTEXT_TYPE_GLX);
 
 	AGliPt size = get_window_size_from_settings();
@@ -246,6 +247,8 @@ add_content (gpointer _)
 		actors.hdock = agl_actor__find_by_name((AGlActor*)app->scene, "Dock H");
 		actors.list = agl_actor__find_by_name((AGlActor*)app->scene, "List");
 		actors.files = agl_actor__find_by_name((AGlActor*)app->scene, "Files");
+
+		application_menu_init();
 
 		Sample* sample = samplecat_list_store_get_sample_by_row_index(0);
 		if(sample){

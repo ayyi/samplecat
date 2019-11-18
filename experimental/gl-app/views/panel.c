@@ -59,7 +59,7 @@ _init()
 	if(!init_done){
 		agl = agl_get_instance();
 
-		font = g_strdup_printf("%s 10", app->style.font);
+		font = g_strdup_printf("%s 10", APP_STYLE.font);
 		agl_set_font_string(font); // initialise the pango context
 
 		ring_material = ring_new();

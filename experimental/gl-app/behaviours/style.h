@@ -9,32 +9,26 @@
 * +----------------------------------------------------------------------+
 *
 */
-#ifndef __views_context_menu_h__
-#define __views_context_menu_h__
-#include "agl/actor.h"
-#include "waveform/promise.h"
-#include "../glx.h"
+#ifndef __behvr_style_h__
+#define __behvr_style_h__
+
+#include "agl/behaviour.h"
 
 typedef struct {
-    int code;
-    int modifier;
-} Key;
+    AGlBehaviour behaviour;
 
-typedef struct {
-    char* title;
-    char* icon;
-    Key key;
-    void (*action)(gpointer);
-    bool (*show_icon)(gpointer);
-    gpointer user_data;
-} MenuItem;
+    uint32_t     bg;
+    uint32_t     bg_alt;
+    uint32_t     bg_selected;
+    uint32_t     fg;
+    uint32_t     text;
+    uint32_t     selection;
+    char*        font;
+} StyleBehaviour;
 
-typedef struct {
-    int len;
-    MenuItem items[];
-} Menu;
+AGlBehaviourClass* style_get_class   ();
+AGlBehaviour*      style             ();
 
-AGlWindow* context_menu_open_new (AGlScene*, AGliPt, Menu*, AMPromise*);
-AGlActor*  context_menu          (gpointer);
+#define STYLE (*(StyleBehaviour*)((AGlActor*)actor->root)->behaviours[0])
 
 #endif

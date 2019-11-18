@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2017-2017 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2017-2019 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -11,13 +11,7 @@
 */
 #define __wf_private__
 #include "config.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <math.h>
-#include <X11/keysym.h>
 #include <gtk/gtk.h>
-#include <gdk/gdkkeysyms.h>
 #include <GL/gl.h>
 #if USE_GLU
 #include <GL/glu.h>

@@ -106,7 +106,7 @@ tabs_view (gpointer _)
 			i++;
 		}
 
-		agl->shaders.plain->uniform.colour = (app->style.fg & 0xffffff00) + 0xff;
+		agl->shaders.plain->uniform.colour = (STYLE.fg & 0xffffff00) + 0xff;
 		agl_use_program((AGlShader*)agl->shaders.plain);
 		agl_rect_((AGlRect){tabs->active * tab_width, TAB_HEIGHT - 6, tab_width - 10, 2});
 
@@ -189,7 +189,7 @@ tabs_view (gpointer _)
 
 			case GDK_MOTION_NOTIFY:;
 				int tab = xy.x / tab_width;
-				if(tab >= g_list_length(tabs->tabs)){
+				if(xy.y > TAB_HEIGHT || tab >= g_list_length(tabs->tabs)){
 					end_hover(tabs);
 				}else{
 					if(!tabs->hover.animatable.val.f || tab != tabs->hover.tab){

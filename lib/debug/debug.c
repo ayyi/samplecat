@@ -92,7 +92,7 @@ log_handler(const gchar* log_domain, GLogLevelFlags log_level, const gchar* mess
 			printf("%s %s\n", ayyi_warn, message);
 			break;
 		default:
-			printf("log_handler(): level=%i %s\n", log_level, message);
+			if(_debug_) printf("log_handler(): level=%i %s\n", log_level, message);
 			break;
 	}
 }

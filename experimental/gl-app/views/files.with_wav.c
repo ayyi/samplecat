@@ -131,25 +131,25 @@ files_with_wav(gpointer _)
 
 		int c; for(c=0;c<G_N_ELEMENTS(col_heads);c++){
 			agl_enable_stencil(0, y0, col[c + 2] - 6, actor->region.y2);
-			agl_print(col[c + 1], y0, 0, app->style.text, col_heads[c]);
+			agl_print(col[c + 1], y0, 0, STYLE.text, col_heads[c]);
 		}
 
 		if(!items->len)
-			return agl_print(0, 0, 0, app->style.text, "No files"), true;
+			return agl_print(0, 0, 0, STYLE.text, "No files"), true;
 
 		y0 += row_height0;
 		int offset = SCROLLBAR->scroll->value;
 		int i, r; for(i = offset; r = i - offset, i < items->len && (i - offset < n_rows); i++){
 			int y = y0 + r * row_height;
 			if(r == FILES->view->selection - offset){
-				agl->shaders.plain->uniform.colour = app->style.selection;
+				agl->shaders.plain->uniform.colour = STYLE.selection;
 				agl_use_program((AGlShader*)agl->shaders.plain);
 				agl_disable_stencil();
 				agl_rect_((AGlRect){0, y - 2, agl_actor__width(actor) - 20, row_height0 + wav_height + 4});
 			}else{
 				// waveform background
 				agl_disable_stencil();
-				agl->shaders.plain->uniform.colour = app->style.bg_alt;
+				agl->shaders.plain->uniform.colour = STYLE.bg_alt;
 				agl_use_program((AGlShader*)agl->shaders.plain);
 				agl_rect_((AGlRect){0, y + row_height0, agl_actor__width(actor) - 20, wav_height});
 			}
@@ -160,7 +160,7 @@ files_with_wav(gpointer _)
 			const char* val[] = {item->leafname, size, user_name(item->uid), group_name(item->gid)};
 			int c; for(c=0;c<G_N_ELEMENTS(val);c++){
 				agl_enable_stencil(0, y0, col[c + 2] - 6, actor->region.y2);
-				agl_print(col[c + 1], y, 0, app->style.text, val[c]);
+				agl_print(col[c + 1], y, 0, STYLE.text, val[c]);
 			}
 
 			if(!vitem->wav){
@@ -170,7 +170,7 @@ files_with_wav(gpointer _)
 				agl_actor__add_child(actor, (AGlActor*)wa);
 				Waveform* waveform = waveform_new(g_strdup_printf("%s/%s", files_view_get_path(FILES), name));
 				wf_actor_set_waveform(wa, waveform, NULL, NULL);
-				wf_actor_set_colour(wa, app->style.fg);
+				wf_actor_set_colour(wa, STYLE.fg);
 				wf_actor_set_rect(wa, &(WfRectangle){0, y + row_height0, agl_actor__width(actor) - 20, wav_height});
 				vitem->wav = (AGlActor*)wa;
 			}

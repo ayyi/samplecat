@@ -75,25 +75,19 @@ state_init (AGlBehaviour* behaviour, AGlActor* actor)
 bool
 state_set_named_parameter (AGlActor* actor, char* name, char* value)
 {
-	for(int i = 0; i < AGL_ACTOR_N_BEHAVIOURS; i++){
-		AGlBehaviour* behaviour = actor->behaviours[i];
-		if(!behaviour)
-			break;
-
-		if(behaviour->klass == state_get_class()){
-			StateBehaviour* b = (StateBehaviour*)behaviour;
-			ParamArray* params = b->params;
-			for(int i = 0; i< params->size; i++){
-				ConfigParam* param = &params->params[i];
-				if(!strcmp(name, param->name)){
-					switch(param->utype){
-						case G_TYPE_STRING:
-							param->set.c(actor, value);
-							param->val.c = g_strdup(value);
-							return true;
-						default:
-							break;
-					}
+	StateBehaviour* state = (StateBehaviour*)agl_actor__find_behaviour(actor, state_get_class());
+	if(state){
+		ParamArray* params = state->params;
+		for(int i = 0; i< params->size; i++){
+			ConfigParam* param = &params->params[i];
+			if(!strcmp(name, param->name)){
+				switch(param->utype){
+					case G_TYPE_STRING:
+						param->set.c(actor, value);
+						param->val.c = g_strdup(value);
+						return true;
+					default:
+						break;
 				}
 			}
 		}

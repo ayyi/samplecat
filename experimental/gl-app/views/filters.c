@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2017-2017 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2017-2019 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -11,10 +11,6 @@
 */
 #define __wf_private__
 #include "config.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <math.h>
 #include <X11/keysym.h>
 #include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
@@ -25,6 +21,7 @@
 #include "agl/pango_render.h"
 #include "samplecat.h"
 #include "shader.h"
+#include "behaviours/panel.h"
 #include "views/filters.h"
 
 #define _g_object_unref0(var) ((var == NULL) ? NULL : (var = (g_object_unref (var), NULL)))
@@ -43,29 +40,26 @@ static int mouse = 0;
 AGlActorClass*
 filters_view_get_class ()
 {
-	return &actor_class;
-}
-
-
-static void
-_init()
-{
 	static bool init_done = false;
 
 	if(!init_done){
 		agl = agl_get_instance();
-		agl_set_font_string("Roboto 10"); // initialise the pango context
+
+		agl_actor_class__add_behaviour(&actor_class, panel_get_class());
 
 		init_done = true;
 	}
+
+	return &actor_class;
 }
+
 
 AGlActor*
 filters_view(gpointer _)
 {
 	instance_count++;
 
-	_init();
+	filters_view_get_class();
 
 	bool filters_paint(AGlActor* actor)
 	{

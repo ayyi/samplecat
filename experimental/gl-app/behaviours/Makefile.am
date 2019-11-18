@@ -2,7 +2,9 @@
 noinst_LTLIBRARIES = libbehaviours.la
 
 libbehaviours_la_SOURCES = \
-	state.c state.h
+	style.c style.h \
+	state.c state.h \
+	panel.c panel.h
 
 AM_CFLAGS = \
 	-no-pie \

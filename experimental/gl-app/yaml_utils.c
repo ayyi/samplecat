@@ -168,7 +168,7 @@ yaml_load (FILE* fp, YamlHandler handlers[])
 
 	int section = 0;
 
-	// read the event sequence.
+	// read the event sequence
 	int safety = 0;
 	int depth = 0;
 	char key[64] = "";
@@ -179,7 +179,7 @@ yaml_load (FILE* fp, YamlHandler handlers[])
 	get_expected_event(&parser, &event, YAML_DOCUMENT_START_EVENT);
 
 	do {
-		if (!yaml_parser_parse(&parser, &event)) goto error; // Get the next event.
+		if (!yaml_parser_parse(&parser, &event)) goto error; // Get the next event
 
 		switch (event.type) {
 			case YAML_STREAM_START_EVENT:
