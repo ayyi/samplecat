@@ -1,19 +1,13 @@
-/*
-  This file is part of the Ayyi Project. http://www.ayyi.org
-  copyright (C) 2004-2017 Tim Orford <tim@orford.org>
-
-  This program is free software; you can redistribute it and/or modify
-  it under the terms of the GNU General Public License version 3
-  as published by the Free Software Foundation.
-
-  This program is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License
-  along with this program; if not, write to the Free Software
-  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+/**
+* +----------------------------------------------------------------------+
+* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
+* | copyright (C) 2004-2019 Tim Orford <tim@orford.org>                  |
+* +----------------------------------------------------------------------+
+* | This program is free software; you can redistribute it and/or modify |
+* | it under the terms of the GNU General Public License version 3       |
+* | as published by the Free Software Foundation.                        |
+* +----------------------------------------------------------------------+
+*
 */
 #include <glib.h>
 #include <glib-object.h>
@@ -22,14 +16,6 @@
 #include "typedefs.h"
 #include "debug/debug.h"
 #include "editablelabelbutton.h"
-
-
-#define TYPE_EDITABLE_LABEL_BUTTON (editable_label_button_get_type ())
-#define EDITABLE_LABEL_BUTTON(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), TYPE_EDITABLE_LABEL_BUTTON, EditableLabelButton))
-#define EDITABLE_LABEL_BUTTON_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST ((klass), TYPE_EDITABLE_LABEL_BUTTON, EditableLabelButtonClass))
-#define IS_EDITABLE_LABEL_BUTTON(obj) (G_TYPE_CHECK_INSTANCE_TYPE ((obj), TYPE_EDITABLE_LABEL_BUTTON))
-#define IS_EDITABLE_LABEL_BUTTON_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), TYPE_EDITABLE_LABEL_BUTTON))
-#define EDITABLE_LABEL_BUTTON_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), TYPE_EDITABLE_LABEL_BUTTON, EditableLabelButtonClass))
 
 static void editable_label_button_finalize  (GObject*);
 static bool editable_label_button_stop_edit (GtkWidget*, GdkEventCrossing*, gpointer);
@@ -40,25 +26,22 @@ struct _EditableLabelButtonPrivate {
 
 static GtkWidget* w_rename = NULL;
 
-
-static gpointer editable_label_button_parent_class = NULL;
-
 GType editable_label_button_get_type (void) G_GNUC_CONST;
-#define EDITABLE_LABEL_BUTTON_GET_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), TYPE_EDITABLE_LABEL_BUTTON, EditableLabelButtonPrivate))
+G_DEFINE_TYPE_WITH_PRIVATE (EditableLabelButton, editable_label_button, GTK_TYPE_EVENT_BOX)
 enum  {
 	EDITABLE_LABEL_BUTTON_DUMMY_PROPERTY
 };
 
 
 static void
-accels_connect(GtkWidget* widget)
+accels_connect (GtkWidget* widget)
 {
 	// TODO
 }
 
 
 static void
-accels_disconnect(GtkWidget* widget)
+accels_disconnect (GtkWidget* widget)
 {
 	// TODO
 }
@@ -108,7 +91,6 @@ static void
 editable_label_button_class_init (EditableLabelButtonClass* klass)
 {
 	editable_label_button_parent_class = g_type_class_peek_parent (klass);
-	g_type_class_add_private (klass, sizeof (EditableLabelButtonPrivate));
 	G_OBJECT_CLASS (klass)->finalize = editable_label_button_finalize;
 	g_signal_new ("edited", TYPE_EDITABLE_LABEL_BUTTON, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_VOID__STRING, G_TYPE_NONE, 1, G_TYPE_STRING);
 
@@ -120,9 +102,9 @@ editable_label_button_class_init (EditableLabelButtonClass* klass)
 
 
 static void
-editable_label_button_instance_init (EditableLabelButton* self)
+editable_label_button_init (EditableLabelButton* self)
 {
-	self->priv = EDITABLE_LABEL_BUTTON_GET_PRIVATE (self);
+	self->priv = editable_label_button_get_instance_private(self);
 	self->priv->align = NULL;
 	self->label = NULL;
 }
@@ -132,20 +114,6 @@ static void
 editable_label_button_finalize (GObject* obj)
 {
 	G_OBJECT_CLASS (editable_label_button_parent_class)->finalize (obj);
-}
-
-
-GType
-editable_label_button_get_type ()
-{
-	static volatile gsize editable_label_button_type_id__volatile = 0;
-	if (g_once_init_enter (&editable_label_button_type_id__volatile)) {
-		static const GTypeInfo g_define_type_info = { sizeof (EditableLabelButtonClass), (GBaseInitFunc) NULL, (GBaseFinalizeFunc) NULL, (GClassInitFunc) editable_label_button_class_init, (GClassFinalizeFunc) NULL, NULL, sizeof (EditableLabelButton), 0, (GInstanceInitFunc) editable_label_button_instance_init, NULL };
-		GType editable_label_button_type_id;
-		editable_label_button_type_id = g_type_register_static (GTK_TYPE_EVENT_BOX, "EditableLabelButton", &g_define_type_info, 0);
-		g_once_init_leave (&editable_label_button_type_id__volatile, editable_label_button_type_id);
-	}
-	return editable_label_button_type_id__volatile;
 }
 
 
@@ -200,7 +168,7 @@ editable_label_button_start_edit (EditableLabelButton* self)
 
 	accels_disconnect((GtkWidget*)self);
 
-	//show the rename widget
+	// Show the rename widget
 	gtk_entry_set_text(GTK_ENTRY(w_rename), gtk_label_get_text(GTK_LABEL(self->label)));
 	g_object_ref(self->label); // prevent the widget being destroyed when unparented.
 	gtk_container_remove(GTK_CONTAINER(_self->align), (GtkWidget*)self->label);
@@ -210,26 +178,21 @@ editable_label_button_start_edit (EditableLabelButton* self)
 
 	// focus-out can be improved by properly focussing other widgets when clicked on.
 
-	//add signal to toplevel window? it doesnt like this:
-	//g_signal_connect ((gpointer)gtk_widget_get_toplevel(w_rename), "clicked", G_CALLBACK(track_label_edit_stop), GINT_TO_POINTER(tnum));
-
 	//if(focus_handler_id) g_signal_handler_disconnect((gpointer)w_rename, focus_handler_id);
 
 	// this signal wont quit until you click on another button, or other widget which takes kb focus.
 	// "focus" refers to the keyboard. So, eg, TAB will cause it to quit.
-#ifndef DEBUG_TRACKCONTROL
 	focus_handler_id = g_signal_connect ((gpointer)w_rename, "focus-out-event", G_CALLBACK(editable_label_button_stop_edit), self);
-#endif
 
 	if(handler2) g_signal_handler_disconnect((gpointer)w_rename, handler2);
 	handler2 = g_signal_connect(G_OBJECT(w_rename), "key-press-event", G_CALLBACK(track_entry_key_press), NULL); // trap the RET, ESC key.
 
-	// this is neccesary as it allows us to start typing imediately. It also selects the whole string.
+	// Allow us to start typing imediately and select the whole string.
 	gtk_widget_grab_focus(GTK_WIDGET(w_rename));
 }
 
 
-static gboolean
+static bool
 editable_label_button_stop_edit (GtkWidget* entry, GdkEventCrossing* event, gpointer user_data)
 {
 	EditableLabelButton* self = user_data;
@@ -261,5 +224,3 @@ editable_label_button_stop_edit (GtkWidget* entry, GdkEventCrossing* event, gpoi
 
 	return false;
 }
-
-

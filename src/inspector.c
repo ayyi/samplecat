@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2017 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2019 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -10,10 +10,6 @@
 *
 */
 #include "config.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <libgen.h>
 #include <gtk/gtk.h>
 #include "debug/debug.h"
 #include "file_manager/support.h" // to_utf8()
@@ -98,7 +94,7 @@ static void hide_fields                  (Inspector*);
 static void show_fields                  (Inspector*);
 static void inspector_remove_rows        (Inspector*, int, int, int);
 static void inspector_remove_cells       (Inspector*, RowRange*);
-static bool on_notes_focus_out           (GtkWidget*, gpointer);
+static bool on_notes_focus_out           (GtkWidget*, GdkEvent*, gpointer);
 
 
 static void
@@ -689,7 +685,7 @@ show_fields (Inspector* inspector)
 
 
 static bool
-on_notes_focus_out (GtkWidget* widget, gpointer userdata)
+on_notes_focus_out (GtkWidget* widget, GdkEvent* event, gpointer userdata)
 {
 	Inspector* inspector = (Inspector*)userdata;
 	InspectorPrivate* i = inspector->priv;
@@ -698,8 +694,8 @@ on_notes_focus_out (GtkWidget* widget, gpointer userdata)
 	g_return_val_if_fail(textbuf, false);
 
 	GtkTextIter start_iter, end_iter;
-	gtk_text_buffer_get_start_iter(textbuf,  &start_iter);
-	gtk_text_buffer_get_end_iter  (textbuf,  &end_iter);
+	gtk_text_buffer_get_start_iter(textbuf, &start_iter);
+	gtk_text_buffer_get_end_iter  (textbuf, &end_iter);
 	gchar* notes = gtk_text_buffer_get_text(textbuf, &start_iter, &end_iter, true);
 
 	Sample* sample = samplecat.model->selection;
