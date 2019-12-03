@@ -11,10 +11,6 @@
 */
 #define __wf_private__
 #include "config.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <math.h>
 #include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
 #include <GL/gl.h>
@@ -27,6 +23,7 @@
 #include "file_manager/pixmaps.h"
 #include "samplecat.h"
 #include "application.h"
+#include "behaviours/key.h"
 #include "views/scrollbar.h"
 #include "views/files.impl.h"
 #include "views/files.with_wav.h"
@@ -62,13 +59,6 @@ static guint    get_icon                 (const char*, GdkPixbuf*);
 AGlActorClass*
 files_with_wav_get_class ()
 {
-	return &actor_class;
-}
-
-
-static void
-_init()
-{
 	static bool init_done = false;
 
 	if(!init_done){
@@ -77,16 +67,21 @@ _init()
 		icon_textures = g_hash_table_new(NULL, NULL);
 		agl_set_font_string("Roboto 10"); // initialise the pango context
 
+		agl_actor_class__add_behaviour(&actor_class, key_get_class());
+
 		dir_init();
 
 		init_done = true;
 	}
+
+	return &actor_class;
 }
+
 
 // TODO this is a copy of private AGlActor fn.
 //      In this particular case we can just check the state of the Scrollbar child
 static bool
-agl_actor__is_animating(AGlActor* a)
+agl_actor__is_animating (AGlActor* a)
 {
 	if(a->transitions) return true;
 
@@ -103,9 +98,9 @@ files_with_wav(gpointer _)
 {
 	instance_count++;
 
-	_init();
+	files_with_wav_get_class();
 
-	bool files_paint(AGlActor* actor)
+	bool files_paint (AGlActor* actor)
 	{
 		FilesWithWav* view = (FilesWithWav*)actor;
 		DirectoryView* dv = FILES->view;
@@ -286,7 +281,7 @@ files_with_wav(gpointer _)
 		return AGL_HANDLED;
 	}
 
-	FilesWithWav* view = WF_NEW(FilesWithWav,
+	FilesWithWav* view = agl_actor__new(FilesWithWav,
 		.files = {
 			.actor = {
 				.class = &actor_class,

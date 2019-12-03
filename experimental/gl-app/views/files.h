@@ -19,7 +19,7 @@ typedef struct _FilesView FilesView;
 #include "behaviours/state.h"
 #include "agl/observable.h"
 
-#define FILES_STATE(A) ((StateBehaviour*)((A)->behaviours[1]))
+#define FILES_STATE(A) ((StateBehaviour*)((A)->behaviours[2]))
 
 typedef struct {
    AGlBehaviour behaviour;

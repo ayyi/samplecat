@@ -91,7 +91,7 @@ scrollbar_view (AGlActor* panel, AGlOrientation orientation)
 		return true;
 	}
 
-	bool scrollbar_draw_v(AGlActor* actor)
+	bool scrollbar_draw_v (AGlActor* actor)
 	{
 		ScrollbarActor* scrollbar = (ScrollbarActor*)actor;
 
@@ -122,7 +122,7 @@ scrollbar_view (AGlActor* panel, AGlOrientation orientation)
 		return true;
 	}
 
-	void scrollbar_init(AGlActor* actor)
+	void scrollbar_init (AGlActor* actor)
 	{
 		if(((ScrollbarActor*)actor)->orientation == AGL_ORIENTATION_VERTICAL){
 			if(!v_scrollbar_shader.shader.program){
@@ -145,7 +145,7 @@ scrollbar_view (AGlActor* panel, AGlOrientation orientation)
 	ScrollbarActor* scrollbar = AGL_NEW(ScrollbarActor,
 		.actor = {
 			.class = &actor_class,
-			.name = "Scrollbar",
+			.name = actor_class.name,
 			.init = scrollbar_init,
 			.set_size = scrollbar_set_size,
 			.paint = agl_actor__null_painter,
@@ -180,7 +180,7 @@ scrollbar_view (AGlActor* panel, AGlOrientation orientation)
 
 
 static void
-scrollbar_set_size(AGlActor* actor)
+scrollbar_set_size (AGlActor* actor)
 {
 	AGlActor* root = (AGlActor*)actor->root;
 
@@ -235,7 +235,7 @@ vscrollbar_bar_position (AGlActor* actor, iRange* pos)
 
 
 static bool
-scrollbar_on_event(AGlActor* actor, GdkEvent* event, AGliPt xy)
+scrollbar_on_event (AGlActor* actor, GdkEvent* event, AGliPt xy)
 {
 	void animation_done (WfAnimation* animation, gpointer user_data)
 	{
@@ -270,7 +270,6 @@ scrollbar_on_event(AGlActor* actor, GdkEvent* event, AGliPt xy)
 					int dx = x - press.pt.x;
 					double vp_size = arr_gl_pos2px_(arrange, &am_object_val(&song->loc[AM_LOC_END]).sp) + 20.0;
 					double scale = vp_size / (double)agl_actor__width(actor);
-					arrange->canvas->scroll_to(arrange, ((int)-press.viewport.x1) + dx * scale, -1);
 #endif
 				}
 			}else{
@@ -334,7 +333,7 @@ scrollbar_on_event(AGlActor* actor, GdkEvent* event, AGliPt xy)
 
 
 static bool
-go_inactive(gpointer _view)
+go_inactive (gpointer _view)
 {
 	AGlActor* actor = _view;
 	ScrollbarActor* scrollbar = _view;
@@ -353,7 +352,7 @@ go_inactive(gpointer _view)
 
 
 static void
-scrollbar_start_activity(AGlActor* actor, bool hovered)
+scrollbar_start_activity (AGlActor* actor, bool hovered)
 {
 	ScrollbarActor* scrollbar = (ScrollbarActor*)actor;
 

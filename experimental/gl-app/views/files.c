@@ -23,6 +23,7 @@
 #include "samplecat.h"
 #include "application.h"
 #include "keys.h"
+#include "behaviours/key.h"
 #include "views/scrollbar.h"
 #include "views/files.impl.h"
 #include "views/files.h"
@@ -37,7 +38,8 @@
 #define scrollable_height (view->view->items->len)
 #define max_scroll_offset (scrollable_height - N_ROWS_VISIBLE(actor) + 2)
 #define SCROLLBAR         ((ScrollbarActor*)((FilesView*)actor)->scrollbar)
-#define SELECTABLE        ((SelectBehaviour*)actor->behaviours[0])
+#define KEYS(A)           ((KeyBehaviour*)A->behaviours[0])
+#define SELECTABLE        ((SelectBehaviour*)actor->behaviours[1])
 #define PATH              (FILES_STATE((AGlActor*)view)->params->params[0].val.c)
 
 static void files_free (AGlActor*);
@@ -45,18 +47,9 @@ static void files_free (AGlActor*);
 static AGl* agl = NULL;
 static int instance_count = 0;
 static AGlActorClass actor_class = {0, "Files", (AGlActorNew*)files_view, files_free};
-static GHashTable* key_handlers = NULL;
 
 static bool  files_scan_dir  (AGlActor*);
 static void  files_on_scroll (Observable*, int row, gpointer view);
-
-typedef bool (ActorKeyHandler)(AGlActor*);
-
-typedef struct
-{
-	int              key;
-	ActorKeyHandler* handler;
-} ActorKey;
 
 static ActorKeyHandler
 	files_nav_up,
@@ -99,30 +92,18 @@ on_select (Observable* o, int row, gpointer _actor)
 AGlActorClass*
 files_view_get_class ()
 {
-	return &actor_class;
-}
-
-
-static void
-_init()
-{
 	static bool init_done = false;
 
 	if(!init_done){
 		agl = agl_get_instance();
 
-		key_handlers = g_hash_table_new(g_int_hash, g_int_equal);
-		int i = 0; while(true){
-			ActorKey* key = &keys[i];
-			if(i > 100 || !key->key) break;
-			g_hash_table_insert(key_handlers, &key->key, key->handler);
-			i++;
-		}
+		agl_actor_class__add_behaviour(&actor_class, key_get_class());
 
 		dir_init();
 
 		init_done = true;
 	}
+	return &actor_class;
 }
 
 
@@ -131,16 +112,18 @@ files_add_behaviours (FilesView* view)
 {
 	AGlActor* actor = (AGlActor*)view;
 
-	actor->behaviours[0] = selectable();
+	KEYS(actor)->keys = &keys;
+
+	actor->behaviours[1] = selectable();
 	SELECTABLE->on_select = on_select;
-	agl_behaviour_init(actor->behaviours[0], (AGlActor*)view);
+	agl_behaviour_init((AGlBehaviour*)SELECTABLE, (AGlActor*)view);
 
 	void set_path (AGlActor* actor, const char* path)
 	{
 		g_idle_add((GSourceFunc)files_scan_dir, (gpointer)actor);
 	}
 
-	actor->behaviours[1] = state();
+	actor->behaviours[2] = state();
 	StateBehaviour* state = FILES_STATE(actor);
 	#define N_PARAMS 1
 	state->params = g_malloc(sizeof(ParamArray) + N_PARAMS * sizeof(ConfigParam));
@@ -150,7 +133,7 @@ files_add_behaviours (FilesView* view)
 		.utype = G_TYPE_STRING,
 		.set.c = set_path
 	};
-	agl_behaviour_init(actor->behaviours[1], (AGlActor*)view);
+	agl_behaviour_init(actor->behaviours[2], (AGlActor*)view);
 }
 
 
@@ -159,7 +142,7 @@ files_view (gpointer _)
 {
 	instance_count++;
 
-	_init();
+	files_view_get_class();
 
 	bool files_paint (AGlActor* actor)
 	{
@@ -282,20 +265,15 @@ files_view (gpointer _)
 						agl_observable_set(SELECTABLE->observable, row);
 				}
 				return AGL_HANDLED;
-			case GDK_KEY_RELEASE:;
-				GdkEventKey* e = (GdkEventKey*)event;
-				int keyval = e->keyval;
-				ActorKeyHandler* handler = g_hash_table_lookup(key_handlers, &keyval);
-				if(handler)
-					return handler(actor);
-				break;
+			case GDK_KEY_RELEASE:
+				return key_behaviour_handle_event((AGlBehaviour*)KEYS(actor), actor, event);
 			default:
 				break;
 		}
 		return AGL_NOT_HANDLED;
 	}
 
-	FilesView* view = WF_NEW(FilesView,
+	FilesView* view = agl_actor__new(FilesView,
 		.actor = {
 			.class = &actor_class,
 			.name = "Files",

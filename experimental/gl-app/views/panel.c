@@ -159,6 +159,7 @@ panel_view(gpointer _)
 					actor_context.grabbed = actor;
 					origin = mouse = xy;
 					agl_actor__invalidate(actor);
+					return AGL_HANDLED;
 				}
 				break;
 			case GDK_BUTTON_RELEASE:
@@ -167,24 +168,29 @@ panel_view(gpointer _)
 				if(actor_context.grabbed){
 					dock_v_move_panel_to_y((DockVView*)actor->parent, actor, xy.y);
 					actor_context.grabbed = NULL;
+					return AGL_HANDLED;
 				}
 				break;
 			case GDK_MOTION_NOTIFY:
 				if(actor_context.grabbed == actor){
 					mouse = xy;
 					agl_actor__invalidate(actor);
+					return AGL_HANDLED;
 				}
 				break;
 			case GDK_KEY_RELEASE:;
 				GdkEventKey* e = (GdkEventKey*)event;
 				int keyval = e->keyval;
-				KeyHandler* handler = g_hash_table_lookup(panel->actions.actions, &keyval);
-				if(handler) handler();
+				if(panel->actions.actions){
+					KeyHandler* handler = g_hash_table_lookup(panel->actions.actions, &keyval);
+					if(handler) handler();
+					return AGL_HANDLED;
+				}
 				break;
 			default:
 				break;
 		}
-		return AGL_HANDLED;
+		return AGL_NOT_HANDLED;
 	}
 
 	PanelView* view = AGL_NEW(PanelView,

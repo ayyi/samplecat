@@ -11,10 +11,6 @@
 */
 #define __wf_private__
 #include "config.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <GL/gl.h>
 #include "debug/debug.h"
 #include "agl/utils.h"
 #include "agl/fbo.h"

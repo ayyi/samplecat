@@ -11,7 +11,6 @@
 */
 #define __main_c__
 #include "config.h"
-#include <string.h>
 #include <getopt.h>
 #include <libgen.h>
 #include <X11/Xlib.h>
@@ -20,7 +19,6 @@
 #include "agl/actor.h"
 #include "file_manager/mimetype.h"
 #include "file_manager/pixmaps.h"
-#include "src/typedefs.h"
 #include "samplecat.h"
 #include "utils/ayyi_utils.h"
 #include "waveform/waveform.h"
@@ -46,19 +44,15 @@
 
 Application* app = NULL;
 
-struct Actors {AGlActor *bg, *hdock, *vdock1, *vdock2, *list, *files, *wave, *search, *tabs, *debug; } actors = {NULL,};
+struct Actors {AGlActor *files, *debug; } actors = {NULL,};
 
-static KeyHandler
-	nav_up,
-	nav_down;
-
+#if 0
 static Key keys[] = {
-	{XK_Up,   nav_up},
-	{XK_Down, nav_down},
 	{0,}
 };
 
 static void add_key_handlers ();
+#endif
 
 static bool show_directory   (gpointer);
 static bool add_content      (gpointer);
@@ -128,6 +122,23 @@ main (int argc, char* argv[])
 	agl_scene_get_class()->behaviour_classes[0] = style_get_class();
 	app->scene = (AGlScene*)agl_actor__new_root_(CONTEXT_TYPE_GLX);
 
+	bool on_event (AGlActor* actor, GdkEvent* event, AGliPt xy)
+	{
+		switch(event->type){
+			case GDK_KEY_PRESS:
+			case GDK_KEY_RELEASE:;
+				AGlActor* list = agl_actor__find_by_name(actor, "List");
+				if(list){
+					return list->on_event(list, event, xy);
+				}
+				break;
+			default:
+				break;
+		}
+		return AGL_NOT_HANDLED;
+	}
+	((AGlActor*)app->scene)->on_event = on_event;
+
 	AGliPt size = get_window_size_from_settings();
 	int screen = DefaultScreen(dpy);
 	AGlWindow* window = agl_make_window(dpy, "Samplecat", (XDisplayWidth(dpy, screen) - size.x) / 2, (XDisplayHeight(dpy, screen) - size.y) / 2, size.x, size.y, app->scene);
@@ -163,13 +174,13 @@ main (int argc, char* argv[])
 }
 
 
-					static void load_file_done(WaveformActor* a, gpointer _c)
+					static void load_file_done (WaveformActor* a, gpointer _c)
 					{
 						// TODO not sure if we need to redraw here or not...
 						//agl_actor__invalidate(((AGlActor*)a);
 					}
 
-				static void on_selection_change(SamplecatModel* m, Sample* sample, gpointer actor)
+				static void on_selection_change (SamplecatModel* m, Sample* sample, gpointer actor)
 				{
 					PF;
 
@@ -178,7 +189,7 @@ main (int argc, char* argv[])
 					g_object_unref(waveform);
 				}
 
-		static void on_actor_added(Application* app, AGlActor* actor, gpointer data)
+		static void on_actor_added (Application* app, AGlActor* actor, gpointer data)
 		{
 			AGlActorClass* c = actor->class;
 			if(c == wf_actor_get_class()){
@@ -186,15 +197,13 @@ main (int argc, char* argv[])
 			}
 		}
 
-		static void scene_set_size(AGlActor* scene)
+		static void scene_set_size (AGlActor* scene)
 		{
 			dbg(2, "%i", ((AGlActor*)app->scene)->region.x2);
 
-			actors.hdock->region = (AGlfRegion){20, 20, agl_actor__width(scene) - 20, agl_actor__height(scene) - 20};
-			agl_actor__set_size(actors.hdock);
-
-// not needed?
-			if(actors.list) agl_actor__set_size(actors.list); // clear cache
+			AGlActor* container = ((AGlActor*)app->scene)->children->data;
+			container->region = (AGlfRegion){20, 20, agl_actor__width(scene) - 20, agl_actor__height(scene) - 20};
+			agl_actor__set_size(container);
 
 #ifdef SHOW_FBO_DEBUG
 			actors.debug->region = (AGlfRegion){scene->region.x2/2, 10, scene->region.x2 - 10, scene->region.x2/2};
@@ -231,21 +240,17 @@ add_content (gpointer _)
 
 	application_set_auditioner();
 
-	Waveform* w = NULL;
-
 	app->wfc = wf_context_new((AGlActor*)app->scene);
 
 #if 0
-	agl_actor__add_child((AGlActor*)scene, actors.bg = background_actor(NULL));
-	actors.bg->region.x2 = 1;
-	actors.bg->region.y2 = 1;
+	AGlActor* bg = agl_actor__add_child((AGlActor*)scene, background_actor(NULL));
+	bg->region.x2 = 1;
+	bg->region.y2 = 1;
 #endif
 	g_signal_connect(app, "actor-added", G_CALLBACK(on_actor_added), NULL);
 
 	if(load_settings()){
 		dbg(1, "window setting loaded ok");
-		actors.hdock = agl_actor__find_by_name((AGlActor*)app->scene, "Dock H");
-		actors.list = agl_actor__find_by_name((AGlActor*)app->scene, "List");
 		actors.files = agl_actor__find_by_name((AGlActor*)app->scene, "Files");
 
 		application_menu_init();
@@ -259,23 +264,22 @@ add_content (gpointer _)
 #ifdef DEBUG
 		if(_debug_ > 2) agl_actor__print_tree((AGlActor*)app->scene);
 #endif
-	}
 
 #ifdef SHOW_FBO_DEBUG
-	agl_actor__add_child((AGlActor*)scene, actors.debug = wf_debug_actor(NULL));
-	wf_debug_actor_set_actor((DebugActor*)actors.debug, actors.list);
+		agl_actor__add_child((AGlActor*)scene, actors.debug = wf_debug_actor(NULL));
+		wf_debug_actor_set_actor((DebugActor*)actors.debug, actors.list);
 #endif
+
+		AGlActor* tabs = agl_actor__find_by_name((AGlActor*)app->scene, "Tabs");
+		if(tabs){
+			AGlActor* selected = g_list_nth_data(tabs->children, ((TabsView*)tabs)->active);
+			app->scene->selected = selected;
+		}
+	}
 
 	files_view_set_path((FilesView*)actors.files, app->config.browse_dir);
 
 	((AGlActor*)app->scene)->set_size = scene_set_size;
-
-	if(w) wf_actor_set_region((WaveformActor*)actors.wave, &(WfSampleRegion){0, waveform_get_n_frames(w)});
-
-	//scene_set_size((AGlActor*)app->scene);
-
-	// TODO how do these handlers interact with individual view key handlers?
-	add_key_handlers();
 
 	return G_SOURCE_REMOVE;
 }
@@ -294,8 +298,8 @@ add_content (gpointer _)
 			agl_actor__invalidate((AGlActor*)app->scene);
 		}
 
-static gboolean
-show_directory(gpointer _)
+static bool
+show_directory (gpointer _)
 {
 	app->wfc = wf_context_new((AGlActor*)app->scene);
 	((AGlActor*)app->scene)->set_size = scene_set_size2;
@@ -309,34 +313,12 @@ show_directory(gpointer _)
 	agl_actor__set_size((AGlActor*)app->scene);
 
 	app->scene->selected = actors.files;
-	add_key_handlers();
 
 	return G_SOURCE_REMOVE;
 }
 
 
-static void
-nav_up()
-{
-	PF;
-	if(actors.list){
-		ListView* list = (ListView*)actors.list;
-		list_view_select(list, list->selection - 1);
-	}
-}
-
-
-static void
-nav_down()
-{
-	PF;
-	if(actors.list){
-		ListView* list = (ListView*)actors.list;
-		list_view_select(list, list->selection + 1);
-	}
-}
-
-
+#if 0
 GHashTable* key_handlers = NULL;
 static void
 add_key_handlers()
@@ -352,6 +334,7 @@ add_key_handlers()
 		}
 	}
 }
+#endif
 
 
 // temporary

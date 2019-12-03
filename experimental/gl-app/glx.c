@@ -28,9 +28,6 @@
 #include "keys.h"
 #include "gl-app/glx.h"
 
-extern Key keys[];
-extern GHashTable* key_handlers;
-
 #ifndef GLX_MESA_swap_control
 typedef GLint (*PFNGLXSWAPINTERVALMESAPROC)    (unsigned interval);
 typedef GLint (*PFNGLXGETSWAPINTERVALMESAPROC) (void);
@@ -395,7 +392,7 @@ window_lookup (Window window)
  *  but is not currently working.
  */
 void
-event_loop(Display* dpy)
+event_loop (Display* dpy)
 {
 	float frame_usage = 0.0;
 
@@ -440,10 +437,6 @@ event_loop(Display* dpy)
 						break;
 					case KeyPress: {
 						char buffer[10];
-						int code = XLookupKeysym(&event.xkey, 0);
-
-						KeyHandler* handler = g_hash_table_lookup(key_handlers, &code);
-						if(handler) handler();
 
 #if 0
 						bool shift = ((XKeyEvent*)&event)->state & ShiftMask;

@@ -287,7 +287,7 @@ dock_v_view(gpointer _)
 			case GDK_BUTTON_PRESS:
 				agl_actor__grab(actor);
 				//set_cursor(arrange->canvas->widget->window, CURSOR_H_DOUBLE_ARROW);
-				break;
+				return AGL_HANDLED;
 			case GDK_MOTION_NOTIFY:
 				if(actor_context.grabbed == actor){
 					int y = xy.y - actor->region.y1;
@@ -341,7 +341,7 @@ dock_v_view(gpointer _)
 						}
 					}
 				}
-				break;
+				return AGL_HANDLED;
 			case GDK_LEAVE_NOTIFY:
 				dbg (1, "LEAVE_NOTIFY");
 				if(dock->handle.opacity > 0.0){
@@ -353,7 +353,7 @@ dock_v_view(gpointer _)
 			default:
 				break;
 		}
-		return AGL_HANDLED;
+		return AGL_NOT_HANDLED;
 	}
 
 	DockVView* dock = AGL_NEW(DockVView,

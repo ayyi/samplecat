@@ -11,6 +11,7 @@
 */
 #ifndef __views_dock_h_h__
 #define __views_dock_h_h__
+
 #include "panel.h"
 
 typedef struct {
@@ -25,7 +26,7 @@ typedef struct {
 
 AGlActorClass* dock_h_get_class      ();
 
-AGlActor* dock_h_view                (WaveformActor*);
+AGlActor* dock_h_view                (gpointer);
 AGlActor* dock_h_add_panel           (DockHView*, AGlActor*);
 void      dock_h_move_panel_to_index (DockHView*, AGlActor*, int);
 void      dock_h_move_panel_to_y     (DockHView*, AGlActor*, int);

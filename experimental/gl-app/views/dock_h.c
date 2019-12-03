@@ -15,18 +15,11 @@
 #define __wf_private__
 #include "config.h"
 #undef USE_GTK
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <math.h>
-#include <gdk/gdkkeysyms.h>
-#include <GL/gl.h>
-#include "agl/ext.h"
+#include "debug/debug.h"
 #include "agl/utils.h"
 #include "agl/actor.h"
-#include "waveform/waveform.h"
-#include "waveform/peakgen.h"
-#include "waveform/shader.h"
+#include "agl/shader.h"
+#include "waveform/utils.h"
 #include "views/dock_h.h"
 
 #define _g_free0(var) (var = (g_free (var), NULL))
@@ -61,7 +54,7 @@ _init ()
 
 
 AGlActor*
-dock_h_view(WaveformActor* _)
+dock_h_view (gpointer _)
 {
 	instance_count++;
 
@@ -105,12 +98,12 @@ dock_h_view(WaveformActor* _)
 		panel_init(a);
 	}
 
-	void dock_set_state(AGlActor* actor)
+	void dock_set_state (AGlActor* actor)
 	{
 		agl->shaders.plain->uniform.colour = 0x66666666;
 	}
 
-	void dock_h_set_size(AGlActor* actor)
+	void dock_h_set_size (AGlActor* actor)
 	{
 		DockHView* dock = (DockHView*)actor;
 		int height = agl_actor__height(actor);
@@ -292,7 +285,7 @@ dock_h_view(WaveformActor* _)
 			case GDK_BUTTON_PRESS:
 				agl_actor__grab(actor);
 				//set_cursor(arrange->canvas->widget->window, CURSOR_H_DOUBLE_ARROW);
-				break;
+				return AGL_HANDLED;
 			case GDK_MOTION_NOTIFY:
 				if(actor_context.grabbed == actor){
 					AGlActor* a2 = dock->handle.actor;
@@ -342,7 +335,7 @@ dock_h_view(WaveformActor* _)
 						}
 					}
 				}
-				break;
+				return AGL_HANDLED;
 			case GDK_LEAVE_NOTIFY:
 				dbg (1, "LEAVE_NOTIFY");
 				if(dock->handle.opacity > 0.0){
@@ -354,10 +347,10 @@ dock_h_view(WaveformActor* _)
 			default:
 				break;
 		}
-		return AGL_HANDLED;
+		return AGL_NOT_HANDLED;
 	}
 
-	DockHView* dock = WF_NEW(DockHView,
+	DockHView* dock = AGL_NEW(DockHView,
 		.panel = {
 			.actor = {
 				.class = &actor_class,
