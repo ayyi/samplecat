@@ -35,4 +35,6 @@ test/ubuntu-18/Dockerfile
 player.vala.c
 player.vala.h
 !test/debian*/Makefile
+!test/debian*/scripts/Makefile
 !test/ubuntu*/Makefile
+!test/ubuntu*/scripts/Makefile
