@@ -11,9 +11,7 @@
 */
 #include <glib.h>
 #include <glib-object.h>
-#include <string.h>
 #include <config.h>
-#include <stdlib.h>
 #include <time.h>
 #include <gdk-pixbuf/gdk-pixbuf.h>
 #include <gobject/gvaluecollector.h>
@@ -64,7 +62,6 @@ static void              samplecat_value_take_idle (GValue* value, gpointer v_ob
 static gpointer          samplecat_value_get_idle  (const GValue* value);
 #endif
 
-
 static gpointer samplecat_filter_parent_class = NULL;
 static gpointer samplecat_idle_parent_class = NULL;
 static gchar    samplecat_model_unk[32];
@@ -85,8 +82,7 @@ G_DEFINE_TYPE_WITH_PRIVATE (SamplecatModel, samplecat_model, G_TYPE_OBJECT)
 enum  {
 	SAMPLECAT_MODEL_DUMMY_PROPERTY
 };
-static gboolean samplecat_model_queue_selection_changed (SamplecatModel*);
-static gboolean _samplecat_model_queue_selection_changed_gsource_func (gpointer self);
+static bool     samplecat_model_queue_selection_changed (gpointer);
 static void     g_cclosure_user_marshal_VOID__POINTER_INT_POINTER (GClosure*, GValue* return_value, guint n_param_values, const GValue* param_values, gpointer invocation_hint, gpointer marshal_data);
 static GObject* samplecat_model_constructor (GType type, guint n_construct_properties, GObjectConstructParam*);
 static void     samplecat_model_finalize (GObject*);
@@ -621,6 +617,7 @@ samplecat_model_construct (GType object_type)
 
 	_samplecat_idle_unref0 (self->priv->dir_idle);
 	self->priv->dir_idle = samplecat_idle_new (___lambda__gsource_func, self);
+
 #if 0 // updating the directory list is not currently done until a consumer needs it
 	samplecat_idle_queue (self->priv->dir_idle);
 #endif
@@ -663,21 +660,10 @@ samplecat_model_remove (SamplecatModel* self, gint id)
 void
 samplecat_model_set_search_dir (SamplecatModel* self, gchar* dir)
 {
-	SamplecatFilters _tmp0_;
-	SamplecatFilter* _tmp1_;
-	gchar* _tmp2_;
-	g_return_if_fail (self != NULL);
-	_tmp0_ = self->filters;
-	_tmp1_ = _tmp0_.dir;
-	_tmp2_ = dir;
-	samplecat_filter_set_value (_tmp1_, _tmp2_);
-}
+	g_return_if_fail (self);
 
-
-static gboolean
-_samplecat_model_queue_selection_changed_gsource_func (gpointer self)
-{
-	return samplecat_model_queue_selection_changed (self);
+	SamplecatFilters _tmp0_ = self->filters;
+	samplecat_filter_set_value (_tmp0_.dir, dir);
 }
 
 
@@ -695,14 +681,15 @@ samplecat_model_set_selection (SamplecatModel* self, Sample* sample)
 		if (self->priv->selection_change_timeout) {
 			g_source_remove (self->priv->selection_change_timeout);
 		}
-		self->priv->selection_change_timeout = g_timeout_add_full (G_PRIORITY_DEFAULT, (guint) 250, _samplecat_model_queue_selection_changed_gsource_func, g_object_ref (self), g_object_unref);
+		self->priv->selection_change_timeout = g_timeout_add_full (G_PRIORITY_DEFAULT, (guint) 250, samplecat_model_queue_selection_changed, g_object_ref (self), g_object_unref);
 	}
 }
 
 
-static gboolean
-samplecat_model_queue_selection_changed (SamplecatModel* self)
+static bool
+samplecat_model_queue_selection_changed (gpointer _self)
 {
+	SamplecatModel* self = _self;
 	g_return_val_if_fail (self != NULL, FALSE);
 
 	self->priv->selection_change_timeout = 0;
@@ -1042,7 +1029,7 @@ samplecat_model_print_col_name (guint prop_type)
 
 
 void
-samplecat_model_move_files(GList* list, const gchar* dest_path)
+samplecat_model_move_files (GList* list, const gchar* dest_path)
 {
 	/* This is called _before_ the files are actually moved!
 	 * file_util_move_simple() which is called afterwards 

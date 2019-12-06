@@ -9,7 +9,7 @@ while getopts ":i" opt; do
         i  )
 			# privileged is needed for opengl
 			#             docker run --privileged -e "DISPLAY=unix:0.0" -v="/tmp/.X11-unix:/tmp/.X11-unix:rw" -i -t $container bash
-			docker run --privileged -v="/tmp/.X11-unix:/tmp/.X11-unix:rw" -i -t $container bash
+			docker run --rm --privileged -v="/tmp/.X11-unix:/tmp/.X11-unix:rw" -i -t $container bash
 			exit
 			;;
         \? ) echo -e $usage
@@ -19,7 +19,7 @@ done
 shift $(($OPTIND - 1))
 
 # run git build script
-docker run -it $container
+docker run --rm -it $container
 
 # run the container and run a specific command (overrides CMD)
 #docker run -it $container bash

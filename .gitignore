@@ -37,3 +37,4 @@ player.vala.c
 player.vala.h
 !test/debian*/Makefile
 !test/ubuntu*/Makefile
+!test/ubuntu*/scripts/Makefile

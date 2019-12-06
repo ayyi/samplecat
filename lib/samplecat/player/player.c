@@ -50,7 +50,6 @@ player_constructor (GType type, guint n_construct_properties, GObjectConstructPa
 {
 	GObjectClass* parent_class = G_OBJECT_CLASS (player_parent_class);
 	GObject* obj = parent_class->constructor (type, n_construct_properties, construct_properties);
-	Player* self = G_TYPE_CHECK_INSTANCE_CAST (obj, TYPE_PLAYER, Player);
 
 	return obj;
 }

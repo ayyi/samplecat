@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://samplecat.orford.org          |
-* | copyright (C) 2007-2015 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2019 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -10,10 +10,6 @@
 *
 */
 #include "config.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <string.h>
 #include <math.h>
 #include <gtk/gtk.h>
 #include "debug/debug.h"
@@ -217,15 +213,15 @@ colour_box__on_event(GtkWidget* widget, GdkEvent* event, gpointer user_data)
 
 
 static int
-colour_box__drag_dataget(GtkWidget *widget, GdkDragContext *drag_context, GtkSelectionData *data, guint info, guint time, gpointer user_data)
+colour_box__drag_dataget (GtkWidget *widget, GdkDragContext *drag_context, GtkSelectionData *data, guint info, guint time, gpointer user_data)
 {
 	char text[16];
 	PF;
 
-	int box_num = GPOINTER_TO_UINT(user_data); //box_num corresponds to the colour index.
+	int box_num = GPOINTER_TO_UINT(user_data); // box_num corresponds to the colour index.
 
-	//convert to a pseudo uri string:
-	sprintf(text, "colour:%i%c%c", box_num + 1, 13, 10); //1 based to avoid atoi problems.
+	// convert to a pseudo uri string:
+	sprintf(text, "colour:%i%c%c", (box_num + 1) % 16, 13, 10); //1 based to avoid atoi problems.
 
 	gtk_selection_data_set(data, GDK_SELECTION_TYPE_STRING, BITS_PER_CHAR_8, (guchar*)text, strlen(text));
 
