@@ -22,6 +22,7 @@ while getopts ":i" opt; do
 done
 shift $(($OPTIND - 1))
 
-# run git build script
-docker run --rm -it $container
+test -t 1 && USE_TTY="-t"
 
+# run git build script
+docker run --rm -i ${USE_TTY} $container
