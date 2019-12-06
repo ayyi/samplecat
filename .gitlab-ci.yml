@@ -8,6 +8,8 @@ debian-build:
     - cd test/debian-10 && ./build && ./run
 
 ubuntu-build:
+  before_script:
+    - apk add --update make && rm -rf /var/cache/apk/*
   script:
     - cd test/ubuntu-18 && ./build && ./run
 
