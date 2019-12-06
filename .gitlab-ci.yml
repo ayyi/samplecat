@@ -1,4 +1,4 @@
-image: frolvlad/alpine-gcc:latest
+image: docker:latest
 
 before_script:
   - docker info
@@ -9,7 +9,7 @@ debian-build:
 
 ubuntu-build:
   before_script:
-    - apk add --update make && rm -rf /var/cache/apk/*
+    - apk add --update make gcc && rm -rf /var/cache/apk/*
   script:
     - cd test/ubuntu-18 && ./build && ./run
 
