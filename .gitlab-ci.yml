@@ -1,4 +1,4 @@
-image: docker:latest
+image: frolvlad/alpine-gcc:latest
 
 before_script:
   - docker info
