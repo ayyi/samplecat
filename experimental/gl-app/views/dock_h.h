@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2016-2017 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2016-2019 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -11,6 +11,7 @@
 */
 #ifndef __views_dock_h_h__
 #define __views_dock_h_h__
+
 #include "panel.h"
 
 typedef struct {
@@ -25,7 +26,7 @@ typedef struct {
 
 AGlActorClass* dock_h_get_class      ();
 
-AGlActor* dock_h_view                (WaveformActor*);
+AGlActor* dock_h_view                (gpointer);
 AGlActor* dock_h_add_panel           (DockHView*, AGlActor*);
 void      dock_h_move_panel_to_index (DockHView*, AGlActor*, int);
 void      dock_h_move_panel_to_y     (DockHView*, AGlActor*, int);

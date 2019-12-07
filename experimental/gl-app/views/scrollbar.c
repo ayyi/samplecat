@@ -91,17 +91,17 @@ scrollbar_view (AGlActor* panel, AGlOrientation orientation)
 		return true;
 	}
 
-	bool scrollbar_draw_v(AGlActor* actor)
+	bool scrollbar_draw_v (AGlActor* actor)
 	{
 		ScrollbarActor* scrollbar = (ScrollbarActor*)actor;
 
 		if(!actor->disabled){
-			if(scrollbar->handle.animation.val.f < 0.05){
+			if(scrollbar->handle.opacity < 0.05){
 				return true;
 			}
 
-			if(scrollbar->trough.animation.val.f > 0.05){
-				agl->shaders.plain->uniform.colour = 0xffffff00 + (int)(255.0f * scrollbar->trough.animation.val.f);
+			if(scrollbar->trough.opacity > 0.05){
+				agl->shaders.plain->uniform.colour = 0xffffff00 + (int)(255.0f * scrollbar->trough.opacity);
 				agl_use_program((AGlShader*)agl->shaders.plain);
 				agl_rect(0, -actor->parent->scrollable.y1, agl_actor__width(actor), agl_actor__height(actor));
 			}
@@ -111,7 +111,7 @@ scrollbar_view (AGlActor* panel, AGlOrientation orientation)
 			bar.start += -actor->parent->scrollable.y1;
 			bar.end += -actor->parent->scrollable.y1;
 
-			v_scrollbar_shader.uniform.colour = 0x6677ff00 + (int)(255.0f * scrollbar->handle.animation.val.f);
+			v_scrollbar_shader.uniform.colour = 0x6677ff00 + (int)(255.0f * scrollbar->handle.opacity);
 			v_scrollbar_shader.uniform.bg_colour = v_scrollbar_shader.uniform.colour & 0xffffff00;
 			v_scrollbar_shader.uniform.centre1 = (AGliPt){6, bar.start + 4};
 			v_scrollbar_shader.uniform.centre2 = (AGliPt){6, bar.end - 4};
@@ -122,7 +122,7 @@ scrollbar_view (AGlActor* panel, AGlOrientation orientation)
 		return true;
 	}
 
-	void scrollbar_init(AGlActor* actor)
+	void scrollbar_init (AGlActor* actor)
 	{
 		if(((ScrollbarActor*)actor)->orientation == AGL_ORIENTATION_VERTICAL){
 			if(!v_scrollbar_shader.shader.program){
@@ -145,48 +145,48 @@ scrollbar_view (AGlActor* panel, AGlOrientation orientation)
 	ScrollbarActor* scrollbar = AGL_NEW(ScrollbarActor,
 		.actor = {
 			.class = &actor_class,
-			.name = "Scrollbar",
+			.name = actor_class.name,
 			.init = scrollbar_init,
 			.set_size = scrollbar_set_size,
 			.paint = agl_actor__null_painter,
 			.on_event = scrollbar_on_event,
 		},
 		.orientation = orientation,
-		.scroll = observable_new(),
+		.scroll = agl_observable_new(),
 		.handle = {
 			.opacity = 0.5,
 			.animation = {
-				.start_val.f = 0.7,
-				.val.f       = 0.7,
-				.type        = WF_FLOAT
+				.start_val.f  = 0.7,
+				.target_val.f = 0.7,
+				.type         = WF_FLOAT
 			}
 		},
 		.trough = {
 			.opacity = 0.0,
 			.animation = {
-				.start_val.f = 0.0,
-				.val.f       = 0.0,
-				.type        = WF_FLOAT
+				.start_val.f  = 0.0,
+				.target_val.f = 0.0,
+				.type         = WF_FLOAT
 			},
 		}
 	);
-	scrollbar->handle.animation.model_val.f = &scrollbar->handle.opacity;
-	scrollbar->trough.animation.model_val.f = &scrollbar->trough.opacity;
+	scrollbar->handle.animation.val.f = &scrollbar->handle.opacity;
+	scrollbar->trough.animation.val.f = &scrollbar->trough.opacity;
 
-	observable_subscribe(scrollbar->scroll, scrollbar_on_scroll, scrollbar);
+	agl_observable_subscribe(scrollbar->scroll, scrollbar_on_scroll, scrollbar);
 
 	return (AGlActor*)scrollbar;
 }
 
 
 static void
-scrollbar_set_size(AGlActor* actor)
+scrollbar_set_size (AGlActor* actor)
 {
 	AGlActor* root = (AGlActor*)actor->root;
 
 	if(actor->parent->region.x2 > 0/* && actor->region.x2 > 0*/){
 		if(((ScrollbarActor*)actor)->orientation == AGL_ORIENTATION_VERTICAL){
-			actor->region = (AGliRegion){
+			actor->region = (AGlfRegion){
 				.x1 = agl_actor__width(actor->parent)/* - V_SCROLLBAR_H_PADDING*/ - 2 * R - 8,
 				.x2 = agl_actor__width(actor->parent)/* - V_SCROLLBAR_H_PADDING*/,
 				.y1 = V_SCROLLBAR_V_PADDING,
@@ -195,7 +195,7 @@ scrollbar_set_size(AGlActor* actor)
 		}else{
 			int offset = 0;
 
-			actor->region = (AGliRegion){
+			actor->region = (AGlfRegion){
 				.x1 = 0,
 				.x2 = root->region.x2,
 				.y1 = root->region.y2 - H_SCROLLBAR_V_PADDING - 2 * R - 5 + offset,
@@ -235,7 +235,7 @@ vscrollbar_bar_position (AGlActor* actor, iRange* pos)
 
 
 static bool
-scrollbar_on_event(AGlActor* actor, GdkEvent* event, AGliPt xy)
+scrollbar_on_event (AGlActor* actor, GdkEvent* event, AGliPt xy)
 {
 	void animation_done (WfAnimation* animation, gpointer user_data)
 	{
@@ -270,19 +270,18 @@ scrollbar_on_event(AGlActor* actor, GdkEvent* event, AGliPt xy)
 					int dx = x - press.pt.x;
 					double vp_size = arr_gl_pos2px_(arrange, &am_object_val(&song->loc[AM_LOC_END]).sp) + 20.0;
 					double scale = vp_size / (double)agl_actor__width(actor);
-					arrange->canvas->scroll_to(arrange, ((int)-press.viewport.x1) + dx * scale, -1);
 #endif
 				}
 			}else{
 				iRange bar = {0,};
 				vscrollbar_bar_position (actor, &bar);
-				scrollbar->handle.opacity = (xy.y > bar.start && xy.y < bar.end) ? 1.0 : 0.7;
+				scrollbar->handle.animation.target_val.f = (xy.y > bar.start && xy.y < bar.end) ? 1.0 : 0.7;
 				agl_actor__start_transition(actor, g_list_append(NULL, &scrollbar->handle.animation), animation_done, NULL);
 			}
 			break;
 		case GDK_ENTER_NOTIFY:
-			scrollbar->trough.opacity = 0.1;
-			agl_actor__start_transition(actor, g_list_append(NULL, &scrollbar->trough.animation), animation_done, NULL);
+			scrollbar->trough.animation.target_val.f = 0.1;
+//			agl_actor__start_transition(actor, g_list_append(NULL, &scrollbar->trough.animation), animation_done, NULL);
 
 			iRange bar = {0,};
 			vscrollbar_bar_position (actor, &bar);
@@ -291,11 +290,11 @@ scrollbar_on_event(AGlActor* actor, GdkEvent* event, AGliPt xy)
 		case GDK_LEAVE_NOTIFY:
 			scrollbar_start_activity(actor, false);
 
-			scrollbar->trough.opacity = 0.0;
+			scrollbar->trough.animation.target_val.f = 0.0;
 			agl_actor__start_transition(actor, g_list_append(NULL, &scrollbar->trough.animation), animation_done, NULL);
 
-			scrollbar->handle.opacity = 0.7;
-			agl_actor__start_transition(actor, g_list_append(NULL, &scrollbar->handle.animation), animation_done, NULL);
+			scrollbar->handle.animation.target_val.f = 0.7;
+//			agl_actor__start_transition(actor, g_list_append(NULL, &scrollbar->handle.animation), animation_done, NULL);
 			break;
 		case GDK_BUTTON_PRESS:
 			{
@@ -334,7 +333,7 @@ scrollbar_on_event(AGlActor* actor, GdkEvent* event, AGliPt xy)
 
 
 static bool
-go_inactive(gpointer _view)
+go_inactive (gpointer _view)
 {
 	AGlActor* actor = _view;
 	ScrollbarActor* scrollbar = _view;
@@ -345,7 +344,7 @@ go_inactive(gpointer _view)
 
 	activity = 0;
 
-	scrollbar->handle.opacity = 0.0;
+	scrollbar->handle.animation.target_val.f = 0.0;
 	agl_actor__start_transition(actor, g_list_append(NULL, &scrollbar->handle.animation), NULL, NULL);
 
 	return G_SOURCE_REMOVE;
@@ -353,11 +352,11 @@ go_inactive(gpointer _view)
 
 
 static void
-scrollbar_start_activity(AGlActor* actor, bool hovered)
+scrollbar_start_activity (AGlActor* actor, bool hovered)
 {
 	ScrollbarActor* scrollbar = (ScrollbarActor*)actor;
 
-	scrollbar->handle.opacity = hovered ? 1.0 : 0.7;
+	scrollbar->handle.animation.target_val.f = hovered ? 1.0 : 0.7;
 	agl_actor__start_transition(actor, g_list_append(NULL, &scrollbar->handle.animation), NULL, NULL);
 
 	if(activity){

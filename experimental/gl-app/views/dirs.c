@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2016-2018 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2016-2019 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -11,13 +11,6 @@
 */
 #define __wf_private__
 #include "config.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <math.h>
-#include <gdk/gdkkeysyms.h>
-#include <GL/gl.h>
-#include "agl/ext.h"
 #include "agl/utils.h"
 #include "agl/actor.h"
 #include "waveform/waveform.h"
@@ -29,11 +22,13 @@
 
 #define row_height 20
 
+static void dirs_free (AGlActor*);
+
 static AGl* agl = NULL;
 static int instance_count = 0;
-static AGlActorClass actor_class = {0, "Dirs", (AGlActorNew*)directories_view};
+static AGlActorClass actor_class = {0, "Dirs", (AGlActorNew*)directories_view, dirs_free};
 
-static void dirs_select(DirectoriesView*, int);
+static void dirs_select (DirectoriesView*, int);
 
 
 AGlActorClass*
@@ -59,13 +54,13 @@ _init()
 
 
 AGlActor*
-directories_view(WaveformActor* _)
+directories_view (WaveformActor* _)
 {
 	instance_count++;
 
 	_init();
 
-	bool dirs_paint(AGlActor* actor)
+	bool dirs_paint (AGlActor* actor)
 	{
 		DirectoriesView* view = (DirectoriesView*)actor;
 
@@ -96,7 +91,7 @@ directories_view(WaveformActor* _)
 		return true;
 	}
 
-	void dirs_init(AGlActor* a)
+	void dirs_init (AGlActor* a)
 	{
 #ifdef AGL_ACTOR_RENDER_CACHE
 		a->fbo = agl_fbo_new(agl_actor__width(a), agl_actor__height(a), 0, AGL_FBO_HAS_STENCIL);
@@ -104,7 +99,7 @@ directories_view(WaveformActor* _)
 #endif
 	}
 
-	void dirs_set_size(AGlActor* actor)
+	void dirs_set_size (AGlActor* actor)
 	{
 		DirectoriesView* view = (DirectoriesView*)actor;
 
@@ -122,7 +117,7 @@ directories_view(WaveformActor* _)
 		actor->region.y2 = MIN(actor->region.y2, actor->region.y1 + (view->cache.n_rows + 1) * row_height);
 	}
 
-	bool dirs_event(AGlActor* actor, GdkEvent* event, AGliPt xy)
+	bool dirs_event (AGlActor* actor, GdkEvent* event, AGliPt xy)
 	{
 		switch(event->type){
 			case GDK_BUTTON_RELEASE:
@@ -137,19 +132,12 @@ directories_view(WaveformActor* _)
 		return AGL_HANDLED;
 	}
 
-	void dirs_free(AGlActor* actor)
-	{
-		if(!--instance_count){
-		}
-	}
-
-	DirectoriesView* view = WF_NEW(DirectoriesView,
+	DirectoriesView* view = agl_actor__new(DirectoriesView,
 		.actor = {
 			.class = &actor_class,
-			.name = "Directories",
+			.name = actor_class.name,
 			.colour = 0xaaff33ff,
 			.init = dirs_init,
-			.free = dirs_free,
 			.paint = dirs_paint,
 			.set_size = dirs_set_size,
 			.on_event = dirs_event
@@ -157,7 +145,7 @@ directories_view(WaveformActor* _)
 		.selection = -1
 	);
 
-	void dirs_on_filter_changed(GObject* _filter, gpointer _actor)
+	void dirs_on_filter_changed (GObject* _filter, gpointer _actor)
 	{
 		DirectoriesView* view = (DirectoriesView*)_actor;
 
@@ -173,7 +161,17 @@ directories_view(WaveformActor* _)
 
 
 static void
-dirs_select(DirectoriesView* dirs, int row)
+dirs_free (AGlActor* actor)
+{
+	if(!--instance_count){
+	}
+
+	g_free(actor);
+}
+
+
+static void
+dirs_select (DirectoriesView* dirs, int row)
 {
 	int n_rows_total = dirs->cache.n_rows;
 

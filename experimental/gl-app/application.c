@@ -12,8 +12,6 @@
 *
 */
 #include "config.h"
-#include <stdio.h>
-#include <string.h>
 #include <glib-object.h>
 #include "debug/debug.h"
 #include "support.h"
@@ -21,17 +19,21 @@
 #include "db/db.h"
 #include "samplecat.h"
 #include "list_store.h"
+#include "behaviours/panel.h"
+#include "views/panel.h"
+#include "views/context_menu.h"
 #include "application.h"
 
+extern GHashTable* agl_actor_registry;
 
 static gpointer application_parent_class = NULL;
 
 enum  {
 	APPLICATION_DUMMY_PROPERTY
 };
-static GObject* application_constructor    (GType, guint n_construct_properties, GObjectConstructParam*);
-static void     application_finalize       (GObject*);
-static void     application_search         ();
+static GObject* application_constructor (GType, guint n_construct_properties, GObjectConstructParam*);
+static void     application_finalize    (GObject*);
+static void     application_search      ();
 
 #ifdef HAVE_AYYIDBUS
 extern Auditioner a_ayyidbus;
@@ -46,16 +48,6 @@ application_construct (GType object_type)
 
 	//app->cache_dir = g_build_filename (g_get_home_dir(), ".config", PACKAGE, "cache", NULL);
 	//app->configctx.dir = g_build_filename (g_get_home_dir(), ".config", PACKAGE, NULL);
-
-	app->style = (Style){
-		.bg = 0x000000ff,
-		.bg_alt = 0x181818ff,
-		.bg_selected = 0x777777ff,
-		.fg = 0x66aaffff,
-		.text = 0xbbbbbbff,
-		.selection = 0x6677ff77,
-		.font = "Roboto"
-	};
 
 	return app;
 }
@@ -164,7 +156,7 @@ application_get_type ()
 
 
 void
-application_quit(Application* app)
+application_quit (Application* app)
 {
 	PF;
 	g_signal_emit_by_name (app, "on-quit");
@@ -175,7 +167,7 @@ application_quit(Application* app)
  * fill the display with the results matching the current set of filters.
  */
 static void
-application_search()
+application_search ()
 {
 	PF;
 	if(BACKEND_IS_NULL) return;
@@ -184,8 +176,127 @@ application_search()
 }
 
 
+static void
+action_play (gpointer _)
+{
+	application_play_selected();
+}
+
+
+static void
+action_delete (gpointer _)
+{
+}
+
+
+Menu menu = {
+	12,
+	{
+		{"Play", "media-playback-start", {'p'}, action_play},
+		{"Delete", "delete", {0}, action_delete},
+		{},
+		{},
+		{},
+		{},
+		{},
+		{},
+		{},
+		{},
+		{},
+		{},
+	}
+};
+
+
 void
-application_set_auditioner()
+application_menu_init ()
+{
+	void panel_select (gpointer user_data)
+	{
+		AGlActorClass* k = (AGlActorClass*)user_data;
+		AGlActor* existing = agl_actor__find_by_class((AGlActor*)app->scene, k);
+		if(existing){
+			application_remove_panel(k);
+		}else{
+			application_add_panel(k);
+		}
+	}
+
+	bool show_icon (gpointer user_data)
+	{
+		return !!agl_actor__find_by_class((AGlActor*)app->scene, (AGlActorClass*)user_data);
+	}
+
+	typedef struct
+	{
+		int i;
+	} A;
+
+	void foreach (gpointer key, gpointer value, gpointer user_data)
+	{
+		AGlActorClass* k = (AGlActorClass*)value;
+		A* a = user_data;
+
+		for(int i = 0; i < AGL_ACTOR_N_BEHAVIOURS; i++){
+			AGlBehaviourClass* ki = k->behaviour_classes[i];
+			if(ki == panel_get_class()){
+				if(a->i < menu.len){
+					menu.items[a->i] = (MenuItem){
+						(char*)key,
+						"checkmark",
+						{0,},
+						panel_select,
+						show_icon,
+						k
+					};
+					a->i++;
+				}
+			}
+		}
+	}
+	g_hash_table_foreach(agl_actor_registry, foreach, &(A){.i = 3});
+}
+
+
+void
+application_add_panel (AGlActorClass* klass)
+{
+	float height = 80;
+
+	AGlActor* parent = agl_actor__find_by_name((AGlActor*)app->scene, "Dock H");
+	if(parent){
+		if((parent = agl_actor__find_by_name(parent, "Left"))){
+			AGlActor* panel = panel_view_get_class()->new(NULL);
+			panel->region.y2 = height;
+			((PanelView*)panel)->size_req.min = (AGliPt){-1, 24};
+			AGlActor* actor = klass->new(NULL);
+			agl_actor__add_child(panel, actor);
+
+			for(GList* l = parent->children; l; l = l->next){
+				((AGlActor*)l->data)->region.y2 += height;
+			}
+			agl_actor__insert_child(parent, panel, 0);
+			agl_actor__set_size(parent);
+		}
+	}
+	else gwarn("parent not found");
+}
+
+
+void
+application_remove_panel (AGlActorClass* klass)
+{
+	AGlActor* actor = agl_actor__find_by_class((AGlActor*)app->scene, klass);
+	if(actor){
+		actor = actor->parent;
+		agl_actor__remove_child(actor->parent, actor);
+		agl_actor__set_size(actor->parent);
+	}
+}
+
+
+void
+application_set_auditioner ()
 {
 	play->auditioner = &a_ayyidbus;
 
@@ -201,14 +312,14 @@ application_set_auditioner()
 
 	void application_on_player_ready(gpointer user_data, gpointer _)
 	{
-		dbg(0, "player ready");
+		dbg(1, "player ready");
 	}
 	am_promise_add_callback(play->ready, application_on_player_ready, NULL);
 }
 
 
 void
-application_play(Sample* sample)
+application_play (Sample* sample)
 {
 	if(play->status == PLAY_PAUSED){
 		if(play->auditioner->playpause){
@@ -234,7 +345,7 @@ application_play(Sample* sample)
 
 
 void
-application_play_selected()
+application_play_selected ()
 {
 	Sample* sample = samplecat.model->selection;
 	if (!sample) {

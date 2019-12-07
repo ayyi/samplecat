@@ -65,6 +65,7 @@
 #include "../layouts/layouts.c"
 
 #define BACKEND samplecat.model->backend
+#define _INSPECTOR ((Inspector*)panels[PANEL_TYPE_INSPECTOR].widget)
  
 extern void       view_details_dnd_get            (GtkWidget*, GdkDragContext*, GtkSelectionData*, guint info, guint time, gpointer data);
 extern void       on_quit                         (GtkMenuItem*, gpointer);
@@ -155,7 +156,10 @@ static NewPanelFn
 #ifdef USE_OPENGL
 	waveform_panel_new,
 #endif
-	spectrogram_new, search_new, filters_new, make_fileview_pane;
+#ifdef HAVE_FFTW3
+	spectrogram_new,
+#endif
+	search_new, filters_new, make_fileview_pane;
 extern NewPanelFn dir_panel_new;
 
 #ifdef ROTATOR
@@ -436,9 +440,9 @@ GtkWindow
 
 		if(panels[PANEL_TYPE_INSPECTOR].widget){
 #ifdef USE_OPENGL
-			app->inspector->show_waveform = !gdl_dock_item_is_active((GdlDockItem*)panels[PANEL_TYPE_WAVEFORM].dock_item);
+			_INSPECTOR->show_waveform = !gdl_dock_item_is_active((GdlDockItem*)panels[PANEL_TYPE_WAVEFORM].dock_item);
 #else
-			app->inspector->show_waveform = true;
+			_INSPECTOR->show_waveform = true;
 #endif
 		}
 
@@ -675,7 +679,7 @@ window_on_configure(GtkWidget* widget, GdkEventConfigure* event, gpointer user_d
 			//As the allocation is somehow bigger than its container, we just do it v approximately.
 /*
 			if(window.vpaned && GTK_WIDGET_REALIZED(window.vpaned)){
-				//dbg(0, "height=%i %i %i", app->hpaned->allocation.height, app->statusbar->allocation.y, app->inspector->widget->allocation.height);
+				//dbg(0, "height=%i %i %i", app->hpaned->allocation.height, app->statusbar->allocation.y, _INSPECTOR->widget->allocation.height);
 				guint inspector_y = height - app->hpaned->allocation.y - 210;
 				gtk_paned_set_position(GTK_PANED(window.vpaned), inspector_y);
 			}

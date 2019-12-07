@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2018 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2019 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -10,14 +10,16 @@
 *
 */
 #include "config.h"
+#include <glib/gstdio.h>
 #include <debug/debug.h>
 #include "agl/actor.h"
-#include "src/typedefs.h"
 #include "samplecat.h"
 #include "utils/ayyi_utils.h"
 #include "waveform/waveform.h"
 #include "yaml_utils.h"
 #include "application.h"
+#include "behaviours/state.h"
+#include "behaviours/panel.h"
 #include "layout.h"
 
 typedef AGlActorClass* (get_class)();
@@ -220,7 +222,9 @@ config_load_window_yaml (yaml_parser_t* parser, yaml_event_t* event)
 							}
 						}
 					}else{
-						dbg(0, "  ignoring: %s=%s", key, event->data.scalar.value);
+						if(!state_set_named_parameter(stack[sp], key, (char*)event->data.scalar.value)){
+							dbg(0, "  ignoring: %s=%s", key, event->data.scalar.value);
+						}
 					}
 					key[0] = '\0';
 				}
@@ -282,7 +286,7 @@ config_load_window_yaml (yaml_parser_t* parser, yaml_event_t* event)
 
 
 static bool
-layout_set_size(gpointer data)
+layout_set_size (gpointer data)
 {
 	agl_actor__set_size((AGlActor*)app->scene);
 	return G_SOURCE_REMOVE;
@@ -290,7 +294,7 @@ layout_set_size(gpointer data)
 
 
 static void
-config_load_windows_yaml (yaml_parser_t* parser, yaml_event_t* event)
+config_load_windows_yaml (yaml_parser_t* parser, yaml_event_t* event, gpointer user_data)
 {
 	// TODO use start_wrapper ?
 
@@ -391,7 +395,7 @@ open_settings_file ()
 
 
 static bool
-find_event(yaml_parser_t* parser, yaml_event_t* event, const char* name)
+find_event (yaml_parser_t* parser, yaml_event_t* event, const char* name)
 {
 	bool found = false;
 	while(!found && yaml_parser_parse(parser, event)){
@@ -459,6 +463,13 @@ load_settings ()
 		agl_actor_register_class("Files", files_view_get_class());
 		agl_actor_register_class("Waveform", wf_actor_get_class());
 		agl_actor_register_class("Spectrogram", spectrogram_view_get_class());
+
+		agl_actor_class__add_behaviour(files_view_get_class(), panel_get_class());
+		agl_actor_class__add_behaviour(search_view_get_class(), panel_get_class());
+		agl_actor_class__add_behaviour(inspector_view_get_class(), panel_get_class());
+		agl_actor_class__add_behaviour(spectrogram_view_get_class(), panel_get_class());
+		agl_actor_class__add_behaviour(directories_view_get_class(), panel_get_class());
+		agl_actor_class__add_behaviour(wf_actor_get_class(), panel_get_class());
 	}
 
 	yaml_parser_t parser; yaml_parser_initialize(&parser);
@@ -466,107 +477,22 @@ load_settings ()
 	FILE* fp = open_settings_file();
 	if(!fp) return false;
 
-	yaml_parser_set_input_file(&parser, fp);
-
-	int section = 0;
-	int safety = 0;
-	int depth = 0;
-	char key[64] = {0,};
-	gboolean end = FALSE;
-	yaml_event_t event;
-
-	get_expected_event(&parser, &event, YAML_STREAM_START_EVENT);
-	get_expected_event(&parser, &event, YAML_DOCUMENT_START_EVENT);
-
-	do {
-		if (!yaml_parser_parse(&parser, &event)) goto error; // Get the next event.
-
-		switch (event.type) {
-			case YAML_DOCUMENT_END_EVENT:
-				end = TRUE;
-				dbg(2, "YAML_DOCUMENT_END_EVENT");
-				break;
-			case YAML_SCALAR_EVENT:
-				dbg(2, "YAML_SCALAR_EVENT: value=%s %i plain=%i style=%i", event.data.scalar.value, event.data.scalar.length, event.data.scalar.plain_implicit, event.data.scalar.style);
-
-				if(!key[0]){ // first half of a pair
-					g_strlcpy(key, (char*)event.data.scalar.value, 64);
-				}else{
-					// second half of a pair
-					dbg(2, "      %s=%s", key, event.data.scalar.value);
-					if(!strcmp(key, "example-1")){
-						long long colour = strtoll((char*)event.data.scalar.value, NULL, 16);
-						dbg(0, "%Li", colour);
-					}
-					else if(!strcmp(key, "example-2")){
-						long long colour = strtoll((char*)event.data.scalar.value, NULL, 16);
-						dbg(0, "%Li", colour);
-					}
-
-					key[0] = '\0';
-				}
-				break;
-			case YAML_MAPPING_START_EVENT:
-				depth++;
-				if(key[0]){
-					if(!section){
-						if(!strcmp(key, "windows")){
-							dbg(2, "found Windows section");
-							config_load_windows_yaml(&parser, &event);
-
-						}
-						else gwarn("unexpected section: %s", key);
-					}
-					else dbg(2, "new section: %s", key);
-					key[0] = '\0';
-				}
-				else dbg(2, "YAML_MAPPING_START_EVENT");
-				break;
-			case YAML_MAPPING_END_EVENT:
-				dbg(2, "YAML_MAPPING_END_EVENT");
-				if(--depth < 0) gwarn("too many YAML_MAPPING_END_EVENT's.");
-				break;
-			case YAML_STREAM_END_EVENT:
-				end = TRUE;
-				dbg(2, "YAML_STREAM_END_EVENT");
-				break;
-			case YAML_SEQUENCE_START_EVENT:
-			case YAML_SEQUENCE_END_EVENT:
-			case YAML_ALIAS_EVENT:
-			case YAML_NO_EVENT:
-			default:
-				gwarn("unexpected event: %i", event.type);
-				break;
-		}
-
-		//the application is responsible for destroying the event object.
-		yaml_event_delete(&event);
-
-	} while(!end && safety++ < 50);
-
-	yaml_parser_delete(&parser);
-	fclose(fp);
-
-	return true;
-
-  error:
-	yaml_parser_delete(&parser);
-	fclose(fp);
-
-	return false;
+	return yaml_load(fp, (YamlHandler[]){
+		{"windows", config_load_windows_yaml},
+		{NULL}
+	});
 }
 
 
-gboolean
+bool
 save_settings ()
 {
 	PF;
 
 	if(!yaml_emitter_initialize(&emitter)){ gerr("failed to initialise yaml writer."); return false; }
 
-	char* filename = g_strdup_printf("%s.yaml", app->config_ctx.filename);
-	FILE* fp = fopen(filename, "wb");
-	g_free(filename);
+	char* tmp = g_strdup_printf("%s/samplecat.yaml", g_get_tmp_dir());
+	FILE* fp = fopen(tmp, "wb");
 	if(!fp){
 		printf("cannot open config file for writing (%s)\n", app->config_ctx.filename);
 		return FALSE;
@@ -599,7 +525,9 @@ save_settings ()
 
 			if(!is_panel_child){
 				int vals1[2] = {actor->region.x1, actor->region.y1};
-				yaml_add_key_value_pair_array("position", vals1, 2);
+				if(vals1[0] || vals1[1]){
+					yaml_add_key_value_pair_array("position", vals1, 2);
+				}
 				int vals2[2] = {agl_actor__width(actor), agl_actor__height(actor)};
 				yaml_add_key_value_pair_array("size", vals2, 2);
 			}
@@ -620,6 +548,25 @@ save_settings ()
 					if(b[2])
 						if(!yaml_add_key_value_pair_pt("max", &panel->size_req.max)) goto error;
 					end_map_(event);
+				}
+			}
+
+			for(int i = 0; i < AGL_ACTOR_N_BEHAVIOURS; i++){
+				AGlBehaviour* behaviour = actor->behaviours[i];
+				if(!behaviour) break;
+				if(behaviour->klass == state_get_class()){
+					StateBehaviour* b = (StateBehaviour*)behaviour;
+					ParamArray* params = b->params;
+					for(int i = 0; i< params->size; i++){
+						ConfigParam* param = &params->params[i];
+						switch(param->utype){
+							case G_TYPE_STRING:
+								if(!yaml_add_key_value_pair(param->name, param->val.c)) goto error;
+								break;
+							default:
+								break;
+						}
+					}
 				}
 			}
 
@@ -649,6 +596,13 @@ save_settings ()
 	fclose(fp);
 	dbg(1, "yaml write finished ok.");
 
+	char* filename = g_strdup_printf("%s.yaml", app->config_ctx.filename);
+	if(g_rename (tmp, filename)){
+		gwarn("failed to save config");
+	}
+	g_free(filename);
+	g_free(tmp);
+
 	return true;
 
   error:
@@ -669,6 +623,7 @@ save_settings ()
 	yaml_event_delete(&event);
 	yaml_emitter_delete(&emitter);
 	fclose(fp);
+	g_free(tmp);
 
 	return false;
 }

@@ -19,8 +19,8 @@
 #include "button.h"
 
 #define SIZE 24
-#define BG_OPACITY(B) (button->animatables[0]->val.f)
-#define RIPPLE(B) (button->animatables[1]->val.f)
+#define BG_OPACITY(B) (button->bg_opacity)
+#define RIPPLE(B) (button->ripple_radius)
 
 static AGl* agl = NULL;
 
@@ -28,9 +28,10 @@ struct {
 	AGliPt pt;
 } GlButtonPress;
 
-static AGlActorClass actor_class = {0, "Button", (AGlActorNew*)button};
-
+static void button_free     (AGlActor*);
 static bool button_on_event (AGlActor*, GdkEvent*, AGliPt);
+
+static AGlActorClass actor_class = {0, "Button", (AGlActorNew*)button, button_free};
 
 
 AGlActorClass*
@@ -61,7 +62,7 @@ button(int* icon, ButtonAction action, ButtonGetState get_state, gpointer user_d
 	bool gl_button_paint(AGlActor* actor)
 	{
 		ButtonActor* button = (ButtonActor*)actor;
-		Style* style = &app->style;
+		StyleBehaviour* style = &STYLE;
 
 		bool state = button->get_state ? button->get_state(actor, button->user_data) : false;
 
@@ -83,7 +84,7 @@ button(int* icon, ButtonAction action, ButtonGetState get_state, gpointer user_d
 
 		// hover background
 		if(BG_OPACITY(button) > 0.0){ // dont get events if disabled, so no need to check state (TODO turn off hover when disabling).
-			float alpha = button->animatables[0]->val.f;
+			float alpha = button->bg_opacity;
 			uint32_t fg = colour_lighter(agl->shaders.plain->uniform.colour, 16);
 			agl->shaders.plain->uniform.colour = style->bg ? colour_mix(agl->shaders.plain->uniform.colour, fg, alpha) : (fg & 0xffffff00) + (uint32_t)(alpha * 0xff);
 		}
@@ -144,7 +145,7 @@ button(int* icon, ButtonAction action, ButtonGetState get_state, gpointer user_d
 
 		agl_enable(0/* !AGL_ENABLE_TEXTURE_2D*/);
 		if(state){
-			agl_colour_rbga(app->style.bg_selected);
+			agl_colour_rbga(STYLE.bg_selected);
 			agl_rect_(r);
 		}
 		if(!button->disabled && agl_actor__is_hovered(actor)){
@@ -175,18 +176,11 @@ button(int* icon, ButtonAction action, ButtonGetState get_state, gpointer user_d
 		actor->paint = agl->use_shaders ? gl_button_paint : gl_button_paint_gl1;
 	}
 
-	void button_free(AGlActor* actor)
-	{
-		g_free(((ButtonActor*)actor)->animatables[0]);
-		g_free(((ButtonActor*)actor)->animatables[1]);
-	}
-
 	ButtonActor* button = AGL_NEW(ButtonActor,
 		.actor = {
 			.class    = &actor_class,
 			.name     = "Button",
 			.init     = button_init,
-			.free     = button_free,
 			.paint    = agl_actor__null_painter,
 			.set_size = button_set_size,
 			.on_event = button_on_event,
@@ -198,20 +192,28 @@ button(int* icon, ButtonAction action, ButtonGetState get_state, gpointer user_d
 	);
 
 	button->animatables[0] = SC_NEW(WfAnimatable,
-		.model_val.f = &button->bg_opacity,
-		.start_val.f = 0.0,
-		.val.f       = 0.0,
-		.type        = WF_FLOAT
+		.val.f        = &button->bg_opacity,
+		.start_val.f  = 0.0,
+		.target_val.f = 0.0,
+		.type         = WF_FLOAT
 	);
 
 	button->animatables[1] = SC_NEW(WfAnimatable,
-		.model_val.f = &button->ripple_radius,
-		.start_val.f = 0.0,
-		.val.f       = 0.0,
-		.type        = WF_FLOAT
+		.val.f        = &button->ripple_radius,
+		.start_val.f  = 0.0,
+		.target_val.f = 0.0,
+		.type         = WF_FLOAT
 	);
 
 	return (AGlActor*)button;
+}
+
+
+static void
+button_free (AGlActor* actor)
+{
+	g_free(((ButtonActor*)actor)->animatables[0]);
+	g_free(((ButtonActor*)actor)->animatables[1]);
 }
 
 
@@ -237,14 +239,14 @@ button_on_event(AGlActor* actor, GdkEvent* event, AGliPt xy)
 			dbg (1, "ENTER_NOTIFY");
 			//set_cursor(actor->root->widget->window, CURSOR_H_DOUBLE_ARROW);
 
-			button->bg_opacity = 1.0;
+			button->animatables[0]->target_val.f = 1.0;
 			agl_actor__start_transition(actor, g_list_append(NULL, button->animatables[0]), animation_done, NULL);
 			return AGL_HANDLED;
 		case GDK_LEAVE_NOTIFY:
 			dbg (1, "LEAVE_NOTIFY");
 			//set_cursor(actor->root->widget->window, CURSOR_NORMAL);
 
-			button->bg_opacity = 0.0;
+			button->animatables[0]->target_val.f = 0.0;
 			agl_actor__start_transition(actor, g_list_append(NULL, button->animatables[0]), animation_done, NULL);
 			return AGL_HANDLED;
 		case GDK_BUTTON_PRESS:
@@ -255,8 +257,8 @@ button_on_event(AGlActor* actor, GdkEvent* event, AGliPt xy)
 				call(button->action, actor, button->user_data);
 
 				GlButtonPress.pt = xy;
-				button->animatables[1]->val.f = 0.001;
-				button->ripple_radius = 64.0;
+				button->ripple_radius = 0.001;
+				button->animatables[1]->target_val.f = 64.0;
 				agl_actor__start_transition(actor, g_list_append(NULL, button->animatables[1]), ripple_done, button);
 				return AGL_HANDLED;
 			}

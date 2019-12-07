@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2017 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2019 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -10,9 +10,8 @@
 *
 */
 
-
-#ifndef __LIST_STORE_H__
-#define __LIST_STORE_H__
+#ifndef __list_store_h__
+#define __list_store_h__
 
 #include <glib.h>
 #include <glib-object.h>
@@ -20,7 +19,6 @@
 #include <gtk/gtk.h>
 
 G_BEGIN_DECLS
-
 
 #define SAMPLECAT_TYPE_FILTER (samplecat_filter_get_type ())
 #define SAMPLECAT_FILTER(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), SAMPLECAT_TYPE_FILTER, SamplecatFilter))
@@ -114,13 +112,6 @@ gpointer         samplecat_filter_ref                         (gpointer instance
 void             samplecat_filter_unref                       (gpointer instance);
 
 GType            samplecat_filters_get_type                   (void) G_GNUC_CONST;
-
-GType            samplecat_model_get_type                     (void) G_GNUC_CONST;
-SamplecatModel*  samplecat_model_new                          (void);
-SamplecatModel*  samplecat_model_construct                    (GType);
-void             samplecat_model_set_search_dir               (SamplecatModel*, gchar* dir);
-void             samplecat_model_set_selection                (SamplecatModel*, Sample*);
-void             samplecat_model_add_filter                   (SamplecatModel*, SamplecatFilter*);
 
 GType               samplecat_list_store_get_type             (void) G_GNUC_CONST;
 SamplecatListStore* samplecat_list_store_new                  (void);

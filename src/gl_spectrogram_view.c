@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2018 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2019 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -51,11 +51,10 @@ struct _GlSpectrogramPrivate {
 };
 
 
-static gpointer gl_spectrogram_parent_class = NULL;
 static GlSpectrogram* gl_spectrogram_instance = NULL;
 static GdkGLContext* gl_spectrogram_glcontext = NULL;
 
-#define GL_SPECTROGRAM_GET_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), TYPE_GL_SPECTROGRAM, GlSpectrogramPrivate))
+G_DEFINE_TYPE_WITH_PRIVATE (GlSpectrogram, gl_spectrogram, GTK_TYPE_DRAWING_AREA)
 
 enum  {
 	GL_SPECTROGRAM_DUMMY_PROPERTY
@@ -193,7 +192,11 @@ gl_spectrogram_real_expose_event (GtkWidget* widget, GdkEventExpose* event)
 	current = gdk_gl_drawable_make_current (gldrawable, agl_get_gl_context());
 #else
 	g_return_val_if_fail(G_OBJECT_TYPE(gldrawable) == GDK_TYPE_GL_WINDOW, FALSE);
-	current = gdk_gl_window_make_context_current (gldrawable, agl_get_gl_context());
+	if(G_OBJECT_TYPE(gldrawable) == GDK_TYPE_GL_PIXMAP){
+		current = gdk_gl_pixmap_make_context_current (gldrawable, agl_get_gl_context());
+	} else {
+		current = gdk_gl_window_make_context_current (gldrawable, agl_get_gl_context());
+	}
 #endif
 	if (!current) {
 		return FALSE;
@@ -300,7 +303,7 @@ static void
 gl_spectrogram_class_init (GlSpectrogramClass* klass)
 {
 	gl_spectrogram_parent_class = g_type_class_peek_parent (klass);
-	g_type_class_add_private (klass, sizeof (GlSpectrogramPrivate));
+
 	GTK_WIDGET_CLASS (klass)->configure_event = gl_spectrogram_real_configure_event;
 	GTK_WIDGET_CLASS (klass)->expose_event = gl_spectrogram_real_expose_event;
 	GTK_WIDGET_CLASS (klass)->unrealize = gl_spectrogram_real_unrealize;
@@ -309,9 +312,9 @@ gl_spectrogram_class_init (GlSpectrogramClass* klass)
 
 
 static void
-gl_spectrogram_instance_init (GlSpectrogram* self)
+gl_spectrogram_init (GlSpectrogram* self)
 {
-	self->priv = GL_SPECTROGRAM_GET_PRIVATE (self);
+	self->priv = gl_spectrogram_get_instance_private(self);
 	self->priv->pixbuf = NULL;
 	self->priv->gl_init_done = FALSE;
 }
@@ -325,20 +328,3 @@ gl_spectrogram_finalize (GObject* obj)
 	_g_free0 (self->priv->_filename);
 	G_OBJECT_CLASS (gl_spectrogram_parent_class)->finalize (obj);
 }
-
-
-GType
-gl_spectrogram_get_type (void)
-{
-	static volatile gsize gl_spectrogram_type_id__volatile = 0;
-	if (g_once_init_enter (&gl_spectrogram_type_id__volatile)) {
-		static const GTypeInfo g_define_type_info = { sizeof (GlSpectrogramClass), (GBaseInitFunc) NULL, (GBaseFinalizeFunc) NULL, (GClassInitFunc) gl_spectrogram_class_init, (GClassFinalizeFunc) NULL, NULL, sizeof (GlSpectrogram), 0, (GInstanceInitFunc) gl_spectrogram_instance_init, NULL };
-		GType gl_spectrogram_type_id;
-		gl_spectrogram_type_id = g_type_register_static (GTK_TYPE_DRAWING_AREA, "GlSpectrogram", &g_define_type_info, 0);
-		g_once_init_leave (&gl_spectrogram_type_id__volatile, gl_spectrogram_type_id);
-	}
-	return gl_spectrogram_type_id__volatile;
-}
-
-
-

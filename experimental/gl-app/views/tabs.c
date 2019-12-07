@@ -11,10 +11,6 @@
 */
 #define __wf_private__
 #include "config.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <GL/gl.h>
 #include "debug/debug.h"
 #include "agl/utils.h"
 #include "agl/fbo.h"
@@ -30,9 +26,11 @@ extern void agl_actor__render_from_fbo (AGlActor*);
 #define FONT "Droid Sans"
 #define TAB_HEIGHT 30
 
+static void tabs_free (AGlActor*);
+
 static AGl* agl = NULL;
 static int instance_count = 0;
-static AGlActorClass actor_class = {0, "Tabs", (AGlActorNew*)tabs_view};
+static AGlActorClass actor_class = {0, "Tabs", (AGlActorNew*)tabs_view, tabs_free};
 static int tab_width = 80;
 
 static AGlMaterial* ring_material = NULL;
@@ -84,7 +82,7 @@ tabs_view (gpointer _)
 
 			icon->bg = 0x000000ff;
 			if(tabs->hover.animatable.val.f && i == tabs->hover.tab){
-				agl->shaders.plain->uniform.colour = icon->bg = 0x33333300 + (int)(((float)0xff) * tabs->hover.animatable.val.f);
+				agl->shaders.plain->uniform.colour = icon->bg = 0x33333300 + (int)(((float)0xff) * tabs->hover.opacity);
 				agl_use_program((AGlShader*)agl->shaders.plain);
 				agl_rect_((AGlRect){i * tab_width, -0, tab_width - 10, TAB_HEIGHT - 6});
 			}
@@ -104,12 +102,12 @@ tabs_view (gpointer _)
 			i++;
 		}
 
-		agl->shaders.plain->uniform.colour = (app->style.fg & 0xffffff00) + 0xff;
+		agl->shaders.plain->uniform.colour = (STYLE.fg & 0xffffff00) + 0xff;
 		agl_use_program((AGlShader*)agl->shaders.plain);
 		agl_rect_((AGlRect){tabs->active * tab_width, TAB_HEIGHT - 6, tab_width - 10, 2});
 
 		// set content position
-		if(ABS(slide->animatable.val.f) > 0.01){
+		if(ABS(slide->x) > 0.01){
 			agl_enable_stencil(0, 0, actor->region.x2, actor->region.y2);
 
 			/*
@@ -117,13 +115,13 @@ tabs_view (gpointer _)
 			 *  This is a workaround for the fact that you cannot apply a stencil to children.
 			 */
 			AGlActor* items[] = {slide->prev, slide->next};
-			float x = slide->animatable.val.f;
-			int w = agl_actor__width(actor);
+			float x = slide->x;
+			float w = agl_actor__width(actor);
 			for(int i=0; i<G_N_ELEMENTS(items); i++){
 				AGlActor* a = items[i];
 				if(a->cache.valid){
 					glTranslatef(x, TAB_HEIGHT, 0);
-					int xt = a->region.x2;
+					float xt = a->region.x2;
 					a->region.x2 = agl_actor__width(actor);
 
 					agl_actor__render_from_fbo(a);
@@ -131,7 +129,7 @@ tabs_view (gpointer _)
 					a->region.x2 = xt;
 					glTranslatef(-x, -TAB_HEIGHT, 0);
 				}else{
-					a->region.x1 = slide->animatable.val.f;
+					a->region.x1 = x;
 					a->region.x2 = a->region.x1 + w;
 				}
 				if(x < 0) x += w; else x -= w;
@@ -157,7 +155,7 @@ tabs_view (gpointer _)
 
 		TabsViewTab* tab = g_list_nth_data(tabs->tabs, tabs->active);
 		if(tab){
-			tab->actor->region = (AGliRegion){0, TAB_HEIGHT, agl_actor__width(actor), agl_actor__height(actor)};
+			tab->actor->region = (AGlfRegion){0, TAB_HEIGHT, agl_actor__width(actor), agl_actor__height(actor)};
 		}
 	}
 
@@ -165,9 +163,11 @@ tabs_view (gpointer _)
 	{
 		TabsView* tabs = (TabsView*)actor;
 
+		// FIXME xy is wrong for ENTER and EXIT - offset should be already applied
+
 		void end_hover(TabsView* tabs)
 		{
-			tabs->hover.opacity = 0.0;
+			tabs->hover.animatable.target_val.f = 0.0;
 			agl_actor__start_transition(actor, g_list_append(NULL, &tabs->hover.animatable), NULL, NULL);
 		}
 
@@ -185,12 +185,12 @@ tabs_view (gpointer _)
 
 			case GDK_MOTION_NOTIFY:;
 				int tab = xy.x / tab_width;
-				if(tab >= g_list_length(tabs->tabs)){
+				if(xy.y > TAB_HEIGHT || tab >= g_list_length(tabs->tabs)){
 					end_hover(tabs);
 				}else{
 					if(!tabs->hover.animatable.val.f || tab != tabs->hover.tab){
 						tabs->hover.tab = tab;
-						tabs->hover.opacity = 1.0;
+						tabs->hover.animatable.target_val.f = 1.0;
 						agl_actor__start_transition(actor, g_list_append(NULL, &tabs->hover.animatable), NULL, NULL);
 					}
 				}
@@ -202,24 +202,11 @@ tabs_view (gpointer _)
 		return AGL_NOT_HANDLED;
 	}
 
-	void tabs_free (AGlActor* actor)
-	{
-		TabsView* tabs = (TabsView*)actor;
-
-		g_list_free_full(tabs->tabs, g_free);
-
-		ring_material_class.free(ring_material);
-
-		if(!--instance_count){
-		}
-	}
-
 	TabsView* view = AGL_NEW(TabsView,
 		.actor = {
 			.class = &actor_class,
 			.name = "Tabs",
 			.init = tabs_init,
-			.free = tabs_free,
 			.paint = tabs_paint,
 			.set_size = tabs_set_size,
 			.on_event = tabs_event,
@@ -228,20 +215,34 @@ tabs_view (gpointer _)
 	);
 
 	view->hover.animatable = (WfAnimatable){
-		.model_val.f = &view->hover.opacity,
+		.val.f       = &view->hover.opacity,
 		.start_val.f = 0.0,
-		.val.f       = 0.0,
+		.target_val.f= 0.0,
 		.type        = WF_FLOAT
 	};
 
 	view->slide = (TabTransition){
 		.animatable = {
-			.model_val.f = &view->slide.x,
-			.type        = WF_FLOAT
+			.val.f = &view->slide.x,
+			.type  = WF_FLOAT
 		}
 	};
 
 	return (AGlActor*)view;
+}
+
+
+static void
+tabs_free (AGlActor* actor)
+{
+	TabsView* tabs = (TabsView*)actor;
+
+	g_list_free_full(tabs->tabs, g_free);
+
+	ring_material_class.free(ring_material);
+
+	if(!--instance_count){
+	}
 }
 
 
@@ -302,13 +303,13 @@ tabs_select_tab (TabsView* tabs, int active)
 		int direction = (active > tabs->active) * 2 - 1;
 
 		tabs->active = active;
-		next->actor->region = (AGliRegion){0, TAB_HEIGHT, agl_actor__width(actor), agl_actor__height(actor)};
+		next->actor->region = (AGlfRegion){0, TAB_HEIGHT, agl_actor__width(actor), agl_actor__height(actor)};
 		agl_actor__set_size(next->actor);
 		agl_actor__invalidate(actor);
 
 		if(n_tabs > 1 && next && prev){
-			slide->animatable.val.f = agl_actor__width(actor) * direction;
-			slide->x = 0;
+			slide->x = agl_actor__width(actor) * direction;
+			slide->animatable.target_val.f = 0;
 			slide->next->region.x2 = -10000;
 			slide->prev->region.x2 = -10000;
 

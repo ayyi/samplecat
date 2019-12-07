@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2017-2017 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2017-2019 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -11,10 +11,6 @@
 */
 #define __wf_private__
 #include "config.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <math.h>
 #include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
 #include <GL/gl.h>
@@ -25,6 +21,7 @@
 #include "agl/actor.h"
 #include "agl/fbo.h"
 #include "samplecat.h"
+#include "application.h"
 #include "views/scrollbar.h"
 #include "views/inspector.h"
 
@@ -35,9 +32,11 @@
 #define agl_actor__scrollable_height(A) (A->scrollable.y2 - A->scrollable.y1)
 #define scrollable_height (view->cache.n_rows * row_height)
 
+static void inspector_free (AGlActor*);
+
 static AGl* agl = NULL;
 static int instance_count = 0;
-static AGlActorClass actor_class = {0, "Inspector", (AGlActorNew*)inspector_view};
+static AGlActorClass actor_class = {0, "Inspector", (AGlActorNew*)inspector_view, inspector_free};
 
 
 AGlActorClass*
@@ -60,13 +59,13 @@ _init()
 
 
 AGlActor*
-inspector_view(gpointer _)
+inspector_view (gpointer _)
 {
 	instance_count++;
 
 	_init();
 
-	bool inspector_paint(AGlActor* actor)
+	bool inspector_paint (AGlActor* actor)
 	{
 		InspectorView* view = (InspectorView*)actor;
 		Sample* sample = view->sample;
@@ -94,11 +93,11 @@ inspector_view(gpointer _)
 #ifdef INSPECTOR_RENDER_CACHE
 #define PRINT_ROW(KEY, VAL) \
 		agl_print( 0, row_height * (                      row)  , 0, 0xffffff99, KEY); \
-		agl_print(80, row_height * (                      row++), 0, 0xffffffff, VAL);
+		agl_print(80, row_height * (                      row++), 0, STYLE.text, VAL);
 #else
 #define PRINT_ROW(KEY, VAL) \
 		agl_print( 0, row_height * (view->scroll_offset + row)  , 0, 0xffffff99, KEY); \
-		agl_print(80, row_height * (view->scroll_offset + row++), 0, 0xffffffff, VAL);
+		agl_print(80, row_height * (view->scroll_offset + row++), 0, STYLE.text, VAL);
 #endif
 
 		struct {
@@ -139,7 +138,7 @@ inspector_view(gpointer _)
 		return true;
 	}
 
-	void inspector_init(AGlActor* a)
+	void inspector_init (AGlActor* a)
 	{
 #ifdef INSPECTOR_RENDER_CACHE
 		InspectorView* view = (InspectorView*)a;
@@ -150,7 +149,7 @@ inspector_view(gpointer _)
 		a->parent->colour = 0xffaa33ff; // panel gets colour from its child. This assumes inspector parent is a Scrollable
 	}
 
-	void inspector_set_size(AGlActor* actor)
+	void inspector_set_size (AGlActor* actor)
 	{
 		InspectorView* view = (InspectorView*)actor;
 
@@ -163,15 +162,9 @@ inspector_view(gpointer _)
 #endif
 	}
 
-	bool inspector_event(AGlActor* actor, GdkEvent* event, AGliPt xy)
+	bool inspector_event (AGlActor* actor, GdkEvent* event, AGliPt xy)
 	{
 		return AGL_NOT_HANDLED;
-	}
-
-	void inspector_free(AGlActor* actor)
-	{
-		if(!--instance_count){
-		}
 	}
 
 	InspectorView* view = AGL_NEW(InspectorView,
@@ -179,7 +172,6 @@ inspector_view(gpointer _)
 			.class = &actor_class,
 			.name = actor_class.name,
 			.init = inspector_init,
-			.free = inspector_free,
 			.paint = inspector_paint,
 			.set_size = inspector_set_size,
 			.on_event = inspector_event,
@@ -192,7 +184,7 @@ inspector_view(gpointer _)
 		}
 	);
 
-	void inspector_on_selection_change(SamplecatModel* m, Sample* sample, gpointer actor)
+	void inspector_on_selection_change (SamplecatModel* m, Sample* sample, gpointer actor)
 	{
 		InspectorView* inspector = actor;
 		dbg(1, "sample=%s", sample->name);
@@ -206,4 +198,13 @@ inspector_view(gpointer _)
 	return (AGlActor*)view;
 }
 
+
+static void
+inspector_free (AGlActor* actor)
+{
+	if(!--instance_count){
+	}
+
+	g_free(actor);
+}
 

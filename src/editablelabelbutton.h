@@ -23,13 +23,12 @@
 
 G_BEGIN_DECLS
 
-
-#define TYPE_EDITABLE_LABEL_BUTTON (editable_label_button_get_type ())
-#define EDITABLE_LABEL_BUTTON(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), TYPE_EDITABLE_LABEL_BUTTON, EditableLabelButton))
-#define EDITABLE_LABEL_BUTTON_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST ((klass), TYPE_EDITABLE_LABEL_BUTTON, EditableLabelButtonClass))
-#define IS_EDITABLE_LABEL_BUTTON(obj) (G_TYPE_CHECK_INSTANCE_TYPE ((obj), TYPE_EDITABLE_LABEL_BUTTON))
+#define TYPE_EDITABLE_LABEL_BUTTON            (editable_label_button_get_type ())
+#define EDITABLE_LABEL_BUTTON(obj)            (G_TYPE_CHECK_INSTANCE_CAST ((obj), TYPE_EDITABLE_LABEL_BUTTON, EditableLabelButton))
+#define EDITABLE_LABEL_BUTTON_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST ((klass), TYPE_EDITABLE_LABEL_BUTTON, EditableLabelButtonClass))
+#define IS_EDITABLE_LABEL_BUTTON(obj)         (G_TYPE_CHECK_INSTANCE_TYPE ((obj), TYPE_EDITABLE_LABEL_BUTTON))
 #define IS_EDITABLE_LABEL_BUTTON_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), TYPE_EDITABLE_LABEL_BUTTON))
-#define EDITABLE_LABEL_BUTTON_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), TYPE_EDITABLE_LABEL_BUTTON, EditableLabelButtonClass))
+#define EDITABLE_LABEL_BUTTON_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS ((obj), TYPE_EDITABLE_LABEL_BUTTON, EditableLabelButtonClass))
 
 typedef struct _EditableLabelButton EditableLabelButton;
 typedef struct _EditableLabelButtonClass EditableLabelButtonClass;
@@ -38,7 +37,6 @@ typedef struct _EditableLabelButtonPrivate EditableLabelButtonPrivate;
 struct _EditableLabelButton {
 	GtkEventBox                 parent_instance;
 	GtkLabel*                   label;
-	GtkWidget*                  wrename;             //text entry widget used for editing. Normally hidden.
 	EditableLabelButtonPrivate* priv;
 };
 

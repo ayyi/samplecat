@@ -20,7 +20,6 @@ typedef struct {
 
 AGlActorClass* list_view_get_class ();
 
-AGlActor* list_view             (gpointer);
-void      list_view_select      (ListView*, int);
+AGlActor* list_view (gpointer);
 
 #endif

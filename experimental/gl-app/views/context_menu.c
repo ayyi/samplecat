@@ -18,15 +18,18 @@
 #include "agl/utils.h"
 #include "agl/shader.h"
 #include "waveform/promise.h"
+#include "icon/utils.h"
 #include "waveform/utils.h"
 #include "application.h"
 #include "views/context_menu.h"
 
 #define BORDER 4
 
+static void context_menu_free (AGlActor*);
+
 static AGl* agl = NULL;
 
-static AGlActorClass actor_class = {0, "Context menu", (AGlActorNew*)context_menu};
+static AGlActorClass actor_class = {0, "Context menu", (AGlActorNew*)context_menu, context_menu_free};
 static AMPromise* _promise = NULL;
 static AGlWindow* popup = NULL;
 static Menu* _menu = NULL;
@@ -34,10 +37,10 @@ static Menu* _menu = NULL;
 static float hover_opacity = 0;
 static int hover_row = 0;
 static WfAnimatable animatable = {
-	.start_val.f = 0.0,
-	.val.f       = 0.0,
-	.type        = WF_FLOAT,
-	.model_val.f = &hover_opacity
+	.start_val.f  = 0.0,
+	.target_val.f = 0.0,
+	.type         = WF_FLOAT,
+	.val.f        = &hover_opacity
 };
 
 
@@ -49,7 +52,7 @@ context_menu_open_new (AGlScene* parent, AGliPt xy, Menu* menu, AMPromise* promi
 	_menu = menu;
 
 	Display* dpy = glXGetCurrentDisplay();
-	AGliPt size = {240, menu->len * 16 + 2 * BORDER};
+	AGliPt size = {200, menu->len * 16 + 2 * BORDER};
 
 	int x, y;
 	Window child;
@@ -98,16 +101,35 @@ context_menu_free (AGlActor* actor)
 static bool
 context_menu_paint (AGlActor* actor)
 {
-	agl_set_font_string("Roboto 10");
+	agl_set_font(STYLE.font, 10, PANGO_WEIGHT_BOLD);
 
-	agl->shaders.plain->uniform.colour = 0xffffff00 + (int)(31.0 * animatable.val.f);
+	agl->shaders.plain->uniform.colour = 0xffffffff;
+	agl_use_program((AGlShader*)agl->shaders.plain);
+	agl_rect(-2, -2, 20, agl_actor__height(actor) + 2);
+
+	agl->shaders.plain->uniform.colour = 0xffffff00 + (int)(31.0 * hover_opacity);
 	agl_use_program((AGlShader*)agl->shaders.plain);
 	agl_rect(-BORDER, hover_row * 16, agl_actor__width(actor), 16);
 
 	for(int i=0; i<_menu->len; i++){
 		MenuItem* item = &_menu->items[i];
-		agl_print(4, i * 16, 0, app->style.text, item->title);
-		if(item->key.code) agl_print(200, i * 16, 0, app->style.text, "%i", item->key.code);
+		if(item->title){
+			if(item->icon){
+				if(item->show_icon ? item->show_icon(item->user_data) : true){
+					guint t = get_icon_texture_by_name(item->icon, 16);
+
+					agl_use_program((AGlShader*)agl->shaders.texture);
+					agl_textured_rect(t, 0, i * 16, 16, 16, NULL);
+				}
+			}
+
+			// for some reason, these characters are not printing
+			//agl_print(4, i * 16, 0, STYLE.text, "✔"); // heavy checkmark
+			//agl_print(4, i * 16, 0, STYLE.text, "✓");
+
+			agl_print(22, i * 16, 0, STYLE.text, item->title);
+			if(item->key.code) agl_print(180, i * 16, 0, STYLE.text, "%c", item->key.code);
+		}
 	}
 
 	return true;
@@ -131,25 +153,27 @@ context_menu_event (AGlActor* actor, GdkEvent* event, AGliPt xy)
 {
 	switch(event->type){
 		case GDK_BUTTON_PRESS:
+			break;
+		case GDK_BUTTON_RELEASE:
 			switch(event->button.button){
 				case 1:;
 					int row = xy.y / 16;
 					if(row >= 0 && row < _menu->len){
 						MenuItem* item = &_menu->items[row];
-						if(item->action) item->action(NULL);
+						if(item->action) item->action(item->user_data);
 					}
 
 					g_idle_add(popup_destroy, NULL);
 					return AGL_HANDLED;
 			}
-			break;
+			return AGL_HANDLED;
 		case GDK_ENTER_NOTIFY:
 			hover_row = xy.y / 16;
-			hover_opacity = 1.0;
+			animatable.target_val.f = 1.0;
 			agl_actor__start_transition(actor, g_list_append(NULL, &animatable), NULL, NULL);
 			break;
 		case GDK_LEAVE_NOTIFY:
-			hover_opacity = 0.0;
+			animatable.target_val.f = 0.0;
 			agl_actor__start_transition(actor, g_list_append(NULL, &animatable), NULL, NULL);
 			break;
 		case GDK_MOTION_NOTIFY:;
@@ -176,10 +200,9 @@ context_menu (gpointer _)
 
 	return AGL_NEW(AGlActor,
 		.class = &actor_class,
-		.name = "Context menu",
-		.region = {BORDER, BORDER, BORDER + 240, BORDER + _menu->len * 16},
+		.name = actor_class.name,
+		.region = {BORDER, BORDER, BORDER + 200, BORDER + _menu->len * 16},
 		.init = context_menu_init,
-		.free = context_menu_free,
 		.paint = context_menu_paint,
 		.on_event = context_menu_event
 	);

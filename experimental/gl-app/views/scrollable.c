@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2017-2018 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2017-2019 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -18,12 +18,6 @@
 #define __wf_private__
 #include "config.h"
 #undef USE_GTK
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <math.h>
-#include <gdk/gdkkeysyms.h>
-#include <GL/gl.h>
 #include "debug/debug.h"
 #include "agl/ext.h"
 #include "agl/utils.h"
@@ -85,7 +79,7 @@ scrollable_view(gpointer _)
 		// first scrollable view child takes up all available space
 
 		AGlActor* child = actor->children->data;
-		child->region = (AGliRegion){0, 0, agl_actor__width(actor), agl_actor__height(actor)};
+		child->region = (AGlfRegion){0, 0, agl_actor__width(actor), agl_actor__height(actor)};
 		agl_actor__set_size(child);
 
 		scrollable_set_scroll_position(actor, -1);

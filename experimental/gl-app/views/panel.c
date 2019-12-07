@@ -31,8 +31,10 @@ extern AGlShader ring;
 
 #define _g_object_unref0(var) ((var == NULL) ? NULL : (var = (g_object_unref (var), NULL)))
 
+static void panel_free (AGlActor*);
+
 static AGl* agl = NULL;
-static AGlActorClass actor_class = {0, "Panel", (AGlActorNew*)panel_view};
+static AGlActorClass actor_class = {0, "Panel", (AGlActorNew*)panel_view, panel_free};
 static int instance_count = 0;
 static AGliPt origin = {0,};
 static AGliPt mouse = {0,};
@@ -57,7 +59,7 @@ _init()
 	if(!init_done){
 		agl = agl_get_instance();
 
-		font = g_strdup_printf("%s 10", app->style.font);
+		font = g_strdup_printf("%s 10", APP_STYLE.font);
 		agl_set_font_string(font); // initialise the pango context
 
 		ring_material = ring_new();
@@ -141,7 +143,7 @@ panel_view(gpointer _)
 		// single child takes all space of panel
 		if(g_list_length(actor->children) == 1){
 			AGlActor* child = actor->children->data;
-			child->region = (AGliRegion){0, panel->title ? PANEL_DRAG_HANDLE_HEIGHT : 0, agl_actor__width(actor), agl_actor__height(actor)};
+			child->region = (AGlfRegion){0, panel->title ? PANEL_DRAG_HANDLE_HEIGHT : 0, agl_actor__width(actor), agl_actor__height(actor)};
 			agl_actor__set_size(child);
 		}
 	}
@@ -157,6 +159,7 @@ panel_view(gpointer _)
 					actor_context.grabbed = actor;
 					origin = mouse = xy;
 					agl_actor__invalidate(actor);
+					return AGL_HANDLED;
 				}
 				break;
 			case GDK_BUTTON_RELEASE:
@@ -165,34 +168,29 @@ panel_view(gpointer _)
 				if(actor_context.grabbed){
 					dock_v_move_panel_to_y((DockVView*)actor->parent, actor, xy.y);
 					actor_context.grabbed = NULL;
+					return AGL_HANDLED;
 				}
 				break;
 			case GDK_MOTION_NOTIFY:
 				if(actor_context.grabbed == actor){
 					mouse = xy;
 					agl_actor__invalidate(actor);
+					return AGL_HANDLED;
 				}
 				break;
 			case GDK_KEY_RELEASE:;
 				GdkEventKey* e = (GdkEventKey*)event;
 				int keyval = e->keyval;
-				KeyHandler* handler = g_hash_table_lookup(panel->actions.actions, &keyval);
-				if(handler) handler();
+				if(panel->actions.actions){
+					KeyHandler* handler = g_hash_table_lookup(panel->actions.actions, &keyval);
+					if(handler) handler();
+					return AGL_HANDLED;
+				}
 				break;
 			default:
 				break;
 		}
-		return AGL_HANDLED;
-	}
-
-	void panel_free(AGlActor* actor)
-	{
-		PanelView* panel = (PanelView*)actor;
-
-		_g_object_unref0(panel->layout);
-
-		if(!--instance_count){
-		}
+		return AGL_NOT_HANDLED;
 	}
 
 	PanelView* view = AGL_NEW(PanelView,
@@ -200,7 +198,6 @@ panel_view(gpointer _)
 			.class = &actor_class,
 			.name = "Panel",
 			.init = panel_init,
-			.free = panel_free,
 			.paint = panel_paint,
 			.set_size = panel_set_size,
 			.on_event = panel_event,
@@ -215,4 +212,15 @@ panel_view(gpointer _)
 	return (AGlActor*)view;
 }
 
+
+static void
+panel_free (AGlActor* actor)
+{
+	PanelView* panel = (PanelView*)actor;
+
+	_g_object_unref0(panel->layout);
+
+	if(!--instance_count){
+	}
+}
 

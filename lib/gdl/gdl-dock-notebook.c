@@ -99,14 +99,12 @@ gdl_dock_notebook_class_init (GdlDockNotebookClass *klass)
     
     GObjectClass       *g_object_class;
     GtkObjectClass     *gtk_object_class;
-    GtkWidgetClass     *widget_class;
     GtkContainerClass  *container_class;
     GdlDockObjectClass *object_class;
     GdlDockItemClass   *item_class;
 
     g_object_class = G_OBJECT_CLASS (klass);
     gtk_object_class = GTK_OBJECT_CLASS (klass);
-    widget_class = GTK_WIDGET_CLASS (klass);
     container_class = GTK_CONTAINER_CLASS (klass);
     object_class = GDL_DOCK_OBJECT_CLASS (klass);
     item_class = GDL_DOCK_ITEM_CLASS (klass);

@@ -9,23 +9,31 @@
 * +----------------------------------------------------------------------+
 *
 */
-#include "selectable.h"
+#ifndef __key_behaviour_h__
+#define __key_behaviour_h__
 
+#include "glib.h"
+#include "agl/actor.h"
+#include "agl/behaviour.h"
 
-Behaviour*
-selectable ()
+typedef bool (ActorKeyHandler)(AGlActor*);
+
+typedef struct
 {
-	SelectBehaviour* a = g_new0(SelectBehaviour, 1);
-	a->observable = observable_new();
+	int              key;
+	ActorKeyHandler* handler;
+} ActorKey;
 
-	return (Behaviour*)a;
-}
+typedef struct {
+   AGlBehaviour behaviour;
+   ActorKey     (*keys)[];
+   GHashTable*  handlers;
+} KeyBehaviour;
 
+AGlBehaviourClass* key_get_class ();
 
-void
-selectable_init (Behaviour* behaviour, AGlActor* actor)
-{
-	SelectBehaviour* selectable = (SelectBehaviour*)behaviour;
+AGlBehaviour* key_behaviour              ();
+void          key_behaviour_init         (AGlBehaviour*, AGlActor*);
+bool          key_behaviour_handle_event (AGlBehaviour*, AGlActor*, GdkEvent*);
 
-	observable_subscribe (selectable->observable, selectable->on_select, actor);
-}
+#endif

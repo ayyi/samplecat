@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2016-2018 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2016-2019 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -15,38 +15,33 @@
 #define __wf_private__
 #include "config.h"
 #undef USE_GTK
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <math.h>
-#include <gdk/gdkkeysyms.h>
-#include <GL/gl.h>
-#include "agl/ext.h"
+#include "debug/debug.h"
 #include "agl/utils.h"
 #include "agl/actor.h"
-#include "waveform/waveform.h"
-#include "waveform/peakgen.h"
-#include "waveform/shader.h"
+#include "agl/shader.h"
+#include "waveform/utils.h"
 #include "views/dock_h.h"
 
 #define _g_free0(var) (var = (g_free (var), NULL))
 #define SPACING 15
 #define DIVIDER 5
 
+static void dock_free (AGlActor*);
+
 static AGl* agl = NULL;
 static int instance_count = 0;
-static AGlActorClass actor_class = {0, "Dock H", (AGlActorNew*)dock_h_view};
+static AGlActorClass actor_class = {0, "Dock H", (AGlActorNew*)dock_h_view, dock_free};
 
 
 AGlActorClass*
-dock_h_get_class()
+dock_h_get_class ()
 {
 	return &actor_class;
 }
 
 
 static void
-_init()
+_init ()
 {
 	static bool init_done = false;
 
@@ -59,7 +54,7 @@ _init()
 
 
 AGlActor*
-dock_h_view(WaveformActor* _)
+dock_h_view (gpointer _)
 {
 	instance_count++;
 
@@ -81,7 +76,7 @@ dock_h_view(WaveformActor* _)
 		}
 
 		if(dock->handle.opacity > 0.0){
-			float alpha = dock->animatables[0]->val.f;
+			float alpha = dock->handle.opacity;
 			agl->shaders.plain->uniform.colour = (0x999999ff & 0xffffff00) + (uint32_t)(alpha * 0xff);
 			agl_use_program((AGlShader*)agl->shaders.plain);
 			agl_rect_((AGlRect){dock->handle.actor->region.x1 - SPACING / 2 - DIVIDER / 2, 0, DIVIDER, agl_actor__height(actor)});
@@ -103,12 +98,12 @@ dock_h_view(WaveformActor* _)
 		panel_init(a);
 	}
 
-	void dock_set_state(AGlActor* actor)
+	void dock_set_state (AGlActor* actor)
 	{
 		agl->shaders.plain->uniform.colour = 0x66666666;
 	}
 
-	void dock_h_set_size(AGlActor* actor)
+	void dock_h_set_size (AGlActor* actor)
 	{
 		DockHView* dock = (DockHView*)actor;
 		int height = agl_actor__height(actor);
@@ -259,7 +254,7 @@ dock_h_view(WaveformActor* _)
 			AGlActor* a = (AGlActor*)l->data;
 			Item* item = &items[i];
 			PanelView* panel = (PanelView*)item->actor;
-			a->region = (AGliRegion){
+			a->region = (AGlfRegion){
 				.x1 = x,
 				.y1 = 0,
 				.x2 = x + items[i].width,
@@ -273,7 +268,7 @@ dock_h_view(WaveformActor* _)
 		// single child takes all space of panel
 		if(g_list_length(actor->children) == 1){
 			AGlActor* child = actor->children->data;
-			child->region = (AGliRegion){0, PANEL_DRAG_HANDLE_HEIGHT, agl_actor__width(actor), height};
+			child->region = (AGlfRegion){0, PANEL_DRAG_HANDLE_HEIGHT, agl_actor__width(actor), height};
 			agl_actor__set_size(child);
 		}
 	}
@@ -290,7 +285,7 @@ dock_h_view(WaveformActor* _)
 			case GDK_BUTTON_PRESS:
 				agl_actor__grab(actor);
 				//set_cursor(arrange->canvas->widget->window, CURSOR_H_DOUBLE_ARROW);
-				break;
+				return AGL_HANDLED;
 			case GDK_MOTION_NOTIFY:
 				if(actor_context.grabbed == actor){
 					AGlActor* a2 = dock->handle.actor;
@@ -329,22 +324,22 @@ dock_h_view(WaveformActor* _)
 					}
 					if(f){
 						if(!dock->handle.opacity){
-							dock->handle.opacity = 1.0;
+							dock->animatables[0]->target_val.f = 1.0;
 							dock->handle.actor = f;
 							agl_actor__start_transition(actor, g_list_append(NULL, dock->animatables[0]), animation_done, NULL);
 						}
 					}else{
 						if(dock->handle.opacity){
-							dock->handle.opacity = 0.0;
+							dock->animatables[0]->target_val.f = 0.0;
 							agl_actor__start_transition(actor, g_list_append(NULL, dock->animatables[0]), animation_done, NULL);
 						}
 					}
 				}
-				break;
+				return AGL_HANDLED;
 			case GDK_LEAVE_NOTIFY:
 				dbg (1, "LEAVE_NOTIFY");
 				if(dock->handle.opacity > 0.0){
-					dock->handle.opacity = 0.0;
+					dock->animatables[0]->target_val.f = 0.0;
 					agl_actor__start_transition(actor, g_list_append(NULL, dock->animatables[0]), animation_done, NULL);
 				}
 				break;
@@ -352,27 +347,16 @@ dock_h_view(WaveformActor* _)
 			default:
 				break;
 		}
-		return AGL_HANDLED;
+		return AGL_NOT_HANDLED;
 	}
 
-	void dock_free(AGlActor* actor)
-	{
-		DockHView* dock = (DockHView*)actor;
-
-		g_list_free0(dock->panels);
-
-		if(!--instance_count){
-		}
-	}
-
-	DockHView* dock = WF_NEW(DockHView,
+	DockHView* dock = AGL_NEW(DockHView,
 		.panel = {
 			.actor = {
 				.class = &actor_class,
 				.name = "Dock H",
 				.program = (AGlShader*)agl->shaders.plain,
 				.init = dock_init,
-				.free = dock_free,
 				.paint = dock_h_paint,
 				.set_state = dock_set_state,
 				.set_size = dock_h_set_size,
@@ -382,13 +366,25 @@ dock_h_view(WaveformActor* _)
 	);
 
 	dock->animatables[0] = AGL_NEW(WfAnimatable,
-		.model_val.f = &dock->handle.opacity,
+		.val.f       = &dock->handle.opacity,
 		.start_val.f = 0.0,
-		.val.f       = 0.0,
+		.target_val.f= 0.0,
 		.type        = WF_FLOAT
 	);
 
 	return (AGlActor*)dock;
+}
+
+
+static void
+dock_free (AGlActor* actor)
+{
+	DockHView* dock = (DockHView*)actor;
+
+	g_list_free0(dock->panels);
+
+	if(!--instance_count){
+	}
 }
 
 

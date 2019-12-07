@@ -46,9 +46,6 @@ struct _accel {
 	gpointer      user_data;
 };
 
-//gint         strcmp2(gconstpointer a, gconstpointer b);
-//GPtrArray*   list_dir(const guchar *path);
-
 void         colour_get_style_fg       (GdkColor*, GtkStateType);
 void         colour_get_style_bg       (GdkColor*, int state);
 void         colour_get_style_base     (GdkColor*, int state);
@@ -92,6 +89,10 @@ void         show_widget_if            (GtkWidget*, gboolean);
 GtkWidget*   scrolled_window_new       ();
 
 gboolean     keyword_is_dupe           (const char* keyword, const char* existing);
+
+#if 0
+GPtrArray*   list_dir                  (const guchar* path);
+#endif
 
 typedef void (*ObjectCallback)         (GObject*, gpointer);
 

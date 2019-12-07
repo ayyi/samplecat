@@ -100,14 +100,10 @@ static void
 gdl_dock_tablabel_class_init (GdlDockTablabelClass *klass)
 {
     GObjectClass      *g_object_class;
-    GtkObjectClass    *object_class;
     GtkWidgetClass    *widget_class;
-    GtkContainerClass *container_class;
 
     g_object_class = G_OBJECT_CLASS (klass);
-    object_class = GTK_OBJECT_CLASS (klass);
     widget_class = GTK_WIDGET_CLASS (klass);
-    container_class = GTK_CONTAINER_CLASS (klass);
     
     g_object_class->set_property = gdl_dock_tablabel_set_property;
     g_object_class->get_property = gdl_dock_tablabel_get_property;
@@ -148,10 +144,7 @@ gdl_dock_tablabel_class_init (GdlDockTablabelClass *klass)
 static void
 gdl_dock_tablabel_instance_init (GdlDockTablabel *tablabel)
 {
-    GtkWidget *widget;
     GtkWidget *label_widget;
-
-    widget = GTK_WIDGET (tablabel);
 
     tablabel->drag_handle_size = DEFAULT_DRAG_HANDLE_SIZE;
     tablabel->item = NULL;
@@ -355,11 +348,9 @@ gdl_dock_tablabel_paint (GtkWidget      *widget,
                          GdkEventExpose *event)
 {
     GdkRectangle     dest, rect;
-    GtkBin          *bin;
     GdlDockTablabel *tablabel;
     gint             border_width;
 
-    bin = GTK_BIN (widget);
     tablabel = GDL_DOCK_TABLABEL (widget);
     border_width = GTK_CONTAINER (widget)->border_width;
 
@@ -415,20 +406,11 @@ gdl_dock_tablabel_button_event (GtkWidget      *widget,
     switch (event->type) {
         case GDK_BUTTON_PRESS:
             if (tablabel->active) {
-                gboolean in_handle;
-                gint     rel_x, rel_y;
-                guint    border_width;
-                GtkBin  *bin;
-
-                bin = GTK_BIN (widget);
-                border_width = GTK_CONTAINER (widget)->border_width;
-
-                rel_x = event->x - border_width;
-                rel_y = event->y - border_width;
+                //guint    border_width = GTK_CONTAINER (widget)->border_width;
+                //gint rel_x = event->x - border_width;
 
                 /* Check if user clicked on the drag handle. */      
-                in_handle = (rel_x < tablabel->drag_handle_size * HANDLE_RATIO) &&
-                    (rel_x > 0);
+                //bool in_handle = (rel_x < tablabel->drag_handle_size * HANDLE_RATIO) && (rel_x > 0);
 
                 if (event->button == 1) {
                     tablabel->pre_drag = TRUE;

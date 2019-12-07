@@ -12,10 +12,6 @@
 #define __wf_private__
 #include "config.h"
 #undef USE_GTK
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include "agl/ext.h"
 #include "agl/utils.h"
 #include "agl/actor.h"
 #include "waveform/waveform.h"
@@ -28,9 +24,11 @@
 #define DIVIDER 5
 #define HANDLE_HEIGHT(P) (((PanelView*)P)->title ? PANEL_DRAG_HANDLE_HEIGHT : 0)
 
+static void dock_free (AGlActor*);
+
 static AGl* agl = NULL;
 static int instance_count = 0;
-static AGlActorClass actor_class = {0, "Dock V", (AGlActorNew*)dock_v_view};
+static AGlActorClass actor_class = {0, "Dock V", (AGlActorNew*)dock_v_view, dock_free};
 
 
 AGlActorClass*
@@ -93,7 +91,7 @@ dock_v_view(gpointer _)
 		}
 
 		if(dock->handle.opacity > 0.0){
-			float alpha = dock->animatables[0]->val.f;
+			float alpha = dock->handle.opacity;
 			agl->shaders.plain->uniform.colour = (0x999999ff & 0xffffff00) + (uint32_t)(alpha * 0xff);
 			agl_use_program((AGlShader*)agl->shaders.plain);
 			agl_rect_((AGlRect){0, dock->handle.actor->region.y1 - SPACING / 2 - DIVIDER / 2 , agl_actor__width(actor), DIVIDER});
@@ -111,7 +109,7 @@ dock_v_view(gpointer _)
 		agl->shaders.plain->uniform.colour = 0x66666666;
 	}
 
-	void dock_v_set_size(AGlActor* actor)
+	void dock_v_set_size (AGlActor* actor)
 	{
 		DockVView* dock = (DockVView*)actor;
 
@@ -122,9 +120,8 @@ dock_v_view(gpointer _)
 		Item items[g_list_length(dock->panels)];
 
 		int req = 0;
-		GList* l = dock->panels;
 		int i = 0;
-		for(;l;l=l->next,i++){
+		for(GList* l=dock->panels;l;l=l->next,i++){
 			items[i] = (Item){l->data, 0};
 			PanelView* panel = (PanelView*)items[i].actor;
 			if(panel->size_req.preferred.y > -1) req += panel->size_req.preferred.y;
@@ -174,33 +171,72 @@ dock_v_view(gpointer _)
 			}
 			y += item->height + (panel->no_border ? 0 : SPACING);
 		}
+		// TODO dont remove spacing if not added
 		y -= SPACING; // no spacing needed after last element
 
 		if(y < agl_actor__height(actor)){
 			// under allocated
-			// TODO use distribute fn from dock_h.c
 			int remaining = agl_actor__height(actor) - y;
 			int n_resizable = 0;
 			for(i=0;i<G_N_ELEMENTS(items);i++){
 				Item* item = &items[i];
 				PanelView* panel = (PanelView*)item->actor;
-				if(item->height < panel->size_req.max.y){
+				if(panel->size_req.max.y < 0 || item->height < panel->size_req.max.y){
 					n_resizable ++;
 				}
 			}
 			if(n_resizable){
-				int each = remaining / n_resizable;
+				typedef struct {PanelView* panel; int h; int amount; bool full;} A; // TODO just use Item
+
+				void distribute(A L[], int _to_distribute, int n_resizable, int iter)
+				{
+					g_return_if_fail(_to_distribute > 0);
+
+					int to_distribute = _to_distribute;
+					int each = to_distribute / n_resizable;
+					int remainder = to_distribute % n_resizable;
+
+					#define CHECK_FULL(A) if(height + amount == max){ A->full = true; n_resizable--; }
+
+					int i; for(i=0;i<20;i++){
+						A* a = &L[i];
+						if(a->panel){
+							if(!a->full){
+								PanelView* panel = a->panel;
+								int max = panel->size_req.max.y < 0 ? 10000 : panel->size_req.max.y;
+								int height = a->h + a->amount;
+								int amount = MIN(max - height, each);
+								CHECK_FULL(a)
+								else if(remainder){
+									amount++;
+									remainder--;
+									CHECK_FULL(a)
+								}
+								to_distribute -= amount;
+								a->amount += amount;
+							}
+						} else break;
+					}
+					if(to_distribute && (to_distribute != _to_distribute) && iter++ < 5) distribute(L, to_distribute, n_resizable, iter);
+					if(iter == 5) gwarn("failed to distribute");
+				}
+				A L[G_N_ELEMENTS(items) + 1];
 				for(i=0;i<G_N_ELEMENTS(items);i++){
 					Item* item = &items[i];
-					PanelView* panel = (PanelView*)item->actor;
-					if(item->height < panel->size_req.max.y){
-						item->height += each;
-					}
+					L[i] = (A){(PanelView*)item->actor,item->height,};
+				}
+				L[i] = (A){NULL,};
+				distribute(L, remaining, n_resizable, 0);
+
+				for(i=0;i<G_N_ELEMENTS(items);i++){
+					Item* item = &items[i];
+					A* a = &L[i];
+					item->height += a->amount;
 				}
 			}
 		}
 		else if(y > agl_actor__height(actor)){
-			dbg(0, "over allocated");
+			dbg(1, "%s: over allocated", actor->name);
 			/*
 			int over = y - agl_actor__height(actor);
 			if(n_flexible){
@@ -216,15 +252,22 @@ dock_v_view(gpointer _)
 			}
 			*/
 			if(agl_actor__height(actor)){
-				int gain = (1000 * y) / agl_actor__height(actor);
-				for(i=0;i<G_N_ELEMENTS(items);i++){
-					items[i].height = (1000 * items[i].height) / gain;
+				int gain = (1000 * y) / (int)agl_actor__height(actor);
+				int y = 0;
+				for(i=0;i<G_N_ELEMENTS(items)-1;i++){
+					Item* item = &items[i];
+					PanelView* panel = (PanelView*)item->actor;
+					y += items[i].height = MAX((1000 * items[i].height) / gain, panel->size_req.min.y);
+					y += panel->no_border ? 0 : SPACING;
 				}
+				// last can be less than req.min
+				items[G_N_ELEMENTS(items) - 1].height = (int)agl_actor__height(actor) - y;
 			}
 		}
 
 		y = 0;
-		for(l=dock->panels,i=0;l;l=l->next,i++){
+		GList* l = dock->panels;
+		for(int i=0;l;l=l->next,i++){
 			AGlActor* a = (AGlActor*)l->data;
 			a->region.y1 = y;
 			a->region.y2 = y + items[i].height;
@@ -244,7 +287,7 @@ dock_v_view(gpointer _)
 			case GDK_BUTTON_PRESS:
 				agl_actor__grab(actor);
 				//set_cursor(arrange->canvas->widget->window, CURSOR_H_DOUBLE_ARROW);
-				break;
+				return AGL_HANDLED;
 			case GDK_MOTION_NOTIFY:
 				if(actor_context.grabbed == actor){
 					int y = xy.y - actor->region.y1;
@@ -287,22 +330,22 @@ dock_v_view(gpointer _)
 					if(f){
 						if(!dock->handle.opacity){
 							//set_cursor(arrange->canvas->widget->window, CURSOR_H_DOUBLE_ARROW);
-							dock->handle.opacity = 1.0;
+							dock->animatables[0]->target_val.f = 1.0;
 							dock->handle.actor = f;
 							agl_actor__start_transition(actor, g_list_append(NULL, dock->animatables[0]), animation_done, NULL);
 						}
 					}else{
 						if(dock->handle.opacity){
-							dock->handle.opacity = 0.0;
+							dock->animatables[0]->target_val.f = 0.0;
 							agl_actor__start_transition(actor, g_list_append(NULL, dock->animatables[0]), animation_done, NULL);
 						}
 					}
 				}
-				break;
+				return AGL_HANDLED;
 			case GDK_LEAVE_NOTIFY:
 				dbg (1, "LEAVE_NOTIFY");
 				if(dock->handle.opacity > 0.0){
-					dock->handle.opacity = 0.0;
+					dock->animatables[0]->target_val.f = 0.0;
 					agl_actor__start_transition(actor, g_list_append(NULL, dock->animatables[0]), animation_done, NULL);
 				}
 				break;
@@ -310,17 +353,7 @@ dock_v_view(gpointer _)
 			default:
 				break;
 		}
-		return AGL_HANDLED;
-	}
-
-	void dock_free(AGlActor* actor)
-	{
-		DockVView* dock = (DockVView*)actor;
-
-		g_list_free0(dock->panels);
-
-		if(!--instance_count){
-		}
+		return AGL_NOT_HANDLED;
 	}
 
 	DockVView* dock = AGL_NEW(DockVView,
@@ -330,7 +363,6 @@ dock_v_view(gpointer _)
 				.name = "Dock V",
 				.program = (AGlShader*)agl->shaders.plain,
 				.init = dock_init,
-				.free = dock_free,
 				.paint = dock_v_paint,
 				.set_state = dock_set_state,
 				.set_size = dock_v_set_size,
@@ -345,13 +377,25 @@ dock_v_view(gpointer _)
 	);
 
 	dock->animatables[0] = AGL_NEW(WfAnimatable,
-		.model_val.f = &dock->handle.opacity,
+		.val.f       = &dock->handle.opacity,
 		.start_val.f = 0.0,
-		.val.f       = 0.0,
+		.target_val.f= 0.0,
 		.type        = WF_FLOAT
 	);
 
 	return (AGlActor*)dock;
+}
+
+
+static void
+dock_free (AGlActor* actor)
+{
+	DockVView* dock = (DockVView*)actor;
+
+	g_list_free0(dock->panels);
+
+	if(!--instance_count){
+	}
 }
 
 

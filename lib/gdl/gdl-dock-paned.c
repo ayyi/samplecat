@@ -96,14 +96,12 @@ gdl_dock_paned_class_init (GdlDockPanedClass *klass)
 {
     GObjectClass       *g_object_class;
     GtkObjectClass     *gtk_object_class;
-    GtkWidgetClass     *widget_class;
     GtkContainerClass  *container_class;
     GdlDockObjectClass *object_class;
     GdlDockItemClass   *item_class;
 
     g_object_class = G_OBJECT_CLASS (klass);
     gtk_object_class = GTK_OBJECT_CLASS (klass);
-    widget_class = GTK_WIDGET_CLASS (klass);
     container_class = GTK_CONTAINER_CLASS (klass);
     object_class = GDL_DOCK_OBJECT_CLASS (klass);
     item_class = GDL_DOCK_ITEM_CLASS (klass);
@@ -536,7 +534,6 @@ gdl_dock_paned_dock (GdlDockObject    *object,
     GtkPaned *paned;
     gboolean  done = FALSE;
     gboolean  hresize = FALSE;
-    gboolean  wresize = FALSE;
     gint      temp = 0;
     
     g_return_if_fail (GDL_IS_DOCK_PANED (object));
@@ -550,8 +547,6 @@ gdl_dock_paned_dock (GdlDockObject    *object,
             hresize = TRUE;
         temp = 0;
         g_object_get (G_OBJECT (requestor), "preferred_width", &temp, NULL);
-        if (temp == -2)
-            wresize = TRUE;
     }
 
     /* see if we can dock the item in our paned */

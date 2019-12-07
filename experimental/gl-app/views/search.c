@@ -11,13 +11,9 @@
 */
 #define __wf_private__
 #include "config.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <X11/keysym.h>
 #include <gdk/gdkkeysyms.h>
 #include "debug/debug.h"
-#include "agl/ext.h"
 #include "agl/utils.h"
 #include "agl/actor.h"
 #include "agl/fbo.h"
@@ -34,8 +30,10 @@
 #define BORDER 1
 #define MARGIN_BOTTOM 5
 
+static void search_free (AGlActor*);
+
 static int instance_count = 0;
-static AGlActorClass actor_class = {0, "Search", (AGlActorNew*)search_view};
+static AGlActorClass actor_class = {0, "Search", (AGlActorNew*)search_view, search_free};
 
 static AGl* agl = NULL;
 static char* font = NULL;
@@ -58,8 +56,7 @@ _init()
 	if(!init_done){
 		agl = agl_get_instance();
 
-		font = g_strdup_printf("%s 10", app->style.font);
-		agl_set_font_string(font); // initialise the pango context
+		font = g_strdup_printf("%s 10", APP_STYLE.font);
 
 		init_done = true;
 	}
@@ -224,22 +221,11 @@ search_view(gpointer _)
 		return AGL_HANDLED;
 	}
 
-	void search_free(AGlActor* actor)
-	{
-		SearchView* view = (SearchView*)actor;
-
-		_g_object_unref0(view->layout);
-
-		if(!--instance_count){
-		}
-	}
-
 	SearchView* view = AGL_NEW(SearchView,
 		.actor = {
 			.class = &actor_class,
 			.name = "Search",
 			.init = search_init,
-			.free = search_free,
 			.paint = search_paint,
 			.on_event = search_event
 		}
@@ -254,6 +240,20 @@ search_view(gpointer _)
 	search_layout(view);
 
 	return (AGlActor*)view;
+}
+
+
+static void
+search_free (AGlActor* actor)
+{
+	SearchView* view = (SearchView*)actor;
+
+	_g_object_unref0(view->layout);
+
+	if(!--instance_count){
+	}
+
+	g_free(actor);
 }
 
 

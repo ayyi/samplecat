@@ -147,7 +147,7 @@ public class Model : GLib.Object
 			selection->ref();
 
 			if((bool)selection_change_timeout) Source.remove(selection_change_timeout);
-			selection_change_timeout = Timeout.add(250, queue_selection_changed);
+			selection_change_timeout = GLib.Timeout.add(250, queue_selection_changed);
 		}
 	}
 

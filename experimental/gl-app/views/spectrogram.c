@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2017-2017 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2017-2019 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -11,13 +11,7 @@
 */
 #define __wf_private__
 #include "config.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <math.h>
-#include <X11/keysym.h>
 #include <gtk/gtk.h>
-#include <gdk/gdkkeysyms.h>
 #include <GL/gl.h>
 #if USE_GLU
 #include <GL/glu.h>
@@ -34,11 +28,12 @@
 #define PADDING 1
 #define BORDER 1
 
+static void spectrogram_free (AGlActor*);
+static bool load_texture     (SpectrogramView*);
+
 static AGl* agl = NULL;
 static int instance_count = 0;
-static AGlActorClass actor_class = {0, "Spectrogram", (AGlActorNew*)spectrogram_view};
-
-static bool load_texture(SpectrogramView*);
+static AGlActorClass actor_class = {0, "Spectrogram", (AGlActorNew*)spectrogram_view, spectrogram_free};
 
 
 AGlActorClass*
@@ -99,18 +94,11 @@ spectrogram_view(gpointer _)
 		return AGL_NOT_HANDLED;
 	}
 
-	void spectrogram_free(AGlActor* actor)
-	{
-		if(!--instance_count){
-		}
-	}
-
 	SpectrogramView* view = AGL_NEW(SpectrogramView,
 		.actor = {
 			.class = &actor_class,
 			.name = actor_class.name,
 			.init = spectrogram_init,
-			.free = spectrogram_free,
 			.paint = spectrogram_paint,
 			.set_size = spectrogram_size,
 			.on_event = spectrogram_event,
@@ -147,6 +135,14 @@ spectrogram_view(gpointer _)
 
 	AGlActor* actor = (AGlActor*)view;
 	return actor;
+}
+
+
+static void
+spectrogram_free (AGlActor* actor)
+{
+	if(!--instance_count){
+	}
 }
 
 

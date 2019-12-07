@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2017-2017 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2017-2019 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -11,10 +11,6 @@
 */
 #define __wf_private__
 #include "config.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <math.h>
 #include <X11/keysym.h>
 #include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
@@ -25,6 +21,7 @@
 #include "agl/pango_render.h"
 #include "samplecat.h"
 #include "shader.h"
+#include "behaviours/panel.h"
 #include "views/filters.h"
 
 #define _g_object_unref0(var) ((var == NULL) ? NULL : (var = (g_object_unref (var), NULL)))
@@ -32,38 +29,37 @@
 #define PADDING 1
 #define BORDER 1
 
+static void filters_free (AGlActor*);
+
 static AGl* agl = NULL;
 static int instance_count = 0;
-static AGlActorClass actor_class = {0, "Filters", (AGlActorNew*)filters_view};
+static AGlActorClass actor_class = {0, "Filters", (AGlActorNew*)filters_view, filters_free};
 static int mouse = 0;
 
 
 AGlActorClass*
 filters_view_get_class ()
 {
-	return &actor_class;
-}
-
-
-static void
-_init()
-{
 	static bool init_done = false;
 
 	if(!init_done){
 		agl = agl_get_instance();
-		agl_set_font_string("Roboto 10"); // initialise the pango context
+
+		agl_actor_class__add_behaviour(&actor_class, panel_get_class());
 
 		init_done = true;
 	}
+
+	return &actor_class;
 }
+
 
 AGlActor*
 filters_view(gpointer _)
 {
 	instance_count++;
 
-	_init();
+	filters_view_get_class();
 
 	bool filters_paint(AGlActor* actor)
 	{
@@ -195,22 +191,11 @@ filters_view(gpointer _)
 		return AGL_NOT_HANDLED;
 	}
 
-	void filters_free(AGlActor* actor)
-	{
-		FiltersView* view = (FiltersView*)actor;
-
-		int i; for(i=0;i<3;i++) if(view->filters[i].layout) _g_object_unref0(view->filters[i].layout);
-
-		if(!--instance_count){
-		}
-	}
-
 	FiltersView* view = AGL_NEW(FiltersView,
 		.actor = {
 			.class = &actor_class,
 			.name = "Search",
 			.init = filters_init,
-			.free = filters_free,
 			.paint = filters_paint,
 			.set_size = filters_size,
 			.on_event = filters_event,
@@ -227,5 +212,19 @@ filters_view(gpointer _)
 	g_signal_connect(samplecat.model->filters.category, "changed", G_CALLBACK(filters_on_filter_changed), view);
 
 	return (AGlActor*)view;
+}
+
+
+static void
+filters_free (AGlActor* actor)
+{
+	FiltersView* view = (FiltersView*)actor;
+
+	int i; for(i=0;i<3;i++) if(view->filters[i].layout) _g_object_unref0(view->filters[i].layout);
+
+	if(!--instance_count){
+	}
+
+	g_free(actor);
 }
 

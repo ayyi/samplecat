@@ -1208,7 +1208,7 @@ gdl_dock_add_item (GdlDock          *dock,
         /* Non-floating item. */
         if (dock->root) {
             GdlDockPlacement local_placement;
-            GtkRequisition preferred_size;
+            //GtkRequisition preferred_size;
             
             best_dock_item =
                 gdl_dock_find_best_placement_item (GDL_DOCK_ITEM (dock->root),

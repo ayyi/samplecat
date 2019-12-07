@@ -1465,7 +1465,7 @@ rotator_init (Rotator* tree_view)
 	g_return_if_fail(glconfig || __init(tree_view));
 	gtk_widget_set_gl_capability((GtkWidget*)widget, glconfig, agl_get_gl_context(), 1, GDK_GL_RGBA_TYPE);
 
-	_r->wfc = wf_context_new(_r->scene = (AGlScene*)agl_actor__new_root(widget));
+	_r->wfc = wf_context_new((AGlActor*)(_r->scene = (AGlScene*)agl_actor__new_root(widget)));
 
 	_r->scene->user_data = widget;
 
@@ -1497,11 +1497,11 @@ rotator_init (Rotator* tree_view)
 			((AGlActor*)actor)->root->enable_animations = false;
 			int i = 0;
 			for(GList* l=r->priv->actors;l;i++,l=l->next){
-				wf_actor_set_z (((SampleActor*)l->data)->actor, -i * dz);
+				wf_actor_set_z (((SampleActor*)l->data)->actor, -i * dz, NULL, NULL);
 			}
 			((AGlActor*)actor)->root->enable_animations = true;
 
-			wf_actor_fade_in(c->actor, NULL, 1.0f, NULL, NULL);
+			wf_actor_fade_in(c->actor, 1.0f, NULL, NULL);
 
 			g_free(c);
 
@@ -1546,7 +1546,7 @@ rotator_init (Rotator* tree_view)
 
 		int i = 0;
 		for(GList* l=_r->actors;l;i++,l=l->next){
-			wf_actor_set_z (((SampleActor*)l->data)->actor, (forward ? _dz : -_dz) - i * dz);
+			wf_actor_set_z (((SampleActor*)l->data)->actor, (forward ? _dz : -_dz) - i * dz, NULL, NULL);
 		}
 
 		_r->actors = g_list_move_to_front(_r->actors, front);
@@ -2547,7 +2547,7 @@ rotator_size_allocate (GtkWidget* widget, GtkAllocation* allocation)
 
 	widget->allocation = *allocation;
 
-	scene->region = (AGliRegion){
+	scene->region = (AGlfRegion){
 		.x2 = allocation->width,
 		.y2 = allocation->height
 	};
@@ -4236,10 +4236,9 @@ draw (Rotator* rotator)
 		for(;l;l=l->prev){
 			SampleActor* sa = l->data;
 			AGlActor* actor = (AGlActor*)sa->actor;
-			WfAnimatable* z = wf_actor_get_z((WaveformActor*)actor);
-			glTranslatef(0, 0, z->val.f);
+			glTranslatef(0, 0, ((WaveformActor*)actor)->z);
 			agl_actor__paint(actor);
-			glTranslatef(0, 0, -z->val.f);
+			glTranslatef(0, 0, -((WaveformActor*)actor)->z);
 		}
 	}
 	glPopMatrix();
@@ -14447,7 +14446,11 @@ on_canvas_realise (GtkWidget* widget, gpointer user_data)
 
 	gl_initialised = true;
 
-	((AGlActor*)_r->scene)->region = ((AGlActor*)_r->scene)->scrollable = (AGliRegion){
+	((AGlActor*)_r->scene)->region = (AGlfRegion){
+		.x2 = widget->allocation.width,
+		.y2 = widget->allocation.height
+	};
+	((AGlActor*)_r->scene)->scrollable = (AGliRegion){
 		.x2 = widget->allocation.width,
 		.y2 = widget->allocation.height
 	};

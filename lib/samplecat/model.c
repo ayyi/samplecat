@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2017 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2019 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -11,9 +11,7 @@
 */
 #include <glib.h>
 #include <glib-object.h>
-#include <string.h>
 #include <config.h>
-#include <stdlib.h>
 #include <time.h>
 #include <gdk-pixbuf/gdk-pixbuf.h>
 #include <gobject/gvaluecollector.h>
@@ -64,10 +62,8 @@ static void              samplecat_value_take_idle (GValue* value, gpointer v_ob
 static gpointer          samplecat_value_get_idle  (const GValue* value);
 #endif
 
-
 static gpointer samplecat_filter_parent_class = NULL;
 static gpointer samplecat_idle_parent_class = NULL;
-static gpointer samplecat_model_parent_class = NULL;
 static gchar    samplecat_model_unk[32];
 static gchar    samplecat_model_unk[32] = {0};
 
@@ -75,17 +71,18 @@ enum  {
 	SAMPLECAT_FILTER_DUMMY_PROPERTY
 };
 static void     samplecat_filter_finalize (SamplecatFilter* obj);
+
 #define SAMPLECAT_IDLE_GET_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), SAMPLECAT_TYPE_IDLE, SamplecatIdlePrivate))
 enum  {
 	SAMPLECAT_IDLE_DUMMY_PROPERTY
 };
 static void     samplecat_idle_finalize   (SamplecatIdle* obj);
-#define SAMPLECAT_MODEL_GET_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), SAMPLECAT_TYPE_MODEL, SamplecatModelPrivate))
+
+G_DEFINE_TYPE_WITH_PRIVATE (SamplecatModel, samplecat_model, G_TYPE_OBJECT)
 enum  {
 	SAMPLECAT_MODEL_DUMMY_PROPERTY
 };
-static gboolean samplecat_model_queue_selection_changed (SamplecatModel*);
-static gboolean _samplecat_model_queue_selection_changed_gsource_func (gpointer self);
+static bool     samplecat_model_queue_selection_changed (gpointer);
 static void     g_cclosure_user_marshal_VOID__POINTER_INT_POINTER (GClosure*, GValue* return_value, guint n_param_values, const GValue* param_values, gpointer invocation_hint, gpointer marshal_data);
 static GObject* samplecat_model_constructor (GType type, guint n_construct_properties, GObjectConstructParam*);
 static void     samplecat_model_finalize (GObject*);
@@ -524,7 +521,9 @@ samplecat_idle_class_init (SamplecatIdleClass * klass)
 {
 	samplecat_idle_parent_class = g_type_class_peek_parent (klass);
 	SAMPLECAT_IDLE_CLASS (klass)->finalize = samplecat_idle_finalize;
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 	g_type_class_add_private (klass, sizeof (SamplecatIdlePrivate));
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 }
 
 
@@ -618,6 +617,7 @@ samplecat_model_construct (GType object_type)
 
 	_samplecat_idle_unref0 (self->priv->dir_idle);
 	self->priv->dir_idle = samplecat_idle_new (___lambda__gsource_func, self);
+
 #if 0 // updating the directory list is not currently done until a consumer needs it
 	samplecat_idle_queue (self->priv->dir_idle);
 #endif
@@ -660,21 +660,10 @@ samplecat_model_remove (SamplecatModel* self, gint id)
 void
 samplecat_model_set_search_dir (SamplecatModel* self, gchar* dir)
 {
-	SamplecatFilters _tmp0_;
-	SamplecatFilter* _tmp1_;
-	gchar* _tmp2_;
-	g_return_if_fail (self != NULL);
-	_tmp0_ = self->filters;
-	_tmp1_ = _tmp0_.dir;
-	_tmp2_ = dir;
-	samplecat_filter_set_value (_tmp1_, _tmp2_);
-}
+	g_return_if_fail (self);
 
-
-static gboolean
-_samplecat_model_queue_selection_changed_gsource_func (gpointer self)
-{
-	return samplecat_model_queue_selection_changed (self);
+	SamplecatFilters _tmp0_ = self->filters;
+	samplecat_filter_set_value (_tmp0_.dir, dir);
 }
 
 
@@ -692,14 +681,15 @@ samplecat_model_set_selection (SamplecatModel* self, Sample* sample)
 		if (self->priv->selection_change_timeout) {
 			g_source_remove (self->priv->selection_change_timeout);
 		}
-		self->priv->selection_change_timeout = g_timeout_add_full (G_PRIORITY_DEFAULT, (guint) 250, _samplecat_model_queue_selection_changed_gsource_func, g_object_ref (self), g_object_unref);
+		self->priv->selection_change_timeout = g_timeout_add_full (G_PRIORITY_DEFAULT, (guint) 250, samplecat_model_queue_selection_changed, g_object_ref (self), g_object_unref);
 	}
 }
 
 
-static gboolean
-samplecat_model_queue_selection_changed (SamplecatModel* self)
+static bool
+samplecat_model_queue_selection_changed (gpointer _self)
 {
+	SamplecatModel* self = _self;
 	g_return_val_if_fail (self != NULL, FALSE);
 
 	self->priv->selection_change_timeout = 0;
@@ -1027,13 +1017,8 @@ samplecat_model_print_col_name (guint prop_type)
 		}
 		default:
 		{
-			gchar* _tmp2_ = NULL;
-			gchar* a;
-			const gchar* _tmp3_;
-			_tmp2_ = g_strdup_printf ("UNKNOWN PROPERTY (%u)", prop_type);
-			a = _tmp2_;
-			_tmp3_ = a;
-			memcpy (samplecat_model_unk, _tmp3_, (gsize) 31);
+			gchar* a = g_strdup_printf ("UNKNOWN PROPERTY (%u)", prop_type);
+			memcpy (samplecat_model_unk, a, (gsize) 31);
 			_g_free0 (a);
 			break;
 		}
@@ -1044,7 +1029,7 @@ samplecat_model_print_col_name (guint prop_type)
 
 
 void
-samplecat_model_move_files(GList* list, const gchar* dest_path)
+samplecat_model_move_files (GList* list, const gchar* dest_path)
 {
 	/* This is called _before_ the files are actually moved!
 	 * file_util_move_simple() which is called afterwards 
@@ -1119,9 +1104,10 @@ static void
 samplecat_model_class_init (SamplecatModelClass* klass)
 {
 	samplecat_model_parent_class = g_type_class_peek_parent (klass);
-	g_type_class_add_private (klass, sizeof (SamplecatModelPrivate));
+
 	G_OBJECT_CLASS (klass)->constructor = samplecat_model_constructor;
 	G_OBJECT_CLASS (klass)->finalize = samplecat_model_finalize;
+
 	g_signal_new ("dir_list_changed", SAMPLECAT_TYPE_MODEL, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_VOID__VOID, G_TYPE_NONE, 0);
 	g_signal_new ("selection_changed", SAMPLECAT_TYPE_MODEL, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_VOID__POINTER, G_TYPE_NONE, 1, G_TYPE_POINTER);
 	g_signal_new ("sample_changed", SAMPLECAT_TYPE_MODEL, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_user_marshal_VOID__POINTER_INT_POINTER, G_TYPE_NONE, 3, G_TYPE_POINTER, G_TYPE_INT, G_TYPE_POINTER);
@@ -1129,9 +1115,9 @@ samplecat_model_class_init (SamplecatModelClass* klass)
 
 
 static void
-samplecat_model_instance_init (SamplecatModel* self)
+samplecat_model_init (SamplecatModel* self)
 {
-	self->priv = SAMPLECAT_MODEL_GET_PRIVATE (self);
+	self->priv = samplecat_model_get_instance_private(self);
 	self->state = 0;
 }
 
@@ -1147,20 +1133,3 @@ samplecat_model_finalize (GObject* obj)
 	_g_list_free0 (self->modified);
 	G_OBJECT_CLASS (samplecat_model_parent_class)->finalize (obj);
 }
-
-
-GType
-samplecat_model_get_type (void)
-{
-	static volatile gsize samplecat_model_type_id__volatile = 0;
-	if (g_once_init_enter (&samplecat_model_type_id__volatile)) {
-		static const GTypeInfo g_define_type_info = { sizeof (SamplecatModelClass), (GBaseInitFunc) NULL, (GBaseFinalizeFunc) NULL, (GClassInitFunc) samplecat_model_class_init, (GClassFinalizeFunc) NULL, NULL, sizeof (SamplecatModel), 0, (GInstanceInitFunc) samplecat_model_instance_init, NULL };
-		GType samplecat_model_type_id;
-		samplecat_model_type_id = g_type_register_static (G_TYPE_OBJECT, "SamplecatModel", &g_define_type_info, 0);
-		g_once_init_leave (&samplecat_model_type_id__volatile, samplecat_model_type_id);
-	}
-	return samplecat_model_type_id__volatile;
-}
-
-
-

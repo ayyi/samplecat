@@ -38,12 +38,14 @@ static struct {
 };
 
 
+#if 0
 static void
 pixbuf_clear(GdkPixbuf* pixbuf, GdkColor* colour)
 {
 	guint32 colour_rgba = ((colour->red/256)<< 24) | ((colour->green/256)<<16) | ((colour->blue/256)<<8) | (0x60);
 	gdk_pixbuf_fill(pixbuf, colour_rgba);
 }
+#endif
 
 
 void

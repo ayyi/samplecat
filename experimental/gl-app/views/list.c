@@ -11,14 +11,8 @@
 */
 #define __wf_private__
 #include "config.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <math.h>
 #include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
-#include <GL/gl.h>
-#include "agl/ext.h"
 #include "agl/utils.h"
 #include "agl/actor.h"
 #include "waveform/waveform.h"
@@ -26,62 +20,56 @@
 #include "waveform/shader.h"
 #include "waveform/actors/text.h"
 #include "samplecat.h"
+#include "keys.h"
 #include "application.h"
+#include "behaviours/panel.h"
+#include "behaviours/key.h"
 #include "views/list.h"
 #include "views/context_menu.h"
 
 extern int need_draw;
+extern Menu menu;
 
 #define _g_free0(var) (var = (g_free (var), NULL))
 
 #define FONT "Droid Sans"
 
+static void list_view_free   (AGlActor*);
+static void list_view_select (ListView*, int row);
+
 static AGl* agl = NULL;
 static int instance_count = 0;
-static AGlActorClass actor_class = {0, "List", (AGlActorNew*)list_view};
+static AGlActorClass actor_class = {0, "List", (AGlActorNew*)list_view, list_view_free};
+
+static ActorKeyHandler
+	nav_up,
+	nav_down;
+
+static ActorKey keys[] = {
+	{XK_Up,   nav_up},
+	{XK_Down, nav_down},
+	{0,}
+};
+
+#define KEYS(A) ((KeyBehaviour*)A->behaviours[1])
 
 
 AGlActorClass*
 list_view_get_class ()
 {
-	return &actor_class;
-}
-
-
-static void
-_init()
-{
 	static bool init_done = false;
 
 	if(!init_done){
 		agl = agl_get_instance();
-		agl_set_font_string("Roboto 10"); // initialise the pango context
+
+		agl_actor_class__add_behaviour(&actor_class, panel_get_class());
+		agl_actor_class__add_behaviour(&actor_class, key_get_class());
 
 		init_done = true;
 	}
+
+	return &actor_class;
 }
-
-
-static void
-action_play (gpointer _)
-{
-	application_play_selected();
-}
-
-
-static void
-action_delete (gpointer _)
-{
-}
-
-
-Menu menu = {
-	2,
-	{
-		{"Play", {0}, action_play},
-		{"Delete", {0}, action_delete},
-	}
-};
 
 
 static void
@@ -94,13 +82,13 @@ _on_context_menu_selection (gpointer _view, gpointer _promise)
 
 
 AGlActor*
-list_view(gpointer _)
+list_view (gpointer _)
 {
 	instance_count++;
 
-	_init();
+	list_view_get_class();
 
-	bool list_paint(AGlActor* actor)
+	bool list_paint (AGlActor* actor)
 	{
 		ListView* view = (ListView*)actor;
 
@@ -120,7 +108,7 @@ list_view(gpointer _)
 		int row_count = 0;
 		do {
 			if(row_count == view->selection - view->scroll_offset){
-				agl->shaders.plain->uniform.colour = 0x6677ff77;
+				agl->shaders.plain->uniform.colour = STYLE.selection;
 				agl_use_program((AGlShader*)agl->shaders.plain);
 				agl_rect_((AGlRect){0, row_count * row_height - 2, agl_actor__width(actor), row_height});
 			}
@@ -134,7 +122,7 @@ list_view(gpointer _)
 
 				int c; for(c=0;c<G_N_ELEMENTS(val);c++){
 					agl_enable_stencil(0, 0, col[c + 1] - 6, actor->region.y2);
-					agl_print(col[c], row_count * row_height, 0, 0xffffffff, val[c]);
+					agl_print(col[c], row_count * row_height, 0, STYLE.text, val[c]);
 				}
 				sample_unref(sample);
 			}
@@ -145,7 +133,7 @@ list_view(gpointer _)
 		return true;
 	}
 
-	void list_init(AGlActor* a)
+	void list_init (AGlActor* a)
 	{
 #ifdef AGL_ACTOR_RENDER_CACHE
 		a->fbo = agl_fbo_new(agl_actor__width(a), agl_actor__height(a), 0, AGL_FBO_HAS_STENCIL);
@@ -153,11 +141,11 @@ list_view(gpointer _)
 #endif
 	}
 
-	void list_set_size(AGlActor* actor)
+	void list_set_size (AGlActor* actor)
 	{
 	}
 
-	bool list_event(AGlActor* actor, GdkEvent* event, AGliPt xy)
+	bool list_event (AGlActor* actor, GdkEvent* event, AGliPt xy)
 	{
 		switch(event->type){
 			case GDK_BUTTON_PRESS:
@@ -168,8 +156,7 @@ list_view(gpointer _)
 
 						AGliPt offset = agl_actor__find_offset(actor);
 						context_menu_open_new(actor->root, (AGliPt){xy.x + offset.x, xy.y + offset.y}, &menu, promise);
-
-						break;
+						return AGL_HANDLED;
 				}
 				// falling through ...
 			case GDK_BUTTON_RELEASE:
@@ -179,30 +166,25 @@ list_view(gpointer _)
 						int row = xy.y / row_height;
 						dbg(1, "y=%i row=%i", xy.y, row);
 						list_view_select((ListView*)actor, row);
-						break;
+						return AGL_HANDLED;
 					default:
 						break;
 				}
 				break;
+			case GDK_KEY_RELEASE:;
+				return key_behaviour_handle_event((AGlBehaviour*)KEYS(actor), actor, event);
 			default:
 				break;
 		}
-		return AGL_HANDLED;
+		return AGL_NOT_HANDLED;
 	}
 
-	void list_free(AGlActor* actor)
-	{
-		if(!--instance_count){
-		}
-	}
-
-	ListView* view = WF_NEW(ListView,
+	ListView* view = agl_actor__new(ListView,
 		.actor = {
 			.class = &actor_class,
 			.name = actor_class.name,
 			.colour = 0xffff99ff,
 			.init = list_init,
-			.free = list_free,
 			.paint = list_paint,
 			.set_size = list_set_size,
 			.on_event = list_event,
@@ -210,13 +192,17 @@ list_view(gpointer _)
 	);
 	AGlActor* actor = (AGlActor*)view;
 
-	void on_selection_change(SamplecatModel* m, Sample* sample, gpointer user_data)
+	KEYS(actor)->keys = &keys;
+
+#if 0
+	void on_selection_change (SamplecatModel* m, Sample* sample, gpointer user_data)
 	{
 		PF;
 	}
 	g_signal_connect((gpointer)samplecat.model, "selection-changed", G_CALLBACK(on_selection_change), NULL);
+#endif
 
-	void list_on_search_filter_changed(GObject* _filter, gpointer _actor)
+	void list_on_search_filter_changed (GObject* _filter, gpointer _actor)
 	{
 		// update list...
 		agl_actor__invalidate((AGlActor*)_actor);
@@ -227,8 +213,18 @@ list_view(gpointer _)
 }
 
 
-void
-list_view_select(ListView* list, int row)
+static void
+list_view_free (AGlActor* actor)
+{
+	if(!--instance_count){
+	}
+
+	g_free(actor);
+}
+
+
+static void
+list_view_select (ListView* list, int row)
 {
 	int n_rows_total = ((SamplecatListStore*)samplecat.store)->row_count;
 
@@ -250,3 +246,24 @@ list_view_select(ListView* list, int row)
 	}
 }
 
+
+static bool
+nav_up (AGlActor* actor)
+{
+	PF;
+	ListView* list = (ListView*)actor;
+	list_view_select(list, list->selection - 1);
+
+	return AGL_HANDLED;
+}
+
+
+static bool
+nav_down (AGlActor* actor)
+{
+	PF;
+	ListView* list = (ListView*)actor;
+	list_view_select(list, list->selection + 1);
+
+	return AGL_HANDLED;
+}

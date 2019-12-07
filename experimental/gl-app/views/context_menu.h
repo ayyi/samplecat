@@ -16,14 +16,17 @@
 #include "../glx.h"
 
 typedef struct {
-    int modifier;
     int code;
+    int modifier;
 } Key;
 
 typedef struct {
     char* title;
+    char* icon;
     Key key;
     void (*action)(gpointer);
+    bool (*show_icon)(gpointer);
+    gpointer user_data;
 } MenuItem;
 
 typedef struct {
