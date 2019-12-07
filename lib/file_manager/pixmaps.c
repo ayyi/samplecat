@@ -124,7 +124,9 @@ void pixmaps_init(void)
 {
 	if(pixmap_cache) return;
 
-	gtk_widget_push_colormap(gdk_rgb_get_colormap());
+	GdkColormap* colour_map = gdk_screen_get_system_colormap(gdk_screen_get_default());
+	if(!colour_map) return;
+	gtk_widget_push_colormap(colour_map);
 
 	pixmap_cache = g_fscache_new((GFSLoadFunc) image_from_file, NULL, NULL);
 
