@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2015 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2019 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -172,21 +172,23 @@ mimetype_is_unsupported(MIME_type* mime_type, char* mime_string)
 #include "file_manager/pixmaps.h"
 
 GdkPixbuf*
-get_iconbuf_from_mimetype(char* mimetype)
+get_iconbuf_from_mimetype (char* mimetype)
 {
 	GdkPixbuf* iconbuf = NULL;
 	MIME_type* mime_type = mime_type_lookup(mimetype);
 	if(mime_type){
 		type_to_icon(mime_type);
-		if (!mime_type->image) dbg(0, "no icon.");
-		iconbuf = mime_type->image->sm_pixbuf;
+		if (mime_type->image)
+			iconbuf = mime_type->image->sm_pixbuf;
+		else
+			dbg(1, "no icon.");
 	}
 	return iconbuf;
 }
 
 
 gboolean
-ensure_config_dir()
+ensure_config_dir ()
 {
 	static char* path = NULL;
 	if(!path) path = g_strdup_printf("%s/.config/" PACKAGE, g_get_home_dir()); // is static - don't free.
@@ -196,14 +198,14 @@ ensure_config_dir()
 
 
 uint32_t
-color_gdk_to_rgba(GdkColor* color)
+color_gdk_to_rgba (GdkColor* color)
 {
 	return ((color->red / 0x100) << 24) + ((color->green / 0x100) << 16) + ((color->blue / 0x100) << 8) + 0xff;
 }
 
 
 uint8_t*
-pixbuf_to_blob(GdkPixbuf* in, guint *len)
+pixbuf_to_blob (GdkPixbuf* in, guint *len)
 {
 	if(!in){ 
 		if (len) *len = 0;
@@ -235,7 +237,7 @@ pixbuf_to_blob(GdkPixbuf* in, guint *len)
 
 
 void
-samplerate_format(char* str, int samplerate)
+samplerate_format (char* str, int samplerate)
 {
 	// format a samplerate given in Hz to be output in kHz
 
@@ -250,7 +252,7 @@ samplerate_format(char* str, int samplerate)
 
 
 void
-bitrate_format(char* str, int bitrate)
+bitrate_format (char* str, int bitrate)
 {
 	if(bitrate<1){ str[0] = '\0'; return; }
 	else if (bitrate < 1000) snprintf(str, 32, "%d b/s", bitrate);
@@ -263,7 +265,7 @@ bitrate_format(char* str, int bitrate)
 
 
 void
-bitdepth_format(char* str, int bitdepth)
+bitdepth_format (char* str, int bitdepth)
 {
 	if(bitdepth<1){ str[0] = '\0'; return; }
 	snprintf(str, 32, "%d b/sample", bitdepth);
@@ -272,7 +274,7 @@ bitdepth_format(char* str, int bitdepth)
 
 
 char*
-dir_format(char* dir)
+dir_format (char* dir)
 {
 	if(dir){
 		if(!strcmp(dir, g_get_home_dir()))
@@ -286,7 +288,7 @@ dir_format(char* dir)
 
 
 gchar*
-format_channels(int n_ch)
+format_channels (int n_ch)
 {
 	switch(n_ch){
 		case 1:
@@ -301,7 +303,7 @@ format_channels(int n_ch)
 
 
 void
-format_smpte(char* str, int64_t t /*milliseconds*/)
+format_smpte (char* str, int64_t t /*milliseconds*/)
 {
 	snprintf(str, 32, "%02d:%02d:%02d.%03d", (int)(t/3600000), (int)(t/60000)%60, (int)(t/1000)%60, (int)(t%1000));
 	str[31] = '\0';
@@ -309,7 +311,7 @@ format_smpte(char* str, int64_t t /*milliseconds*/)
 
 
 float
-gain2db(float gain)
+gain2db (float gain)
 {
 	union {float f; int i;} t;
 	t.f = gain;
@@ -327,7 +329,7 @@ gain2db(float gain)
 
 
 char*
-gain2dbstring(float gain)
+gain2dbstring (float gain)
 {
 	//result must be freed by caller
 
@@ -341,7 +343,7 @@ gain2dbstring(float gain)
 
 
 gchar *
-str_replace(const gchar* string, const gchar* search, const gchar* replacement)
+str_replace (const gchar* string, const gchar* search, const gchar* replacement)
 {
 	gchar *str, **arr;
 
@@ -360,5 +362,3 @@ str_replace(const gchar* string, const gchar* search, const gchar* replacement)
 
 	return str;
 }
-
-
