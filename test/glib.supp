@@ -1,0 +1,18 @@
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   ...
+   fun:g_type_register_static
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   ...
+   fun:g_type_add_interface_static
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   ...
+   fun:g_option_context_parse
+}

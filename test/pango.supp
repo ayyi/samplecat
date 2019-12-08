@@ -1,0 +1,65 @@
+# The below suppressions suppress just about every entry that pango 
+# libraries could have contributed to.  This is likely excessive... ;)
+#
+# We make good use of the wildcarding features of Valgrind.  By using 
+# wildcarded library object filenames we can hope this source is 
+# portable to more systems.
+
+# On one tested system (Ubuntu 14.04), these libraries are:
+#     /usr/lib/x86_64-linux-gnu/libpangocairo-1.0.so.0.3600.3
+#     /usr/lib/x86_64-linux-gnu/libpangoxft-1.0.so.0.3600.3
+#     /usr/lib/x86_64-linux-gnu/libpango-1.0.so.0.3600.3
+#     /usr/lib/x86_64-linux-gnu/libpangoft2-1.0.so.0.3600.3
+
+# On the tested system (Fedora 20), these libraries are:
+#     /usr/lib64/libpango-1.0.so.0.3600.1
+#     /usr/lib64/libpangocairo-1.0.so.0.3600.1
+#     /usr/lib64/libpangoft2-1.0.so.0.3600.1
+#     /usr/lib64/libpangoxft-1.0.so.0.3600.1
+
+#   "4.4. Writing suppression files"
+#   http://valgrind.org/docs/manual/mc-manual.html#mc-manual.suppfiles
+# match-leak-kinds: definite,possible
+#      definite  indirect  possible  reachable  all  none 
+
+{
+   ff_pango_leak_calloc_lib_global
+   Memcheck:Leak
+   match-leak-kinds: definite,possible
+   fun:calloc
+   ...
+   obj:*/libpango*
+}
+{
+   ff_pango_leak_malloc_lib_global
+   Memcheck:Leak
+   match-leak-kinds: definite,possible
+   fun:malloc
+   ...
+   obj:*/libpango*
+}
+{
+   ff_pango_leak_realloc_lib_global
+   Memcheck:Leak
+   match-leak-kinds: definite,possible
+   fun:realloc
+   ...
+   obj:*/libpango*
+}
+
+# On Ubuntu
+#    3 ff_pango_leak_calloc_lib_global        valgrind_ff_pango.supp:40 suppressed: 143 bytes in 3 blocks
+#   10 ff_pango_leak_malloc_lib_global        valgrind_ff_pango.supp:48 suppressed: 336 bytes in 10 blocks
+#   14 ff_pango_leak_realloc_lib_global       valgrind_ff_pango.supp:56 suppressed: 85,576 bytes in 24 blocks
+#   27
+
+#    4 ff_pango_leak_calloc_lib_global        valgrind_ff_pango.supp:47 suppressed: 175 bytes in 4 blocks
+#   22 ff_pango_leak_malloc_lib_global        valgrind_ff_pango.supp:55 suppressed: 837 bytes in 34 blocks
+#   14 ff_pango_leak_realloc_lib_global       valgrind_ff_pango.supp:63 suppressed: 84,784 bytes in 24 blocks
+#   40
+
+# On Fedora
+#    4 ff_pango_leak_calloc_lib_global  valgrind_ff_pango.supp:18 suppressed: 175 bytes in 4 blocks
+#   11 ff_pango_leak_malloc_lib_global  valgrind_ff_pango.supp:26 suppressed: 344 bytes in 11 blocks
+#   12 ff_pango_leak_realloc_lib_global valgrind_ff_pango.supp:34 suppressed: 85,145 bytes in 24 blocks
+#   27

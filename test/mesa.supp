@@ -1,0 +1,121 @@
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   ...
+   fun:_mesa_Translatef
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   ...
+   fun:_mesa_glsl_link_shader
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   ...
+   fun:brw_clear
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   ...
+   fun:_mesa_CreateProgram
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   ...
+   fun:_mesa_CreateShader
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   ...
+   fun:_mesa_AttachShader
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   ...
+   fun:_mesa_ShaderSource
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   ...
+   fun:_mesa_PopMatrix
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   ...
+   fun:_mesa_PushMatrix
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   ...
+   fun:glXSwapBuffers
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   ...
+   fun:_mesa_hash_table_rehash
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   ...
+   fun:intelNewTextureObject
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: possible
+   ...
+   fun:_mesa_TexImage2D
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   ...
+   fun:GetGLXPrivScreenConfig
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Addr8
+   ...
+   fun:glXSwapBuffers
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Addr4
+   ...
+   fun:glXSwapBuffers
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Addr2
+   ...
+   fun:glXSwapBuffers
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Addr8
+   ...
+   fun:glXCreateContext
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Addr4
+   ...
+   fun:glXCreateContext
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Addr2
+   ...
+   fun:glXCreateContext
+}
