@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2016-2019 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2016-2020 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -12,6 +12,7 @@
 #define __wf_private__
 #include "config.h"
 #undef USE_GTK
+#include "agl/ext.h"
 #include "agl/utils.h"
 #include "agl/actor.h"
 #include "waveform/waveform.h"
@@ -32,14 +33,14 @@ static AGlActorClass actor_class = {0, "Dock V", (AGlActorNew*)dock_v_view, dock
 
 
 AGlActorClass*
-dock_v_get_class()
+dock_v_get_class ()
 {
 	return &actor_class;
 }
 
 
 static void
-_init()
+_init ()
 {
 	static bool init_done = false;
 
@@ -52,7 +53,7 @@ _init()
 
 
 static inline int
-get_spacing(DockVView* dock)
+get_spacing (DockVView* dock)
 {
 	int n = 0;
 	GList* l = dock->panels;
@@ -65,7 +66,7 @@ get_spacing(DockVView* dock)
 
 
 AGlActor*
-dock_v_view(gpointer _)
+dock_v_view (gpointer _)
 {
 	instance_count++;
 
@@ -100,11 +101,11 @@ dock_v_view(gpointer _)
 		return true;
 	}
 
-	void dock_init(AGlActor* a)
+	void dock_init (AGlActor* a)
 	{
 	}
 
-	void dock_set_state(AGlActor* actor)
+	void dock_set_state (AGlActor* actor)
 	{
 		agl->shaders.plain->uniform.colour = 0x66666666;
 	}
@@ -275,7 +276,7 @@ dock_v_view(gpointer _)
 		}
 	}
 
-	bool dock_event(AGlActor* actor, GdkEvent* event, AGliPt xy)
+	bool dock_event (AGlActor* actor, GdkEvent* event, AGliPt xy)
 	{
 		DockVView* dock = (DockVView*)actor;
 
@@ -400,7 +401,7 @@ dock_free (AGlActor* actor)
 
 
 AGlActor*
-dock_v_add_panel(DockVView* dock, AGlActor* panel)
+dock_v_add_panel (DockVView* dock, AGlActor* panel)
 {
 	dock->panels = g_list_append(dock->panels, panel);
 	agl_actor__add_child((AGlActor*)dock, panel);
@@ -411,7 +412,8 @@ dock_v_add_panel(DockVView* dock, AGlActor* panel)
 void
 dock_v_move_panel_to_index (DockVView* dock, AGlActor* panel, int i)
 {
-	dbg(0, "i=%i", i);
+	dbg(1, "i=%i", i);
+
 	dock->panels = g_list_remove(dock->panels, panel);
 	dock->panels = g_list_insert(dock->panels, panel, i);
 	agl_actor__set_size((AGlActor*)dock);
@@ -421,24 +423,16 @@ dock_v_move_panel_to_index (DockVView* dock, AGlActor* panel, int i)
 void
 dock_v_move_panel_to_y (DockVView* dock, AGlActor* panel, int y)
 {
-	int find_index(DockVView* dock, int y)
+	int find_index (DockVView* dock, int y)
 	{
-		//int i; for(i=0;i<G_N_ELEMENTS(dock->items);i++){
-		//	AGlActor* a = dock->items[i]->actor;
-		GList* l = dock->panels;
-		//AGlActor* prev = NULL;
 		int i = 0;
-		for(;l;l=l->next){
-			//PanelView* tab = l->data;
+		for(GList* l=dock->panels;l;l=l->next,i++){
 			AGlActor* a = l->data;
-			dbg(0, "  %i", a->region.y1);
-			if(a->region.y1 > y) return i;
-			i++;
+			if(a->region.y1 > y) return i - 1;
 		}
 		return i;
 	}
 
-	dbg(0, "y=%i", y);
 	int i = find_index(dock, y);
 	dock_v_move_panel_to_index(dock, panel, i);
 }

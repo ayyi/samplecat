@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2016-2019 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2016-2020 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -11,9 +11,6 @@
 */
 #include "config.h"
 #undef USE_GTK
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include "agl/ext.h"
 #include "agl/utils.h"
 #include "agl/pango_render.h"
@@ -52,7 +49,7 @@ panel_view_get_class ()
 
 
 static void
-_init()
+_init ()
 {
 	static bool init_done = false;
 
@@ -70,7 +67,7 @@ _init()
 
 
 AGlActor*
-panel_view(gpointer _)
+panel_view (gpointer _)
 {
 	instance_count++;
 
@@ -109,6 +106,35 @@ panel_view(gpointer _)
 				agl->shaders.plain->uniform.colour = 0x6677ff33;
 				agl_use_program((AGlShader*)agl->shaders.plain);
 				agl_rect(0, 0, agl_actor__width(actor), PANEL_DRAG_HANDLE_HEIGHT);
+			}
+
+			void draw_drop_point (AGlActor* Xparent, AGlActor* actor, int y)
+			{
+				agl->shaders.plain->uniform.colour = 0xff6600aa;
+				agl_use_program((AGlShader*)agl->shaders.plain);
+				agl_rect(0, y, agl_actor__width(actor), 2);
+			}
+
+			// show drop point
+			AGlActor* parent = actor->parent;
+			if(parent->class == dock_v_get_class()){
+				DockVView* dock = (DockVView*)actor->parent;
+				int position = (int)actor->region.y1 + offset.y;
+				int y = 0;
+				for(GList* l = dock->panels; l; l = l->next){
+					AGlActor* a = l->data;
+					if(a->region.y1 > position){
+						if(y != actor->region.y1){
+							draw_drop_point(parent, actor, y);
+						}
+						break;
+					}
+					y = a->region.y1 - actor->region.y1;
+				}
+				// insert at end
+				if(position > agl_actor__height(parent) - 10){
+					draw_drop_point(parent, actor, agl_actor__height(parent) - actor->region.y1);
+				}
 			}
 		}
 
@@ -166,7 +192,9 @@ panel_view(gpointer _)
 				agl_actor__invalidate(actor);
 				dbg(1, "RELEASE y=%i", xy.y);
 				if(actor_context.grabbed){
-					dock_v_move_panel_to_y((DockVView*)actor->parent, actor, xy.y);
+					if(actor->parent->class == dock_v_get_class()){
+						dock_v_move_panel_to_y((DockVView*)actor->parent, actor, (int)actor->region.y1 + xy.y);
+					}
 					actor_context.grabbed = NULL;
 					return AGL_HANDLED;
 				}
