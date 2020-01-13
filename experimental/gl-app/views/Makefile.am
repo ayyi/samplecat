@@ -5,6 +5,7 @@ libviews_la_SOURCES = \
 	dock_v.c dock_v.h \
 	dock_h.c dock_h.h \
 	panel.c panel.h \
+	overlay.c overlay.h \
 	scrollable.c scrollable.h \
 	list.c list.h \
 	files.c files.h \
