@@ -1,6 +1,6 @@
 #!/bin/sh
 
-container=samplecat-ubuntu-18
+container=$(cat name)
 
 # run with X forwarding
 #XSOCK=/tmp/.X11-unix/X0 docker run -it -v $XSOCK:$XSOCK $container bash

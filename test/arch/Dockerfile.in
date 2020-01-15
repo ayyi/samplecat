@@ -1,0 +1,17 @@
+FROM archlinux
+
+RUN pacman --noconfirm --noprogressbar -Syu && \\
+
+	pacman --noconfirm --noprogressbar -S \\
+
+#include "dependencies"
+
+RUN echo "alias ll='ls -l'" >> /root/.bashrc
+ENV DISPLAY :0
+WORKDIR /root
+ADD scripts/add_samples /root/
+ADD scripts/Makefile /root/
+
+/* FIXME lapsa should be optional - why is configure failing without it ? */
+
+CMD make

@@ -1,0 +1,15 @@
+make \
+automake \
+autoconf \
+gcc \
+pkgconf \
+openssh \
+git \
+libsndfile \
+ffmpeg \
+ladspa \
+vim \
+gtk2 \
+libxml2 \
+sqlite \
+mesa
