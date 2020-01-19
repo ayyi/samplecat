@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2019 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2020 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -286,7 +286,7 @@ static void auditioner_null() {;}
 static bool auditioner_nullS(Sample* s) {return true;}
 
 static void
-_set_auditioner()
+_set_auditioner ()
 {
 	if(!app->no_gui) printf("auditioner: "); fflush(stdout);
 
@@ -336,7 +336,7 @@ _set_auditioner()
 
 
 static void
-application_set_auditioner(Application* a)
+application_set_auditioner (Application* a)
 {
 	// The gui is allowed to load before connecting the audio.
 	// Connecting the audio can sometimes be very slow.
@@ -344,24 +344,24 @@ application_set_auditioner(Application* a)
 	// TODO In the case of jack_player, starting jack can block the gui
 	//      so this needs to be made properly asynchronous.
 
-	void set_auditioner_on_connected(GError* error, gpointer _)
+	void set_auditioner_on_connected (GError* error, gpointer _)
 	{
 		if(error){
 			statusbar_print(1, "Player: %s", error->message);
 		}
 	}
 
-	bool set_auditioner_on_idle(gpointer data)
+	bool set_auditioner_on_idle (gpointer data)
 	{
-		_set_auditioner();
+		if(!((Application*)data)->no_gui){
+			_set_auditioner();
 
-		player_connect(set_auditioner_on_connected, data);
-
+			player_connect(set_auditioner_on_connected, data);
+		}
 		return G_SOURCE_REMOVE;
 	}
 
-	if(!a->no_gui) // TODO too early for this flag to be set ?
-		g_idle_add_full(G_PRIORITY_LOW, set_auditioner_on_idle, NULL, NULL);
+	g_idle_add_full(G_PRIORITY_LOW, set_auditioner_on_idle, a, NULL);
 }
 
 
