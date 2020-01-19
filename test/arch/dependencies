@@ -3,6 +3,7 @@ automake \
 autoconf \
 gcc \
 pkgconf \
+gdb \
 openssh \
 git \
 libsndfile \
@@ -12,4 +13,5 @@ vim \
 gtk2 \
 libxml2 \
 sqlite \
-mesa
+mesa \
+python3

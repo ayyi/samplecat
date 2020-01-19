@@ -1,0 +1,21 @@
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Addr1
+   fun:config_load
+}
+{
+   JackConnect uninitialised memory
+   Memcheck:Param
+   ...
+   fun:jack_port_register
+   fun:JACKconnect
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Param
+   ...
+   fun:jack_port_register
+   fun:JACKaudiooutputinit
+   ...
+   fun:jplay__play
+}

@@ -14,4 +14,4 @@ cd src
 # check the sample was successfully added
 a=`./samplecat --no-gui`
 a=${a/*mono_0:10.wav*/OK}
-test "$a" = "OK" || echo FAIL
+test "$a" = "OK" || { echo FAIL; exit 1; }

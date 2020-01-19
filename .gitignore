@@ -34,9 +34,13 @@ src/vala/*.[ch]
 experimental/gl-app/samplecat_gl
 experimental/gl-app/shaders/shaders.c
 test/ubuntu-18/Dockerfile
+test/arch/Dockerfile
 player.vala.c
 player.vala.h
 !test/debian*/Makefile
 !test/debian*/scripts/Makefile
 !test/ubuntu*/Makefile
 !test/ubuntu*/scripts/Makefile
+!test/arch/Makefile
+!test/arch/Dockerfile.in
+!test/arch/scripts/Makefile

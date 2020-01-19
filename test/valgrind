@@ -1,0 +1,12 @@
+#!/bin/sh
+
+export G_SLICE=always-malloc
+export G_DEBUG=gc-friendly
+/usr/bin/valgrind \
+	--leak-check=full \
+	--suppressions=test/pango.supp \
+	--suppressions=test/glib.supp \
+	--suppressions=test/mesa.supp \
+	--suppressions=test/samplecat.supp \
+	--gen-suppressions=yes \
+	$@ ./src/samplecat
