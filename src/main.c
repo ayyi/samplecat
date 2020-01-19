@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2018 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2020 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -12,7 +12,6 @@
 #define __main_c__
 #include "config.h"
 #define __USE_GNU
-#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -51,12 +50,9 @@ char * program_name;
 #include "list_store.h"
 #include "support.h"
 #include "sample.h"
-#include "cellrenderer_hypertext.h"
-#include "listview.h"
 #include "window.h"
 #include "colour_box.h"
 #include "progress_dialog.h"
-#include "dnd.h"
 #include "icon_theme.h"
 #include "application.h"
 #include "console_view.h"
@@ -124,7 +120,7 @@ static const char* const usage =
 	"\n";
 
 int 
-main(int argc, char** argv)
+main (int argc, char** argv)
 {
 #ifdef __APPLE__
 	program_name = argv[0];
@@ -227,7 +223,7 @@ main(int argc, char** argv)
 			case 'V':
 				printf ("%s %s\n\n", basename(argv[0]), PACKAGE_VERSION);
 				printf(
-					"Copyright (C) 2007-2019 Tim Orford\n"
+					"Copyright (C) 2007-2020 Tim Orford\n"
 					"Copyright (C) 2011 Robin Gareus\n"
 					"This is free software; see the source for copying conditions.  There is NO\n"
 					"warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n"
@@ -245,8 +241,9 @@ main(int argc, char** argv)
 
 	type_init();
 
-	config_load(&app->configctx, &app->config);
-	g_signal_emit_by_name (app, "config-loaded");
+	if(config_load(&app->configctx, &app->config)){
+		g_signal_emit_by_name (app, "config-loaded");
+	}
 
 	// Pick a valid icon theme
 	// Preferably from the config file, otherwise from the hardcoded list
@@ -404,7 +401,7 @@ main(int argc, char** argv)
 
 
 void
-on_quit(GtkMenuItem* menuitem, gpointer user_data)
+on_quit (GtkMenuItem* menuitem, gpointer user_data)
 {
 	int exit_code = GPOINTER_TO_INT(user_data);
 	if(exit_code > 1) exit_code = 0; //ignore invalid exit code.
@@ -437,5 +434,3 @@ on_quit(GtkMenuItem* menuitem, gpointer user_data)
 	dbg (1, "done.");
 	exit(exit_code);
 }
-
-

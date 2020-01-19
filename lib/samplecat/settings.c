@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2018 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2019 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -10,9 +10,7 @@
 *
 */
 #include "config.h"
-#include <string.h>
-#include <gtk/gtk.h>
-#include "typedefs.h"
+#include <glib.h>
 #include "utils/ayyi_utils.h"
 #include "debug/debug.h"
 #include "file_manager/file_manager.h"
@@ -25,7 +23,7 @@ extern char theme_name[64];
 
 
 static void
-config_new(ConfigContext* ctx)
+config_new (ConfigContext* ctx)
 {
 	//g_key_file_has_group(GKeyFile *key_file, const gchar *group_name);
 
@@ -42,7 +40,7 @@ config_new(ConfigContext* ctx)
 		"auditioner=\n"
 		"jack_autoconnect=system:playback_\n"
 		"jack_midiconnect=DISABLED\n"
-		);
+	);
 
 	if(!g_key_file_load_from_data(ctx->key_file, data, strlen(data), G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS, &error)){
 		perr("error creating new key_file from data. %s\n", error->message);
@@ -56,7 +54,7 @@ config_new(ConfigContext* ctx)
 
 
 bool
-config_load(ConfigContext* ctx, Config* config)
+config_load (ConfigContext* ctx, Config* config)
 {
 	// TODO use the ConfigOption's for loading as well as saving
 
@@ -81,7 +79,7 @@ config_load(ConfigContext* ctx, Config* config)
 			int c; for(c=0;c<CONFIG_MAX;c++){
 				if(c == CONFIG_ICON_THEME){
 					ConfigOption* o = ctx->options[c];
-					g_value_set_string(&ctx->options[CONFIG_ICON_THEME]->val, g_key_file_get_string(ctx->key_file, groupname, o->name, &error));
+					g_value_set_string(&ctx->options[CONFIG_ICON_THEME]->val, g_key_file_get_string(ctx->key_file, groupname, o->name, NULL));
 				}
 			}
 #ifdef USE_MYSQL
@@ -195,7 +193,7 @@ config_load(ConfigContext* ctx, Config* config)
 
 
 bool
-config_save(ConfigContext* ctx)
+config_save (ConfigContext* ctx)
 {
 	// filter settings:
 	g_key_file_set_value(ctx->key_file, "Samplecat", "show_dir", samplecat.model->filters.dir->value ? samplecat.model->filters.dir->value : "");
@@ -272,7 +270,7 @@ config_save(ConfigContext* ctx)
 
 
 ConfigOption*
-config_option_new_int(char* name, void (*save)(ConfigOption*), int min, int max)
+config_option_new_int (char* name, void (*save)(ConfigOption*), int min, int max)
 {
 	ConfigOption* o = g_new0(ConfigOption, 1);
 	*o = (ConfigOption){
@@ -291,7 +289,7 @@ config_option_new_int(char* name, void (*save)(ConfigOption*), int min, int max)
 
 
 ConfigOption*
-config_option_new_string(char* name, void (*save)(ConfigOption*))
+config_option_new_string (char* name, void (*save)(ConfigOption*))
 {
 	ConfigOption* o = g_new0(ConfigOption, 1);
 	*o = (ConfigOption){
@@ -306,7 +304,7 @@ config_option_new_string(char* name, void (*save)(ConfigOption*))
 
 
 ConfigOption*
-config_option_new_bool(char* name, void (*save)(ConfigOption*))
+config_option_new_bool (char* name, void (*save)(ConfigOption*))
 {
 	ConfigOption* o = g_new0(ConfigOption, 1);
 	*o = (ConfigOption){
@@ -321,7 +319,7 @@ config_option_new_bool(char* name, void (*save)(ConfigOption*))
 
 
 ConfigOption*
-config_option_new_manual(void (*save)(ConfigOption*))
+config_option_new_manual (void (*save)(ConfigOption*))
 {
 	ConfigOption* o = g_new0(ConfigOption, 1);
 	*o = (ConfigOption){
