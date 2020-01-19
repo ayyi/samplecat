@@ -14,10 +14,11 @@ MySql and Sqlite can be used for the database.
 Currently, most basic functionality is in place and working.
 
 
-building
+Building
 --------
 
-If you are not a developer it is recommended to use the latest tarball. Building should be entirely standard.
+If you are not a developer it is recommended to use the latest tarball.
+Build using the standard configure/make commands.
 
 If you are a developer you will want to use the git repository directly.
 Each time you do a git pull you will also need to update the submodules:
@@ -29,7 +30,7 @@ Each time you do a git pull you will also need to update the submodules:
 See the file INSTALL more more details.
 
 
-usage
+Usage
 -----
 
 * import files or directories using drag and drop.
@@ -44,7 +45,7 @@ usage
 * middle-click on a waveform to set the cursor position.
 
 
-auditioning
+Auditioning
 -----------
 
 3 players are supported, each of which has pro's and con's.
@@ -53,3 +54,17 @@ auditioning
 * ayyi - system wide auditioning service. http://www.ayyi.org/auditioner
 * cli  - use external command line player if available: afplay, gst-launch, totem-audio-preview
 
+Set auditioner=OPTION in the config file.
+
+If using the jack player, you can use the jack_autoconnect config option to define which jack port to connect to.
+The default value is "system:playback_". Set it to "DISABLED" if you dont want auto-connect.
+
+
+config
+------
+
+You can manually edit the config file
+```
+~/.config/samplecat/samplecat
+```
+The config is updated by the application when it quits.

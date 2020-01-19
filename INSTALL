@@ -11,12 +11,14 @@ Please report any problems at https://github.com/ayyi/samplecat
 
     For some distributions the list of package dependencies
     can be seen in the Docker files in the test directory.
-    Currently Debian, Ubuntu and Fedora are included.
+    Currently Debian, Ubuntu, Fedora and Arch are included.
+    For example for Ubuntu-18 see the file
+    test/ubuntu-18/dependencies
 
 2 - if you are using Mysql, you need to setup the database.
     (Sqlite setup is done automatically)
 
-    The datbase schema is contained in the file samples.sql
+    The database schema is contained in the file samples.sql
     You can import this by runnig the command:
 
     mysql -u<USERNAME> -p < samples.sql
