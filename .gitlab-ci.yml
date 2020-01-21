@@ -13,5 +13,11 @@ ubuntu-build:
   script:
     - cd test/ubuntu-18 && ./build && ./run
 
+arch build:
+  before_script:
+    - apk add --update make gcc && rm -rf /var/cache/apk/*
+  script:
+    - cd test/arch && ./build && ./run
+
 services:
   - docker:dind
