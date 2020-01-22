@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2019 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2020 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -842,7 +842,7 @@ left_pane2()
 		gtk_widget_set_no_show_all(panels[PANEL_TYPE_PLAYER].widget, true);
 
 	inspector_new();
-	gtk_paned_add2(GTK_PANED(window.vpaned), app->inspector->widget);
+	gtk_paned_add2(GTK_PANED(window.vpaned), (GtkWidget*)app->inspector);
 	//g_signal_connect(app->inspector->widget, "size-allocate", (gpointer)on_inspector_allocate, NULL);
 
 	void on_vpaned_allocate(GtkWidget* widget, GtkAllocation* vp_allocation, gpointer user_data)
@@ -858,7 +858,7 @@ left_pane2()
 			//user has not specified a height so we have free reign
 
 			int tot_height = vp_allocation->height;
-			dbg(1, "req=%i tot_allocation=%i %i", inspector_requisition, tot_height, app->inspector->widget->allocation.height);
+			dbg(1, "req=%i tot_allocation=%i %i", inspector_requisition, tot_height, ((GtkWidget*)app->inspector)->allocation.height);
 
 			//small window - dont allow the inspector to take up more than half the space.
 			if(vp_allocation->height < inspector_requisition){
@@ -1727,7 +1727,7 @@ window_on_layout_changed()
 
 	if(app->inspector){
 		GtkWidget* widget;
-		if((widget = app->inspector->widget)){
+		if((widget = (GtkWidget*)app->inspector)){
 			int tot_height = window.vpaned->allocation.height;
 			int max_auto_height = tot_height / 2;
 			dbg(1, "inspector_height=%i tot=%i", widget->allocation.height, tot_height);
