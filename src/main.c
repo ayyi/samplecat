@@ -12,9 +12,6 @@
 #define __main_c__
 #include "config.h"
 #define __USE_GNU
-#include <stdio.h>
-#include <string.h>
-#include <unistd.h>
 #include <libgen.h>
 #include <getopt.h>
 #include <gtk/gtk.h>
@@ -27,6 +24,8 @@ char * program_name;
 #endif
 
 #include "debug/debug.h"
+#define __wf_private__
+#include "waveform/debug.h"
 #include "waveform/utils.h"
 #include "utils/ayyi_utils.h"
 #include "file_manager.h"

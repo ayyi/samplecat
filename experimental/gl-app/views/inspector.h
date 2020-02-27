@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2017-2017 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2017-2020 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -13,6 +13,9 @@
 #define __views_inspector_h__
 
 #define INSPECTOR_RENDER_CACHE
+#ifndef AGL_ACTOR_RENDER_CACHE
+#undef INSPECTOR_RENDER_CACHE
+#endif
 
 typedef struct {
    AGlActor    actor;

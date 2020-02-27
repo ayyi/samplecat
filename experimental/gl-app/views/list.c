@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2012-2019 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2012-2020 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -9,14 +9,13 @@
 * +----------------------------------------------------------------------+
 *
 */
-#define __wf_private__
 #include "config.h"
-#include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
 #include "agl/utils.h"
 #include "agl/actor.h"
+#include "agl/text/renderer.h"
+#include "debug/debug.h"
 #include "waveform/waveform.h"
-#include "waveform/peakgen.h"
 #include "waveform/shader.h"
 #include "waveform/actors/text.h"
 #include "samplecat.h"
@@ -24,6 +23,7 @@
 #include "application.h"
 #include "behaviours/panel.h"
 #include "behaviours/key.h"
+#include "views/graph_debug.h"
 #include "views/list.h"
 #include "views/context_menu.h"
 
@@ -43,11 +43,13 @@ static AGlActorClass actor_class = {0, "List", (AGlActorNew*)list_view, list_vie
 
 static ActorKeyHandler
 	nav_up,
-	nav_down;
+	nav_down,
+	debug_window;
 
 static ActorKey keys[] = {
 	{XK_Up,   nav_up},
 	{XK_Down, nav_down},
+	{XK_d,    debug_window},
 	{0,}
 };
 
@@ -100,7 +102,7 @@ list_view (gpointer _)
 		col[4] = MAX(col[4], actor->region.x2);
 
 		GtkTreeIter iter;
-		if(!gtk_tree_model_get_iter_first((GtkTreeModel*)samplecat.store, &iter)){ gerr ("cannot get iter."); return false; }
+		if(!gtk_tree_model_get_iter_first((GtkTreeModel*)samplecat.store, &iter)){ perr ("cannot get iter"); return false; }
 		int i = 0;
 		for(;i<view->scroll_offset;i++){
 			gtk_tree_model_iter_next((GtkTreeModel*)samplecat.store, &iter);
@@ -121,14 +123,18 @@ list_view (gpointer _)
 				char* val[4] = {sample->name, sample->sample_dir, (char*)len, (char*)f};
 
 				int c; for(c=0;c<G_N_ELEMENTS(val);c++){
-					agl_enable_stencil(0, 0, col[c + 1] - 6, actor->region.y2);
+					if(!builder()->target){
+						// FIXME remove offset - translation is not in correct units?
+						agl_push_clip(0, 0, col[c + 1] - 6 + builder()->offset.x, actor->region.y2);
+					}else{
+						agl_push_clip(0, 0, col[c + 1] - 6, actor->region.y2);
+					}
 					agl_print(col[c], row_count * row_height, 0, STYLE.text, val[c]);
+					agl_pop_clip();
 				}
 				sample_unref(sample);
 			}
 		} while (++row_count < n_rows && gtk_tree_model_iter_next((GtkTreeModel*)samplecat.store, &iter));
-
-		agl_disable_stencil();
 
 		return true;
 	}
@@ -264,6 +270,16 @@ nav_down (AGlActor* actor)
 	PF;
 	ListView* list = (ListView*)actor;
 	list_view_select(list, list->selection + 1);
+
+	return AGL_HANDLED;
+}
+
+
+static bool
+debug_window (AGlActor* actor)
+{
+	PF;
+	graph_debug_window(actor->root);
 
 	return AGL_HANDLED;
 }

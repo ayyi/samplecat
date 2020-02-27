@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2017 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2020 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -11,11 +11,8 @@
 */
 #ifndef __samplecat_typedefs_h__
 #define __samplecat_typedefs_h__
-#ifdef USE_GTK
-#include "gtk/gtk.h"
-#else
+
 #include "glib.h"
-#endif
 
 #ifndef __PRI64_PREFIX
 #if (defined __X86_64__ || defined __LP64__)
@@ -52,7 +49,7 @@ typedef void   (*ErrorCallback)  (GError*, gpointer);
 
 struct _Samplecat {
    SamplecatModel*      model;
-#ifdef USE_GTK
+#ifdef __GTK_H__
    GtkListStore*        store;
 #else
    gpointer             store;

@@ -212,7 +212,9 @@ DirItem*
 diritem_new (const guchar* leafname)
 {
 	DirItem* item = g_new(DirItem, 1);
-	item->leafname = g_strdup((gchar*)leafname);
+	*item = (DirItem){
+		.leafname = g_strdup((gchar*)leafname),
+	};
 	item->may_delete = FALSE;
 	item->_image = NULL;
 	item->base_type = TYPE_UNKNOWN;

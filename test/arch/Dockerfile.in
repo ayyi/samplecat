@@ -9,7 +9,7 @@ RUN pacman --noconfirm --noprogressbar -Syu && \\
 
 #include "dependencies"
 
-RUN echo "alias ll='ls -l'" >> /root/.bashrc
+RUN echo "alias ll='ls -l --color'" >> /root/.bashrc
 WORKDIR /root
 ADD scripts/add_samples /root/
 ADD scripts/Makefile /root/

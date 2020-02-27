@@ -1384,7 +1384,7 @@ __init (Rotator* tree_view)
 
 	{
 		gtk_gl_init(NULL, NULL);
-		if(wf_debug){
+		if(_debug_){
 			gint major, minor;
 #ifdef USE_SYSTEM_GTKGLEXT
 			gdk_gl_query_version (&major, &minor);

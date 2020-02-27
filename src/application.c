@@ -12,8 +12,8 @@
 *
 */
 #include "config.h"
-#include <stdio.h>
 #include <string.h>
+#include <gtk/gtk.h>
 #include <glib-object.h>
 #include "debug/debug.h"
 #include <sample.h>
@@ -100,15 +100,12 @@ application_new ()
 		ctx->options[CONFIG_ICON_THEME] = config_option_new_string("icon_theme", get_theme_name);
 	}
 
-	void on_filter_changed(GObject* _filter, gpointer user_data)
+	void on_filter_changed (Observable* filter, AMVal value, gpointer user_data)
 	{
-		//SamplecatFilter* filter = (SamplecatFilter*)_filter;
 		application_search();
 	}
-
-	GList* l = samplecat.model->filters_;
-	for(;l;l=l->next){
-		g_signal_connect((SamplecatFilter*)l->data, "changed", G_CALLBACK(on_filter_changed), NULL);
+	for(int i = 0; i < N_FILTERS; i++){
+		observable_subscribe(samplecat.model->filters3[i], on_filter_changed, NULL);
 	}
 
 	application_set_auditioner(app);
@@ -351,7 +348,7 @@ application_set_auditioner (Application* a)
 		}
 	}
 
-	bool set_auditioner_on_idle (gpointer data)
+	gboolean set_auditioner_on_idle (gpointer data)
 	{
 		if(!((Application*)data)->no_gui){
 			_set_auditioner();
@@ -623,11 +620,11 @@ application_play_all ()
 		return;
 	}
 
-	bool foreach_func(GtkTreeModel* model, GtkTreePath* path, GtkTreeIter* iter, gpointer user_data)
+	gboolean foreach_func(GtkTreeModel* model, GtkTreePath* path, GtkTreeIter* iter, gpointer user_data)
 	{
 		//ADD_TO_QUEUE(samplecat_list_store_get_sample_by_path(path));
 		play->queue = g_list_append(play->queue, samplecat_list_store_get_sample_by_path(path)); // there is a ref already added, so another one is not needed when adding to the queue.
-		return false; // continue
+		return G_SOURCE_CONTINUE;
 	}
 	gtk_tree_model_foreach(GTK_TREE_MODEL(samplecat.store), foreach_func, NULL);
 

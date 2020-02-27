@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of the Ayyi project. http://www.ayyi.org           |
-* | copyright (C) 2013-2019 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2013-2020 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -48,7 +48,7 @@ scrollbar_view_get_class ()
 
 
 static void
-scrollbar_on_scroll (Observable* observable, int row, gpointer scrollbar)
+scrollbar_on_scroll (AGlObservable* observable, int row, gpointer scrollbar)
 {
 	scrollbar_start_activity((AGlActor*)scrollbar, false);
 }
@@ -332,7 +332,7 @@ scrollbar_on_event (AGlActor* actor, GdkEvent* event, AGliPt xy)
 }
 
 
-static bool
+static gboolean
 go_inactive (gpointer _view)
 {
 	AGlActor* actor = _view;

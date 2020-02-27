@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2016-2019 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2016-2020 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -13,9 +13,12 @@
 #include "config.h"
 #include "agl/utils.h"
 #include "agl/actor.h"
-#include "waveform/waveform.h"
+#include "waveform/shader.h"
+#include "debug/debug.h"
 #include "samplecat.h"
 #include "dh_link.h"
+#include "behaviours/panel.h"
+#include "behaviours/cache.h"
 #include "views/dirs.h"
 
 #define _g_free0(var) (var = (g_free (var), NULL))
@@ -28,43 +31,42 @@ static AGl* agl = NULL;
 static int instance_count = 0;
 static AGlActorClass actor_class = {0, "Dirs", (AGlActorNew*)directories_view, dirs_free};
 
-static void dirs_select (DirectoriesView*, int);
+static void dirs_select            (DirectoriesView*, int);
+static void dirs_on_filter_changed (AGlActor*);
 
 
 AGlActorClass*
 directories_view_get_class ()
-{
-	return &actor_class;
-}
-
-
-static void
-_init()
 {
 	static bool init_done = false;
 
 	if(!init_done){
 		agl = agl_get_instance();
 
-		dir_list_update(); // because this is slow, it is not done until a consumer needs it.
+		agl_actor_class__add_behaviour(&actor_class, panel_get_class());
+		agl_actor_class__add_behaviour(&actor_class, cache_get_class());
 
 		init_done = true;
 	}
+
+	return &actor_class;
 }
 
 
 AGlActor*
-directories_view (WaveformActor* _)
+directories_view (gpointer _)
 {
 	instance_count++;
 
-	_init();
+	directories_view_get_class();
 
 	bool dirs_paint (AGlActor* actor)
 	{
 		DirectoriesView* view = (DirectoriesView*)actor;
 
+#ifndef AGL_ACTOR_RENDER_CACHE
 		agl_enable_stencil(0, 0, actor->region.x2, actor->region.y2);
+#endif
 
 		int i = 0;
 		GNode* node = g_node_first_child (samplecat.model->dir_tree);
@@ -79,24 +81,27 @@ directories_view (WaveformActor* _)
 
 			agl_print(0, i * row_height, 0, 0xffffffff, strlen(link->uri) ? link->uri : link->name);
 
-			gboolean node_open = false;
+			bool node_open = false;
 			if(node_open){
 				// recurse children
 			}
 			i++;
 		}
 
+#ifndef AGL_ACTOR_RENDER_CACHE
 		agl_disable_stencil();
+#endif
 
 		return true;
 	}
 
 	void dirs_init (AGlActor* a)
 	{
-#ifdef AGL_ACTOR_RENDER_CACHE
-		a->fbo = agl_fbo_new(agl_actor__width(a), agl_actor__height(a), 0, AGL_FBO_HAS_STENCIL);
-		a->cache.enabled = true;
-#endif
+		dir_list_update(); // because this is slow, it is not done until a consumer needs it.
+
+		CacheBehaviour* cache = (CacheBehaviour*)a->behaviours[1];
+		cache->on_invalidate = dirs_on_filter_changed;
+		cache_behaviour_add_dependency(cache, a, samplecat.model->filters2.dir);
 	}
 
 	void dirs_set_size (AGlActor* actor)
@@ -107,8 +112,7 @@ directories_view (WaveformActor* _)
 		view->cache.n_rows_visible = N_ROWS_VISIBLE(actor);
 
 		if(!view->cache.n_rows){
-			GNode* node = g_node_first_child (samplecat.model->dir_tree);
-			for(; node; node = g_node_next_sibling(node)){
+			for(GNode* node = g_node_first_child (samplecat.model->dir_tree); node; node = g_node_next_sibling(node)){
 				view->cache.n_rows++;
 			}
 			agl_actor__invalidate(actor);
@@ -145,17 +149,6 @@ directories_view (WaveformActor* _)
 		.selection = -1
 	);
 
-	void dirs_on_filter_changed (GObject* _filter, gpointer _actor)
-	{
-		DirectoriesView* view = (DirectoriesView*)_actor;
-
-		if(samplecat.model->filters.dir->value[0] == '\0'){
-			view->selection = -1;
-			agl_actor__invalidate((AGlActor*)_actor);
-		}
-	}
-	g_signal_connect(samplecat.model->filters.dir, "changed", G_CALLBACK(dirs_on_filter_changed), view);
-
 	return (AGlActor*)view;
 }
 
@@ -190,8 +183,39 @@ dirs_select (DirectoriesView* dirs, int row)
 		GNode* node = g_node_nth_child (samplecat.model->dir_tree, row);
 		if(node){
 			DhLink* link = (DhLink*)node->data;
-			samplecat_filter_set_value(samplecat.model->filters.dir, g_strdup(link->uri));
+			observable_string_set(samplecat.model->filters2.dir, g_strdup(link->uri));
 		}
 	}
 }
 
+
+static void
+dirs_on_filter_changed (AGlActor* _view)
+{
+	DirectoriesView* view = (DirectoriesView*)_view;
+
+	if(samplecat.model->filters2.dir->value.c[0] == '\0'){
+		view->selection = -1;
+	}else{
+		gchar** a = g_strsplit(samplecat.model->filters2.dir->value.c, "/", 100);
+		if(a[0] && a[1]){
+			char* target = a[1];
+
+			int i = 0;
+			GNode* node = g_node_first_child (samplecat.model->dir_tree);
+			for(; node; node = g_node_next_sibling(node), i++){
+				DhLink* link = (DhLink*)node->data;
+				gchar** split = g_strsplit(link->uri, "/", 100);
+				if(split[0] && split[1]){
+					if(!strcmp(split[1], target)){
+						view->selection = i;
+						break;
+					}
+				}
+				g_strfreev(split);
+			}
+		}
+		g_strfreev(a);
+	}
+	agl_actor__invalidate((AGlActor*)view);
+}

@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2012-2019 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2012-2020 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -11,9 +11,6 @@
 */
 #include "config.h"
 #include <math.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
 #define XLIB_ILLEGAL_ACCESS // needed to access Display internals
 #include <X11/Xlib.h>
 #include <X11/keysym.h>
@@ -24,7 +21,7 @@
 #include "agl/ext.h"
 #include "agl/actor.h"
 #include "waveform/utils.h"
-#include "samplecat/typedefs.h"
+#include "samplecat/support.h"
 #include "keys.h"
 #include "gl-app/glx.h"
 
@@ -251,10 +248,8 @@ static Atom wm_close;
  * Return the window and context handles.
  */
 AGlWindow*
-agl_make_window(Display* dpy, const char* name, int x, int y, int width, int height, AGlRootActor* scene)
+agl_make_window (Display* dpy, const char* name, int x, int y, int width, int height)
 {
-	scene->draw = scene_needs_redraw;
-
 	int attrib[] = {
 		GLX_RGBA,
 		GLX_RED_SIZE, 1,
@@ -327,9 +322,6 @@ agl_make_window(Display* dpy, const char* name, int x, int y, int width, int hei
 
 	XFree(visinfo);
 
-	scene->gl.glx.window = win;
-	scene->gl.glx.context = ctx;
-
 	XMapWindow(dpy, win);
 
 	if(!windows){
@@ -338,11 +330,18 @@ agl_make_window(Display* dpy, const char* name, int x, int y, int width, int hei
 		agl_gl_init();
 	}
 
+	AGlScene* scene = (AGlScene*)agl_actor__new_root_(CONTEXT_TYPE_GLX);
+	scene->draw = scene_needs_redraw;
+	scene->gl.glx.window = win;
+	scene->gl.glx.context = ctx;
+
 	AGlWindow* agl_window = AGL_NEW(AGlWindow,
 		.window = win,
 		.scene = scene
 	);
 	windows = g_list_append(windows, agl_window);
+
+	on_window_resize(dpy, agl_window, width, height);
 
 	return agl_window;
 }

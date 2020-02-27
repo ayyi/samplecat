@@ -1200,7 +1200,7 @@ view_details_sort(ViewIface *view)
 
 
 static void
-view_details_add_items(ViewIface* view, GPtrArray* new_items)
+view_details_add_items (ViewIface* view, GPtrArray* new_items)
 {
 	ViewDetails* view_details = (ViewDetails*)view;
 	GPtrArray* items = view_details->items;
@@ -1226,10 +1226,10 @@ view_details_add_items(ViewIface* view, GPtrArray* new_items)
 		}
 
 		ViewItem* vitem = g_new(ViewItem, 1);
-		vitem->item = item;
-		vitem->image = NULL;
-		if (!g_utf8_validate(leafname, -1, NULL)) vitem->utf8_name = to_utf8(leafname);
-		else                                      vitem->utf8_name = NULL;
+		*vitem = (ViewItem){
+			.item = item,
+			.utf8_name = !g_utf8_validate(leafname, -1, NULL) ? to_utf8(leafname) : NULL
+		};
 		dbg(2, "leaf=%20s owner=%3i size=%i", leafname, item->uid, item->size);
 
 		g_ptr_array_add(items, vitem);

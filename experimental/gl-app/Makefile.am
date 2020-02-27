@@ -54,7 +54,7 @@ samplecat_gl_LDADD = \
 	$(top_srcdir)/lib/debug/libdebug.a \
 	$(top_srcdir)/lib/icon/libicon.a \
 	$(top_srcdir)/lib/utils/libutils.a \
-	$(top_srcdir)/lib/waveform/.libs/libwaveform.a \
+	$(WAVEFORM_LDFLAGS) \
 	$(top_srcdir)/lib/file_manager/libfilemanager.a \
 	$(LOCAL_GTK_LIBS) \
 	$(SAMPLECAT_LIBS) \
@@ -73,6 +73,7 @@ samplecat_gl_LDADD = \
 	$(FILEMANAGER_LDFLAGS) \
 	$(X11_LDFLAGS) \
 	$(DBUS_LIBS) \
+	$(MATH_LDFLAGS) \
 	-lstdc++
 
 dist_pkgdata_DATA = samplecat.yaml

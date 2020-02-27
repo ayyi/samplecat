@@ -1,6 +1,10 @@
 
 noinst_LTLIBRARIES = libviews.la
 
+if ENABLE_FFTW3
+FFT_SRC = spectrogram.c spectrogram.h
+endif
+
 libviews_la_SOURCES = \
 	dock_v.c dock_v.h \
 	dock_h.c dock_h.h \
@@ -19,8 +23,9 @@ libviews_la_SOURCES = \
 	tabs.c tabs.h \
 	scrollbar.c scrollbar.h \
 	context_menu.c context_menu.h \
-	spectrogram.c spectrogram.h \
-	button.c button.h
+	button.c button.h \
+	graph_debug.c graph_debug.h \
+	$(FFT_SRC)
 
 AM_CFLAGS = \
 	-no-pie \
@@ -36,5 +41,6 @@ AM_CFLAGS = \
 	$(SAMPLERATE_CFLAGS) \
 	$(FFMPEG_CFLAGS) \
 	$(GTK_CFLAGS) \
+	$(GRAPHENE_CFLAGS) \
 	$(ZLIB_CFLAGS) \
 	$(MYSQL_CFLAGS)

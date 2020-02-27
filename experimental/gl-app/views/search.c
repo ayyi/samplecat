@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2012-2019 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2012-2020 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -15,12 +15,12 @@
 #include <gdk/gdkkeysyms.h>
 #include "debug/debug.h"
 #include "agl/utils.h"
-#include "agl/actor.h"
 #include "agl/fbo.h"
 #include "agl/shader.h"
-#include "agl/pango_render.h"
+#include "agl/text/pango.h"
 #include "samplecat.h"
 #include "application.h"
+#include "behaviours/cache.h"
 #include "views/panel.h"
 #include "views/search.h"
 
@@ -44,33 +44,30 @@ static int search_view_height (SearchView*);
 AGlActorClass*
 search_view_get_class ()
 {
-	return &actor_class;
-}
-
-
-static void
-_init()
-{
 	static bool init_done = false;
 
 	if(!init_done){
 		agl = agl_get_instance();
 
+		agl_actor_class__add_behaviour(&actor_class, cache_get_class());
+
 		font = g_strdup_printf("%s 10", APP_STYLE.font);
 
 		init_done = true;
 	}
+
+	return &actor_class;
 }
 
 
 AGlActor*
-search_view(gpointer _)
+search_view (gpointer _)
 {
 	instance_count++;
 
-	_init();
+	search_view_get_class();
 
-	bool search_paint(AGlActor* actor)
+	bool search_paint (AGlActor* actor)
 	{
 		SearchView* view = (SearchView*)actor;
 
@@ -91,7 +88,7 @@ search_view(gpointer _)
 			agl_use_program((AGlShader*)agl->shaders.plain);
 			agl_rect_((AGlRect){0, 0, agl_actor__width(actor), h});
 
-			//cursor
+			// cursor
   			PangoRectangle rect;
 			pango_layout_get_cursor_pos(view->layout, view->cursor_pos, &rect, NULL);
 			agl->shaders.plain->uniform.colour = 0xffffffff;
@@ -106,27 +103,25 @@ search_view(gpointer _)
 		return true;
 	}
 
-	void search_init(AGlActor* a)
+	void search_init (AGlActor* a)
 	{
-#ifdef AGL_ACTOR_RENDER_CACHE
 		a->fbo = agl_fbo_new(agl_actor__width(a), agl_actor__height(a), 0, AGL_FBO_HAS_STENCIL);
 		a->cache.enabled = true;
-#endif
+
 		PanelView* panel = (PanelView*)a->parent;
 		panel->no_border = true;
 
-		// The search panel is unusual in that can only have one height
+		// The search panel is unusual in that it can only have one height
 		// which is determined by the font size
 		panel->size_req.min.y = panel->size_req.max.y = panel->size_req.preferred.y = search_view_height((SearchView*)a);
 	}
 
-	void search_layout(SearchView* view)
+	void search_layout (SearchView* view)
 	{
 		if(!view->layout){
-			PangoGlRendererClass* PGRC = g_type_class_peek(PANGO_TYPE_GL_RENDERER);
-			view->layout = pango_layout_new (PGRC->context);
+			view->layout = pango_layout_new (agl_pango_get_context());
 		}
-		char* text = view->text ? view->text : ((SamplecatFilter*)samplecat.model->filters.search)->value;
+		char* text = view->text ? view->text : samplecat.model->filters2.search->value.c;
 		if(strlen(text)){
 			view->layout_colour = 0xffffffff;
 		}else{
@@ -138,7 +133,7 @@ search_view(gpointer _)
 		agl_actor__invalidate((AGlActor*)view);
 	}
 
-	bool search_event(AGlActor* actor, GdkEvent* event, AGliPt xy)
+	bool search_event (AGlActor* actor, GdkEvent* event, AGliPt xy)
 	{
 		SearchView* view = (SearchView*)actor;
 
@@ -156,7 +151,7 @@ search_view(gpointer _)
 				g_return_val_if_fail(actor->root->selected, AGL_NOT_HANDLED);
 				dbg(0, "Keypress");
 				if(!view->text){
-					view->text = g_strdup(((SamplecatFilter*)samplecat.model->filters.search)->value);
+					view->text = g_strdup(samplecat.model->filters2.search->value.c);
 				}
 				int val = ((GdkEventKey*)event)->keyval;
 				switch(val){
@@ -195,12 +190,12 @@ search_view(gpointer _)
 						break;
 					case XK_Return:
 						dbg(0, "RET");
-						samplecat_filter_set_value(samplecat.model->filters.search, view->text);
-						samplecat_list_store_do_search((SamplecatListStore*)samplecat.store);
+						observable_set(samplecat.model->filters2.search, (AMVal){.c = view->text});
 						break;
 					default:
 						;char str[2] = {val,};
 						if(g_utf8_validate(str, 1, NULL)){
+							g_return_val_if_fail(view->cursor_pos <= strlen(view->text), AGL_HANDLED);
 							char* a = g_strndup(view->text, view->cursor_pos);
 							char* b = g_strndup(view->text + view->cursor_pos, strlen(view->text) - view->cursor_pos);
 
@@ -221,21 +216,19 @@ search_view(gpointer _)
 		return AGL_HANDLED;
 	}
 
-	SearchView* view = AGL_NEW(SearchView,
+	SearchView* view = agl_actor__new(SearchView,
 		.actor = {
 			.class = &actor_class,
-			.name = "Search",
+			.name = actor_class.name,
 			.init = search_init,
 			.paint = search_paint,
 			.on_event = search_event
 		}
 	);
 
-	void on_search_filter_changed(GObject* _filter, gpointer _actor)
-	{
-		search_layout(_actor);
-	}
-	g_signal_connect(samplecat.model->filters.search, "changed", G_CALLBACK(on_search_filter_changed), view);
+	CacheBehaviour* cache = (CacheBehaviour*)((AGlActor*)view)->behaviours[0];
+	cache->on_invalidate = (AGlActorFn)search_layout;
+	cache_behaviour_add_dependency(cache, (AGlActor*)view, samplecat.model->filters2.search);
 
 	search_layout(view);
 
@@ -258,7 +251,7 @@ search_free (AGlActor* actor)
 
 
 static int
-search_view_height(SearchView* view)
+search_view_height (SearchView* view)
 {
 	g_return_val_if_fail(view->layout, 22);
 

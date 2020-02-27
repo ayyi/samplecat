@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2016-2020 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2020-2020 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -9,19 +9,25 @@
 * +----------------------------------------------------------------------+
 *
 */
-#ifndef __panel_behaviour_h__
-#define __panel_behaviour_h__
+#ifndef __cache_behaviour_h__
+#define __cache_behaviour_h__
 
 #include "glib.h"
 #include "agl/actor.h"
+#include "samplecat/observable.h"
+
+#ifdef AGL_ACTOR_RENDER_CACHE
 
 typedef struct {
    AGlBehaviour behaviour;
-} PanelBehaviour;
+   GArray*      dependencies;
+   AGlActorFn   on_invalidate;
+} CacheBehaviour;
 
-AGlBehaviourClass* panel_get_class ();
+AGlBehaviourClass* cache_get_class ();
 
-AGlBehaviour* panel_behaviour      ();
-void          panel_behaviour_init (AGlBehaviour*, AGlActor*);
+AGlBehaviour* cache_behaviour                ();
+void          cache_behaviour_add_dependency (CacheBehaviour*, AGlActor*, Observable*);
 
+#endif
 #endif

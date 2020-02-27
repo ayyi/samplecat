@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2019 Tim Orford <tim@orford.org> and others       |
+* | copyright (C) 2007-2020 Tim Orford <tim@orford.org> and others       |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -11,11 +11,6 @@
 */
 #define _GNU_SOURCE
 #include "config.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <gtk/gtk.h>
 #include <gdk-pixbuf/gdk-pixdata.h>
 #include <mysql/errmsg.h>
 #include "debug/debug.h"
@@ -63,16 +58,16 @@ static void      mysql__init             (void* config);
 
 static void      mysql__disconnect       ();
 static int       mysql__insert           (Sample*);
-static gboolean  mysql__delete_row       (int id);
-static gboolean  mysql__file_exists      (const char*, int *id);
+static bool      mysql__delete_row       (int id);
+static bool      mysql__file_exists      (const char*, int *id);
 static GList *   mysql__filter_by_audio  (Sample *s);
 
-static gboolean  mysql__update_string    (int id, const char*, const char*);
-static gboolean  mysql__update_int       (int id, const char*, const long int);
-static gboolean  mysql__update_float     (int id, const char*, float);
-static gboolean  mysql__update_blob      (int id, const char*, const guint8*, const guint);
+static bool      mysql__update_string    (int id, const char*, const char*);
+static bool      mysql__update_int       (int id, const char*, const long int);
+static bool      mysql__update_float     (int id, const char*, float);
+static bool      mysql__update_blob      (int id, const char*, const guint8*, const guint);
 
-static gboolean  mysql__search_iter_new  (int* n_results);
+static bool      mysql__search_iter_new  (int* n_results);
 static Sample*   mysql__search_iter_next_(unsigned long** lengths);
 static void      mysql__search_iter_free ();
 
@@ -126,7 +121,7 @@ mysql__init(void* _config)
 
 
 void
-mysql__set_as_backend(SamplecatBackend* backend, SamplecatDBConfig* config)
+mysql__set_as_backend (SamplecatBackend* backend, SamplecatDBConfig* config)
 {
 	db = backend;
 
@@ -157,7 +152,7 @@ mysql__set_as_backend(SamplecatBackend* backend, SamplecatDBConfig* config)
 
 
 gboolean
-mysql__connect()
+mysql__connect ()
 {
 	g_return_val_if_fail(samplecat.model, false);
 
@@ -275,13 +270,13 @@ mysql__is_connected()
 
 
 static void
-mysql__disconnect()
+mysql__disconnect ()
 {
 	mysql_close(&mysql);
 }
 
 int
-mysql__insert(Sample* sample)
+mysql__insert (Sample* sample)
 {
 	int id = 0;
 
@@ -323,8 +318,8 @@ mysql__insert(Sample* sample)
 }
 
 
-static gboolean
-mysql__delete_row(int id)
+static bool
+mysql__delete_row (int id)
 {
 	gboolean ok = true;
 	gchar* sql = g_strdup_printf("DELETE FROM samples WHERE id=%i", id);
@@ -339,21 +334,21 @@ mysql__delete_row(int id)
 
 
 static int 
-mysql__exec_sql(const char* sql)
+mysql__exec_sql (const char* sql)
 {
 	return mysql_real_query(&mysql, sql, strlen(sql));
 }
 
 
-static gboolean
-mysql__update_string(int id, const char* key, const char* value)
+static bool
+mysql__update_string (int id, const char* key, const char* value)
 {
 	return mysql__update_blob(id, key, (const guint8*)(value ? value : ""), (const guint)(value ? strlen(value) : 0));
 }
 
 
-static gboolean
-mysql__update_int(int id, const char* key, const long int value)
+static bool
+mysql__update_int (int id, const char* key, const long int value)
 {
 	char sql[1024];
 	snprintf(sql, 1024, "UPDATE samples SET %s=%li WHERE id=%d", key, value, id);
@@ -365,8 +360,8 @@ mysql__update_int(int id, const char* key, const long int value)
 }
 
 
-static gboolean
-mysql__update_float(int id, const char* key, const float value)
+static bool
+mysql__update_float (int id, const char* key, const float value)
 {
 	char sql[1024];
 	snprintf(sql, 1024, "UPDATE samples SET %s=%f WHERE id=%d", key, value, id);
@@ -378,8 +373,8 @@ mysql__update_float(int id, const char* key, const float value)
 }
 
 
-static gboolean
-mysql__update_blob(int id, const char* key, const guint8* d, const guint len)
+static bool
+mysql__update_blob (int id, const char* key, const guint8* d, const guint len)
 {
 	char *blob = malloc((len*2+1)*sizeof(char));
 	mysql_real_escape_string(&mysql, blob, (char*)d, len);
@@ -395,8 +390,8 @@ mysql__update_blob(int id, const char* key, const guint8* d, const guint len)
 }
 
 
-static gboolean
-mysql__file_exists(const char* path, int *id)
+static bool
+mysql__file_exists (const char* path, int *id)
 {
 	int rv=false;
 	const int len = strlen(path);
@@ -425,7 +420,7 @@ mysql__file_exists(const char* path, int *id)
 //-------------------------------------------------------------
 
 static GList*
-mysql__filter_by_audio(Sample *s) 
+mysql__filter_by_audio (Sample* s)
 {
 	GList *rv = NULL;
 	GString* sql = g_string_new("SELECT full_path FROM samples WHERE 1");
@@ -464,8 +459,8 @@ mysql__filter_by_audio(Sample *s)
 //-------------------------------------------------------------
 
 
-static gboolean
-mysql__search_iter_new(int* n_results)
+static bool
+mysql__search_iter_new (int* n_results)
 {
 	//return TRUE on success.
 
@@ -476,7 +471,7 @@ mysql__search_iter_new(int* n_results)
 	if(search_result) gwarn("previous query not free'd?");
 
 	GString* q = g_string_new("SELECT * FROM samples WHERE 1 ");
-	const char* search = samplecat.model->filters.search->value;
+	const char* search = samplecat.model->filters2.search->value.c;
 	if(search && strlen(search)) {
 #if 0
 		g_string_append_printf(q, "AND (filename LIKE '%%%s%%' OR filedir LIKE '%%%s%%' OR keywords LIKE '%%%s%%') ", search, search, search);
@@ -502,7 +497,7 @@ mysql__search_iter_new(int* n_results)
 #endif
 	}
 
-	const char* dir = samplecat.model->filters.dir->value;
+	const char* dir = samplecat.model->filters2.dir->value.c;
 	if(dir && strlen(dir)) {
 		MYSQL_ESCAPE(esc, dir);
 #ifdef DONT_SHOW_SUBDIRS //TODO
@@ -512,7 +507,7 @@ mysql__search_iter_new(int* n_results)
 #endif
 		free(esc);
 	}
-	const char* category = samplecat.model->filters.category->value;
+	const char* category = samplecat.model->filters2.category->value.c;
 	if(category && strlen(category)) {
 		MYSQL_ESCAPE(esc, category);
 		g_string_append_printf(q, "AND keywords LIKE '%%%s%%' ", esc);
@@ -547,7 +542,7 @@ mysql__search_iter_new(int* n_results)
 
 
 MYSQL_ROW
-mysql__search_iter_next(unsigned long** lengths)
+mysql__search_iter_next (unsigned long** lengths)
 {
 	if(!search_result) return NULL;
 
@@ -559,7 +554,7 @@ mysql__search_iter_next(unsigned long** lengths)
 
 
 static Sample*
-mysql__search_iter_next_(unsigned long** lengths)
+mysql__search_iter_next_ (unsigned long** lengths)
 {
 	if(!search_result) return NULL;
 
@@ -618,7 +613,7 @@ mysql__search_iter_next_(unsigned long** lengths)
 
 
 static void
-mysql__search_iter_free()
+mysql__search_iter_free ()
 {
 	if(search_result) mysql_free_result(search_result);
 	search_result = NULL;
@@ -629,7 +624,7 @@ mysql__search_iter_free()
 
 
 static void
-mysql__dir_iter_new()
+mysql__dir_iter_new ()
 {
 	#define DIR_LIST_QRY "SELECT DISTINCT filedir FROM samples ORDER BY filedir"
 
@@ -646,7 +641,7 @@ mysql__dir_iter_new()
 
 
 static char*
-mysql__dir_iter_next()
+mysql__dir_iter_next ()
 {
 	if(!dir_iter_result) return NULL;
 
@@ -657,7 +652,7 @@ mysql__dir_iter_next()
 
 
 static void
-mysql__dir_iter_free()
+mysql__dir_iter_free ()
 {
 	if(dir_iter_result) mysql_free_result(dir_iter_result);
 	dir_iter_result = NULL;
@@ -666,13 +661,13 @@ mysql__dir_iter_free()
 
 #if NEVER
 void
-mysql__iter_to_result(Sample* result)
+mysql__iter_to_result (Sample* result)
 {
 memset(&result, 0, sizeof(Sample));
 }
 
 void
-mysql__add_row_to_model(MYSQL_ROW row, unsigned long* lengths)
+mysql__add_row_to_model (MYSQL_ROW row, unsigned long* lengths)
 {
 	GdkPixbuf* iconbuf = NULL;
 	char length[64];
@@ -757,7 +752,7 @@ mysql__add_row_to_model(MYSQL_ROW row, unsigned long* lengths)
 
 
 static void
-clear_result()
+clear_result ()
 {
 	if(result.overview) g_object_unref(result.overview);
 	memset(&result, 0, sizeof(Sample));

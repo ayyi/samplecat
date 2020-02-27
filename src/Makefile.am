@@ -105,7 +105,7 @@ samplecat_LDADD = \
 	$(MYSQL_LDFLAGS) \
 	$(JACK_LIBS) \
 	$(top_srcdir)/lib/audio_analysis/libaudioanalysis.la \
-	$(top_srcdir)/lib/waveform/.libs/libwaveform.a \
+	$(WAVEFORM_LDFLAGS) \
 	$(SNDFILE_LIBS) \
 	${SAMPLERATE_LIBS} \
 	$(GTHREAD_LIBS) \

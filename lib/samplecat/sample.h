@@ -1,13 +1,21 @@
+/**
+* +----------------------------------------------------------------------+
+* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
+* | copyright (C) 2007-2016 Tim Orford <tim@orford.org>                  |
+* +----------------------------------------------------------------------+
+* | This program is free software; you can redistribute it and/or modify |
+* | it under the terms of the GNU General Public License version 3       |
+* | as published by the Free Software Foundation.                        |
+* +----------------------------------------------------------------------+
+*
+*/
 #ifndef __have_sample_h__
 #define __have_sample_h__
 
 #include <stdlib.h>
+#include <stdbool.h>
 #include <stdint.h>
-#ifdef USE_GTK
-#include <gtk/gtk.h>
-#else
 #include <gdk/gdk.h>
-#endif
 #include "typedefs.h"
 
 struct _Sample

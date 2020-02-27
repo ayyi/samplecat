@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2016-2019 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2016-2020 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -11,12 +11,12 @@
 */
 #define __wf_private__
 #include "config.h"
-#include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
 #include "agl/ext.h"
 #include "agl/utils.h"
 #include "agl/actor.h"
 #include "waveform/waveform.h"
+#include "debug/debug.h"
 #include "file_manager/file_manager.h"
 #include "file_manager/pixmaps.h"
 #include "icon/utils.h"
@@ -49,7 +49,7 @@ static int instance_count = 0;
 static AGlActorClass actor_class = {0, "Files", (AGlActorNew*)files_view, files_free};
 
 static bool  files_scan_dir  (AGlActor*);
-static void  files_on_scroll (Observable*, int row, gpointer view);
+static void  files_on_scroll (AGlObservable*, int row, gpointer view);
 
 static ActorKeyHandler
 	files_nav_up,
@@ -63,7 +63,7 @@ static ActorKey keys[] = {
 
 
 static void
-on_select (Observable* o, int row, gpointer _actor)
+on_select (AGlObservable* o, int row, gpointer _actor)
 {
 	AGlActor* actor = _actor;
 	FilesView* files = (FilesView*)_actor;
@@ -73,7 +73,7 @@ on_select (Observable* o, int row, gpointer _actor)
 	if(row > -1 && row < items->len && row != dv->selection){
 		dv->selection = row;
 
-		Observable* scroll = ((ScrollbarActor*)actor->children->data)->scroll;
+		AGlObservable* scroll = ((ScrollbarActor*)actor->children->data)->scroll;
 
 		if(row > scroll->value + N_ROWS_VISIBLE(files) - 2){
 			agl_observable_set(scroll, scroll->value + 1);
@@ -184,8 +184,9 @@ files_view (gpointer _)
 			char size[16] = {'\0'}; snprintf(size, 15, "%zu", item->size);
 			const char* val[] = {item->leafname, size, user_name(item->uid), group_name(item->gid)};
 			int c; for(c=0;c<G_N_ELEMENTS(val);c++){
-				agl_enable_stencil(0, y0, col[c + 2] - 6, actor->region.y2);
+				agl_push_clip(0, y0, col[c + 2] - 6, actor->region.y2);
 				agl_print(col[c + 1], y + r * row_height, 0, STYLE.text, val[c]);
+				agl_pop_clip();
 			}
 
 			if(item->mime_type){
@@ -195,8 +196,6 @@ files_view (gpointer _)
 				agl_textured_rect(t, 0, y + r * row_height, 16, 16, NULL);
 			}
 		}
-
-		agl_disable_stencil();
 
 		return true;
 	}
@@ -357,7 +356,7 @@ files_view_row_at_coord (FilesView* view, int x, int y)
 
 
 static void
-files_on_scroll (Observable* observable, int row, gpointer _view)
+files_on_scroll (AGlObservable* observable, int row, gpointer _view)
 {
 	AGlActor* actor = (AGlActor*)_view;
 	FilesView* view = (FilesView*)_view;
@@ -374,7 +373,7 @@ files_on_scroll (Observable* observable, int row, gpointer _view)
 static bool
 files_nav_up (AGlActor* actor)
 {
-	Observable* observable = SELECTABLE->observable;
+	AGlObservable* observable = SELECTABLE->observable;
 	agl_observable_set(observable, observable->value - 1);
 
 	return AGL_HANDLED;
@@ -384,7 +383,7 @@ files_nav_up (AGlActor* actor)
 static bool
 files_nav_down (AGlActor* actor)
 {
-	Observable* observable = SELECTABLE->observable;
+	AGlObservable* observable = SELECTABLE->observable;
 	agl_observable_set(observable, observable->value + 1);
 
 	return AGL_HANDLED;

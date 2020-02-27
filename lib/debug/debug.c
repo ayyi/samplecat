@@ -1,7 +1,6 @@
 #define __debug_c__
 #include <stdio.h>
 #include <string.h>
-#include <stdlib.h>
 #include <stdarg.h>
 #include <sys/ioctl.h>
 #include <glib.h>

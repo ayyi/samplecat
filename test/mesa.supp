@@ -344,3 +344,63 @@
    Memcheck:Addr2
    fun:vbo_Vertex2f
 }
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Addr8
+   ...
+   fun:_mesa_set_enable
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Addr4
+   ...
+   fun:_mesa_set_enable
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Addr2
+   ...
+   fun:_mesa_set_enable
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Addr8
+   ...
+   fun:_mesa_update_state
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Addr4
+   ...
+   fun:_mesa_update_state
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Addr2
+   ...
+   fun:_mesa_update_state
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Addr8
+   ...
+   fun:vbo_exec_FlushVertices
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Addr4
+   ...
+   fun:vbo_exec_FlushVertices
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Addr2
+   ...
+   fun:vbo_exec_FlushVertices
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Addr1
+   ...
+   fun:vbo_exec_FlushVertices
+}

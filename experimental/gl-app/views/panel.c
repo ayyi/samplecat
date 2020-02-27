@@ -13,7 +13,7 @@
 #undef USE_GTK
 #include "agl/ext.h"
 #include "agl/utils.h"
-#include "agl/pango_render.h"
+#include "agl/text/pango.h"
 #include "debug/debug.h"
 #include "waveform/shader.h"
 #include "samplecat/typedefs.h"
@@ -84,6 +84,7 @@ find_dock (AGlActor* parent)
 
 	return NULL;
 }
+
 
 static void
 get_drop_location (AGlActor* actor, AGlActor* picked, AGlActor** dock, AGliPt* dock_position, AGlActor** insert_at)
@@ -196,8 +197,7 @@ panel_view (gpointer _)
 		PanelView* panel = (PanelView*)actor;
 
 		if(panel->title){
-			PangoGlRendererClass* PGRC = g_type_class_peek(PANGO_TYPE_GL_RENDERER);
-			panel->layout = pango_layout_new (PGRC->context);
+			panel->layout = pango_layout_new (agl_pango_get_context());
 			char text[2] = {panel->title[0], 0};
 			pango_layout_set_text(panel->layout, text, -1);
 

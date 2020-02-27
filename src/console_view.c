@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2015 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2020 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -68,7 +68,7 @@ void console__init()
 void
 console__show_result_header()
 {
-	printf("filters: text='%s' dir=%s\n", samplecat.model->filters.search->value, strlen(samplecat.model->filters.dir->value) ? samplecat.model->filters.dir->value : "<all directories>");
+	printf("filters: text='%s' dir=%s\n", samplecat.model->filters2.search->value.c, strlen(samplecat.model->filters2.dir->value.c) ? samplecat.model->filters2.dir->value.c : "<all directories>");
 
 	printf("  name                 directory                            length ch rate mimetype\n");
 }

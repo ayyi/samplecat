@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2015-2019 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2015-2020 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -12,12 +12,15 @@
 #ifndef __glx_utils_h__
 #define __glx_utils_h__
 
+#include <X11/Xlib.h>
+#include "agl/actor.h"
+
 typedef struct {
     Window    window;
     AGlScene* scene;
 } AGlWindow;
 
-AGlWindow* agl_make_window        (Display*, const char* name, int x, int y, int width, int height, AGlScene*);
+AGlWindow* agl_make_window        (Display*, const char* name, int x, int y, int width, int height);
 void       agl_window_destroy     (Display*, AGlWindow**);
 
 void       on_window_resize       (Display*, AGlWindow*, int width, int height);

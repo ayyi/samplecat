@@ -3,6 +3,6 @@
 #include <gtk/gtk.h>
 
 GtkWidget* player_control_new          ();
-void       player_control_on_show_hide (gboolean);
+void       player_control_on_show_hide (bool);
 
 #endif

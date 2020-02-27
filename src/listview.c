@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2019 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2020 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -322,17 +322,18 @@ listview__on_row_clicked(GtkWidget* widget, GdkEventButton* event, gpointer user
 				}
 			}else{
 				gtk_tree_view_get_cell_area(treeview, path, app->libraryview->col_tags, &rect);
+
 				if(((gint)event->x > rect.x) && ((gint)event->x < (rect.x + rect.width))){
-					//tags column:
+					// tags column
 					GtkTreeIter iter;
 					GtkTreeModel* model = gtk_tree_view_get_model(GTK_TREE_VIEW(app->libraryview->widget));
 					gtk_tree_model_get_iter(model, &iter, path);
 					gchar* tags;
 					int id;
-					gtk_tree_model_get(model, &iter, /*COL_FNAME, &fpath, COL_NAME, &fname, */COL_KEYWORDS, &tags, COL_IDX, &id, -1);
+					gtk_tree_model_get(model, &iter, COL_KEYWORDS, &tags, COL_IDX, &id, -1);
 
 					if(tags && strlen(tags)){
-						samplecat_filter_set_value(samplecat.model->filters.search, g_strdup(tags));
+						observable_string_set(samplecat.model->filters2.search, g_strdup(tags));
 					}
 				}
 			}
@@ -340,7 +341,7 @@ listview__on_row_clicked(GtkWidget* widget, GdkEventButton* event, gpointer user
 		}
 		return NOT_HANDLED;
 
-	  //popup menu:
+	  // popup menu
 	  case 3:
 		dbg (2, "right button press!");
 
@@ -394,7 +395,7 @@ listview__on_store_changed(GtkListStore* store, LibraryView* view)
 
 	listview__unblock_motion_handler();
 
-	bool select_first(gpointer data)
+	gboolean select_first(gpointer data)
 	{
 		LibraryView* view = data;
 

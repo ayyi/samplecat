@@ -40,7 +40,7 @@
  */
 
 #include "config.h"
-#include "string.h"
+#include <gtk/gtk.h>
 #include "debug/debug.h"
 #include "typedefs.h"
 #include "table.h"

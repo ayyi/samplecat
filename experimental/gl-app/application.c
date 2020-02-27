@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2019 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2020 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -71,14 +71,12 @@ application_new ()
 		ctx->options[CONFIG_ICON_THEME] = config_option_new_string("icon_theme", get_theme_name);
 	}
 
-	void on_filter_changed(GObject* _filter, gpointer user_data)
+	void on_filter_changed (Observable* filter, AMVal value, gpointer user_data)
 	{
 		application_search();
 	}
-
-	GList* l = samplecat.model->filters_;
-	for(;l;l=l->next){
-		g_signal_connect((SamplecatFilter*)l->data, "changed", G_CALLBACK(on_filter_changed), NULL);
+	for(int i = 0; i < N_FILTERS; i++){
+		observable_subscribe_with_state(samplecat.model->filters3[i], on_filter_changed, NULL);
 	}
 
 	/*
@@ -298,9 +296,11 @@ application_remove_panel (AGlActorClass* klass)
 void
 application_set_auditioner ()
 {
+#ifdef HAVE_AYYIDBUS
 	play->auditioner = &a_ayyidbus;
+#endif
 
-	bool set_auditioner_on_idle(gpointer data)
+	gboolean set_auditioner_on_idle (gpointer data)
 	{
 		//_set_auditioner();
 

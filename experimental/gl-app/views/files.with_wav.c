@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2016-2019 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2016-2020 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -19,6 +19,7 @@
 #include "agl/actor.h"
 #include "waveform/waveform.h"
 #include "waveform/actors/text.h"
+#include "debug/debug.h"
 #include "file_manager/file_manager.h"
 #include "file_manager/pixmaps.h"
 #include "samplecat.h"
@@ -51,7 +52,7 @@ static AGlActorClass actor_class = {0, "Files", (AGlActorNew*)files_with_wav, fi
 static GHashTable* icon_textures = NULL;
 
 static gboolean files_scan_dir           (AGlActor*);
-static void     files_with_wav_on_scroll (Observable*, int row, gpointer view);
+static void     files_with_wav_on_scroll (AGlObservable*, int row, gpointer view);
 static guint    create_icon              (const char*, GdkPixbuf*);
 static guint    get_icon                 (const char*, GdkPixbuf*);
 
@@ -80,6 +81,7 @@ files_with_wav_get_class ()
 
 // TODO this is a copy of private AGlActor fn.
 //      In this particular case we can just check the state of the Scrollbar child
+#ifdef AGL_ACTOR_RENDER_CACHE
 static bool
 agl_actor__is_animating (AGlActor* a)
 {
@@ -91,6 +93,7 @@ agl_actor__is_animating (AGlActor* a)
 	}
 	return false;
 }
+#endif
 
 
 AGlActor*
@@ -179,7 +182,7 @@ files_with_wav(gpointer _)
 					agl_use_program((AGlShader*)agl->shaders.texture);
 					agl_textured_rect(t, 0, y, 16, 16, NULL);
 				}else{
-					gwarn("failed to get icon for %s", item->mime_type->subtype);
+					pwarn("failed to get icon for %s", item->mime_type->subtype);
 				}
 			}
 		}
@@ -406,7 +409,7 @@ files_with_wav_select (FilesWithWav* view, int row)
 
 
 static void
-files_with_wav_on_scroll (Observable* observable, int row, gpointer _view)
+files_with_wav_on_scroll (AGlObservable* observable, int row, gpointer _view)
 {
 	AGlActor* actor = (AGlActor*)_view;
 	FilesWithWav* view = (FilesWithWav*)_view;

@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2016-2019 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2016-2020 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -11,9 +11,6 @@
 */
 #define __wf_private__
 #include "config.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include "debug/debug.h"
 #include "agl/utils.h"
 #include "agl/shader.h"
@@ -36,6 +33,7 @@ static Menu* _menu = NULL;
 
 static float hover_opacity = 0;
 static int hover_row = 0;
+
 static WfAnimatable animatable = {
 	.start_val.f  = 0.0,
 	.target_val.f = 0.0,
@@ -62,15 +60,17 @@ context_menu_open_new (AGlScene* parent, AGliPt xy, Menu* menu, AMPromise* promi
 	XTranslateCoordinates(dpy, window, attr.root, 0, 0, &x, &y, &child);
 	AGliPt offset = {x - attr.x, y - attr.y};
 
-	AGlScene* scene = (AGlRootActor*)agl_actor__new_root_(CONTEXT_TYPE_GLX);
-	agl_actor__add_child((AGlActor*)scene, scene->selected = context_menu(promise));
+	popup = agl_make_window(dpy, "Popup", xy.x + offset.x, xy.y + offset.y, size.x, size.y);
 
-	return popup = agl_make_window(dpy, "Popup", xy.x + offset.x, xy.y + offset.y, size.x, size.y, scene);
+	((AGlActor*)popup->scene)->name = "Popup";
+	agl_actor__add_child((AGlActor*)popup->scene, popup->scene->selected = context_menu(promise));
+
+	return popup;
 }
 
 
 static void
-_init()
+_init ()
 {
 	static bool init_done = false;
 
@@ -136,7 +136,7 @@ context_menu_paint (AGlActor* actor)
 }
 
 
-static bool
+static gboolean
 popup_destroy ()
 {
 	am_promise_resolve(_promise, 0);

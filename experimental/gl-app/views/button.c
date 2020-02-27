@@ -59,7 +59,7 @@ button(int* icon, ButtonAction action, ButtonGetState get_state, gpointer user_d
 {
 	_init();
 
-	bool gl_button_paint(AGlActor* actor)
+	bool button_paint(AGlActor* actor)
 	{
 		ButtonActor* button = (ButtonActor*)actor;
 		StyleBehaviour* style = &STYLE;
@@ -132,38 +132,6 @@ button(int* icon, ButtonAction action, ButtonGetState get_state, gpointer user_d
 		return true;
 	}
 
-	bool gl_button_paint_gl1(AGlActor* actor)
-	{
-		ButtonActor* button = (ButtonActor*)actor;
-
-		bool state = button->get_state ? button->get_state(actor, button->user_data) : false;
-
-		AGlRect r = {
-			.w = agl_actor__width(actor),
-			.h = agl_actor__height(actor->parent)
-		};
-
-		agl_enable(0/* !AGL_ENABLE_TEXTURE_2D*/);
-		if(state){
-			agl_colour_rbga(STYLE.bg_selected);
-			agl_rect_(r);
-		}
-		if(!button->disabled && agl_actor__is_hovered(actor)){
-			glColor4f(1.0, 1.0, 1.0, 0.1);
-			agl_rect_(r);
-		}
-
-		agl_enable(AGL_ENABLE_TEXTURE_2D);
-		glColor4f(1.0, 1.0, 1.0, 1.0);
-#if 0
-		agl_textured_rect(*button->icon + (state ? 1 : 0)], r.x, r.y + r.h / 2.0 - 8.0, SIZE, SIZE, NULL);
-#else
-		agl_textured_rect(*button->icon, r.x, r.y + r.h / 2.0 - 8.0, SIZE, SIZE, NULL);
-#endif
-
-		return true;
-	}
-
 	void button_set_size(AGlActor* actor)
 	{
 		actor->region.y2 = actor->parent->region.y2 - actor->parent->region.y1;
@@ -172,8 +140,6 @@ button(int* icon, ButtonAction action, ButtonGetState get_state, gpointer user_d
 	void button_init(AGlActor* actor)
 	{
 		if(!circle_shader.shader.program) agl_create_program(&circle_shader.shader);
-
-		actor->paint = agl->use_shaders ? gl_button_paint : gl_button_paint_gl1;
 	}
 
 	ButtonActor* button = AGL_NEW(ButtonActor,
@@ -181,7 +147,7 @@ button(int* icon, ButtonAction action, ButtonGetState get_state, gpointer user_d
 			.class    = &actor_class,
 			.name     = "Button",
 			.init     = button_init,
-			.paint    = agl_actor__null_painter,
+			.paint    = button_paint,
 			.set_size = button_set_size,
 			.on_event = button_on_event,
 		},
@@ -191,14 +157,14 @@ button(int* icon, ButtonAction action, ButtonGetState get_state, gpointer user_d
 		.user_data = user_data,
 	);
 
-	button->animatables[0] = SC_NEW(WfAnimatable,
+	button->animatables[0] = AGL_NEW(WfAnimatable,
 		.val.f        = &button->bg_opacity,
 		.start_val.f  = 0.0,
 		.target_val.f = 0.0,
 		.type         = WF_FLOAT
 	);
 
-	button->animatables[1] = SC_NEW(WfAnimatable,
+	button->animatables[1] = AGL_NEW(WfAnimatable,
 		.val.f        = &button->ripple_radius,
 		.start_val.f  = 0.0,
 		.target_val.f = 0.0,

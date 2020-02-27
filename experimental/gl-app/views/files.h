@@ -22,8 +22,8 @@ typedef struct _FilesView FilesView;
 #define FILES_STATE(A) ((StateBehaviour*)((A)->behaviours[2]))
 
 typedef struct {
-   AGlBehaviour behaviour;
-   Observable*  observable;
+   AGlBehaviour   behaviour;
+   AGlObservable* observable;
 } ScrollBehaviour;
 
 struct _FilesView {

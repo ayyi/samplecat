@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2019 Tim Orford <tim@orford.org> and others       |
+* | copyright (C) 2007-2020 Tim Orford <tim@orford.org> and others       |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -10,10 +10,7 @@
 *
 */
 #include "../../config.h"
-#include <stdio.h>
-#include <string.h>
 #include <sqlite3.h>
-#include <gtk/gtk.h>
 #include <gdk-pixbuf/gdk-pixdata.h>
 #include "debug/debug.h"
 #include "samplecat/model.h"
@@ -72,14 +69,14 @@ enum {
 
 
 void
-sqlite__init(void* _config)
+sqlite__init (void* _config)
 {
 	//config = _config;
 }
 
 
 void
-sqlite__set_as_backend(SamplecatBackend* backend)
+sqlite__set_as_backend (SamplecatBackend* backend)
 {
 	backend->init             = sqlite__init;
 
@@ -285,10 +282,10 @@ sqlite__insert(Sample* sample)
 }
 
 
-gboolean
-sqlite__execwrap(char *sql)
+static bool
+sqlite__execwrap (char* sql)
 {
-	gboolean ok = true;
+	bool ok = true;
 	char* errMsg = 0;
 	if(sqlite3_exec(db, sql, NULL, NULL, &errMsg) != SQLITE_OK){
 		ok = false;
@@ -302,28 +299,32 @@ sqlite__execwrap(char *sql)
 
 
 static bool
-sqlite__delete_row(int id)
+sqlite__delete_row (int id)
 {
 	return sqlite__execwrap(sqlite3_mprintf("DELETE FROM samples WHERE id=%i", id));
 }
 
+
 static bool
-sqlite__update_string(int id, const char* key, const char* value)
+sqlite__update_string (int id, const char* key, const char* value)
 {
 	return sqlite__execwrap(sqlite3_mprintf("UPDATE samples SET %s='%q' WHERE id=%u", key, value?value:"", id));
 }
 
+
 static bool
-sqlite__update_int(int id, const char* key, const long int value)
+sqlite__update_int (int id, const char* key, const long int value)
 {
 	return sqlite__execwrap(sqlite3_mprintf("UPDATE samples SET %s=%li WHERE id=%i", key, value, id));
 }
 
+
 static bool
-sqlite__update_float(int id, const char* key, const float value)
+sqlite__update_float (int id, const char* key, const float value)
 {
 	return sqlite__execwrap(sqlite3_mprintf("UPDATE samples SET %s=%f WHERE id=%i", key, value, id));
 }
+
 
 static bool
 sqlite__update_blob (int id, const char* key, const guint8* d, const guint len)
@@ -355,18 +356,19 @@ sqlite__update_blob (int id, const char* key, const guint8* d, const guint len)
 
 
 static bool
-sqlite__file_exists(const char* path, int *id)
+sqlite__file_exists (const char* path, int *id)
 {
 	PF2;
-	gboolean ok =false;
-	int rows,columns;
-	char **table = NULL;
-	char *errmsg= NULL;
+	bool ok = false;
+	int rows, columns;
+	char** table = NULL;
+	char* errmsg = NULL;
+
 	char* sql = sqlite3_mprintf("SELECT id FROM samples WHERE full_path='%q'", path);
-	int rc = sqlite3_get_table(db, sql, &table,&rows,&columns,&errmsg);
-	if(rc==SQLITE_OK && (table != NULL) && (rows>=1) && (columns==1)) {
-		if (id) *id= atoi(table[1]);
-		ok=true;
+	int rc = sqlite3_get_table(db, sql, &table, &rows, &columns, &errmsg);
+	if(rc == SQLITE_OK && (table != NULL) && (rows >= 1) && (columns == 1)) {
+		if (id) *id = atoi(table[1]);
+		ok = true;
 	}
 	if (table) sqlite3_free_table(table);
 
@@ -376,9 +378,9 @@ sqlite__file_exists(const char* path, int *id)
 
 
 GList*
-sqlite__filter_by_audio(Sample *s) 
+sqlite__filter_by_audio (Sample* s)
 {
-	GList *rv = NULL;
+	GList* rv = NULL;
 	GString* sql = g_string_new("SELECT full_path FROM samples WHERE 1");
 	if (s->channels>0)
 		g_string_append_printf(sql, " AND channels=%i", s->channels);
@@ -415,9 +417,8 @@ sqlite__filter_by_audio(Sample *s)
 }
 
 
-
-static gboolean
-sqlite__search_iter_new(int* n_results)
+static bool
+sqlite__search_iter_new (int* n_results)
 {
 	PF;
 	static int count = 0;
@@ -435,7 +436,7 @@ sqlite__search_iter_new(int* n_results)
 	gboolean ok = true;
 
 	char* where = sqlite3_mprintf("%s", "");
-	const char* search = samplecat.model->filters.search->value;
+	const char* search = samplecat.model->filters2.search->value.c;
 	if(search && strlen(search)){
 #if 0
 		char* where2 = sqlite3_mprintf("%s AND (filename LIKE '%%%q%%' OR filedir LIKE '%%%q%%' OR keywords LIKE '%%%q%%') ", where, search, search, search);
@@ -446,11 +447,13 @@ sqlite__search_iter_new(int* n_results)
 		char* tok;
 		while ((tok = strtok(s, " _")) != 0) {
 			char* tmp = sqlite3_mprintf("%s %s (filename LIKE '%%%q%%' OR filedir LIKE '%%%q%%' OR keywords LIKE '%%%q%%') ",
-					where2a?where2a:"", where2a?"AND":"",
-					tok, tok, tok);
+				where2a ? where2a : "",
+				where2a ? "AND" : "",
+				tok, tok, tok
+			);
 			if (where2a) sqlite3_free(where2a);
 			where2a = tmp;
-			s=NULL;
+			s = NULL;
 		}
 		char* where2;
 		if (where2a) {
@@ -465,13 +468,13 @@ sqlite__search_iter_new(int* n_results)
 		sqlite3_free(where);
 		where = where2;
 	}
-	const char* category = samplecat.model->filters.category->value;
+	const char* category = samplecat.model->filters2.category->value.c;
 	if(category){
 		gchar* where2 = sqlite3_mprintf("%s AND keywords LIKE '%%%q%%' ", where, category);
 		sqlite3_free(where);
 		where = where2;
 	}
-	const char* dir = samplecat.model->filters.dir->value;
+	const char* dir = samplecat.model->filters2.dir->value.c;
 	if(dir && strlen(dir)){
 #ifdef DONT_SHOW_SUBDIRS //TODO
 		gchar* where2 = sqlite3_mprintf("%s AND filedir='%q' ", where, dir);

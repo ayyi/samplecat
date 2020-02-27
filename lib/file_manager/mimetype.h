@@ -56,10 +56,14 @@ MIME_type*         type_get_type            (const guchar* path);
 MIME_type*         mime_type_lookup         (const char* type);
 MIME_type*         type_from_path           (const char* path);
 
+#ifdef GDK_PIXBUF_H
 GdkPixbuf*         mime_type_get_pixbuf     (MIME_type*);
+#endif
 gboolean           type_open                (const char* path, MIME_type*);
 MaskedPixmap*      type_to_icon             (MIME_type*);
+#ifdef __GDK_TYPES_H__
 GdkAtom            type_to_atom             (MIME_type*);
+#endif
 MIME_type*         mime_type_from_base_type (int base_type);
 int                mode_to_base_type        (int st_mode);
 void               type_set_handler_dialog  (MIME_type*);

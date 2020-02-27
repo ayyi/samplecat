@@ -151,6 +151,10 @@ PKG_CHECK_MODULES(GTHREAD, gthread-2.0,, [true])
 AC_SUBST(GTHREAD_CFLAGS)
 AC_SUBST(GTHREAD_LIBS)
 
+PKG_CHECK_MODULES(GRAPHENE, graphene-1.0,, [true])
+AC_SUBST(GRAPHENE_CFLAGS)
+AC_SUBST(GRAPHENE_LIBS)
+
 dnl -----------------------------------------------------------------------------
 
 if test x$enable_mysql = xno ; then
@@ -471,6 +475,12 @@ AS_IF([test "$enable_aubio" = "yes"],[
 AM_CONDITIONAL(ENABLE_AUBIO, test "$enable_aubio" = "yes")
 AC_SUBST(AUBIO_CFLAGS)
 AC_SUBST(AUBIO_LDFLAGS)
+
+dnl -----------------------------------------------------------------------------
+
+dnl cannot use the pc file because it is not yet generated
+WAVEFORM_LDFLAGS=`pwd`"/lib/waveform/.libs/libwaveform.a "`pkg-config --libs graphene-1.0`
+AC_SUBST(WAVEFORM_LDFLAGS)
 
 dnl -----------------------------------------------------------------------------
 

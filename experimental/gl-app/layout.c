@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2019 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2020 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -285,7 +285,7 @@ config_load_window_yaml (yaml_parser_t* parser, yaml_event_t* event)
 }
 
 
-static bool
+static gboolean
 layout_set_size (gpointer data)
 {
 	agl_actor__set_size((AGlActor*)app->scene);
@@ -468,7 +468,6 @@ load_settings ()
 		agl_actor_class__add_behaviour(search_view_get_class(), panel_get_class());
 		agl_actor_class__add_behaviour(inspector_view_get_class(), panel_get_class());
 		agl_actor_class__add_behaviour(spectrogram_view_get_class(), panel_get_class());
-		agl_actor_class__add_behaviour(directories_view_get_class(), panel_get_class());
 		agl_actor_class__add_behaviour(wf_actor_get_class(), panel_get_class());
 	}
 
@@ -584,7 +583,7 @@ save_settings ()
 
 	map_open_(&event, "windows");
 	map_open_(&event, "window");
-	if(!add_child(&event, (AGlActor*)app->scene)) return false;
+	if(!((AGlActor*)app->scene)->children || !add_child(&event, (AGlActor*)app->scene)) goto close;
 	end_map_(&event);
 	end_map_(&event);
 
@@ -622,6 +621,7 @@ save_settings ()
 	}
 	yaml_event_delete(&event);
 	yaml_emitter_delete(&emitter);
+  close:
 	fclose(fp);
 	g_free(tmp);
 

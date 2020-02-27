@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2017-2019 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2017-2020 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -129,7 +129,7 @@ scrollable_view(gpointer _)
  *  Use -1 to preserve existing offset
  */
 static void
-scrollable_set_scroll_position(AGlActor* actor, int scroll_offset)
+scrollable_set_scroll_position (AGlActor* actor, int scroll_offset)
 {
 	ScrollableView* view = (ScrollableView*)actor;
 	AGlActor* child = actor->children->data;
@@ -139,7 +139,11 @@ scrollable_set_scroll_position(AGlActor* actor, int scroll_offset)
 	g_return_if_fail(max_scroll_offset > -1);
 	view->scroll_offset = CLAMP(scroll_offset, 0, max_scroll_offset);
 	int h = agl_actor__scrollable_height(child);
+#ifdef AGL_ACTOR_RENDER_CACHE
 	actor->scrollable.y1 = child->scrollable.y1 = child->cache.offset.y = - view->scroll_offset;
+#else
+	actor->scrollable.y1 = child->scrollable.y1 = - view->scroll_offset;
+#endif
 	actor->scrollable.y2 = child->scrollable.y2 = actor->scrollable.y1 + h;
 }
 

@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2019 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2020 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -61,7 +61,6 @@ config_load (ConfigContext* ctx, Config* config)
 #ifdef USE_MYSQL
 	strcpy(config->mysql.name, "samplecat");
 #endif
-	strcpy(config->show_dir, "");
 
 	int i;
 	for (i=0;i<PALETTE_SIZE;i++) {
@@ -97,7 +96,7 @@ config_load (ConfigContext* ctx, Config* config)
 			char*  loc[num_keys+(PALETTE_SIZE-1)];
 			size_t siz[num_keys+(PALETTE_SIZE-1)];
 
-			i=0;
+			i = 0;
 			ADD_CONFIG_KEY (config->database_backend, "database_backend");
 #ifdef USE_MYSQL
 			ADD_CONFIG_KEY (config->mysql.host,       "mysql_host");
@@ -128,7 +127,8 @@ config_load (ConfigContext* ctx, Config* config)
 				if((keyval = g_key_file_get_string(ctx->key_file, groupname, keys[k], &error))){
 					if(loc[k]){
 						size_t keylen = siz[k];
-						snprintf(loc[k], keylen, "%s", keyval); loc[k][keylen-1] = '\0';
+						snprintf(loc[k], keylen, "%s", keyval);
+						loc[k][keylen - 1] = '\0';
 					}
 					dbg(2, "%s=%s", keys[k], keyval);
 					g_free(keyval);
@@ -141,10 +141,10 @@ config_load (ConfigContext* ctx, Config* config)
 			}
 
 			if((keyval = g_key_file_get_string(ctx->key_file, groupname, "show_dir", &error))){
-				samplecat_model_set_search_dir (samplecat.model, config->show_dir);
+				samplecat_model_set_search_dir (samplecat.model, g_strdup(keyval));
 			}
 			if((keyval = g_key_file_get_string(ctx->key_file, groupname, "filter", &error))){
-				samplecat.model->filters.search->value = g_strdup(keyval);
+				observable_string_set(samplecat.model->filters2.search, g_strdup(keyval));
 			}
 
 			{
@@ -195,11 +195,11 @@ config_load (ConfigContext* ctx, Config* config)
 bool
 config_save (ConfigContext* ctx)
 {
-	// filter settings:
-	g_key_file_set_value(ctx->key_file, "Samplecat", "show_dir", samplecat.model->filters.dir->value ? samplecat.model->filters.dir->value : "");
-	g_key_file_set_value(ctx->key_file, "Samplecat", "filter", samplecat.model->filters.search->value ? samplecat.model->filters.search->value : "");
+	// filter settings
+	g_key_file_set_value(ctx->key_file, "Samplecat", "show_dir", samplecat.model->filters2.dir->value.c ? samplecat.model->filters2.dir->value.c : "");
+	g_key_file_set_value(ctx->key_file, "Samplecat", "filter", samplecat.model->filters2.search->value.c ? samplecat.model->filters2.search->value.c : "");
 
-	// application specific settings:
+	// application specific settings
 	if(ctx->options){
 		char value[256];
 		int i = 0;

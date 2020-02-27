@@ -12,6 +12,7 @@
 #ifndef __player_h__
 #define __player_h__
 
+#include <stdbool.h>
 #include <glib-object.h>
 #include "samplecat/typedefs.h"
 #include "waveform/promise.h"

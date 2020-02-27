@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2016-2019 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2016-2020 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -19,7 +19,7 @@
 #include "agl/utils.h"
 #include "agl/actor.h"
 #include "agl/shader.h"
-#include "waveform/utils.h"
+#include "samplecat/support.h"
 #include "views/dock_h.h"
 
 #define _g_free0(var) (var = (g_free (var), NULL))
@@ -27,6 +27,7 @@
 #define DIVIDER 5
 
 static void dock_free (AGlActor*);
+static AGlActor* find_handle_by_x (DockHView*, float);
 
 static AGl* agl = NULL;
 static int instance_count = 0;
@@ -311,17 +312,7 @@ dock_h_view (gpointer _)
 						agl_actor__invalidate(a1);
 					}
 				}else{
-					int x = 0;
-					GList* l = dock->panels;
-					AGlActor* f = NULL;
-					for(;l;l=l->next){
-						AGlActor* a = l->data;
-						x = a->region.x1;
-						if(ABS(x - xy.x) < SPACING){
-							f = a;
-							break;
-						}
-					}
+					AGlActor* f = find_handle_by_x(dock, xy.x);
 					if(f){
 						if(!dock->handle.opacity){
 							dock->animatables[0]->target_val.f = 1.0;
@@ -394,6 +385,22 @@ dock_h_add_panel(DockHView* dock, AGlActor* panel)
 	dock->panels = g_list_append(dock->panels, panel);
 	agl_actor__add_child((AGlActor*)dock, panel);
 	return panel;
+}
+
+
+static AGlActor*
+find_handle_by_x (DockHView* dock, float pos)
+{
+	float x = 0;
+	GList* l = dock->panels;
+	for(;l;l=l->next){
+		AGlActor* a = l->data;
+		x = a->region.y1;
+		if(ABS(x - pos) < SPACING){
+			return a;
+		}
+	}
+	return NULL;
 }
 
 

@@ -119,6 +119,7 @@ tabs_view (gpointer _)
 			float w = agl_actor__width(actor);
 			for(int i=0; i<G_N_ELEMENTS(items); i++){
 				AGlActor* a = items[i];
+#ifdef AGL_ACTOR_RENDER_CACHE
 				if(a->cache.valid){
 					glTranslatef(x, TAB_HEIGHT, 0);
 					float xt = a->region.x2;
@@ -128,6 +129,9 @@ tabs_view (gpointer _)
 
 					a->region.x2 = xt;
 					glTranslatef(-x, -TAB_HEIGHT, 0);
+#else
+				if(false){
+#endif
 				}else{
 					a->region.x1 = x;
 					a->region.x2 = a->region.x1 + w;

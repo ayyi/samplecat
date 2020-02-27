@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2017 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2020 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -10,7 +10,7 @@
 *
 */
 #include "config.h"
-#include <gtk/gtk.h>
+//#include <gtk/gtk.h>
 #include "debug/debug.h"
 #include "samplecat.h"
 #include "dh_link.h"
@@ -22,7 +22,7 @@ static void create_nodes_for_path (gchar** path);
  *  Build a node list of all the directories in the database.
  */
 void
-dir_list_update()
+dir_list_update ()
 {
 	samplecat.model->backend.dir_iter_new();
 
@@ -33,18 +33,18 @@ dir_list_update()
 	GNode* leaf = g_node_new(link);
 	g_node_insert(samplecat.model->dir_tree, -1, leaf);
 
-	GNode* lookup_node_by_path(gchar** path)
+	GNode* lookup_node_by_path (gchar** path)
 	{
-		//find a node containing the given path
+		// find a node containing the given path
 
 		typedef struct {
 			gchar** path;
 			GNode*  insert_at;
 		} C;
 
-		gboolean traverse_func(GNode *node, gpointer data)
+		gboolean traverse_func(GNode* node, gpointer data)
 		{
-			//test if the given node is a match for the closure path.
+			// test if the given node is a match for the closure path.
 
 			DhLink* link = node->data;
 			C* c = data;
@@ -52,7 +52,7 @@ dir_list_update()
 			if(link){
 				c->insert_at = node;
 				gchar** v = g_strsplit(link->name, "/", 64);
-				int i; for(i=0;v[i];i++){
+				for(int i=0;v[i];i++){
 					if(strlen(v[i])){
 						if(strcmp(v[i], path[i])){
 							c->insert_at = NULL;
@@ -62,11 +62,12 @@ dir_list_update()
 				}
 				g_strfreev(v);
 			}
-			return false; //continue
+			return false; // continue
 		}
 
-		C* c = g_new0(C, 1);
-		c->path = path;
+		C* c = SC_NEW(C,
+			.path = path
+		);
 
 		g_node_traverse(samplecat.model->dir_tree, G_IN_ORDER, G_TRAVERSE_ALL, 64, traverse_func, c);
 		GNode* ret = c->insert_at;
@@ -81,7 +82,6 @@ dir_list_update()
 		gchar** v = g_strsplit(u, "/", 64);
 		int i = 0;
 		while(v[i]){
-			//dbg(0, "%s", v[i]);
 			i++;
 		}
 		GNode* node = lookup_node_by_path(v);
@@ -99,11 +99,11 @@ dir_list_update()
 
 
 static void
-create_nodes_for_path(gchar** path)
+create_nodes_for_path (gchar** path)
 {
-	gchar* make_uri(gchar** path, int n)
+	gchar* make_uri (gchar** path, int n)
 	{
-		//result must be freed by caller
+		// result must be freed by caller
 
 		gchar* a = NULL;
 		int k; for(k=0;k<=n;k++){
@@ -116,10 +116,9 @@ create_nodes_for_path(gchar** path)
 	}
 
 	GNode* node = samplecat.model->dir_tree;
-	int i; for(i=0;path[i];i++){
+	for(int i=0;path[i];i++){
 		if(strlen(path[i])){
-			//dbg(0, "  testing %s ...", path[i]);
-			gboolean found = false;
+			bool found = false;
 			GNode* n = g_node_first_child(node);
 			if(n) do {
 				DhLink* link = n->data;

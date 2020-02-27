@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2017-2019 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2017-2020 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -18,10 +18,11 @@
 #include "debug/debug.h"
 #include "agl/actor.h"
 #include "agl/fbo.h"
-#include "agl/pango_render.h"
+#include "agl/text/pango.h"
 #include "samplecat.h"
 #include "shader.h"
 #include "behaviours/panel.h"
+#include "behaviours/cache.h"
 #include "views/filters.h"
 
 #define _g_object_unref0(var) ((var == NULL) ? NULL : (var = (g_object_unref (var), NULL)))
@@ -46,6 +47,7 @@ filters_view_get_class ()
 		agl = agl_get_instance();
 
 		agl_actor_class__add_behaviour(&actor_class, panel_get_class());
+		agl_actor_class__add_behaviour(&actor_class, cache_get_class());
 
 		init_done = true;
 	}
@@ -55,7 +57,7 @@ filters_view_get_class ()
 
 
 AGlActor*
-filters_view(gpointer _)
+filters_view (gpointer _)
 {
 	instance_count++;
 
@@ -69,22 +71,20 @@ filters_view(gpointer _)
 		int y = 4;
 
 		agl_print_layout(x, y, 0, 0xffffffff, view->title);
-
 		PangoRectangle logical_rect;
 		pango_layout_get_pixel_extents(view->title, NULL, &logical_rect);
 		x += logical_rect.width + 10;
 
 		int n_filters = 0;
 		int i; for(i=0;i<G_N_ELEMENTS(view->filters) - 1;i++){
-			SamplecatFilter* filter = view->filters[i].filter;
-			char* val = filter->value;
+			Observable* filter = view->filters[i].filter;
+			char* val = filter->value.c;
 			if(val && strlen(val)){
 				if(!view->filters[i].layout){
-					PangoGlRendererClass* PGRC = g_type_class_peek(PANGO_TYPE_GL_RENDERER);
-					view->filters[i].layout = pango_layout_new (PGRC->context);
+					view->filters[i].layout = pango_layout_new (agl_pango_get_context());
 				}
-				char* text = strcmp(filter->name, "search")
-					? g_strdup_printf("%s: %s", filter->name, val)
+				char* text = strcmp(((NamedObservable*)filter)->name, "search")
+					? g_strdup_printf("%s: %s", ((NamedObservable*)filter)->name, val)
 					: g_strdup_printf("\"%s\"", val);
 				pango_layout_set_text(view->filters[i].layout, text, -1);
 				g_free(text);
@@ -123,7 +123,7 @@ filters_view(gpointer _)
 		return true;
 	}
 
-	void filters_init(AGlActor* a)
+	void filters_init (AGlActor* a)
 	{
 		FiltersView* view = (FiltersView*)a;
 
@@ -132,25 +132,19 @@ filters_view(gpointer _)
 			button_shader.uniform.radius = 2;
 		}
 
-#ifdef AGL_ACTOR_RENDER_CACHE
-		a->fbo = agl_fbo_new(agl_actor__width(a), agl_actor__height(a), 0, AGL_FBO_HAS_STENCIL);
-		a->cache.enabled = true;
-#endif
-
-		PangoGlRendererClass* PGRC = g_type_class_peek(PANGO_TYPE_GL_RENDERER);
-		view->title = pango_layout_new (PGRC->context);
+		view->title = pango_layout_new (agl_pango_get_context());
 		pango_layout_set_text(view->title, "Filters:", -1);
 
-		view->filters[0].filter = samplecat.model->filters.search;
-		view->filters[1].filter = samplecat.model->filters.dir;
-		view->filters[2].filter = samplecat.model->filters.category;
+		view->filters[0].filter = samplecat.model->filters2.search;
+		view->filters[1].filter = samplecat.model->filters2.dir;
+		view->filters[2].filter = samplecat.model->filters2.category;
 	}
 
-	void filters_size(AGlActor* actor)
+	void filters_layout (AGlActor* actor)
 	{
 	}
 
-	bool filters_event(AGlActor* actor, GdkEvent* event, AGliPt xy)
+	bool filters_event (AGlActor* actor, GdkEvent* event, AGliPt xy)
 	{
 		FiltersView* view = (FiltersView*)actor;
 
@@ -173,7 +167,8 @@ filters_view(gpointer _)
 						int j = pick(view, xy.x);
 						dbg(0, "click! pick=%i", j);
 						if(j > -1){
-							if(event->type == GDK_BUTTON_RELEASE) samplecat_filter_set_value(view->filters[j].filter, "");
+							if(event->type == GDK_BUTTON_RELEASE)
+								observable_string_set(view->filters[j].filter, g_strdup(""));
 							return AGL_HANDLED;
 						}
 				}
@@ -191,25 +186,22 @@ filters_view(gpointer _)
 		return AGL_NOT_HANDLED;
 	}
 
-	FiltersView* view = AGL_NEW(FiltersView,
+	FiltersView* view = agl_actor__new(FiltersView,
 		.actor = {
 			.class = &actor_class,
-			.name = "Search",
+			.name = actor_class.name,
 			.init = filters_init,
 			.paint = filters_paint,
-			.set_size = filters_size,
+			.set_size = filters_layout,
 			.on_event = filters_event,
 		}
 	);
 
-	void filters_on_filter_changed(GObject* _filter, gpointer _actor)
-	{
-		PF;
-		agl_actor__invalidate((AGlActor*)_actor);
-	}
-	g_signal_connect(samplecat.model->filters.search, "changed", G_CALLBACK(filters_on_filter_changed), view);
-	g_signal_connect(samplecat.model->filters.dir, "changed", G_CALLBACK(filters_on_filter_changed), view);
-	g_signal_connect(samplecat.model->filters.category, "changed", G_CALLBACK(filters_on_filter_changed), view);
+	CacheBehaviour* cache = (CacheBehaviour*)((AGlActor*)view)->behaviours[1];
+
+	cache_behaviour_add_dependency(cache, (AGlActor*)view, samplecat.model->filters2.search);
+	cache_behaviour_add_dependency(cache, (AGlActor*)view, samplecat.model->filters2.dir);
+	cache_behaviour_add_dependency(cache, (AGlActor*)view, samplecat.model->filters2.category);
 
 	return (AGlActor*)view;
 }

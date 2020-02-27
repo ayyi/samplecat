@@ -12,11 +12,7 @@
 #undef ROTATOR
 
 #include "config.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdint.h>
 #include <math.h>
-#include <string.h>
 #include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
 #ifdef USE_GDL
@@ -77,7 +73,8 @@ static void       window_on_realise               (GtkWidget*, gpointer);
 static void       window_on_size_request          (GtkWidget*, GtkRequisition*, gpointer);
 static void       window_on_allocate              (GtkWidget*, GtkAllocation*, gpointer);
 static gboolean   window_on_configure             (GtkWidget*, GdkEventConfigure*, gpointer);
-static gboolean   tag_selector_new                ();
+static void       tag_selector_new                ();
+static void       tagshow_selector_new            ();
 static void       window_on_fileview_row_selected (GtkTreeView*, gpointer);
 static void       delete_selected_rows            ();
 static void       on_category_set_clicked         (GtkComboBox*, gpointer);
@@ -723,7 +720,7 @@ window_on_configure(GtkWidget* widget, GdkEventConfigure* event, gpointer user_d
 					}
 				}
 
-				bool check_ready(gpointer user_data)
+				gboolean check_ready(gpointer user_data)
 				{
 					return file_manager__get()->directory->have_scanned
 						? (select_first_audio(), G_SOURCE_REMOVE)
@@ -902,30 +899,28 @@ search_new()
 	gtk_misc_set_padding(GTK_MISC(label), 5, 5);
 	gtk_box_pack_start(GTK_BOX(row1), label, FALSE, FALSE, 0);
 
-	gboolean on_focus_out(GtkWidget* widget, GdkEventFocus* event, gpointer user_data)
+	gboolean on_focus_out (GtkWidget* widget, GdkEventFocus* event, gpointer user_data)
 	{
 		PF;
 		const gchar* text = gtk_entry_get_text(GTK_ENTRY(window.search));
-		if(!samplecat.model->filters.search->value || strcmp(text, samplecat.model->filters.search->value)){
-			samplecat_filter_set_value(samplecat.model->filters.search, g_strdup(text));
-		}
+		observable_string_set(samplecat.model->filters2.search, g_strdup(text));
 		return NOT_HANDLED;
 	}
 
-	SamplecatFilter* filter = samplecat.model->filters.search;
+	Observable* filter = samplecat.model->filters2.search;
 	GtkWidget* entry = window.search = gtk_entry_new();
 	gtk_entry_set_max_length(GTK_ENTRY(entry), 64);
-	if(filter->value) gtk_entry_set_text(GTK_ENTRY(entry), filter->value);
+	if(filter->value.c) gtk_entry_set_text(GTK_ENTRY(entry), filter->value.c);
 	gtk_box_pack_start(GTK_BOX(row1), entry, EXPAND_TRUE, TRUE, 0);
 	g_signal_connect(G_OBJECT(entry), "focus-out-event", G_CALLBACK(on_focus_out), NULL);
 	gtk_entry_set_activates_default(GTK_ENTRY(entry), TRUE);
 	g_signal_connect(G_OBJECT(entry), "activate", G_CALLBACK(on_focus_out), NULL);
 
-	void on_search_filter_changed(GObject* _filter, gpointer _entry)
+	void on_search_filter_changed (Observable* _filter, AMVal value, gpointer _entry)
 	{
-		gtk_entry_set_text(GTK_ENTRY(_entry), ((SamplecatFilter*)_filter)->value);
+		gtk_entry_set_text(GTK_ENTRY(_entry), value.c);
 	}
-	g_signal_connect(filter, "changed", G_CALLBACK(on_search_filter_changed), entry);
+	observable_subscribe(filter, on_search_filter_changed, entry);
 
 	//----------------------------------------------------------------------
 
@@ -957,31 +952,30 @@ search_new()
 
 
 static GtkWidget*
-filters_new()
+filters_new ()
 {
 	static GHashTable* buttons; buttons = g_hash_table_new(NULL, NULL);
 
 	GtkWidget* hbox = gtk_vbox_new(FALSE, 2);
 
-	char* label_text(SamplecatFilter* filter)
+	char* label_text (Observable* filter)
 	{
-		int len = 22 - strlen(filter->name);
+		int len = 22 - strlen(((NamedObservable*)filter)->name);
 		char value[20] = {0,};
-		g_strlcpy(value, filter->value ? filter->value : "", len);
-		return g_strdup_printf("%s: %s%s", filter->name, value, filter->value && strlen(filter->value) > len ? "..." : "");
+		g_strlcpy(value, filter->value.c ? filter->value.c : "", len);
+		return g_strdup_printf("%s: %s%s", ((NamedObservable*)filter)->name, value, filter->value.c && strlen(filter->value.c) > len ? "..." : "");
 	}
 
-	GList* l = samplecat.model->filters_;
-	for(;l;l=l->next){
-		SamplecatFilter* filter = l->data;
-		dbg(2, "  %s %s", filter->name, filter->value);
+	for(int i = 0; i < N_FILTERS; i++){
+		Observable* filter = samplecat.model->filters3[i];
+		dbg(2, "  %s", filter->value.c);
 
 		char* text = label_text(filter);
 		GtkWidget* button = gtk_button_new_with_label(text);
 		g_free(text);
 		gtk_box_pack_start(GTK_BOX(hbox), button, EXPAND_FALSE, FALSE, 0);
 		gtk_button_set_alignment ((GtkButton*)button, 0.0, 0.5);
-		gtk_widget_set_no_show_all(button, !(filter->value && strlen(filter->value)));
+		gtk_widget_set_no_show_all(button, !(filter->value.c && strlen(filter->value.c)));
 
 		GtkWidget* icon = gtk_image_new_from_stock(GTK_STOCK_CLOSE, GTK_ICON_SIZE_MENU);
 		gtk_misc_set_padding((GtkMisc*)icon, 4, 0);
@@ -990,38 +984,37 @@ filters_new()
 
 		g_hash_table_insert(buttons, filter, button);
 
-		void on_filter_button_clicked(GtkButton* button, gpointer _filter)
+		void on_filter_button_clicked (GtkButton* button, gpointer _filter)
 		{
-			samplecat_filter_set_value((SamplecatFilter*)_filter, "");
+			observable_string_set((Observable*)_filter, g_strdup(""));
 		}
 
 		g_signal_connect(button, "clicked", G_CALLBACK(on_filter_button_clicked), filter);
 
-		void set_label(SamplecatFilter* filter, GtkWidget* button)
+		void set_label (Observable* filter, GtkWidget* button)
 		{
 			if(button){
 				char* text = label_text(filter);
 				gtk_button_set_label((GtkButton*)button, text);
 				g_free(text);
-				show_widget_if(button, filter->value && strlen(filter->value));
+				show_widget_if(button, filter->value.c && strlen(filter->value.c));
 			}
 		}
 
-		void on_filter_changed(GObject* _filter, gpointer user_data)
+		void on_filter_changed (Observable* filter, AMVal value, gpointer user_data)
 		{
-			SamplecatFilter* filter = (SamplecatFilter*)_filter;
-			dbg(1, "filter=%s value=%s", filter->name, filter->value);
+			dbg(1, "value=%s", value);
 			set_label(filter, g_hash_table_lookup(buttons, filter));
 		}
 
-		g_signal_connect(filter, "changed", G_CALLBACK(on_filter_changed), NULL);
+		observable_subscribe(filter, on_filter_changed, NULL);
 	}
 	return hbox;
 }
 
 
 GtkWidget*
-message_panel__add_msg(const gchar* msg, const gchar* stock_id)
+message_panel__add_msg (const gchar* msg, const gchar* stock_id)
 {
 	//TODO expire old messages. Limit to 5 and add close button?
 
@@ -1045,7 +1038,7 @@ message_panel__add_msg(const gchar* msg, const gchar* stock_id)
 
 #ifndef USE_GDL
 static GtkWidget*
-message_panel__new()
+message_panel__new ()
 {
 	PF;
 	GtkWidget* vbox = app->msg_panel = gtk_vbox_new(FALSE, 2);
@@ -1066,11 +1059,12 @@ message_panel__new()
 #endif
 
 
-static gboolean
-tag_selector_new()
+/*
+ *  The tag _edit_ selector
+ */
+static void
+tag_selector_new ()
 {
-	//the tag _edit_ selector
-
 	GtkWidget* combo2 = window.category = gtk_combo_box_entry_new_text();
 	GtkComboBox* combo_ = GTK_COMBO_BOX(combo2);
 	gtk_combo_box_append_text(combo_, "no categories");
@@ -1079,20 +1073,19 @@ tag_selector_new()
 	}
 	gtk_box_pack_start(GTK_BOX(window.toolbar2), combo2, EXPAND_FALSE, FALSE, 0);
 
-	//"set" button:
+	// "set" button
 	GtkWidget* set = gtk_button_new_with_label("Set Tag");
 	gtk_box_pack_start(GTK_BOX(window.toolbar2), set, EXPAND_FALSE, FALSE, 0);
 	g_signal_connect(set, "clicked", G_CALLBACK(on_category_set_clicked), NULL);
-
-	return TRUE;
 }
 
 
-gboolean
-tagshow_selector_new()
+/*
+ *  The view-filter tag-select.
+ */
+static void
+tagshow_selector_new ()
 {
-	//the view-filter tag-select.
-
 	#define ALL_CATEGORIES "all categories"
 
 	GtkWidget* combo = gtk_combo_box_new_text();
@@ -1105,37 +1098,27 @@ tagshow_selector_new()
 	gtk_box_pack_start(GTK_BOX(window.toolbar), combo, EXPAND_FALSE, FALSE, 0);
 
 	void
-	on_view_category_changed(GtkComboBox* widget, gpointer user_data)
+	on_view_category_changed (GtkComboBox* widget, gpointer user_data)
 	{
-		//update the sample list with the new view-category.
+		// update the sample list with the new view-category
 		PF;
 
 		char* category = gtk_combo_box_get_active_text(GTK_COMBO_BOX(widget));
 		if (!strcmp(category, ALL_CATEGORIES)) g_free0(category);
-		samplecat_filter_set_value(samplecat.model->filters.category, category);
+		observable_string_set(samplecat.model->filters2.category, category);
 	}
 	g_signal_connect(combo, "changed", G_CALLBACK(on_view_category_changed), NULL);
 
-	void on_category_filter_changed(GObject* _filter, gpointer user_data)
+	void on_category_filter_changed(Observable* filter, AMVal value, gpointer user_data)
 	{
 		GtkComboBox* combo = user_data;
-		SamplecatFilter* filter = (SamplecatFilter*)_filter;
-		if(filter->value){
-			if(!strlen(filter->value)){
-				gtk_combo_box_set_active(combo, 0);
-			}
+
+		if(!strlen(filter->value.c)){
+			gtk_combo_box_set_active(combo, 0);
 		}
 	}
 
-	GList* l = samplecat.model->filters_;
-	for(;l;l=l->next){
-		SamplecatFilter* filter = l->data;
-		if(!strcmp(filter->name, "category")){
-			g_signal_connect(filter, "changed", G_CALLBACK(on_category_filter_changed), combo);
-		}
-	}
-
-	return TRUE;
+	observable_subscribe(samplecat.model->filters2.category, on_category_filter_changed, combo);
 }
 
 
@@ -1440,7 +1423,7 @@ show_waveform(gboolean enable)
 
 		static guint timer = 0;
 
-		bool redisplay(gpointer _view)
+		gboolean redisplay (gpointer _view)
 		{
 
 #ifdef USE_GDL
@@ -1533,7 +1516,7 @@ show_waveform(gboolean enable)
 		show_widget_if(window.waveform, enable);
 #endif
 		if(enable){
-			bool show_wave()
+			gboolean show_wave()
 			{
 				Sample* s;
 				if((s = samplecat.model->selection)){

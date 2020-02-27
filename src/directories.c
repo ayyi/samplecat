@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2017 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2020 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -81,14 +81,14 @@ dir_panel_new()
 }
 
 
-static gboolean
-on_dir_tree_link_selected(GObject* _, DhLink* link, gpointer data)
+static bool
+on_dir_tree_link_selected (GObject* _, DhLink* link, gpointer data)
 {
 	g_return_val_if_fail(link, false);
 
 	dbg(1, "dir=%s", link->uri);
 
-	samplecat_filter_set_value(samplecat.model->filters.dir, g_strdup(link->uri));
+	observable_string_set(samplecat.model->filters2.dir, g_strdup(link->uri));
 
 	return false;
 }

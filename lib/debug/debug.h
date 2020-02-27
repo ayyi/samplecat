@@ -5,7 +5,7 @@
 
 #define dbg(A, B, ...) debug_printf(__func__, A, B, ##__VA_ARGS__)
 #define gerr(A, ...) g_critical("%s(): "A, __func__, ##__VA_ARGS__)
-#define perr(A, ...) errprintf2(__func__, A, ##__VA_ARGS__)
+#define perr(A, ...) errprintf2(__func__, A"\n", ##__VA_ARGS__)
 #define gwarn(A, ...) g_warning("%s(): "A, __func__, ##__VA_ARGS__);
 #define pwarn(A, ...) warnprintf2(__func__, A, ##__VA_ARGS__)
 #define PF0 {printf("%s()...\n", __func__);}

@@ -17,7 +17,7 @@
 typedef struct {
     AGlActor       actor;
     AGlOrientation orientation;
-    Observable*    scroll;
+    AGlObservable* scroll;
     struct {
       float        opacity;
       WfAnimatable animation;

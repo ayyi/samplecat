@@ -13,9 +13,6 @@
 #include <glib-object.h>
 #include <gtk/gtk.h>
 #include <gdk-pixbuf/gdk-pixbuf.h>
-#include <stdlib.h>
-#include <string.h>
-#include <float.h>
 #include <math.h>
 #include <file_manager/mimetype.h>
 #include <file_manager/pixmaps.h>

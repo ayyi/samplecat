@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2016 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2020 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -11,9 +11,7 @@
 */
 #include "config.h"
 #define __USE_GNU
-#include <stdlib.h>
-#include <string.h>
-#include <gtk/gtk.h>
+#include <glib.h>
 #include "debug/debug.h"
 #include "decoder/ad.h"
 #include "file_manager/file_manager.h"
@@ -168,7 +166,7 @@ sample_unref(Sample* sample)
 
 
 bool
-sample_get_file_info(Sample* sample)
+sample_get_file_info (Sample* sample)
 {
 	// ownership of allocated memory (ie the meta_data) is transferred to the caller.
 
@@ -203,7 +201,7 @@ sample_get_by_filename(const char* abspath)
 		const char* abspath;
 	};
 
-	bool filter_sample (GtkTreeModel* model, GtkTreePath* path, GtkTreeIter* iter, gpointer data)
+	gboolean filter_sample (GtkTreeModel* model, GtkTreePath* path, GtkTreeIter* iter, gpointer data)
 	{
 		struct find_sample* fs = (struct find_sample*) data;
 		Sample* s = samplecat_list_store_get_sample_by_iter(iter);

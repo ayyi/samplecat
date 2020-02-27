@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2015 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2020 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -10,10 +10,6 @@
 *
 */
 #include "config.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
 #include <math.h>
 #include <sys/time.h>
 #include <glib.h>
@@ -59,7 +55,7 @@ worker_thread(gpointer data)
 
 	g_async_queue_ref(msg_queue);
 
-	bool done(gpointer _message)
+	gboolean done(gpointer _message)
 	{
 		Message* message = _message;
 		message->done(message->sample, message->user_data);
@@ -68,10 +64,11 @@ worker_thread(gpointer data)
 
 		sample_unref(message->sample);
 		g_free(message);
+
 		return G_SOURCE_REMOVE;
 	}
 
-	bool worker_timeout(gpointer data)
+	gboolean worker_timeout(gpointer data)
 	{
 		// check for new work
 		while(g_async_queue_length(msg_queue)){

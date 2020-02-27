@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2016-2017 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2016-2020 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -10,11 +10,8 @@
 *
 */
 #include "config.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include "shader.h"
-#include "agl/pango_render.h"
+#include "agl/text/pango.h"
 #include "materials/icon_ring.h"
 
 extern AGlShader ring;
@@ -45,8 +42,7 @@ ring_new()
 	);
 	IconMaterial* icon = (IconMaterial*)ring_material;
 
-	PangoGlRendererClass* PGRC = g_type_class_peek(PANGO_TYPE_GL_RENDERER);
-	icon->layout = pango_layout_new (PGRC->context);
+	icon->layout = pango_layout_new (agl_pango_get_context());
 
 	return ring_material;
 }

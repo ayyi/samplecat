@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2019 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2020 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -9,6 +9,7 @@
 * +----------------------------------------------------------------------+
 *
 */
+#include "config.h"
 #include "debug/debug.h"
 #include "samplecat/sample.h"
 #include "samplecat/support.h"
@@ -113,7 +114,7 @@ player_connect (ErrorCallback callback, gpointer user_data)
 bool
 player_play (Sample* sample)
 {
-	bool play_update(gpointer _)
+	gboolean play_update(gpointer _)
 	{
 		if(play->auditioner->position) play->position = play->auditioner->position();
 		if(play->position != UINT_MAX) g_signal_emit_by_name (play, "position");
