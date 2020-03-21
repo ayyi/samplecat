@@ -17,10 +17,12 @@
 #include "agl/utils.h"
 #include "agl/fbo.h"
 #include "agl/shader.h"
-#include "agl/text/pango.h"
+#include "agl/behaviours/key.h"
+#include "agl/text/text_input.h"
 #include "samplecat.h"
 #include "application.h"
 #include "behaviours/cache.h"
+#include "behaviours/state.h"
 #include "views/panel.h"
 #include "views/search.h"
 
@@ -40,6 +42,16 @@ static char* font = NULL;
 
 static int search_view_height (SearchView*);
 
+static ActorKeyHandler search_enter;
+
+static ActorKey keys[] = {
+	{XK_Return,   search_enter},
+	{XK_KP_Enter, search_enter},
+	{0,}
+};
+
+#define KEYS(A) ((KeyBehaviour*)(A)->behaviours[2])
+
 
 AGlActorClass*
 search_view_get_class ()
@@ -50,6 +62,8 @@ search_view_get_class ()
 		agl = agl_get_instance();
 
 		agl_actor_class__add_behaviour(&actor_class, cache_get_class());
+		agl_actor_class__add_behaviour(&actor_class, state_get_class());
+		agl_actor_class__add_behaviour(&actor_class, key_get_class());
 
 		font = g_strdup_printf("%s 10", APP_STYLE.font);
 
@@ -69,8 +83,6 @@ search_view (gpointer _)
 
 	bool search_paint (AGlActor* actor)
 	{
-		SearchView* view = (SearchView*)actor;
-
 		agl_enable_stencil(0, 0, actor->region.x2, actor->region.y2);
 		if(!agl->use_shaders) agl_enable(AGL_ENABLE_BLEND); // disable textures
 
@@ -87,16 +99,7 @@ search_view (gpointer _)
 			agl->shaders.plain->uniform.colour = 0x777777ff;
 			agl_use_program((AGlShader*)agl->shaders.plain);
 			agl_rect_((AGlRect){0, 0, agl_actor__width(actor), h});
-
-			// cursor
-  			PangoRectangle rect;
-			pango_layout_get_cursor_pos(view->layout, view->cursor_pos, &rect, NULL);
-			agl->shaders.plain->uniform.colour = 0xffffffff;
-			agl_use_program((AGlShader*)agl->shaders.plain);
-			agl_rect_((AGlRect){2 + PANGO_PIXELS(rect.x), 2, 1, h - 2});
 		}
-
-		agl_print_layout(4, BORDER + PADDING + 2, 0, view->layout_colour, view->layout);
 
 		agl_disable_stencil();
 
@@ -116,104 +119,18 @@ search_view (gpointer _)
 		panel->size_req.min.y = panel->size_req.max.y = panel->size_req.preferred.y = search_view_height((SearchView*)a);
 	}
 
-	void search_layout (SearchView* view)
+	void search_size (AGlActor* actor)
 	{
-		if(!view->layout){
-			view->layout = pango_layout_new (agl_pango_get_context());
-		}
-		char* text = view->text ? view->text : samplecat.model->filters2.search->value.c;
-		if(strlen(text)){
-			view->layout_colour = 0xffffffff;
-		}else{
-			view->layout_colour = 0x555555ff;
-			text = "Search";
-		}
-		pango_layout_set_text(view->layout, text, -1);
-
-		agl_actor__invalidate((AGlActor*)view);
+		((AGlActor*)actor->children->data)->region = (AGlfRegion){4, BORDER + PADDING - 2, agl_actor__width(actor) - 8, 18};
 	}
 
-	bool search_event (AGlActor* actor, GdkEvent* event, AGliPt xy)
+	void search_layout (SearchView* view)
 	{
-		SearchView* view = (SearchView*)actor;
+		AGlActor* actor = (AGlActor*)view;
 
-		switch(event->type){
-			case GDK_BUTTON_PRESS: {
-					int index;
-					pango_layout_xy_to_index (view->layout, xy.x * PANGO_SCALE, xy.y * PANGO_SCALE, &index, NULL);
-					if(view->cursor_pos != index){
-						view->cursor_pos = index;
-						agl_actor__invalidate(actor);
-					}
-				}
-				break;
-			case GDK_KEY_PRESS:
-				g_return_val_if_fail(actor->root->selected, AGL_NOT_HANDLED);
-				dbg(0, "Keypress");
-				if(!view->text){
-					view->text = g_strdup(samplecat.model->filters2.search->value.c);
-				}
-				int val = ((GdkEventKey*)event)->keyval;
-				switch(val){
-					case XK_Left:
-						view->cursor_pos = MAX(0, view->cursor_pos - 1);
-						agl_actor__invalidate(actor);
-						break;
-					case XK_Right:
-						if(view->text){
-							view->cursor_pos = MIN(strlen(view->text), view->cursor_pos + 1);
-							agl_actor__invalidate(actor);
-						}
-						break;
-					case XK_Delete:
-						dbg(0, "Delete");
-						if(view->text && view->cursor_pos < strlen(view->text)){
-							GString* s = g_string_new(view->text);
-							g_string_erase(s, view->cursor_pos, 1);
-							g_free(view->text);
-							view->text = g_string_free(s, FALSE);
+		text_input_set_text((TextInput*)actor->children->data, samplecat.model->filters2.search->value.c);
 
-							search_layout(view);
-						}
-						break;
-					case XK_BackSpace:
-						dbg(0, "BackSpace");
-						if(view->text && view->cursor_pos > 0){
-							char a[64]; g_strlcpy(a, view->text, view->cursor_pos);
-							char b[64]; g_strlcpy(b, view->text + view->cursor_pos, strlen(view->text) - view->cursor_pos + 2);
-							g_free(view->text);
-							view->text = g_strdup_printf("%s%s", a, b);
-							view->cursor_pos --;
-
-							search_layout(view);
-						}
-						break;
-					case XK_Return:
-						dbg(0, "RET");
-						observable_set(samplecat.model->filters2.search, (AMVal){.c = view->text});
-						break;
-					default:
-						;char str[2] = {val,};
-						if(g_utf8_validate(str, 1, NULL)){
-							g_return_val_if_fail(view->cursor_pos <= strlen(view->text), AGL_HANDLED);
-							char* a = g_strndup(view->text, view->cursor_pos);
-							char* b = g_strndup(view->text + view->cursor_pos, strlen(view->text) - view->cursor_pos);
-
-							view->text = g_strconcat(a, str, b, NULL);
-
-							g_free(a);
-							g_free(b);
-
-							view->cursor_pos ++;
-							search_layout(view);
-						}
-						break;
-				}
-				break;
-			default:
-				break;
-		}
-		return AGL_HANDLED;
+		agl_actor__invalidate(actor);
 	}
 
 	SearchView* view = agl_actor__new(SearchView,
@@ -222,13 +139,22 @@ search_view (gpointer _)
 			.name = actor_class.name,
 			.init = search_init,
 			.paint = search_paint,
-			.on_event = search_event
+			.set_size = search_size,
 		}
 	);
+
+	AGlActor* input = agl_actor__add_child((AGlActor*)view, text_input(NULL));
+	text_input_set_placeholder((TextInput*)input, "Search");
+	agl_observable_set(((TextInput*)input)->font, 10);
 
 	CacheBehaviour* cache = (CacheBehaviour*)((AGlActor*)view)->behaviours[0];
 	cache->on_invalidate = (AGlActorFn)search_layout;
 	cache_behaviour_add_dependency(cache, (AGlActor*)view, samplecat.model->filters2.search);
+
+	CacheBehaviour* state = (CacheBehaviour*)((AGlActor*)view)->behaviours[1];
+	((StateBehaviour*)state)->is_container = false;
+
+	KEYS((AGlActor*)view)->keys = &keys;
 
 	search_layout(view);
 
@@ -239,10 +165,6 @@ search_view (gpointer _)
 static void
 search_free (AGlActor* actor)
 {
-	SearchView* view = (SearchView*)actor;
-
-	_g_object_unref0(view->layout);
-
 	if(!--instance_count){
 	}
 
@@ -253,10 +175,17 @@ search_free (AGlActor* actor)
 static int
 search_view_height (SearchView* view)
 {
-	g_return_val_if_fail(view->layout, 22);
+	return text_input_get_height((TextInput*)((AGlActor*)view)->children->data) + 2 * PADDING + 2 * BORDER + MARGIN_BOTTOM;
+}
 
-	PangoRectangle logical_rect;
-	pango_layout_get_pixel_extents(view->layout, NULL, &logical_rect);
-	return logical_rect.height - logical_rect.y + 2 * PADDING + 2 * BORDER + MARGIN_BOTTOM;
+
+static bool
+search_enter (AGlActor* actor, GdkModifierType modifiers)
+{
+	const gchar* text = text_input_get_text((TextInput*)actor->children->data);
+
+	observable_set(samplecat.model->filters2.search, (AMVal){.c = (char*)text});
+
+	return AGL_HANDLED;
 }
 

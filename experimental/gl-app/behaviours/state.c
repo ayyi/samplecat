@@ -47,7 +47,8 @@ state ()
 	StateBehaviour* behaviour = AGL_NEW(StateBehaviour,
 		.behaviour = {
 			.klass = (AGlBehaviourClass*)&klass
-		}
+		},
+		.is_container = true
 	);
 
 	return (AGlBehaviour*)behaviour;

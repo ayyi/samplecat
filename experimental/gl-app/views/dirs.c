@@ -21,9 +21,8 @@
 #include "behaviours/cache.h"
 #include "views/dirs.h"
 
-#define _g_free0(var) (var = (g_free (var), NULL))
-
 #define row_height 20
+#define cache() ((CacheBehaviour*)actor->behaviours[1])
 
 static void dirs_free (AGlActor*);
 
@@ -95,13 +94,12 @@ directories_view (gpointer _)
 		return true;
 	}
 
-	void dirs_init (AGlActor* a)
+	void dirs_init (AGlActor* actor)
 	{
 		dir_list_update(); // because this is slow, it is not done until a consumer needs it.
 
-		CacheBehaviour* cache = (CacheBehaviour*)a->behaviours[1];
-		cache->on_invalidate = dirs_on_filter_changed;
-		cache_behaviour_add_dependency(cache, a, samplecat.model->filters2.dir);
+		cache()->on_invalidate = dirs_on_filter_changed;
+		cache_behaviour_add_dependency(cache(), actor, samplecat.model->filters2.dir);
 	}
 
 	void dirs_set_size (AGlActor* actor)

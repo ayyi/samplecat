@@ -16,7 +16,7 @@
 #include <GL/gl.h>
 #include "agl/ext.h"
 #include "agl/utils.h"
-#include "agl/actor.h"
+#include "agl/behaviours/key.h"
 #include "waveform/waveform.h"
 #include "waveform/actors/text.h"
 #include "debug/debug.h"
@@ -24,7 +24,6 @@
 #include "file_manager/pixmaps.h"
 #include "samplecat.h"
 #include "application.h"
-#include "behaviours/key.h"
 #include "views/scrollbar.h"
 #include "views/files.impl.h"
 #include "views/files.with_wav.h"

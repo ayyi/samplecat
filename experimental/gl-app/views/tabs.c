@@ -21,8 +21,6 @@
 
 extern void agl_actor__render_from_fbo (AGlActor*);
 
-#define _g_free0(var) (var = (g_free (var), NULL))
-
 #define FONT "Droid Sans"
 #define TAB_HEIGHT 30
 

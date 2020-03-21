@@ -16,7 +16,6 @@ typedef struct {
    AGlActor     actor;
    int          cursor_pos;
    char*        text;
-   PangoLayout* layout;
    uint32_t     layout_colour;
 } SearchView;
 

@@ -23,7 +23,11 @@
 #include "layout.h"
 
 typedef AGlActorClass* (get_class)();
-get_class dock_v_get_class, dock_h_get_class, scrollable_view_get_class, list_view_get_class, files_view_get_class, directories_view_get_class, inspector_view_get_class, search_view_get_class, filters_view_get_class, player_view_get_class, scrollbar_view_get_class, button_get_class, spectrogram_view_get_class;
+get_class dock_v_get_class, dock_h_get_class, scrollable_view_get_class, list_view_get_class, files_view_get_class, directories_view_get_class, inspector_view_get_class, search_view_get_class, filters_view_get_class, player_view_get_class, scrollbar_view_get_class, button_get_class
+#ifdef HAVE_FFTW3
+	, spectrogram_view_get_class
+#endif
+	;
 #include "views/dock_v.h"
 #include "views/tabs.h"
 
@@ -462,12 +466,16 @@ load_settings ()
 		agl_actor_register_class("Scrollbar", scrollbar_view_get_class());
 		agl_actor_register_class("Files", files_view_get_class());
 		agl_actor_register_class("Waveform", wf_actor_get_class());
+#ifdef HAVE_FFTW3
 		agl_actor_register_class("Spectrogram", spectrogram_view_get_class());
+#endif
 
 		agl_actor_class__add_behaviour(files_view_get_class(), panel_get_class());
 		agl_actor_class__add_behaviour(search_view_get_class(), panel_get_class());
 		agl_actor_class__add_behaviour(inspector_view_get_class(), panel_get_class());
+#ifdef HAVE_FFTW3
 		agl_actor_class__add_behaviour(spectrogram_view_get_class(), panel_get_class());
+#endif
 		agl_actor_class__add_behaviour(wf_actor_get_class(), panel_get_class());
 	}
 
@@ -509,7 +517,7 @@ save_settings ()
 	snprintf(value, 255, "0x%08x", 0xff00ff00);
 	if(!yaml_add_key_value_pair("test_colour", value)) goto error;
 
-	bool add_child(yaml_event_t* event, AGlActor* actor)
+	bool add_child (yaml_event_t* event, AGlActor* actor)
 	{
 		AGlActorClass* c = actor->class;
 		g_return_val_if_fail(c, false);
@@ -550,13 +558,11 @@ save_settings ()
 				}
 			}
 
-			for(int i = 0; i < AGL_ACTOR_N_BEHAVIOURS; i++){
-				AGlBehaviour* behaviour = actor->behaviours[i];
-				if(!behaviour) break;
-				if(behaviour->klass == state_get_class()){
-					StateBehaviour* b = (StateBehaviour*)behaviour;
-					ParamArray* params = b->params;
-					for(int i = 0; i< params->size; i++){
+			StateBehaviour* b = (StateBehaviour*)agl_actor__get_behaviour(actor, state_get_class());
+			if(b){
+				ParamArray* params = b->params;
+				if(params){
+					for(int i = 0; i < params->size; i++){
 						ConfigParam* param = &params->params[i];
 						switch(param->utype){
 							case G_TYPE_STRING:
@@ -569,9 +575,10 @@ save_settings ()
 				}
 			}
 
-			GList* l = actor->children;
-			for(;l;l=l->next){
-				if(!add_child(event, l->data)) goto error;
+			if(!b || b->is_container){
+				for(GList* l = actor->children;l;l=l->next){
+					if(!add_child(event, l->data)) goto error;
+				}
 			}
 
 			end_map_(event);

@@ -45,6 +45,7 @@ typedef struct
 typedef struct {
     AGlBehaviour  behaviour;
     ParamArray*   params;
+    bool          is_container; // if false, children are private and not saved
 } StateBehaviour;
 
 AGlBehaviourClass* state_get_class           ();

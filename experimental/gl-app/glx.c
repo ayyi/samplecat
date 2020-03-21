@@ -198,44 +198,44 @@ on_window_resize(Display* dpy, AGlWindow* window, int width, int height)
  * Remove window border/decorations.
  */
 static void
-no_border(Display* dpy, Window w)
+no_border (Display* dpy, Window w)
 {
-   static const unsigned MWM_HINTS_DECORATIONS = (1 << 1);
-   static const int PROP_MOTIF_WM_HINTS_ELEMENTS = 5;
+	static const unsigned MWM_HINTS_DECORATIONS = (1 << 1);
+	static const int PROP_MOTIF_WM_HINTS_ELEMENTS = 5;
 
-   typedef struct
-   {
-      unsigned long       flags;
-      unsigned long       functions;
-      unsigned long       decorations;
-      long                inputMode;
-      unsigned long       status;
-   } PropMotifWmHints;
+	typedef struct
+	{
+		unsigned long       flags;
+		unsigned long       functions;
+		unsigned long       decorations;
+		long                inputMode;
+		unsigned long       status;
+	} PropMotifWmHints;
 
-   PropMotifWmHints motif_hints;
-   unsigned long flags = 0;
+	PropMotifWmHints motif_hints;
+	unsigned long flags = 0;
 
-   /* setup the property */
-   motif_hints.flags = MWM_HINTS_DECORATIONS;
-   motif_hints.decorations = flags;
+	/* setup the property */
+	motif_hints.flags = MWM_HINTS_DECORATIONS;
+	motif_hints.decorations = flags;
 
-   /* get the atom for the property */
-   Atom prop = XInternAtom(dpy, "_MOTIF_WM_HINTS", True);
-   if (!prop) {
-      /* something went wrong! */
-      return;
-   }
+	/* get the atom for the property */
+	Atom prop = XInternAtom(dpy, "_MOTIF_WM_HINTS", True);
+	if (!prop) {
+		/* something went wrong! */
+		return;
+	}
 
-   /* not sure this is correct, seems to work, XA_WM_HINTS didn't work */
-   Atom proptype = prop;
+	/* not sure this is correct, seems to work, XA_WM_HINTS didn't work */
+	Atom proptype = prop;
 
-   XChangeProperty(dpy, w,                         /* display, window */
-                   prop, proptype,                 /* property, type */
-                   32,                             /* format: 32-bit datums */
-                   PropModeReplace,                /* mode */
-                   (unsigned char *) &motif_hints, /* data */
-                   PROP_MOTIF_WM_HINTS_ELEMENTS    /* nelements */
-                  );
+	XChangeProperty(dpy, w,
+		prop, proptype,                 /* property, type */
+		32,                             /* format: 32-bit datums */
+		PropModeReplace,                /* mode */
+		(unsigned char *) &motif_hints, /* data */
+		PROP_MOTIF_WM_HINTS_ELEMENTS    /* nelements */
+	);
 }
 
 
@@ -420,7 +420,7 @@ event_loop (Display* dpy)
 						dbg(1, "client message");
 						if ((event.xclient.message_type == wm_protocol) // OK, it's comming from the WM
 								&& ((Atom)event.xclient.data.l[0] == wm_close)) {
-							agl_window_destroy(dpy, &window);
+							return;
 						}
 						break;
 					case Expose:
@@ -435,30 +435,27 @@ event_loop (Display* dpy)
 						window->scene->gl.glx.needs_draw = True;
 						break;
 					case KeyPress: {
-						char buffer[10];
-
-#if 0
-						bool shift = ((XKeyEvent*)&event)->state & ShiftMask;
-						bool control = ((XKeyEvent*)&event)->state & ControlMask;
-#endif
-						XLookupString(&event.xkey, buffer, sizeof(buffer), NULL, NULL);
-						switch(buffer[0]){
-							case 27: // ESC
+						int code = XLookupKeysym(&event.xkey, 0);
+						switch(code){
+							case XK_Escape:
 								if(g_list_length(windows) > 1 && window != ((AGlWindow*)windows->data)){
 									agl_window_destroy(dpy, &window);
 								}else{
 									return; // exit
 								}
 								break;
-							case 'q':
-								return;
+							case XK_q:
+								if(((XKeyEvent*)&event)->state & ControlMask){
+									return;
+								}
+								// falling through ...
 							default:
 								agl_actor__xevent(window->scene, &event);
+								break;
 						}
-
-						} break;
+						}
+						break;
 					case KeyRelease:
-						agl_actor__xevent(window->scene, &event);
 						break;
 					case ButtonPress:
 					case ButtonRelease:

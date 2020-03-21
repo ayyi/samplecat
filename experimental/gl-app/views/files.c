@@ -15,6 +15,7 @@
 #include "agl/ext.h"
 #include "agl/utils.h"
 #include "agl/actor.h"
+#include "agl/behaviours/key.h"
 #include "waveform/waveform.h"
 #include "debug/debug.h"
 #include "file_manager/file_manager.h"
@@ -22,8 +23,6 @@
 #include "icon/utils.h"
 #include "samplecat.h"
 #include "application.h"
-#include "keys.h"
-#include "behaviours/key.h"
 #include "views/scrollbar.h"
 #include "views/files.impl.h"
 #include "views/files.h"
@@ -371,7 +370,7 @@ files_on_scroll (AGlObservable* observable, int row, gpointer _view)
 
 
 static bool
-files_nav_up (AGlActor* actor)
+files_nav_up (AGlActor* actor, GdkModifierType modifier)
 {
 	AGlObservable* observable = SELECTABLE->observable;
 	agl_observable_set(observable, observable->value - 1);
@@ -381,7 +380,7 @@ files_nav_up (AGlActor* actor)
 
 
 static bool
-files_nav_down (AGlActor* actor)
+files_nav_down (AGlActor* actor, GdkModifierType modifier)
 {
 	AGlObservable* observable = SELECTABLE->observable;
 	agl_observable_set(observable, observable->value + 1);

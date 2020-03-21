@@ -15,22 +15,19 @@
 #include "agl/actor.h"
 #include "agl/text/renderer.h"
 #include "debug/debug.h"
+#include "agl/behaviours/key.h"
 #include "waveform/waveform.h"
 #include "waveform/shader.h"
 #include "waveform/actors/text.h"
 #include "samplecat.h"
-#include "keys.h"
 #include "application.h"
 #include "behaviours/panel.h"
-#include "behaviours/key.h"
 #include "views/graph_debug.h"
 #include "views/list.h"
 #include "views/context_menu.h"
 
 extern int need_draw;
 extern Menu menu;
-
-#define _g_free0(var) (var = (g_free (var), NULL))
 
 #define FONT "Droid Sans"
 
@@ -177,7 +174,7 @@ list_view (gpointer _)
 						break;
 				}
 				break;
-			case GDK_KEY_RELEASE:;
+			case GDK_KEY_RELEASE:
 				return key_behaviour_handle_event((AGlBehaviour*)KEYS(actor), actor, event);
 			default:
 				break;
@@ -254,7 +251,7 @@ list_view_select (ListView* list, int row)
 
 
 static bool
-nav_up (AGlActor* actor)
+nav_up (AGlActor* actor, GdkModifierType modifier)
 {
 	PF;
 	ListView* list = (ListView*)actor;
@@ -265,7 +262,7 @@ nav_up (AGlActor* actor)
 
 
 static bool
-nav_down (AGlActor* actor)
+nav_down (AGlActor* actor, GdkModifierType modifier)
 {
 	PF;
 	ListView* list = (ListView*)actor;
@@ -276,7 +273,7 @@ nav_down (AGlActor* actor)
 
 
 static bool
-debug_window (AGlActor* actor)
+debug_window (AGlActor* actor, GdkModifierType modifier)
 {
 	PF;
 	graph_debug_window(actor->root);
