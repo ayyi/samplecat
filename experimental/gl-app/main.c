@@ -19,7 +19,6 @@
 #include "file_manager/pixmaps.h"
 #include "samplecat.h"
 #include "utils/ayyi_utils.h"
-#include "waveform/waveform.h"
 #include "icon/utils.h"
 #include "yaml_utils.h"
 #include "application.h"

@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2017 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2020 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -15,7 +15,6 @@
 #include <string.h>
 #include <unistd.h>
 #include <math.h>
-#include <gtk/gtk.h>
 #include "debug/debug.h"
 #include "samplecat.h"
 #include "audio_analysis/waveform/waveform.h"
@@ -29,7 +28,7 @@ typedef struct
 
 
 static bool
-calc_ebur128(Sample* sample)
+calc_ebur128 (Sample* sample)
 {
 	struct ebur128 ebur;
 	if (!ebur128analyse(sample->full_path, &ebur)){
@@ -63,7 +62,7 @@ calc_ebur128(Sample* sample)
  *  Combine all analysis jobs in one for the purpose of having only a single model update
  */
 void
-request_analysis(Sample* sample)
+request_analysis (Sample* sample)
 {
 	typedef struct {
 		int changed;
@@ -85,7 +84,7 @@ request_analysis(Sample* sample)
 		}
 	}
 
-	void analysis_done(Sample* sample, gpointer _c)
+	void analysis_done (Sample* sample, gpointer _c)
 	{
 		C* c = _c;
 		switch(c->changed){
@@ -112,7 +111,7 @@ request_analysis(Sample* sample)
 
 
 void
-request_overview(Sample* sample)
+request_overview (Sample* sample)
 {
 	void overview_work(Sample* sample, gpointer user_data)
 	{
@@ -136,7 +135,7 @@ request_overview(Sample* sample)
 
 
 void
-request_peaklevel(Sample* sample)
+request_peaklevel (Sample* sample)
 {
 	void peaklevel_work(Sample* sample, gpointer user_data)
 	{
@@ -159,15 +158,15 @@ request_peaklevel(Sample* sample)
 
 
 void
-request_ebur128(Sample* sample)
+request_ebur128 (Sample* sample)
 {
-	void ebur128_work(Sample* sample, gpointer _result)
+	void ebur128_work (Sample* sample, gpointer _result)
 	{
 		WorkResult* result = _result;
 		result->success = calc_ebur128(sample);
 	}
 
-	void ebur128_done(Sample* sample, gpointer _result)
+	void ebur128_done (Sample* sample, gpointer _result)
 	{
 		WorkResult* result = _result;
 		if(result->success) samplecat_model_update_sample (samplecat.model, sample, COL_X_EBUR, NULL);

@@ -24,7 +24,9 @@
 
 #include "config.h"
 
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <gtk/gtk.h>
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 #include <string.h>
 #include <sys/stat.h>
 

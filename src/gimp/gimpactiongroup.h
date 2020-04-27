@@ -50,7 +50,6 @@ struct _GimpActionGroup
 {
   GtkActionGroup             parent_instance;
 
-  //Gimp                      *gimp;
   gchar                     *label;
   gchar                     *stock_id;
   gboolean                   mnemonics;
@@ -129,23 +128,7 @@ struct _GimpStringActionEntry
   const gchar *help_id;
 };
 
-/*
-struct _GimpPlugInActionEntry
-{
-  const gchar   *name;
-  const gchar   *stock_id;
-  const gchar   *label;
-  const gchar   *accelerator;
-  const gchar   *tooltip;
-  PlugInProcDef *proc_def;
-
-  const gchar   *help_id;
-};
-*/
-
-
 GType            gimp_action_group_get_type (void);
-//GimpActionGroup *gimp_action_group_new      (Gimp                  *gimp,
 GimpActionGroup *gimp_action_group_new      (
                                              const gchar           *name,
                                              const gchar           *label,
@@ -179,7 +162,6 @@ void   gimp_action_group_add_string_actions (GimpActionGroup       *group,
                                              GimpStringActionEntry *entries,
                                              guint                  n_entries,
                                              GCallback              callback);
-//void   gimp_action_group_add_plug_in_actions(GimpActionGroup*, GimpPlugInActionEntry *entries, guint n_entries, GCallback callback);
 
 void   gimp_action_group_set_action_visible   (GimpActionGroup     *group,
                                                const gchar         *action_name,
@@ -200,4 +182,4 @@ void   gimp_action_group_set_action_important (GimpActionGroup     *group,
                                                gboolean             is_important);
 
 
-#endif  /* __GIMP_ACTION_GROUP_H__ */
+#endif

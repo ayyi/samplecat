@@ -10,7 +10,6 @@
 *
 */
 #include "config.h"
-//#include <gtk/gtk.h>
 #include "debug/debug.h"
 #include "samplecat.h"
 #include "dh_link.h"
@@ -24,6 +23,8 @@ static void create_nodes_for_path (gchar** path);
 void
 dir_list_update ()
 {
+	g_return_if_fail(samplecat.model->backend.dir_iter_new);
+
 	samplecat.model->backend.dir_iter_new();
 
 	if(samplecat.model->dir_tree) g_node_destroy(samplecat.model->dir_tree);

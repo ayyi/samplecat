@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://samplecat.orford.org          |
-* | copyright (C) 2007-2019 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2020 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -11,11 +11,12 @@
 */
 #include "config.h"
 #include <math.h>
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <gtk/gtk.h>
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 #include "debug/debug.h"
 #include "file_manager.h"
-#include <gimp/gimpaction.h>
-#include <gimp/gimpactiongroup.h>
+#include "gimp/gimpactiongroup.h"
 #include "typedefs.h"
 #include "support.h"
 #include "application.h"
@@ -45,7 +46,7 @@ gboolean   colourbox_dirty;
 
 
 void
-colour_box_init()
+colour_box_init ()
 {
 	int i; for(i=0;i<PALETTE_SIZE;i++) colour_button[i] = NULL;
 	colourbox_dirty = true;
@@ -53,7 +54,7 @@ colour_box_init()
 
 
 GtkWidget*
-colour_box_new(GtkWidget* parent)
+colour_box_new (GtkWidget* parent)
 {
 	GtkWidget* e;
 	int i;
@@ -113,7 +114,7 @@ colour_box_new(GtkWidget* parent)
 
 
 static void
-colour_box_update()
+colour_box_update ()
 {
 	//show the current palette colours in the colour_box
 	int i;
@@ -141,7 +142,7 @@ colour_box_update()
 
 #if NEVER
 static gboolean
-colour_box__exists(GdkColor* colour)
+colour_box__exists (GdkColor* colour)
 {
 	//returns true if a similar colour already exists in the colour_box.
 
@@ -162,7 +163,7 @@ colour_box__exists(GdkColor* colour)
 
 
 gboolean
-colour_box_add(GdkColor* colour)
+colour_box_add (GdkColor* colour)
 {
 	static unsigned slot = 0;
 
@@ -182,7 +183,7 @@ colour_box_add(GdkColor* colour)
 
 
 static void
-colour_box__set_colour(int i, GdkColor* colour)
+colour_box__set_colour (int i, GdkColor* colour)
 {
 	g_return_if_fail(i < PALETTE_SIZE);
 	g_return_if_fail(colour_button[i]);
@@ -192,7 +193,7 @@ colour_box__set_colour(int i, GdkColor* colour)
 
 
 static gboolean
-colour_box__on_event(GtkWidget* widget, GdkEvent* event, gpointer user_data)
+colour_box__on_event (GtkWidget* widget, GdkEvent* event, gpointer user_data)
 {
 	switch (event->type){
 		case GDK_BUTTON_PRESS:
@@ -230,7 +231,7 @@ colour_box__drag_dataget (GtkWidget *widget, GdkDragContext *drag_context, GtkSe
 
 
 static GtkWidget*
-colour_box__make_context_menu()
+colour_box__make_context_menu ()
 {
 	GtkWidget *menu = gtk_menu_new();
 
@@ -254,7 +255,7 @@ colour_box__make_context_menu()
 
 
 static int
-colour_box__lookup_idx(GtkWidget* widget)
+colour_box__lookup_idx (GtkWidget* widget)
 {
 	int i; for(i=0;i<PALETTE_SIZE;i++){
 		if(colour_button[i] == widget) return i;
@@ -264,7 +265,7 @@ colour_box__lookup_idx(GtkWidget* widget)
 
 
 static void
-menu__open_selector(GtkMenuItem* menuitem, gpointer user_data)
+menu__open_selector (GtkMenuItem* menuitem, gpointer user_data)
 {
 	static gboolean colour_editing=false;
 	dbg(2, "data=%p", user_data);
@@ -313,7 +314,7 @@ menu__open_selector(GtkMenuItem* menuitem, gpointer user_data)
 
 
 void
-colour_box_colourise()
+colour_box_colourise ()
 {
 	GdkColor colour;
 #if 0 // tim

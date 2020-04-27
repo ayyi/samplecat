@@ -1,6 +1,8 @@
 #include "config.h"
 #include <stdio.h>
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <gtk/gtk.h>
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 #include "debug/debug.h"
 #include "application.h"
 #include "support.h"
@@ -21,24 +23,27 @@ struct _progres {
 static struct _progres pw = {NULL, NULL, NULL, NULL, NULL, NULL, false, 0, 0};
 
 
-static gboolean on_destroy (GtkWidget* w, gpointer p) {
+static gboolean
+on_destroy (GtkWidget* w, gpointer p) {
 	gtk_widget_destroyed(w,p);
 	pw.win=NULL;
 	return FALSE;
 }
 
-static gboolean on_abort (GtkWidget* w, gpointer p) {
+static gboolean
+on_abort (GtkWidget* w, gpointer p) {
 	pw.aborted=true;
 	return FALSE;
 }
 
-static gboolean on_btn (GtkWidget* w, gpointer p) {
+static gboolean
+on_btn (GtkWidget* w, gpointer p) {
 	pw.btn=GPOINTER_TO_INT(p);
 	return FALSE;
 }
 
 GtkWidget*
-progress_win_new(GtkWidget *parent, gchar *title)
+progress_win_new (GtkWidget *parent, gchar *title)
 {
 	GtkWidget* window = pw.win= gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	gtk_window_set_title(GTK_WINDOW(window), title);
@@ -86,8 +91,9 @@ progress_win_new(GtkWidget *parent, gchar *title)
 	return window;
 }
 
+
 void
-set_progress(int cur, int all)
+set_progress (int cur, int all)
 {
 	GtkProgressBar *p = GTK_PROGRESS_BAR(pw.bar);
 	gchar txt[64];
@@ -108,7 +114,7 @@ set_progress(int cur, int all)
 #define DEFAULT_TEXT "Referencing files.."
 
 int 
-do_progress(int cur, int all) 
+do_progress (int cur, int all)
 {
 	if (pw.aborted) return 1;
 	pw.tics++;
@@ -128,7 +134,7 @@ do_progress(int cur, int all)
 }
 
 void
-hide_progress()
+hide_progress ()
 {
 	if (pw.win) {
 		gtk_widget_destroy(pw.win);
@@ -139,7 +145,7 @@ hide_progress()
 }
 
 int
-do_progress_question(gchar *msg /* TODO: question-ID, config, options */ )
+do_progress_question (gchar *msg /* TODO: question-ID, config, options */ )
 {
 	if (!pw.win) {
 		pw.win = progress_win_new(app->window, DEFAULT_TEXT);

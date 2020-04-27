@@ -23,7 +23,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <gdk/gdkkeysyms.h>
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <gtk/gtk.h>
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 #include "debug/debug.h"
 #include "file_manager/mimetype.h"
 

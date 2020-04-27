@@ -22,8 +22,6 @@
 #include "config.h"
 
 #include <stdlib.h>
-#include <stdint.h>
-#include <stdio.h>
 #include <math.h>
 #include <string.h>
 #include <errno.h>
@@ -33,7 +31,9 @@
 #include <ctype.h>
 #include <sys/stat.h>
 
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <gtk/gtk.h>
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 #include <gdk/gdkkeysyms.h>
 #include "debug/debug.h"
 
@@ -207,7 +207,6 @@ draw_small_icon (GdkWindow* window, GdkRectangle* area, DirItem* item, MaskedPix
 		: image->sm_pixbuf;
 
 	g_return_if_fail(pixbuf);
-	//dbg(0, "selected=%i pixbuf=%p ispixbuf=%i", selected, pixbuf, GDK_IS_PIXBUF(pixbuf));
 	if(!GDK_IS_PIXBUF(pixbuf)) errprintf("%s bad icon pixbuf", __func__);
 
 	dbg(2, "copying pixbuf to drawable... width=%i %i", width, area->y + image_y);

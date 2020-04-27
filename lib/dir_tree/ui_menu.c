@@ -9,16 +9,15 @@
  * This software comes with no warranty of any kind, use at your own risk!
  */
 
-//#ifdef HAVE_CONFIG_H
-//#  include "config.h"
-//#endif
-//#include "intl.h"
+#include "config.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <gtk/gtk.h>
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 
 #include "ui_menu.h"
 

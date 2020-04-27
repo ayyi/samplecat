@@ -11,6 +11,7 @@ ffmpeg \
 ladspa \
 vim \
 gtk2 \
+graphene \
 libxml2 \
 sqlite \
 mesa \

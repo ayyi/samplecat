@@ -21,24 +21,13 @@
 
 #include "config.h"
 
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <gtk/gtk.h>
-
-//#include "libgimpbase/gimpbase.h"
-//#include "libgimpwidgets/gimpwidgets.h"
-
-//#include "widgets-types.h"
-
-//#include "core/gimp.h"
-//#include "core/gimpviewable.h"
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 
 typedef struct _GimpActionGroup GimpActionGroup;
 #include "gimpactiongroup.h"
-//#include "gimpaction.h"
-//#include "gimpenumaction.h"
-//#include "gimppluginaction.h"
-//#include "gimpstringaction.h"
 
-//#include "gimp-intl.h"
 gchar* gimp_strip_uline (const gchar* str);
 
 
@@ -243,11 +232,6 @@ gimp_action_group_set_property (GObject      *object,
 
   switch (prop_id)
     {
-/*
-    case PROP_GIMP:
-      group->gimp = g_value_get_object (value);
-      break;
-*/
     case PROP_LABEL:
       group->label = g_value_dup_string (value);
       break;
@@ -321,7 +305,6 @@ gimp_action_group_new (/*Gimp                      *gimp,*/
 {
   GimpActionGroup *group;
 
-  //g_return_val_if_fail (GIMP_IS_GIMP (gimp), NULL);
   g_return_val_if_fail (name != NULL, NULL);
 
   group = g_object_new (GIMP_TYPE_ACTION_GROUP,

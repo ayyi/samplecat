@@ -11,12 +11,13 @@
 */
 #ifndef __samplecat_types_h__
 #define __samplecat_types_h__
+
 #include <glib.h>
 #include "typedefs.h"
 
 #define PALETTE_SIZE 17
 
-struct _menu_def
+struct _MenuDef
 {
 	char*      label;
 	GCallback  callback;

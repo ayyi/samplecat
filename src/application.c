@@ -13,7 +13,9 @@
 */
 #include "config.h"
 #include <string.h>
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <gtk/gtk.h>
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 #include <glib-object.h>
 #include "debug/debug.h"
 #include <sample.h>
@@ -508,12 +510,12 @@ application_add_file(const char* path, ScanResults* result)
  *	Scan the directory and try and add any files found.
  */
 void
-application_add_dir(const char* path, ScanResults* result)
+application_add_dir (const char* path, ScanResults* result)
 {
 	PF;
 
 	char filepath[PATH_MAX];
-	G_CONST_RETURN gchar* file;
+	const gchar* file;
 	GError* error = NULL;
 	GDir* dir;
 

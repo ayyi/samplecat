@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2019 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2020 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -10,7 +10,9 @@
 *
 */
 #include "config.h"
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <gtk/gtk.h>
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 #include <GL/gl.h>
 #include "debug/debug.h"
 
@@ -113,6 +115,7 @@ texture_from_pixbuf (const char* name, GdkPixbuf* pixbuf)
 	g_object_unref(pixbuf);
 	return t;
 }
+
 
 guint
 get_icon_texture_by_name (const char* name, int size)

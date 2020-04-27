@@ -20,7 +20,7 @@
 #define PATH_MAX (1024)
 #endif
 
-typedef struct _menu_def          MenuDef;
+typedef struct _MenuDef           MenuDef;
 typedef struct _libraryview       LibraryView;
 typedef struct _Inspector         Inspector;
 typedef struct _PlayCtrl          PlayCtrl;

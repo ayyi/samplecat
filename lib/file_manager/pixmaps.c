@@ -39,7 +39,9 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <string.h>
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <gtk/gtk.h>
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 #include "debug/debug.h"
 
 #include "fscache.h"

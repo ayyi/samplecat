@@ -11,9 +11,10 @@
 */
 #include "config.h"
 #include <stdlib.h>
-#include <stdint.h>
 #include <string.h>
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <gtk/gtk.h>
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 #include "debug/debug.h"
 #ifdef USE_AYYI
 #include <ayyi/ayyi.h>
@@ -743,7 +744,8 @@ listview__on_motion(GtkWidget* widget, GdkEventMotion* event, gpointer user_data
 void
 listview__edit_row(GtkWidget* widget, gpointer user_data)
 {
-	//currently this only works for the Tags cell.
+	// currently this only works for the Tags cell.
+
 	PF;
 	GtkTreeView* treeview = GTK_TREE_VIEW(app->libraryview->widget);
 
@@ -764,10 +766,13 @@ listview__edit_row(GtkWidget* widget, gpointer user_data)
 			GtkCellRenderer*   focus_cell   = app->libraryview->cells.tags;
 			//g_signal_handlers_block_by_func(app->libraryview->widget, cursor_changed, self);
 			gtk_widget_grab_focus(app->libraryview->widget);
-			gtk_tree_view_set_cursor_on_cell(GTK_TREE_VIEW(app->libraryview->widget), treepath,
-			                                 focus_column, //GtkTreeViewColumn *focus_column - this needs to be set for start_editing to work.
-			                                 focus_cell,   //the cell to be edited.
-			                                 START_EDITING);
+			gtk_tree_view_set_cursor_on_cell(
+				GTK_TREE_VIEW(app->libraryview->widget),
+				treepath,
+				focus_column, // GtkTreeViewColumn *focus_column - this needs to be set for start_editing to work.
+				focus_cell,   // the cell to be edited.
+				START_EDITING
+			);
 			//g_signal_handlers_unblock_by_func(treeview, cursor_changed, self);
 
 			g_free(path_str);
@@ -778,9 +783,11 @@ listview__edit_row(GtkWidget* widget, gpointer user_data)
 }
 
 
-/**the keywords column has been edited. Update the database to reflect the new text.  */
+/*
+ *  The keywords column has been edited. Update the database to reflect the new text.
+ */
 static void
-listview__on_keywords_edited(GtkCellRendererText* cell, gchar* path_string, gchar* new_text, gpointer user_data)
+listview__on_keywords_edited (GtkCellRendererText* cell, gchar* path_string, gchar* new_text, gpointer user_data)
 {
 	PF;
 	GtkTreeIter iter;

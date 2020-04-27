@@ -11,14 +11,13 @@
 */
 #define __wf_private__
 #include "config.h"
-#include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
 #include <GL/gl.h>
 #include "agl/ext.h"
 #include "agl/utils.h"
 #include "agl/behaviours/key.h"
-#include "waveform/waveform.h"
-#include "waveform/actors/text.h"
+#include "waveform/actor.h"
+#include "waveform/text.h"
 #include "debug/debug.h"
 #include "file_manager/file_manager.h"
 #include "file_manager/pixmaps.h"

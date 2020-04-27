@@ -10,9 +10,11 @@
 * +----------------------------------------------------------------------+
 *
 */
-#include "../config.h"
+#include "config.h"
 #include <math.h>
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <gtk/gtk.h>
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 #include <debug/debug.h>
 #include "player/player.h"
 #include "support.h"

@@ -15,7 +15,7 @@
 #include "agl/actor.h"
 #include "samplecat.h"
 #include "utils/ayyi_utils.h"
-#include "waveform/waveform.h"
+#include "waveform/actor.h"
 #include "yaml_utils.h"
 #include "application.h"
 #include "behaviours/state.h"

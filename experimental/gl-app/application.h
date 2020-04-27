@@ -16,7 +16,7 @@
 #include <glib.h>
 #include <glib-object.h>
 #include "agl/actor.h"
-#include "waveform/typedefs.h"
+#include "waveform/ui-typedefs.h"
 #include "samplecat/typedefs.h"
 #include "behaviours/style.h"
 #include "settings.h"

@@ -13,14 +13,11 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <gdk-pixbuf/gdk-pixdata.h>
-#include <gtk/gtk.h>
 #include <float.h>
 #include <math.h>
 #include <gdk/gdk.h>
 #include <gdk/gdkgl.h>
 #include <gtk/gtkgl.h>
-#include <GL/glu.h>
-#include <stdlib.h>
 #include <string.h>
 #include "agl/utils.h"
 #include "agl/shader.h"
@@ -261,7 +258,7 @@ gl_spectrogram_set_projection (GlSpectrogram* self)
 
 
 static void
-__lambda0__spectrogram_ready (const char* filename, GdkPixbuf* pixbuf, gpointer _self)
+__spectrogram_ready (const char* filename, GdkPixbuf* pixbuf, gpointer _self)
 {
 	GlSpectrogram* self = _self;
 
@@ -284,7 +281,7 @@ gl_spectrogram_set_file (GlSpectrogram* self, gchar* filename)
 	_g_free0 (self->priv->_filename);
 	self->priv->_filename = g_strdup ((const gchar*) filename);
 	cancel_spectrogram (NULL);
-	get_spectrogram (filename, __lambda0__spectrogram_ready, self);
+	get_spectrogram (filename, __spectrogram_ready, self);
 }
 
 

@@ -11,15 +11,13 @@
 */
 #include "config.h"
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
-#include <math.h>
-#include <gtk/gtk.h>
+#include <gdk/gdk.h>
 #include <gdk-pixbuf/gdk-pixdata.h>
 #include <cairo.h>
 #include "debug/debug.h"
-#include "waveform/waveform/waveform.h"
+#include "wf/waveform.h"
+#include "waveform/pixbuf.h"
 #include "decoder/ad.h"
 #include "samplecat/support.h"
 #include "samplecat/sample.h"

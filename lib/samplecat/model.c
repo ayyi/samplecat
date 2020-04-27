@@ -81,8 +81,9 @@ static gpointer samplecat_idle_parent_class = NULL;
 static gchar    samplecat_model_unk[32];
 static gchar    samplecat_model_unk[32] = {0};
 
-#define SAMPLECAT_IDLE_GET_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), SAMPLECAT_TYPE_IDLE, SamplecatIdlePrivate))
-//G_DEFINE_TYPE_WITH_PRIVATE (SamplecatIdle, samplecat_idle, G_TYPE_FUNDAMENTAL)
+#define _G_TYPE_INSTANCE_GET_PRIVATE(instance, g_type, c_type) \
+	((c_type*) g_type_instance_get_private ((GTypeInstance*) (instance), (g_type)))
+#define SAMPLECAT_IDLE_GET_PRIVATE(o) (_G_TYPE_INSTANCE_GET_PRIVATE ((o), SAMPLECAT_TYPE_IDLE, SamplecatIdlePrivate))
 enum  {
 	SAMPLECAT_IDLE_DUMMY_PROPERTY
 };
@@ -107,6 +108,7 @@ samplecat_idle_construct (GType object_type, GSourceFunc _fn, void* _fn_target)
 	self->priv->fn = _fn;
 	self->priv->fn_target = _fn_target;
 	self->priv->fn_target_destroy_notify = NULL;
+
 	return self;
 }
 
@@ -300,8 +302,8 @@ samplecat_idle_instance_init (SamplecatIdle * self)
 static void
 samplecat_idle_finalize (SamplecatIdle* obj)
 {
-	SamplecatIdle * self;
-	self = G_TYPE_CHECK_INSTANCE_CAST (obj, SAMPLECAT_TYPE_IDLE, SamplecatIdle);
+	SamplecatIdle* self = G_TYPE_CHECK_INSTANCE_CAST (obj, SAMPLECAT_TYPE_IDLE, SamplecatIdle);
+
 	(self->priv->fn_target_destroy_notify == NULL) ? NULL : (self->priv->fn_target_destroy_notify (self->priv->fn_target), NULL);
 	self->priv->fn = NULL;
 	self->priv->fn_target = NULL;

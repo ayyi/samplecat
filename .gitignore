@@ -44,3 +44,4 @@ player.vala.h
 !test/arch/Makefile
 !test/arch/Dockerfile.in
 !test/arch/scripts/Makefile
+test-driver

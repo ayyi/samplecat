@@ -13,5 +13,6 @@ RUN echo "alias ll='ls -l --color'" >> /root/.bashrc
 WORKDIR /root
 ADD scripts/add_samples /root/
 ADD scripts/Makefile /root/
+ENV DISPLAY :0
 
 CMD make

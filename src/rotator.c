@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://samplecat.orford.org          |
-* | copyright (C) 2007-2019 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2020 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -31,12 +31,12 @@
 
 #include "config.h"
 #include <string.h>
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <gtk/gtk.h>
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 #include <gdk/gdkkeysyms.h>
 #include <GL/gl.h>
 #include "debug/debug.h"
-#include "agl/utils.h"
-#include "waveform/waveform.h"
 #include "waveform/actor.h"
 
 #include "application.h"

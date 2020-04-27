@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2004-2019 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2004-2020 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -11,7 +11,9 @@
 */
 #include <glib.h>
 #include <glib-object.h>
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <gtk/gtk.h>
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 #include <gdk/gdkkeysyms.h>
 #include "typedefs.h"
 #include "debug/debug.h"

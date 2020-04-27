@@ -25,7 +25,10 @@
  */
 #define MAX_ICON_SIZE (400 * 1024)
 
+#include "config.h"
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <gtk/gtk.h>
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>

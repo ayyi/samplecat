@@ -22,7 +22,9 @@
 #include "config.h"
 
 #include <string.h>
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <gtk/gtk.h>
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 #include "debug/debug.h"
 #include "support.h"
 #include "view_iface.h"

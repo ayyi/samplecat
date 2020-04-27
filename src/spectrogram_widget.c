@@ -12,7 +12,9 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <gdk-pixbuf/gdk-pixbuf.h>
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <gtk/gtk.h>
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 #include <stdlib.h>
 #include <string.h>
 #include <gdk/gdk.h>
@@ -34,7 +36,8 @@ typedef struct _SpectrogramWidgetPrivate SpectrogramWidgetPrivate;
 #define _g_free0(var) (var = (g_free (var), NULL))
 #define _g_object_unref0(var) ((var == NULL) ? NULL : (var = (g_object_unref (var), NULL)))
 
-typedef void (*RenderDoneFunc) (gchar* filename, GdkPixbuf* a, void* user_data_, void* user_data);
+typedef void (*RenderDoneFunc) (gchar* filename, GdkPixbuf*, void* user_data_, void* user_data);
+
 struct _SpectrogramWidget {
 	GtkWidget parent_instance;
 	SpectrogramWidgetPrivate * priv;
@@ -50,18 +53,16 @@ struct _SpectrogramWidgetPrivate {
 };
 
 
-static gpointer spectrogram_widget_parent_class = NULL;
-
 GType spectrogram_widget_get_type (void) G_GNUC_CONST;
-#define SPECTROGRAM_WIDGET_GET_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), TYPE_SPECTROGRAM_WIDGET, SpectrogramWidgetPrivate))
+G_DEFINE_TYPE_WITH_PRIVATE (SpectrogramWidget, spectrogram_widget, GTK_TYPE_DRAWING_AREA)
 enum  {
 	SPECTROGRAM_WIDGET_DUMMY_PROPERTY
 };
 
-void               spectrogram_widget_image_ready        (SpectrogramWidget*, gchar* filename, GdkPixbuf*, void*);
-void               spectrogram_widget_set_file           (SpectrogramWidget*, gchar* filename);
 SpectrogramWidget* spectrogram_widget_new                (void);
 SpectrogramWidget* spectrogram_widget_construct          (GType);
+void               spectrogram_widget_image_ready        (SpectrogramWidget*, gchar* filename, GdkPixbuf*, void*);
+void               spectrogram_widget_set_file           (SpectrogramWidget*, gchar* filename);
 
 static void        spectrogram_widget_real_realize       (GtkWidget*);
 static void        spectrogram_widget_real_unrealize     (GtkWidget*);
@@ -79,11 +80,11 @@ spectrogram_widget_image_ready (SpectrogramWidget* self, gchar* filename, GdkPix
 	g_return_if_fail (self);
 
 	if (self->priv->pixbuf) {
-		GdkPixbuf* _tmp1_ = self->priv->pixbuf;
-		g_object_unref ((GObject*) _tmp1_);
+		g_object_unref ((GObject*)self->priv->pixbuf);
 	}
 	self->priv->pixbuf = _pixbuf;
-	gtk_widget_queue_draw ((GtkWidget*) self);
+
+	gtk_widget_queue_draw ((GtkWidget*)self);
 }
 
 
@@ -344,11 +345,8 @@ spectrogram_widget_new (void)
 static GObject*
 spectrogram_widget_constructor (GType type, guint n_construct_properties, GObjectConstructParam * construct_properties)
 {
-	GObject * obj;
-	GObjectClass * parent_class;
-	parent_class = G_OBJECT_CLASS (spectrogram_widget_parent_class);
-	obj = parent_class->constructor (type, n_construct_properties, construct_properties);
-	return obj;
+	GObjectClass* parent_class = G_OBJECT_CLASS (spectrogram_widget_parent_class);
+	return parent_class->constructor (type, n_construct_properties, construct_properties);
 }
 
 
@@ -356,7 +354,7 @@ static void
 spectrogram_widget_class_init (SpectrogramWidgetClass * klass)
 {
 	spectrogram_widget_parent_class = g_type_class_peek_parent (klass);
-	g_type_class_add_private (klass, sizeof (SpectrogramWidgetPrivate));
+
 	GTK_WIDGET_CLASS (klass)->realize = spectrogram_widget_real_realize;
 	GTK_WIDGET_CLASS (klass)->unrealize = spectrogram_widget_real_unrealize;
 	GTK_WIDGET_CLASS (klass)->size_request = spectrogram_widget_real_size_request;
@@ -368,9 +366,9 @@ spectrogram_widget_class_init (SpectrogramWidgetClass * klass)
 
 
 static void
-spectrogram_widget_instance_init (SpectrogramWidget * self)
+spectrogram_widget_init (SpectrogramWidget * self)
 {
-	self->priv = SPECTROGRAM_WIDGET_GET_PRIVATE (self);
+	self->priv = spectrogram_widget_get_instance_private(self);
 	self->priv->pixbuf = NULL;
 }
 
@@ -383,20 +381,3 @@ spectrogram_widget_finalize (GObject* obj)
 	_g_free0 (self->priv->_filename);
 	G_OBJECT_CLASS (spectrogram_widget_parent_class)->finalize (obj);
 }
-
-
-GType
-spectrogram_widget_get_type (void)
-{
-	static volatile gsize spectrogram_widget_type_id__volatile = 0;
-	if (g_once_init_enter (&spectrogram_widget_type_id__volatile)) {
-		static const GTypeInfo g_define_type_info = { sizeof (SpectrogramWidgetClass), (GBaseInitFunc) NULL, (GBaseFinalizeFunc) NULL, (GClassInitFunc) spectrogram_widget_class_init, (GClassFinalizeFunc) NULL, NULL, sizeof (SpectrogramWidget), 0, (GInstanceInitFunc) spectrogram_widget_instance_init, NULL };
-		GType spectrogram_widget_type_id;
-		spectrogram_widget_type_id = g_type_register_static (GTK_TYPE_WIDGET, "SpectrogramWidget", &g_define_type_info, 0);
-		g_once_init_leave (&spectrogram_widget_type_id__volatile, spectrogram_widget_type_id);
-	}
-	return spectrogram_widget_type_id__volatile;
-}
-
-
-

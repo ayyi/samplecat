@@ -8,7 +8,9 @@
  * Please read the included file COPYING for more information.
  * This software comes with no warranty of any kind, use at your own risk!
  */
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <gtk/gtk.h>
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 #include "utils/mime_type.h"
 #include "file_manager/file_manager.h"
 #include "view_dir_tree.h"

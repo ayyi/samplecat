@@ -14,7 +14,6 @@
 #include <glib.h>
 #include "debug/debug.h"
 #include "decoder/ad.h"
-#include "file_manager/file_manager.h"
 #include "file_manager/support.h" // to_utf8()
 #include "file_manager/mimetype.h"
 #include "samplecat/support.h"

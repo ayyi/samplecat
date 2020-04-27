@@ -70,7 +70,7 @@ path_from_utf8(const gchar* utf8)
 
 
 GList*
-get_dirlist(const char* path)
+get_dirlist (const char* path)
 {
 	/*
 	scan a directory and return a list of any subdirectoies. Not recursive.
@@ -79,9 +79,9 @@ get_dirlist(const char* path)
 
 	GList* dir_list = NULL;
 	char filepath[256];
-	G_CONST_RETURN gchar *file;
-	GError *error = NULL;
-	GDir *dir;
+	const gchar* file;
+	GError* error = NULL;
+	GDir* dir;
 	if((dir = g_dir_open(path, 0, &error))){
 		while((file = g_dir_read_name(dir))){
 			if(file[0]=='.') continue;
@@ -98,6 +98,7 @@ get_dirlist(const char* path)
 		g_error_free(error);
 		error = NULL;
 	}
+
 	return dir_list;
 }
 

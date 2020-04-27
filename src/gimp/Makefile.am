@@ -17,7 +17,6 @@ BUILT_SOURCES =
 CLEANFILES =
 
 libgimpwidgets_a_SOURCES = \
-	gimpaction.c gimpaction.h \
 	gimpactiongroup.c gimpactiongroup.h
 
 EXTRA_DIST =

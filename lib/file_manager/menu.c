@@ -25,7 +25,9 @@
 #include <errno.h>
 #include <string.h>
 #include <dirent.h>
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <gtk/gtk.h>
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 #include <glib/gstdio.h>
 
 #include "debug/debug.h"

@@ -15,7 +15,7 @@
 #include <stdbool.h>
 #include <glib-object.h>
 #include "samplecat/typedefs.h"
-#include "waveform/promise.h"
+#include "wf/promise.h"
 
 #define AUDITIONER_DOMAIN "Auditioner"
 

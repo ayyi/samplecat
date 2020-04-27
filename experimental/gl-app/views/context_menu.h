@@ -12,7 +12,7 @@
 #ifndef __views_context_menu_h__
 #define __views_context_menu_h__
 #include "agl/actor.h"
-#include "waveform/promise.h"
+#include "wf/promise.h"
 #include "../glx.h"
 
 typedef struct {

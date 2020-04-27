@@ -13,7 +13,9 @@
 
 #include "config.h"
 #include <math.h>
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <gtk/gtk.h>
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 #include <gdk/gdkkeysyms.h>
 #ifdef USE_GDL
 #include "gdl/gdl-dock-layout.h"
@@ -26,7 +28,6 @@
 #include "samplecat/worker.h"
 #include "player/player.h"
 #include "audio_analysis/waveform/waveform.h"
-#include "gimp/gimpaction.h"
 #include "gimp/gimpactiongroup.h"
 #include "src/typedefs.h"
 #include "sample.h"
@@ -1842,7 +1843,7 @@ make_context_menu()
 	menu_update_rows(GtkWidget* widget, gpointer user_data)
 	{
 		PF;
-		gboolean force_update = true; //(GPOINTER_TO_INT(user_data)==2) ? true : false; // NOTE - linked to order in _menu_def[]
+		gboolean force_update = true; //(GPOINTER_TO_INT(user_data)==2) ? true : false; // NOTE - linked to order in menu_def[]
 
 		GtkTreeSelection* selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(app->libraryview->widget));
 		GList* selectionlist = gtk_tree_selection_get_selected_rows(selection, NULL);
@@ -1885,7 +1886,7 @@ make_context_menu()
 		app->config.add_recursive = !app->config.add_recursive;
 	}
 
-	MenuDef _menu_def[] = {
+	MenuDef menu_def[] = {
 		{"Delete",         G_CALLBACK(menu_delete_row),         GTK_STOCK_DELETE,      true},
 		{"Update",         G_CALLBACK(menu_update_rows),        GTK_STOCK_REFRESH,     true},
 	#if 0 // force is now the default update. Is there a use case for 2 choices?
@@ -1894,7 +1895,9 @@ make_context_menu()
 		{"Reset Colours",  G_CALLBACK(listview__reset_colours), GTK_STOCK_OK,          true},
 		{"Edit tags",      G_CALLBACK(listview__edit_row),      GTK_STOCK_EDIT,        true},
 		{"Open",           G_CALLBACK(listview__edit_row),      GTK_STOCK_OPEN,       false},
+#if 0
 		{"Open Directory", G_CALLBACK(NULL),                    GTK_STOCK_OPEN,        true},
+#endif
 		{"",                                                                               },
 		{"Play All",       G_CALLBACK(menu_play_all),           GTK_STOCK_MEDIA_PLAY, false},
 		{"Stop Playback",  G_CALLBACK(menu_play_stop),          GTK_STOCK_MEDIA_STOP, false},
@@ -1915,7 +1918,7 @@ make_context_menu()
 
 	GtkWidget* menu = gtk_menu_new();
 
-	add_menu_items_from_defn(menu, _menu_def, G_N_ELEMENTS(_menu_def));
+	add_menu_items_from_defn(menu, menu_def, G_N_ELEMENTS(menu_def));
 
 	GList* menu_items = gtk_container_get_children((GtkContainer*)menu);
 	GList* last = g_list_last(menu_items);

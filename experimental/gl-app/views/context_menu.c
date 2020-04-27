@@ -14,7 +14,7 @@
 #include "debug/debug.h"
 #include "agl/utils.h"
 #include "agl/shader.h"
-#include "waveform/promise.h"
+#include "wf/promise.h"
 #include "icon/utils.h"
 #include "waveform/utils.h"
 #include "application.h"

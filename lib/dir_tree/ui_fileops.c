@@ -9,10 +9,7 @@
  * This software comes with no warranty of any kind, use at your own risk!
  */
 
-#include "../../config.h"
-//#ifdef HAVE_CONFIG_H
-//#  include "config.h"
-//#endif
+#include "config.h"
 
 #include <pwd.h>
 #include <stdio.h>
@@ -24,7 +21,9 @@
 #include <utime.h>
 
 #include <glib.h>
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <gtk/gtk.h>	/* for locale warning dialog */
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 
 #include "utils/ayyi_utils.h"
 #include "ui_fileops.h"

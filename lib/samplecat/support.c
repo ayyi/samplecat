@@ -14,7 +14,7 @@
 #include <sys/stat.h>
 #include <string.h>
 #include <dirent.h>
-#include <gtk/gtk.h>
+#include <gdk/gdk.h>
 #include <gdk-pixbuf/gdk-pixdata.h>
 #ifdef HAVE_ZLIB
 #include <zlib.h>

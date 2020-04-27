@@ -60,7 +60,9 @@ GList*       uri_list_from_text    (gchar* data, gint files_only);
 gchar*       uri_text_escape       (const gchar* text);
 void         uri_text_decode       (gchar* text);
 
+#ifdef __GDK_H__
 GdkPixbuf*   create_spotlight_pixbuf(GdkPixbuf *src, GdkColor*);
+#endif
 
 gchar*       path_to_utf8          (const gchar *path);
 

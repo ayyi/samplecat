@@ -12,7 +12,6 @@
 #define __wf_private__
 #include "config.h"
 #include <X11/keysym.h>
-#include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
 #include <GL/gl.h>
 #include "debug/debug.h"

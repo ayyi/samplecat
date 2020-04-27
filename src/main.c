@@ -14,7 +14,9 @@
 #define __USE_GNU
 #include <libgen.h>
 #include <getopt.h>
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <gtk/gtk.h>
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 #include <gdk-pixbuf/gdk-pixdata.h>
 
 #ifdef __APPLE__
@@ -25,7 +27,7 @@ char * program_name;
 
 #include "debug/debug.h"
 #define __wf_private__
-#include "waveform/debug.h"
+#include "wf/debug.h"
 #include "waveform/utils.h"
 #include "utils/ayyi_utils.h"
 #include "file_manager.h"

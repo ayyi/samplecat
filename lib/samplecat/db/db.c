@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2019 Tim Orford <tim@orford.org> and others       |
+* | copyright (C) 2007-2020 Tim Orford <tim@orford.org> and others       |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -15,7 +15,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <gtk/gtk.h>
 #include <gdk-pixbuf/gdk-pixdata.h>
 #include "debug/debug.h"
 #include "samplecat/support.h"

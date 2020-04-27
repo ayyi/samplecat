@@ -16,7 +16,6 @@
 #include "agl/utils.h"
 #include "agl/actor.h"
 #include "agl/behaviours/key.h"
-#include "waveform/waveform.h"
 #include "debug/debug.h"
 #include "file_manager/file_manager.h"
 #include "file_manager/pixmaps.h"

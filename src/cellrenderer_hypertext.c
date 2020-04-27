@@ -20,10 +20,11 @@
  * Boston, MA 02111-1307, USA.
  */
 
-//#include <config.h>
+#include "config.h"
 #include <string.h>
-#include <stdint.h>
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <gtk/gtk.h>
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 #include "debug/debug.h"
 #include "typedefs.h"
 #include "support.h"

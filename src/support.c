@@ -10,22 +10,22 @@
 *
 */
 #include "config.h"
-#include <sys/types.h>
 #include <sys/stat.h>
 #include <stdarg.h>
 #include <sys/wait.h>
 #include <dirent.h>
 #include <sys/param.h>
 #include <errno.h>
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <gtk/gtk.h>
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 #include <gdk-pixbuf/gdk-pixdata.h>
 
 #include "debug/debug.h"
 #include "file_manager/file_manager.h"
 #include "dir_tree/typedefs.h"
 #include "dir_tree/ui_fileops.h"
-#include <gimp/gimpaction.h>
-#include <gimp/gimpactiongroup.h>
+#include "gimp/gimpactiongroup.h"
 #include "typedefs.h"
 #include "src/support.h"
 #include "application.h"
