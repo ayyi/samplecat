@@ -236,8 +236,21 @@
 {
    <insert_a_suppression_name_here>
    Memcheck:Leak
+   match-leak-kinds: possible
+   ...
+   fun:detach_shader
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
    ...
    fun:dri3_create_screen
+}
+{
+   Temporary
+   Memcheck:Leak
+   ...
+   fun:glXCreateContext
 }
 {
    <insert_a_suppression_name_here>

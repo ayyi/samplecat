@@ -11,7 +11,6 @@
 */
 #define __wf_private__
 #include "config.h"
-#include <gdk/gdkkeysyms.h>
 #include "agl/ext.h"
 #include "agl/utils.h"
 #include "agl/actor.h"
@@ -262,8 +261,6 @@ files_view (gpointer _)
 						agl_observable_set(SELECTABLE->observable, row);
 				}
 				return AGL_HANDLED;
-			case GDK_KEY_RELEASE:
-				return key_behaviour_handle_event((AGlBehaviour*)KEYS(actor), actor, event);
 			default:
 				break;
 		}

@@ -10,7 +10,6 @@
 *
 */
 #include "config.h"
-#include <gdk/gdkkeysyms.h>
 #include "agl/utils.h"
 #include "agl/actor.h"
 #include "agl/text/renderer.h"
@@ -173,8 +172,6 @@ list_view (gpointer _)
 						break;
 				}
 				break;
-			case GDK_KEY_RELEASE:
-				return key_behaviour_handle_event((AGlBehaviour*)KEYS(actor), actor, event);
 			default:
 				break;
 		}

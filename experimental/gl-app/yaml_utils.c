@@ -37,7 +37,7 @@ yaml_add_key_value_pair (const char* key, const char* value)
 	EMIT(yaml_scalar_event_initialize(&event, NULL, str_tag, (guchar*)key, -1, 1, 0, YAML_PLAIN_SCALAR_STYLE));
 	EMIT(yaml_scalar_event_initialize(&event, NULL, str_tag, (guchar*)value, -1, 0, 1, YAML_PLAIN_SCALAR_STYLE));
 
-	return TRUE;
+	return true;
 }
 
 
@@ -51,7 +51,7 @@ yaml_add_key_value_pair_int (const char* key, int ival)
 	EMIT(yaml_scalar_event_initialize(&event, NULL, str_tag, (guchar*)key, -1, 1, 0, YAML_PLAIN_SCALAR_STYLE));
 	EMIT(yaml_scalar_event_initialize(&event, NULL, str_tag, (guchar*)value, -1, 1, 0, YAML_ANY_SCALAR_STYLE));
 
-	return TRUE;
+	return true;
 }
 
 
@@ -66,7 +66,8 @@ yaml_add_key_value_pair_float (const char* key, float fval)
 	if(!yaml_emitter_emit(&emitter, &event)) return FALSE;
 	if(!yaml_scalar_event_initialize(&event, NULL, str_tag, (guchar*)value, -1, 0, 1, YAML_PLAIN_SCALAR_STYLE)) return FALSE;
 	if(!yaml_emitter_emit(&emitter, &event)) return FALSE;
-	return TRUE;
+
+	return true;
 }
 
 
@@ -78,10 +79,11 @@ yaml_add_key_value_pair_bool (const char* key, bool val)
 	snprintf(value, 255, "%s", val ? "true" : "false");
 
 	if(!yaml_scalar_event_initialize(&event, NULL, str_tag, (guchar*)key, -1, 1, 0, YAML_PLAIN_SCALAR_STYLE)) return FALSE;
-	if(!yaml_emitter_emit(&emitter, &event)) return FALSE;
+	if(!yaml_emitter_emit(&emitter, &event)) return false;
 	if(!yaml_scalar_event_initialize(&event, NULL, (guchar*)YAML_BOOL_TAG, (guchar*)value, -1, 1, 0, YAML_ANY_SCALAR_STYLE)) return FALSE;
-	if(!yaml_emitter_emit(&emitter, &event)) return FALSE;
-	return TRUE;
+	if(!yaml_emitter_emit(&emitter, &event)) return false;
+
+	return true;
 }
 
 
@@ -126,7 +128,7 @@ yaml_add_key_value_pair_array (const char* key, int val[], int size)
 
 	yaml_event_delete(&event);
 
-	return TRUE;
+	return true;
 }
 
 
@@ -148,11 +150,11 @@ yaml_add_key_value_pair_pt (const char* key, AGliPt* pt)
 		EMIT(yaml_scalar_event_initialize(&event, NULL, str_tag, (guchar*)value, -1, 1, 0, YAML_ANY_SCALAR_STYLE));
 	}
 
-    EMIT(SEQUENCE_END_EVENT_INIT(event, mark, mark));
+	EMIT(SEQUENCE_END_EVENT_INIT(event, mark, mark));
 
 	yaml_event_delete(&event);
 
-	return TRUE;
+	return true;
 }
 
 
@@ -172,7 +174,7 @@ yaml_load (FILE* fp, YamlHandler handlers[])
 	int safety = 0;
 	int depth = 0;
 	char key[64] = "";
-	bool end = FALSE;
+	bool end = false;
 	yaml_event_t event;
 
 	get_expected_event(&parser, &event, YAML_STREAM_START_EVENT);
@@ -253,17 +255,18 @@ yaml_load (FILE* fp, YamlHandler handlers[])
 	yaml_parser_delete(&parser);
 	fclose(fp);
 
-	return TRUE;
+	return true;
 
   error:
 	yaml_parser_delete(&parser);
 	fclose(fp);
 
-	return FALSE;
+	return false;
 }
 
 
-void yaml_set_string (yaml_event_t* event, gpointer data)
+void
+yaml_set_string (yaml_event_t* event, gpointer data)
 {
 	g_return_if_fail(event->type == YAML_SCALAR_EVENT);
 	*((char**)data) = g_strdup((char*)event->data.scalar.value);

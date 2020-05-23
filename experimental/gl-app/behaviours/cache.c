@@ -51,7 +51,8 @@ cache_behaviour ()
 static void
 cache_behaviour_free (AGlBehaviour* behaviour)
 {
-	g_array_free(((CacheBehaviour*)behaviour)->dependencies, false);
+	g_array_free(((CacheBehaviour*)behaviour)->dependencies, true);
+	g_free(behaviour);
 }
 
 

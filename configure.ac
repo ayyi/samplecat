@@ -1,5 +1,5 @@
 AC_PREREQ(2.59)
-AC_INIT([Samplecat],[0.3.0],[tim@orford.org])
+AC_INIT([Samplecat],[0.3.1],[tim@orford.org])
 AC_CONFIG_SRCDIR([src/main.c])
 AC_CONFIG_HEADER([config.h])
 AC_CANONICAL_HOST
@@ -251,7 +251,6 @@ AC_CHECK_HEADERS(sys/inotify.h)
 
 dnl -----------------------------------------------------------------------------
 
-dnl TODO: allow to disable?
 PKG_CHECK_MODULES(ZLIB, zlib, enable_zlib="yes", enable_zlib="no")
 AC_SUBST(ZLIB_CFLAGS)
 AC_SUBST(ZLIB_LIBS)
