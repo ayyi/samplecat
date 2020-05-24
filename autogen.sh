@@ -29,7 +29,6 @@ if [ ! -f lib/waveform/autogen.sh ]; then
 		cd "$dir"
 	else
 		git submodule update --init
-		git submodule foreach git pull origin master
 	fi
 fi
 

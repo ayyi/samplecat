@@ -30,4 +30,4 @@ done
 shift $(($OPTIND - 1))
 
 # run git build script
-docker run --rm -i ${TTY} $container
+docker run --rm -e CI_COMMIT_BRANCH="$CI_COMMIT_BRANCH" -i ${TTY} $container

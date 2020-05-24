@@ -17,6 +17,7 @@ arch build:
   before_script:
     - apk add --update make gcc && rm -rf /var/cache/apk/*
   script:
+    - echo $CI_COMMIT_BRANCH
     - cd test/arch && ./build && ./run
 
 services:
