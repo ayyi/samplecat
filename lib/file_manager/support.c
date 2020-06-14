@@ -827,7 +827,7 @@ strcmp2 (gconstpointer a, gconstpointer b)
 	g_free(aaa);
 	g_free(bbb);
 
-	return diff != 0;
+	return diff;
 }
 
 
