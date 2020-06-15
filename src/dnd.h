@@ -11,6 +11,7 @@
 */
 #ifndef __samplecat_dnd_h__
 #define __samplecat_dnd_h__
+
 #include <gtk/gtk.h>
 #include "dnd/dnd.h"
 

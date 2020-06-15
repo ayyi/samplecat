@@ -138,7 +138,7 @@ file_manager__plugin_load (const gchar* filepath)
 #endif
 
 	if(!handle) {
-		gwarn("cannot open %s (%s)!", filepath, g_module_error());
+		pwarn("cannot open %s (%s)!", filepath, g_module_error());
 		return NULL;
 	}
 
@@ -170,7 +170,7 @@ file_manager__plugin_load (const gchar* filepath)
 			}
 		}
 	} else {
-		gwarn("File '%s' is not a valid Filtype plugin", filepath);
+		pwarn("File '%s' is not a valid Filtype plugin", filepath);
 	}
 	
 	if(!success) {
@@ -227,7 +227,7 @@ file_manager__load_plugins ()
 			}
 			g_dir_close(dir);
 		} else {
-			gwarn("dir='%s' failed. %s", path, error->message);
+			pwarn("dir='%s' failed. %s", path, error->message);
 			g_error_free(error);
 			error = NULL;
 		}

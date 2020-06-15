@@ -23,4 +23,4 @@ shift $(($OPTIND - 1))
 test -t 1 && USE_TTY="-t"
 
 # run git build script
-docker run --rm -e CI_COMMIT_BRANCH="$CI_COMMIT_BRANCH" -i ${USE_TTY} $container
+docker run --rm -e BRANCH="$CI_COMMIT_BRANCH" -i ${USE_TTY} $container

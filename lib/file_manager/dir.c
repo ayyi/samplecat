@@ -473,7 +473,7 @@ recheck_callback (gpointer data)
 
 	g_free(leaf);
 
-	if (dir->recheck_list) return G_SOURCE_CONTINUE;
+	if (dir->recheck_list) return G_SOURCE_CONTINUE; // call again
 
 	/* The recheck_list list is empty. Stop scanning, unless
 	 * needs_update, in which case we start scanning again.
@@ -1227,7 +1227,7 @@ sort_by_name (const void* item1, const void* item2)
 
 
 int
-sort_by_type(const void* item1, const void* item2)
+sort_by_type (const void* item1, const void* item2)
 {
 	const DirItem* i1 = (DirItem*)item1;
 	const DirItem* i2 = (DirItem*)item2;
@@ -1240,8 +1240,7 @@ sort_by_type(const void* item1, const void* item2)
 	MIME_type* m1 = i1->mime_type;
 	MIME_type* m2 = i2->mime_type;
 
-	if (m1 && m2)
-	{
+	if (m1 && m2) {
 		diff = strcmp(m1->media_type, m2->media_type);
 		if (!diff)
 			diff = strcmp(m1->subtype, m2->subtype);

@@ -2,13 +2,8 @@
 SUBDIRS = filetypes
 
 AM_CFLAGS = \
-	-DPACKAGE_DATA_DIR=\""$(datadir)"\" \
-	-DPACKAGE_LOCALE_DIR=\""$(prefix)/$(DATADIRNAME)/locale"\" \
-	-DPACKAGE_LIB_DIR=\"$(pkglibdir)\" \
-	-DIMAGES_DIR=\"$(imagesdir)\" \
-	-I../ \
 	-DG_LOG_DOMAIN=\"FileMan\" \
-	-I$(top_srcdir)/src \
+	-DPACKAGE_LIB_DIR=\"$(pkglibdir)\" \
 	-I$(top_srcdir)/lib \
 	$(GTK_CFLAGS)
 
@@ -28,6 +23,7 @@ GTK_SOURCES = \
 libfilemanager_a_SOURCES = \
 	typedefs.h \
 	$(GTK_SOURCES) \
+	pixmaps.c pixmaps.h \
 	mimetype.c mimetype.h \
 	support.c support.h \
 	display.c display.h \
@@ -35,6 +31,5 @@ libfilemanager_a_SOURCES = \
 	cell_icon.c cell_icon.h \
 	diritem.c diritem.h \
 	dir.c dir.h \
-	pixmaps.c pixmaps.h \
 	fscache.c fscache.h
 

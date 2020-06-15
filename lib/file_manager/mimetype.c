@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of the Ayyi project. http://ayyi.org               |
-* | copyright (C) 2011-2018 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2011-2020 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | ROX-Filer, filer for the ROX desktop project, v2.3                   |
 * | Copyright (C) 2005, the ROX-Filer team.                              |
@@ -12,6 +12,7 @@
 * +----------------------------------------------------------------------+
 *
 */
+#include "config.h"
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdio.h>

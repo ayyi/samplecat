@@ -19,24 +19,17 @@
 
 /* view_details.c - display a list of files in a TreeView */
 
-#define _GNU_SOURCE
 #include "config.h"
 
-#include <stdlib.h>
-#include <stdint.h>
-#include <string.h>
-#include <sys/types.h>
-#include <sys/stat.h>
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <gtk/gtk.h>
 #pragma GCC diagnostic warning "-Wdeprecated-declarations"
 #include <gdk/gdkkeysyms.h>
 
-#include "dnd/dnd.h"
 #include "debug/debug.h"
+#include "dnd/dnd.h"
 #include "support.h"
 #include "display.h"
-#include "dnd.h"
 #include "cell_icon.h"
 
 #pragma GCC diagnostic ignored "-Wmisleading-indentation"
@@ -1331,7 +1324,7 @@ view_details_update_items(ViewIface* view, GPtrArray* items)
 
 
 static void
-view_details_delete_if(ViewIface* view, gboolean (*test)(gpointer item, gpointer data), gpointer data)
+view_details_delete_if (ViewIface* view, gboolean (*test)(gpointer item, gpointer data), gpointer data)
 {
 	ViewDetails* view_details = (ViewDetails*)view;
 	int i = 0;
@@ -1364,7 +1357,7 @@ view_details_delete_if(ViewIface* view, gboolean (*test)(gpointer item, gpointer
 
 
 static void
-view_details_clear(ViewIface* view)
+view_details_clear (ViewIface* view)
 {
 	GPtrArray* items = ((ViewDetails*)view)->items;
 	GtkTreeModel* model = (GtkTreeModel*)view;

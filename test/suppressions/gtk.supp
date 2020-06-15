@@ -1,0 +1,12 @@
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Cond
+   obj:/usr/lib64/gtk-2.0/*/engines/libpixmap.so
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Param
+   writev(vector[...])
+   ...
+   obj:/usr/lib64/gtk-2.0/*/engines/libpixmap.so
+}

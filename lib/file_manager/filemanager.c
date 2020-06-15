@@ -151,7 +151,7 @@ ayyi_filemanager_get_type (void)
  *   If the cause was a key event and we resize, warp the pointer.
  */
 void
-fm__change_to(AyyiFilemanager* fm, const char* path, const char* from)
+fm__change_to (AyyiFilemanager* fm, const char* path, const char* from)
 {
 	dbg(2, "%s", path);
 	g_return_if_fail(fm);
@@ -213,7 +213,7 @@ fm__change_to(AyyiFilemanager* fm, const char* path, const char* from)
 
 
 void
-fm__change_to_parent(AyyiFilemanager* fm)
+fm__change_to_parent (AyyiFilemanager* fm)
 {
 	const char* current = fm->sym_path;
 

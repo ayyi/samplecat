@@ -716,7 +716,7 @@ static GdkPixbuf *scale_pixbuf_up(GdkPixbuf *src, int max_w, int max_h)
  * that the image is never freed.
  */
 static MaskedPixmap*
-get_bad_image()
+get_bad_image ()
 {
 	GdkPixbuf* bad = gdk_pixbuf_new_from_xpm_data(bad_xpm);
 	MaskedPixmap* mp = masked_pixmap_new(bad);

@@ -1,4 +1,5 @@
 // Manually created - do not delete!
+
 [CCode(
 	cheader_filename = "file_manager/filer.h",
 	cheader_filename = "file_manager/rox_global.h",

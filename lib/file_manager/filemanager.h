@@ -49,7 +49,6 @@ typedef enum
     FILER_CREATE_THUMBS = 0x04, // Create thumbs when scan ends
 } FilerFlags;
 
-// Numbers used in options
 typedef enum
 {
 	VIEW_TYPE_COLLECTION = 0,	// Icons view

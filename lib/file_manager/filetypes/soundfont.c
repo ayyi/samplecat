@@ -13,6 +13,7 @@
 // Mount the soundfound using gvfs ?
 //  -appear in ~/.gvfs
 
+#include "debug/debug.h"
 #include "../file_manager.h"
 
 static void sounfont_init    ();
@@ -37,6 +38,7 @@ static void
 soundfont_deinit ()
 {
 }
+
 
 DECLARE_FILETYPE_PLUGIN(soundfont_info);
 
