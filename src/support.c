@@ -383,28 +383,6 @@ make_accels (GtkAccelGroup* accel_group, GimpActionGroup* action_group, Accel* k
 }
 
 
-void
-add_menu_items_from_defn (GtkWidget* menu, MenuDef* menu_def, int n)
-{
-	int i; for(i=0;i<n;i++){
-		MenuDef* item = &menu_def[i];
-		if(!item->label[0] == '\0'){
-			GtkWidget* menu_item = gtk_image_menu_item_new_with_label (item->label);
-			gtk_menu_shell_append (GTK_MENU_SHELL(menu), menu_item);
-			if(item->stock_id){
-				GtkWidget* ico = gtk_image_new_from_stock(item->stock_id, GTK_ICON_SIZE_MENU);
-				gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(menu_item), ico);
-			}
-			if(item->callback) g_signal_connect (G_OBJECT(menu_item), "activate", G_CALLBACK(item->callback), GINT_TO_POINTER(i));
-			if(!item->sensitive) gtk_widget_set_sensitive(GTK_WIDGET(menu_item), false);
-		}else{
-			GtkWidget* menu_item = gtk_separator_menu_item_new();
-			gtk_menu_shell_append (GTK_MENU_SHELL(menu), menu_item);
-		}
-	}
-}
-
-
 /**
  * gimp_strip_uline:
  * @str: underline infested string (or %NULL)

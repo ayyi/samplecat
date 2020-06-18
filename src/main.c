@@ -159,7 +159,11 @@ main (int argc, char** argv)
 #endif
 	ADD_PLAYER("null");
 
-	gboolean player_opt = false;
+	GBytes* gtkrc = g_resources_lookup_data ("/samplecat/resources/gtkrc", 0, NULL);
+	gtk_rc_parse_string (g_bytes_get_data(gtkrc, 0));
+	g_bytes_unref (gtkrc);
+
+	bool player_opt = false;
 	int opt;
 	while((opt = getopt_long (argc, argv, short_options, long_options, NULL)) != -1) {
 		switch(opt) {

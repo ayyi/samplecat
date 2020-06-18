@@ -9,24 +9,23 @@
 * +----------------------------------------------------------------------+
 *
 */
-#ifndef __typedefs_h__
-#define __typedefs_h__
 
-#include "samplecat/typedefs.h"
+#ifndef __gtk_menu_h__
+#define __gtk_menu_h__
 
-#define OVERVIEW_WIDTH (200)
-#define OVERVIEW_HEIGHT (20)
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#include <gtk/gtk.h>
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 
-#ifndef PATH_MAX
-#define PATH_MAX (1024)
-#endif
+typedef struct
+{
+	char*     label;
+	GCallback callback;
+	char*     stock_id;
+	int       callback_data;
+} MenuDef;
 
-typedef struct _libraryview       LibraryView;
-typedef struct _Inspector         Inspector;
-typedef struct _PlayCtrl          PlayCtrl;
-typedef struct _view_option       ViewOption;
-typedef struct _accel             Accel;
-typedef struct _ScanResults       ScanResults;
-typedef struct _GimpActionGroup   GimpActionGroup;
+GtkWidget* make_menu                (int size, MenuDef[size], gpointer);
+void       add_menu_items_from_defn (GtkWidget* menu, int size, MenuDef[size], gpointer);
 
 #endif

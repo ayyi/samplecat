@@ -17,14 +17,6 @@
 
 #define PALETTE_SIZE 17
 
-struct _MenuDef
-{
-	char*      label;
-	GCallback  callback;
-	char*      stock_id;
-	gboolean   sensitive;
-};
-
 struct _palette {
 	guint red[8];
 	guint grn[8];

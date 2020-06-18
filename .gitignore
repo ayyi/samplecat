@@ -31,6 +31,7 @@ libtool
 layouts/layout_ui.c
 layouts/layouts.c
 src/vala/*.[ch]
+src/resources.c
 experimental/gl-app/samplecat_gl
 experimental/gl-app/shaders/shaders.c
 test/ubuntu-18/Dockerfile

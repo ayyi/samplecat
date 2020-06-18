@@ -9,7 +9,7 @@ LOCAL_GTKGLEXT_CFLAGS = \
 endif
 
 AM_CFLAGS = \
-	-g -Wall -O2 \
+	-O2 \
 	-DPACKAGE_DATA_DIR=\""$(datadir)"\" \
 	-DPACKAGE_LOCALE_DIR=\""$(prefix)/$(DATADIRNAME)/locale"\" \
 	-DIMAGES_DIR=\"$(imagesdir)\" \
@@ -67,6 +67,7 @@ endif
 samplecat_SOURCES = \
 	typedefs.h types.h \
 	main.c \
+	resources.c \
 	application.c application.h \
 	window.c window.h \
 	progress_dialog.c progress_dialog.h \
@@ -96,6 +97,7 @@ samplecat_LDADD = \
 	$(top_srcdir)/lib/samplecat/.libs/libsamplecat.a \
 	$(top_srcdir)/lib/samplecat/db/libsamplecatdb.a \
 	$(GDL_LDFLAGS) \
+	$(top_srcdir)/lib/gtk/libgtk.la \
 	gimp/libgimpwidgets.a \
 	$(SAMPLECAT_LIBS) \
 	$(AYYI_LIBS) \

@@ -56,12 +56,14 @@ samplecat_gl_LDADD = \
 	$(top_srcdir)/lib/utils/libutils.a \
 	$(WAVEFORM_LDFLAGS) \
 	$(top_srcdir)/lib/file_manager/libfilemanager.a \
+	$(top_srcdir)/lib/gtk/libgtk.la \
 	$(LOCAL_GTK_LIBS) \
 	$(SAMPLECAT_LIBS) \
 	$(AYYI_LIBS) \
 	$(TRACKER_LIBS) \
 	$(SQLITE_LIBS) \
-	$(GTK_LIBS) $(MYSQL_LDFLAGS) \
+	$(GTK_LIBS) \
+	$(MYSQL_LDFLAGS) \
 	$(JACK_LIBS) $(SNDFILE_LIBS) ${SAMPLERATE_LIBS} \
 	$(GTHREAD_LIBS) \
 	$(FFTW3_LIBS) \

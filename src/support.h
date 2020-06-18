@@ -68,8 +68,6 @@ void         statusbar_print           (int n, char* fmt, ...);
 
 void         make_accels               (GtkAccelGroup*, GimpActionGroup*, struct _accel*, int count, gpointer user_data);
 
-void         add_menu_items_from_defn  (GtkWidget* menu, MenuDef*, int);
-
 const gchar* gimp_get_mod_name_shift   ();
 const gchar* gimp_get_mod_name_control ();
 const gchar* gimp_get_mod_name_alt     ();

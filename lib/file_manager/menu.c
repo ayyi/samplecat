@@ -31,6 +31,7 @@
 #include <glib/gstdio.h>
 
 #include "debug/debug.h"
+#include "gtk/menu.h"
 #include "support.h"
 #include "file_manager.h"
 #include "dir.h"
@@ -63,7 +64,6 @@ static GtkWidget* fm__make_subdir_menu (AyyiFilemanager*);
 static void       fm_menu__set_sort    (GtkMenuItem*, gpointer);
 static void       fm_menu__reverse_sort(GtkMenuItem*, gpointer);
 static void       mini_buffer          (GtkMenuItem*, gpointer);
-static GtkWidget* menu_separator_new   (GtkWidget*);
 static void       file_op              (gpointer, FileOp, GtkWidget*);
 
 #define IS_DIR(item) (item->base_type == TYPE_DIRECTORY)
@@ -129,15 +129,8 @@ static GtkItemFactoryEntry fm_menu_def[] = {
 };
 #endif
 
-typedef struct
-{
-	char*     label;
-	GCallback callback;
-	char*     stock_id;
-	int       callback_data;
-} MenuDef;
-
 static MenuDef fm_menu_def[] = {
+	{"-"},
 	{"Delete",          G_CALLBACK(file_op),           GTK_STOCK_DELETE, FILE_DELETE},
 	{"-"},
 	{"Go up directory", G_CALLBACK(menu__go_up_dir),   GTK_STOCK_GO_UP},
@@ -161,29 +154,20 @@ static MenuDef fm_menu_def[] = {
 
 
 static void
-fm_menu__item_image_from_stock(GtkWidget* menu, GtkWidget* item, char* stock_id)
+menu_on_dir_changed (GtkWidget* widget, char* dir, gpointer menu_item)
 {
-	GtkIconSet* set = gtk_style_lookup_icon_set(gtk_widget_get_style(menu), stock_id);
-	GdkPixbuf* pixbuf = gtk_icon_set_render_icon(set, gtk_widget_get_style(menu), GTK_TEXT_DIR_LTR, GTK_STATE_NORMAL, GTK_ICON_SIZE_MENU, menu, NULL);
-
-	GtkWidget* icon = gtk_image_new_from_pixbuf(pixbuf);
-	gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(item), icon);
-	g_object_unref(pixbuf);
+	AyyiFilemanager* fm = file_manager__get();
+	dbg(2, "dir=%s name=%s", fm->real_path, dir);
+	g_return_if_fail(fm->real_path);
+	GtkLabel* label = (GtkLabel*)gtk_bin_get_child((GtkBin*)menu_item);
+	if(label){
+		gtk_label_set_text(label, fm->real_path);
+	}
 }
 
 
-	static void menu_on_dir_changed(GtkWidget* widget, char* dir, gpointer menu_item)
-	{
-		AyyiFilemanager* fm = file_manager__get();
-		dbg(2, "dir=%s name=%s", fm->real_path, dir);
-		g_return_if_fail(fm->real_path);
-		GtkLabel* label = (GtkLabel*)gtk_bin_get_child((GtkBin*)menu_item);
-		if(label){
-			gtk_label_set_text(label, fm->real_path);
-		}
-	}
 GtkWidget*
-fm__make_context_menu()
+fm__make_context_menu ()
 {
 	GtkWidget* menu = gtk_menu_new();
 
@@ -194,64 +178,17 @@ fm__make_context_menu()
 	GtkWidget* title = gtk_menu_item_new_with_label(name);
 	gtk_container_add(GTK_CONTAINER(menu), title);
 
-	menu_separator_new(menu);
-
-	GtkWidget* parent = menu;
-	GtkWidget* a = NULL;
-
-	int i; for(i=0;i<G_N_ELEMENTS(fm_menu_def);i++){
-		MenuDef* item = &fm_menu_def[i];
-		switch(item->label[0]){
-			case '-':
-				menu_separator_new(menu);
-				break;
-			case '<':
-				gtk_menu_item_set_submenu(GTK_MENU_ITEM(a), parent);
-				parent = menu;
-				break;
-			case '>':
-				item = &fm_menu_def[++i]; // following item must be the submenu parent item.
-				parent = gtk_menu_new();
-
-				GtkWidget* sub = a = gtk_image_menu_item_new_with_label(item->label);
-				//GtkWidget* ico = gtk_image_new_from_pixbuf(mime_type_get_pixbuf(inode_directory)); // TODO *****
-				//gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(sub), ico);
-				if(item->stock_id){
-					fm_menu__item_image_from_stock(menu, a, item->stock_id);
-				}
-				gtk_container_add(GTK_CONTAINER(menu), sub);
-
-				break;
-			default:
-				;GtkWidget* menu_item = gtk_image_menu_item_new_with_label (item->label);
-				gtk_menu_shell_append (GTK_MENU_SHELL(parent), menu_item);
-				if(item->stock_id){
-					fm_menu__item_image_from_stock(menu, menu_item, item->stock_id);
-				}
-				if(item->callback) g_signal_connect (G_OBJECT(menu_item), "activate", G_CALLBACK(item->callback), GINT_TO_POINTER(item->callback_data));
-		}
-	}
+	add_menu_items_from_defn (menu, G_N_ELEMENTS(fm_menu_def), fm_menu_def, NULL);
 
 	fm__menu_on_view_change(menu);
 
 	g_signal_connect(file_manager__get(), "dir_changed", G_CALLBACK(menu_on_dir_changed), title);
 
-	gtk_widget_show_all(menu);
 	return menu;
 }
 
 
 #if 0
-static void
-temp(gpointer key, gpointer value, gpointer data)
-{
-	GPtrArray *array = (GPtrArray *) data;
-	g_ptr_array_add(array, value);
-
-	DirItem* item = (DirItem*)value;
-	if (IS_DIR(item)) printf("***  %s\n", item->leafname);
-	printf("  %s basetype=%i\n", item->leafname, item->base_type);
-}
 #endif
 
 
@@ -259,7 +196,7 @@ temp(gpointer key, gpointer value, gpointer data)
  *  Add a sub-menu showing the sub-directories in the current directory.
  */
 static GtkWidget*
-fm__make_subdir_menu(AyyiFilemanager* fm)
+fm__make_subdir_menu (AyyiFilemanager* fm)
 {
 	GtkWidget* submenu = gtk_menu_new();
 
@@ -268,6 +205,16 @@ fm__make_subdir_menu(AyyiFilemanager* fm)
 		//TODO we should use existing data instead of recanning the directory.
 		//     Why are there no directories in the hashtable?
 #if 0
+		void temp(gpointer key, gpointer value, gpointer data)
+		{
+			GPtrArray *array = (GPtrArray *) data;
+			g_ptr_array_add(array, value);
+
+			DirItem* item = (DirItem*)value;
+			if (IS_DIR(item)) printf("***  %s\n", item->leafname);
+			printf("  %s basetype=%i\n", item->leafname, item->base_type);
+		}
+
 		GPtrArray* array = g_ptr_array_new();
 		g_hash_table_foreach(filer.directory->known_items, temp, array);
 #endif
@@ -391,16 +338,6 @@ fm_menu__refresh(GtkMenuItem* menuitem, gpointer user_data)
 }
 
 
-static GtkWidget*
-menu_separator_new(GtkWidget* container)
-{
-	GtkWidget* separator = gtk_menu_item_new();
-	gtk_widget_set_sensitive(separator, FALSE);
-	gtk_container_add(GTK_CONTAINER(container), separator);
-	return separator;
-}
-
-
 #if 0
 /* Returns TRUE if the keys were installed (first call only) */
 gboolean
@@ -486,7 +423,6 @@ fm_menu__set_sort (GtkMenuItem* menuitem, gpointer user_data)
 static void
 fm_menu__reverse_sort (GtkMenuItem* menuitem, gpointer user_data)
 {
-
 	//if (updating_menu) return;
 
 	AyyiFilemanager* fm = file_manager__get();

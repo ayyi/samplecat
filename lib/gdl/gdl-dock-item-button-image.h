@@ -20,30 +20,21 @@
  * Boston, MA 02111-1307, USA.
  */
  
-#ifndef _GDL_DOCK_ITEM_BUTTON_IMAGE_H_
-#define _GDL_DOCK_ITEM_BUTTON_IMAGE_H_
+#ifndef __gdl_dock_item_button_image_h__
+#define __gdl_dock_item_button_image_h__
 
 #include <gtk/gtk.h>
 
 G_BEGIN_DECLS
 
-/* Standard Macros */
-#define GDL_TYPE_DOCK_ITEM_BUTTON_IMAGE            \
-    (gdl_dock_item_button_image_get_type())
-#define GDL_DOCK_ITEM_BUTTON_IMAGE(obj)            \
-    (G_TYPE_CHECK_INSTANCE_CAST ((obj), GDL_TYPE_DOCK_ITEM_BUTTON_IMAGE, GdlDockItemButtonImage))
-#define GDL_DOCK_ITEM_BUTTON_IMAGE_CLASS(klass)    \
-    (G_TYPE_CHECK_CLASS_CAST ((klass), GDL_TYPE_DOCK_ITEM_BUTTON_IMAGE, GdlDockItemButtonImageClass))
-#define GDL_IS_DOCK_ITEM_BUTTON_IMAGE(obj)         \
-    (G_TYPE_CHECK_INSTANCE_TYPE ((obj), GDL_TYPE_DOCK_ITEM_BUTTON_IMAGE))
-#define GDL_IS_DOCK_ITEM_BUTTON_IMAGE_CLASS(klass) \
-    (G_TYPE_CHECK_CLASS_TYPE ((klass), GDL_TYPE_DOCK_ITEM_BUTTON_IMAGE))
-#define GDL_DOCK_ITEM_BUTTON_IMAGE_GET_CLASS(obj)  \
-    (G_TYPE_INSTANCE_GET_CLASS ((obj), GDL_TYPE_DOCK_ITEM_BUTTON_IMAGE, GdlDockItemButtonImageClass))
+#define GDL_TYPE_DOCK_ITEM_BUTTON_IMAGE            (gdl_dock_item_button_image_get_type())
+#define GDL_DOCK_ITEM_BUTTON_IMAGE(obj)            (G_TYPE_CHECK_INSTANCE_CAST ((obj), GDL_TYPE_DOCK_ITEM_BUTTON_IMAGE, GdlDockItemButtonImage))
+#define GDL_DOCK_ITEM_BUTTON_IMAGE_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST ((klass), GDL_TYPE_DOCK_ITEM_BUTTON_IMAGE, GdlDockItemButtonImageClass))
+#define GDL_IS_DOCK_ITEM_BUTTON_IMAGE(obj)         (G_TYPE_CHECK_INSTANCE_TYPE ((obj), GDL_TYPE_DOCK_ITEM_BUTTON_IMAGE))
+#define GDL_IS_DOCK_ITEM_BUTTON_IMAGE_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), GDL_TYPE_DOCK_ITEM_BUTTON_IMAGE))
+#define GDL_DOCK_ITEM_BUTTON_IMAGE_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS ((obj), GDL_TYPE_DOCK_ITEM_BUTTON_IMAGE, GdlDockItemButtonImageClass))
 
-/* Data Types & Structures */
 typedef enum {
-    GDL_DOCK_ITEM_BUTTON_IMAGE_CLOSE,
     GDL_DOCK_ITEM_BUTTON_IMAGE_ICONIFY
 } GdlDockItemButtonImageType;
 
@@ -62,9 +53,8 @@ struct _GdlDockItemButtonImageClass {
 
 /* Data Public Functions */
 GType      gdl_dock_item_button_image_get_type (void);
-GtkWidget *gdl_dock_item_button_image_new (
-    GdlDockItemButtonImageType image_type);
+GtkWidget *gdl_dock_item_button_image_new      (GdlDockItemButtonImageType);
 
 G_END_DECLS
 
-#endif /* _GDL_DOCK_ITEM_BUTTON_IMAGE_H_ */
+#endif

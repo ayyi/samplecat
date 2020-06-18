@@ -23,6 +23,7 @@
 #include "gdl/gdl-dock-paned.h"
 #endif
 #include "debug/debug.h"
+#include "gtk/menu.h"
 #include "file_manager.h"
 #include "file_manager/menu.h"
 #include "samplecat/worker.h"
@@ -519,12 +520,9 @@ GtkWindow
 	{
 		window_save_layout();
 
-#ifdef DEBUG
-		// free memory for valgrind testing
-
-		#define widget_destroy0(var) ((var == NULL) ? NULL : (var = (gtk_widget_destroy (var), NULL)))
-		widget_destroy0(window.waveform);
-		widget_destroy0(window.file_man);
+#ifdef WITH_VALGRIND
+		g_clear_pointer(&window.waveform, gtk_widget_destroy);
+		g_clear_pointer(&window.file_man, gtk_widget_destroy);
 
 		gtk_widget_destroy(app->window);
 #endif
@@ -553,14 +551,11 @@ GtkWindow
 
 	window_on_layout_changed();
 
-	bool window_on_clicked(GtkWidget* widget, GdkEventButton* event, gpointer user_data)
+	bool window_on_clicked (GtkWidget* widget, GdkEventButton* event, gpointer user_data)
 	{
 		if(event->button == 3){
 			if(app->context_menu){
-				gtk_menu_popup(GTK_MENU(app->context_menu),
-				               NULL, NULL,  // parents
-				               NULL, NULL,  // fn and data used to position the menu.
-				               event->button, event->time);
+				gtk_menu_popup(GTK_MENU(app->context_menu), NULL, NULL, NULL, NULL, event->button, event->time);
 				return HANDLED;
 			}
 		}
@@ -613,7 +608,7 @@ window_on_allocate(GtkWidget* win, GtkAllocation* allocation, gpointer user_data
 		gtk_widget_set_size_request(win, 100, 100);
 	}
 
-	static gboolean did_set_colours = false;
+	static bool did_set_colours = false;
 	if (!did_set_colours) {
 		did_set_colours = true;
 
@@ -1087,7 +1082,7 @@ tag_selector_new ()
 static void
 tagshow_selector_new ()
 {
-	#define ALL_CATEGORIES "all categories"
+	#define ALL_CATEGORIES "All categories"
 
 	GtkWidget* combo = gtk_combo_box_new_text();
 	GtkComboBox* combo_ = GTK_COMBO_BOX(combo);
@@ -1114,7 +1109,7 @@ tagshow_selector_new ()
 	{
 		GtkComboBox* combo = user_data;
 
-		if(!strlen(filter->value.c)){
+		if(!filter->value.c || !strlen(filter->value.c)){
 			gtk_combo_box_set_active(combo, 0);
 		}
 	}
@@ -1274,26 +1269,27 @@ menu__play(GtkMenuItem* menuitem, gpointer user_data)
 
 
 static void
-make_menu_actions(struct _accel keys[], int count, void (*add_to_menu)(GtkAction*))
+make_menu_actions (Accel keys[], int count, void (*add_to_menu)(GtkAction*))
 {
 	// take the raw definitions and create actions and (optionally) menu items for them.
 
 	GtkActionGroup* group = gtk_action_group_new("File Manager");
 	accel_group = gtk_accel_group_new();
 
-	int k;
-	for(k=0;k<count;k++){
-		struct _accel* key = &keys[k];
+	for(int k=0;k<count;k++){
+		Accel* key = &keys[k];
 
-    	GtkAction* action = gtk_action_new(key->name, key->name, "Tooltip", key->stock_item? key->stock_item->stock_id : "gtk-file");
-  		gtk_action_group_add_action(GTK_ACTION_GROUP(group), action);
+		GtkAction* action = gtk_action_new(key->name, key->name, "Tooltip", key->stock_item ? key->stock_item->stock_id : "gtk-file");
+		gtk_action_group_add_action(GTK_ACTION_GROUP(group), action);
 
-    	GClosure* closure = g_cclosure_new(G_CALLBACK(key->callback), key->user_data, NULL);
+		GClosure* closure = g_cclosure_new(G_CALLBACK(key->callback), key->user_data, NULL);
 		g_signal_connect_closure(G_OBJECT(action), "activate", closure, FALSE);
-		//dbg(0, "callback=%p", closure->callback);
 		gchar path[64]; sprintf(path, "<%s>/Categ/%s", gtk_action_group_get_name(GTK_ACTION_GROUP(group)), key->name);
-		//gtk_accel_group_connect(accel_group, key->key[0].code, key->key[0].mask, GTK_ACCEL_MASK, closure);
+#if 0
+		gtk_accel_group_connect(accel_group, key->key[0].code, key->key[0].mask, GTK_ACCEL_MASK, closure);
+#else
 		gtk_accel_group_connect_by_path(accel_group, path, closure);
+#endif
 		gtk_accel_map_add_entry(path, key->key[0].code, key->key[0].mask);
 		gtk_action_set_accel_path(action, path);
 		gtk_action_set_accel_group(action, accel_group);
@@ -1831,7 +1827,7 @@ window_save_layout()
 
 
 static GtkWidget*
-make_context_menu()
+make_context_menu ()
 {
 	void menu_delete_row(GtkMenuItem* widget, gpointer user_data)
 	{
@@ -1840,7 +1836,7 @@ make_context_menu()
 
 	/** sync the selected catalogue row with the filesystem. */
 	void
-	menu_update_rows(GtkWidget* widget, gpointer user_data)
+	menu_update_rows (GtkWidget* widget, gpointer user_data)
 	{
 		PF;
 		gboolean force_update = true; //(GPOINTER_TO_INT(user_data)==2) ? true : false; // NOTE - linked to order in menu_def[]
@@ -1887,26 +1883,26 @@ make_context_menu()
 	}
 
 	MenuDef menu_def[] = {
-		{"Delete",         G_CALLBACK(menu_delete_row),         GTK_STOCK_DELETE,      true},
-		{"Update",         G_CALLBACK(menu_update_rows),        GTK_STOCK_REFRESH,     true},
+		{"Delete",         G_CALLBACK(menu_delete_row),         GTK_STOCK_DELETE},
+		{"Update",         G_CALLBACK(menu_update_rows),        GTK_STOCK_REFRESH},
 	#if 0 // force is now the default update. Is there a use case for 2 choices?
-		{"Force Update",   G_CALLBACK(update_rows),             GTK_STOCK_REFRESH,     true},
+		{"Force Update",   G_CALLBACK(update_rows),             GTK_STOCK_REFRESH},
 	#endif
-		{"Reset Colours",  G_CALLBACK(listview__reset_colours), GTK_STOCK_OK,          true},
-		{"Edit tags",      G_CALLBACK(listview__edit_row),      GTK_STOCK_EDIT,        true},
-		{"Open",           G_CALLBACK(listview__edit_row),      GTK_STOCK_OPEN,       false},
+		{"Reset Colours",  G_CALLBACK(listview__reset_colours), GTK_STOCK_OK},
+		{"Edit tags",      G_CALLBACK(listview__edit_row),      GTK_STOCK_EDIT},
 #if 0
-		{"Open Directory", G_CALLBACK(NULL),                    GTK_STOCK_OPEN,        true},
+		{"Open",           G_CALLBACK(listview__edit_row),      GTK_STOCK_OPEN},
+		{"Open Directory", G_CALLBACK(NULL),                    GTK_STOCK_OPEN},
 #endif
-		{"",                                                                               },
-		{"Play All",       G_CALLBACK(menu_play_all),           GTK_STOCK_MEDIA_PLAY, false},
-		{"Stop Playback",  G_CALLBACK(menu_play_stop),          GTK_STOCK_MEDIA_STOP, false},
-		{"",                                                                               },
-		{"View",           G_CALLBACK(NULL),                    GTK_STOCK_PREFERENCES, true},
+		{"-",                                                                       },
+		{"Play All",       G_CALLBACK(menu_play_all),           GTK_STOCK_MEDIA_PLAY},
+		{"Stop Playback",  G_CALLBACK(menu_play_stop),          GTK_STOCK_MEDIA_STOP},
+		{"-",                                                                       },
+		{"View",           G_CALLBACK(NULL),                    GTK_STOCK_PREFERENCES},
 	#ifdef USE_GDL
-		{"Layouts",        G_CALLBACK(NULL),                    GTK_STOCK_PROPERTIES,  true},
+		{"Layouts",        G_CALLBACK(NULL),                    GTK_STOCK_PROPERTIES},
 	#endif
-		{"Prefs",          G_CALLBACK(NULL),                    GTK_STOCK_PREFERENCES, true},
+		{"Prefs",          G_CALLBACK(NULL),                    GTK_STOCK_PREFERENCES},
 	};
 
 	static struct
@@ -1918,13 +1914,15 @@ make_context_menu()
 
 	GtkWidget* menu = gtk_menu_new();
 
-	add_menu_items_from_defn(menu, menu_def, G_N_ELEMENTS(menu_def));
+	add_menu_items_from_defn(menu, G_N_ELEMENTS(menu_def), menu_def, NULL);
 
 	GList* menu_items = gtk_container_get_children((GtkContainer*)menu);
 	GList* last = g_list_last(menu_items);
 
-	widgets.play_all = g_list_nth_data(menu_items, 7);
-	widgets.stop_playback = g_list_nth_data(menu_items, 8);
+	widgets.play_all = g_list_nth_data(menu_items, 5);
+	widgets.stop_playback = g_list_nth_data(menu_items, 6);
+	gtk_widget_set_sensitive(widgets.play_all, false);
+	gtk_widget_set_sensitive(widgets.stop_playback, false);
 
 	GtkWidget* sub = gtk_menu_new();
 	gtk_menu_item_set_submenu(GTK_MENU_ITEM(last->data), sub);
@@ -2041,14 +2039,14 @@ make_context_menu()
 
 			gtk_menu_shell_append (GTK_MENU_SHELL(sub), gtk_separator_menu_item_new());
 
-			add_menu_items_from_defn(sub, (MenuDef[]){{"Save", (GCallback)layout_save, GTK_STOCK_SAVE, false}}, 1);
+			add_menu_items_from_defn(sub, 1, (MenuDef[]){{"Save", (GCallback)layout_save, GTK_STOCK_SAVE}}, NULL);
+			gtk_widget_set_sensitive(g_list_last(gtk_container_get_children((GtkContainer*)sub))->data, false);
 		}
 
-		void _window_on_layout_changed(GObject* object, gpointer user_data)
+		void _window_on_layout_changed (GObject* object, gpointer user_data)
 		{
 			GList* items = gdl_dock_get_named_items((GdlDock*)window.dock);
-			GList* l = items;
-			for(;l;l=l->next){
+			for(GList* l=items;l;l=l->next){
 				GdlDockItem* item = l->data;
 				Panel_* panel = NULL;
 				if((panel = panel_lookup((GdlDockObject*)item))){

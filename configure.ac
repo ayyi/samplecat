@@ -486,6 +486,19 @@ dnl ----------------------------------------------------------------------------
 MATH_LDFLAGS=-lm
 AC_SUBST(MATH_LDFLAGS)
 
+AC_ARG_ENABLE(test, AS_HELP_STRING([--enable-test],[ compile the test programs]), enable_test=yes, enable_test=no)
+AM_CONDITIONAL(BUILD_TESTS, test "$enable_test" = "yes")
+
+AC_ARG_ENABLE(valgrind,
+	[  --enable-valgrind            Enable features to help with memory reporting.]
+)
+if test "$enable_valgrind" = "yes"; then
+	AC_DEFINE(WITH_VALGRIND, 1, [Enable features to help with memory reporting])
+else
+	enable_valgrind=no
+fi;
+
+
 CXXFLAGS="$CXXFLAGS -pipe -fmessage-length=200 -fdiagnostics-show-location=every-line"
 CFLAGS="$CFLAGS -pipe -fmessage-length=200 -fdiagnostics-show-location=every-line -Wno-misleading-indentation"
 
@@ -506,6 +519,7 @@ AC_CONFIG_FILES([lib/audio_analysis/meter/Makefile])
 AC_CONFIG_FILES([lib/audio_analysis/spectrogram/Makefile])
 AC_CONFIG_FILES([lib/audio_analysis/waveform/Makefile])
 AC_CONFIG_FILES([lib/gdl/Makefile])
+AC_CONFIG_FILES([lib/gtk/Makefile])
 AC_CONFIG_FILES([layouts/Makefile])
 AC_CONFIG_FILES([src/Makefile])
 AC_CONFIG_FILES([src/gimp/Makefile])
@@ -548,6 +562,7 @@ AC_MSG_RESULT([Building opengl support:      $enable_opengl])
 AC_MSG_RESULT([Building libass support:      $enable_libass])
 AC_MSG_RESULT([Building ayyi support:        $enable_ayyi])
 AC_MSG_RESULT([Building dock support:        $enable_dock])
+AC_MSG_RESULT([Building valgrind:            $enable_valgrind])
 AC_MSG_RESULT([Extra debugging:              $enable_debug])
 AC_MSG_RESULT([Use system Gtk OpenGL:        $enable_system_gtkglext])
 AC_MSG_RESULT([])
