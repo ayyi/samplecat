@@ -143,22 +143,15 @@ get_layout (GtkCellRendererHyperText *cellhypertext,
 
   //normally is called when mouse enters a new row.
 
-  //printf("get_layout()...\n");
-
   /*
-  PangoLayout *layout;
-  layout = ( * GTK_CELL_RENDERER_TEXT_CLASS(parent_class)->get_layout)(celltext, widget, will_render, flags);
+  PangoLayout* layout = ( * GTK_CELL_RENDERER_TEXT_CLASS(parent_class)->get_layout)(celltext, widget, will_render, flags);
   */
 
   GtkCellRendererText *celltext = &cellhypertext->renderer_text;
   PangoAttrList *attr_list;
-  PangoLayout *layout;
-  PangoUnderline uline;
-  //GtkCellRendererTextPrivate *priv;
+  //GtkCellRendererTextPrivate* priv = GTK_CELL_RENDERER_TEXT_GET_PRIVATE(parent->celltext);
 
-  //priv = GTK_CELL_RENDERER_TEXT_GET_PRIVATE(parent->celltext);
-  
-  layout = gtk_widget_create_pango_layout(widget, celltext->text);
+  PangoLayout* layout = gtk_widget_create_pango_layout(widget, celltext->text);
 
   if(celltext->extra_attrs) attr_list = pango_attr_list_copy(celltext->extra_attrs);
   else                      attr_list = pango_attr_list_new();
@@ -182,10 +175,10 @@ get_layout (GtkCellRendererHyperText *cellhypertext,
 
   add_attr(attr_list, pango_attr_font_desc_new(celltext->font));
 
-  if (celltext->scale_set &&
-      celltext->font_scale != 1.0)
+  if (celltext->scale_set && celltext->font_scale != 1.0)
     add_attr (attr_list, pango_attr_scale_new (celltext->font_scale));
-  
+
+  PangoUnderline uline;
   if (celltext->underline_set) uline = celltext->underline_style;
   else                         uline = PANGO_UNDERLINE_NONE;
 
@@ -206,8 +199,6 @@ get_layout (GtkCellRendererHyperText *cellhypertext,
     }
   }
 
-  //printf("get_layout()...\n");
-          //uline = PANGO_UNDERLINE_SINGLE; /*temp!!!!!!!!!!*/ celltext->underline_style = PANGO_UNDERLINE_SINGLE;
   if (uline != PANGO_UNDERLINE_NONE) add_attr(attr_list, pango_attr_underline_new(celltext->underline_style));
 
   if (celltext->rise_set) add_attr(attr_list, pango_attr_rise_new (celltext->rise));
@@ -336,26 +327,23 @@ gtk_cell_renderer_hyper_text_render(GtkCellRenderer      *cell,
 
 			if(strlen(celltext->text)){
 				g_strstrip(celltext->text);
-				const gchar *str = celltext->text;//"<b>pre</b> light";
-				//split the string:
+				const gchar* str = celltext->text;//"<b>pre</b> light";
+
 				gchar** split = g_strsplit(str, " ", 100);
 				//printf("gtk_cell_renderer_hyper_text_render(): split: [%s] %p %p %p %s\n", str, split[0], split[1], split[2], split[0]);
 				int word_index = 0;
 				gchar* joined = NULL;
 				if(split[word_index]){
-					gchar word[64];
-					snprintf(word, 64, "<u>%s</u>", split[word_index]);
-					//g_free(split[word_index]);
-					split[word_index] = word;
+					char* item = split[word_index];
+					split[word_index] = g_strdup_printf("<u>%s</u>", item);
+					g_free(item);
 					joined = g_strjoinv(" ", split);
-					//printf("gtk_cell_renderer_hyper_text_render(): GTK_STATE_PRELIGHT: joined: %s\n", joined);
 				}
-				//g_strfreev(split); //segfault - doesnt like reassigning split[word_index] ?
+				g_strfreev(split);
 
-				//g_object_set();
-				gchar *text = NULL;
-				GError *error = NULL;
-				PangoAttrList *attrs = NULL;
+				gchar* text = NULL;
+				GError* error = NULL;
+				PangoAttrList* attrs = NULL;
 
 				if (joined && !pango_parse_markup(joined, -1, 0, &attrs, &text, NULL, &error)){
 					g_warning("Failed to set cell text from markup due to error parsing markup: %s", error->message);

@@ -28,10 +28,8 @@ static bool on_dir_tree_link_selected (GObject*, DhLink*, gpointer);
 
 
 GtkWidget*
-dir_panel_new()
+dir_panel_new ()
 {
-	GtkWidget* widget = NULL;
-
 	GtkWidget* _dir_tree_new()
 	{
 		dir_list_update(); // because this is slow, it is not done until a consumer needs it.
@@ -39,24 +37,18 @@ dir_panel_new()
 		return app->dir_treeview = dh_book_tree_new(&samplecat.model->dir_tree);
 	}
 
-#if 0
-	if(!BACKEND_IS_NULL){ // why ?
-#endif
-		GtkWidget* tree = _dir_tree_new();
-		widget = scrolled_window_new();
-		gtk_container_add((GtkContainer*)widget, tree);
-		g_signal_connect(tree, "link-selected", G_CALLBACK(on_dir_tree_link_selected), NULL);
+	GtkWidget* tree = _dir_tree_new();
+	GtkWidget* widget = scrolled_window_new();
+	gtk_container_add((GtkContainer*)widget, tree);
+	g_signal_connect(tree, "link-selected", G_CALLBACK(on_dir_tree_link_selected), NULL);
 
-		/* The dir tree shows ALL directories and is not affected by the current filter setting.
-		void on_dir_filter_changed(GObject* _filter, gpointer _entry)
-		{
-			SamplecatFilter* filter = (SamplecatFilter*)_filter;
-		}
-		g_signal_connect(samplecat.model->filters.dir, "changed", G_CALLBACK(on_dir_filter_changed), NULL);
-		*/
-#if 0
+	/* The dir tree shows ALL directories and is not affected by the current filter setting.
+	void on_dir_filter_changed(GObject* _filter, gpointer _entry)
+	{
+		SamplecatFilter* filter = (SamplecatFilter*)_filter;
 	}
-#endif
+	g_signal_connect(samplecat.model->filters.dir, "changed", G_CALLBACK(on_dir_filter_changed), NULL);
+	*/
 
 	void on_dir_list_changed(GObject* _model, gpointer user_data)
 	{
@@ -94,6 +86,4 @@ on_dir_tree_link_selected (GObject* _, DhLink* link, gpointer data)
 
 	return false;
 }
-
-
 

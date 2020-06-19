@@ -428,12 +428,18 @@ on_quit (GtkMenuItem* menuitem, gpointer user_data)
 
 	if(samplecat.model->backend.disconnect) samplecat.model->backend.disconnect();
 
+#ifdef WITH_VALGRIND
+	application_free(app);
+	mime_type_clear();
+
 #if 0
-	//disabled due to errors when quitting early.
-
 	clear_store(); //does this make a difference to valgrind? no.
+#endif
+#endif
 
-	gtk_main_quit();
+#ifdef WITH_VALGRIND
+	application_free(app);
+	mime_type_clear();
 #endif
 
 	dbg (1, "done.");

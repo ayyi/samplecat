@@ -47,6 +47,8 @@ struct _SamplecatModel {
     GList*                 backends;
     SamplecatBackend       backend;
 
+    char*                  categories[10];
+
     union {
         Observable* filters3[N_FILTERS];
         struct {

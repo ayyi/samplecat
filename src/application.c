@@ -132,6 +132,21 @@ application_new ()
 }
 
 
+#ifdef WITH_VALGRIND
+void
+application_free (Application* self)
+{
+	ConfigContext* ctx = &app->configctx;
+	int i = 0;
+	ConfigOption* option;
+	while((option = ctx->options[i++])){
+		g_value_unset(&option->val);
+		g_free(option);
+	}
+}
+#endif
+
+
 void
 application_emit_icon_theme_changed (Application* self, const gchar* s)
 {

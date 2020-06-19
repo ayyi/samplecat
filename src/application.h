@@ -51,15 +51,15 @@ struct _Application
       NONE = 0,
       SCANNING,
    }                    state;
-   gboolean             loaded;
+   bool                 loaded;
 
    const char*          cache_dir;
    ConfigContext        configctx;
    Config               config;
 
    pthread_t            gui_thread;
-   gboolean             no_gui;
-   gboolean             temp_view;
+   bool                 no_gui;
+   bool                 temp_view;
    struct _args {
       char*             search;
       char*             add;
@@ -131,6 +131,11 @@ void         application_play_all                ();
 void         application_play_path               (const char*);
 
 void         application_emit_icon_theme_changed (Application*, const gchar*);
+
+#ifdef WITH_VALGRIND
+void         application_free                    (Application*);
+#endif
+
 G_END_DECLS
 
 #endif

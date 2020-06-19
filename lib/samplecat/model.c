@@ -380,6 +380,17 @@ samplecat_model_construct (GType object_type)
 	self->state = 1;
 	self->cache_dir = g_build_filename (g_get_home_dir(), ".config", PACKAGE, "cache", NULL, NULL);
 
+	self->categories[0] = "drums";
+	self->categories[1] = "perc";
+	self->categories[2] = "bass";
+	self->categories[3] = "keys";
+	self->categories[4] = "synth";
+	self->categories[5] = "strings";
+	self->categories[6] = "brass";
+	self->categories[7] = "fx";
+	self->categories[8] = "impulse";
+	self->categories[9] = "breaks";
+
 	// note that category value must be NULL if not set - empty string is invalid
 	for(int i = 0; i < N_FILTERS; i++){
 		if(true || i == FILTER_CATEGORY){

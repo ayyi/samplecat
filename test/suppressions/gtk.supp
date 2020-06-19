@@ -10,3 +10,27 @@
    ...
    obj:/usr/lib64/gtk-2.0/*/engines/libpixmap.so
 }
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Param
+   writev(vector[...])
+   ...
+   fun:XRenderChangePicture
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Cond
+   fun:gtk_widget_size_allocate
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Cond
+   fun:gdk_region_rectangle
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Param
+   writev(vector[...])
+   ...
+   fun:XPutImage
+}

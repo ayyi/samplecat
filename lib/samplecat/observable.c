@@ -139,7 +139,7 @@ observable_string_set (Observable* observable, const char* str)
 
 	if(observable->value.c){
 		changed = (!str) || strcmp(str, observable->value.c);
-		g_free(observable->value.c);
+		g_free(changed ? observable->value.c : (char*)str);
 	}
 
 	if(changed)

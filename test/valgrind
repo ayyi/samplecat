@@ -10,4 +10,5 @@ export G_DEBUG=gc-friendly
 	--suppressions=test/mesa.supp \
 	--suppressions=test/samplecat.supp \
 	--gen-suppressions=yes \
+	--num-callers=50 \
 	$@ ./src/samplecat

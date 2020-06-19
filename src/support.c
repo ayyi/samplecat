@@ -25,7 +25,6 @@
 #include "file_manager/file_manager.h"
 #include "dir_tree/typedefs.h"
 #include "dir_tree/ui_fileops.h"
-#include "gimp/gimpactiongroup.h"
 #include "typedefs.h"
 #include "src/support.h"
 #include "application.h"
@@ -328,7 +327,9 @@ shortcuts_add_action (GtkAction* action, GimpActionGroup* action_group)
 	g_return_if_fail(action_group);
 
 	gtk_action_group_add_action(GTK_ACTION_GROUP(action_group), action);
+#if 0
 	dbg(2, "group=%s group_size=%i action=%s", gtk_action_group_get_name(GTK_ACTION_GROUP(action_group)), g_list_length(gtk_action_group_list_actions(GTK_ACTION_GROUP(action_group))), gtk_action_get_name(action));
+#endif
 }
 
 

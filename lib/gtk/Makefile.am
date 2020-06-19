@@ -6,5 +6,6 @@ AM_CFLAGS = \
 noinst_LTLIBRARIES = libgtk.la
 
 libgtk_la_SOURCES = \
+	gimpactiongroup.c gimpactiongroup.h \
 	menu.c menu.h
 

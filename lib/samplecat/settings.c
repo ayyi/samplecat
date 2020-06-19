@@ -75,10 +75,12 @@ config_load (ConfigContext* ctx, Config* config)
 		gchar* groupname = g_key_file_get_start_group(ctx->key_file);
 		dbg (2, "group=%s.", groupname);
 		if(!strcmp(groupname, "Samplecat")){
-			int c; for(c=0;c<CONFIG_MAX;c++){
+			for(int c=0;c<CONFIG_MAX;c++){
 				if(c == CONFIG_ICON_THEME){
 					ConfigOption* o = ctx->options[c];
-					g_value_set_string(&ctx->options[CONFIG_ICON_THEME]->val, g_key_file_get_string(ctx->key_file, groupname, o->name, NULL));
+					char* str = g_key_file_get_string(ctx->key_file, groupname, o->name, NULL);
+					g_value_set_string(&o->val, str);
+					g_free(str);
 				}
 			}
 #ifdef USE_MYSQL
@@ -141,10 +143,10 @@ config_load (ConfigContext* ctx, Config* config)
 			}
 
 			if((keyval = g_key_file_get_string(ctx->key_file, groupname, "show_dir", &error))){
-				samplecat_model_set_search_dir (samplecat.model, g_strdup(keyval));
+				samplecat_model_set_search_dir (samplecat.model, keyval);
 			}
 			if((keyval = g_key_file_get_string(ctx->key_file, groupname, "filter", &error))){
-				observable_string_set(samplecat.model->filters2.search, g_strdup(keyval));
+				observable_string_set(samplecat.model->filters2.search, keyval);
 			}
 
 			{

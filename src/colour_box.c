@@ -17,7 +17,6 @@
 #include "debug/debug.h"
 #include "gtk/menu.h"
 #include "file_manager.h"
-#include "gimp/gimpactiongroup.h"
 #include "typedefs.h"
 #include "support.h"
 #include "application.h"
@@ -29,16 +28,19 @@ typedef struct
 {
 	GtkWidget* menu;
 } ColourBox;
+
 static GtkWidget*  clicked_widget = NULL;
 
 static void        colour_box_update               ();
-//static gboolean    colour_box__exists              (GdkColor*);
 static void        colour_box__set_colour          (int, GdkColor*);
 static gboolean    colour_box__on_event            (GtkWidget*, GdkEvent*, gpointer);
 static int         colour_box__drag_dataget        (GtkWidget*, GdkDragContext*, GtkSelectionData*, guint info, guint time, gpointer);
 static GtkWidget*  colour_box__make_context_menu   ();
 static int         colour_box__lookup_idx          (GtkWidget*);
 static void        menu__open_selector             (GtkMenuItem*, gpointer);
+#if 0
+static gboolean    colour_box__exists              (GdkColor*);
+#endif
 
 ColourBox self = {NULL};
 
@@ -64,12 +66,13 @@ colour_box_new (GtkWidget* parent)
 	GtkWidget* e;
 	for(int i=PALETTE_SIZE-1;i>=0;i--){
 		e = colour_button[i] = gtk_event_box_new();
-		gtk_container_set_border_width(GTK_CONTAINER(e),1);
+		//gtk_container_set_border_width(GTK_CONTAINER(e), 1);
 
 		gtk_drag_source_set(e, GDK_BUTTON1_MASK | GDK_BUTTON2_MASK, dnd_file_drag_types, dnd_file_drag_types_count, GDK_ACTION_COPY | GDK_ACTION_MOVE | GDK_ACTION_LINK);
 		g_signal_connect(G_OBJECT(e), "drag-data-get", G_CALLBACK(colour_box__drag_dataget), GUINT_TO_POINTER(i));
+
 #if 1 // do not allow to change 'neutral' colour.
-	if (i > 0)
+		if (i > 0)
 #endif
 		g_signal_connect(G_OBJECT(e), "event", G_CALLBACK(colour_box__on_event), GUINT_TO_POINTER(i));
 
@@ -112,6 +115,8 @@ colour_box_new (GtkWidget* parent)
 		}
 	}
 	g_signal_connect(G_OBJECT(app->window), "size-allocate", G_CALLBACK(window_on_allocate), NULL);
+
+	gtk_widget_set_size_request(e, -1, 24);
 
 	return e;
 }
@@ -172,7 +177,8 @@ colour_box_add (GdkColor* colour)
 
 	//char d[32]; hexstring_from_gdkcolor(d, colour); dbg(0, " %i: %s", slot, d);
 
-	if(slot >= PALETTE_SIZE){ if(_debug_) warnprintf("%s(): colour_box full.\n", __func__); return false; }
+	g_return_val_if_fail(slot < PALETTE_SIZE, false);
+
 #if 0 /* don't try to be smarter than the user -- 
        * This can screw up the order or user-configured colours 
 			 * if they're too similar.
@@ -181,6 +187,7 @@ colour_box_add (GdkColor* colour)
 	if(colour_box__exists(colour)){ dbg(2, "dup colour - not adding..."); return false; }
 #endif
 	hexstring_from_gdkcolor(app->config.colour[slot++], colour);
+
 	return true;
 }
 
@@ -257,13 +264,13 @@ colour_box__lookup_idx (GtkWidget* widget)
 static void
 menu__open_selector (GtkMenuItem* menuitem, gpointer user_data)
 {
-	static gboolean colour_editing = false;
+	static bool colour_editing = false;
 	dbg(2, "data=%p", user_data);
 
 	if (colour_editing) return;
 	colour_editing = true;
 
-	void on_colour_change(GtkColorSelection* colorselection, gpointer user_data)
+	void on_colour_change (GtkColorSelection* colorselection, gpointer user_data)
 	{
 		int box_idx = colour_box__lookup_idx(clicked_widget);
 		if(box_idx > -1){
@@ -273,13 +280,13 @@ menu__open_selector (GtkMenuItem* menuitem, gpointer user_data)
 		}
 	}
 
-	void on_ok(GtkButton* button, gpointer user_data)
+	void on_ok (GtkButton* button, gpointer user_data)
 	{
 		dbg(1, "...");
 		gtk_widget_destroy(gtk_widget_get_toplevel((GtkWidget*)button));
 	}
 
-	void on_destroy(GtkButton* button, gpointer user_data)
+	void on_destroy (GtkButton* button, gpointer user_data)
 	{
 		dbg(1, "...");
 		colour_editing = false;
@@ -297,6 +304,7 @@ menu__open_selector (GtkMenuItem* menuitem, gpointer user_data)
 	gtk_box_pack_start((GtkBox*)v, sel, EXPAND_FALSE, FILL_FALSE, 0);
 	gtk_box_pack_start((GtkBox*)v, b, EXPAND_FALSE, FILL_FALSE, 0);
 	gtk_widget_show_all(window);
+
 	g_signal_connect (G_OBJECT(b), "clicked", G_CALLBACK(on_ok), user_data);
 	g_signal_connect (G_OBJECT(b), "destroy", G_CALLBACK(on_destroy), user_data);
 	g_signal_connect (G_OBJECT(sel), "color-changed", G_CALLBACK(on_colour_change), user_data);
@@ -359,12 +367,12 @@ colour_box_colourise ()
 
 #define LUMSHIFT (0)
 	colour_box_add(&app->bg_colour); // "transparent" - none
-	int i;
-	for (i=0;i<PALETTE_SIZE-1;i++) {
+
+	for (int i=0;i<PALETTE_SIZE-1;i++) {
 		float h, s, l; 
-		l=1.0; h = (float)i / ((float)PALETTE_SIZE-1.0);
-		s=(i%2)?.6:.9; 
-		l=0.3 + ((i+LUMSHIFT)%4)/6.0; /* 0.3 .. 0.8 */
+		l = 1.0; h = (float)i / ((float)PALETTE_SIZE - 1.0);
+		s = (i % 2) ? .6 : .9;
+		l = 0.3 + ((i + LUMSHIFT)%4) / 6.0; /* 0.3 .. 0.8 */
 		hsl2rgb(h, s, l, &colour);
 		if (!colour_box_add(&colour)) {
 			fprintf(stderr, "WTF %d\n", i);
@@ -372,5 +380,4 @@ colour_box_colourise ()
 	}
 #endif
 }
-
 

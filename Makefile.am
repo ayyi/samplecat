@@ -29,4 +29,8 @@ EXTRA_DIST = \
 build_test: dummy
 	./build_test
 
-EXTRA_DIST = samplecat.1 icons/samplecat.xpm samples.sql
+EXTRA_DIST = samplecat.1 \
+	icons/samplecat.xpm \
+	samples.sql \
+	resources.xml \
+	resources/gtkrc

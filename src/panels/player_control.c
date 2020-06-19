@@ -61,6 +61,7 @@ GtkWidget*
 player_control_new()
 {
 	g_return_val_if_fail(!app->playercontrol, NULL);
+
 	PlayCtrl* pc = app->playercontrol = g_new0(PlayCtrl, 1);
 
 	GtkWidget* top = pc->widget = gtk_scrolled_window_new(NULL, NULL);
@@ -87,7 +88,7 @@ player_control_new()
 
 
 static void
-pc_add_widgets()
+pc_add_widgets ()
 {
 	PlayCtrl* pc = app->playercontrol;
 
@@ -240,7 +241,7 @@ cb_pitch_toggled (GtkToggleButton *btn, gpointer user_data)
 
 
 static void
-cb_link_toggled(GtkToggleButton *btn, gpointer user_data)
+cb_link_toggled (GtkToggleButton *btn, gpointer user_data)
 {
 	play->link_speed_pitch = gtk_toggle_button_get_active (btn);
 	if (play->link_speed_pitch) {
@@ -311,9 +312,10 @@ update_slider (gpointer _)
 
 
 void
-player_control_on_show_hide(bool enable)
+player_control_on_show_hide (bool enable)
 {
 	PlayCtrl* pc = app->playercontrol;
+
 	#define WIDGETS_CREATED (pc->slider1) // not created until audio is ready.
 
 	static guint play_start_handler = 0;
@@ -365,7 +367,7 @@ player_control_on_show_hide(bool enable)
 		if(WIDGETS_CREATED) gtk_widget_set_sensitive(app->playercontrol->slider1, false);
 	}
 
-	void pc_on_play(GObject* _player, gpointer _pc)
+	void pc_on_play (GObject* _player, gpointer _pc)
 	{
 		PlayCtrl* pc = app->playercontrol;
 
@@ -382,7 +384,7 @@ player_control_on_show_hide(bool enable)
 		}
 	}
 
-	void pc_on_stop(GObject* _player, gpointer _pc)
+	void pc_on_stop (GObject* _player, gpointer _pc)
 	{
 		PlayCtrl* pc = app->playercontrol;
 

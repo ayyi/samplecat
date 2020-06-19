@@ -16,3 +16,15 @@
    ...
    fun:g_option_context_parse
 }
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   ...
+   fun:g_type_register_fundamental
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   ...
+   fun:g_type_class_ref
+}

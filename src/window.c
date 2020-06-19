@@ -24,12 +24,12 @@
 #endif
 #include "debug/debug.h"
 #include "gtk/menu.h"
+#include "gtk/gimpactiongroup.h"
 #include "file_manager.h"
 #include "file_manager/menu.h"
 #include "samplecat/worker.h"
 #include "player/player.h"
 #include "audio_analysis/waveform/waveform.h"
-#include "gimp/gimpactiongroup.h"
 #include "src/typedefs.h"
 #include "sample.h"
 #include "support.h"
@@ -51,7 +51,6 @@
 #include "spectrogram_widget.h"
 #endif
 #endif
-#include "colour_box.h"
 #ifdef ROTATOR
 #include "rotator.h"
 #endif
@@ -68,18 +67,13 @@
 extern void       view_details_dnd_get            (GtkWidget*, GdkDragContext*, GtkSelectionData*, guint info, guint time, gpointer data);
 extern void       on_quit                         (GtkMenuItem*, gpointer);
 
-char* categories[] = {"drums", "perc", "bass", "keys", "synth", "strings", "brass", "fx", "impulse", "breaks"};
-
 static gboolean   window_on_destroy               (GtkWidget*, gpointer);
 static void       window_on_realise               (GtkWidget*, gpointer);
 static void       window_on_size_request          (GtkWidget*, GtkRequisition*, gpointer);
 static void       window_on_allocate              (GtkWidget*, GtkAllocation*, gpointer);
 static gboolean   window_on_configure             (GtkWidget*, GdkEventConfigure*, gpointer);
-static void       tag_selector_new                ();
-static void       tagshow_selector_new            ();
 static void       window_on_fileview_row_selected (GtkTreeView*, gpointer);
 static void       delete_selected_rows            ();
-static void       on_category_set_clicked         (GtkComboBox*, gpointer);
 static void       menu__add_to_db                 (GtkMenuItem*, gpointer);
 static void       menu__add_dir_to_db             (GtkMenuItem*, gpointer);
 static void       menu__play                      (GtkMenuItem*, gpointer);
@@ -109,10 +103,6 @@ struct _window {
 #ifdef USE_GDL
    GdlDockLayout* layout;
 #endif
-   GtkWidget*     toolbar;
-   GtkWidget*     toolbar2;
-   GtkWidget*     search;
-   GtkWidget*     category;
    GtkWidget*     file_man;
    GtkWidget*     dir_tree;
    GtkWidget*     waveform;
@@ -132,6 +122,7 @@ struct _window {
 typedef enum {
    PANEL_TYPE_LIBRARY,
    PANEL_TYPE_SEARCH,
+   PANEL_TYPE_TAGS,
    PANEL_TYPE_FILTERS,
    PANEL_TYPE_INSPECTOR,
    PANEL_TYPE_DIRECTORIES,
@@ -158,8 +149,10 @@ static NewPanelFn
 #ifdef HAVE_FFTW3
 	spectrogram_new,
 #endif
-	search_new, filters_new, make_fileview_pane;
-extern NewPanelFn dir_panel_new;
+	filters_new,
+	make_fileview_pane;
+
+extern NewPanelFn search_new, dir_panel_new, tags_new;
 
 #ifdef ROTATOR
 GtkWidget*
@@ -182,6 +175,7 @@ typedef struct {
 Panel_ panels[] = {
    {"Library",     listview__new},
    {"Search",      search_new},
+   {"Tags",        tags_new},
    {"Filters",     filters_new},
    {"Inspector",   inspector_new},
    {"Directories", dir_panel_new},
@@ -199,8 +193,8 @@ Panel_ panels[] = {
 };
 
 #ifdef USE_GDL
-static Panel_*    panel_lookup                    (GdlDockObject*);
-static int        panel_lookup_index              (GdlDockObject*);
+static Panel_*    panel_lookup        (GdlDockObject*);
+static int        panel_lookup_index  (GdlDockObject*);
 #endif
 
 Accel menu_keys[] = {
@@ -633,7 +627,9 @@ window_on_allocate(GtkWidget* win, GtkAllocation* allocation, gpointer user_data
 #if 0
 		if(is_similar(&app->bg_colour_mod1, &app->fg_colour, 0xFF)) perr("colours not set properly!");
 #endif
+#if 0
 		dbg(2, "%s %s", gdkcolor_get_hexstring(&app->bg_colour_mod1), gdkcolor_get_hexstring(&app->fg_colour));
+#endif
 		if(app->fm_view) view_details_set_alt_colours(VIEW_DETAILS(app->fm_view), &app->bg_colour_mod1, &app->fg_colour);
 
 		g_signal_emit_by_name (app, "theme-changed", NULL);
@@ -872,81 +868,6 @@ left_pane2()
 #endif
 
 
-/*
- *  Search box and tagging
- */
-static GtkWidget*
-search_new()
-{
-	PF;
-
-	g_return_val_if_fail(app->window, FALSE);
-
-	GtkWidget* filter_vbox = gtk_vbox_new(NON_HOMOGENOUS, 0);
-
-	//----------------------------------------------------------------------
-
-	// first row
-
-	GtkWidget* row1 = window.toolbar = gtk_hbox_new(NON_HOMOGENOUS, 0);
-	gtk_box_pack_start(GTK_BOX(filter_vbox), row1, EXPAND_FALSE, FILL_FALSE, 0);
-
-	GtkWidget* label = gtk_label_new("Search");
-	gtk_misc_set_padding(GTK_MISC(label), 5, 5);
-	gtk_box_pack_start(GTK_BOX(row1), label, FALSE, FALSE, 0);
-
-	gboolean on_focus_out (GtkWidget* widget, GdkEventFocus* event, gpointer user_data)
-	{
-		PF;
-		const gchar* text = gtk_entry_get_text(GTK_ENTRY(window.search));
-		observable_string_set(samplecat.model->filters2.search, g_strdup(text));
-		return NOT_HANDLED;
-	}
-
-	Observable* filter = samplecat.model->filters2.search;
-	GtkWidget* entry = window.search = gtk_entry_new();
-	gtk_entry_set_max_length(GTK_ENTRY(entry), 64);
-	if(filter->value.c) gtk_entry_set_text(GTK_ENTRY(entry), filter->value.c);
-	gtk_box_pack_start(GTK_BOX(row1), entry, EXPAND_TRUE, TRUE, 0);
-	g_signal_connect(G_OBJECT(entry), "focus-out-event", G_CALLBACK(on_focus_out), NULL);
-	gtk_entry_set_activates_default(GTK_ENTRY(entry), TRUE);
-	g_signal_connect(G_OBJECT(entry), "activate", G_CALLBACK(on_focus_out), NULL);
-
-	void on_search_filter_changed (Observable* _filter, AMVal value, gpointer _entry)
-	{
-		gtk_entry_set_text(GTK_ENTRY(_entry), value.c);
-	}
-	observable_subscribe(filter, on_search_filter_changed, entry);
-
-	//----------------------------------------------------------------------
-
-	//second row (metadata edit)
-
-	GtkWidget* hbox_edit = window.toolbar2 = gtk_hbox_new(NON_HOMOGENOUS, 0);
-	gtk_box_pack_start(GTK_BOX(filter_vbox), hbox_edit, EXPAND_FALSE, FILL_FALSE, 0);
-
-	//left align the label:
-	GtkWidget* align1 = gtk_alignment_new(0.0, 0.5, 0.0, 0.0);
-	gtk_box_pack_start(GTK_BOX(hbox_edit), align1, EXPAND_FALSE, FILL_FALSE, 0);
-
-	GtkWidget* label2 = gtk_label_new("Tag");
-	gtk_misc_set_padding(GTK_MISC(label2), 5, 5);
-	gtk_container_add(GTK_CONTAINER(align1), label2);
-
-	//make the two lhs labels the same width:
-	GtkSizeGroup* size_group = gtk_size_group_new(GTK_SIZE_GROUP_HORIZONTAL);
-	gtk_size_group_add_widget(size_group, label);
-	gtk_size_group_add_widget(size_group, align1);
-	
-	colour_box_new(hbox_edit);
-
-	tagshow_selector_new();
-	tag_selector_new();
-
-	return filter_vbox;
-}
-
-
 static GtkWidget*
 filters_new ()
 {
@@ -1055,71 +976,8 @@ message_panel__new ()
 #endif
 
 
-/*
- *  The tag _edit_ selector
- */
 static void
-tag_selector_new ()
-{
-	GtkWidget* combo2 = window.category = gtk_combo_box_entry_new_text();
-	GtkComboBox* combo_ = GTK_COMBO_BOX(combo2);
-	gtk_combo_box_append_text(combo_, "no categories");
-	int i; for (i=0;i<G_N_ELEMENTS(categories);i++) {
-		gtk_combo_box_append_text(combo_, categories[i]);
-	}
-	gtk_box_pack_start(GTK_BOX(window.toolbar2), combo2, EXPAND_FALSE, FALSE, 0);
-
-	// "set" button
-	GtkWidget* set = gtk_button_new_with_label("Set Tag");
-	gtk_box_pack_start(GTK_BOX(window.toolbar2), set, EXPAND_FALSE, FALSE, 0);
-	g_signal_connect(set, "clicked", G_CALLBACK(on_category_set_clicked), NULL);
-}
-
-
-/*
- *  The view-filter tag-select.
- */
-static void
-tagshow_selector_new ()
-{
-	#define ALL_CATEGORIES "All categories"
-
-	GtkWidget* combo = gtk_combo_box_new_text();
-	GtkComboBox* combo_ = GTK_COMBO_BOX(combo);
-	gtk_combo_box_append_text(combo_, ALL_CATEGORIES);
-	int i; for(i=0;i<G_N_ELEMENTS(categories);i++){
-		gtk_combo_box_append_text(combo_, categories[i]);
-	}
-	gtk_combo_box_set_active(combo_, 0);
-	gtk_box_pack_start(GTK_BOX(window.toolbar), combo, EXPAND_FALSE, FALSE, 0);
-
-	void
-	on_view_category_changed (GtkComboBox* widget, gpointer user_data)
-	{
-		// update the sample list with the new view-category
-		PF;
-
-		char* category = gtk_combo_box_get_active_text(GTK_COMBO_BOX(widget));
-		if (!strcmp(category, ALL_CATEGORIES)) g_free0(category);
-		observable_string_set(samplecat.model->filters2.category, category);
-	}
-	g_signal_connect(combo, "changed", G_CALLBACK(on_view_category_changed), NULL);
-
-	void on_category_filter_changed(Observable* filter, AMVal value, gpointer user_data)
-	{
-		GtkComboBox* combo = user_data;
-
-		if(!filter->value.c || !strlen(filter->value.c)){
-			gtk_combo_box_set_active(combo, 0);
-		}
-	}
-
-	observable_subscribe(samplecat.model->filters2.category, on_category_filter_changed, combo);
-}
-
-
-static void
-delete_selected_rows()
+delete_selected_rows ()
 {
 	GtkTreeModel* model = gtk_tree_view_get_model(GTK_TREE_VIEW(app->libraryview->widget));
 
@@ -1296,58 +1154,6 @@ make_menu_actions (Accel keys[], int count, void (*add_to_menu)(GtkAction*))
 
 		if(add_to_menu) add_to_menu(action);
 	}
-}
-
-
-static void
-on_category_set_clicked(GtkComboBox* widget, gpointer user_data)
-{
-	// add selected category to selected samples.
-
-	PF;
-	//selected category?
-	gchar* category = gtk_combo_box_get_active_text(GTK_COMBO_BOX(window.category));
-
-	GtkTreeSelection* selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(app->libraryview->widget));
-	GList* selectionlist = gtk_tree_selection_get_selected_rows(selection, NULL);
-	if(!selectionlist){ statusbar_print(1, "no files selected."); return; }
-
-	int i;
-	GtkTreeIter iter;
-	for(i=0;i<g_list_length(selectionlist);i++){
-		GtkTreePath* treepath_selection = g_list_nth_data(selectionlist, i);
-
-		if(gtk_tree_model_get_iter(GTK_TREE_MODEL(samplecat.store), &iter, treepath_selection)){
-			gchar* fname; gchar* tags;
-			int id;
-			Sample* sample;
-			gtk_tree_model_get(GTK_TREE_MODEL(samplecat.store), &iter, COL_SAMPLEPTR, &sample, COL_NAME, &fname, COL_KEYWORDS, &tags, COL_IDX, &id, -1);
-			dbg(1, "id=%i name=%s", id, fname);
-
-			if(!strcmp(category, "no categories")){
-				if(samplecat_model_update_sample(samplecat.model, sample, COL_KEYWORDS, "")){
-				}
-			}else{
-				if(!keyword_is_dupe(category, tags)){
-					char tags_new[1024];
-					snprintf(tags_new, 1024, "%s %s", tags ? tags : "", category);
-					g_strstrip(tags_new); // trim
-
-					if(samplecat_model_update_sample(samplecat.model, sample, COL_KEYWORDS, (void*)tags_new)){
-						statusbar_print(1, "category set");
-					}
-
-				}else{
-					statusbar_print(1, "ignoring duplicate keyword.");
-				}
-			}
-
-		} else perr("bad iter! i=%i (<%i)\n", i, g_list_length(selectionlist));
-	}
-	g_list_foreach(selectionlist, (GFunc)gtk_tree_path_free, NULL);
-	g_list_free(selectionlist);
-
-	g_free(category);
 }
 
 

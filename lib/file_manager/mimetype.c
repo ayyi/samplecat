@@ -86,13 +86,13 @@ type_init(void)
 	gint n_elements;
 	gchar** path[64];
 	gtk_icon_theme_get_search_path(icon_theme, path, &n_elements);
-	int i; for(i=0;i<n_elements;i++){
+	for(int i=0;i<n_elements;i++){
 		dbg(2, "icon_theme_path=%s", path[0][i]);
 	}
 	g_strfreev(*path);
 #endif
 
-	type_hash = g_hash_table_new(g_str_hash, g_str_equal);
+	type_hash = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
 
 	text_plain = get_mime_type("text/plain", TRUE);
 	inode_directory = get_mime_type("inode/directory", TRUE);

@@ -46,6 +46,12 @@
    ...
    obj:*/libpango*
 }
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   ...
+   fun:FcValueSave
+}
 
 # On Ubuntu
 #    3 ff_pango_leak_calloc_lib_global        valgrind_ff_pango.supp:40 suppressed: 143 bytes in 3 blocks

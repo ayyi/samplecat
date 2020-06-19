@@ -80,6 +80,12 @@
    <insert_a_suppression_name_here>
    Memcheck:Leak
    ...
+   fun:_mesa_new_shader_program
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   ...
    fun:_mesa_PopMatrix
 }
 {
@@ -117,6 +123,30 @@
    Memcheck:Addr2
    ...
    fun:_mesa_Rotatef
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   ...
+   fun:_mesa_Rotatef
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Addr8
+   ...
+   fun:_mesa_set_enable
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Addr4
+   ...
+   fun:_mesa_set_enable
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Addr2
+   ...
+   fun:_mesa_set_enable
 }
 {
    <insert_a_suppression_name_here>
@@ -247,6 +277,12 @@
    fun:dri3_create_screen
 }
 {
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   ...
+   fun:driCreateNewScreen2
+}
+{
    Temporary
    Memcheck:Leak
    ...
@@ -361,24 +397,6 @@
    <insert_a_suppression_name_here>
    Memcheck:Addr8
    ...
-   fun:_mesa_set_enable
-}
-{
-   <insert_a_suppression_name_here>
-   Memcheck:Addr4
-   ...
-   fun:_mesa_set_enable
-}
-{
-   <insert_a_suppression_name_here>
-   Memcheck:Addr2
-   ...
-   fun:_mesa_set_enable
-}
-{
-   <insert_a_suppression_name_here>
-   Memcheck:Addr8
-   ...
    fun:_mesa_update_state
 }
 {
@@ -416,4 +434,10 @@
    Memcheck:Addr1
    ...
    fun:vbo_exec_FlushVertices
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   ...
+   fun:gdk_gl_config_new_rgb
 }

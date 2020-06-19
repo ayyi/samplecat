@@ -1,7 +1,7 @@
 ## Process this file with automake to produce Makefile.in
 
 VALA_DIR =
-SUBDIRS = gimp $(VALA_DIR)
+SUBDIRS = panels $(VALA_DIR)
 
 if !ENABLE_SYSTEM_GTKGLEXT
 LOCAL_GTKGLEXT_CFLAGS = \
@@ -18,8 +18,8 @@ AM_CFLAGS = \
 	-I$(top_srcdir)/lib/file_manager \
 	-I$(top_srcdir)/lib/waveform \
 	$(LOCAL_GTKGLEXT_CFLAGS) \
+	-I./panels \
 	-I./dir_tree \
-	-I./gimp \
 	$(SAMPLECAT_CFLAGS) \
 	$(FFTW3_CFLAGS) \
 	$(OPENGL_CFLAGS) \
@@ -73,8 +73,6 @@ samplecat_SOURCES = \
 	progress_dialog.c progress_dialog.h \
 	listview.c listview.h \
 	inspector.c inspector.h \
-	player_control.c player_control.h \
-	directories.c directories.h \
 	dh_tree.c dh_tree.h \
 	cellrenderer_hypertext.c cellrenderer_hypertext.h \
 	colour_box.c colour_box.h \
@@ -98,7 +96,7 @@ samplecat_LDADD = \
 	$(top_srcdir)/lib/samplecat/db/libsamplecatdb.a \
 	$(GDL_LDFLAGS) \
 	$(top_srcdir)/lib/gtk/libgtk.la \
-	gimp/libgimpwidgets.a \
+	$(top_srcdir)/src/panels/libpanels.la \
 	$(SAMPLECAT_LIBS) \
 	$(AYYI_LIBS) \
 	$(DBUS_LIBS) \
