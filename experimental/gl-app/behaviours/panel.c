@@ -11,6 +11,8 @@
 */
 #include "panel.h"
 
+static void panel_behaviour_init (AGlBehaviour*, AGlActor*);
+
 static AGlBehaviourClass klass = {
 	.new = panel_behaviour,
 	.init = panel_behaviour_init
@@ -37,7 +39,7 @@ panel_behaviour ()
 }
 
 
-void
+static void
 panel_behaviour_init (AGlBehaviour* behaviour, AGlActor* actor)
 {
 }

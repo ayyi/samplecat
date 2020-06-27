@@ -128,11 +128,10 @@ glx_init(Display* dpy)
 
 
 static int
-find_window_instance_number(AGlWindow* window)
+find_window_instance_number (AGlWindow* window)
 {
-	GList* l = windows;
 	int i = 0;
-	for(;l;l=l->next){
+	for(GList* l=windows;l;l=l->next){
 		AGlWindow* w = l->data;
 		if(w->window == window->window) return i + 1;
 		i++;
@@ -245,7 +244,6 @@ static Atom wm_close;
 
 /*
  * Create an RGB, double-buffered window.
- * Return the window and context handles.
  */
 AGlWindow*
 agl_make_window (Display* dpy, const char* name, int x, int y, int width, int height)

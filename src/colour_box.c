@@ -20,7 +20,6 @@
 #include "typedefs.h"
 #include "support.h"
 #include "application.h"
-#include "listview.h"
 #include "dnd.h"
 #include "colour_box.h"
 

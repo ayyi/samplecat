@@ -24,7 +24,9 @@
 #ifndef __GDL_DOCK_OBJECT_H__
 #define __GDL_DOCK_OBJECT_H__
 
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <gtk/gtk.h>
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 
 G_BEGIN_DECLS
 

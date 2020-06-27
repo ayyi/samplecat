@@ -14,9 +14,6 @@
 #define __USE_GNU
 #include <libgen.h>
 #include <getopt.h>
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#include <gtk/gtk.h>
-#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 #include <gdk-pixbuf/gdk-pixdata.h>
 
 #ifdef __APPLE__
@@ -83,7 +80,7 @@ static const char* const short_options = "b:gv:s:a:p:chV";
 
 static const char* const usage =
 	"Usage: %s [OPTIONS]\n\n"
-	"SampleCat is a program for cataloguing and auditioning audio samples.\n" 
+	"SampleCat is a program for cataloguing and auditioning audio samples.\n"
 	"\n"
 	"Options:\n"
 	"  -a, --add <file(s)>    add these files/directories.\n"
@@ -127,10 +124,6 @@ main (int argc, char** argv)
 	program_name = argv[0];
 #endif
 
-	// init console escape commands
-	sprintf(err,    "%serror!%s", red, white);
-	sprintf(warn,   "%swarning:%s", yellow, white);
-
 	g_log_set_default_handler(log_handler, NULL);
 
 #ifndef HAVE_GTK_2_12
@@ -143,8 +136,6 @@ main (int argc, char** argv)
 
 	app = application_new();
 	SamplecatModel* model = samplecat.model;
-
-	colour_box_init();
 
 #define ADD_PLAYER(A) app->players = g_list_append(app->players, A)
 
@@ -179,7 +170,7 @@ main (int argc, char** argv)
 				//if a particular backend is requested, and is available, reduce the backend list to just this one.
 				dbg(1, "backend '%s' requested.", optarg);
 				if(can_use(model->backends, optarg)){
-					list_clear(model->backends);
+					g_clear_pointer(&model->backends, g_list_free);
 					samplecat_model_add_backend(optarg);
 					dbg(1, "n_backends=%i", g_list_length(model->backends));
 				}else{
@@ -193,7 +184,7 @@ main (int argc, char** argv)
 				break;
 			case 'p':
 				if(can_use(app->players, optarg)){
-					list_clear(app->players);
+					g_clear_pointer(&app->players, g_list_free);
 					ADD_PLAYER(optarg);
 					player_opt = true;
 				}else{
@@ -266,13 +257,13 @@ main (int argc, char** argv)
 	);
 
 	if (app->config.database_backend && can_use(model->backends, app->config.database_backend)) {
-		list_clear(model->backends);
+		g_clear_pointer(&model->backends, g_list_free);
 		samplecat_model_add_backend(app->config.database_backend);
 	}
 
 	if (!player_opt && app->config.auditioner) {
 		if(can_use(app->players, app->config.auditioner)){
-			list_clear(app->players);
+			g_clear_pointer(&app->players, g_list_free);
 			ADD_PLAYER(app->config.auditioner);
 		}
 	}
@@ -280,7 +271,7 @@ main (int argc, char** argv)
 	if(player_opt) g_strlcpy(app->config.auditioner, app->players->data, 8);
 
 #ifdef __APPLE__
-	GtkOSXApplication* osxApp = (GtkOSXApplication*) 
+	GtkOSXApplication* osxApp = (GtkOSXApplication*)
 	g_object_new(GTK_TYPE_OSX_APPLICATION, NULL);
 #endif
 	app->gui_thread = pthread_self();
@@ -289,7 +280,6 @@ main (int argc, char** argv)
 	pixmaps_init();
 
 	if(app->no_gui) console__init();
-
 
 	if (!db_connect()) {
 		g_warning("cannot connect to any database.");
@@ -355,7 +345,7 @@ main (int argc, char** argv)
 	worker_thread_init();
 #endif
 
-	if(!app->no_gui) window_new(); 
+	if(!app->no_gui) window_new();
 
 #ifdef __APPLE__
 	GtkWidget* menu_bar;

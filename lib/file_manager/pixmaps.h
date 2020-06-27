@@ -15,6 +15,7 @@
 
 #include <glib.h>
 #include <gdk-pixbuf/gdk-pixbuf.h>
+#include "file_manager/fscache.h"
 
 extern GFSCache *pixmap_cache;
 

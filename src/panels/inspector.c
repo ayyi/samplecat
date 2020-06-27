@@ -15,13 +15,11 @@
 #pragma GCC diagnostic warning "-Wdeprecated-declarations"
 #include "debug/debug.h"
 #include "file_manager/support.h" // to_utf8()
-#include "mimetype.h"
+#include "file_manager/mimetype.h"
 #include "support.h"
 #include "model.h"
 #include "application.h"
-#include "mimetype.h"
 #include "sample.h"
-#include "listview.h"
 #include "editablelabelbutton.h"
 #ifdef USE_TRACKER
   #include "src/db/tracker.h"

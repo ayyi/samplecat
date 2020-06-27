@@ -41,7 +41,6 @@
 
 #include "application.h"
 #include "list_store.h"
-#include "listview.h"
 #include "rotator.h"
 
 #ifndef USE_SYSTEM_GTKGLEXT

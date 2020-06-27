@@ -24,7 +24,7 @@
 #include "support.h"
 #include "application.h"
 #include "model.h"
-#include "listview.h"
+#include "library.h"
 #include "progress_dialog.h"
 #include "dnd.h"
 

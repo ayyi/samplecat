@@ -35,7 +35,7 @@
 #include "support.h"
 #include "model.h"
 #include "application.h"
-#include "listview.h"
+#include "library.h"
 #include "dnd.h"
 #include "inspector.h"
 #include "progress_dialog.h"

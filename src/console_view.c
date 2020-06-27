@@ -18,13 +18,12 @@
 #include "application.h"
 #include "support.h"
 #include "sample.h"
-#include "listview.h"
 #include "console_view.h"
 
 static void console__show_result_footer (int);
 
 
-void console__init()
+void console__init ()
 {
 #if 0
 	// for this to work, we would have to not add blank rows before populating them which is not possible.
@@ -41,7 +40,7 @@ void console__init()
 	g_signal_connect(G_OBJECT(samplecat.store), "row-inserted", G_CALLBACK(store_row_inserted), NULL);
 #endif
 
-	void store_content_changed(GtkListStore* store, gpointer data)
+	void store_content_changed (GtkListStore* store, gpointer data)
 	{
 		PF;
 		GtkTreeIter iter;
@@ -66,7 +65,7 @@ void console__init()
 
 
 void
-console__show_result_header()
+console__show_result_header ()
 {
 	printf("filters: text='%s' dir=%s\n", samplecat.model->filters2.search->value.c, strlen(samplecat.model->filters2.dir->value.c) ? samplecat.model->filters2.dir->value.c : "<all directories>");
 
@@ -75,7 +74,7 @@ console__show_result_header()
 
 
 void
-console__show_result(Sample* result)
+console__show_result (Sample* result)
 {
 	int w = get_terminal_width();
 
@@ -96,7 +95,7 @@ console__show_result(Sample* result)
 
 
 static void
-console__show_result_footer(int row_count)
+console__show_result_footer (int row_count)
 {
 	printf("total %i samples found.\n", row_count);
 }

@@ -61,7 +61,7 @@ OPENGL_LDFLAGS = \
 endif
 
 if ENABLE_GDL
-GDL_LDFLAGS=$(top_srcdir)/lib/gdl/libgdl.a $(XML_LIBS)
+GDL_LDFLAGS = $(top_srcdir)/lib/gdl/libgdl.a $(XML_LIBS)
 endif
 
 samplecat_SOURCES = \
@@ -71,8 +71,6 @@ samplecat_SOURCES = \
 	application.c application.h \
 	window.c window.h \
 	progress_dialog.c progress_dialog.h \
-	listview.c listview.h \
-	inspector.c inspector.h \
 	dh_tree.c dh_tree.h \
 	cellrenderer_hypertext.c cellrenderer_hypertext.h \
 	colour_box.c colour_box.h \

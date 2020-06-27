@@ -12,17 +12,14 @@
 * +----------------------------------------------------------------------+
 *
 */
-#define __wf_private__
 #include "config.h"
 #undef USE_GTK
 #include "debug/debug.h"
-#include "agl/utils.h"
 #include "agl/actor.h"
 #include "agl/shader.h"
 #include "samplecat/support.h"
 #include "views/dock_h.h"
 
-#define _g_free0(var) (var = (g_free (var), NULL))
 #define SPACING 15
 #define DIVIDER 5
 
@@ -61,13 +58,12 @@ dock_h_view (gpointer _)
 
 	_init();
 
-	bool dock_h_paint(AGlActor* actor)
+	bool dock_h_paint (AGlActor* actor)
 	{
 		DockHView* dock = (DockHView*)actor;
 
-		int x = 0;
-		GList* l = dock->panels;
-		for(;l;l=l->next){
+		float x = 0.;
+		for(GList* l=dock->panels;l;l=l->next){
 			AGlActor* a = l->data;
 			if(x){
 				x = a->region.x1;
@@ -86,7 +82,7 @@ dock_h_view (gpointer _)
 		return true;
 	}
 
-	void dock_init(AGlActor* a)
+	void dock_init (AGlActor* a)
 	{
 		void panel_init(AGlActor* actor)
 		{
@@ -104,10 +100,10 @@ dock_h_view (gpointer _)
 		agl->shaders.plain->uniform.colour = 0x66666666;
 	}
 
-	void dock_h_set_size (AGlActor* actor)
+	void dock_h_layout (AGlActor* actor)
 	{
 		DockHView* dock = (DockHView*)actor;
-		int height = agl_actor__height(actor);
+		float height = agl_actor__height(actor);
 
 		typedef struct {
 			AGlActor* actor;
@@ -128,8 +124,7 @@ dock_h_view (gpointer _)
 		if(items[G_N_ELEMENTS(items) - 1].actor->region.x2 == agl_actor__width(actor)){
 			dbg(2, "width already correct: %i", agl_actor__width(actor));
 
-			GList* l = actor->children;
-			for(;l;l=l->next){
+			for(GList* l=actor->children;l;l=l->next){
 				AGlActor* child = l->data;
 				child->region.y2 = height;
 				agl_actor__set_size(child);
@@ -350,7 +345,7 @@ dock_h_view (gpointer _)
 				.init = dock_init,
 				.paint = dock_h_paint,
 				.set_state = dock_set_state,
-				.set_size = dock_h_set_size,
+				.set_size = dock_h_layout,
 				.on_event = dock_h_event,
 			}
 		}

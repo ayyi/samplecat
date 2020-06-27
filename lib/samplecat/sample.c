@@ -11,7 +11,9 @@
 */
 #include "config.h"
 #define __USE_GNU
-#include <glib.h>
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#include <gtk/gtk.h>
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 #include "debug/debug.h"
 #include "decoder/ad.h"
 #include "file_manager/support.h" // to_utf8()
@@ -20,7 +22,7 @@
 #include "support.h"
 #include "model.h"
 #include "worker.h"
-#include "src/listview.h"
+#include "list_store.h"
 #include "sample.h"
 
 #undef DEBUG_REFCOUNTS

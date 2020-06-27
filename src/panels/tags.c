@@ -17,14 +17,14 @@
 #include "debug/debug.h"
 #include "support.h"
 #include "colour_box.h"
-#include "listview.h"
+#include "library.h"
 #include "application.h"
 
 static struct {
-   GtkWidget*     hbox1;
-   GtkWidget*     hbox2;
-   GtkWidget*     category;
-   GtkWidget*     colour;
+   GtkWidget* hbox1;
+   GtkWidget* hbox2;
+   GtkWidget* category;
+   GtkWidget* colour;
 } window;
 
 static GtkWidget* tag_selector_new ();

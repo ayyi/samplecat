@@ -1,6 +1,6 @@
 ## Process this file with automake to produce Makefile.in
 
-SUBDIRS = layouts lib src experimental
+SUBDIRS = layouts lib src experimental test/unit test/ui
 
 pkgconfigdir = $(libdir)/pkgconfig
 

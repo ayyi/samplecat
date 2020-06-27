@@ -9,19 +9,15 @@
 * +----------------------------------------------------------------------+
 *
 */
-#define __wf_private__
 #include "config.h"
 #undef USE_GTK
 #include "agl/ext.h"
-#include "agl/utils.h"
-#include "agl/actor.h"
 #include "agl/debug.h"
 #include "agl/shader.h"
 #include "samplecat/support.h"
 #include "views/panel.h"
 #include "views/dock_v.h"
 
-#define _g_free0(var) (var = (g_free (var), NULL))
 #define SPACING 15
 #define DIVIDER 5
 #define HANDLE_HEIGHT(P) (((PanelView*)P)->title ? PANEL_DRAG_HANDLE_HEIGHT : 0)

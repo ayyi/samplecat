@@ -15,7 +15,7 @@
 
 #include <glib.h>
 #include <glib-object.h>
-#include <sample.h>
+#include <samplecat/sample.h>
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <gtk/gtk.h>
 #pragma GCC diagnostic warning "-Wdeprecated-declarations"

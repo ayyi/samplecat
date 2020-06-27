@@ -22,6 +22,5 @@ typedef struct {
 AGlBehaviourClass* panel_get_class ();
 
 AGlBehaviour* panel_behaviour      ();
-void          panel_behaviour_init (AGlBehaviour*, AGlActor*);
 
 #endif

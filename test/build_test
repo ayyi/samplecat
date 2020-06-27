@@ -21,6 +21,7 @@ options=(
 --disable-ayyidbus
 --enable-ayyi
 --enable-test
+--enable-valgrind
 --disable-fftw
 --disable-libass
 --disable-dnotify

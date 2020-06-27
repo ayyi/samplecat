@@ -53,6 +53,7 @@ search_new ()
 	gtk_entry_set_max_length(GTK_ENTRY(entry), 64);
 	gtk_entry_set_icon_from_stock (GTK_ENTRY(entry), GTK_ENTRY_ICON_PRIMARY, "gtk-find");
 	if(filter->value.c) gtk_entry_set_text(GTK_ENTRY(entry), filter->value.c);
+	gtk_widget_set_name(entry, "search-entry");
 	gtk_box_pack_start(GTK_BOX(row1), entry, EXPAND_TRUE, TRUE, 0);
 	g_signal_connect(G_OBJECT(entry), "focus-out-event", G_CALLBACK(on_focus_out), NULL);
 	gtk_entry_set_activates_default(GTK_ENTRY(entry), TRUE);

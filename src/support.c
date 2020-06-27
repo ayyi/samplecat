@@ -896,35 +896,61 @@ idle_free (Idle* idle)
 
 
 #if 0
+#ifdef USE_GDL
+#include "gdl/gdl-dock-item.h"
+#endif
+	static void print_children (GtkWidget* widget, int* depth);
+
+	static void print_item (GtkWidget* widget, int* depth)
+	{
+		char indent[128];
+		snprintf(indent, 127, "%%%is%%s %%s %%p %s%%s%s\n", *depth * 3, bold, white);
+		char* long_name = GDL_IS_DOCK_ITEM(widget) && ((GdlDockObject*)widget)->long_name? ((GdlDockObject*)widget)->long_name : "";
+		printf(indent, " ", G_OBJECT_CLASS_NAME(G_OBJECT_GET_CLASS(widget)), gtk_widget_get_name(widget), widget, long_name);
+
+		if(GDL_IS_DOCK_ITEM(widget)){
+			GtkWidget* b = ((GdlDockItem*)widget)->child;
+			if(b){
+				(*depth)++;
+				print_item(b, depth);
+				(*depth)--;
+			}
+		}
+		else if(GTK_IS_CONTAINER(widget)){
+			(*depth)++;
+			print_children(widget, depth);
+			(*depth)--;
+		}
+	}
+
+	static void print_children (GtkWidget* widget, int* depth)
+	{
+		if(GTK_IS_CONTAINER(widget)){
+			GList* children = gtk_container_get_children(GTK_CONTAINER(widget));
+			for(GList* l = children; l; l = l->next){
+				print_item(l->data, depth);
+			}
+			g_list_free(children);
+		}
+#ifdef USE_GDL
+		else if(GDL_IS_DOCK_ITEM(widget)){
+			(*depth)++;
+			print_item(widget, depth);
+			(*depth)--;
+		}
+#endif
+	}
+
 void
 print_widget_tree (GtkWidget* widget)
 {
 	UNDERLINE;
 	g_return_if_fail(widget);
-	void print_children(GtkWidget* widget, int* depth)
-	{
-		if(GTK_IS_CONTAINER(widget)){
-			GList* children = gtk_container_get_children(GTK_CONTAINER(widget));
-			GList* l = children;
-			for(;l;l=l->next){
-				GtkWidget* child = l->data;
-				char indent[128];
-				snprintf(indent, 127, "%%%is%%s %%s %%p\n", *depth * 3);
-				printf(indent, " ", G_OBJECT_CLASS_NAME(G_OBJECT_GET_CLASS(child)), gtk_widget_get_name(child), child);
-				if(GTK_IS_CONTAINER(widget)){
-					(*depth)++;
-					print_children(child, depth);
-					(*depth)--;
-				}
-			}
-			g_list_free(children);
-		}
-	}
 
 	int depth = 0;
 	if(GTK_IS_CONTAINER(widget)){
-		int n_children = g_list_length(gtk_container_get_children(GTK_CONTAINER(widget)));
-		if(n_children){
+		bool has_children = gtk_container_get_children(GTK_CONTAINER(widget));
+		if(has_children){
 			print_children(widget, &depth);
 		}
 		else dbg(0, "is empty container: %s %s", G_OBJECT_CLASS_NAME(G_OBJECT_GET_CLASS(widget)), gtk_widget_get_name(widget));

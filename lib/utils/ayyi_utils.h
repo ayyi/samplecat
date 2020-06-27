@@ -28,19 +28,23 @@ gboolean    audio_path_get_wav_leaf  (char* leaf, const char* path, int len);
 char*       audio_path_truncate      (char*, char);
 
 #ifdef __ayyi_utils_c__
-char err      [32];
-char warn     [32];
+#define RED "\x1b[1;31m"
+#define WHITE "\x1b[0;39m"
+#define YELLOW "\x1b[1;33m"
 
-char white    [10] = "\x1b[0;39m"; // 0 = normal
+char err      [32] = RED"error"WHITE;
+char warn     [32] = YELLOW"warning:"WHITE;
+
+char white    [10] = WHITE;        // 0 = normal
 char bold     [10] = "\x1b[1;39m"; // 1 = bright
 char grey     [10] = "\x1b[2;39m"; // 2 = dim
-char yellow   [10] = "\x1b[1;33m";
+char yellow   [10] = YELLOW;
 char yellow_r [10] = "\x1b[30;43m";
 char white__r [10] = "\x1b[30;47m";
 char cyan___r [10] = "\x1b[30;46m";
 char magent_r [10] = "\x1b[30;45m";
 char blue_r   [10] = "\x1b[30;44m";
-char red      [10] = "\x1b[1;31m";
+char red      [10] = RED;
 char red_r    [10] = "\x1b[30;41m";
 char green    [10] = "\x1b[1;32m";
 char green_r  [10] = "\x1b[30;42m";

@@ -31,7 +31,7 @@
 #include "dnd.h"
 #include "cellrenderer_hypertext.h"
 #include "worker.h"
-#include "listview.h"
+#include "library.h"
 
 #define START_EDITING 1
 
