@@ -4,6 +4,13 @@ container=samplecat-debian-10
 
 usage="run [OPTIONS]\n\noptions:\n  -i interactive (bash shell)\n\nWithout options, default samplecat build will run\n"
 
+if [ -z "$CI_COMMIT_BRANCH" ]
+then
+	branch=master
+else
+	branch="$CI_COMMIT_BRANCH"
+fi
+
 while getopts ":i" opt; do
     case $opt in
         i  )
@@ -23,4 +30,4 @@ shift $(($OPTIND - 1))
 test -t 1 && USE_TTY="-t"
 
 # run git build script
-docker run --rm -e BRANCH="$CI_COMMIT_BRANCH" -i ${USE_TTY} $container
+docker run --rm -e BRANCH="$branch" -i ${USE_TTY} $container

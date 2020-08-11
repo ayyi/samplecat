@@ -5,8 +5,14 @@ container=samplecat-ubuntu-18
 # run with X forwarding
 #XSOCK=/tmp/.X11-unix/X0 docker run -it -v $XSOCK:$XSOCK $container bash
 
-
 usage="run [OPTIONS]\n\noptions:\n  -i interactive (bash shell)\n\nWithout options, default samplecat build will run\n"
+
+if [ -z "$CI_COMMIT_BRANCH" ]
+then
+	branch=master
+else
+	branch="$CI_COMMIT_BRANCH"
+fi
 
 test -t 1 && TTY="-t"
 
@@ -30,4 +36,4 @@ done
 shift $(($OPTIND - 1))
 
 # run git build script
-docker run --rm -e CI_COMMIT_BRANCH="$CI_COMMIT_BRANCH" -i ${TTY} $container
+docker run --rm -e branch="$branch" -i ${TTY} $container
