@@ -59,8 +59,13 @@ cache_behaviour_free (AGlBehaviour* behaviour)
 static void
 cache_behaviour_init (AGlBehaviour* behaviour, AGlActor* actor)
 {
-	actor->fbo = agl_fbo_new(agl_actor__width(actor), agl_actor__height(actor), 0, AGL_FBO_HAS_STENCIL);
-	actor->cache.enabled = true;
+	float width = agl_actor__width(actor);
+	float height = agl_actor__height(actor);
+
+	if(width > 0. && height > 0.){
+		actor->fbo = agl_fbo_new(width, height, 0, AGL_FBO_HAS_STENCIL);
+		actor->cache.enabled = true;
+	}
 }
 
 

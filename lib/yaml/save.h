@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2017 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2020 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -16,21 +16,32 @@
 #include <glib.h>
 #include "agl/typedefs.h"
 
-#define end_map \
-		if(!yaml_mapping_end_event_initialize(&event)) goto error; \
-		if(!yaml_emitter_emit(&emitter, &event)) goto error;
+#define PLAIN_IMPLICIT true
 
-#define map_open(A) \
-		if(!yaml_scalar_event_initialize(&event, NULL, str_tag, (guchar*)A, -1, plain_implicit, 0, YAML_PLAIN_SCALAR_STYLE)) goto error; \
-		if(!yaml_emitter_emit(&emitter, &event)) goto error; \
-		if(!yaml_mapping_start_event_initialize(&event, NULL, map_tag, 1, YAML_BLOCK_MAPPING_STYLE)) goto error; \
-		if(!yaml_emitter_emit(&emitter, &event)) goto error; \
+#define map_open_(E, A) \
+		if(!yaml_scalar_event_initialize(E, NULL, str_tag, (guchar*)A, -1, PLAIN_IMPLICIT, 0, YAML_PLAIN_SCALAR_STYLE)) goto error; \
+		if(!yaml_emitter_emit(&emitter, E)) goto error; \
+		if(!yaml_mapping_start_event_initialize(E, NULL, map_tag, 1, YAML_BLOCK_MAPPING_STYLE)) goto error; \
+		if(!yaml_emitter_emit(&emitter, E)) goto error; \
+
+#define end_map(E) \
+		if(!yaml_mapping_end_event_initialize(E)) goto error; \
+		if(!yaml_emitter_emit(&emitter, E)) goto error;
 
 #define end_document \
 	yaml_document_end_event_initialize(&event, 0); \
 	yaml_emitter_emit(&emitter, &event); \
 	yaml_stream_end_event_initialize(&event); \
 	if(!yaml_emitter_emit(&emitter, &event)) goto error;
+
+#define EMIT(A) \
+	if(!A) return FALSE; \
+	if(!yaml_emitter_emit(&emitter, &event)) return FALSE;
+
+#define EMIT_(A) \
+	if(!A) goto error; \
+	if(!yaml_emitter_emit(&emitter, &event)) goto error;
+
 
 bool yaml_add_key_value_pair       (const char* key, const char*);
 bool yaml_add_key_value_pair_int   (const char* key, int);
@@ -39,15 +50,7 @@ bool yaml_add_key_value_pair_bool  (const char* key, bool);
 bool yaml_add_key_value_pair_array (const char* key, int[], int size);
 bool yaml_add_key_value_pair_pt    (const char* key, AGliPt*);
 
-typedef void   (*YamlCallback)         (yaml_parser_t*, yaml_event_t*, gpointer);
-typedef void   (*YamlValueCallback)    (yaml_event_t*, gpointer);
-
-typedef struct
-{
-	char*        key;
-	YamlCallback callback;
-	gpointer     data;
-} YamlHandler;
+typedef void (*YamlValueCallback) (yaml_event_t*, gpointer);
 
 typedef struct
 {
@@ -55,11 +58,6 @@ typedef struct
 	YamlValueCallback callback;
 	gpointer          value;
 } YamlValueHandler;
-
-bool yaml_load         (FILE*, YamlHandler[]);
-void yaml_set_string   (yaml_event_t*, gpointer);
-void yaml_set_int      (yaml_event_t*, gpointer);
-void yaml_set_uint64   (yaml_event_t*, gpointer);
 
 #ifndef __yaml_utils_c__
 extern unsigned char* str_tag;

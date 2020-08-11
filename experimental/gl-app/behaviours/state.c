@@ -96,3 +96,19 @@ state_set_named_parameter (AGlActor* actor, char* name, char* value)
 	return false;
 }
 
+
+bool
+state_has_parameter (AGlActor* actor, char* name)
+{
+	StateBehaviour* state = (StateBehaviour*)agl_actor__find_behaviour(actor, state_get_class());
+	if(state){
+		ParamArray* params = state->params;
+		for(int i = 0; i< params->size; i++){
+			ConfigParam* param = &params->params[i];
+			if(!strcmp(name, param->name)){
+				return true;
+			}
+		}
+	}
+	return false;
+}

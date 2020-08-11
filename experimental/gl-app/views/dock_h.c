@@ -206,7 +206,7 @@ dock_h_view (gpointer _)
 						} else break;
 					}
 					if(to_distribute && (to_distribute != _to_distribute) && iter++ < 5) distribute(L, to_distribute, n_resizable, iter);
-					if(iter == 5) gwarn("failed to distribute");
+					if(iter == 5) pwarn("failed to distribute");
 				}
 				A L[G_N_ELEMENTS(items) + 1];
 				for(i=0;i<G_N_ELEMENTS(items);i++){
@@ -269,7 +269,7 @@ dock_h_view (gpointer _)
 		}
 	}
 
-	bool dock_h_event(AGlActor* actor, GdkEvent* event, AGliPt xy)
+	bool dock_h_event (AGlActor* actor, GdkEvent* event, AGliPt xy)
 	{
 		DockHView* dock = (DockHView*)actor;
 
@@ -330,8 +330,9 @@ dock_h_view (gpointer _)
 				}
 				break;
 			case GDK_BUTTON_RELEASE:
-			default:
 				break;
+			default:
+				return AGL_NOT_HANDLED;
 		}
 		return AGL_NOT_HANDLED;
 	}
@@ -375,7 +376,7 @@ dock_free (AGlActor* actor)
 
 
 AGlActor*
-dock_h_add_panel(DockHView* dock, AGlActor* panel)
+dock_h_add_panel (DockHView* dock, AGlActor* panel)
 {
 	dock->panels = g_list_append(dock->panels, panel);
 	agl_actor__add_child((AGlActor*)dock, panel);
@@ -390,7 +391,7 @@ find_handle_by_x (DockHView* dock, float pos)
 	GList* l = dock->panels;
 	for(;l;l=l->next){
 		AGlActor* a = l->data;
-		x = a->region.y1;
+		x = a->region.x1;
 		if(ABS(x - pos) < SPACING){
 			return a;
 		}
@@ -414,7 +415,7 @@ dock_h_move_panel_to_y (DockHView* dock, AGlActor* panel, int y)
 {
 	int find_index(DockHView* dock, int y)
 	{
-		GList* l = dock->panels;
+		GList* l = ((AGlActor*)dock)->children;
 		int i = 0;
 		for(;l;l=l->next){
 			AGlActor* a = l->data;

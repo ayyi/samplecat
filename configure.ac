@@ -329,6 +329,7 @@ AC_CHECK_LIB(yaml, yaml_parser_scan,
 	[],
 	[-lyaml])
 AC_SUBST(YAML_LIBS)
+AM_CONDITIONAL(ENABLE_YAML, [test "$YAML_LIBS" = "-lyaml"])
 
 dnl -----------------------------------------------------------------------------
 
@@ -521,6 +522,7 @@ AC_CONFIG_FILES([lib/audio_analysis/waveform/Makefile])
 AC_CONFIG_FILES([lib/gdl/Makefile])
 AC_CONFIG_FILES([lib/gtk/Makefile])
 AC_CONFIG_FILES([lib/test/Makefile])
+AC_CONFIG_FILES([lib/yaml/Makefile])
 AC_CONFIG_FILES([layouts/Makefile])
 AC_CONFIG_FILES([src/Makefile])
 AC_CONFIG_FILES([src/panels/Makefile])

@@ -20,7 +20,6 @@
 #include "samplecat.h"
 #include "utils/ayyi_utils.h"
 #include "icon/utils.h"
-#include "yaml_utils.h"
 #include "application.h"
 #include "glx.h"
 #include "keys.h"

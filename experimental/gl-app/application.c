@@ -277,7 +277,7 @@ application_add_panel (AGlActorClass* klass)
 			agl_actor__set_size(parent);
 		}
 	}
-	else gwarn("parent not found");
+	else pwarn("parent not found");
 }
 
 

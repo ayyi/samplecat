@@ -16,13 +16,15 @@
 #include "samplecat.h"
 #include "utils/ayyi_utils.h"
 #include "waveform/actor.h"
-#include "yaml_utils.h"
+#include "yaml/load.h"
+#include "yaml/save.h"
 #include "application.h"
 #include "behaviours/state.h"
 #include "behaviours/panel.h"
 #include "layout.h"
 
 typedef AGlActorClass* (get_class)();
+
 get_class dock_v_get_class, dock_h_get_class, scrollable_view_get_class, list_view_get_class, files_view_get_class, directories_view_get_class, inspector_view_get_class, search_view_get_class, filters_view_get_class, player_view_get_class, scrollbar_view_get_class, button_get_class
 #ifdef HAVE_FFTW3
 	, spectrogram_view_get_class
@@ -32,22 +34,6 @@ get_class dock_v_get_class, dock_h_get_class, scrollable_view_get_class, list_vi
 #include "views/tabs.h"
 
 GHashTable* agl_actor_registry; // maps className to AGlActorClass
-
-#define PLAIN_IMPLICIT true
-
-#define end_map_(E) \
-		if(!yaml_mapping_end_event_initialize(E)) goto error; \
-		if(!yaml_emitter_emit(&emitter, E)) goto error;
-
-#define map_open_(E, A) \
-		if(!yaml_scalar_event_initialize(E, NULL, str_tag, (guchar*)A, -1, PLAIN_IMPLICIT, 0, YAML_PLAIN_SCALAR_STYLE)) goto error; \
-		if(!yaml_emitter_emit(&emitter, E)) goto error; \
-		if(!yaml_mapping_start_event_initialize(E, NULL, map_tag, 1, YAML_BLOCK_MAPPING_STYLE)) goto error; \
-		if(!yaml_emitter_emit(&emitter, E)) goto error; \
-
-#define EMIT(A) \
-	if(!A) goto error; \
-	if(!yaml_emitter_emit(&emitter, &event)) goto error;
 
 
 static void
@@ -59,15 +45,15 @@ agl_actor_register_class (const char* name, AGlActorClass* class)
 }
 
 
-static AGliPt
-config_load_point (yaml_parser_t* parser, yaml_event_t* event)
+static bool
+config_load_point (yaml_parser_t* parser, yaml_event_t* event, gpointer _pt)
 {
-	AGliPt p = {0,};
+	AGliPt* pt = _pt;
 
-	void load_integers(yaml_parser_t* parser, AGliPt* p)
+	void load_integers (yaml_parser_t* parser, AGliPt* p)
 	{
 		yaml_event_t event;
-		int i; for(i=0;i<2;i++){
+		for(int i=0;i<2;i++){
 			if(yaml_parser_parse(parser, &event)){
 				switch (event.type) {
 					case YAML_SCALAR_EVENT:
@@ -85,19 +71,52 @@ config_load_point (yaml_parser_t* parser, yaml_event_t* event)
 	while(yaml_parser_parse(parser, event)){
 		switch (event->type) {
 			case YAML_SEQUENCE_START_EVENT:
-				load_integers(parser, &p);
+				load_integers(parser, pt);
 				break;
 			case YAML_SEQUENCE_END_EVENT:
-				return p;
+				return true;
 			case YAML_SCALAR_EVENT:
-				gwarn("expected array start but got scalar");
+				pwarn("expected array start but got scalar");
 				break;
 			default:
-				gwarn("expected array start %i", event->type);
+				pwarn("expected array start %i", event->type);
 		}
 	}
-	gwarn("?");
-	return p;
+	pwarn("sequence end not found");
+
+	return true;
+}
+
+
+static bool
+config_load_size (yaml_parser_t* parser, yaml_event_t* event, gpointer _actor)
+{
+	AGlActor* actor = _actor;
+
+	AGliPt pt = {0};
+	config_load_point(parser, event, &pt);
+
+	actor->region.x2 = actor->region.x1 + pt.x;
+	actor->region.y2 = actor->region.y1 + pt.y;
+
+	return true;
+}
+
+
+static bool
+config_load_position (yaml_parser_t* parser, yaml_event_t* event, gpointer _actor)
+{
+	AGlActor* actor = _actor;
+
+	AGliPt pt = {0};
+	config_load_point(parser, event, &pt);
+
+	actor->region.x1 = pt.x;
+	actor->region.y1 = pt.y;
+	actor->region.x2 += pt.x;
+	actor->region.y2 += pt.y;
+
+	return true;
 }
 
 
@@ -131,26 +150,26 @@ end_wrapper (yaml_parser_t* parser)
 }
 #endif
 
-#define get_expected_event(parser, event, EVENT_TYPE) \
-	if(!yaml_parser_parse(parser, event)) return false; \
-	if((event)->type != EVENT_TYPE) return false;
 
 static bool
-load_size_req (yaml_parser_t* parser, yaml_event_t* event, AGlActor* actor)
+load_size_req (yaml_parser_t* parser, yaml_event_t* event, gpointer _actor)
 {
+	AGlActor* actor = _actor;
+
 	if(actor->class == panel_view_get_class() || actor->class == dock_v_get_class() || actor->class == dock_h_get_class()){
 		get_expected_event(parser, event, YAML_MAPPING_START_EVENT);
-		int i = 0; for(;yaml_parser_parse(parser, event) && i < 20; i++){
+
+		for(int i = 0; yaml_parser_parse(parser, event) && i < 20; i++){
 			switch(event->type){
 				case YAML_SCALAR_EVENT:
 					{
 						char* key = (char*)event->data.scalar.value;
 						if(!strcmp(key, "min")){
-							((PanelView*)actor)->size_req.min = config_load_point(parser, event);
+							config_load_point(parser, event, &((PanelView*)actor)->size_req.min);
 						}else if(!strcmp(key, "preferred")){
-							((PanelView*)actor)->size_req.preferred = config_load_point(parser, event);
+							config_load_point(parser, event, &((PanelView*)actor)->size_req.preferred);
 						}else if(!strcmp(key, "max")){
-							((PanelView*)actor)->size_req.max = config_load_point(parser, event);
+							config_load_point(parser, event, &((PanelView*)actor)->size_req.max);
 						}
 					}
 					break;
@@ -161,95 +180,116 @@ load_size_req (yaml_parser_t* parser, yaml_event_t* event, AGlActor* actor)
 			}
 		}
 	}
+	else pwarn("no class match: class=%p", actor->class);
+
 	return false;
 }
 
 
+#define STACK_SIZE 32
+
+typedef struct {
+	AGlActor* items[STACK_SIZE];
+	int       sp;
+	char      name[64];
+} Stack;
+
+#define STACK_PUSH(ACTOR) ({if(stack->sp >= STACK_SIZE) return FALSE; stack->items[++stack->sp] = ACTOR;})
+#define STACK_POP() ({AGlActor* a = stack->items[stack->sp]; stack->items[stack->sp--] = NULL; a;})
+
+
 static bool
-config_load_window_yaml (yaml_parser_t* parser, yaml_event_t* event)
+type_handler (yaml_parser_t* parser, yaml_event_t* event, gpointer _stack)
 {
-	// At this point in the parsing, we have just found a "ROOT" map. First event should be a YAML_SCALAR_EVENT...
+	Stack* stack = _stack;
 
-	#define STACK_SIZE 32
-	AGlActor* stack[STACK_SIZE] = {0,};
-	int sp = -1;
-	#define STACK_PUSH(ACTOR) ({if(sp >= STACK_SIZE) return FALSE; stack[++sp] = ACTOR;})
-	#define STACK_POP() ({AGlActor* a = stack[sp]; stack[sp--] = NULL; a;})
+	get_expected_event(parser, event, YAML_SCALAR_EVENT);
 
-	//if(!start_wrapper(parser, "ROOT")) return FALSE;
+	if(!strcmp((char*)event->data.scalar.value, "ROOT")){
+		STACK_PUSH((AGlActor*)app->scene);
+	}else if(!strcmp((char*)event->data.scalar.value, "Waveform")){
+		STACK_PUSH((AGlActor*)wf_canvas_add_new_actor(app->wfc, NULL));
+	}else{
+		AGlActorClass* c = g_hash_table_lookup(agl_actor_registry, event->data.scalar.value);
+		if(c){
+			if(c->new){
+				STACK_PUSH(c->new(NULL));
+				stack->items[stack->sp]->name = g_strdup(stack->name);
+			}
+		}else{
+			pwarn("type not found: %s", event->data.scalar.value);
+		}
+	}
 
+	return true;
+}
+
+
+static bool
+generic_handler (yaml_parser_t* parser, yaml_event_t* event, gpointer _stack)
+{
+	char* key = (char*)event->data.scalar.value;
+
+	Stack* stack = _stack;
+	if(stack->sp < 0) return false;
+	AGlActor* actor = stack->items[stack->sp];
+	g_return_val_if_fail(actor, false);
+
+	if(state_has_parameter(actor, key)){
+		get_expected_event(parser, event, YAML_SCALAR_EVENT);
+
+		state_set_named_parameter(actor, key, (char*)event->data.scalar.value);
+	}
+
+	return true;
+}
+
+
+static bool
+handle_scalar_events (yaml_parser_t* parser, yaml_event_t* event, Stack* stack)
+{
+	return handle_scalar_event(parser, event, (YamlHandler[]){
+		{"type", type_handler, stack},
+		{"size", config_load_size, stack->items[stack->sp]},
+		{"position", config_load_position, stack->items[stack->sp]},
+		{"size-req", load_size_req, stack->items[stack->sp]},
+		{NULL, generic_handler, stack},
+		{NULL}
+	});
+}
+
+
+static bool
+add_node (yaml_parser_t* parser, yaml_event_t* event, char* node_name, Stack* stack)
+{
+	g_assert(event->type == YAML_MAPPING_START_EVENT);
+
+	g_strlcpy(stack->name, node_name, 64);
 	char key[64] = {0,};
-	char name[64] = {0,};
-	int depth = 0;
+
 	while(yaml_parser_parse(parser, event)){
 		switch (event->type) {
 			case YAML_SCALAR_EVENT:
 				dbg(2, "YAML_SCALAR_EVENT: value='%s' %i plain=%i style=%i", event->data.scalar.value, event->data.scalar.length, event->data.scalar.plain_implicit, event->data.scalar.style);
 
-				if(!key[0]){
-					// 1st half of a pair
-					g_strlcpy(key, (char*)event->data.scalar.value, 64);
+				g_strlcpy(key, (char*)event->data.scalar.value, 64);
 
-					if(!strcmp(key, "size")){
-						AGliPt p = config_load_point(parser, event);
-						stack[sp]->region.x2 = stack[sp]->region.x1 + p.x;
-						stack[sp]->region.y2 = stack[sp]->region.y1 + p.y;
-						key[0] = '\0';
-					} else if(!strcmp(key, "position")){
-						AGliPt p = config_load_point(parser, event);
-						stack[sp]->region.x1 = p.x;
-						stack[sp]->region.y1 = p.y;
-						stack[sp]->region.x2 += p.x;
-						stack[sp]->region.y2 += p.y;
-						key[0] = '\0';
-					} else if(!strcmp(key, "size-req")){
-						load_size_req(parser, event, stack[sp]);
-						key[0] = '\0';
-					}
-				}else{
-					// 2nd half of a pair
-					if(!strcmp(key, "type")){
-						dbg(2, "found actor: %s=%s", key, event->data.scalar.value);
-						if(!strcmp((char*)event->data.scalar.value, "ROOT")){
-							STACK_PUSH((AGlActor*)app->scene);
-						}else if(!strcmp((char*)event->data.scalar.value, "Waveform")){
-							STACK_PUSH((AGlActor*)wf_canvas_add_new_actor(app->wfc, NULL));
-						}else{
-							AGlActorClass* c = g_hash_table_lookup(agl_actor_registry, event->data.scalar.value);
-							if(c){
-								if(c->new){
-									STACK_PUSH(c->new(NULL));
-									stack[sp]->name = g_strdup(name);
-								}
-							}else{
-								gwarn("             type not found: %s", event->data.scalar.value);
-							}
-						}
-					}else{
-						if(!state_set_named_parameter(stack[sp], key, (char*)event->data.scalar.value)){
-							dbg(0, "  ignoring: %s=%s", key, event->data.scalar.value);
-						}
-					}
-					key[0] = '\0';
-				}
+				handle_scalar_events(parser, event, stack);
 				break;
 			case YAML_MAPPING_START_EVENT:
-				depth++;
 				if(key[0]){
-					g_strlcpy(name, key, 64);
+					add_node(parser, event, key, stack);
 					key[0] = '\0';
 				}
-				else gwarn("mapping event has no name. depth=%i", depth);
 				break;
 			case YAML_MAPPING_END_EVENT:
-				dbg(2, "<-");
-				if(sp > 0){
-					dbg(2, "<- sp=%i: adding '%s' to '%s'", sp, stack[sp] ? stack[sp]->name : NULL, stack[sp - 1] ? stack[sp - 1]->name : NULL);
-					AGlActor* actor = stack[sp];
-					AGlActor* parent = stack[sp - 1];
+				if(stack->sp > 0){
+					dbg(2, "<- sp=%i: adding '%s' to '%s'", stack->sp, stack->items[stack->sp] ? stack->items[stack->sp]->name : NULL, stack->items[stack->sp - 1] ? stack->items[stack->sp - 1]->name : NULL);
+					AGlActor* actor = stack->items[stack->sp];
+					AGlActor* parent = stack->items[stack->sp - 1];
 					AGlActorClass* parent_class = parent->class;
 					if(parent_class == dock_v_get_class() || parent_class == dock_h_get_class()){
-						dock_v_add_panel((DockVView*)stack[sp], STACK_POP());
+						dock_v_add_panel((DockVView*)stack->items[stack->sp], STACK_POP());
 						{
 							if(actor->class == panel_view_get_class()){
 								g_return_val_if_fail(g_list_length(actor->children) == 1, false);
@@ -266,25 +306,66 @@ config_load_window_yaml (yaml_parser_t* parser, yaml_event_t* event)
 					}else if(parent_class == tabs_view_get_class()){
 						tabs_view__add_tab((TabsView*)parent, actor->name, STACK_POP());
 					}else{
-						agl_actor__add_child(stack[sp], STACK_POP());
+						agl_actor__add_child(stack->items[stack->sp], STACK_POP());
 					}
 					g_signal_emit_by_name(app, "actor-added", actor);
 				}
 
-				depth--;
-				if(depth < 0){ dbg(2, "done"); return true; }
+				return true;
 				break;
+			case YAML_NO_EVENT:
 			case YAML_SEQUENCE_START_EVENT:
 			case YAML_SEQUENCE_END_EVENT:
 			default:
-				gwarn("unexpected parser event type: %i", event->type);
+				pwarn("unexpected parser event type: %i", event->type);
+				return false;
+		}
+	}
+
+	return false;
+}
+
+
+static bool
+window_handler (yaml_parser_t* parser, yaml_event_t* event, char* _key, gpointer _)
+{
+	// At this point in the parsing, we have just found a "ROOT" map. First event should be a YAML_SCALAR_EVENT...
+
+	Stack stack = {.sp = -1};
+
+	//if(!start_wrapper(parser, "ROOT")) return FALSE;
+
+	char key[64] = {0,};
+	while(yaml_parser_parse(parser, event)){
+		switch (event->type) {
+			case YAML_SCALAR_EVENT:
+				dbg(2, "YAML_SCALAR_EVENT: value='%s' %i plain=%i style=%i", event->data.scalar.value, event->data.scalar.length, event->data.scalar.plain_implicit, event->data.scalar.style);
+
+				g_strlcpy(key, (char*)event->data.scalar.value, 64);
+
+				handle_scalar_events(parser, event, &stack);
+				break;
+			case YAML_MAPPING_START_EVENT:
+				if(key[0]){
+					add_node(parser, event, key, &stack);
+					key[0] = '\0';
+				}
+				break;
+			case YAML_MAPPING_END_EVENT:
+				return true;
+			case YAML_NO_EVENT:
+				pwarn("EOF");
+				return false;
+			case YAML_SEQUENCE_START_EVENT:
+			case YAML_SEQUENCE_END_EVENT:
+			default:
+				pwarn("unexpected parser event type: %i", event->type);
 				break;
 		}
 	}
 
 	//if(!end_wrapper(parser)) return FALSE;
 
-	gwarn("unexpected end");
 	return false;
 }
 
@@ -297,38 +378,16 @@ layout_set_size (gpointer data)
 }
 
 
-static void
+static bool
 config_load_windows_yaml (yaml_parser_t* parser, yaml_event_t* event, gpointer user_data)
 {
-	// TODO use start_wrapper ?
-
-	char key[64] = {0,};
-	int depth = 0;
-	int i = 0;
-	while(yaml_parser_parse(parser, event) && i++ < 2){
-		switch (event->type) {
-			case YAML_SCALAR_EVENT:
-				dbg(2, "YAML_SCALAR_EVENT: value='%s' %i plain=%i style=%i", event->data.scalar.value, event->data.scalar.length, event->data.scalar.plain_implicit, event->data.scalar.style);
-
-				if(!key[0]){
-					// first half of a pair
-					g_strlcpy(key, (char*)event->data.scalar.value, 64);
-				}else{
-					gwarn("unexpected");
-				}
-				break;
-			case YAML_MAPPING_START_EVENT:
-				depth++;
-				if(key[0]){
-					if(strcmp(key, "window")) gwarn("expected 'window'. no other valid sections.");
-
-					config_load_window_yaml(parser, event);
-				}
-				break;
-			default:
-				break;
-		}
-	}
+	load_mapping(parser, event,
+		NULL,
+		(YamlMappingHandler[]){
+			{"window", window_handler}
+		},
+		user_data
+	);
 
 #if 0
 #ifdef DEBUG
@@ -366,9 +425,14 @@ config_load_windows_yaml (yaml_parser_t* parser, yaml_event_t* event, gpointer u
 #endif
 #endif
 
-	if(!g_list_length(((AGlActor*)app->scene)->children)) return gwarn("layout did not load - pls check config file");
+	if(!g_list_length(((AGlActor*)app->scene)->children)){
+		pwarn("layout did not load - pls check config file");
+		return false;
+	}
 
 	g_idle_add(layout_set_size, NULL);
+
+	return true;
 }
 
 
@@ -398,25 +462,6 @@ open_settings_file ()
 }
 
 
-static bool
-find_event (yaml_parser_t* parser, yaml_event_t* event, const char* name)
-{
-	bool found = false;
-	while(!found && yaml_parser_parse(parser, event)){
-		switch (event->type) {
-			case YAML_SCALAR_EVENT:
-				if(!strcmp((char*)event->data.scalar.value, "size")){
-					found = true;
-				}
-				break;
-			default:
-				break;
-		}
-	}
-	return found;
-}
-
-
 AGliPt
 get_window_size_from_settings ()
 {
@@ -430,7 +475,7 @@ get_window_size_from_settings ()
 
 		yaml_event_t event;
 		if(find_event(&parser, &event, "size")){
-			size = config_load_point(&parser, &event);
+			config_load_point(&parser, &event, &size);
 		}
 		yaml_event_delete(&event);
 
@@ -479,12 +524,9 @@ load_settings ()
 		agl_actor_class__add_behaviour(wf_actor_get_class(), panel_get_class());
 	}
 
-	yaml_parser_t parser; yaml_parser_initialize(&parser);
-
 	FILE* fp = open_settings_file();
-	if(!fp) return false;
 
-	return yaml_load(fp, (YamlHandler[]){
+	return fp && yaml_load(fp, (YamlHandler[]){
 		{"windows", config_load_windows_yaml},
 		{NULL}
 	});
@@ -509,9 +551,9 @@ save_settings ()
 	yaml_emitter_set_canonical(&emitter, false);
 
 	yaml_event_t event;
-	EMIT(yaml_stream_start_event_initialize(&event, YAML_UTF8_ENCODING));
-	EMIT(yaml_document_start_event_initialize(&event, NULL, NULL, NULL, 0));
-	EMIT(yaml_mapping_start_event_initialize(&event, NULL, (guchar*)"tag:yaml.org,2002:map", 1, YAML_BLOCK_MAPPING_STYLE));
+	EMIT_(yaml_stream_start_event_initialize(&event, YAML_UTF8_ENCODING));
+	EMIT_(yaml_document_start_event_initialize(&event, NULL, NULL, NULL, 0));
+	EMIT_(yaml_mapping_start_event_initialize(&event, NULL, (guchar*)"tag:yaml.org,2002:map", 1, YAML_BLOCK_MAPPING_STYLE));
 
 	char value[256];
 	snprintf(value, 255, "0x%08x", 0xff00ff00);
@@ -554,7 +596,7 @@ save_settings ()
 						if(!yaml_add_key_value_pair_pt("preferred", &panel->size_req.preferred)) goto error;
 					if(b[2])
 						if(!yaml_add_key_value_pair_pt("max", &panel->size_req.max)) goto error;
-					end_map_(event);
+					end_map(event);
 				}
 			}
 
@@ -581,7 +623,7 @@ save_settings ()
 				}
 			}
 
-			end_map_(event);
+			end_map(event);
 		}
 		return true;
 	  error:
@@ -591,10 +633,10 @@ save_settings ()
 	map_open_(&event, "windows");
 	map_open_(&event, "window");
 	if(!((AGlActor*)app->scene)->children || !add_child(&event, (AGlActor*)app->scene)) goto close;
-	end_map_(&event);
-	end_map_(&event);
+	end_map(&event);
+	end_map(&event);
 
-	EMIT(yaml_mapping_end_event_initialize(&event));
+	EMIT_(yaml_mapping_end_event_initialize(&event));
 
 	end_document;
 	yaml_event_delete(&event);
@@ -604,7 +646,7 @@ save_settings ()
 
 	char* filename = g_strdup_printf("%s.yaml", app->config_ctx.filename);
 	if(g_rename (tmp, filename)){
-		gwarn("failed to save config");
+		pwarn("failed to save config");
 	}
 	g_free(filename);
 	g_free(tmp);
@@ -634,5 +676,4 @@ save_settings ()
 
 	return false;
 }
-
 

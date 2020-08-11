@@ -12,7 +12,6 @@ samplecat_gl_SOURCES = \
 	shader.c shader.h \
 	layout.c layout.h \
 	utils.c utils.h \
-	yaml_utils.c yaml_utils.h \
 	keys.h \
 	action.h
 
@@ -54,6 +53,7 @@ samplecat_gl_LDADD = \
 	$(top_srcdir)/lib/debug/libdebug.a \
 	$(top_srcdir)/lib/icon/libicon.a \
 	$(top_srcdir)/lib/utils/libutils.a \
+	$(top_srcdir)/lib/yaml/libyaml.a \
 	$(WAVEFORM_LDFLAGS) \
 	$(top_srcdir)/lib/file_manager/libfilemanager.a \
 	$(top_srcdir)/lib/gtk/libgtk.la \

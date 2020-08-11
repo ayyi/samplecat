@@ -216,7 +216,7 @@ files_view (gpointer _)
 		g_signal_connect(view->viewmodel, "row-inserted", (GCallback)files_on_row_add, a);
 	}
 
-	void files_set_size (AGlActor* actor)
+	void files_layout (AGlActor* actor)
 	{
 		FilesView* view = (FilesView*)actor;
 
@@ -274,7 +274,7 @@ files_view (gpointer _)
 			.colour = 0x66ff99ff,
 			.init = files_init,
 			.paint = files_paint,
-			.set_size = files_set_size,
+			.set_size = files_layout,
 			.on_event = files_event,
 		},
 		.viewmodel = vm_directory_new()
