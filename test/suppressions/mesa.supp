@@ -441,3 +441,27 @@
    ...
    fun:gdk_gl_config_new_rgb
 }
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Cond
+   ...
+   fun:vbo_exec_FlushVertices
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Value8
+   ...
+   fun:rasterize_scene
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Value4
+   ...
+   fun:rasterize_scene
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Param
+   ...
+   fun:driswSwapBuffers
+}

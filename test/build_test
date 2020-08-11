@@ -6,7 +6,7 @@
 here=`dirname "$0"`
 version=`cat $here/../configure.ac | grep AC_INIT | sed -e 's/AC_.*\[\([0-9]\.[0-9]\.[0-9]\).*/\1/'`
 package=samplecat
-tarball=${package}-${version}.tar.gz
+tarball=${package}-${version}.tar.xz
 tmpdir=/tmp/${package}_build
 
 options=(
