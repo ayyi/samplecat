@@ -8,6 +8,7 @@ vim \
 gtk+2.0-dev \
 libgraphene-1.0-dev \
 libxml2-dev \
+libyaml-dev \
 libsqlite3-dev \
 libgl1-mesa-dev \
 mesa-utils \

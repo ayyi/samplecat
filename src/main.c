@@ -406,15 +406,17 @@ on_quit (GtkMenuItem* menuitem, gpointer user_data)
 		application_quit(app); // emit signal
 	}
 
+	if(play->auditioner){
 #ifdef HAVE_AYYIDBUS
-	extern Auditioner a_ayyidbus;
-	if(play->auditioner != & a_ayyidbus){
+		extern Auditioner a_ayyidbus;
+		if(play->auditioner != & a_ayyidbus){
 #else
-	if(true){
+		if(true){
 #endif
-		play->auditioner->stop();
+			play->auditioner->stop();
+		}
+		play->auditioner->disconnect();
 	}
-	play->auditioner->disconnect();
 
 	if(samplecat.model->backend.disconnect) samplecat.model->backend.disconnect();
 

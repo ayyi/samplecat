@@ -7,6 +7,7 @@ RUN apt-get -y update && apt-get install -y \
 	vim \
 	libgtkglext1-dev \
 	libxml2-dev \
+	libyaml-dev \
 	libsqlite3-dev \
 	libavcodec-dev
 RUN echo "alias ll='ls -l'" >> /root/.bashrc

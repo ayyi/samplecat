@@ -207,10 +207,12 @@ audtioner_status_reply(DBusGProxy* proxy, DBusGProxyCall* call, gpointer data)
 	if (!dbus_g_proxy_end_call (proxy, call, &error, G_TYPE_STRING, &status, G_TYPE_INT, &queue_size, G_TYPE_INVALID)){
 		if(error){
 			printf("%s\n", error->message);
+			g_error_free(error);
 		}
 	}
 	c->callback(status, queue_size, error, c->user_data);
 
+	g_free(status);
 	g_free(c);
 }
 

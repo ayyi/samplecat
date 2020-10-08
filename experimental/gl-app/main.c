@@ -15,13 +15,12 @@
 #include <libgen.h>
 #include <X11/keysym.h>
 #include <debug/debug.h>
+#include "agl/x11.h"
 #include "file_manager/mimetype.h"
 #include "file_manager/pixmaps.h"
-#include "samplecat.h"
-#include "utils/ayyi_utils.h"
+#include "samplecat/samplecat.h"
 #include "icon/utils.h"
 #include "application.h"
-#include "glx.h"
 #include "keys.h"
 #include "layout.h"
 #include "views/dock_h.h"
@@ -135,7 +134,7 @@ main (int argc, char* argv[])
 
 	AGliPt size = get_window_size_from_settings();
 	int screen = DefaultScreen(dpy);
-	AGlWindow* window = agl_make_window(dpy, "Samplecat", (XDisplayWidth(dpy, screen) - size.x) / 2, (XDisplayHeight(dpy, screen) - size.y) / 2, size.x, size.y);
+	AGlWindow* window = agl_window("Samplecat", (XDisplayWidth(dpy, screen) - size.x) / 2, (XDisplayHeight(dpy, screen) - size.y) / 2, size.x, size.y, false);
 	app->scene = window->scene;
 	((AGlActor*)app->scene)->on_event = on_event;
 
@@ -145,23 +144,13 @@ main (int argc, char* argv[])
 		g_idle_add(add_content, NULL);
 	}
 
-#ifdef USE_GLIB_LOOP
-	GMainLoop* mainloop = main_loop_new(dpy, window->window);
-#else
-	g_main_loop_new(NULL, true);
-#endif
-
-#ifdef USE_GLIB_LOOP
-	g_main_loop_run(mainloop);
-#else
-	event_loop(dpy);
-#endif
+	g_main_loop_run(agl_main_loop_new(window->window));
 
 	if(!app->temp_view){
 		save_settings();
 	}
 
-	agl_window_destroy(dpy, &window);
+	agl_window_destroy(&window);
 	XCloseDisplay(dpy);
 
 	return 0;
@@ -191,25 +180,25 @@ main (int argc, char* argv[])
 			}
 		}
 
-		static void scene_set_size (AGlActor* scene)
-		{
-			dbg(2, "%i", ((AGlActor*)app->scene)->region.x2);
-
-			AGlActor* container = ((AGlActor*)app->scene)->children->data;
-			container->region = (AGlfRegion){20, 20, agl_actor__width(scene) - 20, agl_actor__height(scene) - 20};
-			agl_actor__set_size(container);
-
-#ifdef SHOW_FBO_DEBUG
-			actors.debug->region = (AGlfRegion){scene->region.x2/2, 10, scene->region.x2 - 10, scene->region.x2/2};
-#endif
-
-			agl_actor__invalidate((AGlActor*)app->scene);
-		}
-
-
 static gboolean
 add_content (gpointer _)
 {
+	void scene_set_size (AGlActor* scene)
+	{
+		dbg(2, "%i", ((AGlActor*)app->scene)->region.x2);
+
+		AGlActor* container = ((AGlActor*)app->scene)->children->data;
+		container->region = (AGlfRegion){20, 20, agl_actor__width(scene) - 20, agl_actor__height(scene) - 20};
+		agl_actor__set_size(container);
+
+#ifdef SHOW_FBO_DEBUG
+		actors.debug->region = (AGlfRegion){scene->region.x2/2, 10, scene->region.x2 - 10, scene->region.x2/2};
+#endif
+
+		agl_actor__invalidate((AGlActor*)app->scene);
+	}
+
+
 	config_load(&app->config_ctx, &app->config);
 
 	if (app->config.database_backend && can_use(samplecat.model->backends, app->config.database_backend)) {
@@ -281,7 +270,7 @@ add_content (gpointer _)
 }
 
 
-		static void scene_set_size2(AGlActor* scene)
+		static void scene_set_size2 (AGlActor* scene)
 		{
 			dbg(2, "%i", ((AGlActor*)app->scene)->region.x2);
 

@@ -157,9 +157,7 @@ gdl_dock_item_grip_item_notify (GObject    *master,
                                 GParamSpec *pspec,
                                 gpointer    data)
 {
-    GdlDockItemGrip *grip;
-    
-    grip = GDL_DOCK_ITEM_GRIP (data);
+    GdlDockItemGrip *grip = GDL_DOCK_ITEM_GRIP (data);
 
     if ((strcmp (pspec->name, "stock-id") == 0) ||
         (strcmp (pspec->name, "long-name") == 0)) {        
@@ -373,8 +371,7 @@ gdl_dock_item_grip_realize (GtkWidget *widget)
         attributes.wclass      = GDK_INPUT_OUTPUT;
         attributes.event_mask  = GDK_ALL_EVENTS_MASK;
 
-        grip->title_window = gdk_window_new (gtk_widget_get_parent_window (widget),
-                                             &attributes, (GDK_WA_X | GDK_WA_Y));
+        grip->title_window = gdk_window_new (gtk_widget_get_parent_window (widget), &attributes, (GDK_WA_X | GDK_WA_Y));
 
         gdk_window_set_user_data (grip->title_window, grip);
 
@@ -392,8 +389,8 @@ gdl_dock_item_grip_realize (GtkWidget *widget)
             GDL_DOCK_ITEM_CANT_ICONIFY (grip->item))
             cursor = NULL;
         else 
-            cursor = gdk_cursor_new_for_display (gtk_widget_get_display (widget),
-                                             GDK_HAND2);
+            cursor = gdk_cursor_new_for_display (gtk_widget_get_display (widget), GDK_HAND2);
+
         gdk_window_set_cursor (grip->title_window, cursor);
         if (cursor)
             gdk_cursor_unref (cursor);

@@ -9,6 +9,7 @@ RUN apt-get update && apt-get install -y \
 	libsndfile1-dev \
 	libgtkglext1-dev \
 	libxml2-dev \
+	libyaml-dev \
 	libsqlite3-dev
 
 RUN echo "alias ll='ls -l'" >> /root/.bashrc

@@ -33,7 +33,8 @@ typedef struct
 } YamlMappingHandler;
 
 bool yaml_load           (FILE*, YamlHandler[]);
-bool load_mapping        (yaml_parser_t*, yaml_event_t*, YamlHandler[], YamlMappingHandler[], gpointer);
+bool yaml_load_string    (const char*, YamlHandler[]);
+bool load_mapping        (yaml_parser_t*, YamlHandler[], YamlMappingHandler[], gpointer);
 bool handle_scalar_event (yaml_parser_t*, yaml_event_t*, YamlHandler[]);
 bool find_event          (yaml_parser_t*, yaml_event_t*, const char*);
 

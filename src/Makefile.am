@@ -13,6 +13,7 @@ AM_CFLAGS = \
 	-DPACKAGE_DATA_DIR=\""$(datadir)"\" \
 	-DPACKAGE_LOCALE_DIR=\""$(prefix)/$(DATADIRNAME)/locale"\" \
 	-DIMAGES_DIR=\"$(imagesdir)\" \
+	-DSYSCONFDIR=\"$(sysconfdir)\" \
 	-I$(top_srcdir)/lib \
 	-I$(top_srcdir)/lib/samplecat \
 	-I$(top_srcdir)/lib/file_manager \
@@ -64,6 +65,12 @@ if ENABLE_GDL
 GDL_LDFLAGS = $(top_srcdir)/lib/gdl/libgdl.a $(XML_LIBS)
 endif
 
+if ENABLE_YAML
+YAML_LDFLAGS = \
+	$(top_srcdir)/lib/yaml/libyaml.a \
+	$(YAML_LIBS)
+endif
+
 samplecat_SOURCES = \
 	typedefs.h types.h \
 	main.c \
@@ -86,13 +93,13 @@ samplecat_SOURCES = \
 	$(AYYI_SRC)
 
 samplecat_LDADD = \
-	$(top_srcdir)/lib/utils/libutils.a \
 	$(top_srcdir)/lib/file_manager/libfilemanager.a \
 	$(top_srcdir)/lib/dir_tree/libdirtree.a \
 	$(top_srcdir)/lib/debug/libdebug.a \
 	$(top_srcdir)/lib/samplecat/.libs/libsamplecat.a \
 	$(top_srcdir)/lib/samplecat/db/libsamplecatdb.a \
 	$(GDL_LDFLAGS) \
+	$(top_srcdir)/lib/utils/libutils.a \
 	$(top_srcdir)/lib/gtk/libgtk.la \
 	$(top_srcdir)/src/panels/libpanels.la \
 	$(SAMPLECAT_LIBS) \
@@ -116,6 +123,12 @@ samplecat_LDADD = \
 	$(X11_LDFLAGS) \
 	$(FFMPEG_LIBS) \
 	$(MATH_LDFLAGS) \
+	$(YAML_LDFLAGS) \
 	-lstdc++ \
 	-ldl
 
+EXTRA_DIST = \
+	menu.c
+
+samplecatconfdir=$(sysconfdir)/blah
+samplecatconf_DATA = ../layouts/All.yaml

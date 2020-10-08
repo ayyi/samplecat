@@ -29,5 +29,7 @@ while getopts ":i" opt; do
 done
 shift $(($OPTIND - 1))
 
+CI_COMMIT_BRANCH=${CI_COMMIT_BRANCH:-master}
+
 # run git build script
 docker run --rm -e CI_COMMIT_BRANCH="$CI_COMMIT_BRANCH" -i ${TTY} $container

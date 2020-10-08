@@ -23,11 +23,15 @@
 #ifndef __GDL_DOCK_LAYOUT_H__
 #define __GDL_DOCK_LAYOUT_H__
 
+#include <stdbool.h>
 #include <glib-object.h>
 #include <gdl/gdl-dock-master.h>
 #include <gdl/gdl-dock.h>
 
 G_BEGIN_DECLS
+
+#define GDL_DOCK_YAML
+#define GDL_DOCK_XML_FALLBACK
 
 /* standard macros */
 #define	GDL_TYPE_DOCK_LAYOUT		  (gdl_dock_layout_get_type ())
@@ -42,11 +46,15 @@ typedef struct _GdlDockLayout GdlDockLayout;
 typedef struct _GdlDockLayoutClass GdlDockLayoutClass;
 typedef struct _GdlDockLayoutPrivate GdlDockLayoutPrivate;
 
+#define N_LAYOUT_DIRS 3
+
 struct _GdlDockLayout {
     GObject               g_object;
 
     gboolean              dirty;
     GdlDockMaster        *master;
+
+    const char*           dirs[N_LAYOUT_DIRS];
 
     GdlDockLayoutPrivate *_priv;
 };
@@ -75,12 +83,14 @@ void             gdl_dock_layout_delete_layout  (GdlDockLayout *layout,
                                                  const gchar   *name);
 
 GList           *gdl_dock_layout_get_layouts    (GdlDockLayout *layout,
-                                                 gboolean       include_default);
+                                                 bool       include_default);
 
 void             gdl_dock_layout_run_manager    (GdlDockLayout *layout);
 
-gboolean         gdl_dock_layout_load_from_file (GdlDockLayout *layout,
-                                                 const gchar   *filename);
+bool             gdl_dock_layout_load_from_xml_file  (GdlDockLayout*, const gchar*);
+#ifdef GDL_DOCK_YAML
+bool             gdl_dock_layout_load_from_yaml_file (GdlDockLayout*, const gchar*);
+#endif
 
 gboolean         gdl_dock_layout_load_from_string (GdlDockLayout *layout,
                                                  const gchar   *str);

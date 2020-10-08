@@ -7,6 +7,7 @@ RUN apt-get -y update && apt-get install -y \
 	libsndfile1-dev \
 	libgl1-mesa-dev \
 	libxml2-dev \
+	libyaml-dev \
 	libgraphene-1.0-dev \
 	gtk+2.0-dev
 

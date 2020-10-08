@@ -14,13 +14,15 @@
 
 #include <gtk/gtk.h>
 
-gboolean    window_new            ();
-GtkWidget*  message_panel__add_msg(const gchar* msg, const gchar* stock_id);
+void        window_new             ();
+
+GtkWidget*  message_panel__add_msg (const gchar* msg, const gchar* stock_id);
+
 #ifdef HAVE_FFTW3
-void        show_spectrogram      (gboolean enable);
+void        show_spectrogram       (bool enable);
 #endif
-void        show_filemanager      (gboolean enable);
-void        show_waveform         (gboolean enable);
-void        show_player           (gboolean enable);
+void        show_filemanager       (bool enable);
+void        show_waveform          (bool enable);
+void        show_player            (bool enable);
 
 #endif

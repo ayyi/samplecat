@@ -140,7 +140,7 @@ application_free (Application* self)
 	ConfigOption* option;
 	while((option = ctx->options[i++])){
 		g_value_unset(&option->val);
-		g_free(option);
+		g_clear_pointer(&ctx->options[i-1], g_free);
 	}
 }
 #endif
@@ -319,7 +319,7 @@ _set_auditioner ()
 		play->auditioner = & a_jack;
 		if (!play->auditioner->check()) {
 			connected = true;
-			printf("JACK playback.\n");
+			printf("JACK playback\n");
 		}
 	}
 #endif
@@ -328,7 +328,7 @@ _set_auditioner ()
 		play->auditioner = & a_ayyidbus;
 		if (!play->auditioner->check()) {
 			connected = true;
-			if(!app->no_gui) printf("ayyi_audition.\n");
+			if(!app->no_gui) printf("ayyi_audition\n");
 		}
 	}
 #endif
@@ -337,12 +337,12 @@ _set_auditioner ()
 		play->auditioner = & a_gplayer;
 		if (!play->auditioner->check()) {
 			connected = true;
-			printf("using CLI player.\n");
+			printf("using CLI player\n");
 		}
 	}
 #endif
 	if (!connected) {
-		printf("no playback support.\n");
+		printf("no playback support\n");
 		play->auditioner = & a_null;
 	}
 }

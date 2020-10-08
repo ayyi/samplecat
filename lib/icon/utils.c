@@ -112,7 +112,9 @@ texture_from_pixbuf (const char* name, GdkPixbuf* pixbuf)
 	guint t = create_icon(name, pixbuf);
 	g_hash_table_insert(icon_textures, (gpointer)MAKE_KEY(name, gdk_pixbuf_get_width(pixbuf)), GINT_TO_POINTER(t));
 
+#if 0 // no, this is not safe
 	g_object_unref(pixbuf);
+#endif
 	return t;
 }
 

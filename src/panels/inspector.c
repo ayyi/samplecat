@@ -543,7 +543,7 @@ inspector_set_labels (Inspector* inspector, Sample* sample)
 			l = l->next, child = l->data;
 			gtk_label_set_text(GTK_LABEL(child), c[1]);
 
-			g_free(c); // free the array but not the array contents.
+			g_strfreev(c);
 		}
 		g_strfreev(lines);
 	}

@@ -15,6 +15,7 @@
 #include <dir_tree/typedefs.h>
 
 ViewDirTree* vdtree_new                  (const gchar* path, gint expand);
+void         vdtree_free                 (ViewDirTree*);
 void         vdtree_set_select_func      (ViewDirTree*, void (*func)(ViewDirTree*, const gchar* path, gpointer data), gpointer data);
 void         vdtree_set_layout           (ViewDirTree*, LayoutWindow*);
 gint         vdtree_set_path             (ViewDirTree*, const gchar *path);

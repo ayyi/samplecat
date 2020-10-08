@@ -6,7 +6,6 @@ bin_PROGRAMS = samplecat_gl
 samplecat_gl_SOURCES = \
 	main.c \
 	application.c application.h \
-	glx.c glx.h \
 	directory.c directory.h \
 	materials/icon_ring.c materials/icon_ring.h \
 	shader.c shader.h \
@@ -54,7 +53,8 @@ samplecat_gl_LDADD = \
 	$(top_srcdir)/lib/icon/libicon.a \
 	$(top_srcdir)/lib/utils/libutils.a \
 	$(top_srcdir)/lib/yaml/libyaml.a \
-	$(WAVEFORM_LDFLAGS) \
+	$(top_srcdir)/lib/waveform/.libs/libwaveformcore.a \
+	$(top_srcdir)/lib/waveform/.libs/libwaveformui.a \
 	$(top_srcdir)/lib/file_manager/libfilemanager.a \
 	$(top_srcdir)/lib/gtk/libgtk.la \
 	$(LOCAL_GTK_LIBS) \
@@ -63,6 +63,7 @@ samplecat_gl_LDADD = \
 	$(TRACKER_LIBS) \
 	$(SQLITE_LIBS) \
 	$(GTK_LIBS) \
+	$(GRAPHENE_LIBS) \
 	$(MYSQL_LDFLAGS) \
 	$(JACK_LIBS) $(SNDFILE_LIBS) ${SAMPLERATE_LIBS} \
 	$(GTHREAD_LIBS) \

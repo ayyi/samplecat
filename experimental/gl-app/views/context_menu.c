@@ -14,6 +14,7 @@
 #include "debug/debug.h"
 #include "agl/utils.h"
 #include "agl/shader.h"
+#include "agl/x11.h"
 #include "wf/promise.h"
 #include "icon/utils.h"
 #include "waveform/utils.h"
@@ -60,7 +61,7 @@ context_menu_open_new (AGlScene* parent, AGliPt xy, Menu* menu, AMPromise* promi
 	XTranslateCoordinates(dpy, window, attr.root, 0, 0, &x, &y, &child);
 	AGliPt offset = {x - attr.x, y - attr.y};
 
-	popup = agl_make_window(dpy, "Popup", xy.x + offset.x, xy.y + offset.y, size.x, size.y);
+	popup = agl_window("Popup", xy.x + offset.x, xy.y + offset.y, size.x, size.y, false);
 
 	((AGlActor*)popup->scene)->name = "Popup";
 	agl_actor__add_child((AGlActor*)popup->scene, popup->scene->selected = context_menu(promise));
@@ -142,7 +143,7 @@ popup_destroy ()
 	am_promise_resolve(_promise, 0);
 	_promise = NULL;
 
-	agl_window_destroy(glXGetCurrentDisplay(), &popup);
+	agl_window_destroy(&popup);
 
 	return G_SOURCE_REMOVE;
 }

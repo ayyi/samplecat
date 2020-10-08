@@ -5,7 +5,6 @@ AM_CFLAGS = \
 	-I$(includedir) \
 	-I$(top_srcdir)/lib \
 	-I$(top_srcdir)/lib/waveform \
-	$(MP3TERM_CFLAGS) \
 	$(GLIB_CFLAGS)
 
 noinst_LIBRARIES = libyaml.a

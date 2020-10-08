@@ -35,6 +35,12 @@ FFTW_LDADD = \
 	../../src/gl_spectrogram_view.o
 endif
 
+if ENABLE_YAML
+YAML_LDFLAGS = \
+	$(top_srcdir)/lib/yaml/libyaml.a \
+	$(YAML_LIBS)
+endif
+
 ui_test_LDADD = \
 	../../src/application.o \
 	../../src/cellrenderer_hypertext.o \
@@ -51,7 +57,6 @@ ui_test_LDADD = \
 	../../src/window.o \
 	$(FFTW_LDADD) \
 	$(top_srcdir)/lib/test/libtest.la \
-	$(top_srcdir)/lib/utils/libutils.a \
 	$(top_srcdir)/lib/file_manager/libfilemanager.a \
 	$(top_srcdir)/lib/dir_tree/libdirtree.a \
 	$(top_srcdir)/lib/debug/libdebug.a \
@@ -60,6 +65,7 @@ ui_test_LDADD = \
 	$(GDL_LDFLAGS) \
 	$(top_srcdir)/lib/gtk/libgtk.la \
 	$(top_srcdir)/src/panels/libpanels.la \
+	$(top_srcdir)/lib/utils/libutils.a \
 	$(DBUS_LIBS) \
 	$(DEBUG_LDFLAGS) \
 	$(OPENGL_LDFLAGS) \
@@ -80,6 +86,7 @@ ui_test_LDADD = \
 	$(GMODULE_LIBS) \
 	$(FFMPEG_LIBS) \
 	$(MATH_LDFLAGS) \
+	$(YAML_LDFLAGS) \
 	-lstdc++ \
 	-ldl
 

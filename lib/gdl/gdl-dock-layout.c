@@ -26,9 +26,11 @@
 #include "gdl-i18n.h"
 #include <string.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <libxml/parser.h>
 #include <gtk/gtk.h>
 #include "debug/debug.h"
+#include "utils/fs.h"
 
 #include "gdl-dock-layout.h"
 #include "gdl-tools.h"
@@ -36,6 +38,12 @@
 
 #include "../layouts/layout_ui.c"
 
+#ifdef GDL_DOCK_YAML
+#include "yaml/load.h"
+#include "registry.h"
+#endif
+
+extern gchar* str_replace (const gchar*, const gchar* search, const gchar* replace);
 
 /* ----- Private variables ----- */
 
@@ -107,6 +115,38 @@ static xmlNodePtr gdl_dock_layout_find_layout   (GdlDockLayout      *layout,
 static void     gdl_dock_layout_build_models    (GdlDockLayout      *layout);
 
 static void     gdl_dock_layout_build_tree      (GdlDockLayout      *layout, GdlDockLayoutUIData* ui_data, GtkWidget*);
+
+#ifdef GDL_DOCK_YAML
+static bool     gdl_dock_layout_save_to_yaml    (GdlDockMaster*, const char*);
+static bool     gdl_dock_layout_load_yaml       (GdlDockMaster*, const char*);
+
+static bool     load_dock                       (yaml_parser_t*, yaml_event_t*, gpointer);
+static bool     dock_handler                    (yaml_parser_t*, yaml_event_t*, char*, gpointer);
+
+
+typedef struct {
+	char           name[32];
+	GObjectClass*  object_class;
+
+	GParameter     params[10];
+	int            n_params;
+
+	bool           done;
+} Constructor;
+
+typedef struct {
+	Constructor    items[20];
+	GdlDockObject* objects[20];
+	int            sp;
+	GdlDockItem*   added[20];   // newly created objects. used to notify the client once the layout build is complete
+	int            added_sp;
+	GdlDockMaster* master;
+	GdlDockObject* parent;
+} Stack;
+
+#define INDENT {printf("%*s", stack->sp * 3, " "); fflush(stdout); }
+
+#endif
 
 
 /* ----- Private implementation ----- */
@@ -391,7 +431,7 @@ update_items_model (GdlDockLayout *layout)
 static void
 update_layouts_model (GdlDockLayout *layout)
 {
-    GList *items, *l;
+    GList *l;
     GtkTreeIter iter;
 
     g_return_if_fail (layout != NULL);
@@ -399,7 +439,7 @@ update_layouts_model (GdlDockLayout *layout)
 
     /* build layouts list */
     gtk_list_store_clear (layout->_priv->layouts_model);
-    items = gdl_dock_layout_get_layouts (layout, FALSE);
+    GList* items = gdl_dock_layout_get_layouts (layout, FALSE);
     for (l = items; l; l = l->next) {
         gtk_list_store_append (layout->_priv->layouts_model, &iter);
         gtk_list_store_set (layout->_priv->layouts_model, &iter,
@@ -426,9 +466,7 @@ load_button_on_click (GtkWidget *w, gpointer data)
     g_return_if_fail (layout != NULL);
     
     if (gtk_tree_selection_get_selected (ui_data->selection, &model, &iter)) {
-        gtk_tree_model_get (model, &iter,
-                            COLUMN_NAME, &name,
-                            -1);
+        gtk_tree_model_get (model, &iter, COLUMN_NAME, &name, -1);
         gdl_dock_layout_load_layout (layout, name);
         g_free (name);
     }
@@ -554,11 +592,10 @@ master_locked_notify_cb (GdlDockMaster *master,
 static GtkBuilder *
 load_interface ()
 {
-    GtkBuilder *gui;
     GError* error = NULL;
 
     /* load ui */
-    gui = gtk_builder_new();
+    GtkBuilder *gui = gtk_builder_new();
     gtk_builder_add_from_string (gui, layout_ui, -1, &error);
     if (error) {
         g_warning (_("Could not load layout user interface file")); 
@@ -591,8 +628,7 @@ gdl_dock_layout_construct_items_ui (GdlDockLayout *layout)
 
     ui_data = g_new0 (GdlDockLayoutUIData, 1);
     ui_data->layout = layout;
-    g_object_add_weak_pointer (G_OBJECT (layout),
-                               (gpointer *) &ui_data->layout);
+    g_object_add_weak_pointer (G_OBJECT (layout), (gpointer *) &ui_data->layout);
     g_object_set_data (G_OBJECT (dialog), "ui_data", ui_data);
     
     /* get ui widget references */
@@ -680,7 +716,7 @@ cell_edited_cb (GtkCellRendererText *cell,
 #endif
 
 static void
-gdl_dock_layout_build_tree(GdlDockLayout *layout, GdlDockLayoutUIData* ui_data, GtkWidget* layouts_view)
+gdl_dock_layout_build_tree (GdlDockLayout *layout, GdlDockLayoutUIData* ui_data, GtkWidget* layouts_view)
 {
 	GtkCellRenderer     *renderer;
 	GtkTreeViewColumn   *column;
@@ -707,6 +743,7 @@ gdl_dock_layout_build_tree(GdlDockLayout *layout, GdlDockLayoutUIData* ui_data, 
 #define GDL_DOCK_PARAM_CONSTRUCTION(p) \
     (((p)->flags & (G_PARAM_CONSTRUCT | G_PARAM_CONSTRUCT_ONLY)) != 0)
 
+#ifdef GDL_DOCK_XML_FALLBACK
 static GdlDockObject * 
 gdl_dock_layout_setup_object (GdlDockMaster *master,
                               xmlNodePtr     node,
@@ -772,7 +809,7 @@ gdl_dock_layout_setup_object (GdlDockMaster *master,
         xml_prop = xmlGetProp (node, BAD_CAST props [i]->name);
         if (xml_prop) {
             g_value_set_static_string (&serialized, (char*)xml_prop);
-            
+
             if (!GDL_DOCK_PARAM_CONSTRUCTION (props [i]) &&
                 (props [i]->flags & GDL_DOCK_PARAM_AFTER)) {
                 (*after_params) [*n_after_params].name = props [i]->name;
@@ -823,7 +860,9 @@ gdl_dock_layout_setup_object (GdlDockMaster *master,
 
     return object;
 }
+#endif
 
+#ifdef GDL_DOCK_XML_FALLBACK
 static void
 gdl_dock_layout_recursive_build (GdlDockMaster *master,
                                  xmlNodePtr     parent_node,
@@ -839,9 +878,7 @@ gdl_dock_layout_recursive_build (GdlDockMaster *master,
         GParameter *after_params = NULL;
         gint        n_after_params = 0, i;
 
-        object = gdl_dock_layout_setup_object (master, node,
-                                               &n_after_params,
-                                               &after_params);
+        object = gdl_dock_layout_setup_object (master, node, &n_after_params, &after_params);
         
         if (object) {
             gdl_dock_object_freeze (object);
@@ -866,8 +903,7 @@ gdl_dock_layout_recursive_build (GdlDockMaster *master,
             /* add the object to the parent */
             if (parent) {
                 if (GDL_IS_DOCK_PLACEHOLDER (object))
-                    gdl_dock_placeholder_attach (GDL_DOCK_PLACEHOLDER (object),
-                                                 parent);
+                    gdl_dock_placeholder_attach (GDL_DOCK_PLACEHOLDER (object), parent);
                 else if (gdl_dock_object_is_compound (parent)) {
                     gtk_container_add (GTK_CONTAINER (parent), GTK_WIDGET (object));
                     if (GTK_WIDGET_VISIBLE (parent))
@@ -885,9 +921,13 @@ gdl_dock_layout_recursive_build (GdlDockMaster *master,
                 gdl_dock_object_reduce (object);
 
             gdl_dock_object_thaw (object);
+
+            if(GDL_IS_DOCK_OBJECT(object))
+                g_signal_emit_by_name(master, "dock-item-added", object);
         }
     }
 }
+#endif
 
 static void
 _gdl_dock_layout_foreach_detach (GdlDockObject *object)
@@ -903,18 +943,18 @@ gdl_dock_layout_foreach_toplevel_detach (GdlDockObject *object)
                            NULL);
 }
 
+#ifdef GDL_DOCK_XML_FALLBACK
 static void
 gdl_dock_layout_load (GdlDockMaster *master, xmlNodePtr node)
 {
     g_return_if_fail (master != NULL && node != NULL);
 
     /* start by detaching all items from the toplevels */
-    gdl_dock_master_foreach_toplevel (master, TRUE,
-                                      (GFunc) gdl_dock_layout_foreach_toplevel_detach,
-                                      NULL);
+    gdl_dock_master_foreach_toplevel (master, TRUE, (GFunc) gdl_dock_layout_foreach_toplevel_detach, NULL);
     
     gdl_dock_layout_recursive_build (master, node, NULL);
 }
+#endif
 
 static void 
 gdl_dock_layout_foreach_object_save (GdlDockObject *object,
@@ -925,24 +965,22 @@ gdl_dock_layout_foreach_object_save (GdlDockObject *object,
         GHashTable *placeholders;
     } *info = user_data, info_child;
 
-    xmlNodePtr   node;
-    guint        n_props, i;
-    GParamSpec **props;
-    GValue       attr = { 0, };
-    
     g_return_if_fail (object != NULL && GDL_IS_DOCK_OBJECT (object));
     g_return_if_fail (info->where != NULL);
-    
-    node = xmlNewChild (info->where,
+
+    xmlNodePtr node = xmlNewChild (info->where,
                         NULL,               /* ns */
                         BAD_CAST gdl_dock_object_nick_from_type (G_TYPE_FROM_INSTANCE (object)),
                         BAD_CAST NULL);     /* contents */
 
     /* get object exported attributes */
-    props = g_object_class_list_properties (G_OBJECT_GET_CLASS (object),
-                                            &n_props);
+    guint n_props;
+    GParamSpec **props = g_object_class_list_properties (G_OBJECT_GET_CLASS (object), &n_props);
+
+    GValue attr = { 0, };
     g_value_init (&attr, GDL_TYPE_DOCK_PARAM);
-    for (i = 0; i < n_props; i++) {
+
+    for (int i = 0; i < n_props; i++) {
         GParamSpec *p = props [i];
 
         if (p->flags & GDL_DOCK_PARAM_EXPORT) {
@@ -951,9 +989,7 @@ gdl_dock_layout_foreach_object_save (GdlDockObject *object,
             /* export this parameter */
             /* get the parameter value */
             g_value_init (&v, p->value_type);
-            g_object_get_property (G_OBJECT (object),
-                                   p->name,
-                                   &v);
+            g_object_get_property (G_OBJECT (object), p->name, &v);
 
             /* only save the object "name" if it is set
                (i.e. don't save the empty string) */
@@ -962,7 +998,7 @@ gdl_dock_layout_foreach_object_save (GdlDockObject *object,
                 if (g_value_transform (&v, &attr))
                     xmlSetProp (node, BAD_CAST p->name, BAD_CAST g_value_get_string (&attr));
             }
-            
+
             /* free the parameter value */
             g_value_unset (&v);
         }
@@ -980,12 +1016,10 @@ gdl_dock_layout_foreach_object_save (GdlDockObject *object,
             gdl_dock_layout_foreach_object_save (GDL_DOCK_OBJECT (lph->data),
                                                  (gpointer) &info_child);
     }
-    
+
     /* recurse the object if appropiate */
     if (gdl_dock_object_is_compound (object)) {
-        gtk_container_foreach (GTK_CONTAINER (object),
-                               (GtkCallback) gdl_dock_layout_foreach_object_save,
-                               (gpointer) &info_child);
+        gtk_container_foreach (GTK_CONTAINER (object), (GtkCallback) gdl_dock_layout_foreach_object_save, (gpointer) &info_child);
     }
 }
 
@@ -1135,15 +1169,25 @@ gdl_dock_layout_attach (GdlDockLayout *layout,
 * Loads the layout with the given name to the memory.
 * This will set #GdlDockLayout:dirty to %TRUE.
 *
-* *** This fn is badly named. Would be better if it was called "gdl_dock_layout_activate_layout"
-*
 * See also gdl_dock_layout_load_from_file()
 * Returns: %TRUE if layout successfully loaded else %FALSE
 */
 gboolean
-gdl_dock_layout_load_layout (GdlDockLayout *layout,
-                             const gchar   *name)
+gdl_dock_layout_load_layout (GdlDockLayout *layout, const gchar *name)
 {
+#ifdef GDL_DOCK_YAML
+	for(int i=0;i<N_LAYOUT_DIRS && layout->dirs[i];i++){
+		char* path = g_strdup_printf("%s/%s.yaml", layout->dirs[i], name);
+		if(g_file_test(path, G_FILE_TEST_EXISTS)){
+			if(gdl_dock_layout_load_yaml(layout->master, path))
+				return true;
+		}
+		g_free(path);
+	}
+#endif
+
+#ifdef GDL_DOCK_XML_FALLBACK
+
     xmlNodePtr  node;
     gchar      *layout_name;
 
@@ -1166,6 +1210,7 @@ gdl_dock_layout_load_layout (GdlDockLayout *layout,
         gdl_dock_layout_load (layout->master, node);
         return TRUE;
     } else
+#endif
         return FALSE;
 }
 
@@ -1289,9 +1334,8 @@ gdl_dock_layout_run_manager (GdlDockLayout *layout)
 * Returns: %TRUE if @layout successfully loaded else %FALSE
 */
 
-gboolean
-gdl_dock_layout_load_from_file (GdlDockLayout *layout,
-                                const gchar   *filename)
+bool
+gdl_dock_layout_load_from_xml_file (GdlDockLayout *layout, const gchar *filename)
 {
     gboolean retval = FALSE;
 
@@ -1322,12 +1366,27 @@ gdl_dock_layout_load_from_file (GdlDockLayout *layout,
     return retval;
 }
 
+#ifdef GDL_DOCK_YAML
+bool
+gdl_dock_layout_load_from_yaml_file (GdlDockLayout *layout, const gchar *filename)
+{
+	return gdl_dock_layout_load_yaml (layout->master, filename);
+}
+#endif
+
 gboolean
-gdl_dock_layout_load_from_string (GdlDockLayout *layout,
-                                  const gchar *str)
+gdl_dock_layout_load_from_string (GdlDockLayout *layout, const gchar *str)
 {
     g_return_val_if_fail(str, FALSE);
 
+#ifdef GDL_DOCK_YAML
+	Stack stack = {.master = layout->master};
+
+	return yaml_load_string (str, (YamlHandler[]){
+		{"dock", load_dock, &stack},
+		{NULL}
+	});
+#else
     gboolean retval = FALSE;
 
     if (layout->_priv->doc) {
@@ -1340,7 +1399,7 @@ gdl_dock_layout_load_from_string (GdlDockLayout *layout,
     layout->_priv->doc = xmlParseMemory(str, strlen(str));
     if (layout->_priv->doc) {
         xmlNodePtr root = layout->_priv->doc->children;
-        /* minimum validation: test the root element */
+       /* minimum validation: test the root element */
         if (root && !strcmp ((char*)root->name, ROOT_ELEMENT)) {
             update_layouts_model (layout);
             retval = TRUE;
@@ -1352,6 +1411,7 @@ gdl_dock_layout_load_from_string (GdlDockLayout *layout,
     else dbg(0, "xml parsed failed");
 
     return retval;
+#endif
 }
 
 /** 
@@ -1365,8 +1425,7 @@ gdl_dock_layout_load_from_string (GdlDockLayout *layout,
  * Returns: %TRUE if @layout successfuly save to the file, otherwise %FALSE.
  */
 gboolean
-gdl_dock_layout_save_to_file (GdlDockLayout *layout,
-                              const gchar   *filename)
+gdl_dock_layout_save_to_file (GdlDockLayout *layout, const gchar *filename)
 {
     FILE     *file_handle;
     int       bytes;
@@ -1390,6 +1449,12 @@ gdl_dock_layout_save_to_file (GdlDockLayout *layout,
         };
         fclose (file_handle);
     };
+
+#ifdef GDL_DOCK_YAML
+	if(!gdl_dock_layout_save_to_yaml (layout->master, filename)){
+		pwarn("yaml save failed");
+	}
+#endif
 
     return retval;
 }
@@ -1421,32 +1486,442 @@ gdl_dock_layout_is_dirty (GdlDockLayout *layout)
  *  with g_free(), then free the list itself with g_list_free().
  */
 
-GList *
-gdl_dock_layout_get_layouts (GdlDockLayout *layout,
-                             gboolean       include_default)
+GList*
+gdl_dock_layout_get_layouts (GdlDockLayout *layout, bool include_default)
 {
-    GList      *retval = NULL;
-    xmlNodePtr  node;
+    GList *items = NULL;
 
-    g_return_val_if_fail (layout != NULL, NULL);
+    g_return_val_if_fail (layout, NULL);
 
-    if (!layout->_priv->doc)
-        return NULL;
+#ifdef GDL_DOCK_XML_FALLBACK
+    if (layout->_priv->doc){
+		xmlNodePtr node = layout->_priv->doc->children;
+		for (node = node->children; node; node = node->next) {
+			xmlChar *name;
 
-    node = layout->_priv->doc->children;
-    for (node = node->children; node; node = node->next) {
-        xmlChar *name;
+			if (strcmp ((char*)node->name, LAYOUT_ELEMENT_NAME))
+				continue;
 
-        if (strcmp ((char*)node->name, LAYOUT_ELEMENT_NAME))
-            continue;
+			name = xmlGetProp (node, BAD_CAST NAME_ATTRIBUTE_NAME);
+			if (include_default || strcmp ((char*)name, DEFAULT_LAYOUT))
+				items = g_list_prepend (items, g_strdup ((char*)name));
+			xmlFree (name);
+		};
+		items = g_list_reverse (items);
+	}
+#endif
 
-        name = xmlGetProp (node, BAD_CAST NAME_ATTRIBUTE_NAME);
-        if (include_default || strcmp ((char*)name, DEFAULT_LAYOUT))
-            retval = g_list_prepend (retval, g_strdup ((char*)name));
-        xmlFree (name);
-    };
-    retval = g_list_reverse (retval);
+#ifdef GDL_DOCK_YAML
+	typedef struct {
+		GList** items;
+	} Data;
 
-    return retval;
+	Data data = {&items};
+
+	bool list_contains_string (GList* list, const char* str)
+	{
+		for(GList*l=list;l;l=l->next){
+			char* s = l->data;
+			if(!strcmp(s, str))
+				return true;
+		}
+		return false;
+	}
+
+	bool dir_item (GDir* dir, const char* filename, gpointer user)
+	{
+		Data* data = user;
+
+		if(g_str_has_suffix(filename, ".yaml")){
+			dbg(2, " * %s", filename);
+			if(strncmp(filename, "__", 2)){
+				// to save parsing the file, the layout name is used for the filename, but automake files cannot have spaces
+				char* layout_name = str_replace(filename, "_", " ");
+				layout_name[strlen(filename) - 5] = '\0';
+				if(list_contains_string(*data->items, layout_name)){
+					g_free(layout_name);
+				}else{
+					*data->items = g_list_append(*(data->items), layout_name);
+				}
+			}
+		}
+		return G_SOURCE_CONTINUE;
+	}
+
+	for(int i=0;i<N_LAYOUT_DIRS && layout->dirs[i];i++){
+		char* path = (char*)layout->dirs[i];
+		GError* error = NULL;
+		with_dir(path, &error, dir_item, &data);
+		if(error){
+			printf("%s\n", error->message);
+			g_error_free(error);
+		}
+	}
+#endif
+
+	items = g_list_sort(items, (GCompareFunc)g_ascii_strcasecmp);
+
+    return items;
 }
 
+
+#ifdef GDL_DOCK_YAML
+#include "yaml/load.h"
+#include "yaml/save.h"
+
+
+static bool
+with_fp (const char* filename, const char* mode, bool (*fn)(FILE*, gpointer), gpointer user_data)
+{
+	FILE* fp = fopen(filename, mode);
+	if(!fp){
+		pwarn("cannot open config file (%s).", filename);
+		return false;
+	}
+
+	bool ok = fn(fp, user_data);
+
+	fclose(fp);
+
+	return ok;
+}
+
+
+static GdlDockObject*
+gdl_dock_layout_setup_object2 (GdlDockMaster* master, Stack* stack, gint *n_after_params, GParameter **after_params)
+{
+	Constructor* constructor = &stack->items[stack->sp];
+	g_return_val_if_fail(constructor->object_class, NULL);
+
+	char* name = NULL;
+	for(int i=0;i<constructor->n_params;i++){
+		GParameter* param = &constructor->params[i];
+		GParamSpec* pspec = g_object_class_find_property(constructor->object_class, param->name);
+		if (!GDL_DOCK_PARAM_CONSTRUCTION (pspec) && (pspec->flags & GDL_DOCK_PARAM_AFTER)) {
+		}
+		if(!strcmp(param->name, "name"))
+			name = (char*)g_value_get_string(&param->value);
+	}
+
+	GdlDockObject* object = name ? g_hash_table_lookup (master->dock_objects, name) : NULL;
+
+	if (!object) {
+		constructor->params[constructor->n_params].name = "long-name";
+		g_value_init (&constructor->params [constructor->n_params].value, G_TYPE_STRING);
+		g_value_set_string (&constructor->params[constructor->n_params].value, name);
+		constructor->n_params++;
+
+		/* construct the object if we have to */
+		/* set the master, so toplevels are created correctly and
+		   other objects are bound */
+		object = g_object_newv (G_TYPE_FROM_CLASS(constructor->object_class), constructor->n_params, constructor->params);
+
+		if(GDL_IS_DOCK_ITEM(object) && name)
+			stack->added[stack->added_sp++] = (GdlDockItem*)object;
+
+		/*
+		 *  The 'master' property has to be set _after_ construction so that
+		 *  the 'automatic' property can be correctly set beforehand.
+		 */
+		RegistryItem* item = object->name ? g_hash_table_lookup(registry, object->name) : NULL;
+
+		if(item)
+			GDL_DOCK_OBJECT_UNSET_FLAGS(object, GDL_DOCK_AUTOMATIC);
+
+		gdl_dock_object_bind (object, (GObject*)stack->master);
+
+		if(item){
+			gtk_container_add(GTK_CONTAINER(object), item->info.gtkfn());
+			gtk_widget_show_all((GtkWidget*)object);
+		}
+
+		constructor->done = true;
+		constructor->object_class = NULL;
+
+	} else {
+		/* set the parameters to the existing object */
+		for (int i = 0; i < constructor->n_params; i++)
+			if(strcmp(constructor->params[i].name, "name"))
+				g_object_set_property (G_OBJECT(object), constructor->params[i].name, &constructor->params[i].value);
+	}
+
+	/* free the parameters */
+	for (int i = 0; i < constructor->n_params; i++){
+		g_value_unset (&constructor->params[i].value);
+		if(strcmp(constructor->params[i].name, "long-name"))
+			g_free((char*)constructor->params[i].name);
+	}
+	constructor->n_params = 0;
+
+	return object;
+}
+
+
+static bool
+add_param (yaml_parser_t* parser, yaml_event_t* _event, gpointer _stack)
+{
+	Stack* stack = _stack;
+	Constructor* constructor = &stack->items[stack->sp];
+
+	char* prop = g_strdup((char*)_event->data.scalar.value);
+
+	yaml_event_t event;
+	if(!yaml_parser_parse(parser, &event)){
+		yaml_event_delete(&event);
+		return false;
+	}
+	if(event.type == YAML_MAPPING_START_EVENT){
+		bool ok = dock_handler (parser, &event, prop, stack);
+		g_free(prop);
+		yaml_event_delete(&event);
+		return ok;
+	};
+	char* val = (char*)event.data.scalar.value;
+
+	GParamSpec* param = g_object_class_find_property (constructor->object_class, prop);
+	if(param){
+		if (!(param->flags & GDL_DOCK_PARAM_EXPORT)){
+			INDENT; pwarn("not export");
+		}else{
+			/* initialize value used for transformations */
+			GValue serialized = {0,};
+			g_value_init (&serialized, GDL_TYPE_DOCK_PARAM);
+			g_value_set_static_string (&serialized, val);
+
+			GParameter* arg = &constructor->params[constructor->n_params++];
+			arg->name = prop;
+			g_value_init (&(arg->value), param->value_type);
+			g_value_transform (&serialized, &arg->value);
+		}
+	}
+	else g_free(prop);
+
+	yaml_event_delete(&event);
+	return true;
+}
+
+
+static bool
+dock_handler (yaml_parser_t* parser, yaml_event_t* event, char* name, gpointer _stack)
+{
+	g_assert(event->type == YAML_MAPPING_START_EVENT);
+
+	Stack* stack = _stack;
+
+	// all parameters are now retreived for the previous dock item so it
+	// is instantiated first, before recursing
+
+	GdlDockObject *object = NULL;
+	if(stack->sp){
+		Constructor* constructor = &stack->items[stack->sp];
+		if(constructor->object_class){
+			GParameter *after_params = NULL;
+			gint n_after_params = 0;
+			object = gdl_dock_layout_setup_object2 (stack->master, stack, &n_after_params, &after_params);
+			stack->objects[stack->sp] = object;
+		}
+	}
+
+	// previous object finished. now handle the new one
+
+	GdlDockObject* parent = stack->parent;
+	stack->sp++;
+
+	Constructor* constructor = &stack->items[stack->sp];
+	g_strlcpy(constructor->name, name, 32);
+	GType object_type = gdl_dock_object_type_from_nick (constructor->name);
+	if (object_type == G_TYPE_NONE) {
+		g_warning ("While loading layout: don't know how to create a dock object whose nick is '%s'", constructor->name);
+	}
+	if (object_type != G_TYPE_NONE && G_TYPE_IS_CLASSED (object_type)){
+		constructor->object_class = g_type_class_ref (object_type);
+	}
+
+	if(!load_mapping(parser,
+		(YamlHandler[]){
+			{NULL, add_param, stack},
+			{NULL}
+		},
+		(YamlMappingHandler[]){
+			{NULL, dock_handler, stack},
+			{NULL}
+		},
+		stack
+	)) return false;
+
+	// if came off top, object will not have been created
+	Constructor* top = &stack->items[stack->sp];
+	if(top->object_class){
+		GParameter *after_params = NULL;
+		gint n_after_params = 0;
+		GdlDockObject* object = gdl_dock_layout_setup_object2 (stack->master, stack, &n_after_params, &after_params);
+		stack->objects[stack->sp] = object;
+	}
+
+	// add the new object to the widget tree
+
+	parent = stack->objects[stack->sp - 1];
+
+	if((object = stack->objects[stack->sp])){
+		gdl_dock_object_freeze (object);
+		parent = stack->objects[stack->sp - 1];
+		if(parent){
+			if (GDL_IS_DOCK_PLACEHOLDER (object))
+				gdl_dock_placeholder_attach (GDL_DOCK_PLACEHOLDER (object), parent);
+			else if (gdl_dock_object_is_compound (parent)) {
+				gtk_container_add (GTK_CONTAINER (parent), GTK_WIDGET (object));
+				if (GTK_WIDGET_VISIBLE (parent))
+					gtk_widget_show (GTK_WIDGET (object));
+			}
+
+		} else {
+			INDENT; dbg(1, "%i: adding final: %s", stack->sp, G_OBJECT_CLASS_NAME(G_OBJECT_GET_CLASS(object)));
+
+			GdlDockObject *controller = gdl_dock_master_get_controller (stack->master);
+			if (controller != object && GTK_WIDGET_VISIBLE (controller))
+				gtk_widget_show (GTK_WIDGET (object));
+
+			if(stack->sp == 1){
+				for (GList* l = stack->master->toplevel_docks; l; l = l->next) {
+					GdlDockObject* top = GDL_DOCK_OBJECT (l->data);
+					gtk_container_add (GTK_CONTAINER (top), GTK_WIDGET (object));
+				}
+
+				for(int i=0;i<stack->added_sp;i++){
+					g_signal_emit_by_name(stack->master, "dock-item-added", stack->added[i]);
+				}
+			}
+		}
+
+		gdl_dock_object_thaw (object);
+	}
+
+	memset(&stack->items[stack->sp], 0, sizeof(Constructor));
+	stack->sp--;
+	stack->parent = object;
+
+	return true;
+}
+
+
+static bool
+load_dock (yaml_parser_t* parser, yaml_event_t* event, gpointer user_data)
+{
+	return load_mapping(parser,
+		NULL,
+		(YamlMappingHandler[]){
+			{NULL, dock_handler, user_data},
+			{NULL}
+		},
+		user_data
+	);
+}
+
+
+static bool
+gdl_dock_layout_load_yaml (GdlDockMaster *master, const char* filename)
+{
+	bool fn (FILE* fp, gpointer _master)
+	{
+		Stack stack = {.master = _master};
+
+		return yaml_load(fp, (YamlHandler[]){
+			{"dock", load_dock, &stack},
+			{NULL}
+		});
+	}
+
+	gdl_dock_master_foreach_toplevel (master, TRUE, (GFunc) gdl_dock_layout_foreach_toplevel_detach, NULL);
+
+	bool ok = with_fp(filename, "rb", fn, master);
+	if(!ok){
+		pwarn("load failed: %s", filename);
+	}
+
+	return ok;
+}
+
+
+static bool
+gdl_dock_layout_save_to_yaml (GdlDockMaster *master, const char* filename)
+{
+	const char* path = filename;
+
+	bool fn (FILE* fp, gpointer _master)
+	{
+		GdlDockMaster *master = _master;
+		bool ret = false;
+
+		typedef struct {
+			yaml_event_t  event;
+			int           depth;
+		} Context;
+
+		void gdl_dock_layout_foreach_object_save (GdlDockObject *object, gpointer user_data)
+		{
+			Context* context = user_data;
+
+			const char* type = gdl_dock_object_nick_from_type (G_TYPE_FROM_INSTANCE (object));
+			map_open_(&context->event, type);
+
+			guint n_props;
+			GParamSpec **props = g_object_class_list_properties (G_OBJECT_GET_CLASS (object), &n_props);
+
+			GValue attr = {0,};
+			g_value_init (&attr, GDL_TYPE_DOCK_PARAM);
+
+			for (int i = 0; i < n_props; i++) {
+				GParamSpec *p = props [i];
+
+				if (p->flags & GDL_DOCK_PARAM_EXPORT) {
+					GValue v = {0,};
+
+					g_value_init (&v, p->value_type);
+					g_object_get_property (G_OBJECT (object), p->name, &v);
+
+					// only save the object "name" if it is set (i.e. don't save the empty string)
+					if (strcmp (p->name, GDL_DOCK_NAME_PROPERTY) || g_value_get_string (&v)) {
+						if (g_value_transform (&v, &attr))
+							if(!yaml_add_key_value_pair(p->name, g_value_get_string(&attr))) goto error;
+					}
+
+					g_value_unset (&v);
+				}
+			}
+			g_value_unset (&attr);
+			g_free (props);
+
+			if (gdl_dock_object_is_compound (object)) {
+				gtk_container_foreach (GTK_CONTAINER (object), (GtkCallback) gdl_dock_layout_foreach_object_save, context);
+			}
+
+			end_map(&context->event);
+			return;
+		  error:
+			perr("save error");
+		}
+
+		Context context = {0};
+
+		yaml_start(fp, &context.event);
+
+		gdl_dock_master_foreach_toplevel (master, true, (GFunc) gdl_dock_layout_foreach_object_save, (gpointer) &context);
+
+		EMIT__(yaml_mapping_end_event_initialize(&context.event), &context.event);
+
+		end_document_(&emitter, &context.event);
+
+		yaml_event_delete(&context.event);
+		yaml_emitter_delete(&emitter);
+
+		ret = true;
+	  error:
+	  out:
+
+		return ret;
+	}
+	bool ok = with_fp(path, "wb", fn, master);
+
+	return ok;
+}
+#endif

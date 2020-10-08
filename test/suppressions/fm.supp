@@ -11,3 +11,15 @@
    fun:vm_directory_set_path
    fun:files_view_set_directory
 }
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   ...
+   fun:get_mime_type
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   ...
+   fun:type_to_icon
+}

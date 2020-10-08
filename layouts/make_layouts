@@ -1,16 +1,16 @@
 #!/bin/bash
 
-in=__default__.xml
+in=__default__.yaml
 out=layouts.c
 
 echo "making default layout..."
 
 function build {
 	echo "" > $out
-	echo "// This file is generated from layouts/__default__.xml" >> $out
+	echo "// This file is generated from __default__.yaml" >> $out
 	echo "" >> $out
 	echo -en "const char* default_layout = \"" >> $out
-	cpp -P $in | sed -e "s/$/ \\\/" | sed -e "s/\"/\\\\\"/g" >> $out
+	cpp -P $in | sed -e "s/$/\\\n\\\/" | sed -e "s/\"/\\\\\"/g" >> $out
 	echo "\";" >> $out
 }
 

@@ -36,7 +36,7 @@ graph_debug_window (AGlScene* _scene)
 	target = _scene;
 
 	AGliPt size = {320, 120};
-	window = agl_make_window(glXGetCurrentDisplay(), "Graph debug", 0, 0, size.x, size.y);
+	window = agl_window("Graph debug", 0, 0, size.x, size.y, false);
 
 	agl_actor__add_child(
 		(AGlActor*)window->scene,

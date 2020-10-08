@@ -903,10 +903,15 @@ idle_free (Idle* idle)
 
 	static void print_item (GtkWidget* widget, int* depth)
 	{
+		char text_content[32] = {0};
+		if(GTK_IS_ACCEL_LABEL(widget)){
+			g_strlcpy(text_content, gtk_label_get_text((GtkLabel*)widget), 32);
+		}
+
 		char indent[128];
-		snprintf(indent, 127, "%%%is%%s %%s %%p %s%%s%s\n", *depth * 3, bold, white);
+		snprintf(indent, 127, "%%%is%%s %%s %%p %s%%s%s %%s\n", *depth * 3, bold, white);
 		char* long_name = GDL_IS_DOCK_ITEM(widget) && ((GdlDockObject*)widget)->long_name? ((GdlDockObject*)widget)->long_name : "";
-		printf(indent, " ", G_OBJECT_CLASS_NAME(G_OBJECT_GET_CLASS(widget)), gtk_widget_get_name(widget), widget, long_name);
+		printf(indent, " ", G_OBJECT_CLASS_NAME(G_OBJECT_GET_CLASS(widget)), gtk_widget_get_name(widget), widget, long_name, text_content);
 
 		if(GDL_IS_DOCK_ITEM(widget)){
 			GtkWidget* b = ((GdlDockItem*)widget)->child;

@@ -1,0 +1,30 @@
+---
+layouts:
+  dock:
+    name: '__dock_1'
+    floating: 'no'
+    width: '-1'
+    height: '-1'
+    floatx: '0'
+    floaty: '0'
+    paned:
+      orientation: 'vertical'
+      locked: 'no'
+      position: '525'
+      paned:
+        orientation: 'horizontal'
+        locked: 'no'
+        position: '218'
+        item:
+          name: 'Inspector'
+          orientation: 'vertical'
+          locked: 'no'
+        item:
+          name: 'Filemanager'
+          orientation: 'vertical'
+          locked: 'no'
+      item:
+        name: 'Waveform'
+        orientation: 'vertical'
+        locked: 'no'
+...

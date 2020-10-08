@@ -11,7 +11,10 @@ AM_CFLAGS = \
 	-DGDL_UIDIR=\""$(uidir)"\" \
 	-DGTK_DISABLE_DEPRECATION_WARNINGS \
 	-DGLIB_DISABLE_DEPRECATION_WARNINGS \
-	-I$(includedir) -I$(top_srcdir)/lib \
+	-I$(includedir) \
+	-I$(top_srcdir)/lib \
+	-I$(top_srcdir)/lib/waveform \
+	-I$(top_srcdir)/lib/waveform/gtkglext-1.0 \
 	$(GTK_CFLAGS) \
 	$(XML_CFLAGS)
 
@@ -64,6 +67,7 @@ libgdl_a_SOURCES = \
 	gdl-switcher.c \
 	gdl-switcher.h \
 	gdl-i18n.h \
+	registry.c registry.h \
 	libgdltypebuiltins.h \
 	libgdltypebuiltins.c \
 	libgdlmarshal.h \

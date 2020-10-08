@@ -69,6 +69,7 @@ struct _GdlDockMasterClass {
     GObjectClass parent_class;
 
     void (* layout_changed) (GdlDockMaster *master);
+    void (* dock_item_added) (GdlDockMaster *, gpointer);
 };
 
 /* additional macros */

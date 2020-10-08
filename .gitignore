@@ -9,6 +9,7 @@
 *.real
 *.orig
 *.gz
+*.xz
 *.local
 *.diff
 src/samplecat

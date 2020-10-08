@@ -17,6 +17,7 @@
 
 unsigned char* str_tag = (unsigned char*)"tag:yaml.org,2002:str";
 unsigned char* map_tag = (unsigned char*)"tag:yaml.org,2002:map";
+unsigned char* seq_tag = (unsigned char*)"tag:yaml.org,2002:seq";
 yaml_emitter_t emitter;
 
 

@@ -381,7 +381,7 @@ layout_set_size (gpointer data)
 static bool
 config_load_windows_yaml (yaml_parser_t* parser, yaml_event_t* event, gpointer user_data)
 {
-	load_mapping(parser, event,
+	load_mapping(parser,
 		NULL,
 		(YamlMappingHandler[]){
 			{"window", window_handler}
@@ -526,10 +526,14 @@ load_settings ()
 
 	FILE* fp = open_settings_file();
 
-	return fp && yaml_load(fp, (YamlHandler[]){
+	bool ret = fp && yaml_load(fp, (YamlHandler[]){
 		{"windows", config_load_windows_yaml},
 		{NULL}
 	});
+
+	if(fp) fclose(fp);
+
+	return ret;
 }
 
 
@@ -638,7 +642,7 @@ save_settings ()
 
 	EMIT_(yaml_mapping_end_event_initialize(&event));
 
-	end_document;
+	end_document(&emitter);
 	yaml_event_delete(&event);
 	yaml_emitter_delete(&emitter);
 	fclose(fp);

@@ -17,29 +17,21 @@
 #include "yaml/load.h"
 
 
-/*
- *  Each top-level section in the yaml file is passed to its matching handler
- */
 bool
-yaml_load (FILE* fp, YamlHandler handlers[])
+_yaml_load (yaml_parser_t* parser, YamlHandler handlers[])
 {
-	yaml_parser_t parser; yaml_parser_initialize(&parser);
-
-	yaml_parser_set_input_file(&parser, fp);
-
 	int section = 0;
 
-	// read the event sequence
 	int safety = 0;
 	char key[64] = "";
 	bool end = false;
 	yaml_event_t event;
 
-	get_expected_event(&parser, &event, YAML_STREAM_START_EVENT);
-	get_expected_event(&parser, &event, YAML_DOCUMENT_START_EVENT);
+	get_expected_event(parser, &event, YAML_STREAM_START_EVENT);
+	get_expected_event(parser, &event, YAML_DOCUMENT_START_EVENT);
 
 	do {
-		if (!yaml_parser_parse(&parser, &event)) goto error; // Get the next event
+		if (!yaml_parser_parse(parser, &event)) goto error; // Get the next event
 
 		switch (event.type) {
 			case YAML_STREAM_START_EVENT:
@@ -84,7 +76,7 @@ yaml_load (FILE* fp, YamlHandler handlers[])
 						YamlHandler* h;
 						while((h = &handlers[i]) && h->key ){
 							if(!strcmp(h->key, key)){
-								h->callback(&parser, &event, h->data);
+								h->callback(parser, &event, h->data);
 								break;
 							}
 							i++;
@@ -107,16 +99,39 @@ yaml_load (FILE* fp, YamlHandler handlers[])
 
 	} while(!end && safety++ < 1024);
 
-	yaml_parser_delete(&parser);
-	fclose(fp);
+	yaml_parser_delete(parser);
 
 	return true;
 
   error:
-	yaml_parser_delete(&parser);
-	fclose(fp);
+	yaml_parser_delete(parser);
 
 	return false;
+}
+
+
+/*
+ *  Each top-level section in the yaml file is passed to its matching handler
+ */
+bool
+yaml_load (FILE* fp, YamlHandler handlers[])
+{
+	yaml_parser_t parser; yaml_parser_initialize(&parser);
+
+	yaml_parser_set_input_file(&parser, fp);
+
+	return _yaml_load(&parser, handlers);
+}
+
+
+bool
+yaml_load_string (const char* str, YamlHandler handlers[])
+{
+	yaml_parser_t parser; yaml_parser_initialize(&parser);
+
+	yaml_parser_set_input_string(&parser, (guchar*)str, strlen(str));
+
+	return _yaml_load(&parser, handlers);
 }
 
 
@@ -124,21 +139,22 @@ yaml_load (FILE* fp, YamlHandler handlers[])
  *  After having entered a new mapping, handle expected scalar and mapping events
  */
 bool
-load_mapping (yaml_parser_t* parser, yaml_event_t* event, YamlHandler scalars[], YamlMappingHandler mappings[], gpointer user_data)
+load_mapping (yaml_parser_t* parser, YamlHandler scalars[], YamlMappingHandler mappings[], gpointer user_data)
 {
+	yaml_event_t event;
 	char key[64] = {0,};
-	while(yaml_parser_parse(parser, event)){
-		switch (event->type) {
+	while(yaml_parser_parse(parser, &event)){
+		switch (event.type) {
 			case YAML_SCALAR_EVENT:
-				dbg(2, "YAML_SCALAR_EVENT: value='%s' %i plain=%i style=%i", event->data.scalar.value, event->data.scalar.length, event->data.scalar.plain_implicit, event->data.scalar.style);
+				dbg(2, "YAML_SCALAR_EVENT: value='%s' %i plain=%i style=%i", event.data.scalar.value, event.data.scalar.length, event.data.scalar.plain_implicit, event.data.scalar.style);
 
-				g_strlcpy(key, (char*)event->data.scalar.value, 64);
+				g_strlcpy(key, (char*)event.data.scalar.value, 64);
 
 				int i = 0;
 				YamlHandler* h;
-				while((h = &scalars[i]) && h->key ){
-					if(!strcmp(h->key, key)){
-						h->callback(parser, event, h->data);
+				while((h = &scalars[i]) && h->callback){
+					if(!h->key || !strcmp(h->key, key)){
+						h->callback(parser, &event, h->data);
 						key[0] = 0;
 						break;
 					}
@@ -150,9 +166,9 @@ load_mapping (yaml_parser_t* parser, yaml_event_t* event, YamlHandler scalars[],
 				if(key[0]){
 					int i = 0;
 					YamlMappingHandler* h;
-					while((h = &mappings[i]) && h->key ){
-						if(!strcmp(h->key, key)){
-							h->callback(parser, event, key, h->data);
+					while((h = &mappings[i]) && h->callback){
+						if(!h->key || !strcmp(h->key, key)){
+							h->callback(parser, &event, key, h->data);
 							break;
 						}
 						i++;
@@ -160,11 +176,15 @@ load_mapping (yaml_parser_t* parser, yaml_event_t* event, YamlHandler scalars[],
 				}
 				break;
 			case YAML_MAPPING_END_EVENT:
+				yaml_event_delete(&event);
 				return true;
 			default:
-				pwarn("unexpected event");
+				pwarn("unexpected event %i", event.type);
+				yaml_event_delete(&event);
 				return false;
 		}
+
+		yaml_event_delete(&event);
 	}
 	return false;
 }

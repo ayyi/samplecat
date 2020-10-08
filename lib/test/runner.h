@@ -95,6 +95,13 @@ void       test_finished_      ();
 	test_finished_(); \
 	return G_SOURCE_REMOVE;}
 
+#define FAIL_TEST_NULL(msg) \
+	{TEST.current.finished = true; \
+	passed = false; \
+	printf("%s%s%s\n", red, msg, white); \
+	test_finished_(); \
+	return NULL;}
+
 #define assert(A, B, ...) \
 	{bool __ok_ = ((A) != 0); \
 	{if(!__ok_) perr(B, ##__VA_ARGS__); } \
@@ -104,4 +111,9 @@ void       test_finished_      ();
 	{bool __ok_ = ((A) != 0); \
 	{if(!__ok_) perr(B, ##__VA_ARGS__); } \
 	{if(!__ok_) FAIL_TEST_TIMER("assertion failed") }}
+
+#define assert_null(A, B, ...) \
+	{bool __ok_ = ((A) != 0); \
+	{if(!__ok_) perr(B, ##__VA_ARGS__); } \
+	{if(!__ok_) FAIL_TEST_NULL("assertion failed") }}
 

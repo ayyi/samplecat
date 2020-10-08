@@ -161,7 +161,7 @@ player_on_play_finished ()
 
 
 void
-player_stop()
+player_stop ()
 {
 	PF;
 	if (play->queue) {
@@ -169,7 +169,9 @@ player_stop()
 		g_list_free0(play->queue);
 	}
 
-	play->auditioner->stop();
+	if(play->auditioner){
+		play->auditioner->stop();
+	}
 	play->status = PLAY_STOPPED;
 
 	player_on_play_finished();
