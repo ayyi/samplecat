@@ -394,14 +394,16 @@ application_search()
 }
 
 
+/*
+ *  Path must not contain trailing slash
+ */
 void
-application_scan(const char* path, ScanResults* results)
+application_scan (const char* path, ScanResults* results)
 {
-	// path must not contain trailing slash
-
 	g_return_if_fail(path);
 
 	app->state = SCANNING;
+	worker_go_slow = true;
 	statusbar_print(1, "scanning...");
 
 	application_add_dir(path, results);
@@ -411,7 +413,9 @@ application_scan(const char* path, ScanResults* results)
 	statusbar_print(1, "add finished: %i files added%s%s", results->n_added, fail_msg, dupes_msg);
 	if(results->n_failed) g_free(fail_msg);
 	if(results->n_dupes) g_free(dupes_msg);
+
 	app->state = NONE;
+	worker_go_slow = false;
 }
 
 
@@ -419,14 +423,14 @@ application_scan(const char* path, ScanResults* results)
  *  uri must be "unescaped" before calling this fn. Method string must be removed.
  */
 bool
-application_add_file(const char* path, ScanResults* result)
+application_add_file (const char* path, ScanResults* result)
 {
 	/* check if file already exists in the store
 	 * -> don't add it again
 	 */
 	if(samplecat.model->backend.file_exists(path, NULL)) {
-		if(!app->no_gui) statusbar_print(1, "duplicate: not re-adding a file already in db.");
-		g_warning("duplicate file: %s", path);
+		if(!app->no_gui) statusbar_print(1, "duplicate: %s", path);
+		if(_debug_) g_warning("duplicate file: %s", path);
 		Sample* s = sample_get_by_filename(path);
 		if (s) {
 			//sample_refresh(s, false);
@@ -446,7 +450,7 @@ application_add_file(const char* path, ScanResults* result)
 	Sample* sample = sample_new_from_filename((char*)path, false);
 	if (!sample) {
 		if (app->state != SCANNING){
-			if (_debug_) gwarn("cannot add file: file-type is not supported");
+			if (_debug_) pwarn("cannot add file: file-type is not supported");
 			statusbar_print(1, "cannot add file: file-type is not supported");
 		}
 		return false;
@@ -455,7 +459,7 @@ application_add_file(const char* path, ScanResults* result)
 	if(_debug_ && app->no_gui){ printf("%s\n", path); fflush(stdout); }
 
 	if(!sample_get_file_info(sample)){
-		gwarn("cannot add file: reading file info failed. type=%s", sample->mimetype);
+		pwarn("cannot add file: reading file info failed. type=%s", sample->mimetype);
 		if(!app->no_gui) statusbar_print(1, "cannot add file: reading file info failed");
 		sample_unref(sample);
 		return false;
@@ -473,7 +477,7 @@ application_add_file(const char* path, ScanResults* result)
 			/* TODO :prompt user: ask to delete one of the files
 			 * - import/update the remaining file(s)
 			 */
-			dbg(0, "found similar or identical file: %s", l->data);
+			dbg(1, "found similar or identical file: %s", l->data);
 #ifdef INTERACTIVE_IMPORT
 			if (i < 10)
 				g_string_append_printf(note, "%d: '%s'\n", i, (char*) l->data);

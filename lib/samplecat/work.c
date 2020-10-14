@@ -67,7 +67,6 @@ request_analysis (Sample* sample)
 	typedef struct {
 		int changed;
 	} C;
-	C* c = g_new0(C, 1);
 
 	void analysis_work(Sample* sample, gpointer _c)
 	{
@@ -106,7 +105,7 @@ request_analysis (Sample* sample)
 	}
 
 	if(!sample->overview || sample->peaklevel == 0.0 || !sample->ebur || !strlen(sample->ebur))
-		worker_add_job(sample, analysis_work, analysis_done, c);
+		worker_add_job(sample, analysis_work, analysis_done, g_new0(C, 1));
 }
 
 

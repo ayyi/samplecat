@@ -16,6 +16,9 @@
 #include "debug/debug.h"
 #include "typedefs.h"
 #include "samplecat/sample.h"
+#include "samplecat/support.h"
+
+bool worker_go_slow = false;
 
 typedef struct
 {
@@ -26,14 +29,13 @@ typedef struct
 } Message;
 
 static GAsyncQueue*  msg_queue = NULL;
-static GList*        msg_list  = NULL;
 static GList*        clients   = NULL;
 
 static gpointer worker_thread (gpointer data);
 static bool     send_progress (gpointer);
 
 void
-worker_thread_init()
+worker_thread_init ()
 {
 	dbg(3, "creating overview thread...");
 
@@ -46,21 +48,18 @@ worker_thread_init()
 
 
 static gpointer
-worker_thread(gpointer data)
+worker_thread (gpointer data)
 {
-	//TODO consider replacing the main loop with a blocking call on the async queue,
-	//(g_async_queue_pop) waiting for messages.
-
 	dbg(1, "new worker thread.");
 
 	g_async_queue_ref(msg_queue);
 
-	gboolean done(gpointer _message)
+	gboolean done (gpointer _message)
 	{
 		Message* message = _message;
 		message->done(message->sample, message->user_data);
 
-		send_progress(GINT_TO_POINTER(g_list_length(msg_list)));
+		send_progress(GINT_TO_POINTER(g_async_queue_length(msg_queue)));
 
 		sample_unref(message->sample);
 		g_free(message);
@@ -68,67 +67,52 @@ worker_thread(gpointer data)
 		return G_SOURCE_REMOVE;
 	}
 
-	gboolean worker_timeout(gpointer data)
-	{
-		// check for new work
-		while(g_async_queue_length(msg_queue)){
-			Message* message = g_async_queue_pop(msg_queue); // blocks
-			msg_list = g_list_append(msg_list, message);
-			dbg(2, "new message! %p", message);
-		}
+	while(true){
+		Message* message = g_async_queue_pop(msg_queue); // blocks
+		dbg(2, "new message! %p", message);
 
-		while(msg_list){
-			Message* message = g_list_first(msg_list)->data;
-			msg_list = g_list_remove(msg_list, message);
+		message->work(message->sample, message->user_data);
+		g_idle_add(done, message);
 
-			Sample* sample = message->sample;
-			message->work(sample, message->user_data);
-			g_idle_add(done, message);
-
-			g_usleep(1000); // may possibly help prevent tree freezes if too many jobs complete in quick succession.
-		}
-
-		return G_SOURCE_CONTINUE;
+		if(worker_go_slow)
+			/*
+			 *  Scan in progress - because of disc contention, analysis tasks cannot run in parallel
+			 */
+			g_usleep(5000 * 1000);
+		else
+			/*
+			 *  A long sleep is needed here to allow foreground to update,
+			 */
+			g_usleep(500 * 1000);
 	}
-
-	GMainContext* context = g_main_context_new();
-	GSource* source = g_timeout_source_new(1000);
-	gpointer _data = NULL;
-	g_source_set_callback(source, worker_timeout, _data, NULL);
-	g_source_attach(source, context);
-
-	g_main_loop_run (g_main_loop_new (context, 0));
 
 	return NULL;
 }
 
 
 void
-worker_add_job(Sample* sample, SampleCallback work, SampleCallback done, gpointer user_data)
+worker_add_job (Sample* sample, SampleCallback work, SampleCallback done, gpointer user_data)
 {
 	if(!msg_queue) return;
 
-	Message* message = g_new0(Message, 1);
-	*message = (Message){
+	g_async_queue_push(msg_queue, SC_NEW(Message,
 		.sample = sample_ref(sample),
 		.work = work,
 		.done = done,
 		.user_data = user_data
-	};
-
-	g_async_queue_push(msg_queue, message);
+	));
 }
 
 
 void
-worker_register(Callback callback)
+worker_register (Callback callback)
 {
 	clients = g_list_prepend(clients, callback);
 }
 
 
 static bool
-send_progress(gpointer user_data)
+send_progress (gpointer user_data)
 {
 	GList* l = clients;
 	for(;l;l=l->next){
