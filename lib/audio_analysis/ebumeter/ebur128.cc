@@ -66,7 +66,7 @@ static int ebur128proc (const char *fn, struct ebur128 *ebr) {
 	const int bsize = fsamp / 5;
 
 	if (bsize > len) { // XXX check do we need bsize or 2*bsize?
-		fprintf (stderr, "EBU: Input file is too short.\n");
+		if(_debug_) fprintf (stderr, "EBU: Input file is too short.\n");
 		ad_close(&d);
 		if (ebr) {return 0;} // do not repeat analysis later.
 		return 1;
