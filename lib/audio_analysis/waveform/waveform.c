@@ -60,6 +60,7 @@ make_overview(Sample* sample)
 {
 	WfDecoder d = {{0,}};
 	if(!ad_open(&d, sample->full_path)) return NULL;
+	ad_close(&d);
 	dbg(1, "NEW OVERVIEW");
 
 	GdkPixbuf* pixbuf = gdk_pixbuf_new(GDK_COLORSPACE_RGB, HAS_ALPHA_FALSE, BITS_PER_CHAR_8, OVERVIEW_WIDTH, OVERVIEW_HEIGHT);

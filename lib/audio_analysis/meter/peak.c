@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2016 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2020 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -9,14 +9,14 @@
 * +----------------------------------------------------------------------+
 *
 */
+
 #include "config.h"
-#include <stdlib.h>
 #include <math.h>
 #include "decoder/ad.h"
 
 
 double
-ad_maxsignal(const char* filename)
+ad_maxsignal (const char* filename)
 {
 	WfDecoder d = {{0,}};
 	if(!ad_open(&d, filename)) return 0.0;
@@ -28,8 +28,7 @@ ad_maxsignal(const char* filename)
 	float max_val = 0.0;
 	do {
 		readcount = ad_read(&d, sf_data, read_len);
-		int k;
-		for (k = 0; k < readcount; k++){
+		for (int k = 0; k < readcount; k++){
 			const float temp = fabs (sf_data [k]);
 			max_val = temp > max_val ? temp : max_val;
 		};
