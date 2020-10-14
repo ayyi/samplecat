@@ -14,6 +14,8 @@
 
 #include "typedefs.h"
 
+extern bool worker_go_slow;
+
 void    worker_thread_init   ();
 void    worker_register      (Callback);
 void    worker_add_job       (Sample*, SampleCallback work, SampleCallback done, gpointer);
