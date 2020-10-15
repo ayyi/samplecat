@@ -20,7 +20,7 @@
         <h2>SampleCat is a program for cataloguing and auditioning audio samples.</h2>
 
         <section id="downloads">
-          <a href="http://www.orford.org/assets/samplecat-0.3.0.tar.gz" class="btn">Download stable</a>
+          <a href="http://www.orford.org/assets/samplecat-0.3.1.tar.xz" class="btn">Download stable</a>
           <a href="https://github.com/ayyi/samplecat/tarball/master" class="btn">Download latest snapshot</a>
           <a href="https://github.com/ayyi/samplecat" class="btn btn-github"><span class="icon"></span>View on GitHub</a>
         </section>
@@ -31,6 +31,7 @@
       <section id="main_content">
 
 <div class="main-img-container" style="float:right; padding:0 0 0 2em; margin-top:-5px;">
+	<a href="images/samplecat-2020.webp"><img src="images/samplecat-2020.webp" class="main-img" style="max-width: 587px; margin-bottom: 20px;" alt="samplecat screenshot cantina-light theme"/></a>
 	<img src="images/samplecat4-600.png" class="main-img" alt="samplecat screenshot"/>
 </div>
 
@@ -42,7 +43,12 @@ MySql and Sqlite can be used for the database.</p>
 
 <div class="news">
 	<h2>news</h2>
+
 	<p>
+	<strong>20200901</strong>: Version 0.3.1. Many minor fixes. Updates for changes to Pango API.
+	</p>
+	<p>
+
 	<strong>20190920</strong>: Version 0.3.0. Added new tarball. Many many minor fixes.
 	</p>
 
@@ -53,25 +59,16 @@ MySql and Sqlite can be used for the database.</p>
 	<p>
 	<strong>20140525</strong>: Window panels can now be managed with standard docking behaviour. Layouts can be loaded and saved. This is now reasonably complete and a long overdue tarball release will be offered if people consider it to be stable.
 	</p>
-
-	<p>
-	<strong>20130501</strong>: There is now an additional panel showing a larger waveform display.
-	</p>
-
-	<p>
-	<strong>20121212</strong>: The Inspector layout has been tidied up. The EBUR display format had to be changed to accommodate this so you will have to Refresh samples for them to display correctly.
-	</p>
 </div>
 
 <h2>features</h2>
 <ul>
-	<li>catalogues 'offline' (eg cdrom), as well as 'online' sample files.
-	</li><li>supported filetypes are wav, flac, aiff, sd2, etc, via libsndfile.
-	</li><li>metadata stored: filename, path, samplerate, channels, mimetype, peak level, id3.
-	</li><li>freeform tagging.
-	</li><li>filtering based on name, directory, category, and tag.
-	</li><li>spectrogram display.</li>
-
+	<li>catalogues 'offline' (eg cdrom), as well as 'online' sample files.</li>
+    <li>most audio filetypes are supported, subject to building with libsndfile and/or ffmpeg.</li>
+    <li>metadata stored: filename, path, samplerate, channels, mimetype, peak level, id3.</li>
+    <li>freeform tagging.</li>
+    <li>filtering based on name, directory, category, and tag.</li>
+    <li>spectrogram display.</li>
 	<li>auditioning of samples is possible via JACK.</li>
 	<li>samples can be renamed, moved and copied to other directories.</li>
 </ul>
@@ -80,22 +77,15 @@ MySql and Sqlite can be used for the database.</p>
 
 <p>If you are not a developer it is recommended to use the stable tarball. Building should be entirely standard (untar, configure, make, make install).</p>
 
-<p>If you are a developer you will want to use the git repository directly. The only complication is the use of
-git submodules which are unfortunately not transparent. After cloning the repository, you will have to manually
-get the submodule:</p>
+<p>If you are a developer you will want to use the git repository directly.</p>
 
-<pre><code>    git submodule init
-    git submodule update
+<p>You should update the submodules following a git pull:</p>
+
+<pre><code>    git submodule update
 </code></pre>
 
-<p>If you subsequently need to update the submodules as part of a git pull:</p>
-
-<pre><code>    git submodule foreach git pull origin master
-    make clean
-</code></pre>
-
-<p>Dependencies: gtk+2.4, jack, libsndfile, dbus.</p>
-<p>Optional dependencies: mysqlclient, sqlite, tracker-0.9, libwaveform, ayyi_auditioner, fftw, gtkglext, ffmpeg, libass.</p>
+<p>Dependencies: gtk+2, jack, libsndfile and/or ffmpeg, dbus.</p>
+<p>Optional dependencies: mysqlclient, sqlite, ayyi_auditioner, fftw, libass.</p>
 
 <h2>usage</h2>
 

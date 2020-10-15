@@ -1,5 +1,5 @@
 
 body, p, ul         { font-size: 11px; }
 .main-img           { box-shadow: 2px 2px 5px 4px rgba(127, 255, 127, 0.5); }
-.main-img-container { margin-bottom: 2em; }
+.main-img-container { margin-bottom: 2em; max-width: 600px; }
 
