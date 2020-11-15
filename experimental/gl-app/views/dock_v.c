@@ -11,8 +11,8 @@
 */
 #include "config.h"
 #undef USE_GTK
+#include "debug/debug.h"
 #include "agl/ext.h"
-#include "agl/debug.h"
 #include "agl/shader.h"
 #include "views/panel.h"
 #include "views/dock_v.h"

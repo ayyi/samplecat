@@ -20,7 +20,7 @@ while getopts ":i" opt; do
 			fi
 			# privileged is needed for opengl
 			#             docker run --privileged -e "DISPLAY=unix:0.0" -v="/tmp/.X11-unix:/tmp/.X11-unix:rw" -i -t $container bash
-			docker run --rm --privileged -v="/tmp/.X11-unix:/tmp/.X11-unix:rw" -i -t $container bash
+			docker run --rm --privileged -v="/tmp/.X11-unix:/tmp/.X11-unix:rw" -e DISPLAY=$DISPLAY -i -t $container bash
 			exit
 			;;
         \? ) echo -e $usage
@@ -32,4 +32,4 @@ shift $(($OPTIND - 1))
 CI_COMMIT_BRANCH=${CI_COMMIT_BRANCH:-master}
 
 # run git build script
-docker run --rm -e CI_COMMIT_BRANCH="$CI_COMMIT_BRANCH" -i ${TTY} $container
+docker run --rm -e CI_COMMIT_BRANCH="$CI_COMMIT_BRANCH" -e DISPLAY=$DISPLAY -i ${TTY} $container

@@ -309,8 +309,6 @@ static void     remove_scroll_timeout                (Rotator *tree_view);
 static guint tree_view_signals [LAST_SIGNAL] = { 0 };
 #endif
 
-extern void debug_printf (const char* func, int level, const char* format, ...);
-#define dbg(A, B, ...) debug_printf(__func__, A, B, ##__VA_ARGS__)
 extern Application* application;
 
 typedef struct

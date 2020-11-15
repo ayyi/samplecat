@@ -10,36 +10,27 @@
 *
 */
 
-#include "config.h"
-#include <getopt.h>
-#ifdef USE_GDL
-#include "gdl/gdl-dock-item.h"
-#endif
-#include "gdk/gdkkeysyms.h"
-#include "debug/debug.h"
-#include "icon_theme.h"
-#include "file_manager/pixmaps.h"
-#include "test/runner.h"
-#include "support.h"
-#include "panels/library.h"
-#include "application.h"
-#include "window.h"
 
-#include "utils.c"
-#include "list.c"
-
-
-void
-setup ()
+char*
+find_wav (const char* wav)
 {
-	type_init();
+	if(wav[0] == '/'){
+		return g_strdup(wav);
+	}
 
-	TEST.n_tests = G_N_ELEMENTS(tests);
+	char* filename = g_build_filename("../../lib/waveform/test/data", wav, NULL);
+	if(g_file_test(filename, G_FILE_TEST_EXISTS)){
+		return filename;
+	}
+	g_free(filename);
+
+	filename = g_build_filename("lib/waveform/test/data", wav, NULL);
+	if(g_file_test(filename, G_FILE_TEST_EXISTS)){
+		return filename;
+	}
+	g_free(filename);
+
+	return NULL;
 }
 
-
-void
-teardown ()
-{
-}
 

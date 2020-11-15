@@ -7,4 +7,5 @@ all:
 		make && \
 		./src/samplecat --version
 	cd samplecat/lib/waveform && ./test/waveform_test
+	cd samplecat/test/unit && ./unit_test
 	./add_samples

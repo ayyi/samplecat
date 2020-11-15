@@ -381,7 +381,7 @@ main (int argc, char** argv)
 #ifndef USE_GDL
 	message_panel__add_msg("hello", GTK_STOCK_INFO);
 #endif
-	statusbar_print(2, PACKAGE_NAME". Version "PACKAGE_VERSION);
+	statusbar_print(2, PACKAGE_NAME" "PACKAGE_VERSION);
 
 #ifdef __APPLE__
 	gtk_osxapplication_ready(osxApp);

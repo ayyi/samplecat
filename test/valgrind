@@ -2,9 +2,10 @@
 
 export G_SLICE=always-malloc
 export G_DEBUG=gc-friendly
+
 /usr/bin/valgrind \
 	--leak-check=full \
-	--suppressions=test/pango.supp \
+	--suppressions=test/suppressions/pango.supp \
 	--suppressions=test/suppressions/glib.supp \
 	--suppressions=test/suppressions/gtk.supp \
 	--suppressions=test/suppressions/mesa.supp \

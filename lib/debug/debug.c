@@ -1,4 +1,18 @@
+/**
+* +----------------------------------------------------------------------+
+* | This file is part of the Ayyi project. http://ayyi.org               |
+* | copyright (C) 2013-2020 Tim Orford <tim@orford.org>                  |
+* +----------------------------------------------------------------------+
+* | This program is free software; you can redistribute it and/or modify |
+* | it under the terms of the GNU General Public License version 3       |
+* | as published by the Free Software Foundation.                        |
+* +----------------------------------------------------------------------+
+*
+*/
+
 #define __debug_c__
+
+#include "config.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdarg.h>
@@ -6,12 +20,16 @@
 #include <glib.h>
 #include "debug.h"
 
-
 int _debug_ = 0;
+
+char ayyi_bold  [12] = "\x1b[1;39m";
+char ayyi_white [12] = "\x1b[0;39m";
+char ayyi_warn  [32] = "\x1b[1;33mwarning:\x1b[0;39m";
+char ayyi_err   [32] = "\x1b[1;31merror!\x1b[0;39m";
 
 
 void
-debug_printf(const char* func, int level, const char* format, ...)
+debug_printf (const char* func, int level, const char* format, ...)
 {
 	va_list args;
 	va_start(args, format);
@@ -24,8 +42,11 @@ debug_printf(const char* func, int level, const char* format, ...)
 }
 
 
+/*
+ *  Print a warning string, then pass arguments on to vprintf.
+ */
 void 
-warnprintf(char* format, ...)
+warnprintf (const char* format, ...)
 {
   // print a warning string, then pass arguments on to vprintf.
 
@@ -39,7 +60,7 @@ warnprintf(char* format, ...)
 
 
 void 
-warnprintf2(const char* func, char* format, ...)
+warnprintf2 (const char* func, char* format, ...)
 {
 	// print a warning string, then pass arguments on to vprintf.
 
@@ -53,7 +74,7 @@ warnprintf2(const char* func, char* format, ...)
 
 
 void
-errprintf(char* format, ...)
+errprintf (char* format, ...)
 {
 	// print an error string, then pass arguments on to vprintf.
 
@@ -67,7 +88,7 @@ errprintf(char* format, ...)
 
 
 void
-errprintf2(const char* func, char* format, ...)
+errprintf2 (const char* func, char* format, ...)
 {
 	// print an error string, then pass arguments on to vprintf.
 
@@ -81,7 +102,7 @@ errprintf2(const char* func, char* format, ...)
 
 
 void
-log_handler(const gchar* log_domain, GLogLevelFlags log_level, const gchar* message, gpointer user_data)
+log_handler (const gchar* log_domain, GLogLevelFlags log_level, const gchar* message, gpointer user_data)
 {
 	switch(log_level){
 		case G_LOG_LEVEL_CRITICAL:

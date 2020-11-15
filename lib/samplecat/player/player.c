@@ -125,7 +125,7 @@ player_play (Sample* sample)
 	play->status = PLAY_PLAY_PENDING;
 
 	if(play->auditioner->play(sample)){
-		sample_unref0(play->sample);
+		g_clear_pointer(&play->sample, sample_unref);
 
 		play->status = PLAY_PLAYING;
 		play->sample = sample_ref(sample);
@@ -156,7 +156,7 @@ player_on_play_finished ()
 
 	g_signal_emit_by_name (play, "stop");
 
-	sample_unref0(play->sample);
+	g_clear_pointer(&play->sample, sample_unref);
 }
 
 

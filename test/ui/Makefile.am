@@ -75,11 +75,13 @@ ui_test_LDADD = \
 	$(JACK_LIBS) \
 	$(top_srcdir)/lib/audio_analysis/libaudioanalysis.la \
 	$(WAVEFORM_LDFLAGS) \
+	$(top_srcdir)/lib/waveform/lib/agl/.libs/libagl.a \
 	$(SNDFILE_LIBS) \
 	${SAMPLERATE_LIBS} \
 	$(FFTW3_LIBS) \
 	$(OPENGL_LDFLAGS) \
 	$(GTK_LIBS) \
+	$(GRAPHENE_LIBS) \
 	$(LIBASS_LDFLAGS) \
 	$(X11_LDFLAGS) \
 	$(ZLIB_LIBS) \
@@ -89,6 +91,23 @@ ui_test_LDADD = \
 	$(YAML_LDFLAGS) \
 	-lstdc++ \
 	-ldl
+
+BUILT_SOURCES = list.c
+
+list.c: Makefile test_*.c
+	@echo > $@
+	@for i in test_*.c; do echo "#include \"$$i\"" >> $@; done
+	@echo >> $@
+	@echo "gpointer tests[] = {" >> $@
+	@for i in test_*.c; do echo "	$${i%.c}," >> $@; done
+	@echo "};" >> $@
+
+TESTS = \
+	ui_test
+
+EXTRA_DIST = \
+	utils.c \
+	test_*.c
 
 endif
 

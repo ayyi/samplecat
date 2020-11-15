@@ -18,6 +18,7 @@ AM_CFLAGS = \
 	-I$(top_srcdir)/lib/samplecat \
 	-I$(top_srcdir)/lib/file_manager \
 	-I$(top_srcdir)/lib/waveform \
+	-I$(top_srcdir)/lib/waveform/lib/agl \
 	$(LOCAL_GTKGLEXT_CFLAGS) \
 	-I./panels \
 	-I./dir_tree \
@@ -111,6 +112,7 @@ samplecat_LDADD = \
 	$(JACK_LIBS) \
 	$(top_srcdir)/lib/audio_analysis/libaudioanalysis.la \
 	$(WAVEFORM_LDFLAGS) \
+	$(top_srcdir)/lib/waveform/lib/agl/.libs/libagl.a \
 	$(SNDFILE_LIBS) \
 	${SAMPLERATE_LIBS} \
 	$(GTHREAD_LIBS) \
@@ -124,6 +126,7 @@ samplecat_LDADD = \
 	$(FFMPEG_LIBS) \
 	$(MATH_LDFLAGS) \
 	$(YAML_LDFLAGS) \
+	$(GRAPHENE_LIBS) \
 	-lstdc++ \
 	-ldl
 

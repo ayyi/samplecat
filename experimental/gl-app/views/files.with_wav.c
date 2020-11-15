@@ -31,7 +31,7 @@
 
 #define _g_free0(var) (var = (g_free (var), NULL))
 
-#define row_height0 20
+#define row_height0 22
 #define wav_height 30
 #define row_spacing 8
 #define row_height (row_height0 + wav_height + row_spacing)
@@ -94,13 +94,13 @@ files_with_wav (gpointer _)
 		int n_rows = N_ROWS_VISIBLE(actor);
 		int clip_fix = builder()->target ? 0 : actor->region.x1;
 
-		int col[] = {0, 24, 260, 360, 400, 440, 480};
+		int col[] = {0, 24, 260, 360, 490, 530, 575};
 		char* col_heads[] = {"Filename", "Size", "Date", "Owner", "Group"};
 		int sort_column = 1;
 
 		agl->shaders.plain->uniform.colour = 0x222222ff;
 		agl_use_program((AGlShader*)agl->shaders.plain);
-		agl_rect_((AGlRect){col[sort_column], -2, col[sort_column + 1] - col[sort_column], row_height0});
+		agl_rect_((AGlRect){col[sort_column] -2, -2, col[sort_column + 1] - col[sort_column], row_height0 - 2});
 
 		int c; for(c=0;c<G_N_ELEMENTS(col_heads);c++){
 			agl_push_clip(0.f, 0.f, MIN(col[c + 2] - 6, agl_actor__width(actor)) + clip_fix, actor->region.y2);
@@ -129,10 +129,10 @@ files_with_wav (gpointer _)
 			WavViewItem* vitem = items->pdata[i];
 			DirItem* item = vitem->item;
 			char size[16] = {'\0'}; snprintf(size, 15, "%zu", item->size);
-			const char* val[] = {item->leafname, size, user_name(item->uid), group_name(item->gid)};
+			const char* val[] = {item->leafname, size, pretty_time(&item->mtime), user_name(item->uid), group_name(item->gid)};
 			int c; for(c=0;c<G_N_ELEMENTS(val);c++){
 				agl_push_clip(0, 0, MIN(col[c + 2] - 6, agl_actor__width(actor)) + clip_fix, actor->region.y2 + 20.);
-				agl_print(col[c + 1], y2, 0, STYLE.text, val[c]);
+				agl_print(col[c + 1], y2, 0, (STYLE.text & 0xffffff00) + (c ? 0xaa : 0xff), val[c]);
 				agl_pop_clip();
 			}
 
@@ -166,6 +166,8 @@ files_with_wav (gpointer _)
 					pwarn("failed to get icon for %s", item->mime_type->subtype);
 				}
 			}
+
+			g_free((char*)val[2]);
 		}
 
 		return true;

@@ -12,6 +12,8 @@
 *.xz
 *.local
 *.diff
+*.log
+*.trs
 src/samplecat
 configure
 compile
@@ -38,7 +40,9 @@ experimental/gl-app/shaders/shaders.c
 test/ubuntu-18/Dockerfile
 test/arch/Dockerfile
 test/unit/unit_test
+test/unit/list.c
 test/ui/ui_test
+test/ui/list.c
 player.vala.c
 player.vala.h
 !test/debian*/Makefile

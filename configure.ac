@@ -479,7 +479,7 @@ AC_SUBST(AUBIO_LDFLAGS)
 dnl -----------------------------------------------------------------------------
 
 dnl cannot use the pc file because it is not yet generated
-WAVEFORM_LDFLAGS=`pwd`"/lib/waveform/.libs/libwaveformcore.a "`pwd`"/lib/waveform/.libs/libwaveformui.a "`pkg-config --libs graphene-1.0`
+WAVEFORM_LDFLAGS=`pwd`"/lib/waveform/.libs/libwaveformcore.a "`pwd`"/lib/waveform/.libs/libwaveformui.a "
 AC_SUBST(WAVEFORM_LDFLAGS)
 
 dnl -----------------------------------------------------------------------------

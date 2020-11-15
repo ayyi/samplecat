@@ -9,7 +9,6 @@
 * +----------------------------------------------------------------------+
 *
 */
-#include "agl/debug.h"
 #include "cache.h"
 
 #ifdef AGL_ACTOR_RENDER_CACHE

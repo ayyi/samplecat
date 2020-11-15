@@ -10,36 +10,9 @@
 *
 */
 
-#include "config.h"
-#include <getopt.h>
-#ifdef USE_GDL
-#include "gdl/gdl-dock-item.h"
+#ifndef __unit_utils_h__
+#define __unit_utils_h__
+
+char* find_wav (const char*);
+
 #endif
-#include "gdk/gdkkeysyms.h"
-#include "debug/debug.h"
-#include "icon_theme.h"
-#include "file_manager/pixmaps.h"
-#include "test/runner.h"
-#include "support.h"
-#include "panels/library.h"
-#include "application.h"
-#include "window.h"
-
-#include "utils.c"
-#include "list.c"
-
-
-void
-setup ()
-{
-	type_init();
-
-	TEST.n_tests = G_N_ELEMENTS(tests);
-}
-
-
-void
-teardown ()
-{
-}
-
