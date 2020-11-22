@@ -38,9 +38,6 @@ char * program_name;
 #ifdef USE_TRACKER
   #include "db/tracker.h"
 #endif
-#ifdef USE_MYSQL
-  #include "db/mysql.h"
-#endif
 #include "dh_link.h"
 
 #include "db/db.h"

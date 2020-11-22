@@ -11,7 +11,7 @@ while getopts ":i" opt; do
 			# (dont forget to run xhost to allow the container to connect)
 			# privileged is needed for opengl
 			#             docker run --privileged -e "DISPLAY=unix:0.0" -v="/tmp/.X11-unix:/tmp/.X11-unix:rw" -i -t $container bash
-			docker run --privileged -v="/tmp/.X11-unix:/tmp/.X11-unix:rw" -i -t $container bash
+			docker run --privileged -v="/tmp/.X11-unix:/tmp/.X11-unix:rw" -e DISPLAY=$DISPLAY -i -t $container bash
 			exit
 			;;
         \? ) echo -e $usage
@@ -23,4 +23,4 @@ shift $(($OPTIND - 1))
 test -t 1 && USE_TTY="-t"
 
 # run git build script
-docker run --rm -e BRANCH="$CI_COMMIT_BRANCH" -i ${USE_TTY} $container
+docker run --rm -e BRANCH="$CI_COMMIT_BRANCH" -e DISPLAY=$DISPLAY -i ${USE_TTY} $container
