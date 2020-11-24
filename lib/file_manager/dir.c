@@ -1038,7 +1038,7 @@ dir_rescan (Directory* dir)
 
 	dir->needs_update = FALSE;
 
-	GPtrArray* names = g_ptr_array_new();
+	GPtrArray* names = g_ptr_array_new_full(16, g_free);
 
 #if 0
 	read_globicons();     //gets custom icon settings
@@ -1070,7 +1070,7 @@ dir_rescan (Directory* dir)
 	dir_merge_new(dir);
 	gdk_flush();
 
-	char filepath[FILENAME_MAX];
+	char filepath[FILENAME_MAX] = {0,};
 	struct dirent* ent;
 	/* Make a list of all the names in the directory */
 	while ((ent = readdir(d)))

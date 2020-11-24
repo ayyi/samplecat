@@ -28,3 +28,11 @@
    ...
    fun:g_type_class_ref
 }
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   ...
+   obj:/usr/lib64/libgobject-2.0.*
+   ...
+   fun:_dl_init
+}

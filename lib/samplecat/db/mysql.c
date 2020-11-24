@@ -300,11 +300,11 @@ mysql__insert (Sample* sample)
 		);
 	dbg(1, "sql=%s", sql);
 
-	if(mysql__exec_sql(sql)==0){
-		dbg(1, "ok!");
+	if(mysql__exec_sql(sql) == 0){
+		dbg(1, "ok");
 		id = mysql_insert_id(&mysql);
 	}else{
-		perr("not ok...\n");
+		perr("not ok: %s", sql);
 	}
 	g_free(sql);
 	free(full_path);
@@ -376,16 +376,18 @@ mysql__update_float (int id, const char* key, const float value)
 static bool
 mysql__update_blob (int id, const char* key, const guint8* d, const guint len)
 {
-	char *blob = malloc((len*2+1)*sizeof(char));
+	char* blob = malloc((len * 2 + 1) * sizeof(char));
 	mysql_real_escape_string(&mysql, blob, (char*)d, len);
-	char *sql = malloc((strlen(blob)+33/*query string*/+20 /*int*/+strlen(key))*sizeof(char));
+	char* sql = malloc((strlen(blob) + 33/*query string*/ + 20/*int*/ + strlen(key)) * sizeof(char));
 	sprintf(sql, "UPDATE samples SET %s='%s' WHERE id=%i", key, blob, id);
 	if(mysql_query(&mysql, sql)){
-		free(blob); free(sql);
 		pwarn("update failed! sql=%s\n", sql);
+		free(blob);
+		free(sql);
 		return false;
 	}
-	free(blob); free(sql);
+	free(blob);
+	free(sql);
 	return true;
 }
 
@@ -393,36 +395,36 @@ mysql__update_blob (int id, const char* key, const guint8* d, const guint len)
 static bool
 mysql__file_exists (const char* path, int *id)
 {
-	int rv=false;
+	int rv = false;
 	const int len = strlen(path);
-	char *esc = malloc((len*2+1)*sizeof(char));
+	char* esc = malloc((len * 2 + 1) * sizeof(char));
 	mysql_real_escape_string(&mysql, esc, path, len);
-	char *sql = malloc((43/*query string*/+strlen(esc))*sizeof(char));
-	sprintf(sql, "SELECT id FROM samples WHERE full_path='%s';",esc);
-	dbg(2,"%s",sql);
-	if (id) *id=0;
+	char* sql = malloc((43/*query string*/ + strlen(esc)) * sizeof(char));
+	sprintf(sql, "SELECT id FROM samples WHERE full_path='%s';", esc);
+	dbg(2,"%s", sql);
+	if (id) *id = 0;
 	if(!mysql_query(&mysql, sql)){
-		MYSQL_RES *sr = mysql_store_result(&mysql);
+		MYSQL_RES* sr = mysql_store_result(&mysql);
 		if (sr) {
 			MYSQL_ROW row = mysql_fetch_row(sr);
 			if (row) {
 				if (id) *id=atoi(row[0]);
-				rv=true;
+				rv = true;
 			}
 			mysql_free_result(sr);
 		}
 	}
-	free(sql); free(esc);
+	free(sql);
+	free(esc);
 	return rv;
 	
 }
 
-//-------------------------------------------------------------
 
 static GList*
 mysql__filter_by_audio (Sample* s)
 {
-	GList *rv = NULL;
+	GList* rv = NULL;
 	GString* sql = g_string_new("SELECT full_path FROM samples WHERE 1");
 	if (s->channels>0)
 		g_string_append_printf(sql, " AND channels=%i", s->channels);
@@ -459,11 +461,12 @@ mysql__filter_by_audio (Sample* s)
 //-------------------------------------------------------------
 
 
+/*
+ *  Returns: TRUE on success.
+ */
 static bool
 mysql__search_iter_new (int* n_results)
 {
-	//return TRUE on success.
-
 	g_return_val_if_fail(samplecat.model, false);
 
 	gboolean ok = true;
@@ -483,7 +486,8 @@ mysql__search_iter_new (int* n_results)
 		while ((tok = strtok(s, " _")) != 0) {
 			MYSQL_ESCAPE(esc, tok);
 			gchar* tmp = g_strdup_printf("%s %s (filename LIKE '%%%s%%' OR filedir LIKE '%%%s%%' OR keywords LIKE '%%%s%%') ",
-					where ? where : "", where ? "AND" : "",
+					where ? where : "",
+					where ? "AND" : "",
 					esc, esc, esc);
 			free(esc);
 			if (where) g_free(where);
@@ -494,6 +498,7 @@ mysql__search_iter_new (int* n_results)
 			g_string_append_printf(q, "AND (%s)", where);
 			g_free(where);
 		}
+		free(sd);
 #endif
 	}
 

@@ -1,0 +1,21 @@
+---
+dock:
+  name: '__dock_1'
+  floating: 'no'
+  width: '-1'
+  height: '-1'
+  floatx: '0'
+  floaty: '0'
+  paned:
+    orientation: vertical
+    locked: 'no'
+    position: '70'
+    item:
+      name: Search
+      orientation: vertical
+      locked: 'yes'
+    item:
+      name: 'Library'
+      orientation: 'vertical'
+      locked: 'yes'
+...

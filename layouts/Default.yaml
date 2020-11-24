@@ -1,0 +1,69 @@
+---
+dock:
+  name: __dock_1
+  floating: no
+  width: '-1'
+  height: '-1'
+  floatx: '0'
+  floaty: '0'
+  paned:
+    orientation: vertical
+    locked: 'no'
+    position: '70'
+    item:
+      name: 'Search'
+      orientation: vertical
+      locked: 'yes'
+    paned:
+      orientation: horizontal
+      locked: 'no'
+      position: '275'
+      paned:
+        orientation: vertical
+        locked: 'no'
+        position: '159'
+        paned:
+          orientation: vertical
+          locked: 'no'
+          position: '101'
+          item:
+            name: 'Tags'
+            orientation: vertical
+            locked: 'no'
+          item:
+            name: 'Filters'
+            orientation: vertical
+            locked: 'no'
+        paned:
+          orientation: vertical
+          locked: 'no'
+          position: '197'
+          item:
+            name: 'Directories'
+            orientation: vertical
+            locked: 'no'
+          item:
+            name: 'Inspector'
+            orientation: vertical
+            locked: 'no'
+      paned:
+        orientation: vertical
+        locked: 'no'
+        position: '443'
+        notebook:
+          orientation: vertical
+          locked: 'no'
+          page: '1'
+          item:
+            name: 'Filemanager'
+            orientation: vertical
+            locked: 'no'
+          item:
+            name: 'Library'
+            orientation: vertical
+            locked: 'yes'
+        item:
+          name: 'Waveform'
+          orientation: vertical
+          locked: 'no'
+...

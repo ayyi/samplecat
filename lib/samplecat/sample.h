@@ -37,7 +37,7 @@ struct _Sample
 	float        peaklevel;
 	int          colour_index;
 
-	gboolean     online;
+	bool         online;
 	time_t       mtime;
 
 	char*        keywords;
@@ -57,7 +57,7 @@ struct _Sample
  * @return needs to be sample_unref();
  */
 Sample*     sample_new               ();
-Sample*     sample_new_from_filename (char* path, gboolean path_alloced);
+Sample*     sample_new_from_filename (char* path, bool path_alloced);
 Sample*     sample_dup               (Sample*);
 
 Sample*     sample_get_by_filename   (const char* abspath);
@@ -69,7 +69,5 @@ bool        sample_get_file_info     (Sample*);
 
 char*       sample_get_metadata_str  (Sample*);
 void        sample_set_metadata      (Sample*, const char*);
-
-#define sample_unref0(var) ((var == NULL) ? NULL : (var = (sample_unref (var), NULL)))
 
 #endif

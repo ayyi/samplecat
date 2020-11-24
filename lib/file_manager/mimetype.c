@@ -76,7 +76,7 @@ MIME_type* inode_door;
 
 
 void
-type_init(void)
+type_init (void)
 {
 	if(icon_theme) return;
 

@@ -329,6 +329,7 @@ AC_CHECK_LIB(yaml, yaml_parser_scan,
 	[],
 	[-lyaml])
 AC_SUBST(YAML_LIBS)
+AM_CONDITIONAL(ENABLE_YAML, [test "$YAML_LIBS" = "-lyaml"])
 
 dnl -----------------------------------------------------------------------------
 
@@ -478,7 +479,7 @@ AC_SUBST(AUBIO_LDFLAGS)
 dnl -----------------------------------------------------------------------------
 
 dnl cannot use the pc file because it is not yet generated
-WAVEFORM_LDFLAGS=`pwd`"/lib/waveform/.libs/libwaveformcore.a "`pwd`"/lib/waveform/.libs/libwaveformui.a "`pkg-config --libs graphene-1.0`
+WAVEFORM_LDFLAGS=`pwd`"/lib/waveform/.libs/libwaveformcore.a "`pwd`"/lib/waveform/.libs/libwaveformui.a "
 AC_SUBST(WAVEFORM_LDFLAGS)
 
 dnl -----------------------------------------------------------------------------
@@ -500,7 +501,7 @@ fi;
 
 
 CXXFLAGS="$CXXFLAGS -pipe -fmessage-length=200 -fdiagnostics-show-location=every-line"
-CFLAGS="$CFLAGS -pipe -fmessage-length=200 -fdiagnostics-show-location=every-line -Wno-misleading-indentation"
+CFLAGS="$CFLAGS -pipe -fmessage-length=200 -fdiagnostics-show-location=every-line"
 
 AC_CONFIG_FILES([Makefile])
 AC_CONFIG_FILES([lib/Makefile])
@@ -521,6 +522,7 @@ AC_CONFIG_FILES([lib/audio_analysis/waveform/Makefile])
 AC_CONFIG_FILES([lib/gdl/Makefile])
 AC_CONFIG_FILES([lib/gtk/Makefile])
 AC_CONFIG_FILES([lib/test/Makefile])
+AC_CONFIG_FILES([lib/yaml/Makefile])
 AC_CONFIG_FILES([layouts/Makefile])
 AC_CONFIG_FILES([src/Makefile])
 AC_CONFIG_FILES([src/panels/Makefile])

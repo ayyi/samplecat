@@ -1,0 +1,43 @@
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Addr1
+   fun:config_load
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   ...
+   fun:auditioner_connect
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   ...
+   fun:_dl_init
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   ...
+   fun:dbus_g_bus_get
+   fun:_auditioner_connect*
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   ...
+   fun:gdk_pixbuf_new_from_xpm_data
+   fun:window_new
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   ...
+   fun:ass_renderer_init
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   ...
+   fun:g_thread_new
+}

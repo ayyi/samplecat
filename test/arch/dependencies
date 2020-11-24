@@ -12,7 +12,7 @@ ladspa \
 vim \
 gtk2 \
 graphene \
-libxml2 \
+libyaml \
 sqlite \
 mesa \
 python3

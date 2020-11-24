@@ -41,11 +41,12 @@ enum  {
 static GObject* ayyi_filemanager_constructor (GType, guint n_construct_properties, GObjectConstructParam*);
 static void     ayyi_filemanager_finalize    (GObject*);
 
-static void     detach                          (AyyiFilemanager*);
-static void     tidy_sympath                    (gchar*);
-static void     fm_next_thumb                   (GObject*, const gchar* path);
-static void     start_thumb_scanning            (AyyiFilemanager*);
-static void     fm_add_signals                  (AyyiFilemanager*);
+static void     update_display               (Directory*, DirAction, GPtrArray*, AyyiFilemanager*);
+static void     detach                       (AyyiFilemanager*);
+static void     tidy_sympath                 (gchar*);
+static void     fm_next_thumb                (GObject*, const gchar* path);
+static void     start_thumb_scanning         (AyyiFilemanager*);
+static void     fm_add_signals               (AyyiFilemanager*);
 
 static GdkCursor* crosshair = NULL; // TODO is never set
 
@@ -781,8 +782,7 @@ set_scanning_display(AyyiFilemanager* fm, gboolean scanning)
 }
 
 
-//static
-void
+static void
 update_display (Directory* dir, DirAction action, GPtrArray* items, AyyiFilemanager* fm)
 {
 	ViewIface* view = (ViewIface*)fm->view;

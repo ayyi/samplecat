@@ -16,7 +16,6 @@
 #include "debug/debug.h"
 #include "agl/behaviours/key.h"
 #include "waveform/shader.h"
-#include "waveform/text.h"
 #include "samplecat.h"
 #include "application.h"
 #include "behaviours/panel.h"

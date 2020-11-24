@@ -31,7 +31,7 @@ static void sample_free (Sample*);
 
 
 Sample*
-sample_new()
+sample_new ()
 {
 	Sample* sample = g_new0(Sample, 1);
 	sample->id = -1;
@@ -42,7 +42,7 @@ sample_new()
 
 
 Sample*
-sample_new_from_filename(char* path, gboolean path_alloced)
+sample_new_from_filename (char* path, bool path_alloced)
 {
 	if (!file_exists(path)) {
 		perr("file not found: %s\n", path);
@@ -74,17 +74,19 @@ sample_new_from_filename(char* path, gboolean path_alloced)
 		sample->name= to_utf8(bn);
 		g_free(bn);
 	}
+
 	if(!sample->sample_dir){
 		gchar* dn = g_path_get_dirname(sample->full_path);
 		sample->sample_dir = to_utf8(dn);
 		g_free(dn);
 	}
+
 	return sample;
 }
 
 
 Sample*
-sample_dup(Sample* s)
+sample_dup (Sample* s)
 {
 	Sample* r = g_new0(Sample, 1);
 
@@ -117,7 +119,7 @@ sample_dup(Sample* s)
 
 
 static void
-sample_free(Sample* sample)
+sample_free (Sample* sample)
 {
 	if(sample->ref_count > 0) {
 		gwarn("freeing sample with refcount: %d", sample->ref_count);
@@ -136,7 +138,7 @@ sample_free(Sample* sample)
 
 
 Sample*
-sample_ref(Sample* sample)
+sample_ref (Sample* sample)
 {
 #ifdef DEBUG_REFCOUNTS
 	if(sample->name && !strcmp(sample->name, "test.wav")) printf("+ %i --> %i\n", sample->ref_count, sample->ref_count+1);
@@ -148,7 +150,7 @@ sample_ref(Sample* sample)
 
 
 void
-sample_unref(Sample* sample)
+sample_unref (Sample* sample)
 {
 	if (!sample) return;
 #ifdef DEBUG_REFCOUNTS
@@ -195,7 +197,7 @@ sample_get_file_info (Sample* sample)
 
 
 Sample*
-sample_get_by_filename(const char* abspath)
+sample_get_by_filename (const char* abspath)
 {
 	struct find_sample {
 		Sample*     rv;
@@ -207,17 +209,18 @@ sample_get_by_filename(const char* abspath)
 		struct find_sample* fs = (struct find_sample*) data;
 		Sample* s = samplecat_list_store_get_sample_by_iter(iter);
 		if (!strcmp(s->full_path, fs->abspath)) {
-			fs->rv=s;
-			return TRUE;
+			fs->rv = s;
+			return true;
 		}
 		sample_unref(s);
-		return FALSE;
+		return false;
 	}
 
-	struct find_sample fs;
-	fs.rv = NULL; fs.abspath = abspath;
-	GtkTreeModel* model = GTK_TREE_MODEL(samplecat.store);
-	gtk_tree_model_foreach(model, &filter_sample, &fs);
+	struct find_sample fs = {
+		.abspath = abspath
+	};
+
+	gtk_tree_model_foreach(GTK_TREE_MODEL(samplecat.store), &filter_sample, &fs);
 
 	return fs.rv;
 }
@@ -227,7 +230,7 @@ sample_get_by_filename(const char* abspath)
  *   Result must be g_free'd.
  */
 char*
-sample_get_metadata_str(Sample* sample)
+sample_get_metadata_str (Sample* sample)
 {
 	if(!sample->meta_data) return NULL;
 
@@ -246,7 +249,7 @@ sample_get_metadata_str(Sample* sample)
 
 
 void
-sample_set_metadata(Sample* sample, const char* str)
+sample_set_metadata (Sample* sample, const char* str)
 {
 	if(sample->meta_data) g_ptr_array_unref(sample->meta_data);
 	sample->meta_data = g_ptr_array_new_full(32, g_free);

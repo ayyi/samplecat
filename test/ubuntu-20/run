@@ -1,0 +1,35 @@
+#!/bin/sh
+
+container=$(cat name)
+
+# run with X forwarding
+#XSOCK=/tmp/.X11-unix/X0 docker run -it -v $XSOCK:$XSOCK $container bash
+
+
+usage="run [OPTIONS]\n\noptions:\n  -i interactive (bash shell)\n\nWithout options, default samplecat build will run\n"
+
+test -t 1 && TTY="-t"
+
+while getopts ":i" opt; do
+    case $opt in
+        i  )
+			if [ -e $TTY ]
+			then
+				echo cannot run interactive container without tty
+				exit
+			fi
+			# privileged is needed for opengl
+			#             docker run --privileged -e "DISPLAY=unix:0.0" -v="/tmp/.X11-unix:/tmp/.X11-unix:rw" -i -t $container bash
+			docker run --rm --privileged -v="/tmp/.X11-unix:/tmp/.X11-unix:rw" -e DISPLAY=$DISPLAY -i -t $container bash
+			exit
+			;;
+        \? ) echo -e $usage
+            exit 1
+    esac
+done
+shift $(($OPTIND - 1))
+
+branch=${CI_COMMIT_BRANCH:-master}
+
+# run git build script
+docker run --rm -e branch="$branch" -e DISPLAY=$DISPLAY -i ${TTY} $container

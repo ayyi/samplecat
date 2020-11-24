@@ -6,13 +6,11 @@ bin_PROGRAMS = samplecat_gl
 samplecat_gl_SOURCES = \
 	main.c \
 	application.c application.h \
-	glx.c glx.h \
 	directory.c directory.h \
 	materials/icon_ring.c materials/icon_ring.h \
 	shader.c shader.h \
 	layout.c layout.h \
 	utils.c utils.h \
-	yaml_utils.c yaml_utils.h \
 	keys.h \
 	action.h
 
@@ -23,6 +21,7 @@ AM_CFLAGS = \
 	-I$(top_srcdir)/lib \
 	-I$(top_srcdir)/lib/samplecat \
 	-I$(top_srcdir)/lib/waveform \
+	-I$(top_srcdir)/lib/waveform/lib/agl \
 	-I$(top_srcdir)/lib/waveform/gtkglext-1.0 \
 	-I$(top_srcdir)/experimental \
 	$(SAMPLECAT_CFLAGS) \
@@ -54,7 +53,10 @@ samplecat_gl_LDADD = \
 	$(top_srcdir)/lib/debug/libdebug.a \
 	$(top_srcdir)/lib/icon/libicon.a \
 	$(top_srcdir)/lib/utils/libutils.a \
-	$(WAVEFORM_LDFLAGS) \
+	$(top_srcdir)/lib/yaml/libyaml.a \
+	$(top_srcdir)/lib/waveform/.libs/libwaveformcore.a \
+	$(top_srcdir)/lib/waveform/.libs/libwaveformui.a \
+	$(top_srcdir)/lib/waveform/lib/agl/.libs/libagl.a \
 	$(top_srcdir)/lib/file_manager/libfilemanager.a \
 	$(top_srcdir)/lib/gtk/libgtk.la \
 	$(LOCAL_GTK_LIBS) \
@@ -63,6 +65,7 @@ samplecat_gl_LDADD = \
 	$(TRACKER_LIBS) \
 	$(SQLITE_LIBS) \
 	$(GTK_LIBS) \
+	$(GRAPHENE_LIBS) \
 	$(MYSQL_LDFLAGS) \
 	$(JACK_LIBS) $(SNDFILE_LIBS) ${SAMPLERATE_LIBS} \
 	$(GTHREAD_LIBS) \

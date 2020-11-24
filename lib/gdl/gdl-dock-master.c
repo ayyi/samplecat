@@ -38,6 +38,8 @@
 #include "libgdlmarshal.h"
 #include "libgdltypebuiltins.h"
 
+#include "registry.h"
+
 /* ----- Private prototypes ----- */
 
 static void     gdl_dock_master_class_init    (GdlDockMasterClass *klass);
@@ -73,6 +75,7 @@ static void     _gdl_dock_master_foreach      (gpointer            key,
 static void     gdl_dock_master_xor_rect      (GdlDockMaster      *master);
 
 static void     gdl_dock_master_layout_changed (GdlDockMaster     *master);
+static void     gdl_dock_master_dock_item_added(GdlDockMaster     *master, gpointer);
 
 static void gdl_dock_master_set_switcher_style (GdlDockMaster *master,
                                                 GdlSwitcherStyle switcher_style);
@@ -88,6 +91,7 @@ enum {
 
 enum {
     LAYOUT_CHANGED,
+    DOCK_ITEM_ADDED,
     LAST_SIGNAL
 };
 
@@ -161,8 +165,8 @@ gdl_dock_master_class_init (GdlDockMasterClass *klass)
                            GDL_SWITCHER_STYLE_BOTH,
                            G_PARAM_READWRITE));
 
-    master_signals [LAYOUT_CHANGED] = 
-        g_signal_new ("layout-changed", 
+    master_signals [LAYOUT_CHANGED] =
+        g_signal_new ("layout-changed",
                       G_TYPE_FROM_CLASS (klass),
                       G_SIGNAL_RUN_LAST,
                       G_STRUCT_OFFSET (GdlDockMasterClass, layout_changed),
@@ -172,14 +176,26 @@ gdl_dock_master_class_init (GdlDockMasterClass *klass)
                       G_TYPE_NONE, /* return type */
                       0);
 
+    master_signals [DOCK_ITEM_ADDED] =
+        g_signal_new ("dock-item-added",
+                      G_TYPE_FROM_CLASS (klass),
+                      G_SIGNAL_RUN_LAST,
+                      G_STRUCT_OFFSET (GdlDockMasterClass, dock_item_added),
+                      NULL, /* accumulator */
+                      NULL, /* accu_data */
+                      g_cclosure_marshal_VOID__POINTER,
+                      G_TYPE_NONE, /* return type */
+                      1, /* n params */
+                      G_TYPE_POINTER);
+
     klass->layout_changed = gdl_dock_master_layout_changed;
+    klass->dock_item_added = gdl_dock_master_dock_item_added;
 }
 
 static void
 gdl_dock_master_instance_init (GdlDockMaster *master)
 {
-    master->dock_objects = g_hash_table_new_full (g_str_hash, g_str_equal,
-                                                  g_free, NULL);
+    master->dock_objects = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, NULL);
     master->toplevel_docks = NULL;
     master->controller = NULL;
     master->dock_number = 1;
@@ -666,6 +682,12 @@ gdl_dock_master_layout_changed (GdlDockMaster *master)
     }
 }
 
+static void
+gdl_dock_master_dock_item_added (GdlDockMaster *master, gpointer item)
+{
+    //g_signal_emit (master, master_signals [DOCK_ITEM_ADDED], 0, item);
+}
+
 static gboolean
 idle_emit_layout_changed (gpointer user_data)
 {
@@ -936,7 +958,7 @@ gdl_dock_master_set_controller (GdlDockMaster *master,
         if (GDL_DOCK_OBJECT_AUTOMATIC (new_controller))
             g_warning (_("The new dock controller %p is automatic.  Only manual "
                          "dock objects should be named controller."), new_controller);
-        
+
         /* check that the controller is in the toplevel list */
         if (!g_list_find (master->toplevel_docks, new_controller))
             gdl_dock_master_add (master, new_controller);
@@ -953,10 +975,10 @@ static void
 set_switcher_style_foreach (GtkWidget *obj, gpointer user_data)
 {
     GdlSwitcherStyle style = GPOINTER_TO_INT (user_data);
-    
+
     if (!GDL_IS_DOCK_ITEM (obj))
         return;
-    
+
     if (GDL_IS_DOCK_NOTEBOOK (obj)) {
         
         GtkWidget *child = GDL_DOCK_ITEM (obj)->child;
@@ -966,9 +988,7 @@ set_switcher_style_foreach (GtkWidget *obj, gpointer user_data)
         }
     } else if (gdl_dock_object_is_compound (GDL_DOCK_OBJECT (obj))) {
         
-        gtk_container_foreach (GTK_CONTAINER (obj),
-                               set_switcher_style_foreach,
-                               user_data);
+        gtk_container_foreach (GTK_CONTAINER (obj), set_switcher_style_foreach, user_data);
     }
 }
 
@@ -999,47 +1019,53 @@ int gdl_debug = 2;
 int indent = 0;
 
 void
-gdl_debug_printf(const char* func, int level, const char* format, ...)
+gdl_debug_printf (const char* func, int level, const char* format, ...)
 {
-    va_list args;
+	va_list args;
 
-    va_start(args, format);
-    if (level <= gdl_debug) {
-        fprintf(stderr, "%s(): ", func);
-        vfprintf(stderr, format, args);
-        fprintf(stderr, "\n");
-    }
-    va_end(args);
+	va_start(args, format);
+	if (level <= gdl_debug) {
+		fprintf(stderr, "%s(): ", func);
+		vfprintf(stderr, format, args);
+		fprintf(stderr, "\n");
+	}
+	va_end(args);
 }
 
 static int rec_depth = 0;
 
-static void 
+static void
 gdl_dock_layout_foreach_object_print (GdlDockObject *object, gpointer user_data)
 {
-    char* name  = object->name;
+	char* name  = object->name;
 
-    char f[64];
-    sprintf(f, "  %%%is %%i %%s\n", rec_depth);
-    printf(f, "", rec_depth, name ? name : "");
-    
-    g_return_if_fail (object != NULL && GDL_IS_DOCK_OBJECT (object));
+	char* properties = NULL;
+	if(!name){
+		name = (char*)G_OBJECT_CLASS_NAME(G_OBJECT_GET_CLASS(object));
 
-    /* recurse the object if appropiate */
-    rec_depth++;
-    if (gdl_dock_object_is_compound (object)) {
-        gtk_container_foreach (GTK_CONTAINER (object),
-                               (GtkCallback) gdl_dock_layout_foreach_object_print,
-                               //(gpointer) &info_child);
-                               NULL);
-    }
-    rec_depth--;
+		char* properties = NULL;
+		g_object_get(G_OBJECT(object), "orientation", &properties, NULL);
+	}
+
+	char f[64];
+	sprintf(f, "  %%%is %%i %%s %%s\n", rec_depth);
+	printf(f, "", rec_depth, name ? name : "", properties);
+
+	g_return_if_fail (object != NULL && GDL_IS_DOCK_OBJECT (object));
+
+	rec_depth++;
+	if (gdl_dock_object_is_compound (object)) {
+		gtk_container_foreach (GTK_CONTAINER (object), (GtkCallback) gdl_dock_layout_foreach_object_print, NULL);
+	}
+	rec_depth--;
+
+	if(properties) g_free(properties);
 }
 
 void
 gdl_dock_print_recursive(GdlDockMaster *master)
 {
-    cdbg(0, "...");
-    gdl_dock_master_foreach_toplevel (master, TRUE, (GFunc) gdl_dock_layout_foreach_object_print, NULL);
+	cdbg(0, "...");
+	gdl_dock_master_foreach_toplevel (master, TRUE, (GFunc) gdl_dock_layout_foreach_object_print, NULL);
 }
 

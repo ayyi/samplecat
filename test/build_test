@@ -11,8 +11,8 @@ tmpdir=/tmp/${package}_build
 
 options=(
 " "
+--enable-test
 --enable-debug
---enable-system-gtkglext
 --disable-mysql
 --disable-dock
 --disable-ffmpeg
@@ -20,7 +20,6 @@ options=(
 --disable-jack
 --disable-ayyidbus
 --enable-ayyi
---enable-test
 --enable-valgrind
 --disable-fftw
 --disable-libass
@@ -30,6 +29,7 @@ options=(
 --enable-mx
 --enable-aubio
 --disable-opengl
+--enable-system-gtkglext
 )
 
 set -e

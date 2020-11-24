@@ -11,6 +11,7 @@
 */
 
 #define __runner_c__
+
 #include <getopt.h>
 #include <stdio.h>
 #include <stdbool.h>
@@ -25,7 +26,6 @@
  *  The test must provide the list of tests and the setup and teardown functions
  */
 extern gpointer tests[];
-extern int n_tests;
 extern void setup();
 extern void teardown();
 
@@ -60,17 +60,17 @@ next_test ()
 	printf("\n");
 	TEST.current.test++;
 	if(TEST.timeout) g_source_remove (TEST.timeout);
-	if(TEST.current.test < n_tests){
+	if(TEST.current.test < TEST.n_tests){
 		TEST.current.finished = false;
 		gboolean (*test)() = tests[TEST.current.test];
-		dbg(2, "test %i of %i.", TEST.current.test + 1, n_tests);
+		dbg(2, "test %i of %i.", TEST.current.test + 1, TEST.n_tests);
 		g_timeout_add(300, run_test, test);
 
 		TEST.timeout = g_timeout_add(20000, on_test_timeout, NULL);
 	} else {
 		printf("finished all. passed=%s %i %s failed=%s %i %s\n", green, TEST.n_passed, white, (TEST.n_failed ? red : white), TEST.n_failed, white);
 		teardown();
-		g_timeout_add(1000, __exit, NULL);
+		g_timeout_add(TEST.n_failed ? 4000 : 1000, __exit, NULL);
 	}
 }
 
@@ -92,12 +92,19 @@ test_finished_ ()
 }
 
 
+void
+test_log_start (const char* func)
+{
+	printf("%srunning %i of %i: %s%s ...\n", bold, TEST.current.test + 1, TEST.n_tests, func, white);
+}
+
+
 static gboolean fn(gpointer user_data) { next_test(); return G_SOURCE_REMOVE; }
 
 void
 set_log_handlers ()
 {
-	void log_handler(const gchar* log_domain, GLogLevelFlags log_level, const gchar* message, gpointer user_data)
+	void log_handler (const gchar* log_domain, GLogLevelFlags log_level, const gchar* message, gpointer user_data)
 	{
 	  switch(log_level){
 		case G_LOG_LEVEL_CRITICAL:
@@ -124,13 +131,15 @@ set_log_handlers ()
 int
 main (int argc, char* argv[])
 {
-	gtk_test_init(&argc, &argv);
-
-	dbg(2, "n_tests=%i", n_tests);
+	const gchar* display = g_getenv("DISPLAY");
+	if(display && strlen(display))
+		gtk_test_init(&argc, &argv);
 
 	set_log_handlers();
 
 	setup();
+
+	dbg(2, "n_tests=%i", TEST.n_tests);
 
 	g_idle_add(fn, NULL);
 
@@ -166,7 +175,7 @@ wait_for (ReadyTest test, WaitCallback on_ready, gpointer user_data)
 
 	gboolean _check (C* c)
 	{
-		if(c->test()){
+		if(c->test(c->user_data)){
 			TEST.current.timers = g_list_remove(TEST.current.timers, GINT_TO_POINTER(g_source_get_id(g_main_current_source())));
 			c->on_ready(c->user_data);
 			g_free(c);

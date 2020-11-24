@@ -38,9 +38,6 @@ char * program_name;
 #ifdef USE_TRACKER
   #include "db/tracker.h"
 #endif
-#ifdef USE_MYSQL
-  #include "db/mysql.h"
-#endif
 #include "dh_link.h"
 
 #include "db/db.h"
@@ -381,7 +378,7 @@ main (int argc, char** argv)
 #ifndef USE_GDL
 	message_panel__add_msg("hello", GTK_STOCK_INFO);
 #endif
-	statusbar_print(2, PACKAGE_NAME". Version "PACKAGE_VERSION);
+	statusbar_print(2, PACKAGE_NAME" "PACKAGE_VERSION);
 
 #ifdef __APPLE__
 	gtk_osxapplication_ready(osxApp);
@@ -406,15 +403,17 @@ on_quit (GtkMenuItem* menuitem, gpointer user_data)
 		application_quit(app); // emit signal
 	}
 
+	if(play->auditioner){
 #ifdef HAVE_AYYIDBUS
-	extern Auditioner a_ayyidbus;
-	if(play->auditioner != & a_ayyidbus){
+		extern Auditioner a_ayyidbus;
+		if(play->auditioner != & a_ayyidbus){
 #else
-	if(true){
+		if(true){
 #endif
-		play->auditioner->stop();
+			play->auditioner->stop();
+		}
+		play->auditioner->disconnect();
 	}
-	play->auditioner->disconnect();
 
 	if(samplecat.model->backend.disconnect) samplecat.model->backend.disconnect();
 
@@ -425,11 +424,6 @@ on_quit (GtkMenuItem* menuitem, gpointer user_data)
 #if 0
 	clear_store(); //does this make a difference to valgrind? no.
 #endif
-#endif
-
-#ifdef WITH_VALGRIND
-	application_free(app);
-	mime_type_clear();
 #endif
 
 	dbg (1, "done.");

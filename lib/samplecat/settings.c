@@ -30,6 +30,8 @@ config_new (ConfigContext* ctx)
 	GError* error = NULL;
 	char data[256 * 256];
 	sprintf(data, "# this is the default config file for the Samplecat application.\n# pls enter your database details.\n"
+		"# valid options for database_backend are: sqlite, mysql\n"
+		"# valid options for auditioner are: jack, ayyi, cli\n"
 		"[Samplecat]\n"
 		"database_backend=sqlite\n"
 		"mysql_host=localhost\n"

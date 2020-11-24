@@ -14,6 +14,18 @@
    <insert_a_suppression_name_here>
    Memcheck:Leak
    ...
+   fun:_mesa_BindFramebuffer
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   ...
+   fun:_mesa_BufferData
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   ...
    fun:_mesa_CreateProgram
 }
 {
@@ -255,6 +267,12 @@
    <insert_a_suppression_name_here>
    Memcheck:Leak
    ...
+   fun:blend_func_separate
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   ...
    fun:brw_blorp_clear_color
 }
 {
@@ -449,6 +467,18 @@
 }
 {
    <insert_a_suppression_name_here>
+   Memcheck:Cond
+   ...
+   fun:_mesa_Rotatef
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Cond
+   ...
+   fun:_mesa_Translatef
+}
+{
+   <insert_a_suppression_name_here>
    Memcheck:Value8
    ...
    fun:rasterize_scene
@@ -462,6 +492,19 @@
 {
    <insert_a_suppression_name_here>
    Memcheck:Param
+   writev(vector[...])
    ...
    fun:driswSwapBuffers
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   ...
+   fun:driBindContext
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   ...
+   fun:_mesa_FramebufferTexture2D
 }

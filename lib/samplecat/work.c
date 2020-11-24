@@ -68,7 +68,7 @@ request_analysis (Sample* sample)
 		int changed;
 	} C;
 
-	void analysis_work(Sample* sample, gpointer _c)
+	void analysis_work (Sample* sample, gpointer _c)
 	{
 		C* c = _c;
 
@@ -86,6 +86,7 @@ request_analysis (Sample* sample)
 	void analysis_done (Sample* sample, gpointer _c)
 	{
 		C* c = _c;
+
 		switch(c->changed){
 			case 1 << COL_PEAKLEVEL:
 				samplecat_model_update_sample (samplecat.model, sample, COL_PEAKLEVEL, NULL);
@@ -121,6 +122,7 @@ request_overview (Sample* sample)
 	{
 		PF;
 		g_return_if_fail(sample);
+
 		if(sample->overview){
 			samplecat_model_update_sample (samplecat.model, sample, COL_OVERVIEW, NULL);
 		}else{
@@ -136,12 +138,12 @@ request_overview (Sample* sample)
 void
 request_peaklevel (Sample* sample)
 {
-	void peaklevel_work(Sample* sample, gpointer user_data)
+	void peaklevel_work (Sample* sample, gpointer user_data)
 	{
 		sample->peaklevel = ad_maxsignal(sample->full_path);
 	}
 
-	void peaklevel_done(Sample* sample, gpointer user_data)
+	void peaklevel_done (Sample* sample, gpointer user_data)
 	{
 		dbg(1, "peaklevel=%.2f id=%i", sample->peaklevel, sample->id);
 		// important not to do too many updates to the model as it makes the tree unresponsive.

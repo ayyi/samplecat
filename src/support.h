@@ -13,7 +13,9 @@
 #define __support_h__
 
 #include <stdint.h>
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <gtk/gtk.h>
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 #include "src/typedefs.h"
 #include "utils/ayyi_utils.h"
 #include "utils/mime_type.h"

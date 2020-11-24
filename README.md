@@ -18,7 +18,11 @@ Building
 --------
 
 If you are not a developer it is recommended to use the latest tarball.
-Build using the standard configure/make commands.
+To build from tarball:
+```
+./configure
+make
+```
 
 If you are a developer you will want to use the git repository directly.
 Each time you do a git pull you will also need to update the submodules:

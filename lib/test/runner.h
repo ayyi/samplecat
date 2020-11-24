@@ -13,12 +13,12 @@
 #include <glib.h>
 #include <glib-object.h>
 #define __wf_private__
-#include "wf/debug.h"
+#include "debug/debug.h"
 
 typedef void (TestFn)();
 typedef void (*Test) ();
 
-typedef bool (*ReadyTest)    ();
+typedef bool (*ReadyTest)    (gpointer);
 typedef void (*WaitCallback) (gpointer);
 
 #ifdef __runner_c__
@@ -30,6 +30,7 @@ extern bool abort_on_fail;
 #endif
 
 typedef struct {
+	int n_tests;
 	int n_passed;
 	int n_failed;
 	int timeout;
@@ -49,8 +50,11 @@ extern Test_t TEST;
 
 // public fns
 void       test_errprintf      (char* format, ...);
+void       test_log_start      (const char* func);
 void       wait_for            (ReadyTest, WaitCallback, gpointer);
+#ifdef __GTK_H__
 GtkWidget* find_widget_by_name (GtkWidget*, const char*);
+#endif
 
 // private fns
 void       next_test           ();
@@ -62,7 +66,7 @@ void       test_finished_      ();
 	__test_idx = TEST.current.test; \
 	if(!step){ \
 		g_strlcpy(TEST.current.name, __func__, 64); \
-		printf("%srunning %i of %zu: %s%s ...\n", bold, TEST.current.test + 1, G_N_ELEMENTS(tests), __func__, white); \
+		test_log_start(__func__); \
 	} \
 	if(TEST.current.finished) return;
 
@@ -95,6 +99,13 @@ void       test_finished_      ();
 	test_finished_(); \
 	return G_SOURCE_REMOVE;}
 
+#define FAIL_TEST_NULL(msg) \
+	{TEST.current.finished = true; \
+	passed = false; \
+	printf("%s%s%s\n", red, msg, white); \
+	test_finished_(); \
+	return NULL;}
+
 #define assert(A, B, ...) \
 	{bool __ok_ = ((A) != 0); \
 	{if(!__ok_) perr(B, ##__VA_ARGS__); } \
@@ -104,4 +115,9 @@ void       test_finished_      ();
 	{bool __ok_ = ((A) != 0); \
 	{if(!__ok_) perr(B, ##__VA_ARGS__); } \
 	{if(!__ok_) FAIL_TEST_TIMER("assertion failed") }}
+
+#define assert_null(A, B, ...) \
+	{bool __ok_ = ((A) != 0); \
+	{if(!__ok_) perr(B, ##__VA_ARGS__); } \
+	{if(!__ok_) FAIL_TEST_NULL("assertion failed") }}
 

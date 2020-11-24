@@ -593,26 +593,10 @@ samplecat_model_update_sample (SamplecatModel* self, Sample* sample, gint prop, 
 		}
 		case COL_X_NOTES:
 		{
-			Sample* _tmp46_;
-			gint _tmp47_;
-			void* _tmp48_;
-			gboolean _tmp49_ = FALSE;
-			gboolean _tmp50_;
-			_tmp46_ = sample;
-			_tmp47_ = _tmp46_->id;
-			_tmp48_ = val;
-			_tmp49_ = backend.update_string (_tmp47_, "notes", (gchar*) _tmp48_);
-			ok = _tmp49_;
-			_tmp50_ = ok;
-			if (_tmp50_) {
-				Sample* _tmp51_;
-				void* _tmp52_;
-				gchar* _tmp53_;
-				_tmp51_ = sample;
-				_tmp52_ = val;
-				_tmp53_ = g_strdup ((const gchar*) _tmp52_);
-				_g_free0 (_tmp51_->notes);
-				_tmp51_->notes = _tmp53_;
+			if((ok = backend.update_string (sample->id, "notes", (gchar*)val))){
+				gchar* str = g_strdup ((const gchar*)val);
+				_g_free0 (sample->notes);
+				sample->notes = str;
 			}
 			break;
 		}

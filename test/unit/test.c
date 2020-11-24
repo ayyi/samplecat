@@ -25,19 +25,16 @@
 #include "application.h"
 #include "window.h"
 
-TestFn test_1, test_2;
-
-gpointer tests[] = {
-	test_1,
-	test_2,
-};
-
-int n_tests = G_N_ELEMENTS(tests);
+#include "utils.c"
+#include "list.c"
 
 
 void
 setup ()
 {
+	type_init();
+
+	TEST.n_tests = G_N_ELEMENTS(tests);
 }
 
 
@@ -45,17 +42,4 @@ void
 teardown ()
 {
 }
-
-
-void
-test_1 ()
-{
-}
-
-
-void
-test_2 ()
-{
-}
-
 

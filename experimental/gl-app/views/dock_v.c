@@ -11,10 +11,9 @@
 */
 #include "config.h"
 #undef USE_GTK
+#include "debug/debug.h"
 #include "agl/ext.h"
-#include "agl/debug.h"
 #include "agl/shader.h"
-#include "samplecat/support.h"
 #include "views/panel.h"
 #include "views/dock_v.h"
 
@@ -28,13 +27,6 @@ static AGlActor* find_handle_by_y (DockVView*, float);
 static AGl* agl = NULL;
 static int instance_count = 0;
 static AGlActorClass actor_class = {0, "Dock V", (AGlActorNew*)dock_v_view, dock_free};
-
-
-static inline float
-panel_spacing (PanelView* panel)
-{
-	return panel->no_border ? 4 : SPACING;
-}
 
 
 AGlActorClass*
@@ -54,6 +46,13 @@ _init ()
 
 		init_done = true;
 	}
+}
+
+
+static inline float
+panel_spacing (PanelView* panel)
+{
+	return panel->no_border ? 4 : SPACING;
 }
 
 
@@ -77,7 +76,7 @@ dock_v_view (gpointer _)
 
 	_init();
 
-	bool dock_v_paint(AGlActor* actor)
+	bool dock_v_paint (AGlActor* actor)
 	{
 		DockVView* dock = (DockVView*)actor;
 
@@ -196,10 +195,8 @@ dock_v_view (gpointer _)
 					item->height = each_unallocated;
 				}
 			}
-			y += item->height + panel_spacing(panel);
+			y += item->height + ((i < G_N_ELEMENTS(items) - 1) ? panel_spacing(panel) : 0);
 		}
-		// TODO dont remove spacing if not added
-		y -= SPACING; // no spacing needed after last element
 
 		if(y < agl_actor__height(actor)){
 			// under allocated
@@ -409,7 +406,7 @@ dock_free (AGlActor* actor)
 {
 	DockVView* dock = (DockVView*)actor;
 
-	g_list_free0(dock->panels);
+	g_clear_pointer(&dock->panels, g_list_free);
 
 	if(!--instance_count){
 	}

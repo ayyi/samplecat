@@ -69,3 +69,15 @@
 #   11 ff_pango_leak_malloc_lib_global  valgrind_ff_pango.supp:26 suppressed: 344 bytes in 11 blocks
 #   12 ff_pango_leak_realloc_lib_global valgrind_ff_pango.supp:34 suppressed: 85,145 bytes in 24 blocks
 #   27
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: possible
+   fun:malloc
+   obj:/usr/lib64/libfontconfig.so*
+   obj:/usr/lib64/libfontconfig.so*
+   obj:/usr/lib64/libfontconfig.so*
+   obj:/usr/lib64/libfontconfig.so*
+   obj:/usr/lib64/libfontconfig.so*
+   obj:/usr/lib64/libfontconfig.so*
+}

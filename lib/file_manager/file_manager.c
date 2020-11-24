@@ -1,20 +1,15 @@
-/*
- * Copyright (C) 2007-2018, Tim Orford
- * Copyright (C) 2006, Thomas Leonard and others (see changelog for details).
- *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License as published by the Free
- * Software Foundation; version 3.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
- * more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 59 Temple
- * Place, Suite 330, Boston, MA  02111-1307  USA
- */
+/**
+* +----------------------------------------------------------------------+
+* | This file is part of the Ayyi project. http://ayyi.org               |
+* | copyright (C) 2011-2020 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2006, Thomas Leonard and others                        |
+* +----------------------------------------------------------------------+
+* | This program is free software; you can redistribute it and/or modify |
+* | it under the terms of the GNU General Public License version 3       |
+* | as published by the Free Software Foundation.                        |
+* +----------------------------------------------------------------------+
+*
+*/
 
 /*
  *  file_manager.c
@@ -23,8 +18,7 @@
 
 #include "config.h"
 
-#include <stdlib.h>
-#include <stdint.h>
+#include <stdbool.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -49,7 +43,7 @@ enum {
     PLUGIN_TYPE_1 = 1,
     PLUGIN_TYPE_MAX
 };
-static void file_manager__load_plugins();
+static void file_manager__load_plugins ();
 
 
 	static gboolean _load_plugins(gpointer user_data){ file_manager__load_plugins(); return G_SOURCE_REMOVE; }

@@ -150,7 +150,6 @@ void             fm__open_item                     (AyyiFilemanager*, ViewIter*,
 void             fm__target_mode                   (AyyiFilemanager*, TargetFunc, gpointer, const char* reason);
 void             filer_detach_rescan               (AyyiFilemanager*);
 
-void             update_display                    (Directory*, DirAction, GPtrArray*, AyyiFilemanager*);
 /*static */void  attach                            (AyyiFilemanager*);
 
 void             ayyi_filemanager_emit_dir_changed (AyyiFilemanager*);

@@ -17,8 +17,6 @@ void        info_gerror              (const char* msg, GError**);
 
 gchar*      path_from_utf8           (const gchar* utf8);
 
-GList*      get_dirlist              (const char*);
-
 void        string_increment_suffix  (char* newstr, const char* orig, int new_max);
 
 int         get_terminal_width       ();

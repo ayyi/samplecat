@@ -16,9 +16,11 @@
 #include "agl/ext.h"
 #include "agl/utils.h"
 #include "agl/behaviours/key.h"
+#include "agl/text/renderer.h"
 #include "waveform/actor.h"
 #include "waveform/text.h"
 #include "debug/debug.h"
+#include "icon/utils.h"
 #include "file_manager/file_manager.h"
 #include "file_manager/pixmaps.h"
 #include "samplecat.h"
@@ -29,7 +31,7 @@
 
 #define _g_free0(var) (var = (g_free (var), NULL))
 
-#define row_height0 20
+#define row_height0 22
 #define wav_height 30
 #define row_spacing 8
 #define row_height (row_height0 + wav_height + row_spacing)
@@ -51,8 +53,7 @@ static GHashTable* icon_textures = NULL;
 
 static gboolean files_scan_dir           (AGlActor*);
 static void     files_with_wav_on_scroll (AGlObservable*, int row, gpointer view);
-static guint    create_icon              (const char*, GdkPixbuf*);
-static guint    get_icon                 (const char*, GdkPixbuf*);
+static bool     not_audio                (const char* path);
 
 
 AGlActorClass*
@@ -77,25 +78,8 @@ files_with_wav_get_class ()
 }
 
 
-// TODO this is a copy of private AGlActor fn.
-//      In this particular case we can just check the state of the Scrollbar child
-#ifdef AGL_ACTOR_RENDER_CACHE
-static bool
-agl_actor__is_animating (AGlActor* a)
-{
-	if(a->transitions) return true;
-
-	GList* l = a->children;
-	for(;l;l=l->next){
-		if(agl_actor__is_animating((AGlActor*)l->data)) return true;
-	}
-	return false;
-}
-#endif
-
-
 AGlActor*
-files_with_wav(gpointer _)
+files_with_wav (gpointer _)
 {
 	instance_count++;
 
@@ -108,43 +92,35 @@ files_with_wav(gpointer _)
 		GPtrArray* items = dv->items;
 
 		int n_rows = N_ROWS_VISIBLE(actor);
+		int clip_fix = builder()->target ? 0 : actor->region.x1;
 
-		int col[] = {0, 24, 260, 360, 400, 440, 480};
+		int col[] = {0, 24, 260, 360, 490, 530, 575};
 		char* col_heads[] = {"Filename", "Size", "Date", "Owner", "Group"};
 		int sort_column = 1;
 
-#ifdef AGL_ACTOR_RENDER_CACHE
-		int y0 = 0;
-		bool is_animating = agl_actor__is_animating(actor);
-		if(is_animating) y0 = -actor->scrollable.y1;
-#else
-		int y0 = -actor->scrollable.y1;
-#endif
-
 		agl->shaders.plain->uniform.colour = 0x222222ff;
 		agl_use_program((AGlShader*)agl->shaders.plain);
-		agl_rect_((AGlRect){col[sort_column], y0 - 2, col[sort_column + 1] - col[sort_column], row_height0});
+		agl_rect_((AGlRect){col[sort_column] -2, -2, col[sort_column + 1] - col[sort_column], row_height0 - 2});
 
 		int c; for(c=0;c<G_N_ELEMENTS(col_heads);c++){
-			agl_enable_stencil(0, y0, col[c + 2] - 6, actor->region.y2);
-			agl_print(col[c + 1], y0, 0, STYLE.text, col_heads[c]);
+			agl_push_clip(0.f, 0.f, MIN(col[c + 2] - 6, agl_actor__width(actor)) + clip_fix, actor->region.y2);
+			agl_print(col[c + 1], 0, 0, STYLE.text, col_heads[c]);
+			agl_pop_clip();
 		}
 
 		if(!items->len)
 			return agl_print(0, 0, 0, STYLE.text, "No files"), true;
 
-		y0 += row_height0;
 		int offset = SCROLLBAR->scroll->value;
 		int i, r; for(i = offset; r = i - offset, i < items->len && (i - offset < n_rows); i++){
-			int y = y0 + r * row_height;
+			int y = row_height0 + i * row_height;
+			int y2 = row_height0 + i * row_height;
 			if(r == FILES->view->selection - offset){
 				agl->shaders.plain->uniform.colour = STYLE.selection;
 				agl_use_program((AGlShader*)agl->shaders.plain);
-				agl_disable_stencil();
 				agl_rect_((AGlRect){0, y - 2, agl_actor__width(actor) - 20, row_height0 + wav_height + 4});
 			}else{
 				// waveform background
-				agl_disable_stencil();
 				agl->shaders.plain->uniform.colour = STYLE.bg_alt;
 				agl_use_program((AGlShader*)agl->shaders.plain);
 				agl_rect_((AGlRect){0, y + row_height0, agl_actor__width(actor) - 20, wav_height});
@@ -153,29 +129,36 @@ files_with_wav(gpointer _)
 			WavViewItem* vitem = items->pdata[i];
 			DirItem* item = vitem->item;
 			char size[16] = {'\0'}; snprintf(size, 15, "%zu", item->size);
-			const char* val[] = {item->leafname, size, user_name(item->uid), group_name(item->gid)};
+			const char* val[] = {item->leafname, size, pretty_time(&item->mtime), user_name(item->uid), group_name(item->gid)};
 			int c; for(c=0;c<G_N_ELEMENTS(val);c++){
-				agl_enable_stencil(0, y0, col[c + 2] - 6, actor->region.y2);
-				agl_print(col[c + 1], y, 0, STYLE.text, val[c]);
+				agl_push_clip(0, 0, MIN(col[c + 2] - 6, agl_actor__width(actor)) + clip_fix, actor->region.y2 + 20.);
+				agl_print(col[c + 1], y2, 0, (STYLE.text & 0xffffff00) + (c ? 0xaa : 0xff), val[c]);
+				agl_pop_clip();
 			}
 
 			if(!vitem->wav){
 				DirItem* item = vitem->item;
 				char* name = item->leafname;
-				WaveformActor* wa = wf_canvas_add_new_actor(view->wfc, NULL);
-				agl_actor__add_child(actor, (AGlActor*)wa);
-				Waveform* waveform = waveform_new(g_strdup_printf("%s/%s", files_view_get_path(FILES), name));
-				wf_actor_set_waveform(wa, waveform, NULL, NULL);
-				wf_actor_set_colour(wa, STYLE.fg);
-				wf_actor_set_rect(wa, &(WfRectangle){0, y + row_height0, agl_actor__width(actor) - 20, wav_height});
-				vitem->wav = (AGlActor*)wa;
+
+				char* path = g_strdup_printf("%s/%s", files_view_get_path(FILES), name);
+				if(!not_audio(path)){
+					WaveformActor* wa = wf_canvas_add_new_actor(view->wfc, NULL);
+					agl_actor__add_child(actor, (AGlActor*)wa);
+
+					Waveform* waveform = waveform_new(path);
+					wf_actor_set_waveform(wa, waveform, NULL, NULL);
+					wf_actor_set_colour(wa, STYLE.fg);
+					wf_actor_set_rect(wa, &(WfRectangle){0, y + row_height0, agl_actor__width(actor) - 20, wav_height});
+					vitem->wav = (AGlActor*)wa;
+				}else{
+					g_free(path);
+				}
 			}
 
 			// TODO dont do this in paint
 			if(item->mime_type){
-				GdkPixbuf* pixbuf = mime_type_get_pixbuf(item->mime_type);
-				if(GDK_IS_PIXBUF(pixbuf)){
-					guint t = get_icon(item->mime_type->subtype, pixbuf);
+				guint t = get_icon_texture_by_mimetype(item->mime_type);
+				if(t){
 					agl->shaders.texture->uniform.fg_colour = 0xffffffff;
 					agl_use_program((AGlShader*)agl->shaders.texture);
 					agl_textured_rect(t, 0, y, 16, 16, NULL);
@@ -183,14 +166,14 @@ files_with_wav(gpointer _)
 					pwarn("failed to get icon for %s", item->mime_type->subtype);
 				}
 			}
-		}
 
-		agl_disable_stencil();
+			g_free((char*)val[2]);
+		}
 
 		return true;
 	}
 
-	void files_init(AGlActor* a)
+	void files_init (AGlActor* a)
 	{
 		FilesWithWav* view = (FilesWithWav*)a;
 		AGlActor* actor = a;
@@ -233,7 +216,7 @@ files_with_wav(gpointer _)
 		g_signal_connect(FILES->viewmodel, "row-changed", (GCallback)files_on_row_change, a);
 	}
 
-	void files_set_size(AGlActor* actor)
+	void files_set_size (AGlActor* actor)
 	{
 		FilesWithWav* view = (FilesWithWav*)actor;
 
@@ -242,7 +225,7 @@ files_with_wav(gpointer _)
 		}
 	}
 
-	bool files_event(AGlActor* actor, GdkEvent* event, AGliPt xy)
+	bool files_event (AGlActor* actor, GdkEvent* event, AGliPt xy)
 	{
 		FilesWithWav* view = (FilesWithWav*)actor;
 
@@ -432,35 +415,13 @@ files_with_wav_on_scroll (AGlObservable* observable, int row, gpointer _view)
 }
 
 
-static guint
-create_icon(const char* name, GdkPixbuf* pixbuf)
+static bool
+not_audio (const char* path)
 {
-	g_return_val_if_fail(pixbuf, 0);
-
-	guint textures[1];
-	glGenTextures(1, textures);
-
-	dbg(2, "icon: pixbuf=%ix%i %ibytes/px", gdk_pixbuf_get_width(pixbuf), gdk_pixbuf_get_height(pixbuf), gdk_pixbuf_get_n_channels(pixbuf));
-	glBindTexture   (GL_TEXTURE_2D, textures[0]);
-	glTexParameterf (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameterf (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexImage2D    (GL_TEXTURE_2D, 0, GL_RGBA, gdk_pixbuf_get_width(pixbuf), gdk_pixbuf_get_height(pixbuf), 0, GL_RGBA, GL_UNSIGNED_BYTE, gdk_pixbuf_get_pixels(pixbuf));
-	gl_warn("texture bind");
-	g_object_unref(pixbuf);
-
-	return textures[0];
-}
-
-
-static guint
-get_icon(const char* name, GdkPixbuf* pixbuf)
-{
-	guint t = GPOINTER_TO_INT(g_hash_table_lookup(icon_textures, name));
-	if(!t){
-		t = create_icon(name, pixbuf);
-		g_hash_table_insert(icon_textures, (gpointer)name, GINT_TO_POINTER(t));
-
+	static char* types[] = {".pdf", ".jpg", ".png", ".txt"};
+	for(int i=0;i<G_N_ELEMENTS(types);i++){
+		if(g_str_has_suffix(path, types[i]))
+			return true;
 	}
-	return t;
+	return false;
 }
-

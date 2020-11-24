@@ -1047,22 +1047,22 @@ do_move(const char *path, const char *dest)
 	argv[3] = dest;
 
 	char* err = fork_exec_wait(argv);
-	if (err)
-	{
+	if (err) {
 		//printf_send("!%s\nFailed to move %s as %s\n", err, path, dest_path);
 		dbg(0, "!%s\nFailed to move %s as %s\n", err, path, dest);
 		dbg(0, "FIXME add print callback to application");
 		//statusbar_printf(1, "!%s: Failed to move %s as %s", err, path, dest);
 		g_free(err);
-	}
-	else
-	{
+
+	} else {
 		send_check_path(dest);
 
 		//if (is_dir) send_mount_path(path);
-		if (is_dir) dbg(0, "?%s", path);
-		//else        statusbar_printf(1, "file '%s' moved.", path);
-		else dbg(0, "FIXME add print callback to application");
+		if (is_dir)
+			dbg(0, "?%s", path);
+		else
+			//statusbar_printf(1, "file '%s' moved.", path);
+			dbg(0, "FIXME add print callback to application");
 	}
 }
 

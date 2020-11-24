@@ -8,7 +8,6 @@ RUN apt-get -y update && DEBIAN_FRONTEND=noninteractive apt-get install -y \\
 #include "dependencies"
 
 RUN echo "alias ll='ls -l'" >> /root/.bashrc
-ENV DISPLAY :0
 WORKDIR /root
 ADD add_samples /root/
 ADD scripts/Makefile /root/

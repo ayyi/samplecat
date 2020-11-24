@@ -12,7 +12,7 @@
 #ifndef __graph_debug_h__
 #define __graph_debug_h__
 
-#include "glx.h"
+#include "agl/x11.h"
 
 AGlWindow* graph_debug_window (AGlScene*);
 

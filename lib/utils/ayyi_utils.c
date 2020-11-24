@@ -69,40 +69,6 @@ path_from_utf8(const gchar* utf8)
 }
 
 
-GList*
-get_dirlist (const char* path)
-{
-	/*
-	scan a directory and return a list of any subdirectoies. Not recursive.
-	-the list, and each entry in it,  must be freed.
-	*/
-
-	GList* dir_list = NULL;
-	char filepath[256];
-	const gchar* file;
-	GError* error = NULL;
-	GDir* dir;
-	if((dir = g_dir_open(path, 0, &error))){
-		while((file = g_dir_read_name(dir))){
-			if(file[0]=='.') continue;
-			snprintf(filepath, 128, "%s/%s", path, file);
-
-			if(g_file_test(filepath, G_FILE_TEST_IS_DIR)){
-				dbg (2, "found dir: %s", filepath);
-				dir_list = g_list_append(dir_list, g_strdup(filepath));
-			}
-		}
-		g_dir_close(dir);
-	}else{
-		if(_debug_ > 1) gwarn ("cannot open directory. %s", error->message);
-		g_error_free(error);
-		error = NULL;
-	}
-
-	return dir_list;
-}
-
-
 void
 string_increment_suffix(char* new, const char* orig, int new_max)
 {

@@ -13,6 +13,7 @@ AM_CFLAGS = \
 	-I$(top_srcdir)/lib \
 	-I$(top_srcdir)/lib/samplecat \
 	-I$(top_srcdir)/lib/waveform \
+	-I$(top_srcdir)/lib/waveform/lib/agl \
 	-I$(top_srcdir) \
 	$(SAMPLECAT_CFLAGS) \
 	$(OPENGL_CFLAGS) \

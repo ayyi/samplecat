@@ -34,3 +34,30 @@
    ...
    fun:XPutImage
 }
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   ...
+   fun:gtk_icon_info_load_icon
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Param
+   writev(vector[...])
+   ...
+   fun:XRenderComposite
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Param
+   writev(vector[...])
+   ...
+   fun:XSetClipMask
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Param
+   writev(vector[...])
+   ...
+   fun:xcb_writev
+}

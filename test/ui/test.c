@@ -12,9 +12,8 @@
 
 #include "config.h"
 #include <getopt.h>
-#ifdef USE_GDL
 #include "gdl/gdl-dock-item.h"
-#endif
+#include "gdl/gdl-dock-master.h"
 #include "gdk/gdkkeysyms.h"
 #include "debug/debug.h"
 #include "icon_theme.h"
@@ -29,14 +28,8 @@ static bool search_pending = false;
 
 Application* app = NULL;
 
-TestFn test_1, test_2;
-
-gpointer tests[] = {
-	test_1,
-	test_2,
-};
-
-int n_tests = G_N_ELEMENTS(tests);
+#include "utils.c"
+#include "list.c"
 
 
 int
@@ -185,15 +178,9 @@ on_quit ()
 void
 setup ()
 {
+	TEST.n_tests = G_N_ELEMENTS(tests);
+
 	application_main (0, NULL);
-}
-
-
-void
-send_key (GdkWindow* window, int keyval, GdkModifierType modifiers)
-{
-	assert(gdk_test_simulate_key (window, -1, -1, keyval, modifiers, GDK_KEY_PRESS), "%i", keyval);
-	assert(gdk_test_simulate_key (window, -1, -1, keyval, modifiers, GDK_KEY_RELEASE), "%i", keyval);
 }
 
 
@@ -203,74 +190,5 @@ teardown ()
 	dbg(1, "sending CTL-Q ...");
 
 	send_key(app->window->window, GDK_KEY_q, GDK_CONTROL_MASK);
-}
-
-
-void
-test_1 ()
-{
-	START_TEST;
-
-	void do_search (gpointer _)
-	{
-		assert(gtk_widget_get_realized(app->window), "window not realized");
-
-		gboolean _do_search (gpointer _)
-		{
-#if 0
-			extern void print_widget_tree (GtkWidget* widget);
-			print_widget_tree(app->window);
-#endif
-
-			GtkWidget* search = find_widget_by_name(app->window, "search-entry");
-
-			int n_rows = gtk_tree_model_iter_n_children(gtk_tree_view_get_model((GtkTreeView*)app->libraryview->widget), NULL);
-			assert_and_stop(n_rows > 0, "no library items");
-#if 0
-			send_key(search->window, GDK_KEY_H, 0);
-			send_key(search->window, GDK_KEY_E, 0);
-			send_key(search->window, GDK_KEY_Return, 0);
-#else
-			gtk_test_text_set(search, "Hello");
-#endif
-			gtk_widget_activate(search);
-
-			bool is_empty ()
-			{
-				return gtk_tree_model_iter_n_children(gtk_tree_view_get_model((GtkTreeView*)app->libraryview->widget), NULL) == 0;
-			}
-
-			void then (gpointer _)
-			{
-				FINISH_TEST;
-			}
-
-			wait_for(is_empty, then, NULL);
-
-			return G_SOURCE_REMOVE;
-		}
-		g_timeout_add(1000, _do_search, NULL);
-	}
-
-	bool window_is_open ()
-	{
-		return gtk_widget_get_realized(app->window);
-	}
-
-	wait_for(window_is_open, do_search, NULL);
-}
-
-
-void
-test_2 ()
-{
-	START_TEST;
-
-	gboolean a (gpointer _)
-	{
-		FINISH_TEST_TIMER_STOP;
-	}
-
-	g_timeout_add(2000, a, NULL);
 }
 

@@ -1,3 +1,4 @@
 [submodule "lib/waveform"]
 	path = lib/waveform
 	url = https://github.com/ayyi/libwaveform.git
+	ignore = dirty

@@ -3,7 +3,7 @@
 # $Header: $
 
 RESTRICT="nomirror"
-IUSE="mysql sqlite tracker auditioner ffmpeg"
+IUSE="mysql sqlite tracker auditioner ffmpeg sndfile"
 DESCRIPTION="SampleCat is a program for cataloguing and auditioning audio samples."
 HOMEPAGE="http://ayyi.github.io/samplecat/"
 SRC_URI="http://www.orford.org/assets/${P}.tar.gz"
@@ -12,15 +12,14 @@ LICENSE="GPL-3"
 KEYWORDS="x86"
 SLOT="0"
 
-DEPEND=">=media-sound/jack-audio-connection-kit-0.99
-	>=media-libs/libsndfile-1.0.10
-	dev-libs/dbus-glib
-	media-libs/graphene
+DEPEND="dev-libs/dbus-glib
+	sndfile? ( >=media-libs/libsndfile-1.0.10 )
 	mysql? ( >=dev-db/mysql-3.23.0 )
 	sqlite? ( >=dev-db/sqlite-3 )
 	tracker? ( >=app-misc/tracker-0.6 )
 	auditioner? ( >=media-sound/ayyi_auditioner-0.1 )
 	ffmpeg? ( virtual/ffmpeg )
+	media-libs/graphene
 	>=x11-libs/gtk+-2.6"
 
 src_compile() {
