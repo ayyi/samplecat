@@ -4,6 +4,7 @@ RUN apt-get -y update && apt-get install -y \
 	gcc make automake libtool pkg-config gdb \
 	git \
 	vim \
+	libsqlite3-dev \
 	libsndfile1-dev \
 	libgl1-mesa-dev \
 	libxml2-dev \
