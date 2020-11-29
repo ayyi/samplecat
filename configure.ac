@@ -222,6 +222,32 @@ AC_DEFINE(HAVE_MYSQL_8, 1, [We have at least mysql version 8])
 
 dnl -----------------------------------------------------------------------------
 
+AS_IF([test "$enable_sqlite" != "no"],[
+	PKG_CHECK_MODULES(SQLITE, sqlite3, AC_DEFINE(USE_SQLITE, 1, Use sqlite backend) enable_sqlite="yes", enable_sqlite="no")
+])
+AM_CONDITIONAL(ENABLE_SQLITE, test "$enable_sqlite" = "yes")
+AC_SUBST(SQLITE_CFLAGS)
+AC_SUBST(SQLITE_LIBS)
+
+dnl -----------------------------------------------------------------------------
+
+AS_IF([test "$enable_tracker" != "no"], [
+	 PKG_CHECK_MODULES(TRACKER, tracker-client-0.10, [AC_DEFINE(USE_TRACKER, 1, Use Tracker metadata daemon) enable_tracker="yes"],[
+		 PKG_CHECK_MODULES(TRACKER, tracker-client-0.9, [AC_DEFINE(USE_TRACKER, 1, Use Tracker metadata daemon) enable_tracker="yes"],
+	   enable_tracker="no")]
+	 ) ])
+AM_CONDITIONAL(ENABLE_TRACKER, test "$enable_tracker" = "yes")
+AC_SUBST(TRACKER_CFLAGS)
+AC_SUBST(TRACKER_LIBS)
+
+dnl -----------------------------------------------------------------------------
+
+if test "$enable_mysql" = "no" && test "$enable_sqlite" = "no" && test "$enable_tracker" = "no"; then
+	AC_MSG_ERROR([Please ensure one of either mysql, sqlite, or tracker is enabled])
+fi
+
+dnl -----------------------------------------------------------------------------
+
 dnl TODO: sndfile is optional if FFMPEG is avail
 PKG_CHECK_MODULES(SNDFILE, sndfile)
 AC_SUBST(SNDFILE_CFLAGS)
@@ -358,26 +384,6 @@ AS_IF([test "$enable_sf2" = "yes"], [
 AM_CONDITIONAL(ENABLE_SF2, test "$enable_sf2" = "yes")
 AC_SUBST(SF2_LDFLAGS)
 AC_SUBST(SF2_CFLAGS)
-
-dnl -----------------------------------------------------------------------------
-
-AS_IF([test "$enable_tracker" != "no"], [
-	 PKG_CHECK_MODULES(TRACKER, tracker-client-0.10, [AC_DEFINE(USE_TRACKER, 1, Use Tracker metadata daemon) enable_tracker="yes"],[
-		 PKG_CHECK_MODULES(TRACKER, tracker-client-0.9, [AC_DEFINE(USE_TRACKER, 1, Use Tracker metadata daemon) enable_tracker="yes"],
-	   enable_tracker="no")]
-	 ) ])
-AM_CONDITIONAL(ENABLE_TRACKER, test "$enable_tracker" = "yes")
-AC_SUBST(TRACKER_CFLAGS)
-AC_SUBST(TRACKER_LIBS)
-
-dnl -----------------------------------------------------------------------------
-
-AS_IF([test "$enable_sqlite" != "no"],[
-	PKG_CHECK_MODULES(SQLITE, sqlite3, AC_DEFINE(USE_SQLITE, 1, Use sqlite backend) enable_sqlite="yes", enable_sqlite="no")
-])
-AM_CONDITIONAL(ENABLE_SQLITE, test "$enable_sqlite" = "yes")
-AC_SUBST(SQLITE_CFLAGS)
-AC_SUBST(SQLITE_LIBS)
 
 dnl -----------------------------------------------------------------------------
 
