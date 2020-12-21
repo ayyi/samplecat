@@ -92,6 +92,12 @@
    <insert_a_suppression_name_here>
    Memcheck:Leak
    ...
+   fun:_mesa_make_current
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   ...
    fun:_mesa_new_shader_program
 }
 {
@@ -117,6 +123,12 @@
    Memcheck:Leak
    ...
    fun:_mesa_PushMatrix
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   ...
+   fun:_mesa_RenderbufferStorage
 }
 {
    <insert_a_suppression_name_here>

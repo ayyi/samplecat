@@ -46,7 +46,7 @@ static int instance_count = 0;
 static AGlActorClass actor_class = {0, "Files", (AGlActorNew*)files_view, files_free};
 
 static bool  files_scan_dir  (AGlActor*);
-static void  files_on_scroll (AGlObservable*, int row, gpointer view);
+static void  files_on_scroll (AGlObservable*, AGlVal row, gpointer view);
 
 static ActorKeyHandler
 	files_nav_up,
@@ -60,26 +60,26 @@ static ActorKey keys[] = {
 
 
 static void
-on_select (AGlObservable* o, int row, gpointer _actor)
+on_select (AGlObservable* o, AGlVal row, gpointer _actor)
 {
 	AGlActor* actor = _actor;
 	FilesView* files = (FilesView*)_actor;
 	DirectoryView* dv = files->view;
 	GPtrArray* items = dv->items;
 
-	if(row > -1 && row < items->len && row != dv->selection){
-		dv->selection = row;
+	if(row.i > -1 && row.i < items->len && row.i != dv->selection){
+		dv->selection = row.i;
 
 		AGlObservable* scroll = ((ScrollbarActor*)actor->children->data)->scroll;
 
-		if(row > scroll->value + N_ROWS_VISIBLE(files) - 2){
-			agl_observable_set(scroll, scroll->value + 1);
+		if(row.i > scroll->value.i + N_ROWS_VISIBLE(files) - 2){
+			agl_observable_set(scroll, scroll->value.i + 1);
 		}
-		else if(row < scroll->value + 1){
-			agl_observable_set(scroll, scroll->value - 1);
+		else if(row.i < scroll->value.i + 1){
+			agl_observable_set(scroll, scroll->value.i - 1);
 		}
 
-		VIEW_IFACE_GET_CLASS((ViewIface*)files->view)->set_selected((ViewIface*)files->view, &(ViewIter){.i = row}, true);
+		VIEW_IFACE_GET_CLASS((ViewIface*)files->view)->set_selected((ViewIface*)files->view, &(ViewIter){.i = row.i}, true);
 
 		agl_actor__invalidate(actor);
 	}
@@ -167,7 +167,7 @@ files_view (gpointer _)
 		if(!items->len)
 			return agl_print(col[1], y, 0, STYLE.text, "No files"), true;
 
-		int scroll_offset = SCROLLBAR->scroll->value;
+		int scroll_offset = SCROLLBAR->scroll->value.i;
 		int i, r; for(i = scroll_offset; r = i - scroll_offset, i < items->len && (i - scroll_offset < n_rows); i++){
 			if(r == view->view->selection - scroll_offset){
 				agl->shaders.plain->uniform.colour = STYLE.selection;
@@ -220,7 +220,7 @@ files_view (gpointer _)
 	{
 		FilesView* view = (FilesView*)actor;
 
-		if(SCROLLBAR->scroll->value > max_scroll_offset){
+		if(SCROLLBAR->scroll->value.i > max_scroll_offset){
 			agl_observable_set(SCROLLBAR->scroll, max_scroll_offset);
 		}
 	}
@@ -241,13 +241,13 @@ files_view (gpointer _)
 				switch(event->button.button){
 					case 4:
 						dbg(1, "! scroll up");
-						agl_observable_set(SCROLLBAR->scroll, SCROLLBAR->scroll->value - 1);
+						agl_observable_set(SCROLLBAR->scroll, SCROLLBAR->scroll->value.i - 1);
 						break;
 					case 5:
 						dbg(1, "! scroll down");
 						if(scrollable_height > N_ROWS_VISIBLE(actor)){
-							if(SCROLLBAR->scroll->value < max_scroll_offset)
-								agl_observable_set(SCROLLBAR->scroll, SCROLLBAR->scroll->value + 1);
+							if(SCROLLBAR->scroll->value.i < max_scroll_offset)
+								agl_observable_set(SCROLLBAR->scroll, SCROLLBAR->scroll->value.i + 1);
 						}
 						break;
 				}
@@ -340,7 +340,7 @@ files_view_row_at_coord (FilesView* view, int x, int y)
 {
 	AGlActor* actor = (AGlActor*)view;
 
-	y += SCROLLBAR->scroll->value * row_height - header_height;
+	y += SCROLLBAR->scroll->value.i * row_height - header_height;
 	if(y < 0) return -1;
 	int r = y / row_height;
 	GPtrArray* items = view->view->items;
@@ -351,14 +351,14 @@ files_view_row_at_coord (FilesView* view, int x, int y)
 
 
 static void
-files_on_scroll (AGlObservable* observable, int row, gpointer _view)
+files_on_scroll (AGlObservable* observable, AGlVal row, gpointer _view)
 {
 	AGlActor* actor = (AGlActor*)_view;
 	FilesView* view = (FilesView*)_view;
 	DirectoryView* dv = view->view;
 	GPtrArray* items = dv->items;
 
-	actor->scrollable.y1 = - SCROLLBAR->scroll->value * row_height;
+	actor->scrollable.y1 = - SCROLLBAR->scroll->value.i * row_height;
 	actor->scrollable.y2 = actor->scrollable.y1 + (items->len + 1) * row_height;
 
 	agl_actor__invalidate(actor);
@@ -369,7 +369,7 @@ static bool
 files_nav_up (AGlActor* actor, GdkModifierType modifier)
 {
 	AGlObservable* observable = SELECTABLE->observable;
-	agl_observable_set(observable, observable->value - 1);
+	agl_observable_set(observable, observable->value.i - 1);
 
 	return AGL_HANDLED;
 }
@@ -379,7 +379,7 @@ static bool
 files_nav_down (AGlActor* actor, GdkModifierType modifier)
 {
 	AGlObservable* observable = SELECTABLE->observable;
-	agl_observable_set(observable, observable->value + 1);
+	agl_observable_set(observable, observable->value.i + 1);
 
 	return AGL_HANDLED;
 }

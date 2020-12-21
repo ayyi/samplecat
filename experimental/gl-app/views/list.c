@@ -96,7 +96,8 @@ list_view (gpointer _)
 		col[4] = MAX(col[4], actor->region.x2);
 
 		GtkTreeIter iter;
-		if(!gtk_tree_model_get_iter_first((GtkTreeModel*)samplecat.store, &iter)){ perr ("cannot get iter"); return false; }
+		if(!gtk_tree_model_get_iter_first((GtkTreeModel*)samplecat.store, &iter)) return true;
+
 		int i = 0;
 		for(;i<view->scroll_offset;i++){
 			gtk_tree_model_iter_next((GtkTreeModel*)samplecat.store, &iter);

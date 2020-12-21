@@ -48,7 +48,7 @@ scrollbar_view_get_class ()
 
 
 static void
-scrollbar_on_scroll (AGlObservable* observable, int row, gpointer scrollbar)
+scrollbar_on_scroll (AGlObservable* observable, AGlVal row, gpointer scrollbar)
 {
 	scrollbar_start_activity((AGlActor*)scrollbar, false);
 }

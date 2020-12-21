@@ -134,7 +134,7 @@ main (int argc, char* argv[])
 
 	AGliPt size = get_window_size_from_settings();
 	int screen = DefaultScreen(dpy);
-	AGlWindow* window = agl_window("Samplecat", (XDisplayWidth(dpy, screen) - size.x) / 2, (XDisplayHeight(dpy, screen) - size.y) / 2, size.x, size.y, false);
+	AGlWindow* window = agl_window("Samplecat", (XDisplayWidth(dpy, screen) - size.x) / 2, (XDisplayHeight(dpy, screen) - size.y) / 2, size.x, size.y, 0);
 	app->scene = window->scene;
 	((AGlActor*)app->scene)->on_event = on_event;
 

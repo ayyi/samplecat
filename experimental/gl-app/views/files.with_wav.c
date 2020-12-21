@@ -52,7 +52,7 @@ static AGlActorClass actor_class = {0, "Files", (AGlActorNew*)files_with_wav, fi
 static GHashTable* icon_textures = NULL;
 
 static gboolean files_scan_dir           (AGlActor*);
-static void     files_with_wav_on_scroll (AGlObservable*, int row, gpointer view);
+static void     files_with_wav_on_scroll (AGlObservable*, AGlVal row, gpointer view);
 static bool     not_audio                (const char* path);
 
 
@@ -111,7 +111,7 @@ files_with_wav (gpointer _)
 		if(!items->len)
 			return agl_print(0, 0, 0, STYLE.text, "No files"), true;
 
-		int offset = SCROLLBAR->scroll->value;
+		int offset = SCROLLBAR->scroll->value.i;
 		int i, r; for(i = offset; r = i - offset, i < items->len && (i - offset < n_rows); i++){
 			int y = row_height0 + i * row_height;
 			int y2 = row_height0 + i * row_height;
@@ -220,7 +220,7 @@ files_with_wav (gpointer _)
 	{
 		FilesWithWav* view = (FilesWithWav*)actor;
 
-		if(SCROLLBAR->scroll->value > max_scroll_offset){
+		if(SCROLLBAR->scroll->value.i > max_scroll_offset){
 			agl_observable_set(SCROLLBAR->scroll, max_scroll_offset);
 		}
 	}
@@ -240,13 +240,13 @@ files_with_wav (gpointer _)
 				switch(event->button.button){
 					case 4:
 						dbg(1, "! scroll up");
-						agl_observable_set(SCROLLBAR->scroll, MAX(0, SCROLLBAR->scroll->value - 1));
+						agl_observable_set(SCROLLBAR->scroll, MAX(0, SCROLLBAR->scroll->value.i - 1));
 						break;
 					case 5:
 						dbg(1, "! scroll down");
 						if(scrollable_height > N_ROWS_VISIBLE(actor)){
-							if(SCROLLBAR->scroll->value < max_scroll_offset)
-								agl_observable_set(SCROLLBAR->scroll, SCROLLBAR->scroll->value + 1);
+							if(SCROLLBAR->scroll->value.i < max_scroll_offset)
+								agl_observable_set(SCROLLBAR->scroll, SCROLLBAR->scroll->value.i + 1);
 						}
 						break;
 				}
@@ -336,7 +336,7 @@ files_with_wav_row_at_coord (FilesWithWav* view, int x, int y)
 
 	#define header_height 20
 
-	y += SCROLLBAR->scroll->value * row_height - header_height;
+	y += SCROLLBAR->scroll->value.i * row_height - header_height;
 	if(y < 0) return -1;
 	int r = y / row_height;
 	GPtrArray* items = FILES->view->items;
@@ -367,7 +367,7 @@ files_with_wav_select (FilesWithWav* view, int row)
 			wf_actor_set_colour((WaveformActor*)vitem->wav, 0xff6666ff);
 		}
 
-		iRange range = {SCROLLBAR->scroll->value, SCROLLBAR->scroll->value + N_ROWS_VISIBLE(view) - 1};
+		iRange range = {SCROLLBAR->scroll->value.i, SCROLLBAR->scroll->value.i + N_ROWS_VISIBLE(view) - 1};
 		if(row > range.end){
 			agl_observable_set(SCROLLBAR->scroll, row - N_ROWS_VISIBLE(view) + 1);
 		}
@@ -390,21 +390,21 @@ files_with_wav_select (FilesWithWav* view, int row)
 
 
 static void
-files_with_wav_on_scroll (AGlObservable* observable, int row, gpointer _view)
+files_with_wav_on_scroll (AGlObservable* observable, AGlVal row, gpointer _view)
 {
 	AGlActor* actor = (AGlActor*)_view;
 	FilesWithWav* view = (FilesWithWav*)_view;
 	DirectoryView* dv = FILES->view;
 	GPtrArray* items = dv->items;
 
-	actor->scrollable.y1 = - SCROLLBAR->scroll->value * row_height;
+	actor->scrollable.y1 = - SCROLLBAR->scroll->value.i * row_height;
 	actor->scrollable.y2 = actor->scrollable.y1 + (items->len + 1) * row_height;
 
-	HIDE_ITEM(row - 1);
-	HIDE_ITEM(SCROLLBAR->scroll->value + N_ROWS_VISIBLE(actor));
+	HIDE_ITEM(row.i - 1);
+	HIDE_ITEM(SCROLLBAR->scroll->value.i + N_ROWS_VISIBLE(actor));
 
-	int last = MIN(items->len, SCROLLBAR->scroll->value + N_ROWS_VISIBLE(actor));
-	for(int r = SCROLLBAR->scroll->value; r < last ; r++){
+	int last = MIN(items->len, SCROLLBAR->scroll->value.i + N_ROWS_VISIBLE(actor));
+	for(int r = SCROLLBAR->scroll->value.i; r < last ; r++){
 		WavViewItem* vitem = items->pdata[r];
 		if(vitem->wav){
 			wf_actor_set_rect((WaveformActor*)vitem->wav, &(WfRectangle){0, row_height0 + r * row_height + row_height0, agl_actor__width(actor) - 20, wav_height});
