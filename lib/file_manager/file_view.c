@@ -516,7 +516,7 @@ details_get_sort_column_id (GtkTreeSortable* sortable, gint* sort_column_id, Gtk
 		case SORT_OWNER: col = COL_OWNER; break;
 		case SORT_GROUP: col = COL_GROUP; break;
 		default:
-			g_warning("details_get_sort_column_id(): error! sort_type=%i", filer_window->sort_type);
+			pwarn("error sort_type=%i", filer_window->sort_type);
 			return FALSE;
 	}
 	if (sort_column_id) *sort_column_id = col;

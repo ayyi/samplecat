@@ -68,15 +68,11 @@ on_really_connected (char* status, int len, GError* error, gpointer user_data)
 {
 	C* c = user_data;
 
-	if(error){
-		if(c->callback) c->callback(error, c->user_data);
-		g_error_free(error);
-
-	}else{
+	if(!error){
 		dbus_g_proxy_add_signal(dbus->proxy, "PlaybackStopped", G_TYPE_INVALID);
 		dbus_g_proxy_add_signal(dbus->proxy, "Position", G_TYPE_INT, G_TYPE_DOUBLE, G_TYPE_INVALID);
 
-		void on_stopped(DBusGProxy* proxy, gpointer user_data)
+		void on_stopped (DBusGProxy* proxy, gpointer user_data)
 		{
 			if(!play->queue){
 				player_on_play_finished();
@@ -84,25 +80,25 @@ on_really_connected (char* status, int len, GError* error, gpointer user_data)
 		}
 		dbus_g_proxy_connect_signal (dbus->proxy, "PlaybackStopped", G_CALLBACK(on_stopped), NULL, NULL);
 
-		void on_position(DBusGProxy* proxy, int position, double seconds, gpointer user_data)
+		void on_position (DBusGProxy* proxy, int position, double seconds, gpointer user_data)
 		{
 			player_set_position_seconds(seconds);
 		}
 		dbus_g_proxy_connect_signal (dbus->proxy, "Position", G_CALLBACK(on_position), NULL, NULL);
-
-		if(c->callback) c->callback(NULL, c->user_data);
 	}
+
+	if(c->callback) c->callback(error, c->user_data);
 
 	g_free(c);
 }
 
 
 void
-auditioner_connect(ErrorCallback callback, gpointer user_data)
+auditioner_connect (ErrorCallback callback, gpointer user_data)
 {
 	dbus = g_new0(AyyiConnection, 1);
 
-	gboolean _auditioner_connect(gpointer user_data)
+	gboolean _auditioner_connect (gpointer user_data)
 	{
 		C* c = user_data;
 		GError* error = NULL;
@@ -138,13 +134,13 @@ auditioner_connect(ErrorCallback callback, gpointer user_data)
 
 
 void
-auditioner_disconnect()
+auditioner_disconnect ()
 {
 }
 
 
 static int
-auditioner_check()
+auditioner_check ()
 {
 	// It is not possible to check the service without starting it so we return OK
 	return 0;
@@ -152,7 +148,7 @@ auditioner_check()
 
 
 bool
-auditioner_play(Sample* sample)
+auditioner_play (Sample* sample)
 {
 	dbg(1, "%s", sample->full_path);
 	dbus_g_proxy_call_no_reply(dbus->proxy, "StartPlayback", G_TYPE_STRING, sample->full_path, G_TYPE_INVALID);
@@ -161,18 +157,18 @@ auditioner_play(Sample* sample)
 
 
 void
-auditioner_stop()
+auditioner_stop ()
 {
 	dbg(1, "...");
 	dbus_g_proxy_call_no_reply(dbus->proxy, "StopPlayback", G_TYPE_STRING, "", G_TYPE_INVALID);
 }
 
 void
-auditioner_play_all()
+auditioner_play_all ()
 {
 	static void (*stop)(DBusGProxy*, gpointer) = NULL;
 
-	void play_next()
+	void play_next ()
 	{
 		if(!play->queue){
 			dbus_g_proxy_disconnect_signal(dbus->proxy, "PlaybackStopped", G_CALLBACK(stop), NULL);
@@ -180,7 +176,7 @@ auditioner_play_all()
 		play->next();
 	}
 
-	void playall__on_stopped(DBusGProxy* proxy, gpointer user_data)
+	void playall__on_stopped (DBusGProxy* proxy, gpointer user_data)
 	{
 		play_next();
 	}
@@ -197,22 +193,23 @@ typedef struct {
 
 
 static void
-audtioner_status_reply(DBusGProxy* proxy, DBusGProxyCall* call, gpointer data)
+audtioner_status_reply (DBusGProxy* proxy, DBusGProxyCall* call, gpointer data)
 {
 	C2* c = data;
 
 	char* status;
 	int queue_size;
 	GError* error = NULL;
-	if (!dbus_g_proxy_end_call (proxy, call, &error, G_TYPE_STRING, &status, G_TYPE_INT, &queue_size, G_TYPE_INVALID)){
-		if(error){
-			printf("%s\n", error->message);
-			g_error_free(error);
-		}
-	}
+	dbus_g_proxy_end_call (proxy, call, &error, G_TYPE_STRING, &status, G_TYPE_INT, &queue_size, G_TYPE_INVALID);
+
 	c->callback(status, queue_size, error, c->user_data);
 
-	g_free(status);
+	if(error){
+		printf("%s\n", error->message);
+		g_error_free(error);
+	}else{
+		g_free(status);
+	}
 	g_free(c);
 }
 

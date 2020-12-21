@@ -25,7 +25,7 @@ int _debug_ = 0;
 char ayyi_bold  [12] = "\x1b[1;39m";
 char ayyi_white [12] = "\x1b[0;39m";
 char ayyi_warn  [32] = "\x1b[1;33mwarning:\x1b[0;39m";
-char ayyi_err   [32] = "\x1b[1;31merror!\x1b[0;39m";
+char ayyi_err   [32] = "\x1b[1;31merror\x1b[0;39m";
 
 
 void
