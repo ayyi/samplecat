@@ -25,9 +25,14 @@ make
 ```
 
 If you are a developer you will want to use the git repository directly.
+```
+./autogen.sh
+./configure
+make
+```
 Each time you do a git pull you will also need to update the submodules:
 ```
-	git submodule foreach git pull origin master
+	git submodule update --remote --merge --recursive
 	make clean
 ```
 
