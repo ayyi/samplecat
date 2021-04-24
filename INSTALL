@@ -35,8 +35,6 @@ a tarball, some additional steps are needed before you can
 build:
 
 	./autogen.sh
-	git submodule init
-	git submodule update
 
 If you subsequently need to update the submodules as part of a git pull:
 

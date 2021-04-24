@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2016-2020 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2016-2021 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -98,7 +98,7 @@ dock_v_view (gpointer _)
 
 		if(dock->handle.opacity > 0.0){
 			float alpha = dock->handle.opacity;
-			agl->shaders.plain->uniform.colour = (0x999999ff & 0xffffff00) + (uint32_t)(alpha * 0xff);
+			SET_PLAIN_COLOUR (agl->shaders.plain, (0x999999ff & 0xffffff00) + (uint32_t)(alpha * 0xff));
 			agl_use_program((AGlShader*)agl->shaders.plain);
 			agl_rect_((AGlRect){0, dock->handle.actor->region.y1 - SPACING / 2 - DIVIDER / 2 , agl_actor__width(actor), DIVIDER});
 		}
@@ -112,7 +112,7 @@ dock_v_view (gpointer _)
 
 	void dock_set_state (AGlActor* actor)
 	{
-		agl->shaders.plain->uniform.colour = 0x66666666;
+		SET_PLAIN_COLOUR (agl->shaders.plain, 0x66666666);
 	}
 
 	void dock_v_layout (AGlActor* actor)

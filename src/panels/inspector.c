@@ -374,7 +374,7 @@ inspector_add_meta_cells (Inspector* inspector, GPtrArray* meta_data)
 	if(!meta_data) return;
 
 	// currently we are not able to add ebu cells after metadata cells so they must be added first.
-	if(!i->meta.start) return gwarn("start not set");
+	if(!i->meta.start) return pwarn("start not set");
 
 	if(i->meta.first_child) inspector_remove_cells(inspector, &i->meta);
 

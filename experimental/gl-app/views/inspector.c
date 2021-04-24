@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2017-2020 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2017-2021 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -15,13 +15,10 @@
 #include <GL/gl.h>
 #include "debug/debug.h"
 #include "file_manager/support.h" // to_utf8()
-#include "agl/ext.h"
-#include "agl/utils.h"
-#include "agl/actor.h"
+#include "agl/behaviours/scrollable.h"
 #include "agl/fbo.h"
 #include "samplecat.h"
 #include "application.h"
-#include "views/scrollbar.h"
 #include "views/inspector.h"
 
 #define _g_free0(var) (var = (g_free (var), NULL))
@@ -46,13 +43,11 @@ inspector_view_get_class ()
 
 
 static void
-_init()
+_init ()
 {
-	static bool init_done = false;
-
-	if(!init_done){
+	if (!agl) {
 		agl = agl_get_instance();
-		init_done = true;
+		agl_actor_class__add_behaviour (&actor_class, scrollable_get_class());
 	}
 }
 
@@ -91,8 +86,8 @@ inspector_view (gpointer _)
 
 #ifdef INSPECTOR_RENDER_CACHE
 #define PRINT_ROW(KEY, VAL) \
-		agl_print( 0, row_height * (                      row)  , 0, 0xffffff99, KEY); \
-		agl_print(80, row_height * (                      row++), 0, STYLE.text, VAL);
+		agl_print( 0, -actor->scrollable.y1 + row_height * (row)  , 0, 0xffffff99, KEY); \
+		agl_print(80, -actor->scrollable.y1 + row_height * (row++), 0, STYLE.text, VAL);
 #else
 #define PRINT_ROW(KEY, VAL) \
 		agl_print( 0, row_height * (view->scroll_offset + row)  , 0, 0xffffff99, KEY); \
@@ -139,13 +134,7 @@ inspector_view (gpointer _)
 
 	void inspector_init (AGlActor* a)
 	{
-#ifdef INSPECTOR_RENDER_CACHE
-		InspectorView* view = (InspectorView*)a;
-		a->fbo = agl_fbo_new(agl_actor__width(a), scrollable_height, 0, AGL_FBO_HAS_STENCIL);
-		a->cache.enabled = true;
-		a->cache.size_request = (AGliPt){agl_actor__width(a), agl_actor__scrollable_height(a)};
-#endif
-		a->parent->colour = 0xffaa33ff; // panel gets colour from its child. This assumes inspector parent is a Scrollable
+		a->colour = 0xffaa33ff; // panel gets colour from its child.
 	}
 
 	void inspector_set_size (AGlActor* actor)
@@ -154,11 +143,6 @@ inspector_view (gpointer _)
 
 		#define N_ROWS_VISIBLE(A) (agl_actor__height(((AGlActor*)A)) / row_height)
 		view->cache.n_rows_visible = N_ROWS_VISIBLE(actor);
-
-#ifdef INSPECTOR_RENDER_CACHE
-		actor->cache.size_request.x = agl_actor__width(actor);
-		agl_actor__invalidate(actor);
-#endif
 	}
 
 	bool inspector_event (AGlActor* actor, GdkEvent* event, AGliPt xy)
@@ -166,7 +150,7 @@ inspector_view (gpointer _)
 		return AGL_NOT_HANDLED;
 	}
 
-	InspectorView* view = AGL_NEW(InspectorView,
+	InspectorView* view = agl_actor__new (InspectorView,
 		.actor = {
 			.class = &actor_class,
 			.name = actor_class.name,

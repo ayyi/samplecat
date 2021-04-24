@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2016-2019 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2016-2021 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -75,13 +75,13 @@ tabs_view (gpointer _)
 
 		int x = 0;
 		int i = 0;
-		for(GList* l = tabs->tabs;l;l=l->next){
+		for (GList* l = tabs->tabs;l;l=l->next) {
 			TabsViewTab* tab = l->data;
 
 			icon->bg = 0x000000ff;
 			if(tabs->hover.animatable.val.f && i == tabs->hover.tab){
-				agl->shaders.plain->uniform.colour = icon->bg = 0x33333300 + (int)(((float)0xff) * tabs->hover.opacity);
-				agl_use_program((AGlShader*)agl->shaders.plain);
+				PLAIN_COLOUR2 (agl->shaders.plain) = icon->bg = 0x33333300 + (int)(((float)0xff) * tabs->hover.opacity);
+				agl_use_program (agl->shaders.plain);
 				agl_rect_((AGlRect){i * tab_width, -0, tab_width - 10, TAB_HEIGHT - 6});
 			}
 
@@ -100,12 +100,12 @@ tabs_view (gpointer _)
 			i++;
 		}
 
-		agl->shaders.plain->uniform.colour = (STYLE.fg & 0xffffff00) + 0xff;
-		agl_use_program((AGlShader*)agl->shaders.plain);
-		agl_rect_((AGlRect){tabs->active * tab_width, TAB_HEIGHT - 6, tab_width - 10, 2});
+		PLAIN_COLOUR2 (agl->shaders.plain) = (STYLE.fg & 0xffffff00) + 0xff;
+		agl_use_program ((AGlShader*)agl->shaders.plain);
+		agl_rect_ ((AGlRect){tabs->active * tab_width, TAB_HEIGHT - 6, tab_width - 10, 2});
 
 		// set content position
-		if(ABS(slide->x) > 0.01){
+		if (ABS(slide->x) > 0.01) {
 			agl_enable_stencil(0, 0, actor->region.x2, actor->region.y2);
 
 			/*
@@ -115,7 +115,7 @@ tabs_view (gpointer _)
 			AGlActor* items[] = {slide->prev, slide->next};
 			float x = slide->x;
 			float w = agl_actor__width(actor);
-			for(int i=0; i<G_N_ELEMENTS(items); i++){
+			for (int i=0; i<G_N_ELEMENTS(items); i++) {
 				AGlActor* a = items[i];
 #ifdef AGL_ACTOR_RENDER_CACHE
 				if(a->cache.valid){

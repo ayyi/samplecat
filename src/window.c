@@ -46,9 +46,7 @@
 #include "waveform/view_plus.h"
 #endif
 #ifdef HAVE_FFTW3
-#ifdef USE_OPENGL
-#include "gl_spectrogram_view.h"
-#else
+#ifndef USE_OPENGL
 #include "spectrogram_widget.h"
 #endif
 #endif
@@ -62,8 +60,8 @@
 
 #include "../layouts/layouts.c"
 
-extern void       view_details_dnd_get            (GtkWidget*, GdkDragContext*, GtkSelectionData*, guint info, guint time, gpointer data);
-extern void       on_quit                         (GtkMenuItem*, gpointer);
+extern void view_details_dnd_get (GtkWidget*, GdkDragContext*, GtkSelectionData*, guint info, guint time, gpointer data);
+extern void on_quit              (GtkMenuItem*, gpointer);
 
 #define BACKEND samplecat.model->backend
 #define _INSPECTOR ((Inspector*)panels[PANEL_TYPE_INSPECTOR].widget)
@@ -101,7 +99,7 @@ static NewPanelFn
 	filters_new,
 	make_fileview_pane;
 
-extern NewPanelFn search_new, dir_panel_new, tags_new;
+extern NewPanelFn search_new, dir_panel_new, tags_new, spectrogram_area_new;
 
 typedef struct {
    char*          name;
@@ -448,9 +446,7 @@ window_new ()
 #else
 			if(true){
 #endif
-#ifdef USE_OPENGL
-				gl_spectrogram_set_file((GlSpectrogram*)window.spectrogram, sample->full_path);
-#else
+#ifndef USE_OPENGL
 				spectrogram_widget_set_file ((SpectrogramWidget*)window.spectrogram, sample->full_path);
 #endif
 			}
@@ -1253,13 +1249,9 @@ show_waveform (bool enable)
 static GtkWidget*
 spectrogram_new ()
 {
-#ifdef USE_OPENGL
-	gl_spectrogram_set_gl_context(agl_get_gl_context());
-#endif
-
 	return
 #ifdef USE_OPENGL
-		(GtkWidget*)gl_spectrogram_new();
+		(GtkWidget*)spectrogram_area_new();
 #else
         (GtkWidget*)spectrogram_widget_new();
 #endif
@@ -1284,9 +1276,7 @@ show_spectrogram (bool enable)
 		Sample* selection = samplecat.model->selection;
 		if(selection){
 			dbg(1, "selection=%s", selection->full_path);
-#ifdef USE_OPENGL
-			gl_spectrogram_set_file((GlSpectrogram*)window.spectrogram, selection->full_path);
-#else
+#ifndef USE_OPENGL
 			spectrogram_widget_set_file((SpectrogramWidget*)window.spectrogram, selection->full_path);
 #endif
 		}

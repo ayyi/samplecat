@@ -34,7 +34,7 @@ options=(
 
 set -e
 
-declare -i n_tests_complete=0;
+declare -i n_tests_complete=0
 
 SETCOLOR_GREEN="echo -en \\033[1;32m"
 SETCOLOR_YELLOW="echo -en \\033[1;32m"
@@ -62,18 +62,18 @@ function get_tarball_2 {
 	fi;
 }
 
-mkdir -p ${tmpdir};
+mkdir -p ${tmpdir}
 rm -rf $tmpdir/${package}-${version}
 
 function compile {
 	echo ""
-	${SETCOLOR_YELLOW}; echo "compile: "$1; ${SETCOLOR_NORMAL};
-	./configure $1 && \
+	${SETCOLOR_YELLOW}; echo "compile: "$1; ${SETCOLOR_NORMAL}
+	./configure $1
 	make clean && \
 	make
 	exit_status=$?
 	if [ ${exit_status} -ne 0 ]; then
-		${SETCOLOR_FAILURE}; echo -en "fail! "; ${SETCOLOR_NORMAL}; echo $1;
+		${SETCOLOR_FAILURE}; echo -en "fail! "; ${SETCOLOR_NORMAL}; echo $1
 		abort="true"
 	else
 		n_tests_complete=$n_tests_complete+1
@@ -90,13 +90,13 @@ get_tarball_1 && \
 	cd ${package}-${version} && \
 	echo "" && \
 	for i in "${options[@]}"; do compile "$i" || break; done && \
-	echo "" && \
+	echo ""
 
 if [ "$abort" = "true" ]
 then
 	echo "complete: "$n_tests_complete" / "${#options[@]}
 else
-	${SETCOLOR_YELLOW} && echo "All builds completed successfully" && ${SETCOLOR_NORMAL};
+	${SETCOLOR_YELLOW} && echo "All builds completed successfully" && ${SETCOLOR_NORMAL}
 	echo "complete="$n_tests_complete
 fi
 

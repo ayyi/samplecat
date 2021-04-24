@@ -1,104 +1,82 @@
-/**
-* +----------------------------------------------------------------------+
-* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2016-2020 Tim Orford <tim@orford.org>                  |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-*
-*/
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
+ | copyright (C) 2016-2021 Tim Orford <tim@orford.org>                  |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
+ */
 #define __wf_private__
 #include "config.h"
-#include "agl/ext.h"
-#include "agl/utils.h"
-#include "agl/actor.h"
 #include "agl/behaviours/key.h"
+#include "actors/scrollbar.h"
 #include "debug/debug.h"
 #include "file_manager/file_manager.h"
 #include "file_manager/pixmaps.h"
 #include "icon/utils.h"
 #include "samplecat.h"
 #include "application.h"
-#include "views/scrollbar.h"
 #include "views/files.impl.h"
 #include "views/files.h"
 
 #define _g_free0(var) (var = (g_free (var), NULL))
 
 #define FONT              "Droid Sans"
-#define row_height        20
+#define ROW_HEIGHT        20
 #define header_height     row_height
 #define RHS_PADDING       20 // dont draw under scrollbar
-#define N_ROWS_VISIBLE(A) (agl_actor__height(((AGlActor*)A)) / row_height - 1)
+#define N_ROWS_VISIBLE(A) ((int)(agl_actor__height(((AGlActor*)A))) / ((FilesView*)((AGlActor*)A)->parent)->row_height)
 #define scrollable_height (view->view->items->len)
-#define max_scroll_offset (scrollable_height - N_ROWS_VISIBLE(actor) + 2)
+#define max_scroll(VIEW)  ((scrollable_height - N_ROWS_VISIBLE(VIEW->filelist) + 2) * (VIEW)->row_height)
 #define SCROLLBAR         ((ScrollbarActor*)((FilesView*)actor)->scrollbar)
 #define KEYS(A)           ((KeyBehaviour*)A->behaviours[0])
-#define SELECTABLE        ((SelectBehaviour*)actor->behaviours[1])
+#define SELECTABLE(A)     ((SelectBehaviour*)(A)->behaviours[1])
 #define PATH              (FILES_STATE((AGlActor*)view)->params->params[0].val.c)
 
 static void files_free (AGlActor*);
 
 static AGl* agl = NULL;
 static int instance_count = 0;
+static int col[] = {0, 24, 260, 360, 400, 440};
 static AGlActorClass actor_class = {0, "Files", (AGlActorNew*)files_view, files_free};
 
-static bool  files_scan_dir  (AGlActor*);
-static void  files_on_scroll (AGlObservable*, AGlVal row, gpointer view);
+static bool files_scan_dir  (AGlActor*);
+static void files_on_scroll (AGlObservable*, AGlVal row, gpointer view);
+static void files_on_select (AGlObservable*, AGlVal row, gpointer);
+
+static AGlActor* filelist_view (void*);
 
 static ActorKeyHandler
 	files_nav_up,
-	files_nav_down;
+	files_nav_down,
+	files_page_up,
+	files_page_down,
+	files_nav_home,
+	files_nav_end;
 
 static ActorKey keys[] = {
-	{XK_Up,   files_nav_up},
-	{XK_Down, files_nav_down},
+	{XK_Up,        files_nav_up},
+	{XK_Down,      files_nav_down},
+	{XK_Page_Up,   files_page_up},
+	{XK_Page_Down, files_page_down},
+	{XK_Home,      files_nav_home},
+	{XK_End,       files_nav_end},
 	{0,}
 };
-
-
-static void
-on_select (AGlObservable* o, AGlVal row, gpointer _actor)
-{
-	AGlActor* actor = _actor;
-	FilesView* files = (FilesView*)_actor;
-	DirectoryView* dv = files->view;
-	GPtrArray* items = dv->items;
-
-	if(row.i > -1 && row.i < items->len && row.i != dv->selection){
-		dv->selection = row.i;
-
-		AGlObservable* scroll = ((ScrollbarActor*)actor->children->data)->scroll;
-
-		if(row.i > scroll->value.i + N_ROWS_VISIBLE(files) - 2){
-			agl_observable_set(scroll, scroll->value.i + 1);
-		}
-		else if(row.i < scroll->value.i + 1){
-			agl_observable_set(scroll, scroll->value.i - 1);
-		}
-
-		VIEW_IFACE_GET_CLASS((ViewIface*)files->view)->set_selected((ViewIface*)files->view, &(ViewIter){.i = row.i}, true);
-
-		agl_actor__invalidate(actor);
-	}
-}
 
 
 AGlActorClass*
 files_view_get_class ()
 {
-	static bool init_done = false;
-
-	if(!init_done){
+	if (!agl) {
 		agl = agl_get_instance();
 
 		agl_actor_class__add_behaviour(&actor_class, key_get_class());
 
 		dir_init();
-
-		init_done = true;
 	}
 	return &actor_class;
 }
@@ -112,8 +90,8 @@ files_add_behaviours (FilesView* view)
 	KEYS(actor)->keys = &keys;
 
 	actor->behaviours[1] = selectable();
-	SELECTABLE->on_select = on_select;
-	agl_behaviour_init((AGlBehaviour*)SELECTABLE, (AGlActor*)view);
+	SELECTABLE(actor)->on_select = files_on_select;
+	agl_behaviour_init((AGlBehaviour*)SELECTABLE(actor), (AGlActor*)view);
 
 	void set_path (AGlActor* actor, const char* path)
 	{
@@ -143,56 +121,14 @@ files_view (gpointer _)
 
 	bool files_paint (AGlActor* actor)
 	{
-		FilesView* view = (FilesView*)actor;
-		DirectoryView* dv = view->view;
-		GPtrArray* items = dv->items;
-
-		int n_rows = N_ROWS_VISIBLE(actor);
-
-		int col[] = {0, 24, 260, 360, 400, 440};
 		char* col_heads[] = {"Filename", "Size", "Owner", "Group"};
 
-#ifdef AGL_ACTOR_RENDER_CACHE
-		int y0 = (fbs.i == 0) ? -actor->scrollable.y1 : 0;
-#else
-		int y0 = -actor->scrollable.y1;
-#endif
-
-		int c; for(c=0;c<G_N_ELEMENTS(col_heads);c++){
-			agl_enable_stencil(0, y0, MIN(col[c + 2] - 6, agl_actor__width(actor)), actor->region.y2);
-			agl_print(col[c + 1], y0, 0, STYLE.text, col_heads[c]);
+		for (int c=0;c<G_N_ELEMENTS(col_heads);c++) {
+			agl_push_clip(0.f, 0.f, MIN(col[c + 2] - 6, agl_actor__width(actor) - RHS_PADDING), 1000000.);
+			agl_print(col[c + 1], 0, 0, STYLE.text, col_heads[c]);
+			agl_pop_clip();
 		}
 
-		int y = y0 + row_height;
-		if(!items->len)
-			return agl_print(col[1], y, 0, STYLE.text, "No files"), true;
-
-		int scroll_offset = SCROLLBAR->scroll->value.i;
-		int i, r; for(i = scroll_offset; r = i - scroll_offset, i < items->len && (i - scroll_offset < n_rows); i++){
-			if(r == view->view->selection - scroll_offset){
-				agl->shaders.plain->uniform.colour = STYLE.selection;
-				agl_use_program((AGlShader*)agl->shaders.plain);
-				agl_rect_((AGlRect){0, y + r * row_height - 2, agl_actor__width(actor), row_height});
-			}
-
-			ViewItem* vitem = items->pdata[i];
-			DirItem* item = vitem->item;
-			//dbg(0, "  %i: %zu %s", i, item->size, item->leafname);
-			char size[16] = {'\0'}; snprintf(size, 15, "%zu", item->size);
-			const char* val[] = {item->leafname, size, user_name(item->uid), group_name(item->gid)};
-			int c; for(c=0;c<G_N_ELEMENTS(val);c++){
-				agl_push_clip(0, y0, col[c + 2] - 6, actor->region.y2);
-				agl_print(col[c + 1], y + r * row_height, 0, STYLE.text, val[c]);
-				agl_pop_clip();
-			}
-
-			if(item->mime_type){
-				guint t = get_icon_texture_by_mimetype (item->mime_type);
-
-				agl_use_program((AGlShader*)agl->shaders.texture);
-				agl_textured_rect(t, 0, y + r * row_height, 16, 16, NULL);
-			}
-		}
 
 		return true;
 	}
@@ -201,17 +137,12 @@ files_view (gpointer _)
 	{
 		FilesView* view = (FilesView*)a;
 
-#ifdef AGL_ACTOR_RENDER_CACHE
-		a->fbo = agl_fbo_new(agl_actor__width(a), agl_actor__height(a) + 40, 0, AGL_FBO_HAS_STENCIL);
-		a->cache.enabled = true;
-		a->cache.size_request = (AGliPt){agl_actor__width(a), agl_actor__height(a) + 40};
-#endif
 		g_idle_add((GSourceFunc)files_scan_dir, a);
 
 		void files_on_row_add (GtkTreeModel* tree_model, GtkTreePath* path, GtkTreeIter* iter, AGlActor* actor)
 		{
-			files_on_scroll(SELECTABLE->observable, SELECTABLE->observable->value, actor);
-			agl_actor__invalidate(actor);
+			files_on_scroll(SELECTABLE(actor)->observable, SELECTABLE(actor)->observable->value, actor);
+			agl_actor__invalidate (actor);
 		}
 		g_signal_connect(view->viewmodel, "row-inserted", (GCallback)files_on_row_add, a);
 	}
@@ -220,54 +151,12 @@ files_view (gpointer _)
 	{
 		FilesView* view = (FilesView*)actor;
 
-		if(SCROLLBAR->scroll->value.i > max_scroll_offset){
-			agl_observable_set(SCROLLBAR->scroll, max_scroll_offset);
+		if(view->scroll->value.i > max_scroll(view)){
+			agl_observable_set (view->scroll, max_scroll(view));
 		}
 	}
 
-	bool files_event (AGlActor* actor, GdkEvent* event, AGliPt xy)
-	{
-		FilesView* view = (FilesView*)actor;
-
-		switch(event->type){
-			case GDK_SCROLL:
-				// This event comes from scrollbar view after dragging the scrollbar handle
-				;GdkEventMotion* motion = (GdkEventMotion*)event;
-				dbg(1, "SCROLL %ipx/%i %i/%i", (int)motion->y, scrollable_height * row_height, MAX(((int)motion->y) / row_height, 0), scrollable_height);
-				agl_observable_set(SCROLLBAR->scroll, MAX(((int)motion->y) / row_height, 0));
-				return AGL_HANDLED;
-
-			case GDK_BUTTON_PRESS:
-				switch(event->button.button){
-					case 4:
-						dbg(1, "! scroll up");
-						agl_observable_set(SCROLLBAR->scroll, SCROLLBAR->scroll->value.i - 1);
-						break;
-					case 5:
-						dbg(1, "! scroll down");
-						if(scrollable_height > N_ROWS_VISIBLE(actor)){
-							if(SCROLLBAR->scroll->value.i < max_scroll_offset)
-								agl_observable_set(SCROLLBAR->scroll, SCROLLBAR->scroll->value.i + 1);
-						}
-						break;
-				}
-				return AGL_HANDLED;
-
-			case GDK_BUTTON_RELEASE:
-				;int row = files_view_row_at_coord (view, 0, xy.y);
-				dbg(1, "RELEASE button=%i y=%i row=%i", event->button.button, xy.y - actor->region.y1, row);
-				switch(event->button.button){
-					case 1:
-						agl_observable_set(SELECTABLE->observable, row);
-				}
-				return AGL_HANDLED;
-			default:
-				break;
-		}
-		return AGL_NOT_HANDLED;
-	}
-
-	FilesView* view = agl_actor__new(FilesView,
+	FilesView* view = agl_actor__new (FilesView,
 		.actor = {
 			.class = &actor_class,
 			.name = "Files",
@@ -275,9 +164,10 @@ files_view (gpointer _)
 			.init = files_init,
 			.paint = files_paint,
 			.set_size = files_layout,
-			.on_event = files_event,
 		},
-		.viewmodel = vm_directory_new()
+		.viewmodel = vm_directory_new(),
+		.scroll = agl_observable_new(),
+		.row_height = ROW_HEIGHT
 	);
 	AGlActor* actor = (AGlActor*)view;
 
@@ -285,9 +175,10 @@ files_view (gpointer _)
 
 	view->viewmodel->view = (ViewIface*)(view->view = directory_view_new(view->viewmodel, view));
 
-	agl_actor__add_child((AGlActor*)view, view->scrollbar = scrollbar_view(NULL, GTK_ORIENTATION_VERTICAL));
+	agl_actor__add_child (actor, view->filelist = filelist_view (actor));
+	agl_actor__add_child (actor, view->scrollbar = scrollbar_view (view->filelist, GTK_ORIENTATION_VERTICAL, view->scroll, NULL, ROW_HEIGHT));
 
-	agl_observable_subscribe(SCROLLBAR->scroll, files_on_scroll, view);
+	agl_observable_subscribe (view->scroll, files_on_scroll, view);
 
 	return (AGlActor*)view;
 }
@@ -329,57 +220,229 @@ files_scan_dir (AGlActor* a)
 	FilesView* view = (FilesView*)a;
 
 	vm_directory_set_path(view->viewmodel, PATH && strlen(PATH) ? PATH : g_get_home_dir());
-	agl_actor__invalidate(a);
+	agl_actor__invalidate (a);
 
 	return G_SOURCE_REMOVE;
 }
 
 
-int
-files_view_row_at_coord (FilesView* view, int x, int y)
+static void
+files_on_scroll (AGlObservable* observable, AGlVal val, gpointer _view)
 {
-	AGlActor* actor = (AGlActor*)view;
+	FilesView* view = (FilesView*)_view;
+	AGlActor* actor = view->filelist;
+	DirectoryView* dv = view->view;
+	GPtrArray* items = dv->items;
 
-	y += SCROLLBAR->scroll->value.i * row_height - header_height;
-	if(y < 0) return -1;
-	int r = y / row_height;
-	GPtrArray* items = view->view->items;
-	if(r > items->len) return -1;
+	#define EMPTY_ROWS 1 // Allow some empty space at the bottom
+	g_return_if_fail(val.i <= items->len - ((int)N_ROWS_VISIBLE(view->filelist)) + EMPTY_ROWS);
 
-	return r;
+	actor->scrollable.y1 = - val.i * view->row_height;
+	actor->scrollable.y2 = actor->scrollable.y1 + (items->len + 1) * view->row_height;
+
+	agl_actor__invalidate (actor);
 }
 
 
 static void
-files_on_scroll (AGlObservable* observable, AGlVal row, gpointer _view)
+files_on_select (AGlObservable* o, AGlVal row, gpointer _actor)
 {
-	AGlActor* actor = (AGlActor*)_view;
-	FilesView* view = (FilesView*)_view;
-	DirectoryView* dv = view->view;
+	AGlActor* actor = _actor;
+	FilesView* files = (FilesView*)_actor;
+	DirectoryView* dv = files->view;
 	GPtrArray* items = dv->items;
+	AGlObservable* scroll = files->scroll;
 
-	actor->scrollable.y1 = - SCROLLBAR->scroll->value.i * row_height;
-	actor->scrollable.y2 = actor->scrollable.y1 + (items->len + 1) * row_height;
+	if (row.i > -1 && row.i < items->len && row.i != dv->selection) {
+		dv->selection = row.i;
 
-	agl_actor__invalidate(actor);
+		if (row.i > scroll->value.i + N_ROWS_VISIBLE(files->filelist) - 2) {
+			agl_observable_set (scroll, row.i - (N_ROWS_VISIBLE(files->filelist) - 2));
+		}
+		else if (row.i < scroll->value.i + 1){
+			agl_observable_set (scroll, row.i - 1);
+		}
+
+		VIEW_IFACE_GET_CLASS((ViewIface*)files->view)->set_selected((ViewIface*)files->view, &(ViewIter){.i = row.i}, true);
+
+		agl_actor__invalidate (actor);
+	}
+}
+
+
+static bool
+files_nav (AGlActor* actor, int offset)
+{
+	FilesView* files = (FilesView*)actor;
+	DirectoryView* dv = files->view;
+	GPtrArray* items = dv->items;
+	AGlObservable* observable = SELECTABLE(actor)->observable;
+
+	agl_observable_set (observable, CLAMP(observable->value.i + offset, 0, (int)items->len - 1));
+
+	return AGL_HANDLED;
 }
 
 
 static bool
 files_nav_up (AGlActor* actor, GdkModifierType modifier)
 {
-	AGlObservable* observable = SELECTABLE->observable;
-	agl_observable_set(observable, observable->value.i - 1);
-
-	return AGL_HANDLED;
+	return files_nav (actor, -1);
 }
 
 
 static bool
 files_nav_down (AGlActor* actor, GdkModifierType modifier)
 {
-	AGlObservable* observable = SELECTABLE->observable;
-	agl_observable_set(observable, observable->value.i + 1);
+	return files_nav (actor, 1);
+}
 
-	return AGL_HANDLED;
+
+static bool
+files_page_up (AGlActor* actor, GdkModifierType modifier)
+{
+	return files_nav (actor, -N_ROWS_VISIBLE(((FilesView*)actor)->filelist));
+}
+
+
+static bool
+files_page_down (AGlActor* actor, GdkModifierType modifier)
+{
+	return files_nav (actor, N_ROWS_VISIBLE(((FilesView*)actor)->filelist));
+}
+
+
+static bool
+files_nav_home (AGlActor* actor, GdkModifierType modifier)
+{
+	return files_nav (actor, -10000);
+}
+
+
+static bool
+files_nav_end (AGlActor* actor, GdkModifierType modifier)
+{
+	return files_nav (actor, 10000);
+}
+
+
+int
+files_view_row_at_coord (FilesView* view, int x, int y)
+{
+	y += view->scroll->value.i;
+	if(y < 0) return -1;
+
+	int r = y / view->row_height;
+	GPtrArray* items = view->view->items;
+
+	if(r > items->len) return -1;
+
+	return r;
+}
+
+
+static AGlActor*
+filelist_view (void* _)
+{
+	bool filelist_paint (AGlActor* actor)
+	{
+		FilesView* view = (FilesView*)actor->parent;
+		DirectoryView* dv = view->view;
+		GPtrArray* items = dv->items;
+
+		int y0 = -actor->scrollable.y1;
+
+		if (!items->len)
+			return agl_print(col[1], y0, 0, STYLE.text, "No files"), true;
+
+		int n_rows = N_ROWS_VISIBLE(actor);
+
+		int scroll_offset = view->scroll->value.i;
+		int i, r; for (i = scroll_offset; r = i - scroll_offset, i < items->len && (i - scroll_offset < n_rows); i++) {
+			if (r == view->view->selection - scroll_offset) {
+				PLAIN_COLOUR2 (agl->shaders.plain) = STYLE.selection;
+				agl_use_program (agl->shaders.plain);
+				agl_rect_ ((AGlRect){0, y0 + r * ROW_HEIGHT - 2, agl_actor__width(actor), ROW_HEIGHT});
+			}
+
+			ViewItem* vitem = items->pdata[i];
+			DirItem* item = vitem->item;
+			char size[16] = {'\0'}; snprintf(size, 15, "%zu", item->size);
+			const char* val[] = {item->leafname, size, user_name(item->uid), group_name(item->gid)};
+			for(int c=0;c<G_N_ELEMENTS(val);c++){
+				agl_push_clip (0, y0, MIN(col[c + 2] - 6, actor->region.x2), actor->region.y2);
+				agl_print (col[c + 1], y0 + r * ROW_HEIGHT, 0, STYLE.text, val[c]);
+				agl_pop_clip ();
+			}
+
+			if (item->mime_type) {
+				guint t = get_icon_texture_by_mimetype (item->mime_type);
+
+				agl_use_program ((AGlShader*)agl->shaders.texture);
+				agl_textured_rect (t, 0, y0 + r * ROW_HEIGHT, 16, 16, NULL);
+			}
+		}
+		return true;
+	}
+
+	void filelist_init (AGlActor* actor)
+	{
+#ifdef AGL_ACTOR_RENDER_CACHE
+		actor->fbo = agl_fbo_new (agl_actor__width(actor), agl_actor__height(actor) + 40, 0, AGL_FBO_HAS_STENCIL);
+		actor->cache.enabled = true;
+		actor->cache.size_request = (AGliPt){agl_actor__width(actor), agl_actor__height(actor) + 40};
+#endif
+	}
+
+	void filelist_set_size (AGlActor* actor)
+	{
+		actor->region = (AGlfRegion){
+			.x2 = agl_actor__width(actor->parent),
+			.y1 = ROW_HEIGHT,
+			.y2 = agl_actor__height (actor->parent)
+		};
+	}
+
+	bool filelist_event (AGlActor* actor, GdkEvent* event, AGliPt xy)
+	{
+		FilesView* view = (FilesView*)actor->parent;
+
+		switch (event->type) {
+			case GDK_BUTTON_PRESS:
+				switch (event->button.button) {
+					case 4:
+						dbg(1, "! scroll up");
+						agl_observable_set (view->scroll, view->scroll->value.i - 1);
+						break;
+					case 5:
+						dbg(1, "! scroll down");
+						if (scrollable_height > N_ROWS_VISIBLE(actor)) {
+							if (view->scroll->value.i < max_scroll(view))
+								agl_observable_set (view->scroll, view->scroll->value.i + 1);
+						}
+						break;
+				}
+				return AGL_HANDLED;
+
+			case GDK_BUTTON_RELEASE:
+				;int row = files_view_row_at_coord (view, 0, xy.y);
+				dbg(1, "RELEASE button=%i y=%i row=%i", event->button.button, xy.y - actor->region.y1, row);
+				switch (event->button.button) {
+					case 1:
+						agl_observable_set (SELECTABLE((AGlActor*)view)->observable, row);
+				}
+				return AGL_HANDLED;
+			default:
+				break;
+		}
+		return AGL_NOT_HANDLED;
+	}
+
+	return agl_actor__new (AGlActor,
+		.name = "Filelist",
+		.init = filelist_init,
+		.set_size = filelist_set_size,
+		.paint = filelist_paint,
+		.on_event = filelist_event,
+	);
 }

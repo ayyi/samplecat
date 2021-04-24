@@ -158,7 +158,7 @@ main (int argc, char** argv)
 			case 'v':
 				printf("using debug level: %s\n", optarg);
 				int d = atoi(optarg);
-				if(d<0 || d>5) { gwarn ("bad arg. debug=%i", d); } else _debug_ = wf_debug = d;
+				if(d<0 || d>5) { pwarn ("bad arg. debug=%i", d); } else _debug_ = wf_debug = d;
 				#ifdef USE_AYYI
 				ayyi.debug = _debug_;
 				#endif

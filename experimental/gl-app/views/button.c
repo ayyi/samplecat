@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2013-2019 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2013-2021 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -73,24 +73,24 @@ button(int* icon, ButtonAction action, ButtonGetState get_state, gpointer user_d
 
 		// background
 		if(RIPPLE(button) > 0.0){
-			agl->shaders.plain->uniform.colour = state
+			PLAIN_COLOUR2 (agl->shaders.plain) = state
 				? colour_mix(style->bg, style->bg_selected, RIPPLE(button) / 64.0)
 				: colour_mix(style->bg_selected, style->bg, RIPPLE(button) / 64.0);
 		}else if(state){
-			agl->shaders.plain->uniform.colour = style->bg_selected;
+			PLAIN_COLOUR2 (agl->shaders.plain) = style->bg_selected;
 		}else{
-			agl->shaders.plain->uniform.colour = style->bg;
+			PLAIN_COLOUR2 (agl->shaders.plain) = style->bg;
 		}
 
 		// hover background
 		if(BG_OPACITY(button) > 0.0){ // dont get events if disabled, so no need to check state (TODO turn off hover when disabling).
 			float alpha = button->bg_opacity;
-			uint32_t fg = colour_lighter(agl->shaders.plain->uniform.colour, 16);
-			agl->shaders.plain->uniform.colour = style->bg ? colour_mix(agl->shaders.plain->uniform.colour, fg, alpha) : (fg & 0xffffff00) + (uint32_t)(alpha * 0xff);
+			uint32_t fg = colour_lighter(PLAIN_COLOUR2 (agl->shaders.plain), 16);
+			PLAIN_COLOUR2 (agl->shaders.plain) = style->bg ? colour_mix(PLAIN_COLOUR2 (agl->shaders.plain), fg, alpha) : (fg & 0xffffff00) + (uint32_t)(alpha * 0xff);
 		}
 
 		if(!(RIPPLE(button) > 0.0)){
-			agl_use_program((AGlShader*)agl->shaders.plain);
+			agl_use_program (agl->shaders.plain);
 			agl_rect_(r);
 
 		}else{
@@ -106,8 +106,8 @@ button(int* icon, ButtonAction action, ButtonGetState get_state, gpointer user_d
 			agl_rect_(rr);
 			glTranslatef(-(GlButtonPress.pt.x - actor->region.x1 - radius), -(GlButtonPress.pt.y - radius), -0.0);
 #else
-			circle_shader.uniform.colour = colour_lighter(agl->shaders.plain->uniform.colour, 32);
-			circle_shader.uniform.bg_colour = agl->shaders.plain->uniform.colour;
+			CIRCLE_COLOUR() = colour_lighter (PLAIN_COLOUR2 (agl->shaders.plain), 32);
+			CIRCLE_BG_COLOUR() = PLAIN_COLOUR2 (agl->shaders.plain);
 			circle_shader.uniform.centre = GlButtonPress.pt;
 			circle_shader.uniform.radius = RIPPLE(button);
 			agl_use_program((AGlShader*)&circle_shader);

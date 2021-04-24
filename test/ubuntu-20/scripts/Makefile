@@ -1,7 +1,6 @@
 all:
 	git clone --branch "$(branch)" https://github.com/ayyi/samplecat.git
 	cd samplecat && \
-		git submodule update --init && \
 		./autogen.sh && \
 		./configure --enable-test && \
 		make && \

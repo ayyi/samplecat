@@ -1,6 +1,6 @@
 #!/bin/bash
 
-shaders=(vscrollbar button ring circle);
+shaders=(button ring circle);
 out=shaders.c
 
 if [[ -s $out ]]; then

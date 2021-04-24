@@ -77,6 +77,7 @@ samplecat_gl_LDADD = \
 	$(LIBASS_LDFLAGS) \
 	$(FILEMANAGER_LDFLAGS) \
 	$(X11_LDFLAGS) \
+	$(XRANDR_LDFLAGS) \
 	$(DBUS_LIBS) \
 	$(MATH_LDFLAGS) \
 	-lstdc++

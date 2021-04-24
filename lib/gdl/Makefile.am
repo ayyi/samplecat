@@ -110,6 +110,7 @@ libgdltypebuiltins.c: $(libgdl_headers)
 			--vtail "  return type;\n}\n\n" \
 		$^ > xgen-gtbec \
 	&& cp xgen-gtbec $(@F) \
+	&& sed -i '1s;^;#include "config.h"\n;' $(@F) \
 	&& rm -f xgen-gtbec
 
 libgdltypebuiltins.h: $(libgdl_headers)
@@ -138,5 +139,6 @@ libgdlmarshal.c: libgdlmarshal.h
 	&& glib-genmarshal \
 		--prefix=gdl_marshal $(srcdir)/libgdlmarshal.list --body >> xgen-gmc \
 	&& cp xgen-gmc $(@F) \
+	&& sed -i '1s;^;#include "config.h"\n;' $(@F) \
 	&& rm -f xgen-gmc
 

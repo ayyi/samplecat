@@ -152,7 +152,7 @@ panel_view (gpointer _)
 
 			AGliPt offset = {mouse.x - origin.x, mouse.y - origin.y};
 			if(ABS(offset.x) > 1 || ABS(offset.y) > 1){
-				agl->shaders.plain->uniform.colour = 0x6677ff77;
+				PLAIN_COLOUR2 (agl->shaders.plain) = 0x6677ff77;
 				agl_use_program((AGlShader*)agl->shaders.plain);
 				agl_box(1, offset.x, offset.y, agl_actor__width(actor), agl_actor__height(actor));
 
@@ -183,7 +183,7 @@ panel_view (gpointer _)
 					}
 				}
 			}else{
-				agl->shaders.plain->uniform.colour = 0x6677ff33;
+				PLAIN_COLOUR2 (agl->shaders.plain) = 0x6677ff33;
 				agl_use_program((AGlShader*)agl->shaders.plain);
 				agl_rect(0, 0, agl_actor__width(actor), PANEL_DRAG_HANDLE_HEIGHT);
 			}
@@ -216,11 +216,12 @@ panel_view (gpointer _)
 	{
 		PanelView* panel = (PanelView*)actor;
 
-		// single child takes all space of panel
-		if(g_list_length(actor->children) == 1){
+		// first child takes all space of panel
+		// (2nd child could be scrollbar)
+		if (actor->children) {
 			AGlActor* child = actor->children->data;
 			child->region = (AGlfRegion){0, panel->title ? PANEL_DRAG_HANDLE_HEIGHT : 0, agl_actor__width(actor), agl_actor__height(actor)};
-			agl_actor__set_size(child);
+			agl_actor__set_size (child);
 		}
 	}
 

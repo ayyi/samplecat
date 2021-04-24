@@ -104,11 +104,11 @@ context_menu_paint (AGlActor* actor)
 {
 	agl_set_font(STYLE.font, 10, PANGO_WEIGHT_BOLD);
 
-	agl->shaders.plain->uniform.colour = 0xffffffff;
+	PLAIN_COLOUR2 (agl->shaders.plain) = 0xffffffff;
 	agl_use_program((AGlShader*)agl->shaders.plain);
 	agl_rect(-2, -2, 20, agl_actor__height(actor) + 2);
 
-	agl->shaders.plain->uniform.colour = 0xffffff00 + (int)(31.0 * hover_opacity);
+	PLAIN_COLOUR2 (agl->shaders.plain) = 0xffffff00 + (int)(31.0 * hover_opacity);
 	agl_use_program((AGlShader*)agl->shaders.plain);
 	agl_rect(-BORDER, hover_row * 16, agl_actor__width(actor), 16);
 

@@ -10,7 +10,6 @@ libviews_la_SOURCES = \
 	dock_h.c dock_h.h \
 	panel.c panel.h \
 	overlay.c overlay.h \
-	scrollable.c scrollable.h \
 	list.c list.h \
 	files.c files.h \
 	files.impl.c files.impl.h \
@@ -21,7 +20,6 @@ libviews_la_SOURCES = \
 	filters.c filters.h \
 	player.c player.h \
 	tabs.c tabs.h \
-	scrollbar.c scrollbar.h \
 	context_menu.c context_menu.h \
 	button.c button.h \
 	graph_debug.c graph_debug.h \

@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2012-2020 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2012-2021 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -87,8 +87,8 @@ search_view (gpointer _)
 		if(!agl->use_shaders) agl_enable(AGL_ENABLE_BLEND); // disable textures
 
 		// border
-		agl->shaders.plain->uniform.colour = 0x6677ff77;
-		agl_use_program((AGlShader*)agl->shaders.plain);
+		PLAIN_COLOUR2 (agl->shaders.plain) = 0x6677ff77;
+		agl_use_program (agl->shaders.plain);
 		int h = agl_actor__height(actor) - MARGIN_BOTTOM;
 		agl_rect_((AGlRect){0, 0, agl_actor__width(actor), BORDER});
 		agl_rect_((AGlRect){agl_actor__width(actor) - BORDER, 0, BORDER, h});
@@ -96,7 +96,7 @@ search_view (gpointer _)
 		agl_rect_((AGlRect){0, 0, BORDER, h});
 
 		if(actor->root->selected == actor){
-			agl->shaders.plain->uniform.colour = 0x777777ff;
+			PLAIN_COLOUR2 (agl->shaders.plain) = 0x777777ff;
 			agl_use_program((AGlShader*)agl->shaders.plain);
 			agl_rect_((AGlRect){0, 0, agl_actor__width(actor), h});
 		}

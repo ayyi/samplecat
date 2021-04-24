@@ -19,6 +19,7 @@ uniform vec2 centre;
 uniform float radius;
 uniform vec4 colour;
 uniform vec4 bg_colour;
+
 varying vec2 fPosition;
 
 void main() {

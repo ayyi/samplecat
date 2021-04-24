@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2019 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2021 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -19,6 +19,7 @@
 #include <gdk/gdkgl.h>
 #include <gtk/gtkgl.h>
 #include <string.h>
+#include "debug/debug.h"
 #include "agl/utils.h"
 #include "agl/shader.h"
 #include "gl_spectrogram_view.h"
@@ -27,7 +28,6 @@ typedef struct _GlSpectrogram        GlSpectrogram;
 typedef struct _GlSpectrogramClass   GlSpectrogramClass;
 typedef struct _GlSpectrogramPrivate GlSpectrogramPrivate;
 
-#define _g_free0(var) (var = (g_free (var), NULL))
 #define _g_object_unref0(var) ((var == NULL) ? NULL : (var = (g_object_unref (var), NULL)))
 
 #ifndef USE_SYSTEM_GTKGLEXT
@@ -44,7 +44,7 @@ struct _GlSpectrogramPrivate {
     gchar*     _filename;
     GdkPixbuf* pixbuf;
     gboolean   gl_init_done;
-    GLuint     Textures[2];
+    GLuint     textures[2];
 };
 
 
@@ -65,7 +65,7 @@ GlSpectrogram*  gl_spectrogram_construct            (GType);
 void            gl_spectrogram_set_gl_context       (GdkGLContext*);
 static void     gl_spectrogram_load_texture         (GlSpectrogram*);
 static gboolean gl_spectrogram_real_configure_event (GtkWidget*, GdkEventConfigure*);
-static gboolean gl_spectrogram_real_expose_event    (GtkWidget*, GdkEventExpose*);
+static gboolean gl_spectrogram_expose_event         (GtkWidget*, GdkEventExpose*);
 static void     gl_spectrogram_set_projection       (GlSpectrogram*);
 void            gl_spectrogram_set_file             (GlSpectrogram*, gchar* filename);
 static void     gl_spectrogram_real_unrealize       (GtkWidget*);
@@ -121,13 +121,13 @@ gl_spectrogram_load_texture (GlSpectrogram* self)
 	GlSpectrogramPrivate* p = self->priv;
 
 	GdkGLDrawable* gldrawable = _g_object_ref (gtk_widget_get_gl_drawable ((GtkWidget*) self));
-	gboolean _tmp3_ = gdk_gl_drawable_make_current (gldrawable, agl_get_gl_context());
-	if (!_tmp3_) {
+	if (!gdk_gl_drawable_make_current (gldrawable, agl_get_gl_context())) {
 		g_print ("gl context error!\n");
 		_g_object_unref0 (gldrawable);
 		return;
 	}
-	glBindTexture (GL_TEXTURE_2D, self->priv->Textures[0]);
+
+	agl_use_texture (self->priv->textures[0]);
 #if USE_GLU
 	GdkPixbuf* scaled = gdk_pixbuf_scale_simple (self->priv->pixbuf, 256, 256, GDK_INTERP_BILINEAR);
 	glTexParameterf (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, (GLfloat) GL_LINEAR_MIPMAP_LINEAR);
@@ -165,9 +165,11 @@ gl_spectrogram_real_configure_event (GtkWidget* widget, GdkEventConfigure* event
 
 	glViewport ((GLint) 0, (GLint) 0, (GLsizei) ((GtkWidget*) self)->allocation.width, (GLsizei) ((GtkWidget*) self)->allocation.height);
 	if (!self->priv->gl_init_done) {
-		glGenTextures ((GLsizei) 1, self->priv->Textures);
+		agl_gl_init ();
+		agl_create_program ((AGlShader*)self->priv->agl->shaders.texture);
+		glGenTextures ((GLsizei) 1, self->priv->textures);
 		glEnable (GL_TEXTURE_2D);
-		glBindTexture (GL_TEXTURE_2D, self->priv->Textures[0]);
+		glBindTexture (GL_TEXTURE_2D, self->priv->textures[0]);
 		self->priv->gl_init_done = TRUE;
 	}
 	_g_object_unref0 (gldrawable);
@@ -178,13 +180,13 @@ gl_spectrogram_real_configure_event (GtkWidget* widget, GdkEventConfigure* event
 
 
 static gboolean
-gl_spectrogram_real_expose_event (GtkWidget* widget, GdkEventExpose* event)
+gl_spectrogram_expose_event (GtkWidget* widget, GdkEventExpose* event)
 {
 	GlSpectrogram* self = (GlSpectrogram*)widget;
 
-	GdkGLDrawable* gldrawable = gtk_widget_get_gl_drawable ((GtkWidget*)self);
+	GdkGLDrawable* gldrawable = gtk_widget_get_gl_drawable (widget);
 
-	gboolean current;
+	bool current;
 #ifdef USE_SYSTEM_GTKGLEXT
 	current = gdk_gl_drawable_make_current (gldrawable, agl_get_gl_context());
 #else
@@ -203,40 +205,29 @@ gl_spectrogram_real_expose_event (GtkWidget* widget, GdkEventExpose* event)
 	glClearColor (0.0f, 0.0f, 0.0f, 1.0f);
 	glClear ((GLbitfield) GL_COLOR_BUFFER_BIT);
 
-	double x = 0.0;
-	double w = widget->allocation.width;
-	double top = widget->allocation.height;
-	double botm = 0.0;
+	self->priv->agl->shaders.texture->uniform.fg_colour = 0xffffffff;
+	agl_use_program ((AGlShader*)self->priv->agl->shaders.texture);
+	agl_scale ((AGlShader*)self->priv->agl->shaders.texture, 200., 100.);
+	agl_translate ((AGlShader*)self->priv->agl->shaders.texture, 0., 0.);
 
-	if(self->priv->agl->use_shaders){
-		self->priv->agl->shaders.texture->uniform.fg_colour = 0xffffffff;
-		agl_use_program((AGlShader*)self->priv->agl->shaders.texture);
-	}
-
-	glEnable (GL_TEXTURE_2D);
-	glBindTexture (GL_TEXTURE_2D, self->priv->Textures[0]);
-	glBegin (GL_QUADS);
-	glTexCoord2d (0.0, 0.0);
-	glVertex2d (x, top);
-	glTexCoord2d (1.0, 0.0);
-	glVertex2d (x + w, top);
-	glTexCoord2d (1.0, 1.0);
-	glVertex2d (x + w, botm);
-	glTexCoord2d (0.0, 1.0);
-	glVertex2d (x, botm);
-	glEnd ();
+	agl_rect_ ((AGlRect){
+		.x = 0.,
+		.y = 0.,
+		.w = widget->allocation.width,
+		.h = widget->allocation.height
+	});
 
 #ifdef USE_SYSTEM_GTKGLEXT
-	if(gdk_gl_drawable_is_double_buffered (gldrawable)){
+	if (gdk_gl_drawable_is_double_buffered (gldrawable)) {
 #else
-	if(TRUE){
+	if (true) {
 #endif
 		gdk_gl_drawable_swap_buffers (gldrawable);
 	} else {
 		glFlush ();
 	}
 
-	return TRUE;
+	return true;
 }
 
 
@@ -278,7 +269,7 @@ gl_spectrogram_set_file (GlSpectrogram* self, gchar* filename)
 {
 	g_return_if_fail (self);
 
-	_g_free0 (self->priv->_filename);
+	g_free (self->priv->_filename);
 	self->priv->_filename = g_strdup ((const gchar*) filename);
 	cancel_spectrogram (NULL);
 	get_spectrogram (filename, __spectrogram_ready, self);
@@ -302,7 +293,7 @@ gl_spectrogram_class_init (GlSpectrogramClass* klass)
 	gl_spectrogram_parent_class = g_type_class_peek_parent (klass);
 
 	GTK_WIDGET_CLASS (klass)->configure_event = gl_spectrogram_real_configure_event;
-	GTK_WIDGET_CLASS (klass)->expose_event = gl_spectrogram_real_expose_event;
+	GTK_WIDGET_CLASS (klass)->expose_event = gl_spectrogram_expose_event;
 	GTK_WIDGET_CLASS (klass)->unrealize = gl_spectrogram_real_unrealize;
 	G_OBJECT_CLASS (klass)->finalize = gl_spectrogram_finalize;
 }
@@ -321,7 +312,9 @@ static void
 gl_spectrogram_finalize (GObject* obj)
 {
 	GlSpectrogram* self = GL_SPECTROGRAM (obj);
+
 	cancel_spectrogram (NULL);
-	_g_free0 (self->priv->_filename);
+	g_clear_pointer (&self->priv->_filename, g_free);
+
 	G_OBJECT_CLASS (gl_spectrogram_parent_class)->finalize (obj);
 }

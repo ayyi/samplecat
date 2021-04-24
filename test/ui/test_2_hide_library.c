@@ -20,8 +20,8 @@ test_2_hide_library ()
 
 		void on_submenu_visible (gpointer _)
 		{
-			GtkWidget* submenu = gtk_menu_item_get_submenu((GtkMenuItem*)get_view_menu());
-			assert(gtk_widget_get_visible(submenu), "submenu not visible");
+			GtkWidget* submenu = gtk_menu_item_get_submenu ((GtkMenuItem*)get_view_menu());
+			assert (gtk_widget_get_visible (submenu), "submenu not visible");
 
 			GtkWidget* library_item = find_item_in_view_menu("Library");
 
@@ -39,6 +39,6 @@ test_2_hide_library ()
 		open_submenu (on_submenu_visible, NULL);
 	}
 
-	open_menu(then, NULL);
+	open_menu (then, NULL);
 }
 

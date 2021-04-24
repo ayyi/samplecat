@@ -26,7 +26,7 @@
  *  The test must provide the list of tests and the setup and teardown functions
  */
 extern gpointer tests[];
-extern void setup();
+extern void setup(char* argv[]);
 extern void teardown();
 
 
@@ -131,13 +131,15 @@ set_log_handlers ()
 int
 main (int argc, char* argv[])
 {
+#if 0 // unfortunately, gtk_test_init causes apps to abort on warnings
 	const gchar* display = g_getenv("DISPLAY");
 	if(display && strlen(display))
 		gtk_test_init(&argc, &argv);
+#endif
 
 	set_log_handlers();
 
-	setup();
+	setup (argv);
 
 	dbg(2, "n_tests=%i", TEST.n_tests);
 

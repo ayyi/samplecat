@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2017-2020 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2017-2021 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -93,7 +93,7 @@ filters_view (gpointer _)
 				int width = logical_rect.width;
 
 				#define BTN_OFFSET 6
-				AGliPt size = (AGliPt){width + 22, 23};
+				AGlfPt size = (AGlfPt){width + 22., 23.};
 				bool hovered = (actor->root->hovered == actor) && mouse > x - BTN_OFFSET && mouse < x + size.x - 4;
 
 				if(hovered){
@@ -103,7 +103,7 @@ filters_view (gpointer _)
 					button_shader.uniform.btn_size = size;
 					agl_use_program((AGlShader*)&button_shader);
 					glTranslatef(x - BTN_OFFSET, 0, 0);
-					agl_irect(0, 0, size.x, size.y);
+					agl_rect (0, 0, size.x, size.y);
 					glTranslatef(-(x - BTN_OFFSET), 0, 0);
 
 					agl_print(x + width + 4, y, 0, 0xffffffff, "x");

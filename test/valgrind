@@ -5,6 +5,7 @@ export G_DEBUG=gc-friendly
 
 /usr/bin/valgrind \
 	--leak-check=full \
+	--suppressions=lib/waveform/lib/agl/test/suppressions/mesa.supp \
 	--suppressions=test/suppressions/pango.supp \
 	--suppressions=test/suppressions/glib.supp \
 	--suppressions=test/suppressions/gtk.supp \

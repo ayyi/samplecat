@@ -1,16 +1,16 @@
 /**
-* +----------------------------------------------------------------------+
-* | This file is part of the Ayyi project. http://www.ayyi.org           |
-* | copyright (C) 2013-2017 Tim Orford <tim@orford.org>                  |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-*
-*/
-#ifndef __arrange_shader_h__
-#define __arrange_shader_h__
+ +----------------------------------------------------------------------+
+ | This file is part of the Ayyi project. http://www.ayyi.org           |
+ | copyright (C) 2013-2021 Tim Orford <tim@orford.org>                  |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ */
+
+#pragma once
+
 #include "agl/utils.h"
 #include "agl/shader.h"
 
@@ -19,23 +19,10 @@ typedef struct {
 	struct {
 		uint32_t   colour;
 		uint32_t   bg_colour;
-		AGliPt     centre1;
-		AGliPt     centre2;
-		float      radius;
-	}              uniform;
-	AGlUniformInfo uniforms[1];
-} ScrollbarShader;
-
-typedef struct {
-	AGlShader      shader;
-	struct {
-		uint32_t   colour;
-		uint32_t   bg_colour;
 		uint32_t   fill_colour;
-		AGliPt     btn_size;
+		AGlfPt     btn_size;
 		float      radius;
 	}              uniform;
-	AGlUniformInfo uniforms[1];
 } ButtonShader;
 
 enum {
@@ -48,17 +35,16 @@ enum {
 typedef struct {
 	AGlShader      shader;
 	struct {
-		uint32_t   colour;
-		uint32_t   bg_colour;
 		AGliPt     centre;
 		float      radius;
 	}              uniform;
-	AGlUniformInfo uniforms[1];
 } CircleShader;
 
-extern ScrollbarShader v_scrollbar_shader;
 extern ButtonShader button_shader;
 extern AGlShader ring;
 extern CircleShader circle_shader;
 
-#endif
+#define CIRCLE_COLOUR() \
+	(((AGlUniformUnion*)&circle_shader.shader.uniforms[0])->value.i[0])
+#define CIRCLE_BG_COLOUR() \
+	(((AGlUniformUnion*)&circle_shader.shader.uniforms[1])->value.i[0])

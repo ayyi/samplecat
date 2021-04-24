@@ -1,8 +1,13 @@
 packages=--pkg config --pkg posix --pkg gdk-2.0 --pkg gtk+-2.0 --pkg gmodule-2.0 --pkg debug
-vapidir=--vapidir=. --vapidir=../../lib/debug model.vala
+vapidir=--vapidir=. --vapidir=../../lib/debug
 
 all:
 	valac -C -H spectrogram_widget.h --pkg gtk+-2.0 --pkg gmodule-2.0 spectrogram_widget.vala
+
+spectrogram-area.c: spectrogram-area.vala
+	valac -C -H spectrogram-area.h $(packages) --pkg gl --pkg gtkglext-1.0 \
+		../../lib/waveform/lib/agl/agl/agl.vapi  ../../lib/waveform/lib/agl/agl/gtk-area.vapi $(vapidir) \
+		spectrogram-area.vala
 
 application.c: application.vala
 	valac -C -H application.h $(packages) --pkg samplecat $(vapidir) application.vala
@@ -12,7 +17,7 @@ model.c: model.vala
 	@sed -i -e "/\#include <gobject\/gvaluecollector.h>/a#include <application.h>" model.c # append
 
 list_store.c: list_store.vala
-	valac -C -H list_store.h $(packages) --pkg samplecat $(vapidir) list_store.vala
+	valac -C -H list_store.h $(packages) --pkg samplecat $(vapidir) model.vala list_store.vala
 	@sed -i -e "/^typedef struct _SamplecatListStore /d" list_store.c
 	@sed -i -e "/^typedef struct _SamplecatListStoreClass/d" list_store.c
 	@sed -i -e "/^typedef struct _SamplecatListStorePrivate/d" list_store.c

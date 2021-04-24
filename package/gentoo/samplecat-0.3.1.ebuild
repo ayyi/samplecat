@@ -9,7 +9,7 @@ HOMEPAGE="http://ayyi.github.io/samplecat/"
 SRC_URI="http://www.orford.org/assets/${P}.tar.gz"
 
 LICENSE="GPL-3"
-KEYWORDS="x86"
+KEYWORDS="amd64 x86"
 SLOT="0"
 
 DEPEND="dev-libs/dbus-glib

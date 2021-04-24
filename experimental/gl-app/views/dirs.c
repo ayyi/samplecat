@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2016-2020 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2016-2021 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -73,7 +73,7 @@ directories_view (gpointer _)
 			DhLink* link = (DhLink*)node->data;
 
 			if(i == view->selection/* - view->scroll_offset*/){
-				agl->shaders.plain->uniform.colour = 0x6677ff77;
+				PLAIN_COLOUR2 (agl->shaders.plain) = 0x6677ff77;
 				agl_use_program((AGlShader*)agl->shaders.plain);
 				agl_rect_((AGlRect){0, i * row_height - 2, agl_actor__width(actor), row_height});
 			}

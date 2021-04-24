@@ -1,5 +1,5 @@
 AC_PREREQ(2.59)
-AC_INIT([Samplecat],[0.3.1],[tim@orford.org])
+AC_INIT([Samplecat],[0.3.2],[tim@orford.org])
 AC_CONFIG_SRCDIR([src/main.c])
 AC_CONFIG_HEADER([config.h])
 AC_CANONICAL_HOST
@@ -143,6 +143,13 @@ dnl ----------------------------------------------------------------------------
 
 GLIB_CFLAGS=`pkg-config --cflags glib-2.0`
 AC_SUBST(GLIB_CFLAGS)
+
+if `pkg-config glib-2.0 --atleast-version=2.58`; then
+  HAVE_GLIB_2_58="yes"
+  AC_DEFINE(HAVE_GLIB_2_58, 1, [We have at least glib version 2.58])
+else
+  HAVE_GLIB_2_58="no"
+fi;
 
 GDK_CFLAGS=`pkg-config --cflags gdk-2.0`
 AC_SUBST(GDK_CFLAGS)
@@ -433,6 +440,11 @@ AC_SUBST(OPENGL_CFLAGS)
 AC_SUBST(GL_LDFLAGS)
 AM_CONDITIONAL(ENABLE_OPENGL, test "$enable_opengl" = "yes")
 AM_CONDITIONAL(ENABLE_SYSTEM_GTKGLEXT, test "$enable_system_gtkglext" = "yes")
+
+dnl -----------------------------------------------------------------------------
+
+XRANDR_LDFLAGS=`pkg-config --libs xrandr`
+AC_SUBST(XRANDR_LDFLAGS)
 
 dnl -----------------------------------------------------------------------------
 

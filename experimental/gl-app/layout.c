@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2020 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2021 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -208,7 +208,7 @@ type_handler (yaml_parser_t* parser, yaml_event_t* event, gpointer _stack)
 	if(!strcmp((char*)event->data.scalar.value, "ROOT")){
 		STACK_PUSH((AGlActor*)app->scene);
 	}else if(!strcmp((char*)event->data.scalar.value, "Waveform")){
-		STACK_PUSH((AGlActor*)wf_canvas_add_new_actor(app->wfc, NULL));
+		STACK_PUSH ((AGlActor*)wf_context_add_new_actor (app->wfc, NULL));
 	}else{
 		AGlActorClass* c = g_hash_table_lookup(agl_actor_registry, event->data.scalar.value);
 		if(c){
@@ -500,7 +500,6 @@ load_settings ()
 		agl_actor_register_class("Dock H", dock_h_get_class());
 		agl_actor_register_class("Dock V", dock_v_get_class());
 		agl_actor_register_class("Panel", panel_view_get_class());
-		agl_actor_register_class("Scrollable", scrollable_view_get_class());
 		agl_actor_register_class("Dirs", directories_view_get_class());
 		agl_actor_register_class("Inspector", inspector_view_get_class());
 		agl_actor_register_class("Search", search_view_get_class());
@@ -566,8 +565,9 @@ save_settings ()
 	bool add_child (yaml_event_t* event, AGlActor* actor)
 	{
 		AGlActorClass* c = actor->class;
-		g_return_val_if_fail(c, false);
-		if(c != scrollbar_view_get_class() && c != button_get_class()){
+		if (!c) return true; // It is not an error for an actor to not have a class. It will not be saved.
+
+		if (c != scrollbar_view_get_class() && c != button_get_class()) {
 			g_return_val_if_fail(actor->name, false);
 
 			map_open_(event, actor->name);
@@ -576,7 +576,7 @@ save_settings ()
 
 			bool is_panel_child = actor->parent && actor->parent->class == panel_view_get_class();
 
-			if(!is_panel_child){
+			if (!is_panel_child) {
 				int vals1[2] = {actor->region.x1, actor->region.y1};
 				if(vals1[0] || vals1[1]){
 					yaml_add_key_value_pair_array("position", vals1, 2);
@@ -585,32 +585,32 @@ save_settings ()
 				yaml_add_key_value_pair_array("size", vals2, 2);
 			}
 
-			if(actor->class == panel_view_get_class() || actor->class == dock_v_get_class() || actor->class == dock_h_get_class()){
+			if (actor->class == panel_view_get_class() || actor->class == dock_v_get_class() || actor->class == dock_h_get_class()) {
 				PanelView* panel = (PanelView*)actor;
 				bool b[3] = {
 					panel->size_req.min.x > -1 || panel->size_req.min.y > -1,
 					panel->size_req.preferred.x > -1 || panel->size_req.preferred.y > -1,
 					panel->size_req.max.x > -1 || panel->size_req.max.y > -1
 				};
-				if(b[0] || b[1] || b[2]){
+				if (b[0] || b[1] || b[2]) {
 					map_open_(event, "size-req");
-					if(b[0])
+					if (b[0])
 						if(!yaml_add_key_value_pair_pt("min", &panel->size_req.min)) goto error;
-					if(b[1])
+					if (b[1])
 						if(!yaml_add_key_value_pair_pt("preferred", &panel->size_req.preferred)) goto error;
-					if(b[2])
+					if (b[2])
 						if(!yaml_add_key_value_pair_pt("max", &panel->size_req.max)) goto error;
 					end_map(event);
 				}
 			}
 
-			StateBehaviour* b = (StateBehaviour*)agl_actor__get_behaviour(actor, state_get_class());
-			if(b){
+			StateBehaviour* b = (StateBehaviour*)agl_actor__find_behaviour (actor, state_get_class());
+			if (b) {
 				ParamArray* params = b->params;
-				if(params){
-					for(int i = 0; i < params->size; i++){
+				if (params) {
+					for (int i = 0; i < params->size; i++) {
 						ConfigParam* param = &params->params[i];
-						switch(param->utype){
+						switch (param->utype) {
 							case G_TYPE_STRING:
 								if(!yaml_add_key_value_pair(param->name, param->val.c)) goto error;
 								break;
@@ -621,9 +621,9 @@ save_settings ()
 				}
 			}
 
-			if(!b || b->is_container){
-				for(GList* l = actor->children;l;l=l->next){
-					if(!add_child(event, l->data)) goto error;
+			if (!b || b->is_container) {
+				for (GList* l = actor->children;l;l=l->next) {
+					if (!add_child(event, l->data)) goto error;
 				}
 			}
 
@@ -636,7 +636,7 @@ save_settings ()
 
 	map_open_(&event, "windows");
 	map_open_(&event, "window");
-	if(!((AGlActor*)app->scene)->children || !add_child(&event, (AGlActor*)app->scene)) goto close;
+	if (!((AGlActor*)app->scene)->children || !add_child(&event, (AGlActor*)app->scene)) goto close;
 	end_map(&event);
 	end_map(&event);
 

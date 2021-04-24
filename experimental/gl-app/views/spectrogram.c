@@ -157,7 +157,7 @@ load_texture(SpectrogramView* view)
 	GLint n_colour_components = (GLint)gdk_pixbuf_get_n_channels(view->pixbuf);
 	GLenum format = gdk_pixbuf_get_n_channels(view->pixbuf) == 4 ? GL_RGBA : GL_RGB;
 	if(gluBuild2DMipmaps(GL_TEXTURE_2D, n_colour_components, (GLsizei)gdk_pixbuf_get_width(view->pixbuf), (GLsizei)gdk_pixbuf_get_height(view->pixbuf), format, GL_UNSIGNED_BYTE, gdk_pixbuf_get_pixels(view->pixbuf))){
-		gwarn("mipmap generation failed");
+		pwarn("mipmap generation failed");
 		return false;
 	}
 #else

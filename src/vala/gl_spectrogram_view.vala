@@ -13,7 +13,6 @@ using GLib;
 using Gtk;
 using Gdk;
 using GL;
-using GLU;
 
 [CCode(
    cheader_filename = "stdint.h",

@@ -118,7 +118,7 @@ void
 open_menu (WaitCallback callback, gpointer user_data)
 {
 	guint button = 3;
-	if(!gdk_test_simulate_button (app->window->window, 400, 300, button, 0, GDK_BUTTON_PRESS)){
+	if (!gdk_test_simulate_button (app->window->window, 350, 250, button, 0, GDK_BUTTON_PRESS)) {
 		dbg(0, "click failed");
 	}
 

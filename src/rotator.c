@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of Samplecat. http://samplecat.orford.org          |
-* | copyright (C) 2007-2020 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2007-2021 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -1951,8 +1951,8 @@ _add_by_iter(Rotator* tree_view, GtkTreeIter* iter)
 	Waveform* w = waveform_load_new(sample->full_path);
 	int n_frames = waveform_get_n_frames(w);
 	dbg(0, "  %s %i", sample->name, n_frames);
-	WaveformActor* a = wf_canvas_add_new_actor(_r->wfc, w);
-	if(a){
+	WaveformActor* a = wf_context_add_new_actor (_r->wfc, w);
+	if (a) {
 		agl_actor__add_child((AGlActor*)_r->scene, (AGlActor*)a);
 
 		_r->actors = g_list_append(_r->actors, (SampleActor*)AGL_NEW(SampleActor,

@@ -12,9 +12,10 @@
 
 #include "config.h"
 #include <getopt.h>
+#include <glib/gstdio.h>
+#include <gdk/gdkkeysyms.h>
 #include "gdl/gdl-dock-item.h"
 #include "gdl/gdl-dock-master.h"
-#include "gdk/gdkkeysyms.h"
 #include "debug/debug.h"
 #include "icon_theme.h"
 #include "file_manager/pixmaps.h"
@@ -25,19 +26,24 @@
 #include "window.h"
 
 static bool search_pending = false;
+static char* home;
 
 Application* app = NULL;
 
 #include "utils.c"
 #include "list.c"
 
+static void set_home_dir (char** argv);
+
 
 int
 application_main (int argc, char** argv)
 {
-	g_log_set_default_handler(log_handler, NULL);
+	g_log_set_default_handler (log_handler, NULL);
 
-	gtk_init_check(&argc, &argv);
+	set_home_dir (argv);
+
+	gtk_init_check (&argc, &argv);
 
 	app = application_new();
 	SamplecatModel* model = samplecat.model;
@@ -63,7 +69,11 @@ application_main (int argc, char** argv)
 
 	type_init();
 
-	if(config_load(&app->configctx, &app->config)){
+	if (config_load(&app->configctx, &app->config)) {
+		sprintf(app->config.auditioner, "cli");
+#ifdef USE_SQLITE
+		sprintf(app->config.database_backend, "sqlite");
+#endif
 		g_signal_emit_by_name (app, "config-loaded");
 	}
 
@@ -81,6 +91,15 @@ application_main (int argc, char** argv)
 		NULL
 #endif
 	);
+
+#ifdef USE_SQLITE
+	{
+		ScanResults results = {0,};
+		char* path = g_strdup_printf ("%s/../lib/waveform/test/data/piano.wav", home);
+		application_add_file (path, &results);
+		g_free(path);
+	}
+#endif
 
 	if (app->config.database_backend && can_use(model->backends, app->config.database_backend)) {
 		g_clear_pointer(&model->backends, g_list_free);
@@ -176,11 +195,11 @@ on_quit ()
 
 
 void
-setup ()
+setup (char* argv[])
 {
 	TEST.n_tests = G_N_ELEMENTS(tests);
 
-	application_main (0, NULL);
+	application_main (0, argv);
 }
 
 
@@ -190,5 +209,27 @@ teardown ()
 	dbg(1, "sending CTL-Q ...");
 
 	send_key(app->window->window, GDK_KEY_q, GDK_CONTROL_MASK);
+
+	g_free(home);
 }
 
+
+/*
+ *  Set HOME so that tests can use their own config
+ */
+static void
+set_home_dir (char** argv)
+{
+	char _cwd[PATH_MAX];
+	char* cwd = getcwd(_cwd, PATH_MAX);
+	char* argv0 = g_strdup(argv[0]);
+	char* r = g_strrstr(argv0, "/");
+	if (r) *r = 0;
+	home = g_strdup_printf("%s/%s/..", cwd, argv0);
+	g_setenv ("HOME", home, true);
+
+#ifdef USE_SQLITE
+	char* sqlite_db = g_strdup_printf("%s/.config/samplecat/samplecat.sqlite", home);
+	g_unlink (sqlite_db);
+#endif
+}

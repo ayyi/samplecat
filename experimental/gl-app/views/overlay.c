@@ -54,7 +54,7 @@ overlay_paint (AGlActor* actor)
 {
 	OverlayView* overlay = (OverlayView*)actor;
 
-	agl->shaders.plain->uniform.colour = 0xff6600aa;
+	PLAIN_COLOUR2 (agl->shaders.plain) = 0xff6600aa;
 	agl_use_program((AGlShader*)agl->shaders.plain);
 	agl_rect(overlay->insert_pt.x1, overlay->insert_pt.y1, overlay->insert_pt.x2 - overlay->insert_pt.x1, 1);
 
