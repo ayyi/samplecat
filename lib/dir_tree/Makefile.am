@@ -5,6 +5,7 @@ AM_CFLAGS = \
 	-DIMAGES_DIR=\"$(imagesdir)\" \
 	-DG_LOG_DOMAIN=\"DirTree\" \
 	-I$(top_srcdir)/lib \
+	-I$(top_srcdir)/lib/waveform/lib/agl \
 	$(GTK_CFLAGS)
 
 noinst_LIBRARIES = libdirtree.a

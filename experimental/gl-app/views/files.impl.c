@@ -1,14 +1,15 @@
-/**
-* +----------------------------------------------------------------------+
-* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2017-2019 Tim Orford <tim@orford.org>                  |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-*
-*/
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
+ | copyright (C) 2017-2021 Tim Orford <tim@orford.org>                  |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
+ */
+
 #include "config.h"
 #include <glib.h>
 #include <glib-object.h>
@@ -66,7 +67,7 @@ is_selected (DirectoryView* dv, int i)
 
 
 static gboolean
-_is_selected(DirectoryView* view, int i)
+_is_selected (DirectoryView* view, int i)
 {
 	return i == view->selection;
 }
@@ -244,7 +245,7 @@ free_view_item (ViewItem *view_item)
 
 
 static gint
-wrap_sort(gconstpointer a, gconstpointer b, DirectoryView* view)
+wrap_sort (gconstpointer a, gconstpointer b, DirectoryView* view)
 {
 	DirectoryViewPrivate* v = view->priv;
 
@@ -258,7 +259,7 @@ wrap_sort(gconstpointer a, gconstpointer b, DirectoryView* view)
 
 
 static void
-resort(DirectoryView* view)
+resort (DirectoryView* view)
 {
 	DirectoryViewPrivate* v = view->priv;
 	ViewItem** items = (ViewItem**)view->items->pdata;
@@ -303,7 +304,7 @@ directory_view_sort (ViewIface* view)
 
 
 static void
-directory_view_style_changed(ViewIface *view, int flags)
+directory_view_style_changed (ViewIface *view, int flags)
 {
 	DirectoryView* dv = (DirectoryView*)view;
 	ViewItem** items = (ViewItem**)dv->items->pdata;
@@ -420,9 +421,7 @@ directory_view_update_items (ViewIface* view, GPtrArray* items)
 	 */
 	resort(dv);
 
-	int i;
-	for (i = 0; i < items->len; i++)
-	{
+	for (int i = 0; i < items->len; i++) {
 		DirItem* item = (DirItem *) items->pdata[i];
 		const gchar* leafname = item->leafname;
 
@@ -516,27 +515,27 @@ directory_view_count_items (ViewIface* view)
 
 
 static int
-directory_view_count_selected(ViewIface* view)
+directory_view_count_selected (ViewIface* view)
 {
 	return 1;
 }
 
 
 static void
-directory_view_show_cursor(ViewIface* view)
+directory_view_show_cursor (ViewIface* view)
 {
 }
 
 
 static void
-directory_view_get_iter(ViewIface* view, ViewIter* iter, IterFlags flags)
+directory_view_get_iter (ViewIface* view, ViewIter* iter, IterFlags flags)
 {
 	make_iter((DirectoryView*)view, iter, flags);
 }
 
 
 static void
-directory_view_get_iter_at_point(ViewIface* view, ViewIter* iter, GdkWindow* src, int x, int y)
+directory_view_get_iter_at_point (ViewIface* view, ViewIter* iter, GdkWindow* src, int x, int y)
 {
 	DirectoryView* dv = (DirectoryView*)view;
 
@@ -547,7 +546,7 @@ directory_view_get_iter_at_point(ViewIface* view, ViewIter* iter, GdkWindow* src
 
 
 static void
-directory_view_cursor_to_iter(ViewIface *view, ViewIter *iter)
+directory_view_cursor_to_iter (ViewIface *view, ViewIter *iter)
 {
 #if 0
 	DirectoryView *dv = (DirectoryView *) view;
@@ -576,9 +575,9 @@ directory_view_cursor_to_iter(ViewIface *view, ViewIter *iter)
 static void
 directory_view_set_selected (ViewIface* view, ViewIter* iter, gboolean selected)
 {
-	void set_selected(DirectoryView* dv, int i, gboolean selected)
+	void set_selected (DirectoryView* dv, int i, gboolean selected)
 	{
-		if (selected){
+		if (selected) {
 			dv->selection = i;
 		}
 
@@ -612,14 +611,14 @@ directory_view_set_frozen (ViewIface* view, gboolean frozen)
 
 
 static gboolean
-directory_view_cursor_visible(ViewIface* view)
+directory_view_cursor_visible (ViewIface* view)
 {
 	return TRUE;
 }
 
 
 static void
-directory_view_set_base(ViewIface* view, ViewIter* iter)
+directory_view_set_base (ViewIface* view, ViewIter* iter)
 {
 	DirectoryView *dv = (DirectoryView *) view;
 
@@ -628,7 +627,7 @@ directory_view_set_base(ViewIface* view, ViewIter* iter)
 
 
 static void
-directory_view_start_lasso_box(ViewIface *view, GdkEventButton *event)
+directory_view_start_lasso_box (ViewIface *view, GdkEventButton *event)
 {
 #if 0
 	DirectoryView *dv = (DirectoryView *) view;
@@ -648,7 +647,7 @@ directory_view_start_lasso_box(ViewIface *view, GdkEventButton *event)
 
 
 static void
-directory_view_extend_tip(ViewIface *view, ViewIter *iter, GString *tip)
+directory_view_extend_tip (ViewIface *view, ViewIter *iter, GString *tip)
 {
 }
 

@@ -59,11 +59,11 @@ search_new ()
 	gtk_entry_set_activates_default(GTK_ENTRY(entry), TRUE);
 	g_signal_connect(G_OBJECT(entry), "activate", G_CALLBACK(on_focus_out), NULL);
 
-	void on_search_filter_changed (Observable* _filter, AMVal value, gpointer _entry)
+	void on_search_filter_changed (Observable* _filter, AGlVal value, gpointer _entry)
 	{
 		gtk_entry_set_text(GTK_ENTRY(_entry), value.c);
 	}
-	observable_subscribe(filter, on_search_filter_changed, entry);
+	agl_observable_subscribe (filter, on_search_filter_changed, entry);
 
 	tagshow_selector_new();
 
@@ -96,7 +96,7 @@ tagshow_selector_new ()
 	}
 	g_signal_connect(combo, "changed", G_CALLBACK(on_view_category_changed), NULL);
 
-	void on_category_filter_changed (Observable* filter, AMVal value, gpointer user_data)
+	void on_category_filter_changed (Observable* filter, AGlVal value, gpointer user_data)
 	{
 		GtkComboBox* combo = user_data;
 
@@ -105,5 +105,5 @@ tagshow_selector_new ()
 		}
 	}
 
-	observable_subscribe(samplecat.model->filters2.category, on_category_filter_changed, combo);
+	agl_observable_subscribe (samplecat.model->filters2.category, on_category_filter_changed, combo);
 }

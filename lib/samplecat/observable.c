@@ -1,14 +1,15 @@
-/**
-* +----------------------------------------------------------------------+
-* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2018-2020 Tim Orford <tim@orford.org>                  |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-*
-*/
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
+ | copyright (C) 2018-2021 Tim Orford <tim@orford.org>                  |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
+ */
+
 #include "config.h"
 #include "math.h"
 #include <glib.h>
@@ -16,16 +17,9 @@
 #include "observable.h"
 
 typedef struct {
-   ObservableFn fn;
-   gpointer     user;
+   AGlObservableFn fn;
+   gpointer        user;
 } Subscription;
-
-
-Observable*
-observable_new ()
-{
-	return g_new0(Observable, 1);
-}
 
 
 Observable*
@@ -37,19 +31,8 @@ named_observable_new (const char* name)
 }
 
 
-/*
- *  This will not free string values, this needs to be done by the user.
- */
 void
-observable_free (Observable* observable)
-{
-	g_list_free_full(observable->subscriptions, g_free);
-	g_free(observable);
-}
-
-
-void
-observable_set (Observable* observable, AMVal value)
+observable_set (Observable* observable, AGlVal value)
 {
 	// because that because of the possibility of uninitialized padding
 	// there is no way to check equality of 2 unions so
@@ -65,66 +48,28 @@ observable_set (Observable* observable, AMVal value)
 }
 
 
-void
-observable_subscribe (Observable* observable, ObservableFn fn, gpointer user)
-{
-	observable->subscriptions = g_list_append(observable->subscriptions, SC_NEW(Subscription,
-		.fn = fn,
-		.user = user
-	));
-}
-
-
-/*
- *  Calls back imediately with the current value
- */
-void
-observable_subscribe_with_state (Observable* observable, ObservableFn fn, gpointer user)
-{
-	observable_subscribe(observable, fn, user);
-	fn(observable, observable->value, user);
-}
-
-
-/*
- *  Disconnect by either fn or user_data if they are set
- */
-void
-observable_unsubscribe (Observable* observable, ObservableFn fn, gpointer user)
-{
-	GList* l = observable->subscriptions;
-	for(;l;l=l->next){
-		Subscription* subscription = l->data;
-		if((fn && fn == subscription->fn) || (user && user == subscription->user)){
-			observable->subscriptions = g_list_delete_link(observable->subscriptions, l);
-			break;
-		}
-	}
-}
-
-
 Observable*
 observable_float_new (float val, float min, float max)
 {
-	Observable* observable = observable_new();
+	Observable* observable = agl_observable_new();
 
-	observable->value = (AMVal){.f = val};
-	observable->min = (AMVal){.f = min};
-	observable->max = (AMVal){.f = max};
+	observable->value = (AGlVal){.f = val};
+	observable->min = (AGlVal){.f = min};
+	observable->max = (AGlVal){.f = max};
 
 	return observable;
 }
 
 
 void
-observable_float_set (Observable* observable, float value)
+observable_set_float (Observable* observable, float value)
 {
-	if(isnan(value)) return;
+	if (isnan(value)) return;
 
 	value = CLAMP(value, observable->min.f, observable->max.f);
 
-	if(observable->value.f != value){
-		observable_set(observable, (AMVal){.f=value});
+	if (observable->value.f != value) {
+		observable_set(observable, (AGlVal){.f=value});
 	}
 }
 
@@ -137,11 +82,11 @@ observable_string_set (Observable* observable, const char* str)
 {
 	bool changed = true;
 
-	if(observable->value.c){
+	if (observable->value.c) {
 		changed = (!str) || strcmp(str, observable->value.c);
 		g_free(changed ? observable->value.c : (char*)str);
 	}
 
-	if(changed)
-		observable_set(observable, (AMVal){.c = (char*)str});
+	if (changed)
+		observable_set(observable, (AGlVal){.c = (char*)str});
 }

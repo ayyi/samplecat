@@ -58,11 +58,12 @@ static void         listview__highlight_playing_by_path(GtkTreePath*);
 static void         listview__highlight_playing_by_ref(GtkTreeRowReference*);
 
 
+/*
+ *  The main samplecat pane. A treeview with a list of samples.
+ */
 GtkWidget*
-listview__new()
+listview__new ()
 {
-	//the main pane. A treeview with a list of samples.
-
 	LibraryView* lv = app->libraryview = g_new0(LibraryView, 1);
 
 	lv->scroll = scrolled_window_new();
@@ -71,23 +72,17 @@ listview__new()
 	gtk_container_add(GTK_CONTAINER(lv->scroll), view);
 	g_signal_connect(view, "realize", G_CALLBACK(listview__on_realise), NULL);
 	g_signal_connect(view, "motion-notify-event", (GCallback)listview__on_motion, NULL);
-	g_signal_connect(view, "drag-data-received", G_CALLBACK(listview__drag_received), NULL); //currently the window traps this before we get here.
+	g_signal_connect(view, "drag-data-received", G_CALLBACK(listview__drag_received), NULL); // currently the window traps this before we get here.
 	g_signal_connect(view, "drag-motion", G_CALLBACK(drag_motion), NULL);
-#if 0 // TODO why does this not work?
-	gtk_tree_view_set_fixed_height_mode(GTK_TREE_VIEW(view), TRUE);
-#endif
 
-	//set up as dnd source:
-	gtk_drag_source_set(view, GDK_BUTTON1_MASK | GDK_BUTTON2_MASK,
-	                    dnd_file_drag_types, dnd_file_drag_types_count,
-	                    GDK_ACTION_COPY | GDK_ACTION_MOVE | GDK_ACTION_ASK);
+	// set up as dnd source
+	gtk_drag_source_set(view, GDK_BUTTON1_MASK | GDK_BUTTON2_MASK, dnd_file_drag_types, dnd_file_drag_types_count, GDK_ACTION_COPY | GDK_ACTION_MOVE | GDK_ACTION_ASK);
 	g_signal_connect(G_OBJECT(view), "drag_data_get", G_CALLBACK(listview__dnd_get), NULL);
 
-	//icon:
+	// icon
 	GtkCellRenderer* cell9 = gtk_cell_renderer_pixbuf_new();
-	GtkTreeViewColumn* col9 /*= app->col_icon*/ = gtk_tree_view_column_new_with_attributes("", cell9, "pixbuf", COL_ICON, NULL);
+	GtkTreeViewColumn* col9 = gtk_tree_view_column_new_with_attributes("", cell9, "pixbuf", COL_ICON, NULL);
 	gtk_tree_view_append_column(GTK_TREE_VIEW(view), col9);
-	//g_object_set(cell4,   "cell-background", "Orange",     "cell-background-set", TRUE,  NULL);
 	g_object_set(G_OBJECT(cell9), "xalign", 0.0, NULL);
 	gtk_tree_view_column_set_resizable(col9, TRUE);
 	gtk_tree_view_column_set_min_width(col9, 0);
@@ -105,10 +100,7 @@ listview__new()
 	gtk_tree_view_column_set_sort_column_id(col1, COL_NAME);
 	gtk_tree_view_column_set_reorderable(col1, TRUE);
 	gtk_tree_view_column_set_min_width(col1, 0);
-	//gtk_tree_view_column_set_spacing(col1, 10);
-	//g_object_set(cell1, "ypad", 0, NULL);
 	gtk_tree_view_column_set_cell_data_func(col1, cell1, (gpointer)listview__cell_data_bg, NULL, NULL);
-	//gtk_tree_view_column_set_cell_data_func(col1, cell1, (gpointer)cell_bg_lighter, NULL, NULL);
 
 	gtk_tree_view_column_set_sizing(col1, GTK_TREE_VIEW_COLUMN_FIXED);
 	int width = atoi(app->config.column_widths[0]);
@@ -119,17 +111,14 @@ listview__new()
 	GtkTreeViewColumn* col2 = lv->col_path = gtk_tree_view_column_new_with_attributes("Path", cell2, "text", COL_FNAME, NULL);
 	gtk_tree_view_append_column(GTK_TREE_VIEW(view), col2);
 	gtk_tree_view_column_set_sort_column_id(col2, COL_FNAME);
-	//gtk_tree_view_column_set_resizable(col2, FALSE);
 	gtk_tree_view_column_set_reorderable(col2, TRUE);
 	gtk_tree_view_column_set_min_width(col2, 0);
-	//g_object_set(cell2, "ypad", 0, NULL);
 	gtk_tree_view_column_set_cell_data_func(col2, cell2, listview__path_cell_data, NULL, NULL);
 #ifdef USE_AYYI
-	//icon that shows when file is in current active song.
+	// icon that shows when file is in current active song
 	GtkCellRenderer* ayyi_renderer = gtk_cell_renderer_pixbuf_new();
 	gtk_tree_view_column_pack_start(col2, ayyi_renderer, FALSE);
 	gtk_tree_view_column_add_attribute(col2, ayyi_renderer, "pixbuf", COL_AYYI_ICON);
-	//gtk_tree_view_column_set_cell_data_func(col2, ayyi_renderer, vdtree_color_cb, vdt, NULL);
 #endif
 
 	gtk_tree_view_column_set_sizing(col2, GTK_TREE_VIEW_COLUMN_FIXED);
@@ -137,7 +126,6 @@ listview__new()
 	if(width > 0) gtk_tree_view_column_set_fixed_width(col2, MAX(width, 30));
 	else gtk_tree_view_column_set_fixed_width(col2, 130);
 
-	//GtkCellRenderer *cell3 /*= app->cell_tags*/ = gtk_cell_renderer_text_new();
 	GtkCellRenderer* cell3 = lv->cells.tags = gtk_cell_renderer_hyper_text_new();
 	GtkTreeViewColumn* column3 = lv->col_tags = gtk_tree_view_column_new_with_attributes("Tags", cell3, "text", COL_KEYWORDS, NULL);
 	gtk_tree_view_append_column(GTK_TREE_VIEW(view), column3);
@@ -153,11 +141,9 @@ listview__new()
 	GtkCellRenderer* cell4 = gtk_cell_renderer_pixbuf_new();
 	GtkTreeViewColumn* col4 = lv->col_pixbuf = gtk_tree_view_column_new_with_attributes("Overview", cell4, "pixbuf", COL_OVERVIEW, NULL);
 	gtk_tree_view_append_column(GTK_TREE_VIEW(view), col4);
-	//g_object_set(cell4,   "cell-background", "Orange",     "cell-background-set", TRUE,  NULL);
 	g_object_set(G_OBJECT(cell4), "xalign", 0.0, NULL);
 	gtk_tree_view_column_set_resizable(col4, TRUE);
 	gtk_tree_view_column_set_min_width(col4, 0);
-	//g_object_set(cell4, "ypad", 0, NULL);
 	gtk_tree_view_column_set_cell_data_func(col4, cell4, listview__cell_data_bg, NULL, NULL);
 
 	GtkCellRenderer* cell5 = gtk_cell_renderer_text_new();
@@ -168,7 +154,6 @@ listview__new()
 	gtk_tree_view_column_set_reorderable(col5, TRUE);
 	gtk_tree_view_column_set_min_width(col5, 0);
 	g_object_set(G_OBJECT(cell5), "xalign", 1.0, NULL);
-	//g_object_set(cell5, "ypad", 0, NULL);
 	gtk_tree_view_column_set_cell_data_func(col5, cell5, listview__cell_data_bg, NULL, NULL);
 
 	GtkCellRenderer* cell6 = gtk_cell_renderer_text_new();
@@ -178,7 +163,6 @@ listview__new()
 	gtk_tree_view_column_set_reorderable(col6, TRUE);
 	gtk_tree_view_column_set_min_width(col6, 0);
 	g_object_set(G_OBJECT(cell6), "xalign", 1.0, NULL);
-	//g_object_set(cell6, "ypad", 0, NULL);
 	gtk_tree_view_column_set_cell_data_func(col6, cell6, listview__cell_data_bg, NULL, NULL);
 
 	GtkCellRenderer* cell7 = gtk_cell_renderer_text_new();
@@ -196,7 +180,6 @@ listview__new()
 	gtk_tree_view_column_set_resizable(col8, TRUE);
 	gtk_tree_view_column_set_reorderable(col8, TRUE);
 	gtk_tree_view_column_set_min_width(col8, 0);
-	//g_object_set(G_OBJECT(cell8), "xalign", 1.0, NULL);
 	gtk_tree_view_column_set_cell_data_func(col8, cell8, listview__cell_data_bg, NULL, NULL);
 
 	GtkTreeSelection* selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(view));
@@ -208,30 +191,30 @@ listview__new()
 	g_signal_connect(G_OBJECT(samplecat.store), "content-changed", G_CALLBACK(listview__on_store_changed), lv);
 
 #if 0
-	void on_unrealize(GtkWidget* widget, gpointer user_data)
+	void on_unrealize (GtkWidget* widget, gpointer user_data)
 	{
 		PF0;
 	}
 	g_signal_connect((gpointer)view, "unrealize", G_CALLBACK(on_unrealize), NULL);
 #endif
 
-	void listview_on_play(GObject* _player, gpointer _)
+	void listview_on_play (GObject* _player, gpointer _)
 	{
-		if(play->sample->row_ref){
+		if (play->sample->row_ref) {
 			listview__highlight_playing_by_ref(play->sample->row_ref);
 		}
 	}
 
 	g_signal_connect(play, "play", (GCallback)listview_on_play, NULL);
 
-	void on_sort_order_changed(GtkTreeSortable* sortable, gpointer user_data)
+	void on_sort_order_changed (GtkTreeSortable* sortable, gpointer user_data)
 	{
 		gint sort_column_id;
 		GtkSortType order;
-		if(gtk_tree_sortable_get_sort_column_id(sortable, &sort_column_id, &order)){
-			if(sort_column_id == COL_LEN){
+		if (gtk_tree_sortable_get_sort_column_id(sortable, &sort_column_id, &order)) {
+			if (sort_column_id == COL_LEN) {
 				int n_rows = ((SamplecatListStore*)samplecat.store)->row_count;
-				if(n_rows >= LIST_STORE_MAX_ROWS){
+				if (n_rows >= LIST_STORE_MAX_ROWS) {
 					dbg(0, "TODO need to requery database ordered by length...");
 				}
 			}
@@ -239,7 +222,7 @@ listview__new()
 	}
 	g_signal_connect(GTK_TREE_SORTABLE(samplecat.store), "sort-column-changed", (GCallback)on_sort_order_changed, NULL);
 
-	void list_view_on_search_start()
+	void list_view_on_search_start ()
 	{
 		listview__block_motion_handler();
 	}
@@ -250,11 +233,10 @@ listview__new()
 
 
 static void
-listview__on_realise(GtkWidget* widget, gpointer user_data)
+listview__on_realise (GtkWidget* widget, gpointer user_data)
 {
 	gtk_tree_view_column_set_resizable(app->libraryview->col_name, true);
 	gtk_tree_view_column_set_resizable(app->libraryview->col_path, true);
-	//gtk_tree_view_column_set_sizing(col1, GTK_TREE_VIEW_COLUMN_FIXED);
 
 	listview__on_store_changed(samplecat.store, app->libraryview);
 }
@@ -262,7 +244,7 @@ listview__on_realise(GtkWidget* widget, gpointer user_data)
 
 #if NEVER
 static int
-listview__path_get_id(GtkTreePath* path)
+listview__path_get_id (GtkTreePath* path)
 {
 	int id;
 	GtkTreeIter iter;
@@ -272,17 +254,19 @@ listview__path_get_id(GtkTreePath* path)
 	gtk_tree_model_get(store, &iter, COL_IDX, &id, COL_NAME, &filename, -1);
 
 	dbg(1, "filename=%s", filename);
-	if(!id) pwarn("failed to get id! id must be non-zero.");
+	if (!id) pwarn("failed to get id! id must be non-zero.");
 	return id;
 }
 
+
+/*
+ *  deprecated - use message window instead.
+ */
 void
-listview__show_db_missing()
+listview__show_db_missing ()
 {
-	PF;
-	// deprecated - use message window instead.
-	static gboolean done = FALSE;
-	if(done) return;
+	static bool done = FALSE;
+	if (done) return;
 
 	GtkTreeIter iter;
 	gtk_list_store_append(samplecat.store, &iter);
@@ -294,37 +278,37 @@ listview__show_db_missing()
 
 
 static gboolean
-listview__on_row_clicked(GtkWidget* widget, GdkEventButton* event, gpointer user_data)
+listview__on_row_clicked (GtkWidget* widget, GdkEventButton* event, gpointer user_data)
 {
 	GtkTreeView* treeview = GTK_TREE_VIEW(widget);
 
-	switch(event->button){
+	switch (event->button) {
 	  case 1:
 		;GtkTreePath* path;
-		if(gtk_tree_view_get_path_at_pos(GTK_TREE_VIEW(app->libraryview->widget), (gint)event->x, (gint)event->y, &path, NULL, NULL, NULL)){
+		if (gtk_tree_view_get_path_at_pos(GTK_TREE_VIEW(app->libraryview->widget), (gint)event->x, (gint)event->y, &path, NULL, NULL, NULL)) {
 
-			//auditioning:
+			// auditioning
 			GdkRectangle rect;
 			gtk_tree_view_get_cell_area(treeview, path, app->libraryview->col_pixbuf, &rect);
-			if(((gint)event->x > rect.x) && ((gint)event->x < (rect.x + rect.width))){
+			if (((gint)event->x > rect.x) && ((gint)event->x < (rect.x + rect.width))) {
 
-				//overview column:
+				// overview column
 				dbg(2, "overview. column rect: %i %i %i %i", rect.x, rect.y, rect.width, rect.height);
-				if(play->auditioner){
+				if (play->auditioner) {
 					Sample* sample = samplecat_list_store_get_sample_by_path(path);
-					if(play->sample){
+					if (play->sample) {
 						(sample->id == play->sample->id)
 							? player_stop(sample)
 							: application_play(sample);
-					}else{
+					} else {
 						application_play(sample);
 					}
 					sample_unref(sample);
 				}
-			}else{
+			} else {
 				gtk_tree_view_get_cell_area(treeview, path, app->libraryview->col_tags, &rect);
 
-				if(((gint)event->x > rect.x) && ((gint)event->x < (rect.x + rect.width))){
+				if (((gint)event->x > rect.x) && ((gint)event->x < (rect.x + rect.width))) {
 					// tags column
 					GtkTreeIter iter;
 					GtkTreeModel* model = gtk_tree_view_get_model(GTK_TREE_VIEW(app->libraryview->widget));
@@ -333,7 +317,7 @@ listview__on_row_clicked(GtkWidget* widget, GdkEventButton* event, gpointer user
 					int id;
 					gtk_tree_model_get(model, &iter, COL_KEYWORDS, &tags, COL_IDX, &id, -1);
 
-					if(tags && strlen(tags)){
+					if (tags && strlen(tags)) {
 						observable_string_set(samplecat.model->filters2.search, g_strdup(tags));
 					}
 				}
@@ -348,7 +332,7 @@ listview__on_row_clicked(GtkWidget* widget, GdkEventButton* event, gpointer user
 
 		//if one or no rows selected, select one:
 		GtkTreeSelection* selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(app->libraryview->widget));
-        if(gtk_tree_selection_count_selected_rows(selection) <= 1){
+		if (gtk_tree_selection_count_selected_rows(selection) <= 1) {
 			GtkTreePath* path;
 			if(gtk_tree_view_get_path_at_pos(GTK_TREE_VIEW(app->libraryview->widget), (gint)event->x, (gint)event->y, &path, NULL, NULL, NULL)){
 				gtk_tree_selection_unselect_all(selection);
@@ -359,11 +343,8 @@ listview__on_row_clicked(GtkWidget* widget, GdkEventButton* event, gpointer user
 			}
 		}
 
-		if(app->context_menu){
-			gtk_menu_popup(GTK_MENU(app->context_menu),
-                           NULL, NULL,  //parents
-                           NULL, NULL,  //fn and data used to position the menu.
-                           event->button, event->time);
+		if (app->context_menu) {
+			gtk_menu_popup(GTK_MENU(app->context_menu), NULL, NULL, NULL, NULL, event->button, event->time);
 		}
 		return HANDLED;
 
@@ -375,12 +356,12 @@ listview__on_row_clicked(GtkWidget* widget, GdkEventButton* event, gpointer user
 
 
 static void
-listview__on_cursor_change(GtkTreeView* widget, gpointer user_data)
+listview__on_cursor_change (GtkTreeView* widget, gpointer user_data)
 {
 	dbg(2, "...");
 	Sample* s;
-	if((s = listview__get_first_selected_sample())){
-		if(s->id != app->libraryview->selected){
+	if ((s = listview__get_first_selected_sample())) {
+		if (s->id != app->libraryview->selected) {
 			app->libraryview->selected = s->id;
 			samplecat_model_set_selection (samplecat.model, s);
 		}
@@ -390,20 +371,20 @@ listview__on_cursor_change(GtkTreeView* widget, gpointer user_data)
 
 
 static void
-listview__on_store_changed(GtkListStore* store, LibraryView* view)
+listview__on_store_changed (GtkListStore* store, LibraryView* view)
 {
 	PF;
 
 	listview__unblock_motion_handler();
 
-	gboolean select_first(gpointer data)
+	gboolean select_first (gpointer data)
 	{
 		LibraryView* view = data;
 
 		GtkTreeSelection* selection = gtk_tree_view_get_selection((GtkTreeView*)view->widget);
-		if(!gtk_tree_selection_count_selected_rows(selection)){
+		if (!gtk_tree_selection_count_selected_rows(selection)) {
 			GtkTreePath* path;
-			if(gtk_tree_view_get_visible_range((GtkTreeView*)view->widget, &path, NULL)){
+			if (gtk_tree_view_get_visible_range((GtkTreeView*)view->widget, &path, NULL)) {
 				gtk_tree_view_set_cursor((GtkTreeView*)view->widget, path, NULL, 0);
 				gtk_tree_path_free(path);
 			}
@@ -437,7 +418,7 @@ listview__get_first_selected_iter(GtkTreeIter* iter)
 
 
 void
-listview__reset_colours()
+listview__reset_colours ()
 {
 	gboolean reset_colours (GtkTreeModel* model, GtkTreePath* path, GtkTreeIter* iter, gpointer data) {
 		Sample *s = samplecat_list_store_get_sample_by_iter(iter);
@@ -452,11 +433,11 @@ listview__reset_colours()
 
 
 static GtkTreePath*
-listview__get_first_selected_path()
+listview__get_first_selected_path ()
 {
 	GtkTreeSelection* selection = gtk_tree_view_get_selection((GtkTreeView*)app->libraryview->widget);
 	GList* list                 = gtk_tree_selection_get_selected_rows(selection, NULL);
-	if(list){
+	if (list) {
 		GtkTreePath* path = gtk_tree_path_copy(list->data);
 
 		g_list_foreach (list, (GFunc)gtk_tree_path_free, NULL);
@@ -472,10 +453,10 @@ listview__get_first_selected_path()
  * @return: Sample* -- must sample_unref() after use.
  */
 static Sample*
-listview__get_first_selected_sample()
+listview__get_first_selected_sample ()
 {
 	GtkTreePath* path = listview__get_first_selected_path();
-	if(path){
+	if (path) {
 		Sample* result = samplecat_list_store_get_sample_by_path(path);
 		gtk_tree_path_free(path);
 		return result;
@@ -486,10 +467,10 @@ listview__get_first_selected_sample()
 
 #if 0
 gchar*
-listview__get_first_selected_filename()
+listview__get_first_selected_filename ()
 {
 	GtkTreeIter iter;
-	if(listview__get_first_selected_iter(&iter)){
+	if (listview__get_first_selected_iter(&iter)) {
 		gchar* fname;
 		gtk_tree_model_get(gtk_tree_view_get_model((GtkTreeView*)app->libraryview->widget), &iter, COL_NAME, &fname, -1);
 		return fname;
@@ -501,12 +482,12 @@ listview__get_first_selected_filename()
 
 #if 0
 gchar*
-listview__get_first_selected_filepath()
+listview__get_first_selected_filepath ()
 {
 	//returned value must be freed
 
 	GtkTreeIter iter;
-	if(listview__get_first_selected_iter(&iter)){
+	if (listview__get_first_selected_iter(&iter)) {
 		gchar* fname, *path;
 		gtk_tree_model_get(gtk_tree_view_get_model((GtkTreeView*)app->libraryview->widget), &iter, COL_NAME, &fname, COL_FNAME, &path, -1);
 		gchar* filepath = g_build_filename(path, fname, NULL);
@@ -517,11 +498,12 @@ listview__get_first_selected_filepath()
 #endif
 
 
+/*
+ *  Outgoing drop. provide the dropee with info on which samples were dropped.
+ */
 static void
-listview__dnd_get(GtkWidget* widget, GdkDragContext* context, GtkSelectionData* selection_data, guint info, guint time, gpointer data)
+listview__dnd_get (GtkWidget* widget, GdkDragContext* context, GtkSelectionData* selection_data, guint info, guint time, gpointer data)
 {
-	// Outgoing drop. provide the dropee with info on which samples were dropped.
-
 	GtkTreeModel* model = GTK_TREE_MODEL(samplecat.store);
 	GtkTreeSelection* selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(app->libraryview->widget));
 	GList* selected_rows = gtk_tree_selection_get_selected_rows(selection, &(model));
@@ -529,7 +511,7 @@ listview__dnd_get(GtkWidget* widget, GdkDragContext* context, GtkSelectionData* 
 	GList* list = NULL;
 	GList* row  = selected_rows;
 
-	for(; row; row=row->next){
+	for (; row; row=row->next) {
 		GtkTreePath* treepath_selection = row->data;
 		Sample* s = samplecat_list_store_get_sample_by_path(treepath_selection);
 		//append is slow, but g_list_prepend() is wrong order :(
@@ -553,14 +535,14 @@ listview__dnd_get(GtkWidget* widget, GdkDragContext* context, GtkSelectionData* 
 	}
 
 	GList* l = list;
-	for(;l;l=l->next) g_free(l->data);
+	for (;l;l=l->next) g_free(l->data);
 	g_list_free(list);
 	g_list_free(selected_rows);
 }
 
 
 static gint
-listview__drag_received(GtkWidget* widget, GdkDragContext* drag_context, gint x, gint y, GtkSelectionData* data, guint info, guint time, gpointer user_data)
+listview__drag_received (GtkWidget* widget, GdkDragContext* drag_context, gint x, gint y, GtkSelectionData* data, guint info, guint time, gpointer user_data)
 {
 	PF;
 	return FALSE;
@@ -571,7 +553,7 @@ static bool blocked = false;
 
 
 void
-listview__block_motion_handler()
+listview__block_motion_handler ()
 {
 	LibraryView* view = app->libraryview;
 
@@ -591,7 +573,7 @@ listview__block_motion_handler()
 
 
 static void
-listview__unblock_motion_handler()
+listview__unblock_motion_handler ()
 {
 	LibraryView* view = app->libraryview;
 	g_return_if_fail(view && view->widget);
@@ -608,7 +590,7 @@ listview__unblock_motion_handler()
 
 
 static gboolean
-listview__on_motion(GtkWidget* widget, GdkEventMotion* event, gpointer user_data)
+listview__on_motion (GtkWidget* widget, GdkEventMotion* event, gpointer user_data)
 {
 	// set mouse-over styling for links
 	// TODO should be done by the renderer not by modifying the store. currently causing segfaults.
@@ -742,7 +724,7 @@ listview__on_motion(GtkWidget* widget, GdkEventMotion* event, gpointer user_data
 
 
 void
-listview__edit_row(GtkWidget* widget, gpointer user_data)
+listview__edit_row (GtkWidget* widget, gpointer user_data)
 {
 	// currently this only works for the Tags cell.
 
@@ -812,7 +794,7 @@ listview__on_keywords_edited (GtkCellRendererText* cell, gchar* path_string, gch
 
 
 static void
-listview__path_cell_data(GtkTreeViewColumn* tree_column, GtkCellRenderer* cell, GtkTreeModel* tree_model, GtkTreeIter* iter, gpointer data)
+listview__path_cell_data (GtkTreeViewColumn* tree_column, GtkCellRenderer* cell, GtkTreeModel* tree_model, GtkTreeIter* iter, gpointer data)
 {
 	listview__cell_data_bg(tree_column, cell, tree_model, iter, data);
 
@@ -826,7 +808,7 @@ listview__path_cell_data(GtkTreeViewColumn* tree_column, GtkCellRenderer* cell, 
 
 
 static void
-listview__tag_cell_data(GtkTreeViewColumn* tree_column, GtkCellRenderer* cell, GtkTreeModel* tree_model, GtkTreeIter* iter, gpointer data)
+listview__tag_cell_data (GtkTreeViewColumn* tree_column, GtkCellRenderer* cell, GtkTreeModel* tree_model, GtkTreeIter* iter, gpointer data)
 {
 	/*
 	handle translation of model data to display format for "tag" data.
@@ -978,7 +960,7 @@ listview__tag_cell_data(GtkTreeViewColumn* tree_column, GtkCellRenderer* cell, G
 
 #if NEVER
 static void
-cell_bg_lighter(GtkTreeViewColumn *tree_column, GtkCellRenderer *cell, GtkTreeModel *tree_model, GtkTreeIter *iter)
+cell_bg_lighter (GtkTreeViewColumn *tree_column, GtkCellRenderer *cell, GtkTreeModel *tree_model, GtkTreeIter *iter)
 {
 	unsigned colour_index = 0;
 	gtk_tree_model_get(GTK_TREE_MODEL(samplecat.store), iter, COL_COLOUR, &colour_index, -1);
@@ -1001,7 +983,7 @@ cell_bg_lighter(GtkTreeViewColumn *tree_column, GtkCellRenderer *cell, GtkTreeMo
 #endif
 
 static void
-listview__cell_data_bg(GtkTreeViewColumn *tree_column, GtkCellRenderer *cell, GtkTreeModel *tree_model, GtkTreeIter *iter, gpointer data)
+listview__cell_data_bg (GtkTreeViewColumn *tree_column, GtkCellRenderer *cell, GtkTreeModel *tree_model, GtkTreeIter *iter, gpointer data)
 {
 	unsigned colour_index = 0;
 	char colour[16] = "#606060";
@@ -1020,7 +1002,7 @@ listview__cell_data_bg(GtkTreeViewColumn *tree_column, GtkCellRenderer *cell, Gt
 
 #if NEVER
 static gboolean
-treeview_get_tags_cell(GtkTreeView *view, guint x, guint y, GtkCellRenderer **cell)
+treeview_get_tags_cell (GtkTreeView *view, guint x, guint y, GtkCellRenderer **cell)
 {
 	GtkTreeViewColumn *colm = NULL;
 	guint              colm_x = 0/*, colm_y = 0*/;
@@ -1075,7 +1057,7 @@ treeview_get_tags_cell(GtkTreeView *view, guint x, guint y, GtkCellRenderer **ce
 
 
 gint
-listview__get_mouseover_row()
+listview__get_mouseover_row ()
 {
 	//get the row number the mouse is currently over from the stored row_reference.
 	LibraryView* view = app->libraryview;

@@ -1,15 +1,15 @@
-/**
-* +----------------------------------------------------------------------+
-* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2016-2021 Tim Orford <tim@orford.org>                  |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-*
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
+ | copyright (C) 2016-2021 Tim Orford <tim@orford.org>                  |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
 */
-#define __wf_private__
+
 #include "config.h"
 #include <gdk/gdkkeysyms.h>
 #include <GL/gl.h>
@@ -115,7 +115,7 @@ files_with_wav (gpointer _)
 		a->cache.enabled = true;
 #endif
 
-		agl_observable_set(view->files.scroll, 0);
+		agl_observable_set_int (view->files.scroll, 0);
 
 		g_idle_add((GSourceFunc)files_scan_dir, a);
 
@@ -150,7 +150,7 @@ files_with_wav (gpointer _)
 		FilesWithWav* view = (FilesWithWav*)actor;
 
 		if (view->files.scroll->value.i > max_scroll((FilesView*)view)) {
-			agl_observable_set (view->files.scroll, max_scroll((FilesView*)view));
+			agl_observable_set_int (view->files.scroll, max_scroll((FilesView*)view));
 		}
 	}
 
@@ -163,13 +163,13 @@ files_with_wav (gpointer _)
 				switch (event->button.button) {
 					case 4:
 						dbg(1, "! scroll up");
-						agl_observable_set (view->files.scroll, MAX(0, view->files.scroll->value.i - 1));
+						agl_observable_set_int (view->files.scroll, MAX(0, view->files.scroll->value.i - 1));
 						break;
 					case 5:
 						dbg(1, "! scroll down");
 						if(scrollable_height > N_ROWS_VISIBLE(actor)){
 							if(view->files.scroll->value.i < max_scroll((FilesView*)view))
-								agl_observable_set (view->files.scroll, view->files.scroll->value.i + 1);
+								agl_observable_set_int (view->files.scroll, view->files.scroll->value.i + 1);
 						}
 						break;
 				}
@@ -292,10 +292,10 @@ files_with_wav_select (FilesWithWav* view, int row)
 
 		iRange range = {view->files.scroll->value.i, view->files.scroll->value.i + N_ROWS_VISIBLE(view) - 1};
 		if (row > range.end) {
-			agl_observable_set(view->files.scroll, row - N_ROWS_VISIBLE(view) + 1);
+			agl_observable_set_int (view->files.scroll, row - N_ROWS_VISIBLE(view) + 1);
 		}
 		if (row < range.start) {
-			agl_observable_set (view->files.scroll, row);
+			agl_observable_set_int (view->files.scroll, row);
 		}
 
 		agl_actor__invalidate ((AGlActor*)view);

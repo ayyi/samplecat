@@ -92,15 +92,6 @@ application_main (int argc, char** argv)
 #endif
 	);
 
-#ifdef USE_SQLITE
-	{
-		ScanResults results = {0,};
-		char* path = g_strdup_printf ("%s/../lib/waveform/test/data/piano.wav", home);
-		application_add_file (path, &results);
-		g_free(path);
-	}
-#endif
-
 	if (app->config.database_backend && can_use(model->backends, app->config.database_backend)) {
 		g_clear_pointer(&model->backends, g_list_free);
 		samplecat_model_add_backend(app->config.database_backend);
@@ -130,6 +121,18 @@ application_main (int argc, char** argv)
 		on_quit(NULL, GINT_TO_POINTER(EXIT_FAILURE));
 #endif
 	}
+
+#ifdef USE_SQLITE
+	{
+		char* files[] = {"piano", "short"};
+		ScanResults results = {0,};
+		for (int i=0;i<G_N_ELEMENTS(files);i++) {
+			char* path = g_strdup_printf ("%s/../lib/waveform/test/data/%s.wav", home, files[i]);
+			application_add_file (path, &results);
+			g_free(path);
+		}
+	}
+#endif
 
 #ifndef DEBUG_NO_THREADS
 	worker_thread_init();

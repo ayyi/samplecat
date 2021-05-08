@@ -845,13 +845,17 @@ static void
 samplecat_model_finalize (GObject* obj)
 {
 	SamplecatModel* self = G_TYPE_CHECK_INSTANCE_CAST (obj, SAMPLECAT_TYPE_MODEL, SamplecatModel);
+
 	g_list_free0 (self->backends);
-	for(int i = 0; i < N_FILTERS; i++){
-		g_free(self->filters3[i]->value.c);
-		observable_free(self->filters3[i]);
+
+	for (int i = 0; i < N_FILTERS; i++) {
+		g_free (self->filters3[i]->value.c);
+		agl_observable_free (self->filters3[i]);
 	}
+
 	_samplecat_idle_unref0 (self->priv->dir_idle);
 	_samplecat_idle_unref0 (self->priv->sample_changed_idle);
 	g_list_free0 (self->modified);
+
 	G_OBJECT_CLASS (samplecat_model_parent_class)->finalize (obj);
 }

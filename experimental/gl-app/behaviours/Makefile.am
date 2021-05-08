@@ -4,7 +4,6 @@ noinst_LTLIBRARIES = libbehaviours.la
 libbehaviours_la_SOURCES = \
 	style.c style.h \
 	state.c state.h \
-	cache.c cache.h \
 	panel.c panel.h
 
 AM_CFLAGS = \

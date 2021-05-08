@@ -101,12 +101,12 @@ application_new ()
 		ctx->options[CONFIG_ICON_THEME] = config_option_new_string("icon_theme", get_theme_name);
 	}
 
-	void on_filter_changed (Observable* filter, AMVal value, gpointer user_data)
+	void on_filter_changed (Observable* filter, AGlVal value, gpointer user_data)
 	{
 		application_search();
 	}
 	for(int i = 0; i < N_FILTERS; i++){
-		observable_subscribe(samplecat.model->filters3[i], on_filter_changed, NULL);
+		agl_observable_subscribe (samplecat.model->filters3[i], on_filter_changed, NULL);
 	}
 
 	application_set_auditioner(app);
@@ -425,6 +425,8 @@ application_scan (const char* path, ScanResults* results)
 bool
 application_add_file (const char* path, ScanResults* result)
 {
+	if (BACKEND_IS_NULL) return false;
+
 	/* check if file already exists in the store
 	 * -> don't add it again
 	 */
@@ -444,8 +446,6 @@ application_add_file (const char* path, ScanResults* result)
 	}
 
 	if(!app->no_gui) dbg(1, "%s", path);
-
-	if(BACKEND_IS_NULL) return false;
 
 	Sample* sample = sample_new_from_filename((char*)path, false);
 	if (!sample) {

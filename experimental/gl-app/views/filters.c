@@ -18,10 +18,10 @@
 #include "agl/actor.h"
 #include "agl/fbo.h"
 #include "agl/text/pango.h"
+#include "agl/behaviours/cache.h"
 #include "samplecat.h"
 #include "shader.h"
 #include "behaviours/panel.h"
-#include "behaviours/cache.h"
 #include "views/filters.h"
 
 #define _g_object_unref0(var) ((var == NULL) ? NULL : (var = (g_object_unref (var), NULL)))

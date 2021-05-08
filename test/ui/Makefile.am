@@ -7,6 +7,7 @@ AM_CFLAGS = \
 	-I../../src \
 	-I../../lib \
 	-I../../lib/waveform \
+	-I../../lib/waveform/lib/agl \
 	-I$(top_srcdir)/lib/waveform/gtkglext-1.0 \
 	$(DBUS_CFLAGS) \
 	$(GTK_CFLAGS)

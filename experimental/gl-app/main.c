@@ -1,14 +1,15 @@
-/**
-* +----------------------------------------------------------------------+
-* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2021 Tim Orford <tim@orford.org>                  |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-*
-*/
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
+ | copyright (C) 2007-2021 Tim Orford <tim@orford.org>                  |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
+ */
+
 #define __main_c__
 #include "config.h"
 #include <getopt.h>
@@ -18,6 +19,7 @@
 #include "agl/x11.h"
 #include "file_manager/mimetype.h"
 #include "file_manager/pixmaps.h"
+#include "file_manager/diritem.h"
 #include "samplecat/samplecat.h"
 #include "icon/utils.h"
 #include "application.h"
@@ -154,28 +156,47 @@ main (int argc, char* argv[])
 }
 
 
-					static void load_file_done (WaveformActor* a, gpointer _c)
-					{
-						// TODO not sure if we need to redraw here or not...
-						//agl_actor__invalidate(((AGlActor*)a);
-					}
+static void
+on_actor_added (Application* app, AGlActor* actor, gpointer data)
+{
+	AGlActorClass* c = actor->class;
 
-				static void on_selection_change (SamplecatModel* m, Sample* sample, gpointer actor)
-				{
-					PF;
-
-					Waveform* waveform = waveform_new(sample->full_path);
-					wf_actor_set_waveform((WaveformActor*)actor, waveform, load_file_done, actor);
-					g_object_unref(waveform);
-				}
-
-		static void on_actor_added (Application* app, AGlActor* actor, gpointer data)
+	if (c == wf_actor_get_class()) {
+		void on_selection_change (SamplecatModel* m, Sample* sample, gpointer actor)
 		{
-			AGlActorClass* c = actor->class;
-			if(c == wf_actor_get_class()){
-				g_signal_connect((gpointer)samplecat.model, "selection-changed", G_CALLBACK(on_selection_change), actor);
+			PF;
+
+			Waveform* waveform = waveform_new(sample->full_path);
+			wf_actor_set_waveform((WaveformActor*)actor, waveform, NULL, NULL);
+			g_object_unref(waveform);
+		}
+
+		g_signal_connect((gpointer)samplecat.model, "selection-changed", G_CALLBACK(on_selection_change), actor);
+	}
+
+	if (c == files_view_get_class()) {
+		SelectBehaviour* selectable = (SelectBehaviour*)actor->behaviours[1];
+		g_return_if_fail(selectable);
+
+		void on_file_select (AGlObservable* o, AGlVal value, gpointer actor)
+		{
+			AGlActor* wa = agl_actor__find_by_class ((AGlActor*)((AGlActor*)actor)->root, wf_actor_get_class());
+			if (wa) {
+				FilesView* files = (FilesView*)actor;
+				GPtrArray* items = files->view->items;
+				ViewItem* vitem = items->pdata[value.i];
+
+				char* path = g_strdup_printf("%s/%s", files_view_get_path (files), vitem->item->leafname);
+				Waveform* waveform = waveform_new (path);
+				wf_actor_set_waveform ((WaveformActor*)wa, waveform, NULL, NULL);
+				g_object_unref (waveform);
+				g_free(path);
 			}
 		}
+		agl_observable_subscribe (selectable->observable, on_file_select, actor);
+	}
+}
+
 
 static gboolean
 add_content (gpointer _)
@@ -194,7 +215,6 @@ add_content (gpointer _)
 
 		agl_actor__invalidate((AGlActor*)app->scene);
 	}
-
 
 	config_load(&app->config_ctx, &app->config);
 

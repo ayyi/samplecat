@@ -9,6 +9,7 @@
  * This software comes with no warranty of any kind, use at your own risk!
  */
 
+#include "config.h"
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <gtk/gtk.h>
 #pragma GCC diagnostic warning "-Wdeprecated-declarations"

@@ -227,18 +227,18 @@ list_view_select (ListView* list, int row)
 {
 	int n_rows_total = ((SamplecatListStore*)samplecat.store)->row_count;
 
-	if(row >= 0 && row < n_rows_total){
+	if (row >= 0 && row < n_rows_total) {
 		list->selection = row;
-		if(list->selection >= list->scroll_offset + N_ROWS_VISIBLE(list)){
-			dbg(0, "need to scroll down");
+		if (list->selection >= list->scroll_offset + N_ROWS_VISIBLE(list)) {
 			list->scroll_offset++;
-		}else if(list->selection < list->scroll_offset){
+		} else if (list->selection < list->scroll_offset) {
 			list->scroll_offset--;
 		}
+
 		agl_actor__invalidate((AGlActor*)list);
 
 		Sample* sample = samplecat_list_store_get_sample_by_row_index(list->selection);
-		if(sample){
+		if (sample) {
 			samplecat_model_set_selection (samplecat.model, sample);
 			sample_unref(sample);
 		}

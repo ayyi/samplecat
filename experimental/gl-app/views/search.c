@@ -1,14 +1,15 @@
-/**
-* +----------------------------------------------------------------------+
-* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2012-2021 Tim Orford <tim@orford.org>                  |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-*
-*/
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
+ | copyright (C) 2012-2021 Tim Orford <tim@orford.org>                  |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
+ */
+
 #define __wf_private__
 #include "config.h"
 #include <X11/keysym.h>
@@ -18,10 +19,10 @@
 #include "agl/fbo.h"
 #include "agl/shader.h"
 #include "agl/behaviours/key.h"
+#include "agl/behaviours/cache.h"
 #include "agl/text/text_input.h"
 #include "samplecat.h"
 #include "application.h"
-#include "behaviours/cache.h"
 #include "behaviours/state.h"
 #include "views/panel.h"
 #include "views/search.h"
@@ -145,7 +146,7 @@ search_view (gpointer _)
 
 	AGlActor* input = agl_actor__add_child((AGlActor*)view, text_input(NULL));
 	text_input_set_placeholder((TextInput*)input, "Search");
-	agl_observable_set(((TextInput*)input)->font, 10);
+	agl_observable_set_int (((TextInput*)input)->font, 10);
 
 	CacheBehaviour* cache = (CacheBehaviour*)((AGlActor*)view)->behaviours[0];
 	cache->on_invalidate = (AGlActorFn)search_layout;
@@ -184,7 +185,7 @@ search_enter (AGlActor* actor, GdkModifierType modifiers)
 {
 	const gchar* text = text_input_get_text((TextInput*)actor->children->data);
 
-	observable_set(samplecat.model->filters2.search, (AMVal){.c = (char*)text});
+	observable_set(samplecat.model->filters2.search, (AGlVal){.c = (char*)text});
 
 	return AGL_HANDLED;
 }

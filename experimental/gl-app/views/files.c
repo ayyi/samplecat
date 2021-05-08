@@ -152,7 +152,7 @@ files_view (gpointer _)
 		FilesView* view = (FilesView*)actor;
 
 		if(view->scroll->value.i > max_scroll(view)){
-			agl_observable_set (view->scroll, max_scroll(view));
+			agl_observable_set_int (view->scroll, max_scroll(view));
 		}
 	}
 
@@ -257,10 +257,10 @@ files_on_select (AGlObservable* o, AGlVal row, gpointer _actor)
 		dv->selection = row.i;
 
 		if (row.i > scroll->value.i + N_ROWS_VISIBLE(files->filelist) - 2) {
-			agl_observable_set (scroll, row.i - (N_ROWS_VISIBLE(files->filelist) - 2));
+			agl_observable_set_int (scroll, row.i - (N_ROWS_VISIBLE(files->filelist) - 2));
 		}
 		else if (row.i < scroll->value.i + 1){
-			agl_observable_set (scroll, row.i - 1);
+			agl_observable_set_int (scroll, row.i - 1);
 		}
 
 		VIEW_IFACE_GET_CLASS((ViewIface*)files->view)->set_selected((ViewIface*)files->view, &(ViewIter){.i = row.i}, true);
@@ -278,7 +278,7 @@ files_nav (AGlActor* actor, int offset)
 	GPtrArray* items = dv->items;
 	AGlObservable* observable = SELECTABLE(actor)->observable;
 
-	agl_observable_set (observable, CLAMP(observable->value.i + offset, 0, (int)items->len - 1));
+	agl_observable_set_int (observable, CLAMP(observable->value.i + offset, 0, (int)items->len - 1));
 
 	return AGL_HANDLED;
 }
@@ -412,13 +412,13 @@ filelist_view (void* _)
 				switch (event->button.button) {
 					case 4:
 						dbg(1, "! scroll up");
-						agl_observable_set (view->scroll, view->scroll->value.i - 1);
+						agl_observable_set_int (view->scroll, view->scroll->value.i - 1);
 						break;
 					case 5:
 						dbg(1, "! scroll down");
 						if (scrollable_height > N_ROWS_VISIBLE(actor)) {
 							if (view->scroll->value.i < max_scroll(view))
-								agl_observable_set (view->scroll, view->scroll->value.i + 1);
+								agl_observable_set_int (view->scroll, view->scroll->value.i + 1);
 						}
 						break;
 				}
@@ -429,7 +429,7 @@ filelist_view (void* _)
 				dbg(1, "RELEASE button=%i y=%i row=%i", event->button.button, xy.y - actor->region.y1, row);
 				switch (event->button.button) {
 					case 1:
-						agl_observable_set (SELECTABLE((AGlActor*)view)->observable, row);
+						agl_observable_set_int (SELECTABLE((AGlActor*)view)->observable, row);
 				}
 				return AGL_HANDLED;
 			default:

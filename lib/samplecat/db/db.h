@@ -1,16 +1,18 @@
-/**
-* +----------------------------------------------------------------------+
-* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2020 Tim Orford <tim@orford.org>                  |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-*
-*/
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
+ | copyright (C) 2007-2021 Tim Orford <tim@orford.org>                  |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
+ */
+
 #ifndef __db_db_h__
 #define __db_db_h__
+
 #include <stdbool.h>
 #include <gdk/gdk.h>
 #include "typedefs.h"
@@ -47,12 +49,13 @@ struct _SamplecatBackend
 #define BACKEND_IS_NULL (samplecat.model->backend.search_iter_new == NULL)
 
 void       db_init                (SamplecatDBConfig*);
-gboolean   db_connect             ();
-gboolean   samplecat_set_backend  (BackendType);
+bool       db_connect             ();
+bool       samplecat_set_backend  (BackendType);
 
 GdkPixbuf* blob_to_pixbuf         (const unsigned char* blob, guint len);
 
 #ifdef USE_MYSQL
 #include "samplecat/db/mysql.h"
 #endif
+
 #endif //__db_db_h__
