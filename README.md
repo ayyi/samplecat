@@ -60,7 +60,7 @@ Auditioning
 3 players are supported, each of which has pro's and con's.
 
 * jack - built in player. See jack_autoconnect in the config file.
-* ayyi - system wide auditioning service. http://www.ayyi.org/auditioner
+* ayyi - system wide [auditioning service](https://gitlab.com/ayyi.org/auditioner).
 * cli  - use external command line player if available: afplay, gst-launch, totem-audio-preview
 
 Set auditioner=OPTION in the config file.
