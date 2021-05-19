@@ -57,8 +57,7 @@ GtkWidget* find_widget_by_name (GtkWidget*, const char*);
 #endif
 
 // private fns
-void       next_test           ();
-void       test_finished_      ();
+void       test_finish      ();
 
 #define START_TEST \
 	static int step = 0;\
@@ -75,35 +74,35 @@ void       test_finished_      ();
 	printf("%s: finish\n", TEST.current.name); \
 	TEST.current.finished = true; \
 	passed = true; \
-	test_finished_(); \
+	test_finish(); \
 	return;
 
 #define FINISH_TEST_TIMER_STOP \
 	if(__test_idx != TEST.current.test) return G_SOURCE_REMOVE; \
 	TEST.current.finished = true; \
 	passed = true; \
-	test_finished_(); \
+	test_finish(); \
 	return G_SOURCE_REMOVE;
 
 #define FAIL_TEST(msg, ...) \
 	{TEST.current.finished = true; \
 	passed = false; \
 	test_errprintf(msg, ##__VA_ARGS__); \
-	test_finished_(); \
+	test_finish(); \
 	return; }
 
 #define FAIL_TEST_TIMER(msg) \
 	{TEST.current.finished = true; \
 	passed = false; \
 	printf("%s%s%s\n", red, msg, white); \
-	test_finished_(); \
+	test_finish(); \
 	return G_SOURCE_REMOVE;}
 
 #define FAIL_TEST_NULL(msg) \
 	{TEST.current.finished = true; \
 	passed = false; \
 	printf("%s%s%s\n", red, msg, white); \
-	test_finished_(); \
+	test_finish(); \
 	return NULL;}
 
 #define assert(A, B, ...) \

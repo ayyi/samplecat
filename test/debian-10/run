@@ -4,12 +4,7 @@ image=samplecat-debian-10
 
 usage="run [OPTIONS]\n\noptions:\n  -i interactive (bash shell)\n\nWithout options, default samplecat build will run\n"
 
-if [ -z "$CI_COMMIT_BRANCH" ]
-then
-	branch=master
-else
-	branch="$CI_COMMIT_BRANCH"
-fi
+branch=${CI_COMMIT_BRANCH:-master}
 
 while getopts ":i" opt; do
     case $opt in
