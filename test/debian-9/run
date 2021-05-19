@@ -1,9 +1,10 @@
 #!/bin/sh
 
 container=samplecat-debian-9
+branch=${CI_COMMIT_BRANCH:-master}
 
 # run git build script
-docker run -it $container
+docker run -e branch="$branch" -it $container
 
 # run the container and run a specific command (overrides CMD)
 #docker run -it $container bash

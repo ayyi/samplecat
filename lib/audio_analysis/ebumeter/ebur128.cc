@@ -24,7 +24,7 @@
 #include <getopt.h>
 #include <stdio.h>
 #include <math.h>
-#include "debug/debug.h"
+#include "lib/debug/debug.h"
 #include "ebu_r128_proc.h"
 #include "ebur128.h"
 

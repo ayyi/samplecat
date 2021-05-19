@@ -12,6 +12,7 @@
 
 #define __runner_c__
 
+#include "config.h"
 #include <getopt.h>
 #include <stdio.h>
 #include <stdbool.h>
@@ -54,7 +55,7 @@ on_test_timeout (gpointer _user_data)
 }
 
 
-void
+static void
 next_test ()
 {
 	printf("\n");
@@ -76,7 +77,7 @@ next_test ()
 
 
 void
-test_finished_ ()
+test_finish ()
 {
 	dbg(2, "... passed=%i", passed);
 

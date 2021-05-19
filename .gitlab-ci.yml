@@ -3,11 +3,11 @@ image: docker:latest
 before_script:
   - docker info
 
-debian-build:
+debian build:
   script:
     - cd test/debian-10 && ./build && ./run
 
-ubuntu-build:
+ubuntu build:
   before_script:
     - apk add --update make gcc && rm -rf /var/cache/apk/*
   script:
