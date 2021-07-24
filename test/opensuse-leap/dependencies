@@ -1,0 +1,13 @@
+openssh \
+gcc gcc-c++ make automake libtool pkg-config gdb \
+git-core \
+libsndfile-devel \
+ffmpeg \
+libavcodec-devel libavformat-devel libavutil-devel libavfilter-devel \
+vim \
+gtk2-devel \
+libgraphene-devel \
+libxml2-devel \
+libyaml-devel \
+sqlite3-devel \
+Mesa-libGL-devel

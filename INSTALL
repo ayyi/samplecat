@@ -16,6 +16,7 @@ Please report any problems at https://github.com/ayyi/samplecat
       - test/ubuntu-18/dependencies
       - test/ubuntu-20/dependencies
       - test/arch/dependencies
+      - test/opensuse-leap/dependencies
 
 2 - if you are using Mysql, you need to setup the database.
     (Sqlite setup is done automatically)
