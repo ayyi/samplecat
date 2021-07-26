@@ -1,0 +1,14 @@
+make \
+libtool \
+autoconf \
+gcc \
+gcc-c++ \
+git \
+sqlite-devel \
+libsndfile-devel \
+gtk2-devel \
+libxml2-devel \
+libGLU-devel \
+graphene-devel \
+libyaml-devel \
+fftw-devel

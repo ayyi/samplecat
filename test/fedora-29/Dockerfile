@@ -14,6 +14,8 @@ RUN dnf -y update && \
 		gtk2-devel \
 		libxml2-devel \
 		libGLU-devel \
+		graphene-devel \
+		libyaml-devel \
 		fftw-devel
 
 RUN echo "alias ll='ls -l'" >> /root/.bashrc

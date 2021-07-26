@@ -133,6 +133,3 @@ samplecat_LDADD = \
 
 EXTRA_DIST = \
 	menu.c
-
-samplecatconfdir=$(sysconfdir)/blah
-samplecatconf_DATA = ../layouts/All.yaml
