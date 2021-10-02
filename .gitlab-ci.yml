@@ -5,13 +5,13 @@ before_script:
 
 debian build:
   script:
-    - cd test/debian-10 && ./build && ./run
+    - cd test/debian-11 && ./build && ./run
 
 ubuntu build:
   before_script:
     - apk add --update make gcc && rm -rf /var/cache/apk/*
   script:
-    - cd test/ubuntu-18 && ./build && ./run
+    - cd test/ubuntu-20 && ./build && ./run
 
 arch build:
   before_script:

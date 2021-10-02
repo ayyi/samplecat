@@ -397,6 +397,7 @@ type_to_icon (MIME_type* type)
 
 	dbg(2, "theme=%s typename=%-20s gicon=%p info=%p", theme_name, type_name, icon, info);
 
+	g_object_unref(icon);
 	g_free(type_name);
 
 	if (info) {

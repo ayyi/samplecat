@@ -42,7 +42,6 @@
 #include <sys/stat.h>
 #include <stdint.h>
 
-#include <sndfile.h>
 #include <cairo.h>
 #include <fftw3.h>
 #include <gdk/gdk.h>

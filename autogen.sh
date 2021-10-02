@@ -13,7 +13,7 @@ autoconf
 
 if [ ! -f lib/waveform/autogen.sh ]; then
 	${SETCOLOR_WARN}
-	echo "libwaveform submodule missing"
+	echo "libwaveform submodule missing, will fetch"
 	${SETCOLOR_NORMAL}
 	if [ ! -d .git ]; then
 		echo "attempting to download libwaveform ..."
