@@ -1,13 +1,11 @@
-FROM ubuntu:20.04
+FROM registry.gitlab.com/ayyi.org/docker/ubuntu-20
 
-/* - includes support for running Opengl applications */
-/* - ffmpeg included for creating test data (adds ~100MB to image size) */
+/* Includes support for running Opengl applications.                  */
+/* Ffmpeg included for creating test data (adds ~100MB to image size) */
 RUN apt-get -y update && DEBIAN_FRONTEND=noninteractive apt-get install -y \\
 
 #include "dependencies"
 
-RUN echo "alias ll='ls -l'" >> /root/.bashrc
-WORKDIR /root
 ADD add_samples /root/
 ADD scripts/Makefile /root/
 

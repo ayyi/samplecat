@@ -1,10 +1,6 @@
-openssh-client \
-gcc make automake libtool pkg-config gdb \
-git \
 libsndfile1-dev \
 ffmpeg \
 libavcodec-dev libavformat-dev libavutil-dev libavfilter-dev \
-vim \
 gtk+2.0-dev \
 libgraphene-1.0-dev \
 libxml2-dev \
