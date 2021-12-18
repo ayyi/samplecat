@@ -1,14 +1,14 @@
-/**
-* +----------------------------------------------------------------------+
-* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2020-2020 Tim Orford <tim@orford.org>                  |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-*
-*/
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
+ | copyright (C) 2020-2022 Tim Orford <tim@orford.org>                  |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
+ */
 
 #include "config.h"
 #include <getopt.h>
@@ -104,7 +104,7 @@ application_main (int argc, char** argv)
 		}
 	}
 
-	if(player_opt) g_strlcpy(app->config.auditioner, app->players->data, 8);
+	if (player_opt) g_strlcpy(app->config.auditioner, app->players->data, 8);
 
 #ifdef __APPLE__
 	GtkOSXApplication* osxApp = (GtkOSXApplication*)
@@ -138,12 +138,12 @@ application_main (int argc, char** argv)
 	worker_thread_init();
 #endif
 
-	if(!app->no_gui) window_new();
+	if (!app->no_gui) window_new();
 
-	if(!samplecat.model->backend.pending){
+	if (!samplecat.model->backend.pending) {
 		application_search();
 		search_pending = false;
-	}else{
+	} else {
 		search_pending = true;
 	}
 
@@ -165,24 +165,24 @@ on_quit ()
 {
 	app->temp_view = true;
 
-	if(app->loaded && !app->temp_view){
+	if (app->loaded && !app->temp_view) {
 		config_save(&app->configctx);
 		application_quit(app); // emit signal
 	}
 
-	if(play->auditioner){
+	if (play->auditioner) {
 #ifdef HAVE_AYYIDBUS
 		extern Auditioner a_ayyidbus;
-		if(play->auditioner != & a_ayyidbus){
+		if (play->auditioner != & a_ayyidbus){
 #else
-		if(true){
+		if (true) {
 #endif
 			play->auditioner->stop();
 		}
 		play->auditioner->disconnect();
 	}
 
-	if(samplecat.model->backend.disconnect) samplecat.model->backend.disconnect();
+	if (samplecat.model->backend.disconnect) samplecat.model->backend.disconnect();
 
 #ifdef WITH_VALGRIND
 	application_free(app);
@@ -201,6 +201,7 @@ void
 setup (char* argv[])
 {
 	TEST.n_tests = G_N_ELEMENTS(tests);
+	TEST.before_each = window_is_open;
 
 	application_main (0, argv);
 }

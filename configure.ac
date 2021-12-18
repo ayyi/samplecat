@@ -151,6 +151,13 @@ else
   HAVE_GLIB_2_58="no"
 fi;
 
+if `pkg-config glib-2.0 --atleast-version=2.67`; then
+  HAVE_GLIB_2_67="yes"
+  AC_DEFINE(HAVE_GLIB_2_67, 1, [We have at least glib version 2.67])
+else
+  HAVE_GLIB_2_67="no"
+fi;
+
 GDK_CFLAGS=`pkg-config --cflags gdk-2.0`
 AC_SUBST(GDK_CFLAGS)
 
@@ -263,7 +270,7 @@ AC_SUBST(SNDFILE_LIBS)
 dnl -----------------------------------------------------------------------------
 
 AS_IF([test "$enable_ffmpeg" != "no"], [
-	PKG_CHECK_MODULES(FFMPEG, [libavformat >= 51.0.0 libavcodec >= 51.0.0 libavutil >= 50.0.0 libavfilter >= 6.0.0], enable_ffmpeg=yes, enable_ffmpeg=no)
+	PKG_CHECK_MODULES(FFMPEG, [libavformat >= 51.0.0 libavcodec >= 51.0.0 libavutil >= 50.0.0 libswscale >= 5.0.0], enable_ffmpeg=yes, enable_ffmpeg=no)
 	])
 
 if test "$enable_ffmpeg" = "yes"; then
@@ -499,6 +506,13 @@ dnl ----------------------------------------------------------------------------
 dnl cannot use the pc file because it is not yet generated
 WAVEFORM_LDFLAGS=`pwd`"/lib/waveform/.libs/libwaveformcore.a "`pwd`"/lib/waveform/.libs/libwaveformui.a "
 AC_SUBST(WAVEFORM_LDFLAGS)
+
+dnl -----------------------------------------------------------------------------
+
+FRIBIDI_CFLAGS=`pkg-config --cflags fribidi`
+FRIBIDI_LDFLAGS=`pkg-config --libs fribidi`
+AC_SUBST(FRIBIDI_CFLAGS)
+AC_SUBST(FRIBIDI_LDFLAGS)
 
 dnl -----------------------------------------------------------------------------
 

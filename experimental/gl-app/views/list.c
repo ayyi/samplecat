@@ -15,6 +15,7 @@
 #include "agl/text/renderer.h"
 #include "debug/debug.h"
 #include "agl/behaviours/key.h"
+#include "agl/behaviours/cache.h"
 #include "waveform/shader.h"
 #include "samplecat.h"
 #include "application.h"
@@ -25,8 +26,6 @@
 
 extern int need_draw;
 extern Menu menu;
-
-#define FONT "Droid Sans"
 
 static void list_view_free   (AGlActor*);
 static void list_view_select (ListView*, int row);
@@ -53,15 +52,12 @@ static ActorKey keys[] = {
 AGlActorClass*
 list_view_get_class ()
 {
-	static bool init_done = false;
-
-	if(!init_done){
+	if (!agl) {
 		agl = agl_get_instance();
 
 		agl_actor_class__add_behaviour(&actor_class, panel_get_class());
 		agl_actor_class__add_behaviour(&actor_class, key_get_class());
-
-		init_done = true;
+		agl_actor_class__add_behaviour(&actor_class, cache_get_class());
 	}
 
 	return &actor_class;
@@ -96,32 +92,32 @@ list_view (gpointer _)
 		col[4] = MAX(col[4], actor->region.x2);
 
 		GtkTreeIter iter;
-		if(!gtk_tree_model_get_iter_first((GtkTreeModel*)samplecat.store, &iter)) return true;
+		if (!gtk_tree_model_get_iter_first((GtkTreeModel*)samplecat.store, &iter)) return true;
 
 		int i = 0;
-		for(;i<view->scroll_offset;i++){
+		for (;i<view->scroll_offset;i++) {
 			gtk_tree_model_iter_next((GtkTreeModel*)samplecat.store, &iter);
 		}
 		int row_count = 0;
 		do {
-			if(row_count == view->selection - view->scroll_offset){
+			if (row_count == view->selection - view->scroll_offset) {
 				PLAIN_COLOUR2 (agl->shaders.plain) = STYLE.selection;
 				agl_use_program((AGlShader*)agl->shaders.plain);
 				agl_rect_((AGlRect){0, row_count * row_height - 2, agl_actor__width(actor), row_height});
 			}
 
 			Sample* sample = samplecat_list_store_get_sample_by_iter(&iter);
-			if(sample){
+			if (sample) {
 				char* len[32]; format_smpte((char*)len, sample->frames);
 				char* f[32]; samplerate_format((char*)f, sample->sample_rate);
 
 				char* val[4] = {sample->name, sample->sample_dir, (char*)len, (char*)f};
 
-				int c; for(c=0;c<G_N_ELEMENTS(val);c++){
-					if(!builder()->target){
+				for (int c=0;c<G_N_ELEMENTS(val);c++) {
+					if (!builder()->target) {
 						// FIXME remove offset - translation is not in correct units?
 						agl_push_clip(0, 0, col[c + 1] - 6 + builder()->offset.x, actor->region.y2);
-					}else{
+					} else {
 						agl_push_clip(0, 0, col[c + 1] - 6, actor->region.y2);
 					}
 					agl_print(col[c], row_count * row_height, 0, STYLE.text, val[c]);
@@ -136,10 +132,6 @@ list_view (gpointer _)
 
 	void list_init (AGlActor* a)
 	{
-#ifdef AGL_ACTOR_RENDER_CACHE
-		a->fbo = agl_fbo_new(agl_actor__width(a), agl_actor__height(a), 0, AGL_FBO_HAS_STENCIL);
-		a->cache.enabled = true;
-#endif
 	}
 
 	void list_set_size (AGlActor* actor)
@@ -148,9 +140,9 @@ list_view (gpointer _)
 
 	bool list_event (AGlActor* actor, GdkEvent* event, AGliPt xy)
 	{
-		switch(event->type){
+		switch (event->type) {
 			case GDK_BUTTON_PRESS:
-				switch(event->button.button){
+				switch (event->button.button) {
 					case 3:;
 						AMPromise* promise = am_promise_new(actor);
 						am_promise_add_callback(promise, _on_context_menu_selection, promise);
@@ -161,7 +153,7 @@ list_view (gpointer _)
 				}
 				// falling through ...
 			case GDK_BUTTON_RELEASE:
-				switch(event->button.button){
+				switch (event->button.button) {
 					case 1:
 						agl_actor__invalidate(actor);
 						int row = xy.y / row_height;
@@ -181,7 +173,6 @@ list_view (gpointer _)
 	ListView* view = agl_actor__new(ListView,
 		.actor = {
 			.class = &actor_class,
-			.name = actor_class.name,
 			.colour = 0xffff99ff,
 			.init = list_init,
 			.paint = list_paint,
@@ -215,7 +206,7 @@ list_view (gpointer _)
 static void
 list_view_free (AGlActor* actor)
 {
-	if(!--instance_count){
+	if (!--instance_count) {
 	}
 
 	g_free(actor);

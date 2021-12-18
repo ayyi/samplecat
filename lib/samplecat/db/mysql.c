@@ -613,6 +613,7 @@ mysql__search_iter_next_ (unsigned long** lengths)
 	result.bit_rate    = get_int(row, MYSQL_BITRATE);
 	result.frames      = get_int(row, MYSQL_FRAMES); 
 	sample_set_metadata(&result, row[MYSQL_METADATA]);
+
 	return &result;
 }
 

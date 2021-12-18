@@ -17,5 +17,6 @@ libpanels_la_SOURCES = \
 	player_control.c player_control.h \
 	spectrogram.c \
 	search.c \
-	tags.c
+	tags.c \
+	waveform.c
 

@@ -36,8 +36,6 @@ struct _DirectoryViewClass {
 struct _DirectoryViewPrivate {
     gboolean    needs_update;
     int         cursor_base;      // Cursor when minibuffer opened
-    FmSortType  sort_type;
-    GtkSortType sort_order;
     int         (*sort_fn)(const void*, const void*);
 };
 
@@ -252,7 +250,7 @@ wrap_sort (gconstpointer a, gconstpointer b, DirectoryView* view)
 	ViewItem* ia = *(ViewItem **) a;
 	ViewItem* ib = *(ViewItem **) b;
 
-	return v->sort_order == GTK_SORT_ASCENDING
+	return view->sort_order == GTK_SORT_ASCENDING
 		? v->sort_fn(ia->item, ib->item)
 		: -v->sort_fn(ia->item, ib->item);
 }
@@ -267,9 +265,9 @@ resort (DirectoryView* view)
 
 	if (!len) return;
 
-	gint i;	for (i = len - 1; i >= 0; i--) items[i]->old_pos = i;
+	for (int i = len - 1; i >= 0; i--) items[i]->old_pos = i;
 
-	switch (v->sort_type) {
+	switch (view->sort_type) {
 		case SORT_NAME: v->sort_fn = sort_by_name; break;
 		case SORT_TYPE: v->sort_fn = sort_by_type; break;
 		case SORT_DATE: v->sort_fn = sort_by_date; break;
@@ -283,7 +281,7 @@ resort (DirectoryView* view)
 	g_ptr_array_sort_with_data(view->items, (GCompareDataFunc)wrap_sort, view);
 
 	guint* new_order = g_new(guint, len);
-	for (i = len - 1; i >= 0; i--) {
+	for (int i = len - 1; i >= 0; i--) {
 		new_order[i] = items[i]->old_pos;
 	}
 
@@ -299,7 +297,7 @@ resort (DirectoryView* view)
 static void
 directory_view_sort (ViewIface* view)
 {
-	//resort((DirectoryView *)view);
+	resort((DirectoryView*)view);
 }
 
 
@@ -310,7 +308,7 @@ directory_view_style_changed (ViewIface *view, int flags)
 	ViewItem** items = (ViewItem**)dv->items->pdata;
 	int n = dv->items->len;
 
-	int i; for (i = 0; i < n; i++) {
+	for (int i = 0; i < n; i++) {
 		ViewItem* item = items[i];
 		_g_object_unref0(item->image);
 	}
@@ -336,16 +334,16 @@ directory_view_add_items (ViewIface* _view, GPtrArray* new_items)
 	GPtrArray* items = view->items;
 	GtkTreeModel* model = (GtkTreeModel*)view->model;
 
-	//find the last row in the tree model
+	// Find the last row in the tree model
 	GtkTreeIter iter = {.user_data = GINT_TO_POINTER(items->len)};
 
 	GtkTreePath* path = details_get_path(model, &iter);
 
-	int i; for (i = 0; i < new_items->len; i++) {
+	for (int i = 0; i < new_items->len; i++) {
 		DirItem* item = (DirItem*)new_items->pdata[i];
 		char* leafname = item->leafname;
 
-		if(!vm_directory_match_filter(view->model, item)) continue;
+		if (!vm_directory_match_filter(view->model, item)) continue;
 		if (leafname[0] == '.') {
 			if (leafname[1] == '\0')
 				continue; // never show '.'
@@ -381,7 +379,7 @@ directory_view_update_items (ViewIface* view, GPtrArray* items)
 	/* Find an item in the sorted array.
 	 * Returns the item number, or -1 if not found.
 	 */
-	int view_find_item(DirectoryView* view, DirItem *item)
+	int view_find_item (DirectoryView* view, DirItem *item)
 	{
 		g_return_val_if_fail(view, -1);
 		g_return_val_if_fail(item, -1);
@@ -714,7 +712,7 @@ directory_view_new (VMDirectory* model, FilesView* view)
 	DirectoryView* dv = directory_view_construct (TYPE_DIRECTORY_VIEW);
 	dv->model = model;
 	dv->view = view;
-	dv->priv->sort_type = SORT_NAME;
+	dv->sort_type = SORT_NAME;
 	return dv;
 }
 
@@ -772,4 +770,18 @@ static void
 directory_view_finalize (GObject* obj)
 {
 	G_OBJECT_CLASS (directory_view_parent_class)->finalize (obj);
+}
+
+
+void
+directory_view_set_sort (DirectoryView* view, FmSortType sort, GtkSortType order)
+{
+	if (view->sort_type == sort && view->sort_order == order){
+		return;
+	}
+
+	view->sort_type = sort;
+	view->sort_order = order;
+
+	resort(view);
 }

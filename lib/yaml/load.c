@@ -28,7 +28,9 @@ _yaml_load (yaml_parser_t* parser, YamlHandler handlers[])
 	yaml_event_t event;
 
 	get_expected_event(parser, &event, YAML_STREAM_START_EVENT);
+	yaml_event_delete(&event);
 	get_expected_event(parser, &event, YAML_DOCUMENT_START_EVENT);
+	yaml_event_delete(&event);
 
 	do {
 		if (!yaml_parser_parse(parser, &event)) goto error; // Get the next event
@@ -191,17 +193,17 @@ load_mapping (yaml_parser_t* parser, YamlHandler scalars[], YamlMappingHandler m
 
 
 bool
-handle_scalar_event (yaml_parser_t* parser, yaml_event_t* event, YamlHandler handlers[])
+handle_scalar_event (yaml_parser_t* parser, const yaml_event_t* event, YamlHandler handlers[])
 {
 	char* key = (char*)event->data.scalar.value;
 	int i = 0;
 	YamlHandler* h;
-	while((h = &handlers[i]) && h->callback){
-		if(!h->key){
+	while ((h = &handlers[i]) && h->callback) {
+		if (!h->key) {
 			h->callback(parser, event, h->data);
 			break;
 		}
-		if(!strcmp(h->key, key)){
+		if (!strcmp(h->key, key)) {
 			h->callback(parser, event, h->data);
 			break;
 		}
@@ -213,23 +215,25 @@ handle_scalar_event (yaml_parser_t* parser, yaml_event_t* event, YamlHandler han
 
 
 bool
-find_event (yaml_parser_t* parser, yaml_event_t* event, const char* name)
+find_event (yaml_parser_t* parser, yaml_event_t** event, const char* name)
 {
 	bool found = false;
-	while(!found && yaml_parser_parse(parser, event)){
-		switch (event->type) {
+	while (!found && yaml_parser_parse(parser, *event)) {
+		switch ((*event)->type) {
 			case YAML_SCALAR_EVENT:
-				if(!strcmp((char*)event->data.scalar.value, name)){
+				if (!strcmp((char*)(*event)->data.scalar.value, name)) {
 					found = true;
 				}
 				break;
 			case YAML_NO_EVENT:
+				yaml_event_delete(*event);
 				return false;
 			default:
 				break;
 		}
+		yaml_event_delete(*event);
 	}
-	return found;
+	return false;
 }
 
 

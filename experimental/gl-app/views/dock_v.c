@@ -39,12 +39,8 @@ dock_v_get_class ()
 static void
 _init ()
 {
-	static bool init_done = false;
-
-	if(!init_done){
+	if (!agl) {
 		agl = agl_get_instance();
-
-		init_done = true;
 	}
 }
 
@@ -374,7 +370,6 @@ dock_v_view (gpointer _)
 		.panel = {
 			.actor = {
 				.class = &actor_class,
-				.name = "Dock V",
 				.program = (AGlShader*)agl->shaders.plain,
 				.init = dock_init,
 				.paint = dock_v_paint,
@@ -454,7 +449,7 @@ dock_v_move_panel_to_y (DockVView* dock, AGlActor* panel, int y)
 	int find_index (DockVView* dock, int y)
 	{
 		int i = 0;
-		for(GList* l=dock->panels;l;l=l->next,i++){
+		for (GList* l=dock->panels;l;l=l->next,i++) {
 			AGlActor* a = l->data;
 			if(a->region.y1 > y) return i - 1;
 		}

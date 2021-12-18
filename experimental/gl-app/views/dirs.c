@@ -37,15 +37,11 @@ static void dirs_on_filter_changed (AGlActor*);
 AGlActorClass*
 directories_view_get_class ()
 {
-	static bool init_done = false;
-
-	if(!init_done){
+	if (!agl) {
 		agl = agl_get_instance();
 
 		agl_actor_class__add_behaviour(&actor_class, panel_get_class());
 		agl_actor_class__add_behaviour(&actor_class, cache_get_class());
-
-		init_done = true;
 	}
 
 	return &actor_class;
@@ -121,7 +117,7 @@ directories_view (gpointer _)
 
 	bool dirs_event (AGlActor* actor, GdkEvent* event, AGliPt xy)
 	{
-		switch(event->type){
+		switch (event->type) {
 			case GDK_BUTTON_RELEASE:
 				{
 					int row = xy.y / row_height;
@@ -137,7 +133,6 @@ directories_view (gpointer _)
 	DirectoriesView* view = agl_actor__new(DirectoriesView,
 		.actor = {
 			.class = &actor_class,
-			.name = actor_class.name,
 			.colour = 0xaaff33ff,
 			.init = dirs_init,
 			.paint = dirs_paint,
@@ -154,7 +149,7 @@ directories_view (gpointer _)
 static void
 dirs_free (AGlActor* actor)
 {
-	if(!--instance_count){
+	if (!--instance_count) {
 	}
 
 	g_free(actor);

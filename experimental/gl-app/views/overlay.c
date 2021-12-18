@@ -40,7 +40,6 @@ overlay_view (gpointer root)
 		(AGlActor*)agl_actor__new(OverlayView,
 			.actor = {
 				.class = &actor_class,
-				.name = actor_class.name,
 				.paint = overlay_paint,
 				.region = {0, 0, 20, 20}
 			}

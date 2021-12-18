@@ -199,9 +199,8 @@ context_menu (gpointer _)
 {
 	_init();
 
-	return AGL_NEW(AGlActor,
+	return agl_actor__new(AGlActor,
 		.class = &actor_class,
-		.name = actor_class.name,
 		.region = {BORDER, BORDER, BORDER + 200, BORDER + _menu->len * 16},
 		.init = context_menu_init,
 		.paint = context_menu_paint,

@@ -1,14 +1,15 @@
-/**
-* +----------------------------------------------------------------------+
-* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2019-2020 Tim Orford <tim@orford.org>                  |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-*
-*/
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
+ | copyright (C) 2019-2022 Tim Orford <tim@orford.org>                  |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
+ */
+
 #include "config.h"
 #include "debug/debug.h"
 #include "icon/utils.h"
@@ -36,14 +37,10 @@ static guint textures[2];
 AGlActorClass*
 player_view_get_class ()
 {
-	static bool init_done = false;
-
-	if(!init_done){
+	if (!agl) {
 		agl = agl_get_instance();
 
 		actor_class.behaviour_classes[0] = panel_get_class();
-
-		init_done = true;
 	}
 
 	return &actor_class;
@@ -84,14 +81,13 @@ player_view (gpointer _)
 
 	AGlActor* view = agl_actor__new(AGlActor,
 		.class = &actor_class,
-		.name = "Player",
 		.colour = 0xaaff33ff,
 		.init = player_init,
 		.paint = player_paint,
 	);
 
 	AGlActor* b[2];
-	for(int i=0;i<2;i++){
+	for (int i=0;i<2;i++) {
 		agl_actor__add_child(view, b[i] = button((int*)&textures[i], buttons[i].action, buttons[i].state, NULL));
 		b[i]->region = (AGlfRegion){
 			.x1 = (PLAYER_ICON_SIZE + 4) * i,

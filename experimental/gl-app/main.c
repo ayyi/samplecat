@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
- | copyright (C) 2007-2021 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2007-2022 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -60,8 +60,8 @@ static const struct option long_options[] = {
 static const char* const short_options = "d:h";
 
 static const char* const usage =
-	"Usage: %s [OPTIONS]\n\n"
-	"SampleCat is a program for cataloguing and auditioning audio samples.\n"
+	"\nSampleCat is a program for cataloguing and auditioning audio samples.\n\n"
+	"Usage: %s [OPTIONS]\n"
 	"\n"
 	"Options:\n"
 	"  -d, --dir              show contents of filesystem directory (temporary view, state not saved).\n";
@@ -76,15 +76,15 @@ main (int argc, char* argv[])
 	gtk_init_check(&argc, &argv);
 
 	int opt;
-	while((opt = getopt_long (argc, argv, short_options, long_options, NULL)) != -1) {
-		switch(opt) {
+	while ((opt = getopt_long (argc, argv, short_options, long_options, NULL)) != -1) {
+		switch (opt) {
 			case 'v':
 				_debug_ = 1;
 				break;
 			case 'd':
 				app->temp_view = true;
 				g_strlcpy(app->config.browse_dir, optarg, PATH_MAX);
-				dbg(0, "dir=%s", optarg);
+				dbg(1, "dir=%s", optarg);
 				break;
 			case 'h':
 				printf(usage, basename(argv[0]));
@@ -104,11 +104,11 @@ main (int argc, char* argv[])
 
 	const char* themes[] = {"breeze", NULL};
 	const char* theme = find_icon_theme(themes);
-	if(theme)
+	if (theme)
 		set_icon_theme(theme);
 
 	Display* dpy = XOpenDisplay(NULL);
-	if(!dpy){
+	if (!dpy) {
 		printf("Error: couldn't open display %s\n", XDisplayName(NULL));
 		return -1;
 	}
@@ -117,11 +117,11 @@ main (int argc, char* argv[])
 
 	bool on_event (AGlActor* actor, GdkEvent* event, AGliPt xy)
 	{
-		switch(event->type){
+		switch (event->type) {
 			case GDK_KEY_PRESS:
 			case GDK_KEY_RELEASE:;
 				AGlActor* list = agl_actor__find_by_name(actor, "List");
-				if(list){
+				if (list) {
 					return list->on_event(list, event, xy);
 				}
 				break;
@@ -137,15 +137,11 @@ main (int argc, char* argv[])
 	app->scene = window->scene;
 	((AGlActor*)app->scene)->on_event = on_event;
 
-	if(app->temp_view){
-		g_idle_add(show_directory, NULL);
-	}else{
-		g_idle_add(add_content, NULL);
-	}
+	g_idle_add(app->temp_view ? show_directory : add_content, NULL);
 
 	g_main_loop_run(agl_main_loop_new(window->window));
 
-	if(!app->temp_view){
+	if (!app->temp_view) {
 		save_settings();
 	}
 
@@ -249,20 +245,20 @@ add_content (gpointer _)
 #endif
 	g_signal_connect(app, "actor-added", G_CALLBACK(on_actor_added), NULL);
 
-	if(load_settings()){
+	if (load_settings()) {
 		dbg(1, "window setting loaded ok");
 		actors.files = agl_actor__find_by_name((AGlActor*)app->scene, "Files");
 
 		application_menu_init();
 
 		Sample* sample = samplecat_list_store_get_sample_by_row_index(0);
-		if(sample){
+		if (sample) {
 			samplecat_model_set_selection(samplecat.model, sample);
 			sample_unref(sample);
 		}
 
 #ifdef DEBUG
-		if(_debug_ > 2) agl_actor__print_tree((AGlActor*)app->scene);
+		if (_debug_ > 2) agl_actor__print_tree((AGlActor*)app->scene);
 #endif
 
 #ifdef SHOW_FBO_DEBUG
@@ -271,13 +267,13 @@ add_content (gpointer _)
 #endif
 
 		AGlActor* tabs = agl_actor__find_by_name((AGlActor*)app->scene, "Tabs");
-		if(tabs){
+		if (tabs) {
 			AGlActor* selected = g_list_nth_data(tabs->children, ((TabsView*)tabs)->active);
 			app->scene->selected = selected;
 		}
 	}
 
-	if(actors.files){
+	if (actors.files) {
 		files_view_set_path((FilesView*)actors.files, app->config.browse_dir);
 	}
 

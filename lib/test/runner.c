@@ -1,14 +1,14 @@
-/**
-* +----------------------------------------------------------------------+
-* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2020-2020 Tim Orford <tim@orford.org>                  |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-*
-*/
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
+ | copyright (C) 2020-2020 Tim Orford <tim@orford.org>                  |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
+ */
 
 #define __runner_c__
 
@@ -29,6 +29,34 @@
 extern gpointer tests[];
 extern void setup(char* argv[]);
 extern void teardown();
+
+void set_log_handlers ();
+static void next_test ();
+
+
+int
+main (int argc, char* argv[])
+{
+#if 0 // unfortunately, gtk_test_init causes apps to abort on warnings
+	const gchar* display = g_getenv("DISPLAY");
+	if(display && strlen(display))
+		gtk_test_init(&argc, &argv);
+#endif
+
+	set_log_handlers();
+
+	setup (argv);
+
+	dbg(2, "n_tests=%i", TEST.n_tests);
+
+	gboolean fn(gpointer user_data) { next_test(); return G_SOURCE_REMOVE; }
+
+	g_idle_add(fn, NULL);
+
+	g_main_loop_run (g_main_loop_new (NULL, 0));
+
+	exit(1);
+}
 
 
 static gboolean
@@ -59,13 +87,23 @@ static void
 next_test ()
 {
 	printf("\n");
+
 	TEST.current.test++;
-	if(TEST.timeout) g_source_remove (TEST.timeout);
-	if(TEST.current.test < TEST.n_tests){
+	if (TEST.timeout) g_source_remove (TEST.timeout);
+	if (TEST.current.test < TEST.n_tests) {
 		TEST.current.finished = false;
 		gboolean (*test)() = tests[TEST.current.test];
 		dbg(2, "test %i of %i.", TEST.current.test + 1, TEST.n_tests);
-		g_timeout_add(300, run_test, test);
+
+		if (TEST.before_each){
+			void ready ()
+			{
+				g_timeout_add(1, run_test, tests[TEST.current.test]);
+			}
+			wait_for(TEST.before_each, ready, NULL);
+		} else {
+			g_timeout_add(300, run_test, test);
+		}
 
 		TEST.timeout = g_timeout_add(20000, on_test_timeout, NULL);
 	} else {
@@ -100,8 +138,6 @@ test_log_start (const char* func)
 }
 
 
-static gboolean fn(gpointer user_data) { next_test(); return G_SOURCE_REMOVE; }
-
 void
 set_log_handlers ()
 {
@@ -126,29 +162,6 @@ set_log_handlers ()
 	for(int i=0;i<G_N_ELEMENTS(domain);i++){
 		g_log_set_handler (domain[i], G_LOG_LEVEL_MASK | G_LOG_FLAG_FATAL | G_LOG_FLAG_RECURSION, log_handler, NULL);
 	}
-}
-
-
-int
-main (int argc, char* argv[])
-{
-#if 0 // unfortunately, gtk_test_init causes apps to abort on warnings
-	const gchar* display = g_getenv("DISPLAY");
-	if(display && strlen(display))
-		gtk_test_init(&argc, &argv);
-#endif
-
-	set_log_handlers();
-
-	setup (argv);
-
-	dbg(2, "n_tests=%i", TEST.n_tests);
-
-	g_idle_add(fn, NULL);
-
-	g_main_loop_run (g_main_loop_new (NULL, 0));
-
-	exit(1);
 }
 
 

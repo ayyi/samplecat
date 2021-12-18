@@ -80,6 +80,7 @@ samplecat_gl_LDADD = \
 	$(XRANDR_LDFLAGS) \
 	$(DBUS_LIBS) \
 	$(MATH_LDFLAGS) \
+	$(FRIBIDI_LDFLAGS) \
 	-lstdc++
 
 dist_pkgdata_DATA = samplecat.yaml

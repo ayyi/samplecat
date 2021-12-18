@@ -70,6 +70,13 @@ find_dock_item (const char* name)
 }
 
 
+bool
+window_is_open ()
+{
+	return gtk_widget_get_realized(app->window);
+}
+
+
 GtkWidget*
 get_view_menu ()
 {
@@ -185,4 +192,22 @@ view_not_visible (gpointer name)
 	GdlDockItem* item = find_dock_item(name);
 	return !item || !gtk_widget_get_visible((GtkWidget*)item);
 }
+
+
+void
+search (const char* text)
+{
+	GtkWidget* search = find_widget_by_name(app->window, "search-entry");
+
+#if 0
+	send_key(search->window, GDK_KEY_H, 0);
+	send_key(search->window, GDK_KEY_E, 0);
+	send_key(search->window, GDK_KEY_Return, 0);
+#else
+	gtk_test_text_set(search, text);
+#endif
+
+	gtk_widget_activate(search);
+}
+
 

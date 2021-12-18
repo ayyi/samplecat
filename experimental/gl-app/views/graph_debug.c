@@ -43,7 +43,6 @@ graph_debug_window (AGlScene* _scene)
 		(AGlActor*)window->scene,
 		agl_actor__new(
 			AGlActor,
-			.name = "Debug",
 			.paint = graph_debug_paint,
 			.region = {0, 0, 320, 120}
 		)

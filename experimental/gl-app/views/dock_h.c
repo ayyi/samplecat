@@ -341,7 +341,6 @@ dock_h_view (gpointer _)
 		.panel = {
 			.actor = {
 				.class = &actor_class,
-				.name = "Dock H",
 				.program = (AGlShader*)agl->shaders.plain,
 				.init = dock_init,
 				.paint = dock_h_paint,
@@ -372,6 +371,9 @@ dock_free (AGlActor* actor)
 
 	if(!--instance_count){
 	}
+
+	g_clear_pointer(&dock->animatables[0], g_free);
+	g_free(actor);
 }
 
 

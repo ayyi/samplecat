@@ -1,14 +1,15 @@
-/**
-* +----------------------------------------------------------------------+
-* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2013-2021 Tim Orford <tim@orford.org>                  |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-*
-*/
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
+ | copyright (C) 2013-2022 Tim Orford <tim@orford.org>                  |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
+ */
+
 #include "config.h"
 #include "debug/debug.h"
 #include "agl/utils.h"
@@ -42,24 +43,20 @@ button_get_class ()
 
 
 static void
-_init()
+_init ()
 {
-	static bool init_done = false;
-
-	if(!init_done){
+	if (!agl) {
 		agl = agl_get_instance();
-
-		init_done = true;
 	}
 }
 
 
 AGlActor*
-button(int* icon, ButtonAction action, ButtonGetState get_state, gpointer user_data)
+button (int* icon, ButtonAction action, ButtonGetState get_state, gpointer user_data)
 {
 	_init();
 
-	bool button_paint(AGlActor* actor)
+	bool button_paint (AGlActor* actor)
 	{
 		ButtonActor* button = (ButtonActor*)actor;
 		StyleBehaviour* style = &STYLE;
@@ -72,28 +69,28 @@ button(int* icon, ButtonAction action, ButtonGetState get_state, gpointer user_d
 		};
 
 		// background
-		if(RIPPLE(button) > 0.0){
+		if (RIPPLE(button) > 0.0) {
 			PLAIN_COLOUR2 (agl->shaders.plain) = state
 				? colour_mix(style->bg, style->bg_selected, RIPPLE(button) / 64.0)
 				: colour_mix(style->bg_selected, style->bg, RIPPLE(button) / 64.0);
-		}else if(state){
+		} else if (state) {
 			PLAIN_COLOUR2 (agl->shaders.plain) = style->bg_selected;
-		}else{
+		} else {
 			PLAIN_COLOUR2 (agl->shaders.plain) = style->bg;
 		}
 
 		// hover background
-		if(BG_OPACITY(button) > 0.0){ // dont get events if disabled, so no need to check state (TODO turn off hover when disabling).
+		if (BG_OPACITY(button) > 0.0) { // dont get events if disabled, so no need to check state (TODO turn off hover when disabling).
 			float alpha = button->bg_opacity;
 			uint32_t fg = colour_lighter(PLAIN_COLOUR2 (agl->shaders.plain), 16);
 			PLAIN_COLOUR2 (agl->shaders.plain) = style->bg ? colour_mix(PLAIN_COLOUR2 (agl->shaders.plain), fg, alpha) : (fg & 0xffffff00) + (uint32_t)(alpha * 0xff);
 		}
 
-		if(!(RIPPLE(button) > 0.0)){
+		if (!(RIPPLE(button) > 0.0)) {
 			agl_use_program (agl->shaders.plain);
 			agl_rect_(r);
 
-		}else{
+		} else {
 			// click ripple
 			//int radius = RIPPLE(button);
 #undef RIPPLE_EXPAND
@@ -102,9 +99,9 @@ button(int* icon, ButtonAction action, ButtonGetState get_state, gpointer user_d
 			agl_use_program((AGlShader*)&circle_shader);
 			AGlRect rr = r;
 			rr.w = rr.h = radius * 2;
-			glTranslatef(GlButtonPress.pt.x - actor->region.x1 - radius, GlButtonPress.pt.y - radius, 0.0);
+			agl_translate((AGlShader*)&circle_shader, GlButtonPress.pt.x - actor->region.x1 - radius, GlButtonPress.pt.y - radius);
 			agl_rect_(rr);
-			glTranslatef(-(GlButtonPress.pt.x - actor->region.x1 - radius), -(GlButtonPress.pt.y - radius), -0.0);
+			agl_translate((AGlShader*)&circle_shader, -(GlButtonPress.pt.x - actor->region.x1 - radius), -(GlButtonPress.pt.y - radius));
 #else
 			CIRCLE_COLOUR() = colour_lighter (PLAIN_COLOUR2 (agl->shaders.plain), 32);
 			CIRCLE_BG_COLOUR() = PLAIN_COLOUR2 (agl->shaders.plain);
@@ -132,20 +129,19 @@ button(int* icon, ButtonAction action, ButtonGetState get_state, gpointer user_d
 		return true;
 	}
 
-	void button_set_size(AGlActor* actor)
+	void button_set_size (AGlActor* actor)
 	{
 		actor->region.y2 = actor->parent->region.y2 - actor->parent->region.y1;
 	}
 
-	void button_init(AGlActor* actor)
+	void button_init (AGlActor* actor)
 	{
-		if(!circle_shader.shader.program) agl_create_program(&circle_shader.shader);
+		if (!circle_shader.shader.program) agl_create_program(&circle_shader.shader);
 	}
 
-	ButtonActor* button = AGL_NEW(ButtonActor,
+	ButtonActor* button = agl_actor__new(ButtonActor,
 		.actor = {
 			.class    = &actor_class,
-			.name     = "Button",
 			.init     = button_init,
 			.paint    = button_paint,
 			.set_size = button_set_size,
@@ -184,11 +180,11 @@ button_free (AGlActor* actor)
 
 
 static bool
-button_on_event(AGlActor* actor, GdkEvent* event, AGliPt xy)
+button_on_event (AGlActor* actor, GdkEvent* event, AGliPt xy)
 {
 	ButtonActor* button = (ButtonActor*)actor;
 
-	if(button->disabled) return AGL_NOT_HANDLED;
+	if (button->disabled) return AGL_NOT_HANDLED;
 
 	void animation_done (WfAnimation* animation, gpointer user_data)
 	{
@@ -200,7 +196,7 @@ button_on_event(AGlActor* actor, GdkEvent* event, AGliPt xy)
 		RIPPLE(button) = 0.0;
 	}
 
-	switch (event->type){
+	switch (event->type) {
 		case GDK_ENTER_NOTIFY:
 			dbg (1, "ENTER_NOTIFY");
 			//set_cursor(actor->root->widget->window, CURSOR_H_DOUBLE_ARROW);
@@ -219,7 +215,7 @@ button_on_event(AGlActor* actor, GdkEvent* event, AGliPt xy)
 			return AGL_HANDLED;
 		case GDK_BUTTON_RELEASE:
 			dbg(1, "BUTTON_RELEASE");
-			if(event->button.button == 1){
+			if (event->button.button == 1) {
 				call(button->action, actor, button->user_data);
 
 				GlButtonPress.pt = xy;
@@ -237,12 +233,10 @@ button_on_event(AGlActor* actor, GdkEvent* event, AGliPt xy)
 
 
 void
-button_set_sensitive(AGlActor* actor, bool sensitive)
+button_set_sensitive (AGlActor* actor, bool sensitive)
 {
 #ifdef AGL_DEBUG_ACTOR
 	dbg(0, "%s: %i", actor->name, sensitive);
 #endif
 	((ButtonActor*)actor)->disabled = !sensitive;
 }
-
-

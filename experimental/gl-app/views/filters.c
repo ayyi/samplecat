@@ -1,19 +1,19 @@
-/**
-* +----------------------------------------------------------------------+
-* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2017-2021 Tim Orford <tim@orford.org>                  |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-*
-*/
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
+ | copyright (C) 2017-2022 Tim Orford <tim@orford.org>                  |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
+ */
+
 #define __wf_private__
+
 #include "config.h"
 #include <X11/keysym.h>
-#include <gdk/gdkkeysyms.h>
-#include <GL/gl.h>
 #include "debug/debug.h"
 #include "agl/actor.h"
 #include "agl/fbo.h"
@@ -40,15 +40,11 @@ static int mouse = 0;
 AGlActorClass*
 filters_view_get_class ()
 {
-	static bool init_done = false;
-
-	if(!init_done){
+	if (!agl) {
 		agl = agl_get_instance();
 
 		agl_actor_class__add_behaviour(&actor_class, panel_get_class());
 		agl_actor_class__add_behaviour(&actor_class, cache_get_class());
-
-		init_done = true;
 	}
 
 	return &actor_class;
@@ -62,7 +58,7 @@ filters_view (gpointer _)
 
 	filters_view_get_class();
 
-	bool filters_paint(AGlActor* actor)
+	bool filters_paint (AGlActor* actor)
 	{
 		FiltersView* view = (FiltersView*)actor;
 
@@ -102,9 +98,9 @@ filters_view (gpointer _)
 					button_shader.uniform.fill_colour = 0x003366ff;
 					button_shader.uniform.btn_size = size;
 					agl_use_program((AGlShader*)&button_shader);
-					glTranslatef(x - BTN_OFFSET, 0, 0);
+					agl_translate(&button_shader.shader, x - BTN_OFFSET, 0);
 					agl_rect (0, 0, size.x, size.y);
-					glTranslatef(-(x - BTN_OFFSET), 0, 0);
+					agl_translate(&button_shader.shader, -(x - BTN_OFFSET), 0);
 
 					agl_print(x + width + 4, y, 0, 0xffffffff, "x");
 				}
@@ -126,7 +122,7 @@ filters_view (gpointer _)
 	{
 		FiltersView* view = (FiltersView*)a;
 
-		if(!button_shader.shader.program){
+		if (!button_shader.shader.program) {
 			agl_create_program(&button_shader.shader);
 			button_shader.uniform.radius = 2;
 		}
@@ -147,9 +143,9 @@ filters_view (gpointer _)
 	{
 		FiltersView* view = (FiltersView*)actor;
 
-		int pick(FiltersView* view, int x)
+		int pick (FiltersView* view, int x)
 		{
-			int i; for(i=0;i<G_N_ELEMENTS(view->filters)-1;i++){
+			for(int i=0;i<G_N_ELEMENTS(view->filters)-1;i++){
 				iRange r = {view->filters[i].position, view->filters[i + 1].position};
 				if(r.start && x > r.start -4 && x < r.end + 16){
 					return i;
@@ -158,14 +154,14 @@ filters_view (gpointer _)
 			return -1;
 		}
 
-		switch(event->type){
+		switch (event->type) {
 			case GDK_BUTTON_PRESS:
 			case GDK_BUTTON_RELEASE:
-				switch(event->button.button){
+				switch (event->button.button) {
 					case 1:;
 						int j = pick(view, xy.x);
 						dbg(0, "click! pick=%i", j);
-						if(j > -1){
+						if (j > -1) {
 							if(event->type == GDK_BUTTON_RELEASE)
 								observable_string_set(view->filters[j].filter, g_strdup(""));
 							return AGL_HANDLED;
@@ -188,7 +184,6 @@ filters_view (gpointer _)
 	FiltersView* view = agl_actor__new(FiltersView,
 		.actor = {
 			.class = &actor_class,
-			.name = actor_class.name,
 			.init = filters_init,
 			.paint = filters_paint,
 			.set_size = filters_layout,
@@ -211,9 +206,9 @@ filters_free (AGlActor* actor)
 {
 	FiltersView* view = (FiltersView*)actor;
 
-	int i; for(i=0;i<3;i++) if(view->filters[i].layout) _g_object_unref0(view->filters[i].layout);
+	for (int i=0;i<3;i++) if (view->filters[i].layout) _g_object_unref0(view->filters[i].layout);
 
-	if(!--instance_count){
+	if (!--instance_count) {
 	}
 
 	g_free(actor);

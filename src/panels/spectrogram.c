@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
- | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
- | copyright (C) 2007-2021 Tim Orford <tim@orford.org>                  |
+ | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
+ | copyright (C) 2007-2022 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -44,7 +44,7 @@ enum  {
 
 struct _SpectrogramArea {
 	GlArea parent_instance;
-	SpectrogramAreaPrivate * priv;
+	SpectrogramAreaPrivate* priv;
 };
 
 struct _SpectrogramAreaClass {
@@ -55,8 +55,6 @@ struct _SpectrogramAreaPrivate {
 	struct _agl* agl;
 	gchar* _filename;
 	GdkPixbuf* pixbuf;
-	gboolean gl_init_done;
-	GLuint textures[2];
 };
 
 static gint SpectrogramArea_private_offset;
@@ -128,7 +126,6 @@ spectrogram_area_instance_init (SpectrogramArea* self, gpointer klass)
 {
 	self->priv = spectrogram_area_get_instance_private (self);
 	self->priv->pixbuf = NULL;
-	self->priv->gl_init_done = FALSE;
 }
 
 
@@ -177,12 +174,14 @@ spectrogram_area_load_texture (SpectrogramArea* self)
 {
 	g_return_if_fail (self);
 
+	GlArea* area = (GlArea*)self;
 	SpectrogramAreaPrivate* p = self->priv;
 
-	if (!p->textures[0]) {
-		glGenTextures ((GLsizei) 1, p->textures);
-		glEnable (GL_TEXTURE_2D);
-		glBindTexture (GL_TEXTURE_2D, p->textures[0]);
+	unsigned* texture = &((AGlTextureNode*)((AGlActor*)area->scene)->children->data)->texture;
+
+	if (!texture) {
+		glGenTextures ((GLsizei) 1, texture);
+		glBindTexture (GL_TEXTURE_2D, *texture);
 	}
 
 	GdkGLDrawable* gldrawable = _g_object_ref (gtk_widget_get_gl_drawable ((GtkWidget*) self));
@@ -192,7 +191,7 @@ spectrogram_area_load_texture (SpectrogramArea* self)
 		return;
 	}
 
-	agl_use_texture (p->textures[0]);
+	agl_use_texture (*texture);
 	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -208,7 +207,6 @@ static void
 __spectrogram_ready (const char* filename, GdkPixbuf* pixbuf, gpointer _self)
 {
 	SpectrogramArea* self = _self;
-	GlArea* area = _self;
 
 	if (pixbuf) {
 		if (self->priv->pixbuf) {
@@ -216,7 +214,6 @@ __spectrogram_ready (const char* filename, GdkPixbuf* pixbuf, gpointer _self)
 		}
 		self->priv->pixbuf = pixbuf;
 		spectrogram_area_load_texture (self);
-		((TextureNode*)((AGlActor*)area->scene)->children->data)->texture = self->priv->textures[0];
 		gtk_widget_queue_draw ((GtkWidget*) self);
 	}
 }

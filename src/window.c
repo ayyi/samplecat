@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
- | copyright (C) 2007-2021 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2007-2022 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -67,6 +67,7 @@ extern void on_quit              (GtkMenuItem*, gpointer);
 #define _INSPECTOR ((Inspector*)panels[PANEL_TYPE_INSPECTOR].widget)
 
 typedef GtkWidget* (NewPanelFn)();
+typedef void       (ShowPanelFn)(bool);
 
 typedef enum {
    PANEL_TYPE_LIBRARY,
@@ -90,21 +91,26 @@ typedef enum {
 } PanelType;
 
 static NewPanelFn
-#ifdef USE_OPENGL
-	waveform_panel_new,
-#endif
 #ifdef HAVE_FFTW3
 	spectrogram_new,
 #endif
 	filters_new,
 	make_fileview_pane;
 
-extern NewPanelFn search_new, dir_panel_new, tags_new, spectrogram_area_new;
+extern NewPanelFn search_new, dir_panel_new, tags_new, spectrogram_area_new,
+#ifdef USE_OPENGL
+	waveform_panel_new
+#endif
+	;
+
+#ifdef USE_OPENGL
+ShowPanelFn show_waveform;
+#endif
 
 typedef struct {
    char*          name;
    NewPanelFn*    new;
-   void           (*show) (bool);
+   ShowPanelFn*   show;
    GtkOrientation orientation;
    GtkWidget*     widget;
    GtkWidget*     dock_item;
@@ -141,17 +147,9 @@ struct _window {
 #endif
    GtkWidget*     file_man;
    GtkWidget*     dir_tree;
-   GtkWidget*     waveform;
    GtkWidget*     spectrogram;
 #ifndef USE_GDL
    GtkWidget*     vpaned;        //vertical divider on lhs between the dir_tree and inspector
-#endif
-#ifdef USE_OPENGL
-   struct {
-      AGlActor*   text;
-      AGlActor*   spp;
-      AGlActor*   spinner;
-   }              layers;
 #endif
 } window = {0,};
 
@@ -177,9 +175,6 @@ static GtkWidget* message_panel__new              ();
 static void       left_pane2                      ();
 #endif
 static void       window_on_layout_changed        ();
-#ifdef USE_OPENGL
-static void       update_waveform_view            (Sample*);
-#endif
 
 static void       k_delete_row                    (GtkAccelGroup*, gpointer);
 #ifdef USE_GDL
@@ -221,10 +216,10 @@ const char* preferred_height = "preferred-height";
 
 #ifndef USE_GDL
 #define PACK(widget, position, width, height, id, name, D) \
-	if(GTK_IS_BOX(D)) \
+	if (GTK_IS_BOX(D)) \
 		gtk_box_pack_start(GTK_BOX(D), widget, EXPAND_FALSE, FILL_FALSE, 0); \
 	else \
-		if(!gtk_paned_get_child1(GTK_PANED(D))) gtk_paned_add1(GTK_PANED(D), widget); \
+		if (!gtk_paned_get_child1(GTK_PANED(D))) gtk_paned_add1(GTK_PANED(D), widget); \
 		else gtk_paned_add2(GTK_PANED(D), widget);
 #endif
 
@@ -243,14 +238,14 @@ window_new ()
 
 	int width = atoi(app->config.window_width);
 	int height = atoi(app->config.window_height);
-	if(width && height){
+	if (width && height) {
 		gtk_window_resize(GTK_WINDOW(app->window), width, height);
 
 		// note that the window size is also set in the configure callback.
 		// -sometimes setting it here is ignored, sometimes setting it in configure is ignored.
 		// -setting the size in configure is actually too late, as the window is drawn first
 		//  at the wrong size.
-	}else{
+	} else {
 		// we need an approx size in the case where there is no config file. relative panel sizes will be slightly out.
 		width = 450;
 		height = 600;
@@ -315,19 +310,19 @@ window_new ()
 
 	gtk_paned_add1(GTK_PANED(pcpaned), window.dir_tree);
 
-	if (play->auditioner && play->auditioner->position && play->auditioner->seek){
+	if (play->auditioner && play->auditioner->position && play->auditioner->seek) {
 		gtk_paned_add2(GTK_PANED(pcpaned), panels[PANEL_TYPE_PLAYER].widget);
 	}
 
 #ifdef USE_OPENGL
-	if(app->view_options[SHOW_WAVEFORM].value){
+	if (app->view_options[SHOW_WAVEFORM].value) {
 		show_waveform(true);
 	}
 #endif
 
 #if (defined HAVE_JACK)
 	/* initially hide player seek bar */
-	if(app->view_options[SHOW_PLAYER].value){
+	if (app->view_options[SHOW_PLAYER].value) {
 		show_player(true);
 	}
 #endif
@@ -335,7 +330,7 @@ window_new ()
 
 #ifdef USE_GDL
 	registry_init();
-	for(int p=0;p<G_N_ELEMENTS(panels);p++){
+	for (int p=0;p<G_N_ELEMENTS(panels);p++) {
 		Panel_* panel = &panels[p];
 		register_gtk_fn(panel->name, panel->new);
 	}
@@ -371,11 +366,11 @@ window_new ()
 		panel->dock_item = (GtkWidget*)object;
 		panel->widget = ((GdlDockItem*)object)->child;
 
-		if(panel->show){
+		if (panel->show) {
 			panel->show(true);
 		}
 
-		if(panel == &panels[PANEL_TYPE_SEARCH]){
+		if (panel == &panels[PANEL_TYPE_SEARCH]) {
 			dbg(1, "TODO disallow resizing of search box");
 			g_object_set(object, "resize", false, NULL); // unfortunately gdl-dock does not make any use of this property.
 		}
@@ -386,7 +381,7 @@ window_new ()
 	{
 		PF;
 
-		if(panels[PANEL_TYPE_INSPECTOR].widget){
+		if (panels[PANEL_TYPE_INSPECTOR].widget) {
 #ifdef USE_OPENGL
 			_INSPECTOR->show_waveform = !panels[PANEL_TYPE_WAVEFORM].dock_item || !gdl_dock_item_is_active((GdlDockItem*)panels[PANEL_TYPE_WAVEFORM].dock_item);
 #else
@@ -401,7 +396,7 @@ window_new ()
 
 #ifndef USE_GDL
 #ifdef HAVE_FFTW3
-	if(app->view_options[SHOW_SPECTROGRAM].value){
+	if (app->view_options[SHOW_SPECTROGRAM].value) {
 		show_spectrogram(true);
 	}
 #endif
@@ -440,11 +435,11 @@ window_new ()
 	{
 		PF;
 #ifdef HAVE_FFTW3
-		if(window.spectrogram){
+		if (window.spectrogram) {
 #ifdef USE_GDL
-			if(gdl_dock_item_is_active((GdlDockItem*)panels[PANEL_TYPE_SPECTROGRAM].dock_item)){
+			if (gdl_dock_item_is_active((GdlDockItem*)panels[PANEL_TYPE_SPECTROGRAM].dock_item)) {
 #else
-			if(true){
+			if (true) {
 #endif
 #ifndef USE_OPENGL
 				spectrogram_widget_set_file ((SpectrogramWidget*)window.spectrogram, sample->full_path);
@@ -461,7 +456,9 @@ window_new ()
 		window_save_layout();
 
 #ifdef WITH_VALGRIND
+														#if 0
 		g_clear_pointer(&window.waveform, gtk_widget_destroy);
+														#endif
 		g_clear_pointer(&window.file_man, gtk_widget_destroy);
 		g_clear_pointer(&app->dir_treeview2, vdtree_free);
 
@@ -476,13 +473,13 @@ window_new ()
 		int n_results = BACKEND.n_results;
 		int row_count = ((SamplecatListStore*)store)->row_count;
 
-		if(0 && row_count < LIST_STORE_MAX_ROWS){
+		if (0 && row_count < LIST_STORE_MAX_ROWS) {
 			statusbar_print(1, "%i samples found.", row_count);
-		}else if(!row_count){
+		} else if (!row_count) {
 			statusbar_print(1, "no samples found.");
-		}else if (n_results < 0) {
+		} else if (n_results < 0) {
 			statusbar_print(1, "showing %i sample(s)", row_count);
-		}else{
+		} else {
 			statusbar_print(1, "showing %i of %i sample(s)", row_count, n_results);
 		}
 	}
@@ -494,8 +491,8 @@ window_new ()
 
 	bool window_on_clicked (GtkWidget* widget, GdkEventButton* event, gpointer user_data)
 	{
-		if(event->button == 3){
-			if(app->context_menu){
+		if (event->button == 3) {
+			if (app->context_menu) {
 				gtk_menu_popup(GTK_MENU(app->context_menu), NULL, NULL, NULL, NULL, event->button, event->time);
 				return HANDLED;
 			}
@@ -508,7 +505,7 @@ window_new ()
 	{
 		int n = GPOINTER_TO_INT(_n);
 
-		if(n) statusbar_print(2, "updating %i items...", n);
+		if (n) statusbar_print(2, "updating %i items...", n);
 		else statusbar_print(2, "");
 	}
 	worker_register(on_worker_progress);
@@ -535,14 +532,14 @@ window_on_allocate (GtkWidget* win, GtkAllocation* allocation, gpointer user_dat
 	static gboolean done = false;
 	static gboolean library_done = false;
 #ifndef USE_GDL
-	if(!app->libraryview->widget->requisition.width) return;
+	if (!app->libraryview->widget->requisition.width) return;
 #endif
 
-	if(!done){
+	if (!done) {
 		//dbg(2, "app->libraryview->widget->requisition: wid=%i height=%i", app->libraryview->widget->requisition.width, app->libraryview->widget->requisition.height);
 		//setting window size is now done in window_on_configure
 		done = TRUE;
-	}else{
+	} else {
 		//now reduce the minimum size to allow the user to manually make the window smaller.
 		gtk_widget_set_size_request(win, 100, 100);
 	}
@@ -575,12 +572,12 @@ window_on_allocate (GtkWidget* win, GtkAllocation* allocation, gpointer user_dat
 #if 0
 		dbg(2, "%s %s", gdkcolor_get_hexstring(&app->bg_colour_mod1), gdkcolor_get_hexstring(&app->fg_colour));
 #endif
-		if(app->fm_view) view_details_set_alt_colours(VIEW_DETAILS(app->fm_view), &app->bg_colour_mod1, &app->fg_colour);
+		if (app->fm_view) view_details_set_alt_colours(VIEW_DETAILS(app->fm_view), &app->bg_colour_mod1, &app->fg_colour);
 
 		g_signal_emit_by_name (app, "theme-changed", NULL);
 	}
 
-	if(did_set_colours && !library_done && app->libraryview && app->libraryview->widget->requisition.width){
+	if (did_set_colours && !library_done && app->libraryview && app->libraryview->widget->requisition.width) {
 		g_object_set(app->libraryview->cells.name, "cell-background-gdk", &app->bg_colour_mod1, "cell-background-set", TRUE, NULL);
 		g_object_set(app->libraryview->cells.name, "foreground-gdk", &app->fg_colour, "foreground-set", TRUE, NULL);
 		library_done = true;
@@ -589,22 +586,22 @@ window_on_allocate (GtkWidget* win, GtkAllocation* allocation, gpointer user_dat
 
 
 static gboolean
-window_on_configure(GtkWidget* widget, GdkEventConfigure* event, gpointer user_data)
+window_on_configure (GtkWidget* widget, GdkEventConfigure* event, gpointer user_data)
 {
 	static gboolean window_size_set = false;
-	if(!window_size_set){
+	if (!window_size_set) {
 		//take the window size from the config file, or failing that, from the treeview requisition.
 		int width = atoi(app->config.window_width);
 #ifdef USE_GDL
 		// panels not yet created, so widget requisition cannot be used.
-		if(!width) width = 640;
+		if (!width) width = 640;
 #else
-		if(!width) width = app->libraryview->widget->requisition.width + SCROLLBAR_WIDTH_HACK;
+		if (!width) width = app->libraryview->widget->requisition.width + SCROLLBAR_WIDTH_HACK;
 #endif
 		int window_height = atoi(app->config.window_height);
-		if(!window_height) window_height = 480; //MIN(app->libraryview->widget->requisition.height, 900);  -- ignore the treeview height, is meaningless
+		if (!window_height) window_height = 480; //MIN(app->libraryview->widget->requisition.height, 900);  -- ignore the treeview height, is meaningless
 
-		if(width && window_height){
+		if (width && window_height) {
 			dbg(2, "setting size: width=%i height=%i", width, window_height);
 			gtk_window_resize(GTK_WINDOW(app->window), width, window_height);
 			window_size_set = true;
@@ -622,9 +619,9 @@ window_on_configure(GtkWidget* widget, GdkEventConfigure* event, gpointer user_d
 
 #ifdef USE_GDL
 		window_load_layout(app->temp_view ? "File Manager" : app->args.layout ? app->args.layout : "__default__");
-		if(_debug_) gdl_dock_print_recursive((GdlDockMaster*)((GdlDockObject*)window.dock)->master);
+		if (_debug_) gdl_dock_print_recursive((GdlDockMaster*)((GdlDockObject*)window.dock)->master);
 #else
-		if(app->view_options[SHOW_PLAYER].value && panels[PANEL_TYPE_PLAYER].widget){
+		if (app->view_options[SHOW_PLAYER].value && panels[PANEL_TYPE_PLAYER].widget) {
 			show_player(true);
 		}
 #endif
@@ -634,7 +631,7 @@ window_on_configure(GtkWidget* widget, GdkEventConfigure* event, gpointer user_d
 		{
 			PF;
 
-			if(app->temp_view){
+			if (app->temp_view) {
 
 				void select_first_audio ()
 				{
@@ -643,11 +640,11 @@ window_on_configure(GtkWidget* widget, GdkEventConfigure* event, gpointer user_d
 					ViewIter iter;
 					AyyiFilemanager* fm = file_manager__get();
 					view_get_iter(fm->view, &iter, 0);
-					while(!done && (item = iter.next(&iter))){
+					while (!done && (item = iter.next(&iter))) {
 						MIME_type* mime_type = item->mime_type;
-						if(mime_type){
+						if (mime_type) {
 							char* mime_string = g_strdup_printf("%s/%s", mime_type->media_type, mime_type->subtype);
-							if(!mimetype_is_unsupported(item->mime_type, mime_string)){
+							if (!mimetype_is_unsupported(item->mime_type, mime_string)) {
 								gtk_widget_grab_focus(app->fm_view);
 								view_cursor_to_iter((ViewIface*)app->fm_view, &iter);
 								done = true;
@@ -664,7 +661,7 @@ window_on_configure(GtkWidget* widget, GdkEventConfigure* event, gpointer user_d
 						: G_SOURCE_CONTINUE;
 				}
 
-				if(app->temp_view) g_timeout_add(100, check_ready, NULL);
+				if (app->temp_view) g_timeout_add(100, check_ready, NULL);
 			}
 		}
 		window_activate_layout();
@@ -677,21 +674,21 @@ window_on_configure(GtkWidget* widget, GdkEventConfigure* event, gpointer user_d
 
 
 static gboolean
-window_on_destroy(GtkWidget* widget, gpointer user_data)
+window_on_destroy (GtkWidget* widget, gpointer user_data)
 {
 	return false;
 }
 
 
 static GtkWidget*
-make_fileview_pane()
+make_fileview_pane ()
 {
 	GtkWidget* fman_hpaned = window.file_man = gtk_hpaned_new();
 	gtk_paned_set_position(GTK_PANED(fman_hpaned), 210);
 
-	void fman_left(const char* initial_folder)
+	void fman_left (const char* initial_folder)
 	{
-		void dir_on_select(ViewDirTree* vdt, const gchar* path, gpointer data)
+		void dir_on_select (ViewDirTree* vdt, const gchar* path, gpointer data)
 		{
 			PF;
 			fm__change_to(file_manager__get(), path, NULL);
@@ -702,7 +699,7 @@ make_fileview_pane()
 		vdtree_set_select_func(dir_list, dir_on_select, NULL); //callback
 		gtk_paned_add1(GTK_PANED(fman_hpaned), dir_list->widget);
 
-		void icon_theme_changed(Application* a, char* theme, gpointer _dir_tree)
+		void icon_theme_changed (Application* a, char* theme, gpointer _dir_tree)
 		{
 			vdtree_on_icon_theme_changed((ViewDirTree*)app->dir_treeview2);
 		}
@@ -711,20 +708,20 @@ make_fileview_pane()
 		make_menu_actions(fm_tree_keys, G_N_ELEMENTS(fm_tree_keys), vdtree_add_menu_item);
 	}
 
-	void fman_right(const char* initial_folder)
+	void fman_right (const char* initial_folder)
 	{
 		GtkWidget* file_view = app->fm_view = file_manager__new_window(initial_folder);
 		AyyiFilemanager* fm = file_manager__get();
 		gtk_paned_add2(GTK_PANED(fman_hpaned), file_view);
 		g_signal_connect(G_OBJECT(fm->view), "cursor-changed", G_CALLBACK(window_on_fileview_row_selected), NULL);
 
-		void window_on_dir_changed(GtkWidget* widget, gpointer data)
+		void window_on_dir_changed (GtkWidget* widget, gpointer data)
 		{
 			PF;
 		}
 		g_signal_connect(G_OBJECT(file_manager__get()), "dir_changed", G_CALLBACK(window_on_dir_changed), NULL);
 
-		void icon_theme_changed(Application* a, char* theme, gpointer _dir_tree)
+		void icon_theme_changed (Application* a, char* theme, gpointer _dir_tree)
 		{
 			file_manager__update_all();
 		}
@@ -733,9 +730,7 @@ make_fileview_pane()
 		make_menu_actions(menu_keys, G_N_ELEMENTS(menu_keys), fm__add_menu_item);
 
 		//set up fileview as dnd source:
-		gtk_drag_source_set(file_view, GDK_BUTTON1_MASK | GDK_BUTTON2_MASK,
-				dnd_file_drag_types, dnd_file_drag_types_count,
-				GDK_ACTION_COPY | GDK_ACTION_MOVE | GDK_ACTION_ASK);
+		gtk_drag_source_set(file_view, GDK_BUTTON1_MASK | GDK_BUTTON2_MASK, dnd_file_drag_types, dnd_file_drag_types_count, GDK_ACTION_COPY | GDK_ACTION_MOVE | GDK_ACTION_ASK);
 		g_signal_connect(G_OBJECT(file_view), "drag_data_get", G_CALLBACK(view_details_dnd_get), NULL);
 	}
 
@@ -751,7 +746,7 @@ make_fileview_pane()
 
 #ifndef USE_GDL
 static void
-left_pane2()
+left_pane2 ()
 {
 	/*
 	void on_inspector_allocate(GtkWidget* widget, GtkAllocation* allocation, gpointer user_data)
@@ -772,36 +767,35 @@ left_pane2()
 	*/
 
 	player_control_new();
-	if(!app->view_options[SHOW_PLAYER].value)
+	if (!app->view_options[SHOW_PLAYER].value)
 		gtk_widget_set_no_show_all(panels[PANEL_TYPE_PLAYER].widget, true);
 
 	inspector_new();
 	gtk_paned_add2(GTK_PANED(window.vpaned), (GtkWidget*)app->inspector);
 	//g_signal_connect(app->inspector->widget, "size-allocate", (gpointer)on_inspector_allocate, NULL);
 
-	void on_vpaned_allocate(GtkWidget* widget, GtkAllocation* vp_allocation, gpointer user_data)
+	void on_vpaned_allocate (GtkWidget* widget, GtkAllocation* vp_allocation, gpointer user_data)
 	{
 		static int previous_height = 0;
-		if(!app->inspector || vp_allocation->height == previous_height) return;
+		if (!app->inspector || vp_allocation->height == previous_height) return;
 
 		int inspector_requisition = 240;//app->inspector->vbox->requisition.height; //FIXME
-		//dbg(0, "req=%i", inspector_requisition);
-		if(!inspector_requisition) return;
+		if (!inspector_requisition) return;
 
-		if(!app->inspector->user_height){
+		if (!app->inspector->user_height) {
 			//user has not specified a height so we have free reign
 
 			int tot_height = vp_allocation->height;
 			dbg(1, "req=%i tot_allocation=%i %i", inspector_requisition, tot_height, ((GtkWidget*)app->inspector)->allocation.height);
 
 			//small window - dont allow the inspector to take up more than half the space.
-			if(vp_allocation->height < inspector_requisition){
+			if (vp_allocation->height < inspector_requisition) {
 				gtk_paned_set_position(GTK_PANED(window.vpaned), MAX(tot_height / 2, tot_height - inspector_requisition));
 			}
 
 			//large window - dont allow the inspector to be too big
 			int current_insp_height = tot_height - gtk_paned_get_position(GTK_PANED(window.vpaned));
-			if(current_insp_height > inspector_requisition){
+			if (current_insp_height > inspector_requisition) {
 				gtk_paned_set_position(GTK_PANED(window.vpaned), tot_height - inspector_requisition);
 			}
 		}
@@ -828,7 +822,7 @@ filters_new ()
 		return g_strdup_printf("%s: %s%s", ((NamedObservable*)filter)->name, value, filter->value.c && strlen(filter->value.c) > len ? "..." : "");
 	}
 
-	for(int i = 0; i < N_FILTERS; i++){
+	for (int i = 0; i < N_FILTERS; i++) {
 		Observable* filter = samplecat.model->filters3[i];
 		dbg(2, "  %s", filter->value.c);
 
@@ -855,7 +849,7 @@ filters_new ()
 
 		void set_label (Observable* filter, GtkWidget* button)
 		{
-			if(button){
+			if (button) {
 				char* text = label_text(filter);
 				gtk_button_set_label((GtkButton*)button, text);
 				g_free(text);
@@ -882,11 +876,10 @@ message_panel__add_msg (const gchar* msg, const gchar* stock_id)
 
 	GtkWidget* hbox = gtk_hbox_new(FALSE, 2);
 
-	if(stock_id){
+	if (stock_id) {
 		//const gchar* stock_id = GTK_STOCK_DIALOG_WARNING;
 		GtkWidget* icon = gtk_image_new_from_stock(stock_id, GTK_ICON_SIZE_MENU);
 		gtk_widget_set_size_request(icon, 16, -1);
-		//gtk_image_set_from_stock(GTK_IMAGE(icon), stock_id, GTK_ICON_SIZE_MENU);
 		gtk_box_pack_start((GtkBox*)hbox, icon, FALSE, FALSE, 2);
 	}
 
@@ -915,7 +908,7 @@ message_panel__new ()
 	gtk_box_pack_start((GtkBox*)vbox, hbox, FALSE, FALSE, 2);
 #endif
 
-	if(!BACKEND_IS_NULL) gtk_widget_set_no_show_all(app->msg_panel, true); //initially hidden.
+	if (!BACKEND_IS_NULL) gtk_widget_set_no_show_all(app->msg_panel, true); //initially hidden.
 	return vbox;
 }
 #endif
@@ -928,7 +921,7 @@ delete_selected_rows ()
 
 	GtkTreeSelection* selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(app->libraryview->widget));
 	GList* selectionlist = gtk_tree_selection_get_selected_rows(selection, &(model));
-	if(!selectionlist){ perr("no files selected?\n"); return; }
+	if (!selectionlist) { perr("no files selected?\n"); return; }
 	dbg(1, "%i rows selected.", g_list_length(selectionlist));
 
 	statusbar_print(1, "deleting %i files...", g_list_length(selectionlist));
@@ -937,7 +930,7 @@ delete_selected_rows ()
 
 	//get row refs for each selected row before the list is modified:
 	GList* l = selectionlist;
-	for(;l;l=l->next){
+	for (;l;l=l->next) {
 		GtkTreePath* treepath_selection = l->data;
 
 		GtkTreeRowReference* row_ref = gtk_tree_row_reference_new(GTK_TREE_MODEL(samplecat.store), treepath_selection);
@@ -949,16 +942,16 @@ delete_selected_rows ()
 	GtkTreePath* path;
 	GtkTreeIter iter;
 	l = selected_row_refs;
-	for(;l;l=l->next){
+	for (;l;l=l->next) {
 		GtkTreeRowReference* row_ref = l->data;
-		if((path = gtk_tree_row_reference_get_path(row_ref))){
+		if ((path = gtk_tree_row_reference_get_path(row_ref))) {
 
-			if(gtk_tree_model_get_iter(model, &iter, path)){
+			if (gtk_tree_model_get_iter(model, &iter, path)) {
 				gchar* fname;
 				int id;
 				gtk_tree_model_get(model, &iter, COL_NAME, &fname, COL_IDX, &id, -1);
 
-				if(!samplecat_model_remove(samplecat.model, id)) return;
+				if (!samplecat_model_remove(samplecat.model, id)) return;
 
 				gtk_list_store_remove(samplecat.store, &iter);
 				n++;
@@ -974,7 +967,7 @@ delete_selected_rows ()
 
 
 static void
-window_on_fileview_row_selected(GtkTreeView* treeview, gpointer user_data)
+window_on_fileview_row_selected (GtkTreeView* treeview, gpointer user_data)
 {
 	//a filesystem file has been clicked on.
 	PF;
@@ -985,13 +978,13 @@ window_on_fileview_row_selected(GtkTreeView* treeview, gpointer user_data)
 	DirItem* item;
 	ViewIter iter;
 	view_get_iter(fm->view, &iter, 0);
-	while((item = iter.next(&iter))){
-		if(view_get_selected(fm->view, &iter)){
+	while ((item = iter.next(&iter))) {
+		if (view_get_selected(fm->view, &iter)) {
 			full_path = g_build_filename(fm->real_path, item->leafname, NULL);
 			break;
 		}
 	}
-	if(!full_path) return;
+	if (!full_path) return;
 
 	dbg(1, "%s", full_path);
 
@@ -1008,7 +1001,7 @@ window_on_fileview_row_selected(GtkTreeView* treeview, gpointer user_data)
 	 */
 
 	Sample* s = sample_new_from_filename(full_path, true);
-	if(s){
+	if (s) {
 		s->online = true;
 		samplecat_model_set_selection (samplecat.model, s);
 		sample_unref(s);
@@ -1024,7 +1017,7 @@ make_menu_actions (Accel keys[], int count, void (*add_to_menu)(GtkAction*))
 	GtkActionGroup* group = gtk_action_group_new("File Manager");
 	accel_group = gtk_accel_group_new();
 
-	for(int k=0;k<count;k++){
+	for (int k=0;k<count;k++) {
 		Accel* key = &keys[k];
 
 		GtkAction* action = gtk_action_new(key->name, key->name, "Tooltip", key->stock_item ? key->stock_item->stock_id : "gtk-file");
@@ -1047,204 +1040,6 @@ make_menu_actions (Accel keys[], int count, void (*add_to_menu)(GtkAction*))
 }
 
 
-#ifdef USE_OPENGL
-static GtkWidget*
-waveform_panel_new ()
-{
-	waveform_view_plus_set_gl(agl_get_gl_context());
-	WaveformViewPlus* view = waveform_view_plus_new(NULL);
-
-	window.layers.text = waveform_view_plus_add_layer(view, text_actor(NULL), 3);
-	text_actor_set_colour((TextActor*)window.layers.text, 0x000000bb, 0xffffffbb);
-
-	window.layers.spp = waveform_view_plus_add_layer(view, wf_spp_actor(waveform_view_plus_get_actor(view)), 0);
-
-	window.layers.spinner = waveform_view_plus_add_layer(view, wf_spinner(NULL), 0);
-
-	//waveform_view_plus_add_layer(view, grid_actor(waveform_view_plus_get_actor(view)), 0);
-#if 0
-	waveform_view_plus_set_show_grid(view, true);
-#endif
-	return (GtkWidget*)view;
-}
-
-
-void
-show_waveform (bool enable)
-{
-	typedef struct {
-		gulong selection_handler;
-	} C;
-
-#ifdef WITH_VALGRIND
-	void on_waveform_view_finalize (gpointer _c, GObject* was)
-	{
-		// in normal use, the waveform will never be finalised
-		// if DEBUG is enabled, it will occur at program exit.
-
-		PF;
-		C* c = _c;
-		if(window.waveform){
-#if 1
-			// normally is freed in window_on_quit, are there other cases?
-			pwarn("waveform unexpectedly not already destroyed");
-#else
-			if(window.layers.spinner){
-				//agl_actor__remove_child(window.waveform, window.layers.spinner);
-				waveform_view_plus_remove_layer((WaveformViewPlus*)window.waveform, window.layers.spinner);
-				window.layers.spinner = NULL;
-			}
-			if(window.layers.spp){
-				waveform_view_plus_remove_layer((WaveformViewPlus*)window.waveform, window.layers.spp);
-				window.layers.spp = NULL;
-			}
-			AGlActor** layers[] = {&window.layers.text};
-			for(int i=0;i<G_N_ELEMENTS(layers);i++){
-				if(*layers[i]){
-					waveform_view_plus_remove_layer((WaveformViewPlus*)window.waveform, *layers[i]);
-					*layers[i] = NULL;
-				}
-			}
-			window.waveform = NULL;
-#endif
-		}
-
-		g_signal_handler_disconnect((gpointer)samplecat.model, c->selection_handler);
-		g_free(c);
-	}
-#endif
-
-	void on_waveform_view_show (GtkWidget* widget, gpointer user_data)
-	{
-	}
-
-	void on_waveform_view_set_parent (GtkWidget* widget, GtkObject *old_parent, gpointer user_data)
-	{
-	}
-
-	void on_waveform_view_realise (GtkWidget* widget, gpointer user_data)
-	{
-		// The widget becomes unrealised after layout changes and it needs to be restored afterwards
-		// TODO the widget now supports being unrealised so this may no longer be needed.
-		PF;
-		WaveformViewPlus* view = (WaveformViewPlus*)widget;
-
-		static guint timer = 0;
-
-		gboolean redisplay (gpointer _view)
-		{
-
-#ifdef USE_GDL
-			if(gdl_dock_item_is_active((GdlDockItem*)panels[PANEL_TYPE_WAVEFORM].dock_item)){
-#else
-			WaveformViewPlus* view = (WaveformViewPlus*)_view;
-			if(!view->waveform && app->view_options[SHOW_WAVEFORM].value){
-#endif
-				show_waveform(true);
-			}
-			timer = 0;
-			return G_SOURCE_REMOVE;
-		}
-		if(timer) g_source_remove(timer);
-		timer = g_timeout_add(500, redisplay, view);
-	}
-
-	void _waveform_on_selection_change (SamplecatModel* m, Sample* sample, gpointer _c)
-	{
-		PF;
-		g_return_if_fail(window.waveform);
-		update_waveform_view(sample);
-	}
-
-	bool waveform_is_playing ()
-	{
-		if(!play->sample) return false;
-		if(!((WaveformViewPlus*)window.waveform)->waveform) return false;
-
-		char* path = ((WaveformViewPlus*)window.waveform)->waveform->filename;
-		return !strcmp(path, play->sample->full_path);
-	}
-
-	void waveform_on_position (GObject* _player, gpointer _)
-	{
-		g_return_if_fail(play->sample);
-		if(!((WaveformViewPlus*)window.waveform)->waveform) return;
-
-		if(window.layers.spp){
-			wf_spp_actor_set_time((SppActor*)window.layers.spp, waveform_is_playing() ? play->position : UINT32_MAX);
-		}
-	}
-
-	void waveform_on_play (GObject* player, gpointer _)
-	{
-		waveform_on_position(player, _);
-	}
-
-	void waveform_on_stop (GObject* _player, gpointer _)
-	{
-		AGlActor* spp = waveform_view_plus_get_layer((WaveformViewPlus*)window.waveform, 5);
-		if(spp){
-			wf_spp_actor_set_time((SppActor*)spp, UINT32_MAX);
-		}
-	}
-
-	if(enable && !window.waveform){
-		C* c = g_new0(C, 1);
-
-#ifdef USE_GDL
-		window.waveform = panels[PANEL_TYPE_WAVEFORM].widget;
-#else
-		window.waveform = waveform_panel_new();
-#endif
-#ifdef WITH_VALGRIND
-		g_object_weak_ref((GObject*)window.waveform, on_waveform_view_finalize, c);
-#endif
-
-#ifndef USE_GDL
-		gtk_box_pack_start(GTK_BOX(window.vbox), window.waveform, EXPAND_FALSE, FILL_TRUE, 0);
-		gtk_widget_set_size_request(window.waveform, 100, 96);
-#endif
-
-		c->selection_handler = g_signal_connect((gpointer)samplecat.model, "selection-changed", G_CALLBACK(_waveform_on_selection_change), c);
-		g_signal_connect((gpointer)window.waveform, "realize", G_CALLBACK(on_waveform_view_realise), NULL);
-		g_signal_connect((gpointer)window.waveform, "show", G_CALLBACK(on_waveform_view_show), NULL);
-		g_signal_connect((gpointer)window.waveform, "parent-set", G_CALLBACK(on_waveform_view_set_parent), NULL);
-
-		void waveform_on_audio_ready (gpointer _, gpointer __)
-		{
-			g_signal_connect(play, "play", (GCallback)waveform_on_play, NULL);
-			g_signal_connect(play, "stop", (GCallback)waveform_on_stop, NULL);
-			g_signal_connect(play, "position", (GCallback)waveform_on_position, NULL);
-		}
-		am_promise_add_callback(play->ready, waveform_on_audio_ready, NULL);
-	}
-
-	if(panels[PANEL_TYPE_WAVEFORM].widget){
-#ifdef USE_GDL
-		show_widget_if((GtkWidget*)gdl_dock_get_item_by_name(GDL_DOCK(window.dock), panels[PANEL_TYPE_WAVEFORM].name), enable);
-#else
-		show_widget_if(window.waveform, enable);
-#endif
-		if(enable){
-			gboolean show_wave()
-			{
-				Sample* s;
-				if((s = samplecat.model->selection)){
-					WaveformViewPlus* view = (WaveformViewPlus*)window.waveform;
-					Waveform* w = view->waveform;
-					if(!w || strcmp(w->filename, s->full_path)){
-						update_waveform_view(s);
-					}
-				}
-				return G_SOURCE_REMOVE;
-			}
-			g_idle_add(show_wave, NULL);
-		}
-	}
-}
-#endif
-
-
 #ifdef HAVE_FFTW3
 static GtkWidget*
 spectrogram_new ()
@@ -1261,7 +1056,7 @@ spectrogram_new ()
 void
 show_spectrogram (bool enable)
 {
-	if(enable && !window.spectrogram){
+	if (enable && !window.spectrogram) {
 #ifdef USE_GDL
 		window.spectrogram = panels[PANEL_TYPE_SPECTROGRAM].widget;
 #else
@@ -1274,7 +1069,7 @@ show_spectrogram (bool enable)
 #endif
 
 		Sample* selection = samplecat.model->selection;
-		if(selection){
+		if (selection) {
 			dbg(1, "selection=%s", selection->full_path);
 #ifndef USE_OPENGL
 			spectrogram_widget_set_file((SpectrogramWidget*)window.spectrogram, selection->full_path);
@@ -1282,7 +1077,7 @@ show_spectrogram (bool enable)
 		}
 	}
 
-	if(window.spectrogram){
+	if (window.spectrogram) {
 		show_widget_if(window.spectrogram, enable);
 	}
 
@@ -1347,79 +1142,20 @@ show_player (bool enable)
 }
 
 
-#ifdef USE_OPENGL
-	static void on_loaded(Waveform* w, GError* error, gpointer _view)
-	{
-		WaveformViewPlus* view = _view;
-
-		wf_spinner_stop((WfSpinner*)window.layers.spinner);
-
-		if(error){
-			AGlActor* text_layer = waveform_view_plus_get_layer(view, 3);
-			if(text_layer){
-				text_actor_set_text((TextActor*)text_layer, NULL, g_strdup(error->message));
-			}
-		}
-	}
-
-static void
-update_waveform_view (Sample* sample)
-{
-	g_return_if_fail(window.waveform);
-	if(!gtk_widget_get_realized(window.waveform)) return; // may be hidden by the layout manager.
-
-	WaveformViewPlus* view = (WaveformViewPlus*)window.waveform;
-
-	wf_spinner_start((WfSpinner*)window.layers.spinner);
-
-	waveform_view_plus_load_file(view, sample->online ? sample->full_path : NULL, on_loaded, view);
-
-#if 0
-	void on_waveform_finalize(gpointer _c, GObject* was)
-	{
-		dbg(0, "!");
-	}
-	g_object_weak_ref((GObject*)((WaveformViewPlus*)window.waveform)->waveform, on_waveform_finalize, NULL);
-#endif
-
-	dbg(1, "name=%s", sample->name);
-
-	AGlActor* text_layer = waveform_view_plus_get_layer(view, 3);
-	if(text_layer){
-		char* text = NULL;
-		if(sample->channels){
-			char* ch_str = format_channels(sample->channels);
-			char* level  = gain2dbstring(sample->peaklevel);
-			char length[64]; format_smpte(length, sample->length);
-			char fs_str[32]; samplerate_format(fs_str, sample->sample_rate); strcpy(fs_str + strlen(fs_str), " kHz");
-
-			text = g_strdup_printf("%s  %s  %s  %s", length, ch_str, fs_str, level);
-
-			g_free(ch_str);
-			g_free(level);
-		}
-
-		text_actor_set_text(((TextActor*)text_layer), g_strdup(sample->name), text);
-		//text_actor_set_colour((TextActor*)text_layer, 0x33aaffff, 0xffff00ff);
-	}
-}
-#endif
-
-
 static void
 window_on_layout_changed ()
 {
 #ifndef USE_GDL
 	//what is the height of the inspector?
 
-	if(app->inspector){
+	if (app->inspector) {
 		GtkWidget* widget;
-		if((widget = (GtkWidget*)app->inspector)){
+		if ((widget = (GtkWidget*)app->inspector)) {
 			int tot_height = window.vpaned->allocation.height;
 			int max_auto_height = tot_height / 2;
 			dbg(1, "inspector_height=%i tot=%i", widget->allocation.height, tot_height);
-			if(widget->allocation.height < app->inspector->preferred_height
-					&& widget->allocation.height < max_auto_height){
+			if (widget->allocation.height < app->inspector->preferred_height
+					&& widget->allocation.height < max_auto_height) {
 				int inspector_height = MIN(max_auto_height, app->inspector->preferred_height);
 				dbg(1, "setting height : %i/%i", tot_height - inspector_height, inspector_height);
 				gtk_paned_set_position(GTK_PANED(window.vpaned), tot_height - inspector_height);
@@ -1429,7 +1165,7 @@ window_on_layout_changed ()
 #endif
 
 	// scroll to current dir in the directory list
-	if(app->dir_treeview2) vdtree_set_path(app->dir_treeview2, app->dir_treeview2->path);
+	if (app->dir_treeview2) vdtree_set_path(app->dir_treeview2, app->dir_treeview2->path);
 }
 
 
@@ -1481,11 +1217,11 @@ window_load_layout (const char* layout_name)
 #endif
 
 	GError* error = NULL;
-	for(int i=0;i<N_LAYOUT_DIRS;i++){
+	for (int i=0;i<N_LAYOUT_DIRS;i++) {
 		const char* dir = window.layout->dirs[i];
 		char* path = g_strdup_printf("%s/%s.yaml", dir, layout_name);
-		if(g_file_test(path, G_FILE_TEST_EXISTS)){
-			if((have_layout = gdl_dock_layout_load_from_yaml_file(window.layout, path))){
+		if (g_file_test(path, G_FILE_TEST_EXISTS)) {
+			if ((have_layout = gdl_dock_layout_load_from_yaml_file(window.layout, path))) {
 				g_free(path);
 				break;
 			}
@@ -1494,20 +1230,20 @@ window_load_layout (const char* layout_name)
 	}
 
 #ifdef GDL_DOCK_XML_FALLBACK
-	if(!have_layout){
+	if (!have_layout) {
 		// fallback to using legacy xml file
 
 		GDir* dir = g_dir_open(window.layout->dirs[0], 0, &error);
-		if(!error) {
+		if (!error) {
 			const gchar* filename;
-			while((filename = g_dir_read_name(dir)) && !have_layout){
-				if(g_str_has_suffix(filename, ".xml")){
+			while ((filename = g_dir_read_name(dir)) && !have_layout) {
+				if (g_str_has_suffix(filename, ".xml")) {
 					gchar* name = layout_name && strlen(layout_name)
 						? g_strdup(layout_name)
 						: g_strndup(filename, strlen(filename) - 4);
 					char* path = g_strdup_printf("%s/layouts/%s.xml", app->configctx.dir, name);
-					if(gdl_dock_layout_load_from_xml_file(window.layout, path)){
-						if(!strcmp(name, "__default__")){ // only activate one layout
+					if (gdl_dock_layout_load_from_xml_file(window.layout, path)) {
+						if (!strcmp(name, "__default__")) { // only activate one layout
 							have_layout = _load_xml_layout(name);
 						}
 					}
@@ -1518,14 +1254,14 @@ window_load_layout (const char* layout_name)
 	}
 #endif
 
-	if(!have_layout){
-		if(app->temp_view){
+	if (!have_layout) {
+		if (app->temp_view) {
 			perr("unable to find File Manger layout");
 			exit(1);
 		}
 
 		dbg(1, "using default_layout");
-		if(gdl_dock_layout_load_from_string (window.layout, default_layout)){
+		if (gdl_dock_layout_load_from_string (window.layout, default_layout)) {
 		}
 	}
 }
@@ -1538,18 +1274,19 @@ window_save_layout ()
 	g_return_if_fail(window.layout);
 
 	char* dir = g_build_filename(app->configctx.dir, "layouts", NULL);
-	if(!g_mkdir_with_parents(dir, 488)){
+	if (!g_mkdir_with_parents(dir, 488)) {
 
 #ifdef GDL_DOCK_YAML
 		char* filename = g_build_filename(app->configctx.dir, "layouts", "__default__.yaml", NULL);
 #else
 		char* filename = g_build_filename(app->configctx.dir, "layouts", "__default__.xml", NULL);
 #endif
-		if(gdl_dock_layout_save_to_file(window.layout, filename)){
+		if (gdl_dock_layout_save_to_file(window.layout, filename)) {
 		}
 		g_free(filename);
 
 	} else gwarn("failed to create layout directory: %s", dir);
+
 	g_free(dir);
 }
 #endif
@@ -1559,9 +1296,9 @@ window_save_layout ()
 static Panel_*
 panel_lookup_by_name (const char* name)
 {
-	for(int i=0;i<PANEL_TYPE_MAX;i++){
+	for (int i=0;i<PANEL_TYPE_MAX;i++) {
 		Panel_* panel = &panels[i];
-		if(!strcmp(panel->name, name)){
+		if (!strcmp(panel->name, name)) {
 			return panel;
 		}
 	}

@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
- | copyright (C) 2016-2021 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2016-2022 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -9,8 +9,11 @@
  +----------------------------------------------------------------------+
  |
  */
+
 #define __wf_private__
+
 #include "config.h"
+#include "agl/fbo.h"
 #include "agl/behaviours/key.h"
 #include "actors/scrollbar.h"
 #include "debug/debug.h"
@@ -24,7 +27,6 @@
 
 #define _g_free0(var) (var = (g_free (var), NULL))
 
-#define FONT              "Droid Sans"
 #define ROW_HEIGHT        20
 #define header_height     row_height
 #define RHS_PADDING       20 // dont draw under scrollbar
@@ -36,11 +38,9 @@
 #define SELECTABLE(A)     ((SelectBehaviour*)(A)->behaviours[1])
 #define PATH              (FILES_STATE((AGlActor*)view)->params->params[0].val.c)
 
-static void files_free (AGlActor*);
+static void files_free  (AGlActor*);
+static bool files_event (AGlActor*, GdkEvent*, AGliPt);
 
-static AGl* agl = NULL;
-static int instance_count = 0;
-static int col[] = {0, 24, 260, 360, 400, 440};
 static AGlActorClass actor_class = {0, "Files", (AGlActorNew*)files_view, files_free};
 
 static bool files_scan_dir  (AGlActor*);
@@ -48,6 +48,21 @@ static void files_on_scroll (AGlObservable*, AGlVal row, gpointer view);
 static void files_on_select (AGlObservable*, AGlVal row, gpointer);
 
 static AGlActor* filelist_view (void*);
+
+static AGl* agl = NULL;
+static int instance_count = 0;
+
+typedef enum {
+	F_COL_ICON = 0,
+	F_COL_NAME,
+	F_COL_SIZE,
+	F_COL_DATE,
+	F_COL_OWNER,
+	F_COL_GROUP,
+} SortColum;
+
+static int sort_types[] = {F_COL_ICON, F_COL_NAME, 0, F_COL_DATE, F_COL_SIZE, F_COL_OWNER, F_COL_GROUP, 0}; // map FmSortType to column
+static int col[] = {0, 24, 260, 360, 440, 480, 520};
 
 static ActorKeyHandler
 	files_nav_up,
@@ -75,6 +90,8 @@ files_view_get_class ()
 		agl = agl_get_instance();
 
 		agl_actor_class__add_behaviour(&actor_class, key_get_class());
+		agl_actor_class__add_behaviour(&actor_class, selectable_get_class());
+		agl_actor_class__add_behaviour(&actor_class, state_get_class());
 
 		dir_init();
 	}
@@ -89,16 +106,14 @@ files_add_behaviours (FilesView* view)
 
 	KEYS(actor)->keys = &keys;
 
-	actor->behaviours[1] = selectable();
 	SELECTABLE(actor)->on_select = files_on_select;
-	agl_behaviour_init((AGlBehaviour*)SELECTABLE(actor), (AGlActor*)view);
+	agl_behaviour_init((AGlBehaviour*)SELECTABLE(actor), actor);
 
 	void set_path (AGlActor* actor, const char* path)
 	{
 		g_idle_add((GSourceFunc)files_scan_dir, (gpointer)actor);
 	}
 
-	actor->behaviours[2] = state();
 	StateBehaviour* state = FILES_STATE(actor);
 	#define N_PARAMS 1
 	state->params = g_malloc(sizeof(ParamArray) + N_PARAMS * sizeof(ConfigParam));
@@ -108,12 +123,12 @@ files_add_behaviours (FilesView* view)
 		.utype = G_TYPE_STRING,
 		.set.c = set_path
 	};
-	agl_behaviour_init(actor->behaviours[2], (AGlActor*)view);
+	agl_behaviour_init((AGlBehaviour*)state, actor);
 }
 
 
 AGlActor*
-files_view (gpointer _)
+files_view (void* _)
 {
 	instance_count++;
 
@@ -121,14 +136,20 @@ files_view (gpointer _)
 
 	bool files_paint (AGlActor* actor)
 	{
-		char* col_heads[] = {"Filename", "Size", "Owner", "Group"};
+		FilesView* view = (FilesView*)actor;
+
+		char* col_heads[] = {"Filename", "Size", "Date", "Owner", "Group"};
+		int sort = sort_types[view->view->sort_type];
+
+		PLAIN_COLOUR2 (agl->shaders.plain) = 0x222222ff;
+		agl_use_program ((AGlShader*)agl->shaders.plain);
+		agl_rect_ ((AGlRect){col[sort] -2, -2, col[sort + 1] - col[sort], ROW_HEIGHT - 2});
 
 		for (int c=0;c<G_N_ELEMENTS(col_heads);c++) {
 			agl_push_clip(0.f, 0.f, MIN(col[c + 2] - 6, agl_actor__width(actor) - RHS_PADDING), 1000000.);
 			agl_print(col[c + 1], 0, 0, STYLE.text, col_heads[c]);
 			agl_pop_clip();
 		}
-
 
 		return true;
 	}
@@ -151,7 +172,7 @@ files_view (gpointer _)
 	{
 		FilesView* view = (FilesView*)actor;
 
-		if(view->scroll->value.i > max_scroll(view)){
+		if (view->scroll->value.i > max_scroll(view)) {
 			agl_observable_set_int (view->scroll, max_scroll(view));
 		}
 	}
@@ -159,15 +180,15 @@ files_view (gpointer _)
 	FilesView* view = agl_actor__new (FilesView,
 		.actor = {
 			.class = &actor_class,
-			.name = "Files",
 			.colour = 0x66ff99ff,
 			.init = files_init,
 			.paint = files_paint,
 			.set_size = files_layout,
+			.on_event = files_event,
 		},
 		.viewmodel = vm_directory_new(),
 		.scroll = agl_observable_new(),
-		.row_height = ROW_HEIGHT
+		.row_height = ROW_HEIGHT,
 	);
 	AGlActor* actor = (AGlActor*)view;
 
@@ -190,9 +211,47 @@ files_free (AGlActor* actor)
 	FilesView* view = (FilesView*)actor;
 
 	g_object_unref(view->view);
+	g_clear_pointer(&view->scroll, agl_observable_free);
 
-	if(!--instance_count){
+	if (!--instance_count) {
 	}
+
+	g_free(actor);
+}
+
+
+static bool
+files_event (AGlActor* actor, GdkEvent* event, AGliPt xy)
+{
+	FilesView* view = (FilesView*)actor;
+
+	switch (event->type) {
+		case GDK_BUTTON_PRESS:
+		case GDK_BUTTON_RELEASE:
+			switch (event->button.button) {
+				case 1:
+					if (event->type == GDK_BUTTON_RELEASE) {
+						int column = -1;
+						for (int c=0;c<G_N_ELEMENTS(col);c++) {
+							if (xy.x > col[c]) {
+								column = c;
+							}
+						}
+						if (column > 0) {
+							int order[] = {0, SORT_NAME, SORT_SIZE, SORT_DATE, SORT_OWNER, SORT_GROUP, 0};
+							if (order[column]) {
+								directory_view_set_sort (view->view, order[column], column == sort_types[view->view->sort_type] ? !view->view->sort_order: view->view->sort_order);
+								agl_actor__invalidate(actor);
+							}
+						}
+					}
+					return AGL_HANDLED;
+			}
+			break;
+		default:
+			break;
+	}
+	return AGL_NOT_HANDLED;
 }
 
 
@@ -207,7 +266,7 @@ void
 files_view_set_path (FilesView* view, const char* path)
 {
 	char** val = &FILES_STATE((AGlActor*)view)->params->params[0].val.c;
-	if(*val) g_free(*val);
+	if (*val) g_free(*val);
 	*val = g_strdup(path);
 
 	g_idle_add((GSourceFunc)files_scan_dir, (gpointer)view);
@@ -330,12 +389,12 @@ int
 files_view_row_at_coord (FilesView* view, int x, int y)
 {
 	y += view->scroll->value.i;
-	if(y < 0) return -1;
+	if (y < 0) return -1;
 
 	int r = y / view->row_height;
 	GPtrArray* items = view->view->items;
 
-	if(r > items->len) return -1;
+	if (r > items->len) return -1;
 
 	return r;
 }
@@ -368,12 +427,14 @@ filelist_view (void* _)
 			ViewItem* vitem = items->pdata[i];
 			DirItem* item = vitem->item;
 			char size[16] = {'\0'}; snprintf(size, 15, "%zu", item->size);
-			const char* val[] = {item->leafname, size, user_name(item->uid), group_name(item->gid)};
-			for(int c=0;c<G_N_ELEMENTS(val);c++){
+			char* time = pretty_time(&item->mtime);
+			const char* val[] = {item->leafname, size, time, user_name(item->uid), group_name(item->gid)};
+			for (int c=0;c<G_N_ELEMENTS(val);c++) {
 				agl_push_clip (0, y0, MIN(col[c + 2] - 6, actor->region.x2), actor->region.y2);
 				agl_print (col[c + 1], y0 + r * ROW_HEIGHT, 0, STYLE.text, val[c]);
 				agl_pop_clip ();
 			}
+			g_free(time);
 
 			if (item->mime_type) {
 				guint t = get_icon_texture_by_mimetype (item->mime_type);
@@ -439,7 +500,6 @@ filelist_view (void* _)
 	}
 
 	return agl_actor__new (AGlActor,
-		.name = "Filelist",
 		.init = filelist_init,
 		.set_size = filelist_set_size,
 		.paint = filelist_paint,

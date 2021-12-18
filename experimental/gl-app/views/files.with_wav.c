@@ -8,7 +8,7 @@
  | as published by the Free Software Foundation.                        |
  +----------------------------------------------------------------------+
  |
-*/
+ */
 
 #include "config.h"
 #include <gdk/gdkkeysyms.h>
@@ -16,6 +16,7 @@
 #include "agl/ext.h"
 #include "agl/utils.h"
 #include "agl/behaviours/key.h"
+#include "agl/behaviours/cache.h"
 #include "agl/text/renderer.h"
 #include "actors/scrollbar.h"
 #include "waveform/actor.h"
@@ -50,6 +51,17 @@ static AGl* agl = NULL;
 static int instance_count = 0;
 static AGlActorClass actor_class = {0, "Files", (AGlActorNew*)files_with_wav, files_free};
 static GHashTable* icon_textures = NULL;
+
+typedef enum {
+	F_COL_ICON = 0,
+	F_COL_NAME,
+	F_COL_SIZE,
+	F_COL_DATE,
+	F_COL_OWNER,
+	F_COL_GROUP,
+} SortColum;
+
+static int sort_types[] = {F_COL_ICON, F_COL_NAME, 0, F_COL_DATE, F_COL_SIZE, F_COL_OWNER, F_COL_GROUP, 0};
 static int col[] = {0, 24, 260, 360, 490, 530, 575};
 
 static gboolean files_scan_dir           (AGlActor*);
@@ -61,19 +73,17 @@ static AGlActor*filelist_view            (void*);
 AGlActorClass*
 files_with_wav_get_class ()
 {
-	static bool init_done = false;
-
-	if(!init_done){
+	if (!agl) {
 		agl = agl_get_instance();
 
 		icon_textures = g_hash_table_new(NULL, NULL);
 		agl_set_font_string("Roboto 10"); // initialise the pango context
 
 		agl_actor_class__add_behaviour(&actor_class, key_get_class());
+		agl_actor_class__add_behaviour(&actor_class, cache_get_class());
+		agl_actor_class__add_behaviour(&actor_class, state_get_class());
 
 		dir_init();
-
-		init_done = true;
 	}
 
 	return &actor_class;
@@ -89,8 +99,10 @@ files_with_wav (gpointer _)
 
 	bool files_paint (AGlActor* actor)
 	{
+		FilesWithWav* view = (FilesWithWav*)actor;
+
 		char* col_heads[] = {"Filename", "Size", "Date", "Owner", "Group"};
-		int sort_column = 1;
+		int sort_column = sort_types[FILES->view->sort_type];
 
 		PLAIN_COLOUR2 (agl->shaders.plain) = 0x222222ff;
 		agl_use_program ((AGlShader*)agl->shaders.plain);
@@ -109,11 +121,6 @@ files_with_wav (gpointer _)
 	void files_init (AGlActor* a)
 	{
 		FilesWithWav* view = (FilesWithWav*)a;
-
-#ifdef AGL_ACTOR_RENDER_CACHE
-		a->fbo = agl_fbo_new(agl_actor__width(a), agl_actor__height(a), 0, AGL_FBO_HAS_STENCIL);
-		a->cache.enabled = true;
-#endif
 
 		agl_observable_set_int (view->files.scroll, 0);
 
@@ -167,7 +174,7 @@ files_with_wav (gpointer _)
 						break;
 					case 5:
 						dbg(1, "! scroll down");
-						if(scrollable_height > N_ROWS_VISIBLE(actor)){
+						if (scrollable_height > N_ROWS_VISIBLE(actor)) {
 							if(view->files.scroll->value.i < max_scroll((FilesView*)view))
 								agl_observable_set_int (view->files.scroll, view->files.scroll->value.i + 1);
 						}
@@ -176,10 +183,26 @@ files_with_wav (gpointer _)
 				break;
 			case GDK_BUTTON_RELEASE:
 				;int row = files_with_wav_row_at_coord (view, 0, xy.y - actor->region.y1);
-				dbg(1, "RELEASE button=%i y=%i row=%i", event->button.button, xy.y - actor->region.y1, row);
-				switch(event->button.button){
+				dbg(1, "RELEASE button=%i y=%i row=%i", event->button.button, xy.y, row);
+				switch (event->button.button) {
 					case 1:
-						VIEW_IFACE_GET_CLASS((ViewIface*)FILES->view)->set_selected((ViewIface*)FILES->view, &(ViewIter){.i = row}, true);
+						if (row < 0) {
+							int column = -1;
+							for (int c=0;c<G_N_ELEMENTS(col);c++) {
+								if (xy.x > col[c]) {
+									column = c;
+								}
+							}
+							if (column > 0) {
+								int order[] = {0, SORT_NAME, SORT_SIZE, SORT_DATE, SORT_OWNER, SORT_GROUP, 0};
+								if (order[column]) {
+									directory_view_set_sort (FILES->view, order[column], !FILES->view->sort_order);
+									agl_actor__invalidate(actor);
+								}
+							}
+						} else {
+							VIEW_IFACE_GET_CLASS((ViewIface*)FILES->view)->set_selected((ViewIface*)FILES->view, &(ViewIter){.i = row}, true);
+						}
 				}
 				break;
 			default:
@@ -192,7 +215,6 @@ files_with_wav (gpointer _)
 		.files = {
 			.actor = {
 				.class = &actor_class,
-				.name = "Files",
 				.colour = 0x66ff99ff,
 				.init = files_init,
 				.paint = files_paint,
@@ -264,7 +286,7 @@ files_with_wav_row_at_coord (FilesWithWav* view, int x, int y)
 	if (y < 0) return -1;
 	int r = y / ROW_HEIGHT;
 	GPtrArray* items = FILES->view->items;
-	if(r > items->len) return -1;
+	if (r > items->len) return -1;
 	return r;
 }
 
@@ -304,9 +326,9 @@ files_with_wav_select (FilesWithWav* view, int row)
 
 
 #define HIDE_ITEM(N) \
-	if(N > 0 && N < items->len){ \
+	if (N > 0 && N < items->len) { \
 		WavViewItem* vitem = items->pdata[N]; \
-		if(vitem->wav){ \
+		if (vitem->wav) { \
 			wf_actor_set_rect((WaveformActor*)vitem->wav, &(WfRectangle){0,}); \
 		} \
 	}
@@ -411,13 +433,13 @@ filelist_view (void* _)
 			}
 
 			// TODO dont do this in paint
-			if(item->mime_type){
+			if (item->mime_type) {
 				guint t = get_icon_texture_by_mimetype(item->mime_type);
-				if(t){
+				if (t) {
 					agl->shaders.texture->uniform.fg_colour = 0xffffffff;
 					agl_use_program((AGlShader*)agl->shaders.texture);
 					agl_textured_rect(t, 0, y, 16, 16, NULL);
-				}else{
+				} else {
 					pwarn("failed to get icon for %s", item->mime_type->subtype);
 				}
 			}
@@ -454,7 +476,6 @@ filelist_view (void* _)
 	}
 
 	return agl_actor__new (AGlActor,
-		.name = "Filelist",
 		.init = filelist_init,
 		.set_size = filelist_set_size,
 		.paint = filelist_paint,

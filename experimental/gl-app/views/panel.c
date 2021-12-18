@@ -28,8 +28,6 @@
 
 extern AGlShader ring;
 
-#define _g_object_unref0(var) ((var == NULL) ? NULL : (var = (g_object_unref (var), NULL)))
-
 static void panel_free (AGlActor*);
 
 static AGl* agl = NULL;
@@ -42,6 +40,8 @@ static char* font = NULL;
 extern AGlMaterialClass ring_material_class;
 static AGlMaterial* ring_material = NULL;
 
+static void get_drop_location (AGlActor* actor, AGlActor* picked, AGlActor** dock, AGliPt* dock_position, AGlActor** insert_at);
+
 
 AGlActorClass*
 panel_view_get_class ()
@@ -53,17 +53,13 @@ panel_view_get_class ()
 static void
 _init ()
 {
-	static bool init_done = false;
-
-	if(!init_done){
+	if (!agl) {
 		agl = agl_get_instance();
 
 		font = g_strdup_printf("%s 10", APP_STYLE.font);
 		agl_set_font_string(font); // initialise the pango context
 
 		ring_material = ring_new();
-
-		init_done = true;
 	}
 }
 
@@ -71,51 +67,6 @@ _init ()
 typedef struct {
 	AGliPt mouse;
 } Abs;
-
-
-static AGlActor*
-find_dock (AGlActor* parent)
-{
-	do{
-		if(parent->class == dock_v_get_class() || parent->class == dock_h_get_class()){
-			return parent;
-		}
-	} while((parent = parent->parent));
-
-	return NULL;
-}
-
-
-static void
-get_drop_location (AGlActor* actor, AGlActor* picked, AGlActor** dock, AGliPt* dock_position, AGlActor** insert_at)
-{
-	*dock = find_dock(picked);
-	picked = *dock;
-
-	if(picked){
-		// TODO maybe pick could return the offset
-		AGliPt dock_offset = agl_actor__find_offset(picked);
-		AGliPt offset2 = agl_actor__find_offset(actor);
-		if((*dock)->class == dock_v_get_class()){
-			Abs abs = {
-				.mouse = {offset2.x + mouse.x, offset2.y + mouse.y}
-			};
-			int position_in_dock = abs.mouse.y - dock_offset.y;
-			for(GList* l = ((DockVView*)*dock)->panels; l; l = l->next){
-				AGlActor* a = l->data;
-				if(position_in_dock < (int)(a->region.y1 + agl_actor__height(a)) - MIN(40, (int)(agl_actor__height(a) / 2))){
-					if(a != actor){
-						*dock_position = dock_offset;
-						*insert_at = a;
-					}
-					return;
-				}
-			}
-		}else if((*dock)->class == dock_h_get_class()){
-			// TODO
-		}
-	}
-}
 
 
 AGlActor*
@@ -153,8 +104,8 @@ panel_view (gpointer _)
 			AGliPt offset = {mouse.x - origin.x, mouse.y - origin.y};
 			if(ABS(offset.x) > 1 || ABS(offset.y) > 1){
 				PLAIN_COLOUR2 (agl->shaders.plain) = 0x6677ff77;
-				agl_use_program((AGlShader*)agl->shaders.plain);
-				agl_box(1, offset.x, offset.y, agl_actor__width(actor), agl_actor__height(actor));
+				agl_use_program (agl->shaders.plain);
+				agl_box (1, offset.x, offset.y, agl_actor__width(actor), agl_actor__height(actor));
 
 				// show drop point
 				AGliPt position2 = {(int)actor->region.x1 + offset.x, (int)actor->region.y1 + offset.y};
@@ -184,8 +135,8 @@ panel_view (gpointer _)
 				}
 			}else{
 				PLAIN_COLOUR2 (agl->shaders.plain) = 0x6677ff33;
-				agl_use_program((AGlShader*)agl->shaders.plain);
-				agl_rect(0, 0, agl_actor__width(actor), PANEL_DRAG_HANDLE_HEIGHT);
+				agl_use_program (agl->shaders.plain);
+				agl_rect (0, 0, agl_actor__width(actor), PANEL_DRAG_HANDLE_HEIGHT);
 			}
 		}
 
@@ -232,7 +183,7 @@ panel_view (gpointer _)
 		switch(event->type){
 			case GDK_BUTTON_PRESS:
 				dbg(1, "PRESS %i", xy.y);
-				if(xy.y < PANEL_DRAG_HANDLE_HEIGHT){
+				if (xy.y < PANEL_DRAG_HANDLE_HEIGHT) {
 					actor_context.grabbed = actor;
 					origin = mouse = xy;
 					agl_actor__invalidate(actor);
@@ -242,17 +193,17 @@ panel_view (gpointer _)
 			case GDK_BUTTON_RELEASE:
 				agl_actor__invalidate(actor);
 				dbg(1, "RELEASE y=%i", xy.y);
-				if(actor_context.grabbed){
-					if(actor->parent->class == dock_v_get_class()){
+				if (actor_context.grabbed) {
+					if (actor->parent->class == dock_v_get_class()) {
 
 						AGlActor* picked = agl_actor__pick(actor, mouse);
 
-						if(picked){
+						if (picked) {
 							AGlActor* dock = NULL;
 							AGlActor* insert_at = NULL;
 							AGliPt dock_offset = {-1, -1};
 							get_drop_location(actor, picked, &dock, &dock_offset, &insert_at);
-							if(dock && insert_at){
+							if (dock && insert_at) {
 								// TODO use dock and insert at to handle inter-dock dragging
 								dock_v_move_panel_to_y((DockVView*)actor->parent, actor, (int)actor->region.y1 + xy.y);
 							}
@@ -263,7 +214,7 @@ panel_view (gpointer _)
 				}
 				break;
 			case GDK_MOTION_NOTIFY:
-				if(actor_context.grabbed == actor){
+				if (actor_context.grabbed == actor) {
 					mouse = xy;
 					agl_actor__invalidate(actor);
 					return AGL_HANDLED;
@@ -284,10 +235,9 @@ panel_view (gpointer _)
 		return AGL_NOT_HANDLED;
 	}
 
-	PanelView* view = AGL_NEW(PanelView,
+	PanelView* view = agl_actor__new(PanelView,
 		.actor = {
 			.class = &actor_class,
-			.name = "Panel",
 			.init = panel_init,
 			.paint = panel_paint,
 			.set_size = panel_set_size,
@@ -309,11 +259,55 @@ panel_free (AGlActor* actor)
 {
 	PanelView* panel = (PanelView*)actor;
 
-	_g_object_unref0(panel->layout);
+	g_clear_pointer(&panel->layout, g_object_unref);
 
-	if(!--instance_count){
+	if (!--instance_count) {
 	}
 
 	g_free(actor);
 }
 
+
+static AGlActor*
+find_dock (AGlActor* parent)
+{
+	do {
+		if (parent->class == dock_v_get_class() || parent->class == dock_h_get_class()) {
+			return parent;
+		}
+	} while ((parent = parent->parent));
+
+	return NULL;
+}
+
+
+static void
+get_drop_location (AGlActor* actor, AGlActor* picked, AGlActor** dock, AGliPt* dock_position, AGlActor** insert_at)
+{
+	*dock = find_dock(picked);
+	picked = *dock;
+
+	if (picked) {
+		// TODO maybe pick could return the offset
+		AGliPt dock_offset = agl_actor__find_offset(picked);
+		AGliPt offset2 = agl_actor__find_offset(actor);
+		if ((*dock)->class == dock_v_get_class()) {
+			Abs abs = {
+				.mouse = {offset2.x + mouse.x, offset2.y + mouse.y}
+			};
+			int position_in_dock = abs.mouse.y - dock_offset.y;
+			for (GList* l = ((DockVView*)*dock)->panels; l; l = l->next) {
+				AGlActor* a = l->data;
+				if (position_in_dock < (int)(a->region.y1 + agl_actor__height(a)) - MIN(40, (int)(agl_actor__height(a) / 2))) {
+					if (a != actor){
+						*dock_position = dock_offset;
+						*insert_at = a;
+					}
+					return;
+				}
+			}
+		} else if((*dock)->class == dock_h_get_class()) {
+			// TODO
+		}
+	}
+}

@@ -26,6 +26,7 @@
  * Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#include "config.h"
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <gtk/gtk.h>
 #pragma GCC diagnostic warning "-Wdeprecated-declarations"
@@ -379,8 +380,12 @@ static GFSCacheData *lookup_internal(GFSCache *cache, const char *pathname,
 		if (lookup_type != FSCACHE_LOOKUP_CREATE &&
 		    lookup_type != FSCACHE_LOOKUP_INIT)
 			return NULL;
-		
+
+#ifdef HAVE_GLIB_2_67
+		new_key = g_memdup2(&key, sizeof(key));
+#else
 		new_key = g_memdup(&key, sizeof(key));
+#endif
 
 		data = g_new(GFSCacheData, 1);
 		data->data = NULL;

@@ -153,7 +153,6 @@ inspector_view (gpointer _)
 	InspectorView* view = agl_actor__new (InspectorView,
 		.actor = {
 			.class = &actor_class,
-			.name = actor_class.name,
 			.init = inspector_init,
 			.paint = inspector_paint,
 			.set_size = inspector_set_size,

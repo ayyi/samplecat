@@ -16,7 +16,6 @@
 #include <gdk/gdkkeysyms.h>
 #include "debug/debug.h"
 #include "agl/utils.h"
-#include "agl/fbo.h"
 #include "agl/shader.h"
 #include "agl/behaviours/key.h"
 #include "agl/behaviours/cache.h"
@@ -57,9 +56,7 @@ static ActorKey keys[] = {
 AGlActorClass*
 search_view_get_class ()
 {
-	static bool init_done = false;
-
-	if(!init_done){
+	if (!agl) {
 		agl = agl_get_instance();
 
 		agl_actor_class__add_behaviour(&actor_class, cache_get_class());
@@ -67,8 +64,6 @@ search_view_get_class ()
 		agl_actor_class__add_behaviour(&actor_class, key_get_class());
 
 		font = g_strdup_printf("%s 10", APP_STYLE.font);
-
-		init_done = true;
 	}
 
 	return &actor_class;
@@ -84,9 +79,6 @@ search_view (gpointer _)
 
 	bool search_paint (AGlActor* actor)
 	{
-		agl_enable_stencil(0, 0, actor->region.x2, actor->region.y2);
-		if(!agl->use_shaders) agl_enable(AGL_ENABLE_BLEND); // disable textures
-
 		// border
 		PLAIN_COLOUR2 (agl->shaders.plain) = 0x6677ff77;
 		agl_use_program (agl->shaders.plain);
@@ -102,16 +94,11 @@ search_view (gpointer _)
 			agl_rect_((AGlRect){0, 0, agl_actor__width(actor), h});
 		}
 
-		agl_disable_stencil();
-
 		return true;
 	}
 
 	void search_init (AGlActor* a)
 	{
-		a->fbo = agl_fbo_new(agl_actor__width(a), agl_actor__height(a), 0, AGL_FBO_HAS_STENCIL);
-		a->cache.enabled = true;
-
 		PanelView* panel = (PanelView*)a->parent;
 		panel->no_border = true;
 
@@ -137,7 +124,6 @@ search_view (gpointer _)
 	SearchView* view = agl_actor__new(SearchView,
 		.actor = {
 			.class = &actor_class,
-			.name = actor_class.name,
 			.init = search_init,
 			.paint = search_paint,
 			.set_size = search_size,
@@ -166,7 +152,9 @@ search_view (gpointer _)
 static void
 search_free (AGlActor* actor)
 {
-	if(!--instance_count){
+	if (!--instance_count) {
+		g_clear_pointer(&font, g_free);
+		agl = NULL;
 	}
 
 	g_free(actor);

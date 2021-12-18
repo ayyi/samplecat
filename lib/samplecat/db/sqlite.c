@@ -1,15 +1,16 @@
-/**
-* +----------------------------------------------------------------------+
-* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2020 Tim Orford <tim@orford.org> and others       |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-*
-*/
-#include "../../config.h"
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
+ | copyright (C) 2007-2022 Tim Orford <tim@orford.org> and others       |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
+ */
+
+#include "config.h"
 #include <sqlite3.h>
 #include <gdk-pixbuf/gdk-pixdata.h>
 #include "debug/debug.h"
@@ -38,6 +39,8 @@ static bool     sqlite__update_blob      (int id, const char*, const guint8*, co
 static int      sqlite__insert           (Sample*);
 static bool     sqlite__delete_row       (int id);
 static bool     sqlite__file_exists      (const char*, int *id);
+
+static GList*   sqlite__filter_by_audio  (Sample *s);
 
 static sqlite3* db;
 sqlite3_stmt* ppStmt = NULL;
@@ -103,18 +106,18 @@ sqlite__set_as_backend (SamplecatBackend* backend)
 
 
 void
-sqlite__create_db()
+sqlite__create_db ()
 {
 }
 
 
 int
-sqlite__connect()
+sqlite__connect ()
 {
 	PF;
 	int rc;
 
-	if(!ensure_config_dir()){
+	if (!ensure_config_dir()) {
 		return false;
 	}
 
@@ -128,7 +131,7 @@ sqlite__connect()
 	}
 	g_free(db_name);
 
-	int on_create_table(void* NotUsed, int argc, char** argv, char** azColName)
+	int on_create_table (void* NotUsed, int argc, char** argv, char** azColName)
 	{
 		int i;
 		for (i=0; i<argc; i++) {
@@ -151,7 +154,7 @@ sqlite__connect()
 		&columns,
 		&errmsg
 	);
-	if(n == SQLITE_OK && table && (rows == 1) && (columns == 2)) {
+	if (n == SQLITE_OK && table && (rows == 1) && (columns == 2)) {
 		if (!strcmp(table[2], "samples")) {
 			dbg(2, "found table 'samples'");
 			table_exists = TRUE;
@@ -192,7 +195,7 @@ sqlite__connect()
 			}
 		}
 	} else {
-		if(errmsg) dbg(0, "SQL: %s", errmsg);
+		if (errmsg) dbg(0, "SQL: %s", errmsg);
 	}
 	if (table) sqlite3_free_table(table);
 	if (errmsg) sqlite3_free(errmsg);
@@ -221,7 +224,9 @@ sqlite__connect()
 			"bit_rate INT,"
 			"bit_depth INT,"
 			"meta_data TEXT)",
-			on_create_table, 0, &errmsg);
+			on_create_table, 0,
+			&errmsg
+		);
 		if (n != SQLITE_OK) perr("Sqlite error: %s\n", errmsg);
 		if (errmsg) { sqlite3_free(errmsg); return FALSE;}
 
@@ -243,14 +248,14 @@ sqlite__connect()
 
 
 static void
-sqlite__disconnect()
+sqlite__disconnect ()
 {
 	sqlite3_close(db);
 }
 
 
 static int
-sqlite__insert(Sample* sample)
+sqlite__insert (Sample* sample)
 {
 	char* errMsg = 0;
 	sqlite3_int64 idx = -1;
@@ -269,14 +274,14 @@ sqlite__insert(Sample* sample)
 		metadata ? metadata : ""
 	);
 
-	if(sqlite3_exec(db, sql, NULL, NULL, &errMsg) != SQLITE_OK){
-		gwarn("sqlite error: %s", errMsg);
+	if (sqlite3_exec(db, sql, NULL, NULL, &errMsg) != SQLITE_OK) {
+		pwarn("sqlite error: %s", errMsg);
 		sqlite3_free(errMsg);
 	} else {
 		idx = sqlite3_last_insert_rowid(db);
 	}
 
-	if(metadata) g_free(metadata);
+	if (metadata) g_free(metadata);
 	sqlite3_free(sql);
 	return (int)idx;
 }
@@ -287,7 +292,7 @@ sqlite__execwrap (char* sql)
 {
 	bool ok = true;
 	char* errMsg = 0;
-	if(sqlite3_exec(db, sql, NULL, NULL, &errMsg) != SQLITE_OK){
+	if (sqlite3_exec(db, sql, NULL, NULL, &errMsg) != SQLITE_OK) {
 		ok = false;
 		gwarn("sqlite error: %s\n", errMsg);
 		gwarn("query: %s\n", sql);
@@ -342,11 +347,11 @@ sqlite__update_blob (int id, const char* key, const guint8* d, const guint len)
 
 	sqlite3_bind_blob(ppStmt, 1, d, len, g_free);
 	while ((rc = sqlite3_step(ppStmt)) == SQLITE_ROW) { ; }
-	if(rc != SQLITE_DONE) { 
+	if (rc != SQLITE_DONE) {
 		pwarn("step: code=%i error=%s\n", rc, sqlite3_errmsg(db));
 		ok = true;
 	}
-	if((rc = sqlite3_finalize(ppStmt)) != SQLITE_OK){
+	if ((rc = sqlite3_finalize(ppStmt)) != SQLITE_OK) {
 		pwarn("finalize error: %s", sqlite3_errmsg(db));
 		ok = false;
 	}
@@ -366,7 +371,7 @@ sqlite__file_exists (const char* path, int *id)
 
 	char* sql = sqlite3_mprintf("SELECT id FROM samples WHERE full_path='%q'", path);
 	int rc = sqlite3_get_table(db, sql, &table, &rows, &columns, &errmsg);
-	if(rc == SQLITE_OK && (table != NULL) && (rows >= 1) && (columns == 1)) {
+	if (rc == SQLITE_OK && (table != NULL) && (rows >= 1) && (columns == 1)) {
 		if (id) *id = atoi(table[1]);
 		ok = true;
 	}
@@ -377,7 +382,7 @@ sqlite__file_exists (const char* path, int *id)
 }
 
 
-GList*
+static GList*
 sqlite__filter_by_audio (Sample* s)
 {
 	GList* rv = NULL;
@@ -402,10 +407,10 @@ sqlite__filter_by_audio (Sample* s)
 	char **table= NULL;
 	char *errmsg= NULL;
 	int n = sqlite3_get_table(db, sql->str, &table, &rows, &columns, &errmsg);
-	if(n != SQLITE_OK || (table == NULL) || (rows < 1) || (columns != 1)) {
+	if (n != SQLITE_OK || (table == NULL) || (rows < 1) || (columns != 1)) {
 		goto out;
 	}
-	int i; for(i=0;i<rows;i++) {
+	for(int i=0;i<rows;i++) {
 		rv = g_list_prepend(rv, g_strdup(table[i*columns+1]));
 	}
 
@@ -424,7 +429,7 @@ sqlite__search_iter_new (int* n_results)
 	PF;
 	static int count = 0;
 
-	void select_count(const char* where)
+	void select_count (const char* where)
 	{
 		int select_callback(void* NotUsed, int argc, char** argv, char** azColName){ count = atoi(argv[0]); return 0; }
 
@@ -438,7 +443,7 @@ sqlite__search_iter_new (int* n_results)
 
 	char* where = sqlite3_mprintf("%s", "");
 	const char* search = samplecat.model->filters2.search->value.c;
-	if(search && strlen(search)){
+	if (search && strlen(search)) {
 #if 0
 		char* where2 = sqlite3_mprintf("%s AND (filename LIKE '%%%q%%' OR filedir LIKE '%%%q%%' OR keywords LIKE '%%%q%%') ", where, search, search, search);
 #else
@@ -470,13 +475,13 @@ sqlite__search_iter_new (int* n_results)
 		where = where2;
 	}
 	const char* category = samplecat.model->filters2.category->value.c;
-	if(category){
+	if (category) {
 		gchar* where2 = sqlite3_mprintf("%s AND keywords LIKE '%%%q%%' ", where, category);
 		sqlite3_free(where);
 		where = where2;
 	}
 	const char* dir = samplecat.model->filters2.dir->value.c;
-	if(dir && strlen(dir)){
+	if (dir && strlen(dir)) {
 #ifdef DONT_SHOW_SUBDIRS //TODO
 		gchar* where2 = sqlite3_mprintf("%s AND filedir='%q' ", where, dir);
 #else
@@ -490,62 +495,65 @@ sqlite__search_iter_new (int* n_results)
 	char* sql = sqlite3_mprintf("SELECT * FROM samples WHERE 1 %s", where);
 	dbg(2, "sql=%s", sql);
 
-	if(ppStmt) gwarn("ppStmt not reset from previous query?");
+	if (ppStmt) gwarn("ppStmt not reset from previous query?");
 	int n = sqlite3_prepare_v2(db, sql, -1, &ppStmt, NULL);
-	if(n == SQLITE_OK && ppStmt){
+	if (n == SQLITE_OK && ppStmt) {
 		count = 0;
 		select_count(where);
-		if(n_results) *n_results = count;
+		if (n_results) *n_results = count;
 		backend().n_results = count;
-	}
-	else{
+	} else {
 		gwarn("failed to create prepared statement. sql=%s", sql);
 		ok = false;
 	}
 	sqlite3_free(sql);
 	sqlite3_free(where);
+
 	return ok;
 }
 
 
+static Sample result;
+
 static Sample*
-sqlite__search_iter_next(unsigned long** lengths)
+sqlite__search_iter_next (unsigned long** lengths)
 {
 
 	int n = sqlite3_step(ppStmt);
-	if(n != SQLITE_ROW) return NULL;
+	if (n != SQLITE_ROW) return NULL;
+
+	if (result.overview) g_object_unref(result.overview);
 
 	//deserialise the pixbuf field:
 	GdkPixbuf* pixbuf = NULL;
 	const unsigned char* blob = sqlite3_column_blob(ppStmt, COLUMN_PIXBUF);
-	if(blob){
+	if (blob) {
 		int length = sqlite3_column_bytes(ppStmt, COLUMN_PIXBUF);
 		pixbuf = blob_to_pixbuf(blob, length);
 	}
 
-	static Sample result;
+	result = (Sample){
+		.id          = sqlite3_column_int(ppStmt, COLUMN_ID),
+		.full_path   = (char*)(char*)sqlite3_column_text(ppStmt, COLUMN_ABSPATH),
+		.name        = (char*)sqlite3_column_text(ppStmt, COLUMN_FILENAME),
+		.sample_dir  = (char*)sqlite3_column_text(ppStmt, COLUMN_DIR),
+		.keywords    = (char*)sqlite3_column_text(ppStmt, COLUMN_KEYWORDS),
+		.length      = sqlite3_column_int(ppStmt, COLUMN_LENGTH),
+		.sample_rate = sqlite3_column_int(ppStmt, COLUMN_SAMPLERATE),
+		.frames      = sqlite3_column_int(ppStmt, COLUMN_FRAMES),
+		.channels    = sqlite3_column_int(ppStmt, COLUMN_CHANNELS),
+		.notes       = (char*)sqlite3_column_text(ppStmt, COLUMN_NOTES),
+		.ebur        = (char*)sqlite3_column_text(ppStmt, COLUMN_EBUR),
+		.colour_index= sqlite3_column_int(ppStmt, COLUMN_COLOUR),
+		.mimetype    = (char*)sqlite3_column_text(ppStmt, COLUMN_MIMETYPE),
+		.peaklevel   = sqlite3_column_double(ppStmt, COLUMN_PEAKLEVEL),
+		.online      = sqlite3_column_int(ppStmt, COLUMN_ONLINE),
+		.mtime       = (unsigned long) sqlite3_column_int(ppStmt, COLUMN_MTIME),
+		.bit_depth   = sqlite3_column_int(ppStmt, COLUMN_BITDEPTH),
+		.bit_rate    = sqlite3_column_int(ppStmt, COLUMN_BITRATE),
+		.overview    = pixbuf,
+	};
 
-	memset(&result, 0, sizeof(Sample));
-	result.id          = sqlite3_column_int(ppStmt, COLUMN_ID);
-	result.full_path   = (char*)(char*)sqlite3_column_text(ppStmt, COLUMN_ABSPATH);
-	result.name        = (char*)sqlite3_column_text(ppStmt, COLUMN_FILENAME);
-	result.sample_dir  = (char*)sqlite3_column_text(ppStmt, COLUMN_DIR);
-	result.keywords    = (char*)sqlite3_column_text(ppStmt, COLUMN_KEYWORDS);
-	result.length      = sqlite3_column_int(ppStmt, COLUMN_LENGTH);
-	result.sample_rate = sqlite3_column_int(ppStmt, COLUMN_SAMPLERATE);
-	result.frames      = sqlite3_column_int(ppStmt, COLUMN_FRAMES);
-	result.channels    = sqlite3_column_int(ppStmt, COLUMN_CHANNELS);
-	result.overview    = (GdkPixbuf*)sqlite3_column_blob(ppStmt, COLUMN_PIXBUF);
-	result.notes       = (char*)sqlite3_column_text(ppStmt, COLUMN_NOTES);
-	result.ebur        = (char*)sqlite3_column_text(ppStmt, COLUMN_EBUR);
-	result.colour_index= sqlite3_column_int(ppStmt, COLUMN_COLOUR);
-	result.mimetype    = (char*)sqlite3_column_text(ppStmt, COLUMN_MIMETYPE);
-	result.peaklevel   = sqlite3_column_double(ppStmt, COLUMN_PEAKLEVEL);
-	result.online      = sqlite3_column_int(ppStmt, COLUMN_ONLINE);
-	result.mtime       = (unsigned long) sqlite3_column_int(ppStmt, COLUMN_MTIME);
-	result.bit_depth   = sqlite3_column_int(ppStmt, COLUMN_BITDEPTH);
-	result.bit_rate    = sqlite3_column_int(ppStmt, COLUMN_BITRATE);
-	result.overview    = pixbuf;
 	sample_set_metadata(&result, (char*)sqlite3_column_text(ppStmt, COLUMN_METADATA));
 
 	/* backwards compat. */
@@ -567,21 +575,22 @@ sqlite__search_iter_next(unsigned long** lengths)
 
 
 static void
-sqlite__search_iter_free()
+sqlite__search_iter_free ()
 {
-	sqlite3_finalize(ppStmt);
-	ppStmt = NULL;
+	if (result.overview) g_clear_pointer(&result.overview, g_object_unref);
+
+	g_clear_pointer(&ppStmt, sqlite3_finalize);
 }
 
 
 static void
-sqlite__dir_iter_new()
+sqlite__dir_iter_new ()
 {
 	#define SQLITE_DIR_LIST_QRY "SELECT DISTINCT filedir FROM samples ORDER BY filedir"
 
-	if(ppStmt) gwarn("ppStmt not reset from previous query?");
+	if (ppStmt) gwarn("ppStmt not reset from previous query?");
 	int n = sqlite3_prepare_v2(db, SQLITE_DIR_LIST_QRY, -1, &ppStmt, NULL);
-	if(ppStmt && n == SQLITE_OK){
+	if (ppStmt && n == SQLITE_OK) {
 		/*
 		count = 0;
 		if(n_results){
@@ -589,27 +598,24 @@ sqlite__dir_iter_new()
 			*n_results = count;
 		}
 		*/
-	}
-	else{
-		gwarn("failed to create prepared statement. sql=%s", SQLITE_DIR_LIST_QRY);
+	} else {
+		pwarn("failed to create prepared statement. sql=%s", SQLITE_DIR_LIST_QRY);
 	}
 }
 
 
 static char*
-sqlite__dir_iter_next()
+sqlite__dir_iter_next ()
 {
 	int n = sqlite3_step(ppStmt);
-	if(n == SQLITE_ROW){
-		return (char*)sqlite3_column_text(ppStmt, 0);
-	}
-	else return NULL;
+	return (n == SQLITE_ROW)
+		? (char*)sqlite3_column_text(ppStmt, 0)
+		: NULL;
 }
 
 
 static void
-sqlite__dir_iter_free()
+sqlite__dir_iter_free ()
 {
-	sqlite3_finalize(ppStmt);
-	ppStmt = NULL;
+	g_clear_pointer(&ppStmt, sqlite3_finalize);
 }

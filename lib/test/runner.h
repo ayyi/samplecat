@@ -34,6 +34,7 @@ typedef struct {
 	int n_passed;
 	int n_failed;
 	int timeout;
+	ReadyTest before_each;
 	struct {
 		int    test;
 		char   name[64];

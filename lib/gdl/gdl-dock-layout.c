@@ -120,8 +120,8 @@ static void     gdl_dock_layout_build_tree      (GdlDockLayout      *layout, Gdl
 static bool     gdl_dock_layout_save_to_yaml    (GdlDockMaster*, const char*);
 static bool     gdl_dock_layout_load_yaml       (GdlDockMaster*, const char*);
 
-static bool     load_dock                       (yaml_parser_t*, yaml_event_t*, gpointer);
-static bool     dock_handler                    (yaml_parser_t*, yaml_event_t*, char*, gpointer);
+static bool     load_dock                       (yaml_parser_t*, const yaml_event_t*, gpointer);
+static bool     dock_handler                    (yaml_parser_t*, const yaml_event_t*, char*, gpointer);
 
 
 typedef struct {
@@ -1658,7 +1658,7 @@ gdl_dock_layout_setup_object2 (GdlDockMaster* master, Stack* stack, gint *n_afte
 
 
 static bool
-add_param (yaml_parser_t* parser, yaml_event_t* _event, gpointer _stack)
+add_param (yaml_parser_t* parser, const yaml_event_t* _event, gpointer _stack)
 {
 	Stack* stack = _stack;
 	Constructor* constructor = &stack->items[stack->sp];
@@ -1702,7 +1702,7 @@ add_param (yaml_parser_t* parser, yaml_event_t* _event, gpointer _stack)
 
 
 static bool
-dock_handler (yaml_parser_t* parser, yaml_event_t* event, char* name, gpointer _stack)
+dock_handler (yaml_parser_t* parser, const yaml_event_t* event, char* name, gpointer _stack)
 {
 	g_assert(event->type == YAML_MAPPING_START_EVENT);
 
@@ -1805,7 +1805,7 @@ dock_handler (yaml_parser_t* parser, yaml_event_t* event, char* name, gpointer _
 
 
 static bool
-load_dock (yaml_parser_t* parser, yaml_event_t* event, gpointer user_data)
+load_dock (yaml_parser_t* parser, const yaml_event_t* event, gpointer user_data)
 {
 	return load_mapping(parser,
 		NULL,
