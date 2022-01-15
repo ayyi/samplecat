@@ -153,7 +153,7 @@ GType
 spectrogram_area_get_type (void)
 {
 	static volatile gsize spectrogram_area_type_id__volatile = 0;
-	if (g_once_init_enter (&spectrogram_area_type_id__volatile)) {
+	if (g_once_init_enter ((gsize*)&spectrogram_area_type_id__volatile)) {
 		GType spectrogram_area_type_id;
 		spectrogram_area_type_id = spectrogram_area_get_type_once ();
 		g_once_init_leave (&spectrogram_area_type_id__volatile, spectrogram_area_type_id);

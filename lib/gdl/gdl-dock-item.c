@@ -324,7 +324,7 @@ gdl_dock_item_class_init (GdlDockItemClass *klass)
                       gdl_marshal_VOID__VOID,
                       G_TYPE_NONE, 
                       0);
-    
+
     /**
      * GdlDockItem::dock-drag-motion:
      * @item: The dock item which is being dragged.
@@ -556,7 +556,7 @@ gdl_dock_item_destroy (GtkObject *object)
 
     if (item->_priv) {
         GdlDockItemPrivate *priv = item->_priv;
-        
+
         if (priv->tab_label) {
             gdl_dock_item_set_tablabel (item, NULL);
         };
@@ -584,11 +584,10 @@ static void
 gdl_dock_item_add (GtkContainer *container,
                    GtkWidget    *widget)
 {
-    GdlDockItem *item;
-    
     g_return_if_fail (GDL_IS_DOCK_ITEM (container));
 
-    item = GDL_DOCK_ITEM (container);
+    GdlDockItem *item = GDL_DOCK_ITEM (container);
+
     if (GDL_IS_DOCK_OBJECT (widget)) {
         g_warning (_("You can't add a dock object (%p of type %s) inside a %s. "
                      "Use a GdlDock or some other compound dock object."),
@@ -596,7 +595,7 @@ gdl_dock_item_add (GtkContainer *container,
         return;
     }
 
-    if (item->child != NULL) {
+    if (item->child) {
         g_warning (_("Attempting to add a widget with type %s to a %s, "
                      "but it can only contain one widget at a time; "
                      "it already contains a widget of type %s"),
@@ -615,7 +614,6 @@ gdl_dock_item_remove (GtkContainer *container,
                       GtkWidget    *widget)
 {
     GdlDockItem *item;
-    gboolean     was_visible;
     
     g_return_if_fail (GDL_IS_DOCK_ITEM (container));
     
@@ -634,8 +632,8 @@ gdl_dock_item_remove (GtkContainer *container,
     }
     
     g_return_if_fail (item->child == widget);
-    
-    was_visible = GTK_WIDGET_VISIBLE (widget);
+
+    bool was_visible = GTK_WIDGET_VISIBLE (widget);
 
     gtk_widget_unparent (widget);
     item->child = NULL;
@@ -673,8 +671,7 @@ gdl_dock_item_child_type (GtkContainer *container)
 }
 
 static void
-gdl_dock_item_size_request (GtkWidget      *widget,
-                            GtkRequisition *requisition)
+gdl_dock_item_size_request (GtkWidget *widget, GtkRequisition *requisition)
 {
     GtkRequisition  child_requisition;
     GtkRequisition  grip_requisition;

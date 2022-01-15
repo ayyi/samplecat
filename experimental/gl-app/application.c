@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
- | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
- | copyright (C) 2007-2021 Tim Orford <tim@orford.org>                  |
+ | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
+ | copyright (C) 2007-2022 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -65,7 +65,7 @@ application_new ()
 		ConfigContext* ctx = &app->config_ctx;
 		ctx->options = g_malloc0(CONFIG_MAX * sizeof(ConfigOption*));
 
-		void get_theme_name(ConfigOption* option)
+		void get_theme_name (ConfigOption* option)
 		{
 			g_value_set_string(&option->val, theme_name);
 		}
@@ -144,7 +144,7 @@ GType
 application_get_type ()
 {
 	static volatile gsize application_type_id__volatile = 0;
-	if (g_once_init_enter (&application_type_id__volatile)) {
+	if (g_once_init_enter ((gsize*)&application_type_id__volatile)) {
 		static const GTypeInfo g_define_type_info = { sizeof (ApplicationClass), (GBaseInitFunc) NULL, (GBaseFinalizeFunc) NULL, (GClassInitFunc) application_class_init, (GClassFinalizeFunc) NULL, NULL, sizeof (Application), 0, (GInstanceInitFunc) application_instance_init, NULL };
 		GType application_type_id;
 		application_type_id = g_type_register_static (G_TYPE_OBJECT, "Application", &g_define_type_info, 0);
@@ -214,9 +214,9 @@ application_menu_init ()
 	{
 		AGlActorClass* k = (AGlActorClass*)user_data;
 		AGlActor* existing = agl_actor__find_by_class((AGlActor*)app->scene, k);
-		if(existing){
+		if (existing) {
 			application_remove_panel(k);
-		}else{
+		} else {
 			application_add_panel(k);
 		}
 	}
@@ -236,10 +236,10 @@ application_menu_init ()
 		AGlActorClass* k = (AGlActorClass*)value;
 		A* a = user_data;
 
-		for(int i = 0; i < AGL_ACTOR_N_BEHAVIOURS; i++){
+		for (int i = 0; i < AGL_ACTOR_N_BEHAVIOURS; i++) {
 			AGlBehaviourClass* ki = k->behaviour_classes[i];
-			if(ki == panel_get_class()){
-				if(a->i < menu.len){
+			if (ki == panel_get_class()) {
+				if (a->i < menu.len) {
 					menu.items[a->i] = (MenuItem){
 						(char*)key,
 						"checkmark",
@@ -263,15 +263,15 @@ application_add_panel (AGlActorClass* klass)
 	float height = 80;
 
 	AGlActor* parent = agl_actor__find_by_name((AGlActor*)app->scene, "Dock H");
-	if(parent){
-		if((parent = agl_actor__find_by_name(parent, "Left"))){
+	if (parent) {
+		if ((parent = agl_actor__find_by_name(parent, "Left"))) {
 			AGlActor* panel = panel_view_get_class()->new(NULL);
 			panel->region.y2 = height;
 			((PanelView*)panel)->size_req.min = (AGliPt){-1, 24};
 			AGlActor* actor = klass->new(NULL);
 			agl_actor__add_child(panel, actor);
 
-			for(GList* l = parent->children; l; l = l->next){
+			for (GList* l = parent->children; l; l = l->next) {
 				((AGlActor*)l->data)->region.y2 += height;
 			}
 			agl_actor__insert_child(parent, panel, 0);
@@ -286,7 +286,7 @@ void
 application_remove_panel (AGlActorClass* klass)
 {
 	AGlActor* actor = agl_actor__find_by_class((AGlActor*)app->scene, klass);
-	if(actor){
+	if (actor) {
 		actor = actor->parent;
 		agl_actor__remove_child(actor->parent, actor);
 		agl_actor__set_size(actor->parent);
@@ -322,17 +322,17 @@ application_set_auditioner ()
 void
 application_play (Sample* sample)
 {
-	if(play->status == PLAY_PAUSED){
-		if(play->auditioner->playpause){
+	if (play->status == PLAY_PAUSED) {
+		if (play->auditioner->playpause) {
 			play->auditioner->playpause(false);
 		}
 		play->status = PLAY_PLAYING;
 		return;
 	}
 
-	if(sample) dbg(1, "%s", sample->name);
+	if (sample) dbg(1, "%s", sample->name);
 
-	if(player_play(sample)){
+	if (player_play(sample)) {
 #if 0
 		if(app->play.queue)
 			statusbar_print(1, "playing 1 of %i ...", g_list_length(app->play.queue));

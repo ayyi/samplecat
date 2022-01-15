@@ -216,7 +216,7 @@ main (int argc, char** argv)
 			case 'V':
 				printf ("%s %s\n\n", basename(argv[0]), PACKAGE_VERSION);
 				printf(
-					"Copyright (C) 2007-2020 Tim Orford\n"
+					"Copyright (C) 2007-2022 Tim Orford\n"
 					"Copyright (C) 2011 Robin Gareus\n"
 					"This is free software; see the source for copying conditions.  There is NO\n"
 					"warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n"

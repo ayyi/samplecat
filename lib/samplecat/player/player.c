@@ -79,7 +79,7 @@ GType
 player_get_type ()
 {
 	static volatile gsize player_type_id__volatile = 0;
-	if (g_once_init_enter (&player_type_id__volatile)) {
+	if (g_once_init_enter ((gsize*)&player_type_id__volatile)) {
 		static const GTypeInfo g_define_type_info = { sizeof (PlayerClass), (GBaseInitFunc) NULL, (GBaseFinalizeFunc) NULL, (GClassInitFunc) player_class_init, (GClassFinalizeFunc) NULL, NULL, sizeof (Player), 0, (GInstanceInitFunc) player_instance_init, NULL };
 		GType player_type_id;
 		player_type_id = g_type_register_static (G_TYPE_OBJECT, "Player", &g_define_type_info, 0);

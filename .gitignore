@@ -56,6 +56,7 @@ player.vala.h
 !test/arch/scripts/Makefile
 !test/fedora-34/Makefile
 !test/fedora-34/Dockerfile.in
+!test/fedora-34/scripts/Makefile
 test/fedora-34/Dockerfile
 !test/opensuse-leap/Makefile
 !test/opensuse-leap/Dockerfile.in

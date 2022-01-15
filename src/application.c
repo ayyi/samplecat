@@ -1,16 +1,15 @@
-/**
-* +----------------------------------------------------------------------+
-* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2020 Tim Orford <tim@orford.org>                  |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-*
-* This file is partially based on vala/application.vala but is manually synced.
-*
-*/
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
+ | copyright (C) 2007-2022 Tim Orford <tim@orford.org>                  |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
+ */
+
 #include "config.h"
 #include <string.h>
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -138,7 +137,7 @@ application_free (Application* self)
 	ConfigContext* ctx = &app->configctx;
 	int i = 0;
 	ConfigOption* option;
-	while((option = ctx->options[i++])){
+	while ((option = ctx->options[i++])) {
 		g_value_unset(&option->val);
 		g_clear_pointer(&ctx->options[i-1], g_free);
 	}
@@ -204,7 +203,7 @@ GType
 application_get_type ()
 {
 	static volatile gsize application_type_id__volatile = 0;
-	if (g_once_init_enter (&application_type_id__volatile)) {
+	if (g_once_init_enter ((gsize*)&application_type_id__volatile)) {
 		static const GTypeInfo g_define_type_info = { sizeof (ApplicationClass), (GBaseInitFunc) NULL, (GBaseFinalizeFunc) NULL, (GClassInitFunc) application_class_init, (GClassFinalizeFunc) NULL, NULL, sizeof (Application), 0, (GInstanceInitFunc) application_instance_init, NULL };
 		GType application_type_id;
 		application_type_id = g_type_register_static (G_TYPE_OBJECT, "Application", &g_define_type_info, 0);
@@ -301,7 +300,7 @@ static bool auditioner_nullS(Sample* s) {return true;}
 static void
 _set_auditioner ()
 {
-	if(!app->no_gui){ printf("auditioner: "); fflush(stdout); }
+	if (!app->no_gui) { printf("auditioner: "); fflush(stdout); }
 
 	const static Auditioner a_null = {
 		&auditioner_nullC,
@@ -315,7 +314,7 @@ _set_auditioner ()
 
 	bool connected = false;
 #ifdef HAVE_JACK
-	if(!connected && can_use(app->players, "jack")){
+	if (!connected && can_use(app->players, "jack")) {
 		play->auditioner = & a_jack;
 		if (!play->auditioner->check()) {
 			connected = true;
@@ -324,16 +323,16 @@ _set_auditioner ()
 	}
 #endif
 #ifdef HAVE_AYYIDBUS
-	if(!connected && can_use(app->players, "ayyi")){
+	if (!connected && can_use(app->players, "ayyi")) {
 		play->auditioner = & a_ayyidbus;
 		if (!play->auditioner->check()) {
 			connected = true;
-			if(!app->no_gui) printf("ayyi_audition\n");
+			if (!app->no_gui) printf("ayyi_audition\n");
 		}
 	}
 #endif
 #ifdef HAVE_GPLAYER
-	if(!connected && can_use(app->players, "cli")){
+	if (!connected && can_use(app->players, "cli")) {
 		play->auditioner = & a_gplayer;
 		if (!play->auditioner->check()) {
 			connected = true;
@@ -366,7 +365,7 @@ application_set_auditioner (Application* a)
 
 	gboolean set_auditioner_on_idle (gpointer data)
 	{
-		if(!((Application*)data)->no_gui){
+		if (!((Application*)data)->no_gui) {
 			_set_auditioner();
 
 			player_connect(set_auditioner_on_connected, data);
@@ -386,7 +385,7 @@ application_search()
 {
 	PF;
 
-	if(BACKEND_IS_NULL) return;
+	if (BACKEND_IS_NULL) return;
 
 	g_signal_emit_by_name(app, "search-starting");
 
@@ -411,8 +410,8 @@ application_scan (const char* path, ScanResults* results)
 	gchar* fail_msg = results->n_failed ? g_strdup_printf(", %i failed", results->n_failed) : "";
 	gchar* dupes_msg = results->n_dupes ? g_strdup_printf(", %i duplicates", results->n_dupes) : "";
 	statusbar_print(1, "add finished: %i files added%s%s", results->n_added, fail_msg, dupes_msg);
-	if(results->n_failed) g_free(fail_msg);
-	if(results->n_dupes) g_free(dupes_msg);
+	if (results->n_failed) g_free(fail_msg);
+	if (results->n_dupes) g_free(dupes_msg);
 
 	app->state = NONE;
 	worker_go_slow = false;
@@ -430,9 +429,9 @@ application_add_file (const char* path, ScanResults* result)
 	/* check if file already exists in the store
 	 * -> don't add it again
 	 */
-	if(samplecat.model->backend.file_exists(path, NULL)) {
-		if(!app->no_gui) statusbar_print(1, "duplicate: %s", path);
-		if(_debug_) g_warning("duplicate file: %s", path);
+	if (samplecat.model->backend.file_exists(path, NULL)) {
+		if (!app->no_gui) statusbar_print(1, "duplicate: %s", path);
+		if (_debug_) g_warning("duplicate file: %s", path);
 		Sample* s = sample_get_by_filename(path);
 		if (s) {
 			//sample_refresh(s, false);
@@ -445,7 +444,7 @@ application_add_file (const char* path, ScanResults* result)
 		return false;
 	}
 
-	if(!app->no_gui) dbg(1, "%s", path);
+	if (!app->no_gui) dbg(1, "%s", path);
 
 	Sample* sample = sample_new_from_filename((char*)path, false);
 	if (!sample) {
@@ -456,9 +455,9 @@ application_add_file (const char* path, ScanResults* result)
 		return false;
 	}
 
-	if(_debug_ && app->no_gui){ printf("%s\n", path); fflush(stdout); }
+	if (_debug_ && app->no_gui) { printf("%s\n", path); fflush(stdout); }
 
-	if(!sample_get_file_info(sample)){
+	if (!sample_get_file_info(sample)) {
 		pwarn("cannot add file: reading file info failed. type=%s", sample->mimetype);
 		if(!app->no_gui) statusbar_print(1, "cannot add file: reading file info failed");
 		sample_unref(sample);
@@ -468,12 +467,12 @@ application_add_file (const char* path, ScanResults* result)
 #ifdef CHECK_SIMILAR
 	/* check if same file already exists with different path */
 	GList* existing;
-	if((existing = samplecat.model->backend.filter_by_audio(sample))) {
+	if ((existing = samplecat.model->backend.filter_by_audio(sample))) {
 		GList* l = existing; int i;
 #ifdef INTERACTIVE_IMPORT
 		GString* note = g_string_new("Similar or identical file(s) already present in database:\n");
 #endif
-		for(i=1;l;l=l->next, i++){
+		for (i=1;l;l=l->next, i++) {
 			/* TODO :prompt user: ask to delete one of the files
 			 * - import/update the remaining file(s)
 			 */
@@ -537,34 +536,34 @@ application_add_dir (const char* path, ScanResults* result)
 	GError* error = NULL;
 	GDir* dir;
 
-	if((dir = g_dir_open(path, 0, &error))){
-		while((file = g_dir_read_name(dir))){
-			if(file[0] == '.') continue;
+	if ((dir = g_dir_open(path, 0, &error))) {
+		while ((file = g_dir_read_name(dir))) {
+			if (file[0] == '.') continue;
 
 			snprintf(filepath, PATH_MAX, "%s%c%s", path, G_DIR_SEPARATOR, file);
 			filepath[PATH_MAX - 1] = '\0';
 			if (do_progress(0, 0)) break;
 
 			if(!g_file_test(filepath, G_FILE_TEST_IS_DIR)){
-				if(g_file_test(filepath, G_FILE_TEST_IS_SYMLINK) && !g_file_test(filepath, G_FILE_TEST_IS_REGULAR)){
+				if (g_file_test(filepath, G_FILE_TEST_IS_SYMLINK) && !g_file_test(filepath, G_FILE_TEST_IS_REGULAR)) {
 					dbg(0, "ignoring dangling symlink: %s", filepath);
-				}else{
-					if(application_add_file(filepath, result)){
-						if(!app->no_gui) statusbar_print(1, "%i files added", result->n_added);
+				} else {
+					if (application_add_file(filepath, result)) {
+						if (!app->no_gui) statusbar_print(1, "%i files added", result->n_added);
 					}
 				}
 			}
 			// IS_DIR
-			else if(app->config.add_recursive){
+			else if (app->config.add_recursive) {
 				application_add_dir(filepath, result);
 			}
 		}
 		//hide_progress(); ///no: keep window open until last recursion.
 		g_dir_close(dir);
-	}else{
+	} else {
 		result->n_failed++;
 
-		if(error->code == 2)
+		if (error->code == 2)
 			pwarn("%s\n", error->message); // permission denied
 		else
 			perr("cannot open directory. %i: %s\n", error->code, error->message);
@@ -574,35 +573,35 @@ application_add_dir (const char* path, ScanResults* result)
 
 
 void
-application_play(Sample* sample)
+application_play (Sample* sample)
 {
-	if(play->status == PLAY_PAUSED){
-		if(play->auditioner->playpause){
+	if (play->status == PLAY_PAUSED) {
+		if (play->auditioner->playpause) {
 			play->auditioner->playpause(false);
 		}
 		play->status = PLAY_PLAYING;
 		return;
 	}
 
-	if(sample) dbg(1, "%s", sample->name);
+	if (sample) dbg(1, "%s", sample->name);
 
-	if(player_play(sample)){
-		if(play->queue)
+	if (player_play(sample)) {
+		if (play->queue)
 			statusbar_print(1, "playing 1 of %i ...", g_list_length(play->queue));
 		else
 			statusbar_print(1, "");
 #ifndef USE_GDL
-		if(app->view_options[SHOW_PLAYER].value) show_player(true);
+		if (app->view_options[SHOW_PLAYER].value) show_player(true);
 #endif
 
-	}else{
+	} else {
 		statusbar_print(1, "File not playable");
 	}
 }
 
 
 void
-application_pause()
+application_pause ()
 {
 	if(play->auditioner->playpause){
 		play->auditioner->playpause(true);
@@ -635,7 +634,7 @@ application_play_selected()
 void
 application_play_all ()
 {
-	if(play->queue){
+	if (play->queue) {
 		pwarn("already playing");
 		return;
 	}
@@ -648,8 +647,8 @@ application_play_all ()
 	}
 	gtk_tree_model_foreach(GTK_TREE_MODEL(samplecat.store), foreach_func, NULL);
 
-	if(play->queue){
-		if(play->auditioner->play_all) play->auditioner->play_all(); // TODO remove this fn.
+	if (play->queue) {
+		if (play->auditioner->play_all) play->auditioner->play_all(); // TODO remove this fn.
 		application_play_next();
 	}
 }
@@ -659,18 +658,18 @@ void
 application_play_next ()
 {
 	PF;
-	if(play->queue){
+	if (play->queue) {
 		Sample* next = play->queue->data;
 		REMOVE_FROM_QUEUE(next);
 		dbg(1, "%s", next->full_path);
 
-		if(play->sample){
+		if (play->sample) {
 			play->position = UINT32_MAX;
 			g_signal_emit_by_name (play, "position");
 		}
 
 		application_play(next);
-	}else{
+	} else {
 		dbg(1, "play_all finished.");
 		player_stop();
 	}
@@ -680,11 +679,11 @@ application_play_next ()
 void
 application_play_path (const char* path)
 {
-	if(play->sample) player_stop();
+	if (play->sample) player_stop();
 
 	Sample* s = sample_new_from_filename((char*)path, false);
 	g_assert(s->ref_count == 1); // will be unreffed and freed in application_on_play_finished()
-	if(s){
+	if (s) {
 		application_play(s);
 	}
 }

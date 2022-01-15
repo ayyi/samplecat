@@ -2,9 +2,6 @@
 
 container=samplecat-fedora-34
 
-# run with X forwarding
-#XSOCK=/tmp/.X11-unix/X0 docker run -it -v $XSOCK:$XSOCK $container bash
-
 usage="run [OPTIONS]\n\noptions:\n  -i interactive (bash shell)\n\nWithout options, default samplecat build will run\n"
 
 branch=${CI_COMMIT_BRANCH:-master}
@@ -19,8 +16,6 @@ while getopts ":i" opt; do
 				echo cannot run interactive container without tty
 				exit
 			fi
-			# privileged is needed for opengl
-			#             docker run --privileged -e "DISPLAY=unix:0.0" -v="/tmp/.X11-unix:/tmp/.X11-unix:rw" -i -t $container bash
 			docker run --rm --privileged -v="/tmp/.X11-unix:/tmp/.X11-unix:rw" -e DISPLAY=$DISPLAY -i -t $container bash
 			exit
 			;;

@@ -1,0 +1,15 @@
+#!/bin/bash
+
+# Add a test file to the database so that the
+# gui has something to show
+
+cd /root/samplecat/
+./configure --enable-test
+make
+cd src
+./samplecat --no-gui --add /root/samplecat/lib/waveform/test/data/mono_0\:10.wav
+
+# Check the sample was successfully added
+a=`./samplecat --no-gui`
+a=${a/*mono_0:10.wav*/OK}
+test "$a" = "OK" || echo FAIL

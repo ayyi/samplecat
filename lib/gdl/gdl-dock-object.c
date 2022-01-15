@@ -564,52 +564,48 @@ gdl_dock_object_dock (GdlDockObject    *object,
                       GdlDockPlacement  position,
                       GValue           *other_data)
 {
-    GdlDockObject *parent;
-    
-    g_return_if_fail (object != NULL && requestor != NULL);
+	g_return_if_fail (object != NULL && requestor != NULL);
         
-    if (object == requestor)
-        return;
+	if (object == requestor)
+		return;
     
-    if (!object->master)
-        g_warning (_("Dock operation requested in a non-bound object %p. "
-                     "The application might crash"), object);
+	if (!object->master)
+		g_warning (_("Dock operation requested in a non-bound object %p. The application might crash"), object);
         
 	PF;
 
-    if (!gdl_dock_object_is_bound (requestor))
-        gdl_dock_object_bind (requestor, object->master);
+	if (!gdl_dock_object_is_bound (requestor))
+		gdl_dock_object_bind (requestor, object->master);
 
-    if (requestor->master != object->master) {
-        g_warning (_("Cannot dock %p to %p because they belong to different masters"),
-                   requestor, object);
-        return;
-    }
+	if (requestor->master != object->master) {
+		g_warning (_("Cannot dock %p to %p because they belong to different masters"), requestor, object);
+		return;
+	}
 
-    /* first, see if we can optimize things by reordering */
-    if (position != GDL_DOCK_NONE) {
-        parent = gdl_dock_object_get_parent_object (object);
-        if (gdl_dock_object_reorder (object, requestor, position, other_data) ||
-            (parent && gdl_dock_object_reorder (parent, requestor, position, other_data)))
-            return;
-    }
-    
-    /* freeze the object, since under some conditions it might be destroyed when
-       detaching the requestor */
-    gdl_dock_object_freeze (object);
+	/* first, see if we can optimize things by reordering */
+	GdlDockObject *parent;
+	if (position != GDL_DOCK_NONE) {
+		parent = gdl_dock_object_get_parent_object (object);
+		if (gdl_dock_object_reorder (object, requestor, position, other_data) ||
+			(parent && gdl_dock_object_reorder (parent, requestor, position, other_data)))
+				return;
+	}
 
-    /* detach the requestor before docking */
-    g_object_ref (requestor);
-    if (GDL_DOCK_OBJECT_ATTACHED (requestor))
-        gdl_dock_object_detach (requestor, FALSE);
+	/* freeze the object, since under some conditions it might be destroyed when
+	detaching the requestor */
+	gdl_dock_object_freeze (object);
 
-    if (position != GDL_DOCK_NONE)
-        g_signal_emit (object, gdl_dock_object_signals [DOCK], 0,
-                       requestor, position, other_data);
+	/* detach the requestor before docking */
+	g_object_ref (requestor);
+	if (GDL_DOCK_OBJECT_ATTACHED (requestor))
+		gdl_dock_object_detach (requestor, FALSE);
+
+	if (position != GDL_DOCK_NONE)
+		g_signal_emit (object, gdl_dock_object_signals [DOCK], 0, requestor, position, other_data);
 	dbg(1, "done");
 
-    g_object_unref (requestor);
-    gdl_dock_object_thaw (object);
+	g_object_unref (requestor);
+	gdl_dock_object_thaw (object);
 }
 
 void

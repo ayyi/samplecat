@@ -309,7 +309,7 @@ GType
 samplecat_list_store_get_type (void)
 {
 	static volatile gsize samplecat_list_store_type_id__volatile = 0;
-	if (g_once_init_enter (&samplecat_list_store_type_id__volatile)) {
+	if (g_once_init_enter ((gsize*)&samplecat_list_store_type_id__volatile)) {
 		static const GTypeInfo g_define_type_info = { sizeof (SamplecatListStoreClass), (GBaseInitFunc) NULL, (GBaseFinalizeFunc) NULL, (GClassInitFunc) samplecat_list_store_class_init, (GClassFinalizeFunc) NULL, NULL, sizeof (SamplecatListStore), 0, (GInstanceInitFunc) samplecat_list_store_instance_init, NULL };
 		GType samplecat_list_store_type_id;
 		samplecat_list_store_type_id = g_type_register_static (GTK_TYPE_LIST_STORE, "SamplecatListStore", &g_define_type_info, 0);

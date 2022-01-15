@@ -135,7 +135,7 @@ GType
 ayyi_filemanager_get_type (void)
 {
 	static volatile gsize ayyi_filemanager_type_id__volatile = 0;
-	if (g_once_init_enter (&ayyi_filemanager_type_id__volatile)) {
+	if (g_once_init_enter ((gsize*)&ayyi_filemanager_type_id__volatile)) {
 		static const GTypeInfo g_define_type_info = { sizeof (AyyiFilemanagerClass), (GBaseInitFunc) NULL, (GBaseFinalizeFunc) NULL, (GClassInitFunc) ayyi_filemanager_class_init, (GClassFinalizeFunc) NULL, NULL, sizeof (AyyiFilemanager), 0, (GInstanceInitFunc) ayyi_filemanager_instance_init, NULL };
 		GType ayyi_filemanager_type_id;
 		ayyi_filemanager_type_id = g_type_register_static (G_TYPE_OBJECT, "AyyiFilemanager", &g_define_type_info, 0);

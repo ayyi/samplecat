@@ -716,11 +716,9 @@ item_dock_cb (GdlDockObject    *object,
     /* here we are in fact interested in the requestor, since it's
      * assumed that object will not change its visibility... for the
      * requestor, however, could mean that it's being shown */
-    if (!GDL_DOCK_OBJECT_IN_REFLOW (requestor) &&
-        !GDL_DOCK_OBJECT_AUTOMATIC (requestor)) {
+    if (!GDL_DOCK_OBJECT_IN_REFLOW (requestor) && !GDL_DOCK_OBJECT_AUTOMATIC (requestor)) {
         if (!master->_priv->idle_layout_changed_id)
-            master->_priv->idle_layout_changed_id =
-                g_idle_add (idle_emit_layout_changed, master);
+            master->_priv->idle_layout_changed_id = g_idle_add (idle_emit_layout_changed, master);
     }
 }
 
@@ -793,7 +791,7 @@ gdl_dock_master_add (GdlDockMaster *master,
             g_hash_table_insert (master->dock_objects, g_strdup (object->name), object);
         }
     }
-    
+
     if (GDL_IS_DOCK (object)) {
         gboolean floating;
         
@@ -912,11 +910,9 @@ gdl_dock_master_foreach_toplevel (GdlDockMaster *master,
                                   GFunc          function,
                                   gpointer       user_data)
 {
-    GList *l;
-    
     g_return_if_fail (master != NULL && function != NULL);
 
-    for (l = master->toplevel_docks; l; ) {
+    for (GList* l = master->toplevel_docks; l; ) {
         GdlDockObject *object = GDL_DOCK_OBJECT (l->data);
         l = l->next;
         if (object != master->controller || include_controller)

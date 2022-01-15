@@ -7,7 +7,7 @@ RUN dnf -y update && \
 
 RUN echo "alias ll='ls -l'" >> /root/.bashrc
 WORKDIR /root
-ADD add_samples /root/
+ADD scripts/add_samples /root/
 ADD scripts/Makefile /root/
 
 CMD make

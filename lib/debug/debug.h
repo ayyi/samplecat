@@ -15,12 +15,12 @@
 #define gwarn(A, ...) g_warning("%s(): "A, __func__, ##__VA_ARGS__);
 #define pwarn(A, ...) g_warning("%s(): "A, __func__, ##__VA_ARGS__)
 #define PF0 {printf("%s()...\n", __func__);}
-#define PF {if(_debug_) printf("%s()...\n", __func__);}
-#define PF2 {if(_debug_ > 1) printf("%s()...\n", __func__);}
+#define PF {if (_debug_) printf("%s()...\n", __func__);}
+#define PF2 {if (_debug_ > 1) printf("%s()...\n", __func__);}
 #define PF_DONE printf("%s(): done.\n", __func__);
-#define P_GERR if(error){ gerr("%s\n", error->message); g_error_free(error); error = NULL; }
-#define GERR_INFO if(error){ printf("%s\n", error->message); g_error_free(error); error = NULL; }
-#define GERR_WARN if(error){ gwarn("%s", error->message); g_error_free(error); error = NULL; }
+#define P_GERR if (error){ gerr("%s\n", error->message); g_error_free(error); error = NULL; }
+#define GERR_INFO if (error){ printf("%s\n", error->message); g_error_free(error); error = NULL; }
+#define GERR_WARN if (error){ gwarn("%s", error->message); g_error_free(error); error = NULL; }
 
 void        debug_printf             (const char* func, int level, const char* format, ...);
 void        warnprintf               (const char* format, ...);

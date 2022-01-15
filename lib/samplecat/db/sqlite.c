@@ -133,12 +133,28 @@ sqlite__connect ()
 
 	int on_create_table (void* NotUsed, int argc, char** argv, char** azColName)
 	{
-		int i;
-		for (i=0; i<argc; i++) {
+		for (int i=0; i<argc; i++) {
 			printf("%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
 		}
 		printf("\n");
 		return 0;
+	}
+
+	void ensure_column (char** table, const char* column)
+	{
+		if (!strstr(table[3], column)) { 
+			dbg(0, "updating to new model: %s", column);
+
+			char* sql = g_strdup_printf("ALTER TABLE samples add %s;", column);
+
+			char* errmsg = NULL;
+			if (sqlite3_exec(db, sql, NULL, NULL, &errmsg) != SQLITE_OK)
+				perr("Sqlite error: %s\n", errmsg);
+			if (errmsg)
+				sqlite3_free(errmsg);
+
+			g_free(sql);
+		}
 	}
 
 	int table_exists = FALSE;
@@ -158,41 +174,14 @@ sqlite__connect ()
 		if (!strcmp(table[2], "samples")) {
 			dbg(2, "found table 'samples'");
 			table_exists = TRUE;
-			if (!strstr(table[3], "ebur TEXT")) { 
-				dbg(0, "updating to new model: ebur");
-				int n = sqlite3_exec(db, "ALTER TABLE samples add ebur TEXT;", NULL, NULL, &errmsg);
-				if (n != SQLITE_OK) perr("Sqlite error: %s\n", errmsg); if (errmsg) sqlite3_free(errmsg);
-			}
-			if (!strstr(table[3], "full_path TEXT")) { 
-				dbg(0, "updating to new model: full_path");
-				int n = sqlite3_exec(db, "ALTER TABLE samples add full_path TEXT;", NULL, NULL, &errmsg);
-				if (n != SQLITE_OK) perr("Sqlite error: %s\n", errmsg); if (errmsg) sqlite3_free(errmsg);
-			}
-			if (!strstr(table[3], "mtime INT")) { 
-				dbg(0, "updating to new model: mtime");
-				int n = sqlite3_exec(db, "ALTER TABLE samples add mtime INT;", NULL, NULL, &errmsg);
-				if (n != SQLITE_OK) perr("Sqlite error: %s\n", errmsg); if (errmsg) sqlite3_free(errmsg);
-			}
-			if (!strstr(table[3], "frames INT")) { 
-				dbg(0, "updating to new model: frames");
-				int n = sqlite3_exec(db, "ALTER TABLE samples add frames INT;", NULL, NULL, &errmsg);
-				if (n != SQLITE_OK) perr("Sqlite error: %s\n", errmsg); if (errmsg) sqlite3_free(errmsg);
-			}
-			if (!strstr(table[3], "bit_rate INT")) { 
-				dbg(0, "updating to new model: bit_rate");
-				int n = sqlite3_exec(db, "ALTER TABLE samples add bit_rate INT;", NULL, NULL, &errmsg);
-				if (n != SQLITE_OK) perr("Sqlite error: %s\n", errmsg); if (errmsg) sqlite3_free(errmsg);
-			}
-			if (!strstr(table[3], "bit_depth INT")) { 
-				dbg(0, "updating to new model: bit_depth");
-				int n = sqlite3_exec(db, "ALTER TABLE samples add bit_depth INT;", NULL, NULL, &errmsg);
-				if (n != SQLITE_OK) perr("Sqlite error: %s\n", errmsg); if (errmsg) sqlite3_free(errmsg);
-			}
-			if (!strstr(table[3], "meta_data TEXT")) { 
-				dbg(0, "updating to new model: meta_data");
-				int n = sqlite3_exec(db, "ALTER TABLE samples add meta_data TEXT;", NULL, NULL, &errmsg);
-				if (n != SQLITE_OK) perr("Sqlite error: %s\n", errmsg); if (errmsg) sqlite3_free(errmsg);
-			}
+
+			ensure_column(table, "ebur TEXT");
+			ensure_column(table, "full_path TEXT");
+			ensure_column(table, "mtime INT");
+			ensure_column(table, "frames INT");
+			ensure_column(table, "bit_rate INT");
+			ensure_column(table, "bit_depth INT");
+			ensure_column(table, "meta_data TEXT");
 		}
 	} else {
 		if (errmsg) dbg(0, "SQL: %s", errmsg);
@@ -231,16 +220,20 @@ sqlite__connect ()
 		if (errmsg) { sqlite3_free(errmsg); return FALSE;}
 
 		n = sqlite3_exec(db, "CREATE UNIQUE INDEX idx1 ON samples (full_path);", NULL, NULL, &errmsg);
-		if (n != SQLITE_OK) perr("Sqlite error: %s\n", errmsg); if (errmsg) sqlite3_free(errmsg);
+		if (n != SQLITE_OK) perr("Sqlite error: %s\n", errmsg);
+		g_clear_pointer(&errmsg, sqlite3_free);
 
 		n = sqlite3_exec(db, "CREATE INDEX idx2 ON samples (keywords);", NULL, NULL, &errmsg);
-		if (n != SQLITE_OK) perr("Sqlite error: %s\n", errmsg); if (errmsg) sqlite3_free(errmsg);
+		if (n != SQLITE_OK) perr("Sqlite error: %s\n", errmsg);
+		g_clear_pointer(&errmsg, sqlite3_free);
 
 		n = sqlite3_exec(db, "CREATE INDEX idx3 ON samples (filename);", NULL, NULL, &errmsg);
-		if (n != SQLITE_OK) perr("Sqlite error: %s\n", errmsg); if (errmsg) sqlite3_free(errmsg);
+		if (n != SQLITE_OK) perr("Sqlite error: %s\n", errmsg);
+		g_clear_pointer(&errmsg, sqlite3_free);
 
 		n = sqlite3_exec(db, "CREATE INDEX idx4 ON samples (filedir);", NULL, NULL, &errmsg);
-		if (n != SQLITE_OK) perr("Sqlite error: %s\n", errmsg); if (errmsg) sqlite3_free(errmsg);
+		if (n != SQLITE_OK) perr("Sqlite error: %s\n", errmsg);
+		g_clear_pointer(&errmsg, sqlite3_free);
 
 	}
 	return TRUE;
