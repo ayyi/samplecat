@@ -5,6 +5,7 @@ test_6_update_waveform ()
 {
 	START_TEST;
 
+#ifdef USE_GDL
 	assert(view_is_visible("Waveform"), "expected waveform panel visible");
 	assert(view_is_visible("Library"), "expected library panel visible");
 
@@ -56,4 +57,7 @@ test_6_update_waveform ()
 	}
 
 	wait_for(selection_changed, on_change, "Selection change");
+#else
+	FINISH_TEST;
+#endif
 }

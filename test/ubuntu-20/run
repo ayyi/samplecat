@@ -10,7 +10,7 @@ usage="run [OPTIONS]\n\noptions:\n  -i interactive (bash shell)\n\nWithout optio
 
 test -t 1 && TTY="-t"
 
-while getopts ":i" opt; do
+while getopts ":it" opt; do
     case $opt in
         i  )
 			if [ -e $TTY ]
@@ -21,6 +21,18 @@ while getopts ":i" opt; do
 			# privileged is needed for opengl
 			#             docker run --privileged -e "DISPLAY=unix:0.0" -v="/tmp/.X11-unix:/tmp/.X11-unix:rw" -i -t $container bash
 			docker run --rm --privileged -v="/tmp/.X11-unix:/tmp/.X11-unix:rw" -e DISPLAY=$DISPLAY -i -t $container bash
+			exit
+			;;
+		t  )
+			docker run --rm -t $container /bin/sh -c "(
+				set -e
+				apt-get install wget
+				wget http://www.orford.org/assets/samplecat-0.3.3.tar.xz
+				tar xvf samplecat-0.3.3.tar.xz
+				cd samplecat-0.3.3
+				./configure
+				make
+    		)"
 			exit
 			;;
         \? ) echo -e $usage

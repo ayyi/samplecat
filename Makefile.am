@@ -19,7 +19,7 @@ resources.c: resources.xml resources/gtkrc
 	@echo -en $(green)
 	@echo compiling resources ...
 	@echo -en $(normal)
-	$(GLIB_COMPILE_RESOURCES) resources.xml --target=src/$@ --sourcedir=. --generate-source
+	$(GLIB_COMPILE_RESOURCES) $(top_srcdir)/resources.xml --target=src/$@ --sourcedir=$(top_srcdir) --generate-source
 	sed -i '1s;^;#include "config.h"\n;' src/$@
 
 EXTRA_DIST = \

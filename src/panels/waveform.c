@@ -231,15 +231,6 @@ update_waveform_view (Sample* sample)
 void
 show_waveform (bool enable)
 {
-#ifndef USE_GDL
-	if (enable && !window.waveform) {
-		window.waveform = waveform_panel_new();
-
-		gtk_box_pack_start(GTK_BOX(window.vbox), window.waveform, EXPAND_FALSE, FILL_TRUE, 0);
-		gtk_widget_set_size_request(window.waveform, 100, 96);
-	}
-#endif
-
 	if (window.waveform) {
 #ifdef USE_GDL
 		show_widget_if(window.waveform->parent, enable);
@@ -263,6 +254,20 @@ show_waveform (bool enable)
 		}
 	}
 }
+
+
+#ifndef USE_GDL
+void
+ensure_waveform (GtkWidget* container)
+{
+	if (!window.waveform) {
+		window.waveform = waveform_panel_new();
+
+		gtk_box_pack_start(GTK_BOX(container), window.waveform, EXPAND_FALSE, FILL_TRUE, 0);
+		gtk_widget_set_size_request(window.waveform, 100, 96);
+	}
+}
+#endif
 
 
 static void
