@@ -1,0 +1,18 @@
+FROM manjarolinux/base:latest
+
+/* FIXME lapsa should be optional - why is configure failing without it ? */
+/* note: python3 was added for gtkglext mkenums */
+
+RUN pacman --noconfirm --noprogressbar -Syu && \\
+
+	pacman --noconfirm --noprogressbar -S \\
+
+#include "dependencies"
+
+RUN echo "alias ll='ls -l --color'" >> /root/.bashrc
+WORKDIR /root
+ADD scripts/add_samples /root/
+ADD scripts/Makefile /root/
+ENV DISPLAY :0
+
+CMD make

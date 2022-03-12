@@ -19,6 +19,7 @@ send_key (GdkWindow* window, int keyval, GdkModifierType modifiers)
 }
 
 
+#ifdef USE_GDL
 static GdlDockItem*
 find_dock_item (const char* name)
 {
@@ -68,6 +69,7 @@ find_dock_item (const char* name)
 
 	return c.item;
 }
+#endif
 
 
 bool
@@ -181,16 +183,24 @@ find_item_in_view_menu (const char* name)
 bool
 view_is_visible (gpointer name)
 {
+#ifdef USE_GDL
 	GdlDockItem* item = find_dock_item(name);
 	return item && gtk_widget_get_visible((GtkWidget*)item);
+#else
+	return true;
+#endif
 }
 
 
 bool
 view_not_visible (gpointer name)
 {
+#ifdef USE_GDL
 	GdlDockItem* item = find_dock_item(name);
 	return !item || !gtk_widget_get_visible((GtkWidget*)item);
+#else
+	return true;
+#endif
 }
 
 

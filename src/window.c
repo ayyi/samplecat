@@ -316,6 +316,8 @@ window_new ()
 
 #ifdef USE_OPENGL
 	if (app->view_options[SHOW_WAVEFORM].value) {
+		extern void ensure_waveform (GtkWidget*);
+		ensure_waveform(window.vbox);
 		show_waveform(true);
 	}
 #endif
@@ -1060,6 +1062,8 @@ show_spectrogram (bool enable)
 #ifdef USE_GDL
 		window.spectrogram = panels[PANEL_TYPE_SPECTROGRAM].widget;
 #else
+		extern void gl_spectrogram_set_gl_context (GdkGLContext*);
+
 		gl_spectrogram_set_gl_context(agl_get_gl_context());
 		window.spectrogram = panels[PANEL_TYPE_SPECTROGRAM].new();
 #ifdef USE_OPENGL

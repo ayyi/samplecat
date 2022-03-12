@@ -1,7 +1,6 @@
 make \
 automake \
 autoconf \
-libtool \
 gcc \
 pkgconf \
 gdb \
