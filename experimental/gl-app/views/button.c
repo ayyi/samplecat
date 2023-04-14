@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
- | copyright (C) 2013-2022 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2013-2023 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -13,7 +13,8 @@
 #include "config.h"
 #include "debug/debug.h"
 #include "agl/utils.h"
-#include "samplecat.h"
+#include "agl/event.h"
+#include "samplecat/support.h"
 #include "utils.h"
 #include "shader.h"
 #include "application.h"
@@ -30,7 +31,7 @@ struct {
 } GlButtonPress;
 
 static void button_free     (AGlActor*);
-static bool button_on_event (AGlActor*, GdkEvent*, AGliPt);
+static bool button_on_event (AGlActor*, AGlEvent*, AGliPt);
 
 static AGlActorClass actor_class = {0, "Button", (AGlActorNew*)button, button_free};
 
@@ -180,7 +181,7 @@ button_free (AGlActor* actor)
 
 
 static bool
-button_on_event (AGlActor* actor, GdkEvent* event, AGliPt xy)
+button_on_event (AGlActor* actor, AGlEvent* event, AGliPt xy)
 {
 	ButtonActor* button = (ButtonActor*)actor;
 
@@ -197,23 +198,23 @@ button_on_event (AGlActor* actor, GdkEvent* event, AGliPt xy)
 	}
 
 	switch (event->type) {
-		case GDK_ENTER_NOTIFY:
+		case AGL_ENTER_NOTIFY:
 			dbg (1, "ENTER_NOTIFY");
 			//set_cursor(actor->root->widget->window, CURSOR_H_DOUBLE_ARROW);
 
 			button->animatables[0]->target_val.f = 1.0;
 			agl_actor__start_transition(actor, g_list_append(NULL, button->animatables[0]), animation_done, NULL);
 			return AGL_HANDLED;
-		case GDK_LEAVE_NOTIFY:
+		case AGL_LEAVE_NOTIFY:
 			dbg (1, "LEAVE_NOTIFY");
 			//set_cursor(actor->root->widget->window, CURSOR_NORMAL);
 
 			button->animatables[0]->target_val.f = 0.0;
 			agl_actor__start_transition(actor, g_list_append(NULL, button->animatables[0]), animation_done, NULL);
 			return AGL_HANDLED;
-		case GDK_BUTTON_PRESS:
+		case AGL_BUTTON_PRESS:
 			return AGL_HANDLED;
-		case GDK_BUTTON_RELEASE:
+		case AGL_BUTTON_RELEASE:
 			dbg(1, "BUTTON_RELEASE");
 			if (event->button.button == 1) {
 				call(button->action, actor, button->user_data);

@@ -8,7 +8,6 @@ AM_CFLAGS = \
 	-I../../lib \
 	-I../../lib/waveform \
 	-I../../lib/waveform/lib/agl \
-	-I$(top_srcdir)/lib/waveform/gtkglext-1.0 \
 	$(DBUS_CFLAGS) \
 	$(GTK_CFLAGS)
 
@@ -16,18 +15,8 @@ ui_test_SOURCES = \
 	test.c
 
 if ENABLE_OPENGL
-if ENABLE_SYSTEM_GTKGLEXT
-else
-GTKGLEXT_LDFLAGS = \
-	$(top_srcdir)/lib/waveform/gtkglext-1.0/.libs/libgtkglext.a
-endif
 OPENGL_LDFLAGS = \
-	$(GTKGLEXT_LDFLAGS) \
 	$(GL_LDFLAGS)
-endif
-
-if ENABLE_GDL
-GDL_LDFLAGS = $(top_srcdir)/lib/gdl/libgdl.a $(XML_LIBS)
 endif
 
 if ENABLE_FFTW3
@@ -44,26 +33,25 @@ endif
 
 ui_test_LDADD = \
 	../../src/application.o \
-	../../src/cellrenderer_hypertext.o \
-	../../src/colour_box.o \
+	../../lib/gtk/cellrenderer_hypertext.o \
+	../../src/widgets/colour_box.o \
 	../../src/dh_tree.o \
 	../../src/dnd.o \
-	../../src/editablelabelbutton.o \
-	../../src/icon_theme.o \
 	../../src/panels/library.o \
 	../../src/progress_dialog.o \
 	../../src/resources.o \
 	../../src/support.o \
-	../../src/table.o \
 	../../src/window.o \
+	../../lib/gtk/icon_theme.o \
 	$(FFTW_LDADD) \
 	$(top_srcdir)/lib/test/libtest.la \
-	$(top_srcdir)/lib/file_manager/libfilemanager.a \
 	$(top_srcdir)/lib/dir_tree/libdirtree.a \
 	$(top_srcdir)/lib/debug/libdebug.a \
 	$(top_srcdir)/lib/samplecat/.libs/libsamplecat.a \
 	$(top_srcdir)/lib/samplecat/db/libsamplecatdb.a \
-	$(GDL_LDFLAGS) \
+	$(top_srcdir)/lib/gdl/.libs/libgdl-4.a \
+	$(XML_LIBS) \
+	$(top_srcdir)/lib/file_manager/libfilemanager.a \
 	$(top_srcdir)/lib/gtk/libgtk.la \
 	$(top_srcdir)/src/panels/libpanels.la \
 	$(top_srcdir)/lib/utils/libutils.a \
@@ -82,7 +70,7 @@ ui_test_LDADD = \
 	${SAMPLERATE_LIBS} \
 	$(FFTW3_LIBS) \
 	$(OPENGL_LDFLAGS) \
-	$(GTK_LIBS) \
+	$(GTK_LDFLAGS) \
 	$(GRAPHENE_LIBS) \
 	$(LIBASS_LDFLAGS) \
 	$(X11_LDFLAGS) \

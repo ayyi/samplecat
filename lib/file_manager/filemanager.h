@@ -98,7 +98,9 @@ struct _AyyiFilemanager {
 
     gint                       open_timeout;    // Will resize and show window...
 
+#ifdef GTK4_TODO
     GtkStateType               selection_state; // for drawing selection
+#endif
 
     gboolean                   show_thumbs;
     GList*                     thumb_queue;     // paths to thumbnail

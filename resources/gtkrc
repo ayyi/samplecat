@@ -1,7 +1,0 @@
-
-style "dock-title"
-{
-  font_name = "Bold 8"
-}
-
-widget_class "*GdlDockItemGrip*.GtkHBox.GtkLabel" style "dock-title"

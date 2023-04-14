@@ -1,44 +1,27 @@
-/**
-* +----------------------------------------------------------------------+
-* | This file is part of the Ayyi project. http://ayyi.org               |
-* | copyright (C) 2011-2020 Tim Orford <tim@orford.org>                  |
-* +----------------------------------------------------------------------+
-* | ROX-Filer, filer for the ROX desktop project, v2.3                   |
-* | Copyright (C) 2005, the ROX-Filer team.                              |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-*
-*/
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of the Ayyi project. http://ayyi.org               |
+ | copyright (C) 2011-2023 Tim Orford <tim@orford.org>                  |
+ +----------------------------------------------------------------------+
+ | ROX-Filer, filer for the ROX desktop project, v2.3                   |
+ | Copyright (C) 2005, the ROX-Filer team.                              |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
+ */
+
 #include "config.h"
-#include <stdlib.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <errno.h>
-#include <ctype.h>
-#include <time.h>
-#include <sys/param.h>
-#include <fnmatch.h>
-#include <sys/types.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <string.h>
-
-#include <sys/stat.h>
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <gtk/gtk.h>
-#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 #include "debug/debug.h"
-
+#include "gtk/icon_theme.h"
 #include "fscache.h"
 #include "pixmaps.h"
-#include "mimetype.h"
 #include "diritem.h"
 #include "support.h"
-
-#define _g_object_unref0(var) ((var == NULL) ? NULL : (var = (g_object_unref (var), NULL)))
+#include "mimetype.h"
 
 enum {SET_MEDIA, SET_TYPE};
 
@@ -50,7 +33,6 @@ static MIME_type* get_mime_type    (const gchar* type_name, gboolean can_create)
 #ifdef DEBUG
 static void       print_icon_list  ();
 #endif
-static void      _set_icon_theme   (const char*);
 #endif
 
 /* Hash of all allocated MIME types, indexed by "media/subtype".
@@ -78,18 +60,19 @@ MIME_type* inode_door;
 void
 type_init (void)
 {
-	if(icon_theme) return;
+	if (icon_theme) return;
 
-	icon_theme = gtk_icon_theme_get_default();
+	icon_theme_init ();
 
 #ifdef DEBUG
-	gint n_elements;
-	gchar** path[64];
-	gtk_icon_theme_get_search_path(icon_theme, path, &n_elements);
-	for(int i=0;i<n_elements;i++){
-		dbg(2, "icon_theme_path=%s", path[0][i]);
+	gchar** paths = gtk_icon_theme_get_search_path(icon_theme);
+	if (paths) {
+		gchar* path = paths[0];
+		for (int i=0;path;path = paths[++i]) {
+			dbg(2, "icon_theme_path=%s", path);
+		}
+		g_strfreev(paths);
 	}
-	g_strfreev(*path);
 #endif
 
 	type_hash = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
@@ -114,7 +97,7 @@ type_init (void)
 
 
 GdkPixbuf*
-mime_type_get_pixbuf(MIME_type* mime_type)
+mime_type_get_pixbuf (MIME_type* mime_type)
 {
 	type_to_icon(mime_type);
 	if (!mime_type->image) dbg(0, "no icon.\n");
@@ -133,7 +116,6 @@ mime_type_on_theme_select(GtkMenuItem* menuitem, gpointer user_data)
 #ifdef DEBUG
 	if(0) print_icon_list();
 #endif
-	_set_icon_theme(name);
 
 	//the effects of changing the icon theme are confined to the filemanager only.
 	//Changing icons application wide only makes sense if the mime fns are separated from the filemanager.
@@ -174,7 +156,7 @@ get_mime_type (const gchar* type_name, gboolean can_create)
 	dbg(2, "not found in cache: %s", type_name);
 
 	gchar* slash = strchr(type_name, '/');
-	if (slash == NULL) {
+	if (!slash) {
 		g_warning("MIME type '%s' does not contain a '/' character!", type_name);
 		return NULL;
 	}
@@ -206,6 +188,7 @@ append_names (gpointer key, gpointer value, gpointer data)
 GList*
 mime_type_name_list (void)
 {
+	printf("type hash contains %i items\n", g_hash_table_size(type_hash));
 	GList* list = NULL;
 
 	g_hash_table_foreach(type_hash, append_names, &list);
@@ -372,7 +355,7 @@ type_open (const char* path, MIME_type* type)
 MaskedPixmap*
 type_to_icon (MIME_type* type)
 {
-	if (!type){	g_object_ref(im_unknown); return im_unknown; }
+	if (!type) return g_object_ref(im_unknown);
 
 	time_t now = time(NULL);
 	// already got an image?
@@ -380,64 +363,57 @@ type_to_icon (MIME_type* type)
 		// Yes - don't recheck too often
 		if (abs(now - type->image_time) < 2)
 			return g_object_ref(type->image);
-		_g_object_unref0(type->image);
+		g_clear_pointer(&type->image, g_object_unref);
 	}
 
 	if (type->image) goto out;
 
 	char* type_name = g_strconcat(type->media_type, "/", type->subtype, NULL);
-	GIcon* icon = g_content_type_get_icon (type_name);
-					if(!strcmp(type_name, "inode/directory")){
-						g_themed_icon_prepend_name(G_THEMED_ICON(icon), "folder");
-					}
-					else if(!strcmp(type_name, "inode/directory-open")){
-						g_themed_icon_prepend_name(G_THEMED_ICON(icon), "folder-open");
-					}
-	GtkIconInfo* info = gtk_icon_theme_lookup_by_gicon((*theme_name) ? icon_theme : gtk_icon_theme_get_default(), icon, 16, GTK_ICON_LOOKUP_FORCE_SIZE);
-
-	dbg(2, "theme=%s typename=%-20s gicon=%p info=%p", theme_name, type_name, icon, info);
-
-	g_object_unref(icon);
-	g_free(type_name);
-
-	if (info) {
-		/* Get the actual icon through our cache, not through GTK, because
-		 * GTK doesn't cache icons.
-		 */
-		const char* icon_path = gtk_icon_info_get_filename(info);
-		if (icon_path) type->image = g_fscache_lookup(pixmap_cache, icon_path);
-		//if (icon_path) type->image = masked_pixmap_new(full);
-		/* else shouldn't happen, because we didn't use
-		 * GTK_ICON_LOOKUP_USE_BUILTIN.
-		 */
-		gtk_icon_info_free(info);
+	GIcon* icon_names = g_content_type_get_icon (type_name);
+#if 0
+#ifdef DEBUG
+	const gchar* const* names = g_themed_icon_get_names (G_THEMED_ICON(icon_names));
+	const char* name = names[0];
+	for (int i=0; name; name = names[++i]) {
+		printf("  %s\n", name);
 	}
+#endif
+#endif
+																						
+	//GtkIconPaintable* icon = gtk_icon_theme_lookup_icon (icon_theme, stock_id, NULL, size, 1, 0, 0);
+	GtkIconPaintable* paintable = gtk_icon_theme_lookup_by_gicon(icon_theme, icon_names, 16, 1, GTK_TEXT_DIR_NONE, 0);
+	GFile* file = gtk_icon_paintable_get_file (paintable);
+	if (file) {
+		char* path = g_file_get_path (file);
+		g_object_unref(file);
+		if (path) {
+			type->image = g_fscache_lookup(pixmap_cache, path);
+			if (!type->image->paintable) {
+				type->image->paintable = paintable;
+			}
+			g_free(path);
+		} else {
+			dbg(1, "icon not found for %s", type_name);
+		}
+	}
+
+	g_object_unref(icon_names);
+	g_free(type_name);
 
 out:
 	if (!type->image) {
-		dbg(2, "%s/%s failed! using im_unknown.", type->media_type, type->subtype);
+		dbg(2, "%s/%s failed! using im_unknown icon.", type->media_type, type->subtype);
 		/* One ref from the type structure, one returned */
-		type->image = im_unknown;
-		g_object_ref(im_unknown);
+		type->image = g_object_ref(im_unknown);
+		if (!type->image->paintable) {
+			type->image->paintable = gtk_icon_theme_lookup_icon (icon_theme, "dialog-question-symbolic", NULL, 16, 1, 0, 0);
+		}
 	}
 
 	type->image_time = now;
 	
 	g_object_ref(type->image);
 	return type->image;
-}
-
-
-GdkAtom
-type_to_atom (MIME_type* type)
-{
-	g_return_val_if_fail(type, GDK_NONE);
-
-	char* str = g_strconcat(type->media_type, "/", type->subtype, NULL);
-	GdkAtom retval = gdk_atom_intern(str, FALSE);
-	g_free(str);
-	
-	return retval;
 }
 
 
@@ -448,7 +424,7 @@ type_to_atom (MIME_type* type)
 static gboolean
 set_shell_action (GtkWidget* dialog)
 {
-	gchar *tmp, *path;
+	gchar *tmp;
 	int	error = 0, len;
 	int	fd;
 
@@ -458,13 +434,12 @@ set_shell_action (GtkWidget* dialog)
 
 	const guchar* command = gtk_entry_get_text(entry);
 	
-	if (!strchr(command, '$'))
-	{
+	if (!strchr(command, '$')) {
 		show_shell_help(NULL);
 		return FALSE;
 	}
 
-	path = NULL;//get_action_save_path(dialog);
+	gchar* path = NULL;//get_action_save_path(dialog);
 	if (!path)
 		return FALSE;
 		
@@ -678,64 +653,6 @@ print_icon_list()
 
 }
 #endif
-
-
-/*static*/ void
-_set_icon_theme(const char* name)
-{
-	g_hash_table_remove_all(type_hash);
-
-	dbg(2, "setting theme: %s.", name);
-	if(name && name[0]){
-		if(!*theme_name) icon_theme = gtk_icon_theme_new();
-		g_strlcpy(theme_name, name, 64);
-		gtk_icon_theme_set_custom_theme(icon_theme, theme_name);
-	}
-
-#if 0
-	// this test is disabled as its not reliable
-	while (1)
-	{
-		GtkIconInfo* info = gtk_icon_theme_lookup_icon(icon_theme, "mime-application:postscript", ICON_HEIGHT, 0);
-		if (!info)
-		{
-			info = gtk_icon_theme_lookup_icon(icon_theme, "gnome-mime-application-postscript", ICON_HEIGHT, 0);
-		}
-		if (info)
-		{
-			dbg(0, "got test icon ok. Using theme '%s'", theme_name);
-			print_icon_list();
-			gtk_icon_info_free(info);
-			return;
-		}
-
-		if (strcmp(theme_name, "ROX") == 0) break;
-
-		warnprintf("Icon theme '%s' does not contain MIME icons. Using ROX default theme instead.\n", theme_name);
-
-		//theme_name = "ROX";
-		strcpy(theme_name, "ROX");
-	}
-#endif
-
-#if 0
-	//const char *home_dir = g_get_home_dir();
-	//char *icon_home;
-	icon_home = g_build_filename(home_dir, ".icons", NULL);
-	if (!file_exists(icon_home)) mkdir(icon_home, 0755);
-	g_free(icon_home);
-#endif
-
-	//icon_home = g_build_filename(home_dir, ".icons", "ROX", NULL);
-	//if (symlink(make_path(app_dir, "ROX"), icon_home))
-	//	errprintf("Failed to create symlink '%s':\n%s\n\n"
-	//	"(this may mean that the ROX theme already exists there, but "
-	//	"the 'mime-application:postscript' icon couldn't be loaded for "
-	//	"some reason)", icon_home, g_strerror(errno));
-	//g_free(icon_home);
-
-	gtk_icon_theme_rescan_if_needed(icon_theme);
-}
 #endif
 
 

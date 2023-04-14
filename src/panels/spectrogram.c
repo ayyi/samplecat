@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
- | copyright (C) 2007-2022 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2007-2023 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -15,9 +15,7 @@
 #include <glib.h>
 #include <gdk-pixbuf/gdk-pixbuf.h>
 #include <glib-object.h>
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <gtk/gtk.h>
-#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 #include "debug/debug.h"
 #include "agl/gtk-area.h"
 #include "agl/utils.h"
@@ -43,16 +41,16 @@ enum  {
 };
 
 struct _SpectrogramArea {
-	GlArea parent_instance;
+	AGlGtkArea parent_instance;
 	SpectrogramAreaPrivate* priv;
 };
 
 struct _SpectrogramAreaClass {
-	GlAreaClass parent_class;
+	AGlGtkAreaClass parent_class;
+	AGl* agl;
 };
 
 struct _SpectrogramAreaPrivate {
-	struct _agl* agl;
 	gchar* _filename;
 	GdkPixbuf* pixbuf;
 };
@@ -79,8 +77,8 @@ spectrogram_area_get_instance_private (SpectrogramArea* self)
 SpectrogramArea*
 spectrogram_area_construct (GType object_type)
 {
-	SpectrogramArea* self = (SpectrogramArea*) gl_area_construct (object_type);
-	GlArea* area = (GlArea*)self;
+	SpectrogramArea* self = (SpectrogramArea*) g_object_new (object_type, NULL);
+	AGlGtkArea* area = (AGlGtkArea*)self;
 
 	AGlActor* node = agl_actor__add_child ((AGlActor*)area->scene, texture_node(NULL));
 	node->behaviours[0] = fullsize();
@@ -107,7 +105,7 @@ static void
 spectrogram_area_real_unrealize (GtkWidget* base)
 {
 	SpectrogramArea* self = (SpectrogramArea*) base;
-	GTK_WIDGET_CLASS (spectrogram_area_parent_class)->unrealize ((GtkWidget*) G_TYPE_CHECK_INSTANCE_CAST (self, TYPE_GL_AREA, GlArea));
+	GTK_WIDGET_CLASS (spectrogram_area_parent_class)->unrealize ((GtkWidget*) G_TYPE_CHECK_INSTANCE_CAST (self, AGL_TYPE_GTK_AREA, AGlGtkArea));
 }
 
 
@@ -142,8 +140,7 @@ static GType
 spectrogram_area_get_type_once ()
 {
 	static const GTypeInfo g_define_type_info = { sizeof (SpectrogramAreaClass), (GBaseInitFunc) NULL, (GBaseFinalizeFunc) NULL, (GClassInitFunc) spectrogram_area_class_init, (GClassFinalizeFunc) NULL, NULL, sizeof (SpectrogramArea), 0, (GInstanceInitFunc) spectrogram_area_instance_init, NULL };
-	GType spectrogram_area_type_id;
-	spectrogram_area_type_id = g_type_register_static (TYPE_GL_AREA, "SpectrogramArea", &g_define_type_info, 0);
+	GType spectrogram_area_type_id = g_type_register_static (AGL_TYPE_GTK_AREA, "SpectrogramArea", &g_define_type_info, 0);
 	SpectrogramArea_private_offset = g_type_add_instance_private (spectrogram_area_type_id, sizeof (SpectrogramAreaPrivate));
 	return spectrogram_area_type_id;
 }
@@ -154,19 +151,20 @@ spectrogram_area_get_type (void)
 {
 	static volatile gsize spectrogram_area_type_id__volatile = 0;
 	if (g_once_init_enter ((gsize*)&spectrogram_area_type_id__volatile)) {
-		GType spectrogram_area_type_id;
-		spectrogram_area_type_id = spectrogram_area_get_type_once ();
+		GType spectrogram_area_type_id = spectrogram_area_get_type_once ();
 		g_once_init_leave (&spectrogram_area_type_id__volatile, spectrogram_area_type_id);
 	}
 	return spectrogram_area_type_id__volatile;
 }
 
 
+#if 0
 static gpointer
 _g_object_ref (gpointer self)
 {
 	return self ? g_object_ref (self) : NULL;
 }
+#endif
 
 
 static void
@@ -174,7 +172,7 @@ spectrogram_area_load_texture (SpectrogramArea* self)
 {
 	g_return_if_fail (self);
 
-	GlArea* area = (GlArea*)self;
+	AGlGtkArea* area = (AGlGtkArea*)self;
 	SpectrogramAreaPrivate* p = self->priv;
 
 	unsigned* texture = &((AGlTextureNode*)((AGlActor*)area->scene)->children->data)->texture;
@@ -184,22 +182,17 @@ spectrogram_area_load_texture (SpectrogramArea* self)
 		glBindTexture (GL_TEXTURE_2D, *texture);
 	}
 
-	GdkGLDrawable* gldrawable = _g_object_ref (gtk_widget_get_gl_drawable ((GtkWidget*) self));
-	if (!gdk_gl_drawable_make_current (gldrawable, agl_get_gl_context())) {
-		g_print ("gl context error!\n");
-		g_clear_pointer (&gldrawable, g_object_unref);
-		return;
-	}
+	if (area->scene->gl.gdk.context)
+		gdk_gl_context_make_current (area->scene->gl.gdk.context);
 
 	agl_use_texture (*texture);
 	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	GLint n_colour_components = (GLint)gdk_pixbuf_get_n_channels(p->pixbuf);
-	glTexImage2D (GL_TEXTURE_2D, 0, n_colour_components, gdk_pixbuf_get_width(p->pixbuf), gdk_pixbuf_get_height(p->pixbuf), 0, gdk_pixbuf_get_n_channels (p->pixbuf) == 4 ? GL_RGBA : GL_RGB, GL_UNSIGNED_BYTE, gdk_pixbuf_get_pixels(p->pixbuf));
 
-	g_object_unref (gldrawable);
+	GLint format = gdk_pixbuf_get_n_channels(p->pixbuf) == 4 ? GL_RGBA : GL_RGB;
+	glTexImage2D (GL_TEXTURE_2D, 0, format, gdk_pixbuf_get_width(p->pixbuf), gdk_pixbuf_get_height(p->pixbuf), 0, format, GL_UNSIGNED_BYTE, gdk_pixbuf_get_pixels(p->pixbuf));
 }
 
 
@@ -214,7 +207,7 @@ __spectrogram_ready (const char* filename, GdkPixbuf* pixbuf, gpointer _self)
 		}
 		self->priv->pixbuf = pixbuf;
 		spectrogram_area_load_texture (self);
-		gtk_widget_queue_draw ((GtkWidget*) self);
+		agl_gtk_area_queue_render (_self);
 	}
 }
 

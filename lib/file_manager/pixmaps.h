@@ -1,19 +1,19 @@
-/**
-* +----------------------------------------------------------------------+
-* | This file is part of the Ayyi project. http://ayyi.org               |
-* | copyright (C) 2011-2017 Tim Orford <tim@orford.org>                  |
-* | copyright (C) 2006, Thomas Leonard and others                        |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-*
-*/
-#ifndef __pixmap_h__
-#define __pixmap_h__
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of the Ayyi project. http://ayyi.org               |
+ | copyright (C) 2011-2023 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2006, Thomas Leonard and others                        |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
+ */
 
-#include <glib.h>
+#pragma once
+
+#include <gtk/gtk.h>
 #include <gdk-pixbuf/gdk-pixbuf.h>
 #include "file_manager/fscache.h"
 
@@ -63,17 +63,16 @@ struct _MaskedPixmap
 
     // If huge_pixbuf is NULL then call pixmap_make_huge()
     GdkPixbuf*  huge_pixbuf;
-    GdkPixbuf*  huge_pixbuf_lit;
     int         huge_width, huge_height;
 
     GdkPixbuf*  pixbuf;       // Normal size image, always valid
-    GdkPixbuf*  pixbuf_lit;
     int         width, height;
 
     // If sm_pixbuf is NULL then call pixmap_make_small()
     GdkPixbuf*  sm_pixbuf;
-    GdkPixbuf*  sm_pixbuf_lit;
     int         sm_width, sm_height;
+
+    GtkIconPaintable* paintable;
 };
 
 void          pixmaps_init            (void);
@@ -81,9 +80,5 @@ void          pixmap_make_huge        (MaskedPixmap *mp);
 void          pixmap_make_small       (MaskedPixmap *mp);
 MaskedPixmap* load_pixmap             (const char *name);
 void          pixmap_background_thumb (const gchar *path, GFunc callback, gpointer data);
-MaskedPixmap* masked_pixmap_new       (GdkPixbuf *full_size);
+MaskedPixmap* masked_pixmap_new       (GdkPixbuf *full_size, GtkIconPaintable *icon);
 GdkPixbuf*    scale_pixbuf            (GdkPixbuf *src, int max_w, int max_h);
-
-//GdkPixbuf* create_spotlight_pixbuf(GdkPixbuf *src, guint32 color, guchar alpha);
-
-#endif

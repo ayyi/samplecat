@@ -35,13 +35,10 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <errno.h>
-#include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <string.h>
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <gtk/gtk.h>
-#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 #include "debug/debug.h"
 
 #include "fscache.h"
@@ -76,7 +73,6 @@ MaskedPixmap *im_symlink;
 MaskedPixmap *im_unmounted;
 MaskedPixmap *im_mounted;
 MaskedPixmap *im_appdir;
-MaskedPixmap *im_xattr;
 
 MaskedPixmap *im_dirs;
 
@@ -99,7 +95,9 @@ static const char *stocks[] = {
 };
 */
 
+#ifdef GTK4_TODO
 static GtkIconSize mount_icon_size = -1;
+#endif
 
 /* Static prototypes */
 
@@ -113,7 +111,6 @@ static GdkPixbuf *get_thumbnail_for(const char *path);
 #endif
 //static void thumbnail_child_done(ChildThumbnail *info);
 //static void child_create_thumbnail(const gchar *path);
-//static GdkPixbuf *create_spotlight_pixbuf(GdkPixbuf *src, guint32 color, guchar alpha);
 //static GList *thumbs_purge_cache(Option *option, xmlNode *node, guchar *label);
 //static gchar *thumbnail_path(const gchar *path);
 //static gchar *thumbnail_program(MIME_type *type);
@@ -122,13 +119,16 @@ static GdkPixbuf *get_thumbnail_for(const char *path);
  *			EXTERNAL INTERFACE			*
  ****************************************************************/
 
-void pixmaps_init(void)
+void
+pixmaps_init (void)
 {
-	if(pixmap_cache) return;
+	if (pixmap_cache) return;
 
+#ifdef GTK4_TODO
 	GdkColormap* colour_map = gdk_screen_get_system_colormap(gdk_screen_get_default());
 	if(!colour_map) return;
 	gtk_widget_push_colormap(colour_map);
+#endif
 
 	pixmap_cache = g_fscache_new((GFSLoadFunc) image_from_file, NULL, NULL);
 
@@ -165,17 +165,18 @@ void pixmaps_init(void)
 	gtk_icon_factory_add_default(factory);
 	*/
 
+#ifdef GTK4_TODO
 	mount_icon_size = gtk_icon_size_register("rox-mount-size", 14, 14);
+#endif
 
 	load_default_pixmaps();
-
-	//option_register_widget("thumbs-purge-cache", thumbs_purge_cache);
 }
 
 /* Load image <appdir>/images/name.png.
  * Always returns with a valid image.
  */
-MaskedPixmap *load_pixmap(const char *name)
+MaskedPixmap*
+load_pixmap (const char *name)
 {
 	MaskedPixmap *retval = NULL;
 	/*
@@ -195,28 +196,26 @@ MaskedPixmap *load_pixmap(const char *name)
  * a valid image.
  */
 static MaskedPixmap*
-mp_from_stock(const char *stock_id, int size)
+mp_by_name (const char *stock_id, int size)
 {
-	MaskedPixmap *retval;
+	GtkIconPaintable* icon = gtk_icon_theme_lookup_icon (icon_theme, stock_id, NULL, size, 1, 0, 0);
+	GFile* file = gtk_icon_paintable_get_file (icon);
+	char* path = g_file_get_path (file);
+	g_object_unref(file);
+	if (!path) return NULL;
 
-	GtkIconSet* icon_set = gtk_icon_factory_lookup_default(stock_id);
-	if (!icon_set) return get_bad_image();
-	
-	GdkPixbuf* pixbuf = gtk_icon_set_render_icon(icon_set,
-                                     gtk_widget_get_default_style(), /* Gtk bug */
-                                     GTK_TEXT_DIR_LTR,
-                                     GTK_STATE_NORMAL,
-                                     size,
-                                     NULL,
-                                     NULL);
-	retval = masked_pixmap_new(pixbuf);
+	GError* error = NULL;
+	GdkPixbuf* pixbuf = gdk_pixbuf_new_from_file (path, &error);
+	g_free(path);
+	MaskedPixmap* pixmap = masked_pixmap_new(pixbuf, icon);
 	g_object_unref(pixbuf);
+	g_object_unref(icon);
 
-	return retval;
+	return pixmap;
 }
 
 void
-pixmap_make_huge(MaskedPixmap *mp)
+pixmap_make_huge (MaskedPixmap *mp)
 {
 	if (mp->huge_pixbuf)
 		return;
@@ -228,13 +227,11 @@ pixmap_make_huge(MaskedPixmap *mp)
 	 */
 	mp->huge_pixbuf = scale_pixbuf_up(mp->src_pixbuf, SMALL_WIDTH, SMALL_HEIGHT);
 
-	if (!mp->huge_pixbuf)
-	{
+	if (!mp->huge_pixbuf) {
 		mp->huge_pixbuf = mp->src_pixbuf;
 		g_object_ref(mp->huge_pixbuf);
 	}
 
-	//mp->huge_pixbuf_lit = create_spotlight_pixbuf(mp->huge_pixbuf, 0x000099, 128);
 	mp->huge_width = gdk_pixbuf_get_width(mp->huge_pixbuf);
 	mp->huge_height = gdk_pixbuf_get_height(mp->huge_pixbuf);
 }
@@ -243,7 +240,7 @@ pixmap_make_huge(MaskedPixmap *mp)
  *  Never called
  */
 void
-pixmap_make_small(MaskedPixmap *mp)
+pixmap_make_small (MaskedPixmap *mp)
 {
 	if (mp->sm_pixbuf) return;
 
@@ -257,8 +254,6 @@ pixmap_make_small(MaskedPixmap *mp)
 		g_object_ref(mp->sm_pixbuf);
 	}
 
-	//mp->sm_pixbuf_lit = create_spotlight_pixbuf(mp->sm_pixbuf, 0x000099, 128);
-
 	mp->sm_width = gdk_pixbuf_get_width(mp->sm_pixbuf);
 	mp->sm_height = gdk_pixbuf_get_height(mp->sm_pixbuf);
 }
@@ -269,7 +264,7 @@ pixmap_make_small(MaskedPixmap *mp)
  * callback right away.
  */
 void
-pixmap_background_thumb(const gchar *path, GFunc callback, gpointer data)
+pixmap_background_thumb (const gchar *path, GFunc callback, gpointer data)
 {
 	gboolean found = FALSE;
 
@@ -635,7 +630,7 @@ out:
  * Doesn't check for thumbnails (this is for small icons).
  */
 static MaskedPixmap*
-image_from_file(const char *path)
+image_from_file (const char *path)
 {
 	GError* error = NULL;
 	
@@ -647,7 +642,7 @@ image_from_file(const char *path)
 		return NULL;
 	}
 
-	MaskedPixmap* image = masked_pixmap_new(pixbuf);
+	MaskedPixmap* image = masked_pixmap_new(pixbuf, NULL);
 
 	g_object_unref(pixbuf);
 
@@ -657,58 +652,44 @@ image_from_file(const char *path)
 /* Scale src down to fit in max_w, max_h and return the new pixbuf.
  * If src is small enough, then ref it and return that.
  */
-GdkPixbuf *scale_pixbuf(GdkPixbuf *src, int max_w, int max_h)
+GdkPixbuf*
+scale_pixbuf (GdkPixbuf *src, int max_w, int max_h)
 {
-	int	w, h;
+	int w = gdk_pixbuf_get_width(src);
+	int h = gdk_pixbuf_get_height(src);
 
-	w = gdk_pixbuf_get_width(src);
-	h = gdk_pixbuf_get_height(src);
-
-	if (w <= max_w && h <= max_h)
-	{
+	if (w <= max_w && h <= max_h) {
 		g_object_ref(src);
 		return src;
-	}
-	else
-	{
+	} else {
 		float scale_x = ((float) w) / max_w;
 		float scale_y = ((float) h) / max_h;
 		float scale = MAX(scale_x, scale_y);
 		int dest_w = w / scale;
 		int dest_h = h / scale;
 		
-		return gdk_pixbuf_scale_simple(src,
-						MAX(dest_w, 1),
-						MAX(dest_h, 1),
-						GDK_INTERP_BILINEAR);
+		return gdk_pixbuf_scale_simple(src, MAX(dest_w, 1), MAX(dest_h, 1), GDK_INTERP_BILINEAR);
 	}
 }
 
 /* Scale src up to fit in max_w, max_h and return the new pixbuf.
  * If src is that size or bigger, then ref it and return that.
  */
-static GdkPixbuf *scale_pixbuf_up(GdkPixbuf *src, int max_w, int max_h)
+static GdkPixbuf*
+scale_pixbuf_up (GdkPixbuf *src, int max_w, int max_h)
 {
-	int	w, h;
+	int w = gdk_pixbuf_get_width(src);
+	int h = gdk_pixbuf_get_height(src);
 
-	w = gdk_pixbuf_get_width(src);
-	h = gdk_pixbuf_get_height(src);
-
-	if (w == 0 || h == 0 || w >= max_w || h >= max_h)
-	{
+	if (w == 0 || h == 0 || w >= max_w || h >= max_h) {
 		g_object_ref(src);
 		return src;
-	}
-	else
-	{
+	} else {
 		float scale_x = max_w / ((float) w);
 		float scale_y = max_h / ((float) h);
 		float scale = MIN(scale_x, scale_y);
 		
-		return gdk_pixbuf_scale_simple(src,
-						w * scale,
-						h * scale,
-						GDK_INTERP_BILINEAR);
+		return gdk_pixbuf_scale_simple(src, w * scale, h * scale, GDK_INTERP_BILINEAR);
 	}
 }
 
@@ -719,14 +700,15 @@ static MaskedPixmap*
 get_bad_image ()
 {
 	GdkPixbuf* bad = gdk_pixbuf_new_from_xpm_data(bad_xpm);
-	MaskedPixmap* mp = masked_pixmap_new(bad);
+	MaskedPixmap* mp = masked_pixmap_new(bad, NULL);
 	g_object_unref(bad);
 
 	return mp;
 }
 
 /* Called now and then to clear out old pixmaps */
-static gint purge(gpointer data)
+static gint
+purge (gpointer data)
 {
 	//g_fscache_purge(pixmap_cache, PIXMAP_PURGE_TIME);
 
@@ -736,10 +718,15 @@ static gint purge(gpointer data)
 static gpointer parent_class;
 
 static void
-masked_pixmap_finialize(GObject *object)
+masked_pixmap_finialize (GObject *object)
 {
 	PF;
 	MaskedPixmap *mp = (MaskedPixmap *) object;
+
+	if (mp->paintable)
+	{
+		g_clear_pointer(&mp->paintable, g_object_unref);
+	}
 
 	if (mp->src_pixbuf)
 	{
@@ -752,38 +739,22 @@ masked_pixmap_finialize(GObject *object)
 		g_object_unref(mp->huge_pixbuf);
 		mp->huge_pixbuf = NULL;
 	}
-	if (mp->huge_pixbuf_lit)
-	{
-		g_object_unref(mp->huge_pixbuf_lit);
-		mp->huge_pixbuf_lit = NULL;
-	}
-
 	if (mp->pixbuf)
 	{
 		g_object_unref(mp->pixbuf);
 		mp->pixbuf = NULL;
 	}
-	if (mp->pixbuf_lit)
-	{
-		g_object_unref(mp->pixbuf_lit);
-		mp->pixbuf_lit = NULL;
-	}
-
 	if (mp->sm_pixbuf)
 	{
 		g_object_unref(mp->sm_pixbuf);
 		mp->sm_pixbuf = NULL;
 	}
-	if (mp->sm_pixbuf_lit)
-	{
-		g_object_unref(mp->sm_pixbuf_lit);
-		mp->sm_pixbuf_lit = NULL;
-	}
 
 	G_OBJECT_CLASS(parent_class)->finalize(object);
 }
 
-static void masked_pixmap_class_init(gpointer gclass, gpointer data)
+static void
+masked_pixmap_class_init (gpointer gclass, gpointer data)
 {
 	GObjectClass *object = (GObjectClass *) gclass;
 
@@ -792,29 +763,28 @@ static void masked_pixmap_class_init(gpointer gclass, gpointer data)
 	object->finalize = masked_pixmap_finialize;
 }
 
-static void masked_pixmap_init(GTypeInstance *object, gpointer gclass)
+static void
+masked_pixmap_init (GTypeInstance *object, gpointer gclass)
 {
 	MaskedPixmap *mp = (MaskedPixmap *) object;
 
 	mp->src_pixbuf = NULL;
 
 	mp->huge_pixbuf = NULL;
-	mp->huge_pixbuf_lit = NULL;
 	mp->huge_width = -1;
 	mp->huge_height = -1;
 
 	mp->pixbuf = NULL;
-	mp->pixbuf_lit = NULL;
 	mp->width = -1;
 	mp->height = -1;
 
 	mp->sm_pixbuf = NULL;
-	mp->sm_pixbuf_lit = NULL;
 	mp->sm_width = -1;
 	mp->sm_height = -1;
 }
 
-static GType masked_pixmap_get_type(void)
+static GType
+masked_pixmap_get_type (void)
 {
 	static GType type = 0;
 
@@ -823,28 +793,25 @@ static GType masked_pixmap_get_type(void)
 		static const GTypeInfo info =
 		{
 			sizeof (MaskedPixmapClass),
-			NULL,			/* base_init */
-			NULL,			/* base_finalise */
+			NULL,           /* base_init */
+			NULL,           /* base_finalise */
 			masked_pixmap_class_init,
-			NULL,			/* class_finalise */
-			NULL,			/* class_data */
+			NULL,           /* class_finalise */
+			NULL,           /* class_data */
 			sizeof(MaskedPixmap),
-			0,			/* n_preallocs */
+			0,              /* n_preallocs */
 			masked_pixmap_init
 		};
 
-		type = g_type_register_static(G_TYPE_OBJECT, "MaskedPixmap",
-					      &info, 0);
+		type = g_type_register_static(G_TYPE_OBJECT, "MaskedPixmap", &info, 0);
 	}
 
 	return type;
 }
 
 MaskedPixmap*
-masked_pixmap_new(GdkPixbuf *full_size)
+masked_pixmap_new (GdkPixbuf *full_size, GtkIconPaintable *icon)
 {
-	//printf("masked_pixmap_new()...\n");
-
 	g_return_val_if_fail(full_size != NULL, NULL);
 
 	GdkPixbuf* src_pixbuf = scale_pixbuf(full_size, HUGE_WIDTH, HUGE_HEIGHT);
@@ -853,16 +820,19 @@ masked_pixmap_new(GdkPixbuf *full_size)
 	GdkPixbuf* normal_pixbuf = scale_pixbuf(src_pixbuf, ICON_WIDTH, ICON_HEIGHT);
 	g_return_val_if_fail(normal_pixbuf, NULL);
 
-	//small pixbuf added by Tim - where does rox do this?
 	GdkPixbuf* small_pixbuf = scale_pixbuf(src_pixbuf, SMALL_WIDTH, SMALL_HEIGHT);
 	g_return_val_if_fail(small_pixbuf, NULL);
 	g_return_val_if_fail(GDK_IS_PIXBUF(small_pixbuf), NULL);
 
 	MaskedPixmap* mp = g_object_new(masked_pixmap_get_type(), NULL);
 
+	if (icon) {
+		g_object_ref(icon);
+		mp->paintable = icon;
+	}
+
 	mp->src_pixbuf = src_pixbuf;
 	mp->pixbuf     = normal_pixbuf;
-	//mp->pixbuf_lit = create_spotlight_pixbuf(normal_pixbuf, 0x000099, 128);
 	mp->sm_pixbuf  = small_pixbuf;
 	mp->width      = gdk_pixbuf_get_width (normal_pixbuf);
 	mp->height     = gdk_pixbuf_get_height(normal_pixbuf);
@@ -873,88 +843,25 @@ masked_pixmap_new(GdkPixbuf *full_size)
 	return mp;
 }
 
-#if 0
-/* Stolen from eel...and modified to colourize the pixbuf.
- * 'alpha' is the transparency of 'color' (0xRRGGBB):
- * 0 = fully opaque, 255 = fully transparent.
- */
-
-static GdkPixbuf*
-create_spotlight_pixbuf(GdkPixbuf *src, guint32 color, guchar alpha)
+static void
+load_default_pixmaps (void)
 {
-	GdkPixbuf *dest;
-	int i, j;
-	int width, height, has_alpha, src_row_stride, dst_row_stride;
-	guchar *target_pixels, *original_pixels;
-	guchar *pixsrc, *pixdest;
-	guchar r, g, b;
-	gint n_channels;
-
-	n_channels = gdk_pixbuf_get_n_channels(src);
-	has_alpha = gdk_pixbuf_get_has_alpha(src);
-	width = gdk_pixbuf_get_width(src);
-	height = gdk_pixbuf_get_height(src);
-
-	g_return_val_if_fail(gdk_pixbuf_get_colorspace(src) ==
-			     GDK_COLORSPACE_RGB, NULL);
-	g_return_val_if_fail((!has_alpha && n_channels == 3) ||
-			     (has_alpha && n_channels == 4), NULL);
-	g_return_val_if_fail(gdk_pixbuf_get_bits_per_sample(src) == 8, NULL);
-
-	dest = gdk_pixbuf_new(gdk_pixbuf_get_colorspace(src), has_alpha,
-			       gdk_pixbuf_get_bits_per_sample(src),
-			       width, height);
-	
-	dst_row_stride = gdk_pixbuf_get_rowstride(dest);
-	src_row_stride = gdk_pixbuf_get_rowstride(src);
-	target_pixels = gdk_pixbuf_get_pixels(dest);
-	original_pixels = gdk_pixbuf_get_pixels(src);
-
-	r = (color & 0xff0000) >> 16;
-	g = (color & 0xff00) >> 8;
-	b = color & 0xff;
-
-	for (i = 0; i < height; i++)
-	{
-		gint tmp;
-
-		pixdest = target_pixels + i * dst_row_stride;
-		pixsrc = original_pixels + i * src_row_stride;
-		for (j = 0; j < width; j++)
-		{
-			tmp = (*pixsrc++ * alpha + r * (255 - alpha)) / 255;
-			*pixdest++ = (guchar) MIN(255, tmp);
-			tmp = (*pixsrc++ * alpha + g * (255 - alpha)) / 255;
-			*pixdest++ = (guchar) MIN(255, tmp);
-			tmp = (*pixsrc++ * alpha + b * (255 - alpha)) / 255;
-			*pixdest++ = (guchar) MIN(255, tmp);
-			if (has_alpha)
-				*pixdest++ = *pixsrc++;
-		}
+	im_unknown = mp_by_name("dialog-question", GTK_ICON_SIZE_NORMAL);
+	if (!im_unknown) {
+		// im_unknown must always be a valid pixmap as it is used as the fallback
+		im_unknown = masked_pixmap_new(gdk_pixbuf_new(GDK_COLORSPACE_RGB, FALSE, 8, GTK_ICON_SIZE_NORMAL, GTK_ICON_SIZE_NORMAL), NULL);
 	}
 
-	return dest;
-}
-#endif
-
-/* Load all the standard pixmaps. Also sets the default window icon. */
-static void
-load_default_pixmaps(void)
-{
-	im_error = mp_from_stock(GTK_STOCK_DIALOG_WARNING, GTK_ICON_SIZE_DIALOG);
-	im_unknown = mp_from_stock(GTK_STOCK_DIALOG_QUESTION, GTK_ICON_SIZE_DIALOG);
+	im_error = mp_by_name("dialog-warning-symbolic", GTK_ICON_SIZE_NORMAL);
+	im_symlink = mp_by_name("inode-symlink", GTK_ICON_SIZE_NORMAL);
 /*
-	GError *error = NULL;
-
-	im_symlink = load_pixmap("symlink");
-
-	im_unmounted = mp_from_stock(ROX_STOCK_MOUNT, mount_icon_size);
-	im_mounted = mp_from_stock(ROX_STOCK_MOUNTED, mount_icon_size);
+	im_unmounted = mp_by_name(ROX_STOCK_MOUNT, mount_icon_size);
+	im_mounted = mp_by_name(ROX_STOCK_MOUNTED, mount_icon_size);
 	im_appdir = load_pixmap("application");
-	im_xattr = load_pixmap("rox-xattr");
 
 	im_dirs = load_pixmap("dirs");
 
+	GError *error = NULL;
 	GdkPixbuf* pixbuf = gdk_pixbuf_new_from_file(make_path(app_dir, ".DirIcon"), &error);
 	if (pixbuf)
 	{
@@ -1014,21 +921,5 @@ static void purge_disk_cache(GtkWidget *button, gpointer data)
 		info_message(_("There are no thumbnails to delete"));
 out:
 	g_free(path);
-}
-
-
-static GList *thumbs_purge_cache(Option *option, xmlNode *node, guchar *label)
-{
-	GtkWidget *button, *align;
-
-	g_return_val_if_fail(option == NULL, NULL);
-	
-	align = gtk_alignment_new(0, 0.5, 0, 0);
-	button = button_new_mixed(GTK_STOCK_CLEAR,
-				  _("Purge thumbnails disk cache"));
-	gtk_container_add(GTK_CONTAINER(align), button);
-	g_signal_connect(button, "clicked", G_CALLBACK(purge_disk_cache), NULL);
-
-	return g_list_append(NULL, align);
 }
 */

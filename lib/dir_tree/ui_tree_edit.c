@@ -14,9 +14,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <gtk/gtk.h>
-#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 #include <gdk/gdkkeysyms.h>
 
 #include "ui_tree_edit.h"
@@ -27,6 +25,7 @@
  *-------------------------------------------------------------------
  */
 
+#ifdef GTK4_TODO
 static void tree_edit_close(TreeEditData *ted)
 {
 	gtk_grab_remove(ted->window);
@@ -673,3 +672,4 @@ GList *uig_list_insert_list(GList *parent, GList *insert_link, GList *list)
 
 	return parent;
 }
+#endif

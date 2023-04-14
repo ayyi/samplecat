@@ -23,13 +23,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <gdk/gdkkeysyms.h>
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <gtk/gtk.h>
-#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 #include "debug/debug.h"
 #include "file_manager/mimetype.h"
 
-#include "typedefs.h"
 #include "support.h"
 #include "dh_tree.h"
 
@@ -238,7 +235,6 @@ book_tree_insert_node (DhBookTree *tree, GNode *node, GtkTreeIter *parent_iter)
 	DhBookTreePriv      *priv;
 	GtkTreeIter          iter;
 	DhLink              *link;
-	GNode               *child;
         
 	g_return_if_fail (DH_IS_BOOK_TREE (tree));
 	g_return_if_fail (node != NULL);
@@ -249,7 +245,6 @@ book_tree_insert_node (DhBookTree *tree, GNode *node, GtkTreeIter *parent_iter)
 	gtk_tree_store_append (priv->store, &iter, parent_iter);
 
 	if (link->type == DH_LINK_TYPE_BOOK) {
-		//printf("book_tree_insert_node(): DH_LINK_TYPE_BOOK: %s\n", link->name);
 		gtk_tree_store_set (priv->store, &iter, 
 				    COL_OPEN_PIXBUF,   priv->pixbufs->pixbuf_opened,
 				    COL_CLOSED_PIXBUF, priv->pixbufs->pixbuf_closed,
@@ -257,7 +252,6 @@ book_tree_insert_node (DhBookTree *tree, GNode *node, GtkTreeIter *parent_iter)
 				    COL_LINK,          link,
 				    -1);
 	} else {
-		//printf("book_tree_insert_node(): not book. %s %p\n", link->name, link);
 		gtk_tree_store_set (priv->store, &iter, 
 				    COL_OPEN_PIXBUF,   priv->pixbufs->pixbuf_helpdoc,
 				    COL_CLOSED_PIXBUF, priv->pixbufs->pixbuf_helpdoc,
@@ -266,7 +260,7 @@ book_tree_insert_node (DhBookTree *tree, GNode *node, GtkTreeIter *parent_iter)
 				    -1);
 	}
 	
-	for (child = g_node_first_child (node);
+	for (GNode* child = g_node_first_child (node);
 	     child;
 	     child = g_node_next_sibling (child)) {
 		book_tree_insert_node (tree, child, &iter);

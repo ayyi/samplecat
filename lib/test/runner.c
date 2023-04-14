@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
- | copyright (C) 2020-2020 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2020-2023 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -16,11 +16,9 @@
 #include <getopt.h>
 #include <stdio.h>
 #include <stdbool.h>
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <gtk/gtk.h>
-#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 #include "debug/debug.h"
-#include "src/support.h"
+#include "samplecat/support.h"
 #include "runner.h"
 
 /*
@@ -95,7 +93,7 @@ next_test ()
 		gboolean (*test)() = tests[TEST.current.test];
 		dbg(2, "test %i of %i.", TEST.current.test + 1, TEST.n_tests);
 
-		if (TEST.before_each){
+		if (TEST.before_each) {
 			void ready ()
 			{
 				g_timeout_add(1, run_test, tests[TEST.current.test]);
@@ -107,7 +105,7 @@ next_test ()
 
 		TEST.timeout = g_timeout_add(20000, on_test_timeout, NULL);
 	} else {
-		printf("finished all. passed=%s %i %s failed=%s %i %s\n", green, TEST.n_passed, white, (TEST.n_failed ? red : white), TEST.n_failed, white);
+		printf("finished all. passed=%s %i %s failed=%s %i %s\n", ayyi_green, TEST.n_passed, ayyi_white, (TEST.n_failed ? ayyi_red : ayyi_white), TEST.n_failed, ayyi_white);
 		teardown();
 		g_timeout_add(TEST.n_failed ? 4000 : 1000, __exit, NULL);
 	}
@@ -119,13 +117,13 @@ test_finish ()
 {
 	dbg(2, "... passed=%i", passed);
 
-	for(GList* l = TEST.current.timers; l; l = l->next){
+	for (GList* l = TEST.current.timers; l; l = l->next) {
 		g_source_remove(GPOINTER_TO_INT(l->data));
 	}
 	g_clear_pointer(&TEST.current.timers, g_list_free);
 
-	if(passed) TEST.n_passed++; else TEST.n_failed++;
-	if(!passed && abort_on_fail) TEST.current.test = 1000;
+	if (passed) TEST.n_passed++; else TEST.n_failed++;
+	if (!passed && abort_on_fail) TEST.current.test = 1000;
 
 	next_test();
 }
@@ -134,7 +132,7 @@ test_finish ()
 void
 test_log_start (const char* func)
 {
-	printf("%srunning %i of %i: %s%s ...\n", bold, TEST.current.test + 1, TEST.n_tests, func, white);
+	printf("%srunning %i of %i: %s%s ...\n", ayyi_bold, TEST.current.test + 1, TEST.n_tests, func, ayyi_white);
 }
 
 
@@ -175,7 +173,7 @@ test_errprintf (char* format, ...)
 	vsprintf(str, format, argp);
 	va_end(argp);
 
-	printf("%s%s%s\n", red, str, white);
+	printf("%s%s%s\n", ayyi_red, str, ayyi_white);
 }
 
 
@@ -224,17 +222,15 @@ find_widget_by_name (GtkWidget* root, const char* name)
 
 	void find (GtkWidget* widget, GtkWidget** result)
 	{
-		if(GTK_IS_CONTAINER(widget)){
-			GList* children = gtk_container_get_children(GTK_CONTAINER(widget));
-			for(GList* l = children; l; l = l->next){
-				if(!strcmp(name, gtk_widget_get_name(l->data))){
-					*result = l->data;
-					break;
-				}
-				find(l->data, result);
-
-				if(*result) break;
+		GtkWidget* child = gtk_widget_get_first_child (widget);
+		for (; child; child = gtk_widget_get_next_sibling (child)) {
+			if (!strcmp(name, gtk_widget_get_name(child))) {
+				*result = child;
+				break;
 			}
+			find(child, result);
+
+			if (*result) break;
 		}
 	}
 

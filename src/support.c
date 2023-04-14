@@ -1,31 +1,23 @@
-/**
-* +----------------------------------------------------------------------+
-* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2020 Tim Orford <tim@orford.org>                  |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-*
-*/
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
+ | copyright (C) 2007-2023 Tim Orford <tim@orford.org>                  |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
+ */
+
 #include "config.h"
-#include <sys/stat.h>
-#include <stdarg.h>
-#include <sys/wait.h>
-#include <dirent.h>
-#include <sys/param.h>
-#include <errno.h>
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <gtk/gtk.h>
-#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 #include <gdk-pixbuf/gdk-pixdata.h>
 
 #include "debug/debug.h"
 #include "file_manager/file_manager.h"
 #include "dir_tree/typedefs.h"
 #include "dir_tree/ui_fileops.h"
-#include "typedefs.h"
 #include "src/support.h"
 #include "application.h"
 
@@ -82,12 +74,13 @@ list_dir (const guchar *path)
 #endif
 
 
+#ifdef GTK4_TODO
 void
 colour_get_style_fg (GdkColor* color, GtkStateType state)
 {
 	//gives the default style foreground colour for the given widget state.
 
-	GtkStyle* style = gtk_widget_get_style(app->window);
+	GtkStyle* style = gtk_widget_get_style(gtk_application_get_active_window(GTK_APPLICATION(app));
 	color->red   = style->fg[state].red;
 	color->green = style->fg[state].green;
 	color->blue  = style->fg[state].blue;
@@ -99,7 +92,7 @@ colour_get_style_bg (GdkColor* color, int state)
 {
 	//gives the default style foreground colour for the given widget state.
 
-	GtkStyle* style = gtk_widget_get_style(app->window);
+	GtkStyle* style = gtk_widget_get_style(gtk_application_get_active_window(GTK_APPLICATION(app));
 	color->red   = style->bg[state].red;
 	color->green = style->bg[state].green;
 	color->blue  = style->bg[state].blue;
@@ -111,7 +104,7 @@ colour_get_style_base (GdkColor* color, int state)
 {
 	//gives the default style base colour for the given widget state.
 
-	GtkStyle* style = gtk_widget_get_style(app->window);
+	GtkStyle* style = gtk_widget_get_style(gtk_application_get_active_window(GTK_APPLICATION(app));
 	color->red   = style->base[state].red;
 	color->green = style->base[state].green;
 	color->blue  = style->base[state].blue;
@@ -123,7 +116,7 @@ colour_get_style_text (GdkColor* color, int state)
 {
 	//gives the default style text colour for the given widget state.
 
-	GtkStyle* style = gtk_widget_get_style(app->window);
+	GtkStyle* style = gtk_widget_get_style(gtk_application_get_active_window(GTK_APPLICATION(app));
 	color->red   = style->text[state].red;
 	color->green = style->text[state].green;
 	color->blue  = style->text[state].blue;
@@ -142,6 +135,7 @@ hexstring_from_gdkcolor (char* hexstring, GdkColor* c)
 {
 	snprintf(hexstring, 7, "%02x%02x%02x", c->red >> 8, c->green >> 8, c->blue >> 8);
 }
+#endif
 
 #if NEVER
 void
@@ -156,6 +150,7 @@ color_rgba_to_gdk (GdkColor* colour, uint32_t rgba)
 #endif
 
 
+#ifdef GTK4_TODO
 gboolean
 colour_lighter (GdkColor* lighter, GdkColor* colour)
 {
@@ -200,6 +195,7 @@ is_dark (GdkColor* colour)
 	int average = (colour->red + colour->green + colour->blue) / 3;
 	return (average < 0x7fff);
 }
+#endif
 
 #if NEVER
 gboolean
@@ -307,11 +303,13 @@ statusbar_print (int n, char* fmt, ...)
 
 	if(_debug_) printf("%s\n", s);
 
+#ifdef GTK4_TODO
 	if(n ==1 && app->no_gui) printf("%s\n", s);
+#endif
 
 	GtkWidget* statusbar = NULL;
-	if     (n==1) statusbar = app->statusbar;
-	else if(n==2) statusbar = app->statusbar2;
+	if     (n==1) statusbar = ((Application*)app)->statusbar;
+	else if(n==2) statusbar = ((Application*)app)->statusbar2;
 	else { perr("bad statusbar index (%i)\n", n); n=1; }
 
 	if(!statusbar) return; //window may not be open.
@@ -321,6 +319,7 @@ statusbar_print (int n, char* fmt, ...)
 }
 
 
+#ifdef GTK4_TODO
 static void
 shortcuts_add_action (GtkAction* action, GimpActionGroup* action_group)
 {
@@ -382,6 +381,7 @@ make_accels (GtkAccelGroup* accel_group, GimpActionGroup* action_group, Accel* k
 		}
 	}
 }
+#endif
 
 
 /**
@@ -451,6 +451,7 @@ gimp_strip_uline (const gchar* str)
  */
 #define GIMP_MOD_NAME_FORMAT_STRING N_("<%s>")
 
+#ifdef GTK4_TODO
 const gchar*
 gimp_get_mod_name_shift ()
 {
@@ -584,8 +585,10 @@ gimp_get_mod_string (GdkModifierType modifiers)
 
   return NULL;
 }
+#endif
 
 
+#ifdef GTK4_TODO
 static void
 gimp_substitute_underscores (gchar *str)
 {
@@ -645,18 +648,8 @@ gimp_get_accel_string (guint key, GdkModifierType modifiers)
 
   return g_string_free (gstring, FALSE);
 }
+#endif
 
-
-char*
-remove_trailing_slash (char* path)
-{
-	size_t len = strlen(path);
-	if((len > 0) && (path[len-1] == '/')) path[len-1] = '\0';
-	return path;
-}
-
-
-//from Rox:
 
 /* Convert a list of URIs as a string into a GList of EscapedPath URIs.
  * No unescaping is done.
@@ -696,8 +689,8 @@ void
 uri_list_free (GList* list)
 {
   GList* l = list;
-  for(;l;l=l->next){
-    if(l->data) g_free(l->data);
+  for (;l;l=l->next){
+    if (l->data) g_free(l->data);
   }
   g_list_free(list);
 }
@@ -818,7 +811,7 @@ show_widget_if (GtkWidget* widget, gboolean show)
 GtkWidget*
 scrolled_window_new ()
 {
-	GtkWidget* scroll = gtk_scrolled_window_new(NULL, NULL); //adjustments created automatically.
+	GtkWidget* scroll = gtk_scrolled_window_new();
 	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
 	return scroll;
 }
@@ -893,75 +886,3 @@ idle_free (Idle* idle)
 	if(idle->id) g_source_remove(idle->id);
 	g_free(idle);
 }
-
-
-#if 0
-#ifdef USE_GDL
-#include "gdl/gdl-dock-item.h"
-#endif
-	static void print_children (GtkWidget* widget, int* depth);
-
-	static void print_item (GtkWidget* widget, int* depth)
-	{
-		char text_content[32] = {0};
-		if(GTK_IS_ACCEL_LABEL(widget)){
-			g_strlcpy(text_content, gtk_label_get_text((GtkLabel*)widget), 32);
-		}
-
-		char indent[128];
-		snprintf(indent, 127, "%%%is%%s %%s %%p %s%%s%s %%s\n", *depth * 3, bold, white);
-		char* long_name = GDL_IS_DOCK_ITEM(widget) && ((GdlDockObject*)widget)->long_name? ((GdlDockObject*)widget)->long_name : "";
-		printf(indent, " ", G_OBJECT_CLASS_NAME(G_OBJECT_GET_CLASS(widget)), gtk_widget_get_name(widget), widget, long_name, text_content);
-
-		if(GDL_IS_DOCK_ITEM(widget)){
-			GtkWidget* b = ((GdlDockItem*)widget)->child;
-			if(b){
-				(*depth)++;
-				print_item(b, depth);
-				(*depth)--;
-			}
-		}
-		else if(GTK_IS_CONTAINER(widget)){
-			(*depth)++;
-			print_children(widget, depth);
-			(*depth)--;
-		}
-	}
-
-	static void print_children (GtkWidget* widget, int* depth)
-	{
-		if(GTK_IS_CONTAINER(widget)){
-			GList* children = gtk_container_get_children(GTK_CONTAINER(widget));
-			for(GList* l = children; l; l = l->next){
-				print_item(l->data, depth);
-			}
-			g_list_free(children);
-		}
-#ifdef USE_GDL
-		else if(GDL_IS_DOCK_ITEM(widget)){
-			(*depth)++;
-			print_item(widget, depth);
-			(*depth)--;
-		}
-#endif
-	}
-
-void
-print_widget_tree (GtkWidget* widget)
-{
-	UNDERLINE;
-	g_return_if_fail(widget);
-
-	int depth = 0;
-	if(GTK_IS_CONTAINER(widget)){
-		bool has_children = gtk_container_get_children(GTK_CONTAINER(widget));
-		if(has_children){
-			print_children(widget, &depth);
-		}
-		else dbg(0, "is empty container: %s %s", G_OBJECT_CLASS_NAME(G_OBJECT_GET_CLASS(widget)), gtk_widget_get_name(widget));
-	}
-	else dbg(0, "widget has no children. %i x %i %i", widget->allocation.width, widget->allocation.height, gtk_widget_get_visible(widget));
-	UNDERLINE;
-}
-#endif
-

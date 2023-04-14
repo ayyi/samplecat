@@ -1,6 +1,4 @@
-libgdlmarshal.c
-libgdlmarshal.h
-libgdltypebuiltins.c
-libgdltypebuiltins.h
-*.la
-*.lo
+libgdlmarshal.*
+libgdltypebuiltins.*
+test-dock
+test-combo-button.c

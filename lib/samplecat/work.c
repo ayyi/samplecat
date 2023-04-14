@@ -1,14 +1,15 @@
-/**
-* +----------------------------------------------------------------------+
-* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2020 Tim Orford <tim@orford.org>                  |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-*
-*/
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
+ | copyright (C) 2007-2023 Tim Orford <tim@orford.org>                  |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
+ */
+
 #include "config.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -23,7 +24,7 @@
 
 typedef struct
 {
-   bool    success;
+   bool success;
 } WorkResult;
 
 
@@ -31,7 +32,7 @@ static bool
 calc_ebur128 (Sample* sample)
 {
 	struct ebur128 ebur;
-	if (!ebur128analyse(sample->full_path, &ebur)){
+	if (!ebur128analyse(sample->full_path, &ebur)) {
 		if (sample->ebur) free(sample->ebur);
 		sample->ebur = g_strdup_printf(ebur.err
 			?	"-"
@@ -72,14 +73,14 @@ request_analysis (Sample* sample)
 	{
 		C* c = _c;
 
-		if(!sample->overview){
-			if(make_overview(sample)) c->changed |= 1 << COL_OVERVIEW;
+		if (!sample->overview) {
+			if (make_overview(sample)) c->changed |= 1 << COL_OVERVIEW;
 		}
-		if(sample->peaklevel == 0){
-			if((sample->peaklevel = ad_maxsignal(sample->full_path))) c->changed |= 1 << COL_PEAKLEVEL;
+		if (sample->peaklevel == 0) {
+			if ((sample->peaklevel = ad_maxsignal(sample->full_path))) c->changed |= 1 << COL_PEAKLEVEL;
 		}
-		if(!sample->ebur || !strlen(sample->ebur)){
-			if(calc_ebur128(sample)) c->changed |= 1 << COL_X_EBUR;
+		if (!sample->ebur || !strlen(sample->ebur)) {
+			if (calc_ebur128(sample)) c->changed |= 1 << COL_X_EBUR;
 		}
 	}
 
@@ -87,7 +88,7 @@ request_analysis (Sample* sample)
 	{
 		C* c = _c;
 
-		switch(c->changed){
+		switch (c->changed) {
 			case 1 << COL_PEAKLEVEL:
 				samplecat_model_update_sample (samplecat.model, sample, COL_PEAKLEVEL, NULL);
 				break;
@@ -105,7 +106,7 @@ request_analysis (Sample* sample)
 		g_free(c);
 	}
 
-	if(!sample->overview || sample->peaklevel == 0.0 || !sample->ebur || !strlen(sample->ebur))
+	if (!sample->overview || sample->peaklevel == 0.0 || !sample->ebur || !strlen(sample->ebur))
 		worker_add_job(sample, analysis_work, analysis_done, g_new0(C, 1));
 }
 
@@ -113,19 +114,19 @@ request_analysis (Sample* sample)
 void
 request_overview (Sample* sample)
 {
-	void overview_work(Sample* sample, gpointer user_data)
+	void overview_work (Sample* sample, gpointer user_data)
 	{
 		make_overview(sample);
 	}
 
-	void overview_done(Sample* sample, gpointer user_data)
+	void overview_done (Sample* sample, gpointer user_data)
 	{
 		PF;
 		g_return_if_fail(sample);
 
-		if(sample->overview){
+		if (sample->overview) {
 			samplecat_model_update_sample (samplecat.model, sample, COL_OVERVIEW, NULL);
-		}else{
+		} else {
 			dbg(1, "overview creation failed (no pixbuf).");
 		}
 	}
@@ -148,7 +149,7 @@ request_peaklevel (Sample* sample)
 		dbg(1, "peaklevel=%.2f id=%i", sample->peaklevel, sample->id);
 		// important not to do too many updates to the model as it makes the tree unresponsive.
 		// this can happen when file is not available.
-		if(sample->peaklevel > 0.0){
+		if (sample->peaklevel > 0.0) {
 			samplecat_model_update_sample (samplecat.model, sample, COL_PEAKLEVEL, NULL);
 		}
 	}
@@ -170,7 +171,7 @@ request_ebur128 (Sample* sample)
 	void ebur128_done (Sample* sample, gpointer _result)
 	{
 		WorkResult* result = _result;
-		if(result->success) samplecat_model_update_sample (samplecat.model, sample, COL_X_EBUR, NULL);
+		if (result->success) samplecat_model_update_sample (samplecat.model, sample, COL_X_EBUR, NULL);
 		g_free(result);
 	}
 
@@ -178,5 +179,3 @@ request_ebur128 (Sample* sample)
 
 	worker_add_job(sample, ebur128_work, ebur128_done, g_new0(WorkResult, 1));
 }
-
-

@@ -9,10 +9,8 @@
  * This software comes with no warranty of any kind, use at your own risk!
  */
 #include "config.h"
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <gtk/gtk.h>
-#pragma GCC diagnostic warning "-Wdeprecated-declarations"
-#include "utils/mime_type.h"
+#include "file_manager/mimetype.h"
 #include "file_manager/file_manager.h"
 #include "view_dir_tree.h"
 
@@ -21,9 +19,6 @@
 #include "pixbuf_util.h"
 
 #include <gdk/gdkkeysyms.h> /* for keyboard values */
-
-//#include "icons/icon_thumb.xpm"
-//#include "icons/icon_float.xpm"
 
 
 #define MENU_EDIT_ACTION_OFFSET 16
@@ -131,11 +126,9 @@ static gint layout_key_press_cb(GtkWidget *widget, GdkEventKey *event, gpointer 
 	    switch (event->keyval)
 		{
 		case '+': case GDK_KP_Add:
-			layout_image_zoom_adjust(lw, get_zoom_increment());
 			stop_signal = TRUE;
 			break;
 		case GDK_KP_Subtract:
-			layout_image_zoom_adjust(lw, -get_zoom_increment());
 			stop_signal = TRUE;
 			break;
 		case GDK_KP_Multiply:
@@ -232,7 +225,7 @@ static gint layout_key_press_cb(GtkWidget *widget, GdkEventKey *event, gpointer 
 	return stop_signal;
 }
 
-void layout_keyboard_init(LayoutWindow *lw, GtkWidget *window)
+void layout_keyboard_init (LayoutWindow *lw, GtkWidget *window)
 {
 	g_signal_connect(G_OBJECT(window), "key_press_event",
 			 G_CALLBACK(layout_key_press_cb), lw);
@@ -244,7 +237,7 @@ void layout_keyboard_init(LayoutWindow *lw, GtkWidget *window)
  *-----------------------------------------------------------------------------
  */
 
-static void layout_menu_new_window_cb(GtkAction *action, gpointer data)
+static void layout_menu_new_window_cb (GtkAction *action, gpointer data)
 {
 	LayoutWindow *lw = data;
 	LayoutWindow *nw;
@@ -254,64 +247,64 @@ static void layout_menu_new_window_cb(GtkAction *action, gpointer data)
 	layout_set_path(nw, layout_get_path(lw));
 }
 
-static void layout_menu_new_cb(GtkAction *action, gpointer data)
+static void layout_menu_new_cb (GtkAction *action, gpointer data)
 {
 	collection_window_new(NULL);
 }
 
-static void layout_menu_open_cb(GtkAction *action, gpointer data)
+static void layout_menu_open_cb (GtkAction *action, gpointer data)
 {
 	collection_dialog_load(NULL);
 }
 
-static void layout_menu_search_cb(GtkAction *action, gpointer data)
+static void layout_menu_search_cb (GtkAction *action, gpointer data)
 {
 	LayoutWindow *lw = data;
 
 	search_new(lw->path, layout_image_get_path(lw));
 }
 
-static void layout_menu_dupes_cb(GtkAction *action, gpointer data)
+static void layout_menu_dupes_cb (GtkAction *action, gpointer data)
 {
 	dupe_window_new(DUPE_MATCH_NAME);
 }
 
-static void layout_menu_print_cb(GtkAction *action, gpointer data)
+static void layout_menu_print_cb (GtkAction *action, gpointer data)
 {
 	LayoutWindow *lw = data;
 
 	print_window_new(layout_image_get_path(lw), layout_selection_list(lw), layout_list(lw), lw->window);
 }
 
-static void layout_menu_dir_cb(GtkAction *action, gpointer data)
+static void layout_menu_dir_cb (GtkAction *action, gpointer data)
 {
 	LayoutWindow *lw = data;
 
 	file_util_create_dir(lw->path, lw->window);
 }
 
-static void layout_menu_copy_cb(GtkAction *action, gpointer data)
+static void layout_menu_copy_cb (GtkAction *action, gpointer data)
 {
 	LayoutWindow *lw = data;
 
 	file_util_copy(NULL, layout_selection_list(lw), NULL, lw->window);
 }
 
-static void layout_menu_move_cb(GtkAction *action, gpointer data)
+static void layout_menu_move_cb (GtkAction *action, gpointer data)
 {
 	LayoutWindow *lw = data;
 
 	file_util_move(NULL, layout_selection_list(lw), NULL, lw->window);
 }
 
-static void layout_menu_rename_cb(GtkAction *action, gpointer data)
+static void layout_menu_rename_cb (GtkAction *action, gpointer data)
 {
 	LayoutWindow *lw = data;
 
 	file_util_rename(NULL, layout_selection_list(lw), lw->window);
 }
 
-static void layout_menu_delete_cb(GtkAction *action, gpointer data)
+static void layout_menu_delete_cb (GtkAction *action, gpointer data)
 {
 	LayoutWindow *lw = data;
 
@@ -410,16 +403,10 @@ static void layout_menu_wallpaper_cb(GtkAction *action, gpointer data)
 
 static void layout_menu_zoom_in_cb(GtkAction *action, gpointer data)
 {
-	LayoutWindow *lw = data;
-
-	layout_image_zoom_adjust(lw, get_zoom_increment());
 }
 
 static void layout_menu_zoom_out_cb(GtkAction *action, gpointer data)
 {
-	LayoutWindow *lw = data;
-
-	layout_image_zoom_adjust(lw, -get_zoom_increment());
 }
 
 static void layout_menu_zoom_1_1_cb(GtkAction *action, gpointer data)
@@ -977,16 +964,10 @@ static void layout_button_refresh_cb(GtkWidget *widget, gpointer data)
 
 static void layout_button_zoom_in_cb(GtkWidget *widget, gpointer data)
 {
-	LayoutWindow *lw = data;
-
-	layout_image_zoom_adjust(lw, get_zoom_increment());
 }
 
 static void layout_button_zoom_out_cb(GtkWidget *widget, gpointer data)
 {
-	LayoutWindow *lw = data;
-
-	layout_image_zoom_adjust(lw, -get_zoom_increment());
 }
 
 static void layout_button_zoom_fit_cb(GtkWidget *widget, gpointer data)

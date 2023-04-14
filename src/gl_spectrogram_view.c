@@ -1,14 +1,15 @@
-/**
-* +----------------------------------------------------------------------+
-* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2021 Tim Orford <tim@orford.org>                  |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-*
-*/
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
+ | copyright (C) 2007-2023 Tim Orford <tim@orford.org>                  |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
+ */
+
 #include "config.h"
 #include <glib.h>
 #include <glib-object.h>
@@ -16,13 +17,13 @@
 #include <float.h>
 #include <math.h>
 #include <gdk/gdk.h>
-#include <gdk/gdkgl.h>
-#include <gtk/gtkgl.h>
 #include <string.h>
 #include "debug/debug.h"
 #include "agl/utils.h"
 #include "agl/shader.h"
 #include "gl_spectrogram_view.h"
+
+#ifdef GTK4_TODO
 
 typedef struct _GlSpectrogram        GlSpectrogram;
 typedef struct _GlSpectrogramClass   GlSpectrogramClass;
@@ -318,3 +319,4 @@ gl_spectrogram_finalize (GObject* obj)
 
 	G_OBJECT_CLASS (gl_spectrogram_parent_class)->finalize (obj);
 }
+#endif

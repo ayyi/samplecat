@@ -1,16 +1,17 @@
-/**
-* +----------------------------------------------------------------------+
-* | This file is part of the Ayyi project. http://ayyi.org               |
-* | copyright (C) 2011-2017 Tim Orford <tim@orford.org>                  |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-*
-*/
-#ifndef __fm_support_h__
-#define __fm_support_h__
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of the Ayyi project. http://ayyi.org               |
+ | copyright (C) 2011-2023 Tim Orford <tim@orford.org>                  |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
+ */
+
+#pragma once
+
 #include "stdint.h"
 #include <sys/stat.h>
 #include "file_manager/typedefs.h"
@@ -61,11 +62,9 @@ gchar*       uri_text_escape       (const gchar* text);
 void         uri_text_decode       (gchar* text);
 
 #ifdef __GDK_H__
-GdkPixbuf*   create_spotlight_pixbuf(GdkPixbuf *src, GdkColor*);
+GdkPixbuf*   create_spotlight_pixbuf(GdkPixbuf* src, uint32_t colour);
 #endif
 
 gchar*       path_to_utf8          (const gchar *path);
 
 void         fm__escape_for_menu   (char*);
-
-#endif

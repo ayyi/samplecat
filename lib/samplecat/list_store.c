@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
- | copyright (C) 2007-2021 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2007-2023 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -13,11 +13,8 @@
 #include "config.h"
 #include <glib.h>
 #include <glib-object.h>
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <gtk/gtk.h>
-#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 #include <gdk-pixbuf/gdk-pixbuf.h>
-#include <math.h>
 #include <file_manager/mimetype.h>
 #include <file_manager/pixmaps.h>
 #include <debug/debug.h>
@@ -47,25 +44,26 @@ static void samplecat_list_store_finalize (GObject*);
 SamplecatListStore*
 samplecat_list_store_construct (GType object_type)
 {
-	GType _tmp0_[14] = {0};
-	GType types[14];
 	SamplecatListStore* self = (SamplecatListStore*) g_object_new (object_type, NULL);
-	_tmp0_[0] = GDK_TYPE_PIXBUF;
-	_tmp0_[1] = G_TYPE_INT;
-	_tmp0_[2] = G_TYPE_STRING;
-	_tmp0_[3] = G_TYPE_STRING;
-	_tmp0_[4] = G_TYPE_STRING;
-	_tmp0_[5] = GDK_TYPE_PIXBUF;
-	_tmp0_[6] = G_TYPE_STRING;
-	_tmp0_[7] = G_TYPE_STRING;
-	_tmp0_[8] = G_TYPE_INT;
-	_tmp0_[9] = G_TYPE_STRING;
-	_tmp0_[10] = G_TYPE_FLOAT;
-	_tmp0_[11] = G_TYPE_INT;
-	_tmp0_[12] = G_TYPE_POINTER;
-	_tmp0_[13] = G_TYPE_INT64;
-	memcpy (types, _tmp0_, 14 * sizeof (GType));
+
+	GType types[14] = {
+		GDK_TYPE_PIXBUF,
+		G_TYPE_INT,
+		G_TYPE_STRING,
+		G_TYPE_STRING,
+		G_TYPE_STRING,
+		GDK_TYPE_PIXBUF,
+		G_TYPE_STRING,
+		G_TYPE_STRING,
+		G_TYPE_INT,
+		G_TYPE_STRING,
+		G_TYPE_FLOAT,
+		G_TYPE_INT,
+		G_TYPE_POINTER,
+		G_TYPE_INT64,
+	};
 	gtk_list_store_set_column_types ((GtkListStore*) self, 14, types);
+
 	return self;
 }
 
@@ -82,13 +80,13 @@ samplecat_list_store_clear_ (SamplecatListStore* self)
 {
 	PF;
 	GtkTreeIter iter;
-	while(gtk_tree_model_get_iter_first(GTK_TREE_MODEL(self), &iter)){
+	while (gtk_tree_model_get_iter_first(GTK_TREE_MODEL(self), &iter)) {
 		GdkPixbuf* pixbuf = NULL;
 		Sample* sample = NULL;
 		gtk_tree_model_get(GTK_TREE_MODEL(self), &iter, COL_OVERVIEW, &pixbuf, COL_SAMPLEPTR, &sample, -1);
 		gtk_list_store_remove((GtkListStore*)self, &iter);
-		if(pixbuf) g_object_unref(pixbuf);
-		if(sample) sample_unref(sample);
+		if (pixbuf) g_object_unref(pixbuf);
+		if (sample) sample_unref(sample);
 	}
 
 	self->row_count = 0;
@@ -98,25 +96,24 @@ samplecat_list_store_clear_ (SamplecatListStore* self)
 void
 samplecat_list_store_add (SamplecatListStore* self, Sample* sample)
 {
-
-	if(!samplecat.store) return;
+	if (!samplecat.store) return;
 	g_return_if_fail(sample);
 
 #if 1
 	/* these has actualy been checked _before_ here
 	 * but backend may 'inject' mime types. ?!
 	 */
-	if(!sample->mimetype){
+	if (!sample->mimetype) {
 		dbg(0,"no mimetype given -- this should NOT happen: fix backend");
 		return;
 	}
-	if(mimestring_is_unsupported(sample->mimetype)){
+	if (mimestring_is_unsupported(sample->mimetype)) {
 		dbg(0, "unsupported MIME type: %s", sample->mimetype);
 		return;
 	}
 #endif
 
-	if(!sample->sample_rate){
+	if (!sample->sample_rate) {
 		// needed w/ tracker backend.
 		sample_get_file_info(sample);
 	}
@@ -128,9 +125,9 @@ samplecat_list_store_add (SamplecatListStore* self, Sample* sample)
 	GdkPixbuf* ayyi_icon = NULL;
 
 	//is the file loaded in the current Ayyi song?
-	if(ayyi.got_shm){
+	if (ayyi.got_shm) {
 		gchar* fullpath = g_build_filename(sample->sample_dir, sample->name, NULL);
-		if(ayyi_song__have_file(fullpath)){
+		if (ayyi_song__have_file(fullpath)) {
 			dbg(1, "sample is used in current project TODO set icon");
 		} else dbg(2, "sample not used in current project");
 		g_free(fullpath);
@@ -165,13 +162,13 @@ samplecat_list_store_add (SamplecatListStore* self, Sample* sample)
 			-1);
 
 	GtkTreePath* treepath;
-	if((treepath = gtk_tree_model_get_path(GTK_TREE_MODEL(samplecat.store), &iter))){
+	if ((treepath = gtk_tree_model_get_path(GTK_TREE_MODEL(samplecat.store), &iter))) {
 		sample->row_ref = gtk_tree_row_reference_new(GTK_TREE_MODEL(samplecat.store), treepath);
 		gtk_tree_path_free(treepath);
 	}
 
 	g_return_if_fail (self);
-	if(sample->row_ref && sample->online){
+	if (sample->row_ref && sample->online) {
 		request_analysis(sample);
 	}
 
@@ -186,14 +183,14 @@ samplecat_list_store_on_sample_changed (SamplecatListStore* self, Sample* sample
 	g_return_if_fail (sample->row_ref);
 
 	GtkTreePath* path = gtk_tree_row_reference_get_path(sample->row_ref);
-	if(!path) return;
+	if (!path) return;
 	GtkTreeIter iter;
 	gtk_tree_model_get_iter(GTK_TREE_MODEL(samplecat.store), &iter, path);
 	gtk_tree_path_free(path);
 
 
 	dbg(1, "prop=%i %s", prop, samplecat_model_print_col_name(prop));
-	switch(prop){
+	switch (prop) {
 		case COL_ICON: // online/offline, mtime
 			{
 				GdkPixbuf* iconbuf = NULL;
@@ -258,14 +255,14 @@ samplecat_list_store_do_search (SamplecatListStore* self)
 	samplecat_list_store_clear_(self);
 
 	int n_results = 0;
-	if(!samplecat.model->backend.search_iter_new(&n_results)) {
+	if (!samplecat.model->backend.search_iter_new(&n_results)) {
 		return;
 	}
 
 	int row_count = 0;
 	unsigned long* lengths;
 	Sample* result;
-	while((result = samplecat.model->backend.search_iter_next(&lengths)) && row_count < LIST_STORE_MAX_ROWS){
+	while ((result = samplecat.model->backend.search_iter_next(&lengths)) && row_count < LIST_STORE_MAX_ROWS) {
 		Sample* s = sample_dup(result);
 		samplecat_list_store_add(self, s);
 		sample_unref(s);
@@ -293,6 +290,13 @@ static void
 samplecat_list_store_instance_init (SamplecatListStore * self)
 {
 	self->row_count = 0;
+
+	void list_store_on_icon_theme_changed (GtkIconTheme* self, gpointer data)
+	{
+		dbg(0, "TODO reload icons");
+	}
+	if (icon_theme)
+		g_signal_connect(icon_theme, "changed", (GCallback)list_store_on_icon_theme_changed, NULL);
 }
 
 
@@ -311,8 +315,7 @@ samplecat_list_store_get_type (void)
 	static volatile gsize samplecat_list_store_type_id__volatile = 0;
 	if (g_once_init_enter ((gsize*)&samplecat_list_store_type_id__volatile)) {
 		static const GTypeInfo g_define_type_info = { sizeof (SamplecatListStoreClass), (GBaseInitFunc) NULL, (GBaseFinalizeFunc) NULL, (GClassInitFunc) samplecat_list_store_class_init, (GClassFinalizeFunc) NULL, NULL, sizeof (SamplecatListStore), 0, (GInstanceInitFunc) samplecat_list_store_instance_init, NULL };
-		GType samplecat_list_store_type_id;
-		samplecat_list_store_type_id = g_type_register_static (GTK_TYPE_LIST_STORE, "SamplecatListStore", &g_define_type_info, 0);
+		GType samplecat_list_store_type_id = g_type_register_static (GTK_TYPE_LIST_STORE, "SamplecatListStore", &g_define_type_info, 0);
 		g_once_init_leave (&samplecat_list_store_type_id__volatile, samplecat_list_store_type_id);
 	}
 	return samplecat_list_store_type_id__volatile;
@@ -359,7 +362,7 @@ samplecat_list_store_get_sample_by_row_ref(GtkTreeRowReference* ref)
 {
 	GtkTreePath* path;
 	if (!ref || !gtk_tree_row_reference_valid(ref)) return NULL;
-	if(!(path = gtk_tree_row_reference_get_path(ref))) return NULL;
+	if (!(path = gtk_tree_row_reference_get_path(ref))) return NULL;
 
 	Sample* sample = samplecat_list_store_get_sample_by_path(path);
 

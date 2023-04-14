@@ -1,0 +1,7 @@
+---
+root:
+  section:
+    property-1: 'value-1'
+    sub-section:
+      property-2: 'value-2'
+...

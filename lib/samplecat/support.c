@@ -1,14 +1,15 @@
-/**
-* +----------------------------------------------------------------------+
-* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2019 Tim Orford <tim@orford.org>                  |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-*
-*/
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
+ | copyright (C) 2007-2023 Tim Orford <tim@orford.org>                  |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
+ */
+
 #include "config.h"
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -45,14 +46,14 @@ p_(int level, const char* format, ...)
  * For symlinks, the file pointed to must exist.
  */
 gboolean 
-file_exists(const char *path)
+file_exists (const char *path)
 {
 	struct stat info;
 	return !stat(path, &info);
 }
 
 time_t
-file_mtime(const char *path)
+file_mtime (const char *path)
 {
 	struct stat info;
 	if (stat(path, &info)) return -1;
@@ -60,14 +61,14 @@ file_mtime(const char *path)
 }
 
 gboolean
-is_dir(const char *path)
+is_dir (const char *path)
 {
 	struct stat info;
 	return lstat(path, &info) == 0 && S_ISDIR(info.st_mode);
 }
 
 gboolean
-dir_is_empty(const char *path)
+dir_is_empty (const char *path)
 {
 
 	if (strcmp(path, "/") == 0) return FALSE;
@@ -87,7 +88,7 @@ dir_is_empty(const char *path)
 }
 
 void
-file_extension(const char* path, char* extn)
+file_extension (const char* path, char* extn)
 {
 	g_return_if_fail(path);
 	g_return_if_fail(extn);
@@ -121,7 +122,7 @@ can_use (GList* l, const char* d)
 
 
 gboolean
-mimestring_is_unsupported(char* mime_string)
+mimestring_is_unsupported (char* mime_string)
 {
 	MIME_type* mime_type = mime_type_lookup(mime_string);
 	return mimetype_is_unsupported(mime_type, mime_string);
@@ -129,7 +130,7 @@ mimestring_is_unsupported(char* mime_string)
 
 
 gboolean
-mimetype_is_unsupported(MIME_type* mime_type, char* mime_string)
+mimetype_is_unsupported (MIME_type* mime_type, char* mime_string)
 {
 	g_return_val_if_fail(mime_type, true);
 
@@ -194,13 +195,6 @@ ensure_config_dir ()
 	if(!path) path = g_strdup_printf("%s/.config/" PACKAGE, g_get_home_dir()); // is static - don't free.
 
 	return (!g_mkdir_with_parents(path, 488));
-}
-
-
-uint32_t
-color_gdk_to_rgba (GdkColor* color)
-{
-	return ((color->red / 0x100) << 24) + ((color->green / 0x100) << 16) + ((color->blue / 0x100) << 8) + 0xff;
 }
 
 
@@ -276,8 +270,8 @@ bitdepth_format (char* str, int bitdepth)
 char*
 dir_format (char* dir)
 {
-	if(dir){
-		if(!strcmp(dir, g_get_home_dir()))
+	if (dir) {
+		if (!strcmp(dir, g_get_home_dir()))
 			return dir + strlen(g_get_home_dir());
 		else if(strstr(dir, g_get_home_dir()) == dir)
 			return dir + strlen(g_get_home_dir()) + 1;
@@ -342,7 +336,7 @@ gain2dbstring (float gain)
 }
 
 
-gchar *
+gchar*
 str_replace (const gchar* string, const gchar* search, const gchar* replacement)
 {
 	gchar *str, **arr;
@@ -361,4 +355,13 @@ str_replace (const gchar* string, const gchar* search, const gchar* replacement)
 	g_strfreev (arr);
 
 	return str;
+}
+
+
+char*
+remove_trailing_slash (char* path)
+{
+	size_t len = strlen(path);
+	if ((len > 0) && (path[len-1] == '/')) path[len-1] = '\0';
+	return path;
 }

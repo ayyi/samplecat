@@ -1,16 +1,19 @@
-packages=--pkg config --pkg posix --pkg gdk-2.0 --pkg gtk+-2.0 --pkg gmodule-2.0 --pkg debug
+packages=--pkg config --pkg posix --pkg gtk4 --pkg gmodule-2.0 --pkg debug
 vapidir=--vapidir=. --vapidir=../../lib/debug
 
 all:
 	valac -C -H spectrogram_widget.h --pkg gtk+-2.0 --pkg gmodule-2.0 spectrogram_widget.vala
 
 spectrogram-area.c: spectrogram-area.vala
-	valac -C -H spectrogram-area.h $(packages) --pkg gl --pkg gtkglext-1.0 \
+	valac -C -H spectrogram-area.h $(packages) --pkg gl \
 		../../lib/waveform/lib/agl/agl/agl.vapi  ../../lib/waveform/lib/agl/agl/gtk-area.vapi $(vapidir) \
 		spectrogram-area.vala
 
 application.c: application.vala
 	valac -C -H application.h $(packages) --pkg samplecat $(vapidir) application.vala
+
+application-samplecat.c: application-samplecat.vala
+	valac -C -H application-samplecat.h $(packages) $(vapidir) application-samplecat.vala
 
 model.c: model.vala
 	valac -C -H model.h $(packages) --pkg samplecat $(vapidir)
@@ -41,3 +44,6 @@ directory: directory.vala
 
 inspector: inspector.vala
 	valac -C -H inspector.h --pkg config --pkg gtk+-2.0 --pkg gdk-2.0 --pkg gmodule-2.0 --pkg debug --vapidir=. --vapidir=../../lib/debug inspector.vala
+
+search.c: search.vala
+	valac -C -H search.h --pkg config --pkg gtk4 --pkg gmodule-2.0 --pkg debug --vapidir=. --vapidir=../../lib/debug search.vala

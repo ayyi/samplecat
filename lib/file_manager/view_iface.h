@@ -76,7 +76,7 @@ struct _ViewIfaceClass {
     void     (*show_cursor)          (ViewIface*);
 
     void     (*get_iter)             (ViewIface*, ViewIter*, IterFlags);
-    void     (*get_iter_at_point)    (ViewIface*, ViewIter*, GdkWindow* src, int x, int y);
+    void     (*get_iter_at_point)    (ViewIface*, ViewIter*, int x, int y);
     void     (*cursor_to_iter)       (ViewIface*, ViewIter*);
 
     void     (*set_selected)         (ViewIface*, ViewIter*, gboolean selected);
@@ -85,7 +85,9 @@ struct _ViewIfaceClass {
     void     (*select_only)          (ViewIface*, ViewIter*);
     gboolean (*cursor_visible)       (ViewIface*);
     void     (*set_base)             (ViewIface*, ViewIter*);
+#ifdef GTK4_TODO
     void     (*start_lasso_box)      (ViewIface*, GdkEventButton*);
+#endif
     void     (*extend_tip)           (ViewIface*, ViewIter*, GString* tip);
     gboolean (*auto_scroll_callback) (ViewIface*);
 };
@@ -117,7 +119,7 @@ int      view_count_selected    (ViewIface*);
 void     view_show_cursor       (ViewIface*);
 
 void     view_get_iter          (ViewIface*, ViewIter*, IterFlags flags);
-void     view_get_iter_at_point (ViewIface*, ViewIter*, GdkWindow* src, int x, int y);
+void     view_get_iter_at_point (ViewIface*, ViewIter*, int x, int y);
 void     view_get_cursor        (ViewIface*, ViewIter*);
 void     view_cursor_to_iter    (ViewIface*, ViewIter*);
 
@@ -130,7 +132,9 @@ void     view_select_if         (ViewIface*, gboolean (*test)(ViewIter*, gpointe
 
 gboolean view_cursor_visible    (ViewIface*);
 void     view_set_base          (ViewIface*, ViewIter*);
+#ifdef GTK4_TODO
 void     view_start_lasso_box   (ViewIface*, GdkEventButton*);
+#endif
 void     view_extend_tip        (ViewIface*, ViewIter*, GString* tip);
 gboolean view_auto_scroll_callback(ViewIface*);
 

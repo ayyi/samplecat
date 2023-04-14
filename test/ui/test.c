@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
- | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
- | copyright (C) 2020-2022 Tim Orford <tim@orford.org>                  |
+ | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
+ | copyright (C) 2020-2023 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -17,7 +17,7 @@
 #include "gdl/gdl-dock-item.h"
 #include "gdl/gdl-dock-master.h"
 #include "debug/debug.h"
-#include "icon_theme.h"
+#include "gtk/icon_theme.h"
 #include "file_manager/pixmaps.h"
 #include "test/runner.h"
 #include "support.h"
@@ -28,7 +28,7 @@
 static bool search_pending = false;
 static char* home;
 
-Application* app = NULL;
+SamplecatApplication* app = NULL;
 
 #include "utils.c"
 #include "list.c"
@@ -43,9 +43,11 @@ application_main (int argc, char** argv)
 
 	set_home_dir (argv);
 
+#ifdef GTK4_TODO
 	gtk_init_check (&argc, &argv);
+#endif
 
-	app = application_new();
+	app = SAMPLECAT_APPLICATION(application_new());
 	SamplecatModel* model = samplecat.model;
 
 #define ADD_PLAYER(A) app->players = g_list_append(app->players, A)
@@ -61,9 +63,11 @@ application_main (int argc, char** argv)
 #endif
 	ADD_PLAYER("null");
 
+#ifdef GTK4_TODO
 	GBytes* gtkrc = g_resources_lookup_data ("/samplecat/resources/gtkrc", 0, NULL);
 	gtk_rc_parse_string (g_bytes_get_data(gtkrc, 0));
 	g_bytes_unref (gtkrc);
+#endif
 
 	bool player_opt = false;
 
@@ -92,12 +96,12 @@ application_main (int argc, char** argv)
 #endif
 	);
 
-	if (app->config.database_backend && can_use(model->backends, app->config.database_backend)) {
+	if (can_use(model->backends, app->config.database_backend)) {
 		g_clear_pointer(&model->backends, g_list_free);
 		samplecat_model_add_backend(app->config.database_backend);
 	}
 
-	if (!player_opt && app->config.auditioner) {
+	if (!player_opt) {
 		if(can_use(app->players, app->config.auditioner)){
 			g_clear_pointer(&app->players, g_list_free);
 			ADD_PLAYER(app->config.auditioner);
@@ -110,7 +114,6 @@ application_main (int argc, char** argv)
 	GtkOSXApplication* osxApp = (GtkOSXApplication*)
 	g_object_new(GTK_TYPE_OSX_APPLICATION, NULL);
 #endif
-	app->gui_thread = pthread_self();
 
 	icon_theme_init();
 	pixmaps_init();
@@ -128,7 +131,7 @@ application_main (int argc, char** argv)
 		ScanResults results = {0,};
 		for (int i=0;i<G_N_ELEMENTS(files);i++) {
 			char* path = g_strdup_printf ("%s/../lib/waveform/test/data/%s.wav", home, files[i]);
-			application_add_file (path, &results);
+			samplecat_application_add_file (path, &results);
 			g_free(path);
 		}
 	}
@@ -137,8 +140,6 @@ application_main (int argc, char** argv)
 #ifndef DEBUG_NO_THREADS
 	worker_thread_init();
 #endif
-
-	if (!app->no_gui) window_new();
 
 	if (!samplecat.model->backend.pending) {
 		application_search();
@@ -165,9 +166,9 @@ on_quit ()
 {
 	app->temp_view = true;
 
-	if (app->loaded && !app->temp_view) {
+	if (APPLICATION(app)->loaded && !app->temp_view) {
 		config_save(&app->configctx);
-		application_quit(app); // emit signal
+		application_quit(APPLICATION(app)); // emit signal
 	}
 
 	if (play->auditioner) {
@@ -185,7 +186,7 @@ on_quit ()
 	if (samplecat.model->backend.disconnect) samplecat.model->backend.disconnect();
 
 #ifdef WITH_VALGRIND
-	application_free(app);
+	application_free((Application*)app);
 	mime_type_clear();
 #if 0
 	application_free(app);
@@ -212,7 +213,9 @@ teardown ()
 {
 	dbg(1, "sending CTL-Q ...");
 
+#ifdef GTK4_TODO
 	send_key(app->window->window, GDK_KEY_q, GDK_CONTROL_MASK);
+#endif
 
 	g_free(home);
 }

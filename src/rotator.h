@@ -20,6 +20,7 @@
 #ifndef __rotator_h__
 #define __rotator_h__
 
+#ifdef GTK4_TODO
 #include <gtk/gtkcontainer.h>
 #include <gtk/gtktreemodel.h>
 #include <gtk/gtktreeviewcolumn.h>
@@ -246,4 +247,5 @@ gint          rotator_get_tooltip_column (Rotator       *tree_view);
 
 G_END_DECLS
 
+#endif // GTK4_TODO
 #endif

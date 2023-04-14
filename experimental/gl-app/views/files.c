@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
- | copyright (C) 2016-2022 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2016-2023 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -14,13 +14,13 @@
 
 #include "config.h"
 #include "agl/fbo.h"
+#include "agl/event.h"
 #include "agl/behaviours/key.h"
 #include "actors/scrollbar.h"
 #include "debug/debug.h"
 #include "file_manager/file_manager.h"
 #include "file_manager/pixmaps.h"
 #include "icon/utils.h"
-#include "samplecat.h"
 #include "application.h"
 #include "views/files.impl.h"
 #include "views/files.h"
@@ -39,7 +39,7 @@
 #define PATH              (FILES_STATE((AGlActor*)view)->params->params[0].val.c)
 
 static void files_free  (AGlActor*);
-static bool files_event (AGlActor*, GdkEvent*, AGliPt);
+static bool files_event (AGlActor*, AGlEvent*, AGliPt);
 
 static AGlActorClass actor_class = {0, "Files", (AGlActorNew*)files_view, files_free};
 
@@ -221,16 +221,16 @@ files_free (AGlActor* actor)
 
 
 static bool
-files_event (AGlActor* actor, GdkEvent* event, AGliPt xy)
+files_event (AGlActor* actor, AGlEvent* event, AGliPt xy)
 {
 	FilesView* view = (FilesView*)actor;
 
 	switch (event->type) {
-		case GDK_BUTTON_PRESS:
-		case GDK_BUTTON_RELEASE:
+		case AGL_BUTTON_PRESS:
+		case AGL_BUTTON_RELEASE:
 			switch (event->button.button) {
 				case 1:
-					if (event->type == GDK_BUTTON_RELEASE) {
+					if (event->type == AGL_BUTTON_RELEASE) {
 						int column = -1;
 						for (int c=0;c<G_N_ELEMENTS(col);c++) {
 							if (xy.x > col[c]) {
@@ -344,42 +344,42 @@ files_nav (AGlActor* actor, int offset)
 
 
 static bool
-files_nav_up (AGlActor* actor, GdkModifierType modifier)
+files_nav_up (AGlActor* actor, AGlModifierType modifier)
 {
 	return files_nav (actor, -1);
 }
 
 
 static bool
-files_nav_down (AGlActor* actor, GdkModifierType modifier)
+files_nav_down (AGlActor* actor, AGlModifierType modifier)
 {
 	return files_nav (actor, 1);
 }
 
 
 static bool
-files_page_up (AGlActor* actor, GdkModifierType modifier)
+files_page_up (AGlActor* actor, AGlModifierType modifier)
 {
 	return files_nav (actor, -N_ROWS_VISIBLE(((FilesView*)actor)->filelist));
 }
 
 
 static bool
-files_page_down (AGlActor* actor, GdkModifierType modifier)
+files_page_down (AGlActor* actor, AGlModifierType modifier)
 {
 	return files_nav (actor, N_ROWS_VISIBLE(((FilesView*)actor)->filelist));
 }
 
 
 static bool
-files_nav_home (AGlActor* actor, GdkModifierType modifier)
+files_nav_home (AGlActor* actor, AGlModifierType modifier)
 {
 	return files_nav (actor, -10000);
 }
 
 
 static bool
-files_nav_end (AGlActor* actor, GdkModifierType modifier)
+files_nav_end (AGlActor* actor, AGlModifierType modifier)
 {
 	return files_nav (actor, 10000);
 }
@@ -464,12 +464,12 @@ filelist_view (void* _)
 		};
 	}
 
-	bool filelist_event (AGlActor* actor, GdkEvent* event, AGliPt xy)
+	bool filelist_event (AGlActor* actor, AGlEvent* event, AGliPt xy)
 	{
 		FilesView* view = (FilesView*)actor->parent;
 
 		switch (event->type) {
-			case GDK_BUTTON_PRESS:
+			case AGL_BUTTON_PRESS:
 				switch (event->button.button) {
 					case 4:
 						dbg(1, "! scroll up");
@@ -485,7 +485,7 @@ filelist_view (void* _)
 				}
 				return AGL_HANDLED;
 
-			case GDK_BUTTON_RELEASE:
+			case AGL_BUTTON_RELEASE:
 				;int row = files_view_row_at_coord (view, 0, xy.y);
 				dbg(1, "RELEASE button=%i y=%i row=%i", event->button.button, xy.y - actor->region.y1, row);
 				switch (event->button.button) {

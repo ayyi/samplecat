@@ -1,15 +1,15 @@
-/**
-* +----------------------------------------------------------------------+
-* | This file is part of the Ayyi project. http://ayyi.org               |
-* | copyright (C) 2011-2020 Tim Orford <tim@orford.org>                  |
-* | copyright (C) 2006, Thomas Leonard and others                        |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-*
-*/
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of the Ayyi project. http://ayyi.org               |
+ | copyright (C) 2011-2023 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2006, Thomas Leonard and others                        |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
+ */
 
 /*
  *  file_manager.c
@@ -22,9 +22,7 @@
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <gtk/gtk.h>
-#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 #include <gdk/gdkkeysyms.h>
 #include "debug/debug.h"
 #include "support.h"
@@ -65,11 +63,13 @@ file_manager__init ()
 GtkWidget*
 file_manager__new_window (const char* path)
 {
-	if(!initialised) file_manager__init();
+	if (!initialised) file_manager__init();
 
 	GtkWidget* file_view = view_details_new(new_file_manager);
 	new_file_manager->view = (ViewIface*)file_view;
-	gtk_box_pack_end(GTK_BOX(new_file_manager->window), VIEW_DETAILS(file_view)->scroll_win, TRUE, TRUE, 0);
+	gtk_box_append(GTK_BOX(new_file_manager->window), VIEW_DETAILS(file_view)->scroll_win);
+	gtk_widget_set_hexpand (VIEW_DETAILS(file_view)->scroll_win, true);
+	gtk_widget_set_vexpand (VIEW_DETAILS(file_view)->scroll_win, true);
 
 	all_filer_windows = g_list_prepend(all_filer_windows, new_file_manager);
 
@@ -84,8 +84,7 @@ file_manager__update_all (void)
 {
 	GList* next = all_filer_windows;
 
-	while (next)
-	{
+	while (next) {
 		AyyiFilemanager* fm = (AyyiFilemanager*)next->data;
 
 		/* Updating directory may remove it from list -- stop sending
@@ -97,7 +96,7 @@ file_manager__update_all (void)
 		 * Otherwise, two views of a single directory will trigger
 		 * two scans.
 		 */
-		if (fm->directory && !fm->directory->scanning){
+		if (fm->directory && !fm->directory->scanning) {
 			fm__update_dir(fm, TRUE);
 		}
 	}
@@ -114,7 +113,8 @@ file_manager__on_dir_changed ()
 AyyiFilemanager*
 file_manager__get ()
 {
-	if(!initialised) file_manager__init();
+	if (!initialised)
+		file_manager__init();
 	return new_file_manager;
 }
 
@@ -137,11 +137,11 @@ file_manager__plugin_load (const gchar* filepath)
 	}
 
 	infoFunc plugin_get_info;
-	if(g_module_symbol(handle, "plugin_get_info", (void*)&plugin_get_info)) {
+	if (g_module_symbol(handle, "plugin_get_info", (void*)&plugin_get_info)) {
 		// load generic plugin info
-		if(NULL != (plugin = (*plugin_get_info)())) {
+		if (NULL != (plugin = (*plugin_get_info)())) {
 			// check plugin version
-			if(FILETYPE_PLUGIN_API_VERSION != plugin->api_version){
+			if (FILETYPE_PLUGIN_API_VERSION != plugin->api_version) {
 				dbg(0, "API version mismatch: \"%s\" (%s, type=%d) has version %d should be %d", plugin->name, filepath, plugin->type, plugin->api_version, FILETYPE_PLUGIN_API_VERSION);
 			}
 
@@ -153,7 +153,7 @@ file_manager__plugin_load (const gchar* filepath)
 			success = true;
 
 			// try to load specific plugin type symbols
-			switch(plugin->type) {
+			switch (plugin->type) {
 				default:
 					if(plugin->type >= PLUGIN_TYPE_MAX) {
 						dbg(0, "Unknown or unsupported plugin type: %s (%s, type=%d)", plugin->name, filepath, plugin->type);

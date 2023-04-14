@@ -25,7 +25,9 @@ const gchar* vdtree_row_get_path         (ViewDirTree*, gint row);
 const char*  vdtree_get_selected         (ViewDirTree*);
 
 void         vdtree_on_icon_theme_changed(ViewDirTree*);
+#ifdef GTK4_TODO
 void         vdtree_add_menu_item        (GtkAction*);
+#endif
 
 #endif
 

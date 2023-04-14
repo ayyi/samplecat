@@ -347,13 +347,6 @@ samplecat_idle_unref (gpointer instance)
 }
 
 
-	static gboolean ___lambda__gsource_func (gpointer self)
-	{
-		dir_list_update();
-		g_signal_emit_by_name ((SamplecatModel*)self, "dir-list-changed");
-		return G_SOURCE_REMOVE;
-	}
-
 static gboolean
 __sample_changed_idle (gpointer _self)
 {
@@ -366,7 +359,7 @@ __sample_changed_idle (gpointer _self)
 		sample_unref(change->sample);
 		g_free (change);
 	}
-	g_list_free0 (self->modified);
+	g_clear_pointer (&self->modified, g_list_free);
 
 	return G_SOURCE_REMOVE;
 }
@@ -392,16 +385,23 @@ samplecat_model_construct (GType object_type)
 	self->categories[9] = "breaks";
 
 	// note that category value must be NULL if not set - empty string is invalid
-	for(int i = 0; i < N_FILTERS; i++){
-		if(true || i == FILTER_CATEGORY){
+	for (int i = 0; i < N_FILTERS; i++) {
+		if (true || i == FILTER_CATEGORY) {
 			self->filters3[i] = named_observable_new(names[i]);
-		}else{
+		} else {
 			observable_string_set(self->filters3[i] = named_observable_new(names[i]), g_strdup(""));
 		}
 	}
 
+	gboolean samplecat_model_after_construct (gpointer self)
+	{
+		dir_list_update();
+		g_signal_emit_by_name ((SamplecatModel*)self, "dir-list-changed");
+		return G_SOURCE_REMOVE;
+	}
+
 	_samplecat_idle_unref0 (self->priv->dir_idle);
-	self->priv->dir_idle = samplecat_idle_new (___lambda__gsource_func, self);
+	self->priv->dir_idle = samplecat_idle_new (samplecat_model_after_construct, self);
 
 #if 0 // updating the directory list is not currently done until a consumer needs it
 	samplecat_idle_queue (self->priv->dir_idle);
@@ -846,7 +846,7 @@ samplecat_model_finalize (GObject* obj)
 {
 	SamplecatModel* self = G_TYPE_CHECK_INSTANCE_CAST (obj, SAMPLECAT_TYPE_MODEL, SamplecatModel);
 
-	g_list_free0 (self->backends);
+	g_clear_pointer (&self->backends, g_list_free);
 
 	for (int i = 0; i < N_FILTERS; i++) {
 		g_free (self->filters3[i]->value.c);
@@ -855,7 +855,7 @@ samplecat_model_finalize (GObject* obj)
 
 	_samplecat_idle_unref0 (self->priv->dir_idle);
 	_samplecat_idle_unref0 (self->priv->sample_changed_idle);
-	g_list_free0 (self->modified);
+	g_clear_pointer (&self->modified, g_list_free);
 
 	G_OBJECT_CLASS (samplecat_model_parent_class)->finalize (obj);
 }

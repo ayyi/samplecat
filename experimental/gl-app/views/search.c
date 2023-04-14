@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
- | copyright (C) 2012-2021 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2012-2023 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -10,7 +10,6 @@
  |
  */
 
-#define __wf_private__
 #include "config.h"
 #include <X11/keysym.h>
 #include <gdk/gdkkeysyms.h>
@@ -20,7 +19,6 @@
 #include "agl/behaviours/key.h"
 #include "agl/behaviours/cache.h"
 #include "agl/text/text_input.h"
-#include "samplecat.h"
 #include "application.h"
 #include "behaviours/state.h"
 #include "views/panel.h"
@@ -169,7 +167,7 @@ search_view_height (SearchView* view)
 
 
 static bool
-search_enter (AGlActor* actor, GdkModifierType modifiers)
+search_enter (AGlActor* actor, AGlModifierType modifiers)
 {
 	const gchar* text = text_input_get_text((TextInput*)actor->children->data);
 

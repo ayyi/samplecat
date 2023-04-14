@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
 * | This file is part of the Ayyi project. http://ayyi.org               |
-* | copyright (C) 2013-2020 Tim Orford <tim@orford.org>                  |
+* | copyright (C) 2013-2023 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -24,6 +24,9 @@ int _debug_ = 0;
 
 char ayyi_bold  [12] = "\x1b[1;39m";
 char ayyi_white [12] = "\x1b[0;39m";
+char ayyi_red   [10] = "\x1b[1;31m";
+char ayyi_green [10] = "\x1b[1;32m";
+char ayyi_grey  [12] = "\x1b[0;90m";
 char ayyi_warn  [32] = "\x1b[1;33mwarning:\x1b[0;39m";
 char ayyi_err   [32] = "\x1b[1;31merror\x1b[0;39m";
 
@@ -104,12 +107,14 @@ errprintf2 (const char* func, char* format, ...)
 void
 log_handler (const gchar* log_domain, GLogLevelFlags log_level, const gchar* message, gpointer user_data)
 {
-	switch(log_level){
+	switch (log_level) {
 		case G_LOG_LEVEL_CRITICAL:
 			printf("%s %s\n", ayyi_err, message);
 			break;
 		case G_LOG_LEVEL_WARNING:
 			printf("%s %s\n", ayyi_warn, message);
+			break;
+		case G_LOG_LEVEL_DEBUG:
 			break;
 		default:
 			if(_debug_) printf("log_handler(): level=%i %s\n", log_level, message);

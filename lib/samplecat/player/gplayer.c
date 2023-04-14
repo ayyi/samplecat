@@ -156,20 +156,22 @@ play_file (const char * path)
 	char **argv;
 	GError *error = NULL;
 
-	if(!(argv = get_preview_argv (path))){
-		gwarn("audio preview is unavailable: install either of afplay, mplayer, totem-audio-preview or gstreamer");
+	if (!(argv = get_preview_argv (path))) {
+		pwarn("audio preview is unavailable: install either of afplay, mplayer, totem-audio-preview or gstreamer");
 		return FALSE;
 	}
 
 	if (!g_spawn_async_with_pipes (NULL,
-				       argv,
-				       NULL, 
-				       G_SPAWN_STDOUT_TO_DEV_NULL | G_SPAWN_STDERR_TO_DEV_NULL | G_SPAWN_DO_NOT_REAP_CHILD ,
-				       NULL,
-				       NULL /* user_data */,
-				       &child_pid,
-				       NULL, NULL, NULL,
-				       &error)) {
+		   argv,
+		   NULL, 
+		   G_SPAWN_STDOUT_TO_DEV_NULL | G_SPAWN_STDERR_TO_DEV_NULL | G_SPAWN_DO_NOT_REAP_CHILD ,
+		   NULL,
+		   NULL /* user_data */,
+		   &child_pid,
+		   NULL, NULL, NULL,
+		   &error)
+		)
+	{
 		g_strfreev (argv);
 		g_warning("Error spawning sound preview: %s\n", error->message);
 		g_error_free (error);

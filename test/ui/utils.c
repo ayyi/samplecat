@@ -1,25 +1,26 @@
-/**
-* +----------------------------------------------------------------------+
-* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2020-2020 Tim Orford <tim@orford.org>                  |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-*
-*/
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
+ | copyright (C) 2020-2023 Tim Orford <tim@orford.org>                  |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
+ */
 
 
+#ifdef GTK4_TODO
 void
 send_key (GdkWindow* window, int keyval, GdkModifierType modifiers)
 {
 	assert(gdk_test_simulate_key (window, -1, -1, keyval, modifiers, GDK_KEY_PRESS), "%i", keyval);
 	assert(gdk_test_simulate_key (window, -1, -1, keyval, modifiers, GDK_KEY_RELEASE), "%i", keyval);
 }
+#endif
 
 
-#ifdef USE_GDL
 static GdlDockItem*
 find_dock_item (const char* name)
 {
@@ -29,56 +30,48 @@ find_dock_item (const char* name)
 		GdlDockItem* item;
 	} C;
 
-	GtkWidget* get_first_child (GtkWidget* widget)
-	{
-		GList* items = gtk_container_get_children((GtkContainer*)widget);
-		GtkWidget* item = items->data;
-		g_list_free(items);
-		return item;
-	}
-
 	void gdl_dock_layout_foreach_object (GdlDockObject* object, gpointer user_data)
 	{
 		g_return_if_fail (object && GDL_IS_DOCK_OBJECT (object));
 
 		C* c = user_data;
-		char* name  = object->name;
+		const char* name  = gdl_dock_object_get_name(object);
 
 		char* properties = NULL;
-		if(!name){
+		if (!name) {
 			name = (char*)G_OBJECT_CLASS_NAME(G_OBJECT_GET_CLASS(object));
 		}
-		if(!strcmp(name, c->name)){
+		if (!strcmp(name, c->name)) {
 			c->item = (GdlDockItem*)object;
 			return;
 		}
 
 		if (gdl_dock_object_is_compound (object)) {
-			gtk_container_foreach(GTK_CONTAINER(object), (GtkCallback)gdl_dock_layout_foreach_object, c);
+			gdl_dock_object_foreach_child(object, gdl_dock_layout_foreach_object, c);
 		}
 
-		if(properties) g_free(properties);
+		if (properties) g_free(properties);
 	}
 
-	GtkWidget* window = app->window;
-	GtkWidget* vbox = get_first_child(window);
-	GtkWidget* dock = get_first_child(vbox);
+	GtkWidget* window = (GtkWidget*)gtk_application_get_active_window(GTK_APPLICATION(app));
+	GtkWidget* vbox = gtk_widget_get_first_child(window);
+	GtkWidget* dock = gtk_widget_get_first_child(vbox);
 
 	C c = {name};
-	gdl_dock_master_foreach_toplevel((GdlDockMaster*)GDL_DOCK_OBJECT(dock)->master, TRUE, (GFunc) gdl_dock_layout_foreach_object, &c);
+	gdl_dock_master_foreach_toplevel((GdlDockMaster*)gdl_dock_object_get_master(GDL_DOCK_OBJECT(dock)), TRUE, (GFunc) gdl_dock_layout_foreach_object, &c);
 
 	return c.item;
 }
-#endif
 
 
 bool
 window_is_open ()
 {
-	return gtk_widget_get_realized(app->window);
+	return gtk_widget_get_realized((GtkWidget*)gtk_application_get_active_window(GTK_APPLICATION(app)));
 }
 
 
+#ifdef GTK4_TODO
 GtkWidget*
 get_view_menu ()
 {
@@ -178,43 +171,38 @@ find_item_in_view_menu (const char* name)
 
 	return item;
 }
+#endif
 
 
 bool
 view_is_visible (gpointer name)
 {
-#ifdef USE_GDL
 	GdlDockItem* item = find_dock_item(name);
 	return item && gtk_widget_get_visible((GtkWidget*)item);
-#else
-	return true;
-#endif
 }
 
 
 bool
 view_not_visible (gpointer name)
 {
-#ifdef USE_GDL
 	GdlDockItem* item = find_dock_item(name);
 	return !item || !gtk_widget_get_visible((GtkWidget*)item);
-#else
-	return true;
-#endif
 }
 
 
 void
 search (const char* text)
 {
-	GtkWidget* search = find_widget_by_name(app->window, "search-entry");
+	GtkWidget* search = find_widget_by_name((GtkWidget*)gtk_application_get_active_window(GTK_APPLICATION(app)), "search-entry");
 
 #if 0
 	send_key(search->window, GDK_KEY_H, 0);
 	send_key(search->window, GDK_KEY_E, 0);
 	send_key(search->window, GDK_KEY_Return, 0);
 #else
+#ifdef GTK4_TODO
 	gtk_test_text_set(search, text);
+#endif
 #endif
 
 	gtk_widget_activate(search);

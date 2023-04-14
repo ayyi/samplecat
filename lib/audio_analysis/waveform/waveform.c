@@ -1,14 +1,15 @@
-/**
-* +----------------------------------------------------------------------+
-* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2018 Tim Orford <tim@orford.org>                  |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-*
-*/
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
+ | copyright (C) 2007-2023 Tim Orford <tim@orford.org>                  |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
+ */
+
 #include "config.h"
 #include <stdio.h>
 #include <string.h>
@@ -26,13 +27,13 @@
 #define OVERVIEW_HEIGHT (20)
 
 static struct {
-	GdkColor bg;
-	GdkColor base;
-	GdkColor text;
+	uint32_t bg;
+	uint32_t base;
+	uint32_t text;
 } colour = {
-	{0,},
-	{0,},
-	{.red=0xdddd, .green=0xdddd, .blue=0xdddd},
+	0,
+	0,
+	0xddddddff,
 };
 
 
@@ -47,27 +48,27 @@ pixbuf_clear(GdkPixbuf* pixbuf, GdkColor* colour)
 
 
 void
-set_overview_colour (GdkColor* text_colour, GdkColor* base_colour, GdkColor* bg_colour)
+set_overview_colour (uint32_t text_colour, uint32_t base_colour, uint32_t bg_colour)
 {
-	colour.bg = *bg_colour;
-	colour.base = *base_colour;
-	colour.text = *text_colour;
+	colour.bg = bg_colour;
+	colour.base = base_colour;
+	colour.text = text_colour;
 }
 
 
 GdkPixbuf*
-make_overview(Sample* sample)
+make_overview (Sample* sample)
 {
 	WfDecoder d = {{0,}};
-	if(!ad_open(&d, sample->full_path)) return NULL;
-	ad_close(&d);
+	if (!ad_open(&d, sample->full_path)) return NULL;
+	ad_close (&d);
+
 	dbg(1, "NEW OVERVIEW");
 
-	GdkPixbuf* pixbuf = gdk_pixbuf_new(GDK_COLORSPACE_RGB, HAS_ALPHA_FALSE, BITS_PER_CHAR_8, OVERVIEW_WIDTH, OVERVIEW_HEIGHT);
-	Waveform* waveform = waveform_load_new(sample->full_path);
-	waveform_peak_to_pixbuf(waveform, pixbuf, NULL, color_gdk_to_rgba(&colour.text), color_gdk_to_rgba(&colour.base), true);
-	g_object_unref(waveform);
+	GdkPixbuf* pixbuf = gdk_pixbuf_new (GDK_COLORSPACE_RGB, HAS_ALPHA_FALSE, BITS_PER_CHAR_8, OVERVIEW_WIDTH, OVERVIEW_HEIGHT);
+	Waveform* waveform = waveform_load_new (sample->full_path);
+	waveform_peak_to_pixbuf (waveform, pixbuf, NULL, colour.text, colour.base, true);
+	g_object_unref (waveform);
 
 	return sample->overview = pixbuf;
 }
-

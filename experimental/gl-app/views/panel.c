@@ -1,18 +1,19 @@
-/**
-* +----------------------------------------------------------------------+
-* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2016-2020 Tim Orford <tim@orford.org>                  |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-*
-*/
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
+ | copyright (C) 2016-2023 Tim Orford <tim@orford.org>                  |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
+ */
+
 #include "config.h"
-#undef USE_GTK
 #include "agl/ext.h"
 #include "agl/utils.h"
+#include "agl/event.h"
 #include "agl/text/pango.h"
 #include "debug/debug.h"
 #include "waveform/shader.h"
@@ -176,12 +177,12 @@ panel_view (gpointer _)
 		}
 	}
 
-	bool panel_event (AGlActor* actor, GdkEvent* event, AGliPt xy)
+	bool panel_event (AGlActor* actor, AGlEvent* event, AGliPt xy)
 	{
 		PanelView* panel = (PanelView*)actor;
 
-		switch(event->type){
-			case GDK_BUTTON_PRESS:
+		switch (event->type) {
+			case AGL_BUTTON_PRESS:
 				dbg(1, "PRESS %i", xy.y);
 				if (xy.y < PANEL_DRAG_HANDLE_HEIGHT) {
 					actor_context.grabbed = actor;
@@ -190,7 +191,7 @@ panel_view (gpointer _)
 					return AGL_HANDLED;
 				}
 				break;
-			case GDK_BUTTON_RELEASE:
+			case AGL_BUTTON_RELEASE:
 				agl_actor__invalidate(actor);
 				dbg(1, "RELEASE y=%i", xy.y);
 				if (actor_context.grabbed) {
@@ -213,19 +214,19 @@ panel_view (gpointer _)
 					return AGL_HANDLED;
 				}
 				break;
-			case GDK_MOTION_NOTIFY:
+			case AGL_MOTION_NOTIFY:
 				if (actor_context.grabbed == actor) {
 					mouse = xy;
 					agl_actor__invalidate(actor);
 					return AGL_HANDLED;
 				}
 				break;
-			case GDK_KEY_RELEASE:;
-				GdkEventKey* e = (GdkEventKey*)event;
+			case AGL_KEY_RELEASE:;
+				AGlEventKey* e = (AGlEventKey*)event;
 				int keyval = e->keyval;
-				if(panel->actions.actions){
+				if (panel->actions.actions) {
 					KeyHandler* handler = g_hash_table_lookup(panel->actions.actions, &keyval);
-					if(handler) handler();
+					if (handler) handler();
 					return AGL_HANDLED;
 				}
 				break;

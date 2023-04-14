@@ -5,20 +5,20 @@ before_script:
 
 debian build:
   script:
-    - cd test/debian-11 && ./build && ./run
+    - cd test/debian-12 && ./build && ./run
 
 ubuntu build:
   before_script:
     - apk add --update make gcc && rm -rf /var/cache/apk/*
   script:
-    - cd test/ubuntu-20 && ./build && ./run
+    - cd test/ubuntu-22 && make build && ./run
 
-arch build:
-  before_script:
-    - apk add --update make gcc && rm -rf /var/cache/apk/*
-  script:
-    - echo $CI_COMMIT_BRANCH
-    - cd test/arch && ./build && ./run
+#arch build:
+#  before_script:
+#    - apk add --update make gcc && rm -rf /var/cache/apk/*
+#  script:
+#    - echo $CI_COMMIT_BRANCH
+#    - cd test/arch && ./build && ./run
 
 services:
   - docker:dind

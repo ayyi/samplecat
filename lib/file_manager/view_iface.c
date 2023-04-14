@@ -22,9 +22,7 @@
 #include "config.h"
 
 #include <string.h>
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <gtk/gtk.h>
-#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 #include "debug/debug.h"
 #include "support.h"
 #include "view_iface.h"
@@ -247,7 +245,8 @@ void view_get_cursor(ViewIface *obj, ViewIter *iter)
 /* Position cursor on the last item returned by iter.next().
  * If iter is NULL, remove the cursor.
  */
-void view_cursor_to_iter(ViewIface *obj, ViewIter *iter)
+void
+view_cursor_to_iter (ViewIface *obj, ViewIter *iter)
 {
 	g_return_if_fail(VIEW_IS_IFACE(obj));
 
@@ -255,7 +254,8 @@ void view_cursor_to_iter(ViewIface *obj, ViewIter *iter)
 }
 
 /* Select the item at this iter */
-void view_set_selected(ViewIface *obj, ViewIter *iter, gboolean selected)
+void
+view_set_selected (ViewIface *obj, ViewIter *iter, gboolean selected)
 {
 	g_return_if_fail(VIEW_IS_IFACE(obj));
 
@@ -263,7 +263,8 @@ void view_set_selected(ViewIface *obj, ViewIter *iter, gboolean selected)
 }
 
 /* TRUE if this item is selected */
-gboolean view_get_selected(ViewIface *obj, ViewIter *iter)
+gboolean
+view_get_selected (ViewIface *obj, ViewIter *iter)
 {
 	g_return_val_if_fail(VIEW_IS_IFACE(obj), FALSE);
 
@@ -273,16 +274,16 @@ gboolean view_get_selected(ViewIface *obj, ViewIter *iter)
 /* Clear the selection, then select this item. Does it atomically to avoid
  * problems with giving up and quickly reclaiming the primary selection.
  */
-void view_select_only(ViewIface *obj, ViewIter *iter)
+void
+view_select_only (ViewIface *obj, ViewIter *iter)
 {
 	g_return_if_fail(VIEW_IS_IFACE(obj));
 
 	VIEW_IFACE_GET_CLASS(obj)->select_only(obj, iter);
 }
 
-void view_select_if(ViewIface *obj,
-		    gboolean (*test)(ViewIter *iter, gpointer data),
-		    gpointer data)
+void
+view_select_if (ViewIface *obj, gboolean (*test)(ViewIter *iter, gpointer data), gpointer data)
 {
 	ViewIter iter;
 	gboolean should_select_first;
@@ -316,7 +317,8 @@ void view_select_if(ViewIface *obj,
 }
 
 /* Prevent selection_changed events from being emitted */
-void view_freeze(ViewIface *obj)
+void
+view_freeze (ViewIface *obj)
 {
 	g_return_if_fail(VIEW_IS_IFACE(obj));
 
@@ -324,7 +326,8 @@ void view_freeze(ViewIface *obj)
 }
 
 /* Undo a view_freeze (and emit the changed signal) */
-void view_thaw(ViewIface *obj)
+void
+view_thaw (ViewIface *obj)
 {
 	g_return_if_fail(VIEW_IS_IFACE(obj));
 
@@ -348,7 +351,8 @@ void view_autosize(ViewIface *obj)
 /* Return TRUE if the cursor is shown. Note that the cursor may be visible
  * even if their are no items (so get_cursor().peek() would return NULL).
  */
-gboolean view_cursor_visible(ViewIface *obj)
+gboolean
+view_cursor_visible (ViewIface *obj)
 {
 	g_return_val_if_fail(VIEW_IS_IFACE(obj), FALSE);
 
@@ -358,7 +362,8 @@ gboolean view_cursor_visible(ViewIface *obj)
 /* The 'base' position is used to record the position of the cursor
  * when the minibuffer is opened, for interactive searching.
  */
-void view_set_base(ViewIface *obj, ViewIter *iter)
+void
+view_set_base (ViewIface *obj, ViewIter *iter)
 {
 	g_return_if_fail(VIEW_IS_IFACE(obj));
 
@@ -369,26 +374,30 @@ void view_set_base(ViewIface *obj, ViewIter *iter)
  * iter.peek() will return NULL if no item was under the pointer.
  * x, y is relative to 'window'.
  */
-void view_get_iter_at_point(ViewIface *obj, ViewIter *iter,
-			    GdkWindow *window, int x, int y)
+void
+view_get_iter_at_point(ViewIface* obj, ViewIter* iter, int x, int y)
 {
 	g_return_if_fail(VIEW_IS_IFACE(obj));
 
-	VIEW_IFACE_GET_CLASS(obj)->get_iter_at_point(obj, iter, window, x, y);
+	VIEW_IFACE_GET_CLASS(obj)->get_iter_at_point(obj, iter, x, y);
 }
 
 /* Begin a drag to select a group of icons */
-void view_start_lasso_box(ViewIface *obj, GdkEventButton *event)
+#ifdef GTK4_TODO
+void
+view_start_lasso_box (ViewIface *obj, GdkEventButton *event)
 {
 	g_return_if_fail(VIEW_IS_IFACE(obj));
 
 	VIEW_IFACE_GET_CLASS(obj)->start_lasso_box(obj, event);
 }
+#endif
 
 /* Add anything useful to the tooltip string. Used to include the name of
  * items where the name is shown truncated.
  */
-void view_extend_tip(ViewIface *obj, ViewIter *iter, GString *tip)
+void
+view_extend_tip (ViewIface *obj, ViewIter *iter, GString *tip)
 {
 	g_return_if_fail(VIEW_IS_IFACE(obj));
 
@@ -399,7 +408,8 @@ void view_extend_tip(ViewIface *obj, ViewIter *iter, GString *tip)
  * Checks the pointer position and scrolls the window if it's
  * near the top or bottom.
  */
-gboolean view_auto_scroll_callback(ViewIface *obj)
+gboolean
+view_auto_scroll_callback (ViewIface *obj)
 {
 	g_return_val_if_fail(VIEW_IS_IFACE(obj), FALSE);
 

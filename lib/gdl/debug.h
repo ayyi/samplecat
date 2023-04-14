@@ -1,8 +1,11 @@
+#include "gdl-dock-master.h"
 
 extern int indent;
 extern int gdl_debug;
-#define F1 (indent++)
-#define F2 {indent--; indent = MAX(indent, 0); }
+
+#ifdef DEBUG
+#define ENTER {indent++;}
+#define LEAVE {indent--; indent = MAX(indent, 0); }
 #define cdbg(A, B, ...) \
 	{ \
 		{ \
@@ -12,5 +15,11 @@ extern int gdl_debug;
 		} \
 		gdl_debug_printf(__func__, A, B, ##__VA_ARGS__); \
 	}
-void gdl_debug_printf(const char* func, int level, const char* format, ...);
+#else
+#define ENTER
+#define LEAVE
+#define cdbg(A, B, ...)
+#endif
 
+void gdl_debug_printf (const char* func, int level, const char* format, ...);
+void gdl_dock_print   (GdlDockMaster*);

@@ -21,8 +21,6 @@
 #  define _GNU_SOURCE
 #endif
 
-//#include "intl.h"
-
 /*
  *-------------------------------------
  * Standard library includes
@@ -203,19 +201,12 @@ extern gint exif_rotate_enable;
  * This also doubles as the main.c header.
  */
 
-void window_set_icon(GtkWidget *window, const char **icon, const gchar *file);
-gint window_maximized(GtkWidget *window);
-
-gdouble get_zoom_increment(void);
-
 void help_window_show(const gchar *key);
 
+#ifdef GTK4_TODO
 void keyboard_scroll_calc(gint *x, gint *y, GdkEventKey *event);
 gint key_press_cb(GtkWidget *widget, GdkEventKey *event, gpointer data);
+#endif
 void exit_gqview(void);
 
-
 #endif
-
-
-

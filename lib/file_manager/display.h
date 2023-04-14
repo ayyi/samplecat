@@ -1,17 +1,17 @@
-/**
-* +----------------------------------------------------------------------+
-* | This file is part of the Ayyi project. http://ayyi.org               |
-* | copyright (C) 2011-2018 Tim Orford <tim@orford.org>                  |
-* | copyright (C) 2006, Thomas Leonard and others                        |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-*
-*/
-#ifndef _DISPLAY_H
-#define _DISPLAY_H
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of the Ayyi project. http://ayyi.org               |
+ | copyright (C) 2011-2023 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2006, Thomas Leonard and others                        |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
+ */
+
+#pragma once
 
 #include "file_manager.h"
 
@@ -45,7 +45,6 @@ extern Option o_small_width;
 extern Option o_vertical_order_small, o_vertical_order_large;
 
 /* Prototypes */
-void display_init(void);
 void display_set_layout(FilerWindow *filer_window, DisplayStyle style, DetailsType details, gboolean force_resize);
 void display_set_hidden(FilerWindow *filer_window, gboolean hidden);
 void display_set_filter_directories(FilerWindow *filer_window, gboolean filter_directories);
@@ -59,12 +58,6 @@ void display_set_sort_type(AyyiFilemanager*, FmSortType, GtkSortType order);
 #if 0
 void display_set_autoselect(FilerWindow *filer_window, const gchar *leaf);
 
-void draw_large_icon(GdkWindow *window,
-		     GdkRectangle *area,
-		     DirItem  *item,
-		     MaskedPixmap *image,
-		     gboolean selected,
-		     GdkColor *color);
 gboolean display_is_truncated(FilerWindow *filer_window, int i);
 void display_change_size(FilerWindow *filer_window, gboolean bigger);
 
@@ -75,14 +68,7 @@ void display_update_view(FilerWindow *filer_window,
 			 gboolean update_name_layout);
 void display_update_views(FilerWindow *filer_window);
 #endif
-void draw_small_icon(GdkWindow *window, GdkRectangle *area,
-		     DirItem  *item, MaskedPixmap *image, gboolean selected,
-		     GdkColor *color);
 #if 0
-void draw_huge_icon(GdkWindow *window, GdkRectangle *area, DirItem *item,
-			   MaskedPixmap *image, gboolean selected,
-			   GdkColor *color);
+void draw_huge_icon  (GdkWindow *window, GdkRectangle *area, DirItem *item, MaskedPixmap *image, gboolean selected, GdkColor *color);
 #endif
 void display_set_actual_size(AyyiFilemanager*, gboolean force_resize);
-
-#endif /* _DISPLAY_H */

@@ -1,0 +1,111 @@
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Cond
+   ...
+   fun:gtk_tree_view_measure
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Cond
+   ...
+   fun:gtk_scrolled_window_measure
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Cond
+   fun:gtk_tree_rbtree_find_offset
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Cond
+   ...
+   fun:gtk_tree_rbtree_find_offset
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Cond
+   ...
+   fun:validate_visible_area
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Cond
+   ...
+   fun:gtk_scrolled_window_size_allocate
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Cond
+   ...
+   fun:gtk_tree_view_size_allocate
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Cond
+   ...
+   fun:gtk_tree_view_snapshot
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Cond
+   ...
+   fun:gsk_container_node_new
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Cond
+   ...
+   fun:gtk_widget_create_render_node
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Cond
+   ...
+   fun:gsk_renderer_render
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Cond
+   ...
+   fun:gsk_container_node_diff
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Value8
+   ...
+   fun:gsk_container_node_diff
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Cond
+   ...
+   fun:validate_rows
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Cond
+   ...
+   fun:scroll_sync_handler
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Value8
+   ...
+   fun:cairo_region_copy
+   ...
+   fun:gtk_widget_render
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Value8
+   fun:pixman_region32_contains_rectangle
+   ...
+   fun:gtk_widget_render
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Param
+   ...
+   fun:gdk_x11_surface_get_geometry
+}
+

@@ -1,0 +1,49 @@
+button {
+	margin: 0;
+	border: 0;
+	padding: 0;
+	border-radius: 0;
+}
+
+paned > separator {
+	margin-left: 10px;
+	margin-right: 10px;
+}
+
+/* dock-grip label */
+dock-title {
+	font-size: 8px;
+	font-weight: bold;
+}
+
+dock-grip {
+	background-color: #d7e0e3;
+	padding: 0;
+}
+
+dock-grip > * {
+	margin: -4px;
+	padding: 0;
+}
+
+dock-grip > button.flat {
+	margin: 0;
+	border: 0;
+	padding: 0;
+	border-radius: 0;
+	min-height: 16px;
+}
+
+.gdl-button-image {
+	margin: 0;
+	border: 0;
+	padding: 0;
+}
+
+grid {
+	margin: 5px;
+}
+
+popover > * {
+	border-radius: 2px;
+}

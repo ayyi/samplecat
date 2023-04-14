@@ -287,8 +287,8 @@ sqlite__execwrap (char* sql)
 	char* errMsg = 0;
 	if (sqlite3_exec(db, sql, NULL, NULL, &errMsg) != SQLITE_OK) {
 		ok = false;
-		gwarn("sqlite error: %s\n", errMsg);
-		gwarn("query: %s\n", sql);
+		pwarn("sqlite error: %s\n", errMsg);
+		pwarn("query: %s\n", sql);
 		sqlite3_free(errMsg);
 	}
 	sqlite3_free(sql);
@@ -488,7 +488,7 @@ sqlite__search_iter_new (int* n_results)
 	char* sql = sqlite3_mprintf("SELECT * FROM samples WHERE 1 %s", where);
 	dbg(2, "sql=%s", sql);
 
-	if (ppStmt) gwarn("ppStmt not reset from previous query?");
+	if (ppStmt) pwarn("ppStmt not reset from previous query?");
 	int n = sqlite3_prepare_v2(db, sql, -1, &ppStmt, NULL);
 	if (n == SQLITE_OK && ppStmt) {
 		count = 0;
@@ -496,7 +496,7 @@ sqlite__search_iter_new (int* n_results)
 		if (n_results) *n_results = count;
 		backend().n_results = count;
 	} else {
-		gwarn("failed to create prepared statement. sql=%s", sql);
+		pwarn("failed to create prepared statement. sql=%s", sql);
 		ok = false;
 	}
 	sqlite3_free(sql);
@@ -581,7 +581,7 @@ sqlite__dir_iter_new ()
 {
 	#define SQLITE_DIR_LIST_QRY "SELECT DISTINCT filedir FROM samples ORDER BY filedir"
 
-	if (ppStmt) gwarn("ppStmt not reset from previous query?");
+	if (ppStmt) pwarn("ppStmt not reset from previous query?");
 	int n = sqlite3_prepare_v2(db, SQLITE_DIR_LIST_QRY, -1, &ppStmt, NULL);
 	if (ppStmt && n == SQLITE_OK) {
 		/*

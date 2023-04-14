@@ -14,6 +14,7 @@
 #define UI_MENU_H
 
 
+#ifdef GTK4_TODO
 GtkWidget *menu_item_add(GtkWidget *menu, const gchar *label,
 			 GCallback func, gpointer data);
 GtkWidget *menu_item_add_stock(GtkWidget *menu, const gchar *label, const gchar *stock_id,
@@ -36,6 +37,7 @@ GtkWidget *popup_menu_short_lived(void);
  * if menu will attempt to stay out of region y to y+height
  */
 gint popup_menu_position_clamp(GtkMenu *menu, gint *x, gint *y, gint height);
+#endif
 
 
 #endif

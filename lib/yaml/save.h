@@ -9,24 +9,25 @@
 * +----------------------------------------------------------------------+
 *
 */
-#ifndef __yaml_utils_h__
-#define __yaml_utils_h__
+
+#pragma once
 
 #include <yaml.h>
 #include <glib.h>
 #if __has_include ("agl/typedefs.h")
 #include "agl/typedefs.h"
 #endif
+#include "debug/debug.h"
 
 #define PLAIN_IMPLICIT true
 
-#define yaml_start(fp, event) \
+#define yaml_start(fp) \
 	if(!yaml_emitter_initialize(&emitter)){ perr("failed to initialise yaml writer."); goto out; } \
 	yaml_emitter_set_output_file(&emitter, fp); \
 	yaml_emitter_set_canonical(&emitter, false); \
-	EMIT__(yaml_stream_start_event_initialize(event, YAML_UTF8_ENCODING), event); \
-	EMIT__(yaml_document_start_event_initialize(event, NULL, NULL, NULL, 0), event); \
-	EMIT__(yaml_mapping_start_event_initialize(event, NULL, (guchar*)"tag:yaml.org,2002:map", 1, YAML_BLOCK_MAPPING_STYLE), event);
+	EMIT_(yaml_stream_start_event_initialize(&event, YAML_UTF8_ENCODING)); \
+	EMIT__(yaml_document_start_event_initialize(&event, NULL, NULL, NULL, 0), &event); \
+	EMIT__(yaml_mapping_start_event_initialize(&event, NULL, (guchar*)"tag:yaml.org,2002:map", 1, YAML_BLOCK_MAPPING_STYLE), &event);
 
 #define map_open_(E, A) \
 	if(!yaml_scalar_event_initialize(E, NULL, str_tag, (guchar*)A, -1, PLAIN_IMPLICIT, 0, YAML_PLAIN_SCALAR_STYLE)) goto error; \
@@ -48,17 +49,11 @@
 	if(!yaml_mapping_end_event_initialize(E)) goto error; \
 	if(!yaml_emitter_emit(&emitter, E)) goto error;
 
-#define end_document(EM) \
+#define end_document \
 	yaml_document_end_event_initialize(&event, 0); \
-	yaml_emitter_emit(EM, &event); \
+	yaml_emitter_emit(&emitter, &event); \
 	yaml_stream_end_event_initialize(&event); \
-	if(!yaml_emitter_emit(EM, &event)) goto error;
-
-#define end_document_(EM, event) \
-	yaml_document_end_event_initialize(event, 0); \
-	yaml_emitter_emit(EM, event); \
-	yaml_stream_end_event_initialize(event); \
-	if(!yaml_emitter_emit(EM, event)) goto error;
+	if(!yaml_emitter_emit(&emitter, &event)) goto error;
 
 #define EMIT(A) \
 	if(!A) return FALSE; \
@@ -97,4 +92,4 @@ extern unsigned char* seq_tag;
 extern yaml_emitter_t emitter;
 #endif
 
-#endif
+G_DEFINE_AUTO_CLEANUP_CLEAR_FUNC(yaml_emitter_t, yaml_emitter_delete)

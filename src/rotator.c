@@ -29,11 +29,10 @@
  */
 
 
+#ifdef GTK4_TODO
 #include "config.h"
 #include <string.h>
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <gtk/gtk.h>
-#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 #include <gdk/gdkkeysyms.h>
 #include <GL/gl.h>
 #include "debug/debug.h"
@@ -14537,5 +14536,4 @@ set_position (WaveformActor* actor, int j)
 		h
 	});
 }
-
-
+#endif // GTK4_TODO

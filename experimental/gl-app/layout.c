@@ -1,20 +1,19 @@
-/**
-* +----------------------------------------------------------------------+
-* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2021 Tim Orford <tim@orford.org>                  |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-*
-*/
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
+ | copyright (C) 2007-2023 Tim Orford <tim@orford.org>                  |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
+ */
+
 #include "config.h"
 #include <glib/gstdio.h>
 #include <debug/debug.h>
 #include "agl/actor.h"
-#include "samplecat.h"
-#include "utils/ayyi_utils.h"
 #include "waveform/actor.h"
 #include "yaml/load.h"
 #include "yaml/save.h"
@@ -46,58 +45,38 @@ agl_actor_register_class (const char* name, AGlActorClass* class)
 
 
 static bool
-config_load_point (yaml_parser_t* parser, gpointer _pt)
+config_load_point (yaml_parser_t* parser, const char*, gpointer _pt)
 {
 	AGliPt* pt = _pt;
+	g_auto(yaml_event_t) event;
 
-	void load_integers (yaml_parser_t* parser, AGliPt* p)
-	{
-		yaml_event_t event;
-		for (int i=0;i<2;i++) {
-			if (yaml_parser_parse(parser, &event)) {
-				switch (event.type) {
-					case YAML_SCALAR_EVENT:
-						;int* a = i ? &p->y : &p->x;
-						*a = atoi((char*)event.data.scalar.value);
-						break;
-					default:
-						break;
-				}
+	for (int i=0;i<2;i++) {
+		if (yaml_parser_parse(parser, &event)) {
+			switch (event.type) {
+				case YAML_SCALAR_EVENT:
+					;int* a = i ? &pt->y : &pt->x;
+					*a = atoi((char*)event.data.scalar.value);
+					break;
+				default:
+					break;
 			}
-			yaml_event_delete(&event);
-		}
-	}
-
-	yaml_event_t event;
-	while (yaml_parser_parse(parser, &event)) {
-		switch (event.type) {
-			case YAML_SEQUENCE_START_EVENT:
-				load_integers(parser, pt);
-				break;
-			case YAML_SEQUENCE_END_EVENT:
-				yaml_event_delete(&event);
-				return true;
-			case YAML_SCALAR_EVENT:
-				pwarn("expected array start but got scalar");
-				break;
-			default:
-				pwarn("expected array start %i", event.type);
 		}
 		yaml_event_delete(&event);
 	}
-	pwarn("sequence end not found");
+
+	get_expected_event(parser, &event, YAML_SEQUENCE_END_EVENT);
 
 	return true;
 }
 
 
 static bool
-config_load_size (yaml_parser_t* parser, const yaml_event_t* _, gpointer _actor)
+config_load_size (yaml_parser_t* parser, const char*, gpointer _actor)
 {
 	AGlActor* actor = _actor;
 
 	AGliPt pt = {0};
-	config_load_point(parser, &pt);
+	config_load_point(parser, NULL, &pt);
 
 	actor->region.x2 = actor->region.x1 + pt.x;
 	actor->region.y2 = actor->region.y1 + pt.y;
@@ -107,12 +86,12 @@ config_load_size (yaml_parser_t* parser, const yaml_event_t* _, gpointer _actor)
 
 
 static bool
-config_load_position (yaml_parser_t* parser, const yaml_event_t* _, gpointer _actor)
+config_load_position (yaml_parser_t* parser, const char*, gpointer _actor)
 {
 	AGlActor* actor = _actor;
 
 	AGliPt pt = {0};
-	config_load_point(parser, &pt);
+	config_load_point(parser, NULL, &pt);
 
 	actor->region.x1 = pt.x;
 	actor->region.y1 = pt.y;
@@ -123,73 +102,24 @@ config_load_position (yaml_parser_t* parser, const yaml_event_t* _, gpointer _ac
 }
 
 
-#if 0
-/*
- *  Parse mandatory wrapper
- */
 static bool
-start_wrapper (yaml_parser_t* parser, const char* key)
+load_size_req (yaml_parser_t* parser, const yaml_event_t* event, const char* key, gpointer _actor)
 {
-	yaml_event_t event;
-	if(yaml_parser_parse(parser, &event)){
-		if(event.type == YAML_MAPPING_START_EVENT){
-			return TRUE;
-		}
-	}
-	return FALSE;
-}
+	g_return_val_if_fail(event->type == YAML_MAPPING_START_EVENT, false);
 
-
-static bool
-end_wrapper (yaml_parser_t* parser)
-{
-	yaml_event_t event;
-	if(yaml_parser_parse(parser, &event)){
-		if(event.type == YAML_MAPPING_END_EVENT){
-			return TRUE;
-		}
-	}
-	return FALSE;
-}
-#endif
-
-
-static bool
-load_size_req (yaml_parser_t* parser, const yaml_event_t* _, gpointer _actor)
-{
 	AGlActor* actor = _actor;
-
 	if (actor->class == panel_view_get_class() || actor->class == dock_v_get_class() || actor->class == dock_h_get_class()) {
-		yaml_event_t event;
-		get_expected_event(parser, &event, YAML_MAPPING_START_EVENT);
-		yaml_event_delete(&event);
-
-		for (int i = 0; yaml_parser_parse(parser, &event) && i < 20; i++) {
-			switch (event.type) {
-				case YAML_SCALAR_EVENT:
-					{
-						char* key = (char*)event.data.scalar.value;
-						if (!strcmp(key, "min")) {
-							config_load_point(parser, &((PanelView*)actor)->size_req.min);
-						} else if (!strcmp(key, "preferred")) {
-							config_load_point(parser, &((PanelView*)actor)->size_req.preferred);
-						} else if (!strcmp(key, "max")) {
-							config_load_point(parser, &((PanelView*)actor)->size_req.max);
-						}
-					}
-					break;
-				case YAML_MAPPING_END_EVENT:
-					yaml_event_delete(&event);
-					return true;
-				default:
-					yaml_event_delete(&event);
-					return false;
-			}
-			yaml_event_delete(&event);
-		}
+		return yaml_load_section(parser,
+			NULL,
+			NULL,
+			(YamlSequenceHandler[]){
+				{"min", config_load_point, &((PanelView*)actor)->size_req.min},
+				{"preferred", config_load_point, &((PanelView*)actor)->size_req.preferred},
+				{"max", config_load_point, &((PanelView*)actor)->size_req.max}
+			},
+			actor
+		);
 	}
-	else pwarn("no class match: class=%p", actor->class);
-
 	return false;
 }
 
@@ -207,77 +137,60 @@ typedef struct {
 
 
 static bool
-type_handler (yaml_parser_t* parser, const yaml_event_t* _event, gpointer _stack)
+type_handler (const yaml_event_t* event, const char*, gpointer _stack)
 {
+	g_return_val_if_fail(event->type == YAML_SCALAR_EVENT, false);
+
 	Stack* stack = _stack;
 
-	yaml_event_t event;
-	get_expected_event(parser, &event, YAML_SCALAR_EVENT);
-
-	if (!strcmp((char*)event.data.scalar.value, "ROOT")) {
+	if (!strcmp((char*)event->data.scalar.value, "ROOT")) {
 		STACK_PUSH((AGlActor*)app->scene);
-	} else if (!strcmp((char*)event.data.scalar.value, "Waveform")) {
+	} else if (!strcmp((char*)event->data.scalar.value, "Waveform")) {
 		STACK_PUSH ((AGlActor*)wf_context_add_new_actor (app->wfc, NULL));
 	} else {
-		AGlActorClass* c = g_hash_table_lookup(agl_actor_registry, event.data.scalar.value);
+		AGlActorClass* c = g_hash_table_lookup(agl_actor_registry, event->data.scalar.value);
 		if (c) {
 			if (c->new) {
 				STACK_PUSH(c->new(NULL));
 				stack->items[stack->sp]->name = g_strdup(stack->name);
 			}
 		} else {
-			pwarn("type not found: %s", event.data.scalar.value);
+			pwarn("type not found: %s", event->data.scalar.value);
 		}
 	}
 
-	yaml_event_delete(&event);
-
 	return true;
 }
 
 
 static bool
-generic_handler (yaml_parser_t* parser, const yaml_event_t* event, gpointer _stack)
+generic_handler (const yaml_event_t* event, const char* key, gpointer _stack)
 {
-	char* key = (char*)event->data.scalar.value;
+	g_return_val_if_fail(event->type == YAML_SCALAR_EVENT, false);
 
 	Stack* stack = _stack;
-	if(stack->sp < 0) return false;
+	if (stack->sp < 0) return false;
 	AGlActor* actor = stack->items[stack->sp];
 	g_return_val_if_fail(actor, false);
 
-	if(state_has_parameter(actor, key)){
-		yaml_event_t event2;
-		get_expected_event(parser, &event2, YAML_SCALAR_EVENT);
-
-		state_set_named_parameter(actor, key, (char*)event2.data.scalar.value);
-		yaml_event_delete(&event2);
+	if (state_has_parameter(actor, key)) {
+		state_set_named_parameter(actor, key, (char*)event->data.scalar.value);
+		return true;
 	}
 
-	return true;
-}
-
-
-static bool
-handle_scalar_events (yaml_parser_t* parser, yaml_event_t* event, Stack* stack)
-{
-	return handle_scalar_event(parser, event, (YamlHandler[]){
-		{"type", type_handler, stack},
-		{"size", config_load_size, stack->items[stack->sp]},
-		{"position", config_load_position, stack->items[stack->sp]},
-		{"size-req", load_size_req, stack->items[stack->sp]},
-		{NULL, generic_handler, stack},
-		{NULL}
-	});
+	return false;
 }
 
 
 /*
  *  The previous event should be YAML_MAPPING_START_EVENT
+ *
+ *  Parsing is done manually so as to handle the MAPPING_END
  */
 static bool
-add_node (yaml_parser_t* parser, char* node_name, Stack* stack)
+add_node (yaml_parser_t* parser, const yaml_event_t*, const char* node_name, gpointer _stack)
 {
+	Stack* stack = _stack;
 	g_strlcpy(stack->name, node_name, 64);
 	char key[64] = {0,};
 
@@ -289,11 +202,36 @@ add_node (yaml_parser_t* parser, char* node_name, Stack* stack)
 
 				g_strlcpy(key, (char*)event.data.scalar.value, 64);
 
-				handle_scalar_events(parser, &event, stack);
+				bool handled = handle_scalar_event(parser, &event, (YamlHandler[]){
+					{"type", type_handler, stack},
+					{NULL}
+				}) ||
+				handle_mapping_event(parser, &event, (YamlMappingHandler[]){
+					{"size-req", load_size_req, stack->items[stack->sp]},
+					{NULL}
+				}) ||
+				handle_sequence_event(parser, &event, (YamlSequenceHandler[]){
+					{"position", config_load_position, stack->items[stack->sp]},
+					{"size", config_load_size, stack->items[stack->sp]},
+					{NULL}
+				});
+
+				if (handled) {
+					key[0] = '\0';
+				} else {
+					AGlActor* actor = stack->items[stack->sp];
+					g_return_val_if_fail(actor, false);
+					if (state_has_parameter(actor, key)) {
+						g_auto(yaml_event_t) event2;
+						get_expected_event(parser, &event2, YAML_SCALAR_EVENT);
+						return generic_handler(&event2, key, _stack);
+					}
+				}
 				break;
 			case YAML_MAPPING_START_EVENT:
+				dbg(2, "YAML_MAPPING_EVENT: value='%s'", key);
 				if (key[0]) {
-					add_node(parser, key, stack);
+					add_node(parser, NULL, key, stack);
 					key[0] = '\0';
 				}
 				break;
@@ -331,6 +269,7 @@ add_node (yaml_parser_t* parser, char* node_name, Stack* stack)
 				break;
 			case YAML_NO_EVENT:
 			case YAML_SEQUENCE_START_EVENT:
+				pwarn("unexpected parser event type: YAML_SEQUENCE_START_EVENT");
 			case YAML_SEQUENCE_END_EVENT:
 			default:
 				pwarn("unexpected parser event type: %i", event.type);
@@ -349,47 +288,29 @@ add_node (yaml_parser_t* parser, char* node_name, Stack* stack)
 
 
 static bool
-window_handler (yaml_parser_t* parser, const yaml_event_t* _event, char* _key, gpointer _)
+window_handler (yaml_parser_t* parser, const yaml_event_t* _event, const char* _key, gpointer _)
 {
 	// At this point in the parsing, we have just found a "ROOT" map. First event should be a YAML_SCALAR_EVENT...
 
 	Stack stack = {.sp = -1};
 
-	//if(!start_wrapper(parser, "ROOT")) return FALSE;
-
-	char key[64] = {0,};
-	yaml_event_t event;
-	while (yaml_parser_parse(parser, &event)) {
-		switch (event.type) {
-			case YAML_SCALAR_EVENT:
-				dbg(2, "YAML_SCALAR_EVENT: value='%s' %i plain=%i style=%i", event.data.scalar.value, event.data.scalar.length, event.data.scalar.plain_implicit, event.data.scalar.style);
-
-				g_strlcpy(key, (char*)event.data.scalar.value, 64);
-
-				handle_scalar_events(parser, &event, &stack);
-				break;
-			case YAML_MAPPING_START_EVENT:
-				if (key[0]) {
-					add_node(parser, key, &stack);
-					key[0] = '\0';
-				}
-				break;
-			case YAML_MAPPING_END_EVENT:
-				return true;
-			case YAML_NO_EVENT:
-				pwarn("EOF");
-				yaml_event_delete(&event);
-				return false;
-			case YAML_SEQUENCE_START_EVENT:
-			case YAML_SEQUENCE_END_EVENT:
-			default:
-				pwarn("unexpected parser event type: %i", event.type);
-				break;
-		}
-		yaml_event_delete(&event);
-	}
-
-	//if(!end_wrapper(parser)) return FALSE;
+	return yaml_load_section (parser,
+		(YamlHandler[]){
+			{"type", type_handler, &stack},
+			{NULL, generic_handler, &stack},
+			{NULL,}
+		},
+		(YamlMappingHandler[]){
+			{NULL, add_node, &stack},
+			{NULL,}
+		},
+		(YamlSequenceHandler[]){
+			{"size", config_load_size, app->scene},
+			{"position", config_load_position, app->scene},
+			{NULL,}
+		},
+		&stack
+	);
 
 	return false;
 }
@@ -404,13 +325,14 @@ layout_set_size (gpointer data)
 
 
 static bool
-config_load_windows_yaml (yaml_parser_t* parser, const yaml_event_t* _, gpointer user_data)
+config_load_windows (yaml_parser_t* parser, const yaml_event_t* _, const char*, gpointer user_data)
 {
-	load_mapping(parser,
+	yaml_load_section(parser,
 		NULL,
 		(YamlMappingHandler[]){
 			{"window", window_handler}
 		},
+		NULL,
 		user_data
 	);
 
@@ -464,16 +386,15 @@ config_load_windows_yaml (yaml_parser_t* parser, const yaml_event_t* _, gpointer
 static FILE*
 open_settings_file ()
 {
-	char* cwd = g_get_current_dir();
+	g_autofree char* cwd = g_get_current_dir();
 	char* paths[] = {
 		g_strdup_printf("%s/.config/" PACKAGE, g_get_home_dir()),
 		g_build_filename(PACKAGE_DATA_DIR "/" PACKAGE, NULL),
 		g_build_filename(cwd, NULL)
 	};
-	g_free(cwd);
 
 	FILE* fp;
-	for (int i=0;i<G_N_ELEMENTS(paths);i++) {
+	for (int i=0; i<G_N_ELEMENTS(paths); i++) {
 		char* filename = g_strdup_printf("%s/"PACKAGE".yaml", paths[i]);
 		fp = fopen(filename, "rb");
 		g_free(filename);
@@ -503,7 +424,7 @@ get_window_size_from_settings ()
 		yaml_event_t e;
 		yaml_event_t* event = &e;
 		if (find_event(&parser, &event, "size")) {
-			config_load_point(&parser, &size);
+			config_load_point(&parser, NULL, &size);
 			yaml_event_delete(event);
 		}
 
@@ -553,8 +474,8 @@ load_settings ()
 
 	FILE* fp = open_settings_file();
 
-	bool ret = fp && yaml_load(fp, (YamlHandler[]){
-		{"windows", config_load_windows_yaml},
+	bool ret = fp && yaml_load(fp, (YamlMappingHandler[]){
+		{"windows", config_load_windows},
 		{NULL}
 	});
 
@@ -670,7 +591,7 @@ save_settings ()
 
 	EMIT_(yaml_mapping_end_event_initialize(&event));
 
-	end_document(&emitter);
+	end_document;
 	yaml_event_delete(&event);
 	yaml_emitter_delete(&emitter);
 	fclose(fp);

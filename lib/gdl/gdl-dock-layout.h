@@ -1,6 +1,4 @@
-/* -*- Mode: C; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 4 -*-
- *
- * This file is part of the GNOME Devtools Libraries.
+/* This file is part of the GNOME Devtools Libraries.
  *
  * Copyright (C) 2002 Gustavo Giráldez <gustavo.giraldez@gmx.net>
  *
@@ -23,7 +21,6 @@
 #ifndef __GDL_DOCK_LAYOUT_H__
 #define __GDL_DOCK_LAYOUT_H__
 
-#include <stdbool.h>
 #include <glib-object.h>
 #include <gdl/gdl-dock-master.h>
 #include <gdl/gdl-dock.h>
@@ -43,20 +40,27 @@ G_BEGIN_DECLS
 
 /* data types & structures */
 typedef struct _GdlDockLayout GdlDockLayout;
-typedef struct _GdlDockLayoutClass GdlDockLayoutClass;
 typedef struct _GdlDockLayoutPrivate GdlDockLayoutPrivate;
+typedef struct _GdlDockLayoutClass GdlDockLayoutClass;
 
 #define N_LAYOUT_DIRS 3
 
+/**
+ * GdlDockLayout:
+ *
+ * The GdlDockLayout struct contains only private fields
+ * and should not be directly accessed.
+ */
 struct _GdlDockLayout {
     GObject               g_object;
 
-    gboolean              dirty;
-    GdlDockMaster        *master;
-
     const char*           dirs[N_LAYOUT_DIRS];
-
-    GdlDockLayoutPrivate *_priv;
+    /*< private >*/
+#ifndef GDL_DISABLE_DEPRECATED
+    gboolean              deprecated_dirty;
+    GdlDockMaster        *deprecated_master;
+#endif
+    GdlDockLayoutPrivate *priv;
 };
 
 struct _GdlDockLayoutClass {
@@ -65,13 +69,14 @@ struct _GdlDockLayoutClass {
 
 
 /* public interface */
- 
+
 GType            gdl_dock_layout_get_type       (void);
 
-GdlDockLayout   *gdl_dock_layout_new            (GdlDock       *dock);
+GdlDockLayout   *gdl_dock_layout_new            (GObject       *master);
 
-void             gdl_dock_layout_attach         (GdlDockLayout *layout,
-                                                 GdlDockMaster *master);
+void             gdl_dock_layout_set_master     (GdlDockLayout *layout,
+                                                 GObject       *master);
+GObject         *gdl_dock_layout_get_master     (GdlDockLayout *layout);
 
 gboolean         gdl_dock_layout_load_layout    (GdlDockLayout *layout,
                                                  const gchar   *name);
@@ -83,25 +88,23 @@ void             gdl_dock_layout_delete_layout  (GdlDockLayout *layout,
                                                  const gchar   *name);
 
 GList           *gdl_dock_layout_get_layouts    (GdlDockLayout *layout,
-                                                 bool       include_default);
+                                                 gboolean       include_default);
 
-void             gdl_dock_layout_run_manager    (GdlDockLayout *layout);
-
-bool             gdl_dock_layout_load_from_xml_file  (GdlDockLayout*, const gchar*);
-#ifdef GDL_DOCK_YAML
+gboolean         gdl_dock_layout_load_from_xml_file (GdlDockLayout *layout,
+                                                 const gchar   *filename);
 bool             gdl_dock_layout_load_from_yaml_file (GdlDockLayout*, const gchar*);
-#endif
-
 gboolean         gdl_dock_layout_load_from_string (GdlDockLayout *layout,
                                                  const gchar   *str);
-gboolean         gdl_dock_layout_save_to_file   (GdlDockLayout *layout,
 
+gboolean         gdl_dock_layout_save_to_file   (GdlDockLayout *layout,
                                                  const gchar   *filename);
 
 gboolean         gdl_dock_layout_is_dirty       (GdlDockLayout *layout);
 
-GtkWidget       *gdl_dock_layout_get_ui         (GdlDockLayout *layout);
-GtkWidget       *gdl_dock_layout_get_items_ui   (GdlDockLayout *layout);
+#ifndef GDL_DISABLE_DEPRECATED
+void             gdl_dock_layout_attach         (GdlDockLayout *layout,
+                                                 GdlDockMaster *master);
+#endif
 
 G_END_DECLS
 

@@ -2,7 +2,7 @@
   JACK audio player
   This file is part of the Samplecat project.
 
-  copyright (C) 2006-2019 Tim Orford <tim@orford.org>
+  copyright (C) 2006-2023 Tim Orford <tim@orford.org>
   copyright (C) 2011 Robin Gareus <robin@gareus.org>
 
   written by Robin Gareus
@@ -512,7 +512,7 @@ void *jack_player_thread(void *unused){
 	free(smpbuf);
 #endif
 	player_active = 0;
-	if(play->status != PLAY_PLAY_PENDING){
+	if (play->state != PLAYER_PLAY_PENDING) {
 		play->next();
 	}
 	return NULL;

@@ -46,6 +46,8 @@ struct _SamplecatBackend
 	int        n_results;
 };
 
+#include "samplecat/model.h"
+
 #define BACKEND_IS_NULL (samplecat.model->backend.search_iter_new == NULL)
 
 void       db_init                (SamplecatDBConfig*);

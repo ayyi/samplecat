@@ -1,2 +1,0 @@
-#!/bin/sh
-docker build -t samplecat-debian-10 .

@@ -1,22 +1,21 @@
-/**
-* +----------------------------------------------------------------------+
-* | This file is part of the Ayyi project. http://ayyi.org               |
-* | copyright (C) 2011-2018 Tim Orford <tim@orford.org>                  |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-*
-*/
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of the Ayyi project. http://ayyi.org               |
+ | copyright (C) 2011-2023 Tim Orford <tim@orford.org>                  |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
+ */
+
 #include <glib.h>
 #include <glib-object.h>
 #include <stdlib.h>
 #include <string.h>
 #include <fnmatch.h>
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <gtk/gtk.h>
-#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 #include "debug/debug.h"
 #include "dnd/dnd.h"
 #include "file_manager/file_manager.h"
@@ -48,23 +47,27 @@ static void     fm_next_thumb                (GObject*, const gchar* path);
 static void     start_thumb_scanning         (AyyiFilemanager*);
 static void     fm_add_signals               (AyyiFilemanager*);
 
+#ifdef GTK4_TODO
 static GdkCursor* crosshair = NULL; // TODO is never set
+#endif
 
 
 AyyiFilemanager*
 ayyi_filemanager_construct (GType object_type)
 {
 	AyyiFilemanager* self = (AyyiFilemanager*) g_object_new(object_type, NULL);
+
 	self->sort_type = SORT_NAME;
 	self->display_style_wanted = SMALL_ICONS;
 	self->filter = FILER_SHOW_ALL;
-
-	GtkWidget* vbox = self->window = gtk_vbox_new(FALSE, 0);
+	self->window = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
 
 	fm_add_signals(self);
 
+#ifdef USE_MINIBUFFER
 	create_minibuffer(self);
-	gtk_box_pack_start(GTK_BOX(vbox), self->mini.area, FALSE, TRUE, 0);
+	gtk_box_append(GTK_BOX(self->window), self->mini.area);
+#endif
 
 	return self;
 }
@@ -92,7 +95,8 @@ ayyi_filemanager_new_window (AyyiFilemanager* self, const gchar* path)
 void
 ayyi_filemanager_emit_dir_changed (AyyiFilemanager* self)
 {
-	g_return_if_fail (self != NULL);
+	g_return_if_fail (self);
+
 	g_signal_emit_by_name (self, "dir-changed", self->real_path);
 }
 
@@ -101,8 +105,7 @@ static GObject*
 ayyi_filemanager_constructor (GType type, guint n_construct_properties, GObjectConstructParam* construct_properties)
 {
 	GObjectClass* parent_class = G_OBJECT_CLASS (ayyi_filemanager_parent_class);
-	GObject* obj = parent_class->constructor (type, n_construct_properties, construct_properties);
-	return obj;
+	return parent_class->constructor (type, n_construct_properties, construct_properties);
 }
 
 
@@ -163,8 +166,7 @@ fm__change_to (AyyiFilemanager* fm, const char* path, const char* from)
 	char* real_path = pathdup(path);
 	Directory* new_dir = g_fscache_lookup(dir_cache, real_path);
 
-	if (!new_dir)
-	{
+	if (!new_dir) {
 		dbg(0, "directory '%s' is not accessible", sym_path);
 		g_free(real_path);
 		g_free(sym_path);
@@ -209,7 +211,9 @@ fm__change_to (AyyiFilemanager* fm, const char* path, const char* from)
 
 	//if (filer_window->mini_type == MINI_PATH) g_idle_add((GSourceFunc) minibuffer_show_cb, filer_window);
 
+#ifdef GTK4_TODO
 	fm__menu_on_view_change(fm->menu);
+#endif
 }
 
 
@@ -230,9 +234,11 @@ fm__change_to_parent (AyyiFilemanager* fm)
 }
 
 
+#ifdef GTK4_TODO
 static void
 set_selection_state (AyyiFilemanager* fm, gboolean normal)
 {
+#ifdef GTK4_TODO
 	GtkStateType old_state = fm->selection_state;
 
 	fm->selection_state = normal ? GTK_STATE_SELECTED : GTK_STATE_INSENSITIVE;
@@ -240,7 +246,9 @@ set_selection_state (AyyiFilemanager* fm, gboolean normal)
 	if (old_state != fm->selection_state
 	    && view_count_selected(fm->view))
 		gtk_widget_queue_draw(GTK_WIDGET(fm->view));
+#endif
 }
+#endif
 
 
 /* Selection has been changed -- try to grab the primary selection
@@ -259,6 +267,7 @@ fm__selection_changed (AyyiFilemanager* fm, gint time)
 
 	if (!view_count_selected(fm->view)) return;             // Nothing selected
 
+#ifdef GTK4_TODO
 	if (fm->temp_item_selected == FALSE &&
 		gtk_selection_owner_set(GTK_WIDGET(fm->window), GDK_SELECTION_PRIMARY, time))
 	{
@@ -267,6 +276,7 @@ fm__selection_changed (AyyiFilemanager* fm, gint time)
 	}
 	else
 		set_selection_state(fm, FALSE);
+#endif
 }
 
 
@@ -274,7 +284,7 @@ fm__selection_changed (AyyiFilemanager* fm, gint time)
  * You must g_free() each item in the list.
  */
 GList*
-fm__selected_items(AyyiFilemanager* fm)
+fm__selected_items (AyyiFilemanager* fm)
 {
 	GList* retval = NULL;
 	guchar* dir = (guchar*)fm->sym_path;
@@ -295,7 +305,7 @@ fm__selected_items(AyyiFilemanager* fm)
  * (+1 or -1).
  */
 void
-fm__next_selected(AyyiFilemanager* fm, int dir)
+fm__next_selected (AyyiFilemanager* fm, int dir)
 {
 	ViewIter iter, cursor;
 	ViewIface* view = fm->view;
@@ -315,8 +325,10 @@ fm__next_selected(AyyiFilemanager* fm, int dir)
 
 	if (iter.next(&iter))
 		view_cursor_to_iter(view, &iter);
+#ifdef GTK4_TODO
 	else
 		gdk_beep();
+#endif
 
 	return;
 }
@@ -366,7 +378,9 @@ fm__open_item (AyyiFilemanager* fm, ViewIter *iter, OpenFlags flags)
 
 	if (fm->mini.type == MINI_SHELL)
 	{
+#ifdef GTK4_TODO
 		minibuffer_add(fm, item->leafname);
+#endif
 		return;
 	}
 
@@ -409,12 +423,14 @@ fm__open_item (AyyiFilemanager* fm, ViewIter *iter, OpenFlags flags)
  *  Use fn == NULL to cancel target mode.
  */
 void
-fm__target_mode(AyyiFilemanager* fm, TargetFunc fn, gpointer data, const char *reason)
+fm__target_mode (AyyiFilemanager* fm, TargetFunc fn, gpointer data, const char *reason)
 {
+#ifdef GTK4_TODO
 	TargetFunc old_fn = fm->target_cb;
 
 	if (fn != old_fn)
 		gdk_window_set_cursor(GTK_WIDGET(fm->view)->window, fn ? crosshair : NULL);
+#endif
 
 	fm->target_cb = fn;
 	fm->target_data = data;
@@ -436,7 +452,7 @@ fm__target_mode(AyyiFilemanager* fm, TargetFunc fn, gpointer data, const char *r
 
 
 static inline gboolean
-is_hidden(const char* dir, DirItem* item)
+is_hidden (const char* dir, DirItem* item)
 {
 	/* If the leaf name starts with '.' then the item is hidden */
 	if(item->leafname[0] == '.')
@@ -664,7 +680,7 @@ queue_interesting (AyyiFilemanager* fm)
  * If the window no longer has a filer window, nothing is done.
  */
 static gboolean
-fm_next_thumb_real(GObject* window)
+fm_next_thumb_real (GObject* window)
 {
 	AyyiFilemanager* fm = g_object_get_data(window, "file_window");
 
@@ -701,7 +717,7 @@ fm_next_thumb_real(GObject* window)
  * window is unref'd (eventually).
  */
 static void
-fm_next_thumb(GObject* window, const gchar *path)
+fm_next_thumb (GObject* window, const gchar *path)
 {
 	if (path) dir_force_update_path(path);
 
@@ -710,12 +726,10 @@ fm_next_thumb(GObject* window, const gchar *path)
 
 
 static void
-start_thumb_scanning(AyyiFilemanager* fm)
+start_thumb_scanning (AyyiFilemanager* fm)
 {
 	dbg(0, "FIXME add scanning flag");
 	//if (GTK_WIDGET_VISIBLE(filer_window->thumb_bar)) return; /* Already scanning */
-
-	//gtk_widget_show_all(filer_window->thumb_bar);
 
 	g_object_ref(G_OBJECT(fm->window));
 	fm_next_thumb(G_OBJECT(fm->window), NULL);
@@ -726,7 +740,7 @@ start_thumb_scanning(AyyiFilemanager* fm)
  * (whichever happens first).
  */
 static gboolean
-open_filer_window(AyyiFilemanager* fm)
+open_filer_window (AyyiFilemanager* fm)
 {
 	PF;
 
@@ -754,7 +768,7 @@ open_filer_window(AyyiFilemanager* fm)
 
 
 static gboolean
-if_deleted(gpointer item, gpointer removed)
+if_deleted (gpointer item, gpointer removed)
 {
 	int	i = ((GPtrArray *) removed)->len;
 	DirItem** r = (DirItem **) ((GPtrArray *) removed)->pdata;
@@ -770,7 +784,7 @@ if_deleted(gpointer item, gpointer removed)
 
 
 static void
-set_scanning_display(AyyiFilemanager* fm, gboolean scanning)
+set_scanning_display (AyyiFilemanager* fm, gboolean scanning)
 {
 	if (scanning == fm->scanning) return;
 	fm->scanning = scanning;
@@ -844,6 +858,7 @@ update_display (Directory* dir, DirAction action, GPtrArray* items, AyyiFilemana
 
 
 /* Someone wants us to send them the selection */
+#ifdef GTK4_TODO
 static void
 selection_get (GtkWidget* widget, GtkSelectionData* selection_data, guint info, guint time, gpointer data)
 {
@@ -883,6 +898,7 @@ selection_get (GtkWidget* widget, GtkSelectionData* selection_data, guint info, 
 	g_string_free(reply, TRUE);
 	g_string_free(header, TRUE);
 }
+#endif
 
 
 static void
@@ -958,7 +974,9 @@ fm_add_signals(AyyiFilemanager* fm)
 	g_signal_connect(fm->window, "selection_clear_event", G_CALLBACK(filer_lost_primary), filer_window);
 #endif
 
+#ifdef GTK4_TODO
 	g_signal_connect(fm->window, "selection_get", G_CALLBACK(selection_get), fm);
+#endif
 #if 0
 	gtk_selection_add_targets(GTK_WIDGET(fm->window), GDK_SELECTION_PRIMARY, target_table, sizeof(target_table) / sizeof(*target_table));
 

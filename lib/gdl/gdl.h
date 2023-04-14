@@ -1,5 +1,4 @@
-/* -*- Mode: C; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 4 -*- 
- *
+/*
  * This file is part of the GNOME Devtools Libraries.
  *
  * Copyright (C) 1999-2000 Dave Camp <dave@helixcode.com>
@@ -22,7 +21,6 @@
 #ifndef __GDL_H__
 #define __GDL_H__
 
-#include <gdl/gdl-tools.h>
 #include <gdl/gdl-dock-object.h>
 #include <gdl/gdl-dock-master.h>
 #include <gdl/gdl-dock.h>

@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
- | copyright (C) 2016-2021 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2016-2023 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -15,6 +15,7 @@
 #include <GL/gl.h>
 #include "agl/ext.h"
 #include "agl/utils.h"
+#include "agl/event.h"
 #include "agl/behaviours/key.h"
 #include "agl/behaviours/cache.h"
 #include "agl/text/renderer.h"
@@ -25,7 +26,6 @@
 #include "icon/utils.h"
 #include "file_manager/file_manager.h"
 #include "file_manager/pixmaps.h"
-#include "samplecat.h"
 #include "application.h"
 #include "views/files.impl.h"
 #include "views/files.with_wav.h"
@@ -161,12 +161,12 @@ files_with_wav (gpointer _)
 		}
 	}
 
-	bool files_event (AGlActor* actor, GdkEvent* event, AGliPt xy)
+	bool files_event (AGlActor* actor, AGlEvent* event, AGliPt xy)
 	{
 		FilesWithWav* view = (FilesWithWav*)actor;
 
 		switch (event->type) {
-			case GDK_BUTTON_PRESS:
+			case AGL_BUTTON_PRESS:
 				switch (event->button.button) {
 					case 4:
 						dbg(1, "! scroll up");
@@ -181,7 +181,7 @@ files_with_wav (gpointer _)
 						break;
 				}
 				break;
-			case GDK_BUTTON_RELEASE:
+			case AGL_BUTTON_RELEASE:
 				;int row = files_with_wav_row_at_coord (view, 0, xy.y - actor->region.y1);
 				dbg(1, "RELEASE button=%i y=%i row=%i", event->button.button, xy.y, row);
 				switch (event->button.button) {
@@ -470,7 +470,7 @@ filelist_view (void* _)
 		};
 	}
 
-	bool filelist_event (AGlActor* actor, GdkEvent* event, AGliPt xy)
+	bool filelist_event (AGlActor* actor, AGlEvent* event, AGliPt xy)
 	{
 		return AGL_NOT_HANDLED;
 	}

@@ -1,5 +1,4 @@
-/* -*- Mode: C; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 4 -*-
- *
+/*
  * This file is part of the GNOME Devtools Libraries.
  *
  * Copyright (C) 2002 Gustavo Giráldez <gustavo.giraldez@gmx.net>
@@ -35,21 +34,29 @@ G_BEGIN_DECLS
 #define GDL_DOCK_NOTEBOOK_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS ((obj), GTK_TYPE_DOCK_NOTEBOOK, GdlDockNotebookClass))
 
 /* data types & structures */
-typedef struct _GdlDockNotebook        GdlDockNotebook;
-typedef struct _GdlDockNotebookClass   GdlDockNotebookClass;
+typedef struct _GdlDockNotebook             GdlDockNotebook;
+typedef struct _GdlDockNotebookClass        GdlDockNotebookClass;
+typedef struct _GdlDockNotebookPrivate      GdlDockNotebookPrivate;
+typedef struct _GdlDockNotebookClassPrivate GdlDockNotebookClassPrivate;
 
 struct _GdlDockNotebook {
     GdlDockItem  item;
+
+    GdlDockNotebookPrivate *priv;
 };
 
 struct _GdlDockNotebookClass {
     GdlDockItemClass  parent_class;
+
+    GdlDockNotebookClassPrivate *priv;
 };
 
 
 /* public interface */
- 
+
 GtkWidget     *gdl_dock_notebook_new               (void);
+void           gdl_dock_notebook_add               (GdlDockObject*, GtkWidget*);
+void           gdl_dock_notebook_remove            (GdlDockObject*, GtkWidget*);
 
 GType          gdl_dock_notebook_get_type          (void);
 

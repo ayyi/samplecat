@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
- | copyright (C) 2017-2021 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2017-2023 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -16,6 +16,7 @@
 #include "debug/debug.h"
 #include "file_manager/file_manager.h"
 #include "agl/utils.h"
+#include "agl/event.h"
 #include "views/files.impl.h"
 
 #define _g_object_unref0(var) ((var == NULL) ? NULL : (var = (g_object_unref (var), NULL)))
@@ -261,7 +262,7 @@ resort (DirectoryView* view)
 {
 	DirectoryViewPrivate* v = view->priv;
 	ViewItem** items = (ViewItem**)view->items->pdata;
-	gint len = view->items->len;
+	gint len = MIN(view->items->len, 1 << 24);
 
 	if (!len) return;
 
@@ -533,7 +534,7 @@ directory_view_get_iter (ViewIface* view, ViewIter* iter, IterFlags flags)
 
 
 static void
-directory_view_get_iter_at_point (ViewIface* view, ViewIter* iter, GdkWindow* src, int x, int y)
+directory_view_get_iter_at_point (ViewIface* view, ViewIter* iter, int x, int y)
 {
 	DirectoryView* dv = (DirectoryView*)view;
 
@@ -624,8 +625,9 @@ directory_view_set_base (ViewIface* view, ViewIter* iter)
 }
 
 
+#ifdef GTK4_TODO
 static void
-directory_view_start_lasso_box (ViewIface *view, GdkEventButton *event)
+directory_view_start_lasso_box (ViewIface *view, AGlEventButton *event)
 {
 #if 0
 	DirectoryView *dv = (DirectoryView *) view;
@@ -642,6 +644,7 @@ directory_view_start_lasso_box (ViewIface *view, GdkEventButton *event)
 	dv->lasso_box = TRUE;
 #endif
 }
+#endif
 
 
 static void
@@ -752,7 +755,9 @@ directory_view_interface_init (gpointer giface, gpointer iface_data)
 	iface->select_only       = directory_view_select_only;
 	iface->cursor_visible    = directory_view_cursor_visible;
 	iface->set_base          = directory_view_set_base;
+#ifdef GTK4_TODO
 	iface->start_lasso_box   = directory_view_start_lasso_box;
+#endif
 	iface->extend_tip        = directory_view_extend_tip;
 	iface->auto_scroll_callback = directory_view_auto_scroll_callback;
 }

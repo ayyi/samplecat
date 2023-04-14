@@ -1,14 +1,15 @@
-/**
-* +----------------------------------------------------------------------+
-* | This file is part of the Ayyi project. http://ayyi.org               |
-* | copyright (C) 2011-2017 Tim Orford <tim@orford.org>                  |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-*
-*/
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of the Ayyi project. http://ayyi.org               |
+ | copyright (C) 2011-2017 Tim Orford <tim@orford.org>                  |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
+ */
+
 #include "config.h"
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -25,9 +26,7 @@
 #include <dirent.h>
 #include <sys/param.h>
 #include <errno.h>
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <gtk/gtk.h>
-#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 #include "debug/debug.h"
 #include "file_manager/typedefs.h"
 #include "support.h"
@@ -60,7 +59,7 @@ static void        MD5Transform    (guint32 buf[4], guint32 const in[16]);
  *  Like g_strdup, but does realpath() too (if possible)
  */
 char*
-pathdup(const char* path)
+pathdup (const char* path)
 {
 	char real[MAXPATHLEN];
 
@@ -901,7 +900,7 @@ file_extension(const char* path, char* extn)
  * FALSE if parent doesn't exist.
  */
 gboolean
-is_sub_dir(const char* sub_obj, const char* parent)
+is_sub_dir (const char* sub_obj, const char* parent)
 {
 	struct stat parent_info;
 
@@ -959,7 +958,7 @@ is_sub_dir(const char* sub_obj, const char* parent)
  * Returns an error string, or NULL on success. g_free() the result.
  */
 guchar*
-file_copy(const guchar* from, const guchar* to)
+file_copy (const guchar* from, const guchar* to)
 {
 	const char *argv[] = {"cp", "-pRf", NULL, NULL, NULL};
 
@@ -974,7 +973,7 @@ file_copy(const guchar* from, const guchar* to)
  * Check that path not moved into itself.
  */
 void
-file_move(const char* path, const char* dest)
+file_move (const char* path, const char* dest)
 {
 	if (is_sub_dir(make_dest_path(path, dest), path)) dbg(0, "!ERROR: Can't move/rename object into itself");
 	else {
@@ -985,7 +984,7 @@ file_move(const char* path, const char* dest)
 
 
 static void
-do_move(const char *path, const char *dest)
+do_move (const char *path, const char *dest)
 {
 	const char* argv[] = {"mv", "-f", NULL, NULL, NULL};
 	struct stat	info2;
@@ -1089,7 +1088,7 @@ pathdup(const char* path)
  * the same.
  */
 static const char*
-make_dest_path(const char *object, const char *dir)
+make_dest_path (const char *object, const char *dir)
 {
 	const char *leaf;
 
@@ -1110,7 +1109,7 @@ make_dest_path(const char *object, const char *dir)
 
 /* Notify the filer that this item has been updated */
 static void
-send_check_path(const gchar *path)
+send_check_path (const gchar *path)
 {
 	//printf_send("s%s", path);
 	dbg(0, "s%s", path);
@@ -1119,7 +1118,7 @@ send_check_path(const gchar *path)
 
 /* If the parent has sent any flag toggles, read them */
 static void
-check_flags(void)
+check_flags (void)
 {
 	fd_set set;
 	int	got;
@@ -1146,7 +1145,7 @@ check_flags(void)
 }
 
 
-static void process_flag(char flag)
+static void process_flag (char flag)
 {
 	dbg(0, "...");
 #if 0
@@ -1220,7 +1219,7 @@ fork_exec_wait (const char** argv)
 
 
 gchar*
-uri_text_from_list(GList *list, gint *len, gint plain_text)
+uri_text_from_list (GList *list, gint *len, gint plain_text)
 {
     gchar *uri_text = NULL;
     GString *string;
@@ -1267,7 +1266,7 @@ uri_text_from_list(GList *list, gint *len, gint plain_text)
 }
 
 static void
-uri_list_parse_encoded_chars(GList *list)
+uri_list_parse_encoded_chars (GList *list)
 {
     GList *work = list;
 
@@ -1282,7 +1281,7 @@ uri_list_parse_encoded_chars(GList *list)
 }
 
 GList*
-uri_list_from_text(gchar *data, gint files_only)
+uri_list_from_text (gchar *data, gint files_only)
 {
     GList *list = NULL;
     gint b, e;
@@ -1343,7 +1342,7 @@ static gint escape_char_list[] = {
 static gchar *hex_char = "0123456789ABCDEF";
 
 static gint
-escape_test(guchar c)
+escape_test (guchar c)
 {
     if (c < 32 || c > 127) return TRUE;
     return (escape_char_list[c] != 0);
@@ -1351,7 +1350,7 @@ escape_test(guchar c)
 
 
 static const gchar*
-escape_code(guchar c)
+escape_code (guchar c)
 {
     static gchar text[4];
 
@@ -1365,7 +1364,7 @@ escape_code(guchar c)
 
 
 gchar*
-uri_text_escape(const gchar *text)
+uri_text_escape (const gchar *text)
 {
     GString *string;
     gchar *result;
@@ -1409,7 +1408,8 @@ uri_text_escape(const gchar *text)
 }
 
 /* this operates on the passed string, decoding escaped characters */
-void uri_text_decode(gchar *text)
+void
+uri_text_decode (gchar *text)
 {
     if (strchr(text, '%'))
         {
@@ -1460,15 +1460,13 @@ void uri_text_decode(gchar *text)
  *  g_object_unref() the return value whether the function fails or not).
  */
 GdkPixbuf*
-create_spotlight_pixbuf(GdkPixbuf *src, GdkColor *color)
+create_spotlight_pixbuf (GdkPixbuf* src, uint32_t color)
 {
     guchar opacity = 192;
     guchar alpha = 255 - opacity;
-    GdkPixbuf *dst;
     GdkColorspace colorspace;
-    int width, height, src_rowstride, dst_rowstride, x, y;
+    int src_rowstride, dst_rowstride, x, y;
     int n_channels, bps;
-    int r, g, b;
     guchar *spixels, *dpixels, *src_pixels, *dst_pixels;
     gboolean has_alpha;
 
@@ -1483,10 +1481,10 @@ create_spotlight_pixbuf(GdkPixbuf *src, GdkColor *color)
         (bps != 8))
         goto error;
 
-    width = gdk_pixbuf_get_width(src);
-    height = gdk_pixbuf_get_height(src);
+    int width = gdk_pixbuf_get_width(src);
+    int height = gdk_pixbuf_get_height(src);
 
-    dst = gdk_pixbuf_new(colorspace, has_alpha, bps, width, height);
+    GdkPixbuf* dst = gdk_pixbuf_new(colorspace, has_alpha, bps, width, height);
     if (dst == NULL)
         goto error;
 
@@ -1495,16 +1493,14 @@ create_spotlight_pixbuf(GdkPixbuf *src, GdkColor *color)
     src_rowstride = gdk_pixbuf_get_rowstride(src);
     dst_rowstride = gdk_pixbuf_get_rowstride(dst);
 
-    r = opacity * (color->red >> 8);
-    g = opacity * (color->green >> 8);
-    b = opacity * (color->blue >> 8);
+    int r = opacity * (color & 0xff000000 >> 24);
+    int g = opacity * (color & 0x00ff0000 >> 16);
+    int b = opacity * (color & 0x0000ff00 >>  8);
 
-    for (y = 0; y < height; y++)
-    {
+    for (y = 0; y < height; y++) {
         spixels = src_pixels + y * src_rowstride;
         dpixels = dst_pixels + y * dst_rowstride;
-        for (x = 0; x < width; x++)
-        {
+        for (x = 0; x < width; x++) {
             *dpixels++ = (*spixels++ * alpha + r) >> 8;
             *dpixels++ = (*spixels++ * alpha + g) >> 8;
             *dpixels++ = (*spixels++ * alpha + b) >> 8;
@@ -1576,7 +1572,7 @@ path_to_utf8 (const gchar *path)
 }
 
 void
-fm__escape_for_menu(char* string)
+fm__escape_for_menu (char* string)
 {
 	//gtk uses underscores as nmemonic identifiers, so any literal underscores need to be escaped.
 

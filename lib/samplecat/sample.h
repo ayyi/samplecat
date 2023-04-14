@@ -9,13 +9,13 @@
 * +----------------------------------------------------------------------+
 *
 */
-#ifndef __have_sample_h__
-#define __have_sample_h__
+
+#pragma once
 
 #include <stdlib.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include <gdk/gdk.h>
+#include <gdk-pixbuf/gdk-pixbuf.h>
 #include "typedefs.h"
 
 struct _Sample
@@ -69,5 +69,3 @@ bool        sample_get_file_info     (Sample*);
 
 char*       sample_get_metadata_str  (Sample*);
 void        sample_set_metadata      (Sample*, const char*);
-
-#endif

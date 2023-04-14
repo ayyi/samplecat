@@ -121,17 +121,17 @@ sample_dup (Sample* s)
 static void
 sample_free (Sample* sample)
 {
-	if(sample->ref_count > 0) {
-		gwarn("freeing sample with refcount: %d", sample->ref_count);
+	if (sample->ref_count > 0) {
+		pwarn("freeing sample with refcount: %d", sample->ref_count);
 	}
-	if(sample->row_ref) gtk_tree_row_reference_free(sample->row_ref);
-	if(sample->name) g_free(sample->name);
-	if(sample->full_path) g_free(sample->full_path);
-	if(sample->mimetype) g_free(sample->mimetype);
-	if(sample->ebur) g_free(sample->ebur);
-	if(sample->notes) g_free(sample->notes);
-	if(sample->sample_dir) g_free(sample->sample_dir);
-	if(sample->meta_data) g_ptr_array_unref(sample->meta_data);
+	if (sample->row_ref) gtk_tree_row_reference_free(sample->row_ref);
+	if (sample->name) g_free(sample->name);
+	if (sample->full_path) g_free(sample->full_path);
+	if (sample->mimetype) g_free(sample->mimetype);
+	if (sample->ebur) g_free(sample->ebur);
+	if (sample->notes) g_free(sample->notes);
+	if (sample->sample_dir) g_free(sample->sample_dir);
+	if (sample->meta_data) g_ptr_array_unref(sample->meta_data);
 	//if(sample->overview) g_free(sample->overview); // check how to free that!
 	g_free(sample);
 }
@@ -141,7 +141,7 @@ Sample*
 sample_ref (Sample* sample)
 {
 #ifdef DEBUG_REFCOUNTS
-	if(sample->name && !strcmp(sample->name, "test.wav")) printf("+ %i --> %i\n", sample->ref_count, sample->ref_count+1);
+	if (sample->name && !strcmp(sample->name, "test.wav")) printf("+ %i --> %i\n", sample->ref_count, sample->ref_count+1);
 #endif
 	sample->ref_count++;
 
@@ -154,17 +154,17 @@ sample_unref (Sample* sample)
 {
 	if (!sample) return;
 #ifdef DEBUG_REFCOUNTS
-	if(sample->name && !strcmp(sample->name, "test.wav")) printf("- %i --> %i\n", sample->ref_count, sample->ref_count-1);
+	if (sample->name && !strcmp(sample->name, "test.wav")) printf("- %i --> %i\n", sample->ref_count, sample->ref_count-1);
 #endif
 
 	sample->ref_count--;
 
 #ifdef DEBUG_REFCOUNTS
 	g_return_if_fail(sample->ref_count >= 0);
-	if(sample->ref_count < 1) gwarn("freeing sample... %s", sample->name ? sample->name : "");
+	if (sample->ref_count < 1) pwarn("freeing sample... %s", sample->name ? sample->name : "");
 #endif
 
-	if(sample->ref_count < 1) sample_free(sample);
+	if (sample->ref_count < 1) sample_free(sample);
 }
 
 

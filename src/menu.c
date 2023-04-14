@@ -1,156 +1,73 @@
-/**
-* +----------------------------------------------------------------------+
-* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2020 Tim Orford <tim@orford.org>                  |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-*
-*/
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
+ | copyright (C) 2007-2023 Tim Orford <tim@orford.org>                  |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
+ */
 
+#ifdef GTK4_TODO
 static void menu__add_to_db      (GtkMenuItem*, gpointer);
 static void menu__add_dir_to_db  (GtkMenuItem*, gpointer);
 static void menu__play           (GtkMenuItem*, gpointer);
+#endif
 
 
 static GtkWidget*
-make_context_menu ()
+make_context_menu (GtkWidget* widget)
 {
-	void menu_delete_row (GtkMenuItem* widget, gpointer user_data)
-	{
-		delete_selected_rows();
-	}
+	GMenuModel* model = (GMenuModel*)g_menu_new ();
 
-	/** sync the selected catalogue row with the filesystem. */
-	void
-	menu_update_rows (GtkWidget* widget, gpointer user_data)
-	{
-		PF;
-		gboolean force_update = true; //(GPOINTER_TO_INT(user_data)==2) ? true : false; // NOTE - linked to order in menu_def[]
+	GtkWidget* menu = gtk_popover_menu_new_from_model (model);
+	gtk_widget_set_parent (menu, widget);
+	gtk_popover_set_has_arrow (GTK_POPOVER(menu), false);
+	gtk_popover_set_position (GTK_POPOVER(menu), GTK_POS_LEFT);
 
-		GtkTreeSelection* selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(app->libraryview->widget));
-		GList* selectionlist = gtk_tree_selection_get_selected_rows(selection, NULL);
-		if(!selectionlist) return;
-		dbg(2, "%i rows selected.", g_list_length(selectionlist));
-
-		int i;
-		for(i=0;i<g_list_length(selectionlist);i++){
-			GtkTreePath* treepath = g_list_nth_data(selectionlist, i);
-			Sample* sample = samplecat_list_store_get_sample_by_path(treepath);
-			if(do_progress(0, 0)) break; // TODO: set progress title to "updating"
-			samplecat_model_refresh_sample (samplecat.model, sample, force_update);
-			statusbar_print(1, "online status updated (%s)", sample->online ? "online" : "not online");
-			sample_unref(sample);
-		}
-		hide_progress();
-		g_list_free(selectionlist);
-	}
-
-	void menu_play_all (GtkWidget* widget, gpointer user_data)
-	{
-		application_play_all();
-	}
-
-	void menu_play_stop (GtkWidget* widget, gpointer user_data)
-	{
-		player_stop();
-	}
-
-	void
-	toggle_loop_playback (GtkMenuItem* widget, gpointer user_data)
-	{
-		PF;
-		play->config.loop = !play->config.loop;
-	}
-
-	void toggle_recursive_add (GtkMenuItem* widget, gpointer user_data)
-	{
-		PF;
-		app->config.add_recursive = !app->config.add_recursive;
-	}
+	GSimpleActionGroup* group = g_simple_action_group_new ();
+	gtk_widget_insert_action_group (menu, "context-menu", G_ACTION_GROUP(group));
 
 	MenuDef menu_def[] = {
-		{"Delete",         G_CALLBACK(menu_delete_row),         GTK_STOCK_DELETE},
-		{"Update",         G_CALLBACK(menu_update_rows),        GTK_STOCK_REFRESH},
-	#if 0 // force is now the default update. Is there a use case for 2 choices?
-		{"Force Update",   G_CALLBACK(update_rows),             GTK_STOCK_REFRESH},
-	#endif
-		{"Reset Colours",  G_CALLBACK(listview__reset_colours), GTK_STOCK_OK},
-		{"Edit tags",      G_CALLBACK(listview__edit_row),      GTK_STOCK_EDIT},
+		{"Action-1",       "library.action-1",      "edit-delete-symbolic"},
+		{"Delete",         "library.delete-rows",   "edit-delete-symbolic"},
+		{"Update",         "library.update-rows",   "view-refresh-symbolic"},
+		{"Reset Colours",  "library.reset-colours", ""},
+		{"Edit tags",      "library.edit-row",      "text-editor-symbolic"},
 #if 0
 		{"Open",           G_CALLBACK(listview__edit_row),      GTK_STOCK_OPEN},
 		{"Open Directory", G_CALLBACK(NULL),                    GTK_STOCK_OPEN},
 #endif
 		{"-",                                                                       },
-		{"Play All",       G_CALLBACK(menu_play_all),           GTK_STOCK_MEDIA_PLAY},
-		{"Stop Playback",  G_CALLBACK(menu_play_stop),          GTK_STOCK_MEDIA_STOP},
-		{"-",                                                                       },
-		{"View",           G_CALLBACK(NULL),                    GTK_STOCK_PREFERENCES},
-	#ifdef USE_GDL
-		{"Layouts",        G_CALLBACK(NULL),                    GTK_STOCK_PROPERTIES},
-	#endif
-		{"Prefs",          G_CALLBACK(NULL),                    GTK_STOCK_PREFERENCES},
+		{"Play All",       "app.play-all",           "media-playback-start"},
+		{"Stop Playback",  "app.player-stop",        "media-playback-stop"},
 	};
 
-	static struct
+	add_menu_items_from_defn(menu, model, G_N_ELEMENTS(menu_def), menu_def, NULL);
+
+	//
+	// View menu
+	//
 	{
-		GtkWidget* play_all;
-		GtkWidget* stop_playback;
-		GtkWidget* loop_playback;
-	} widgets;
+		GMenuModel* view_model = (GMenuModel*)g_menu_new ();
+		g_menu_append_submenu (G_MENU(model), "View", view_model);
 
-	GtkWidget* menu = gtk_menu_new();
-
-	add_menu_items_from_defn(menu, G_N_ELEMENTS(menu_def), menu_def, NULL);
-
-	GList* menu_items = gtk_container_get_children((GtkContainer*)menu);
-	GList* last = g_list_last(menu_items);
-
-	widgets.play_all = g_list_nth_data(menu_items, 5);
-	widgets.stop_playback = g_list_nth_data(menu_items, 6);
-	gtk_widget_set_sensitive(widgets.play_all, false);
-	gtk_widget_set_sensitive(widgets.stop_playback, false);
-
-	GtkWidget* sub = gtk_menu_new();
-	gtk_menu_item_set_submenu(GTK_MENU_ITEM(last->data), sub);
-
-	{
-#ifdef USE_GDL
-		GtkWidget* view = last->prev->prev->data;
-#else
-		GtkWidget* view = last->prev->data;
-#endif
-
-		GtkWidget* sub = gtk_menu_new();
-		gtk_menu_item_set_submenu(GTK_MENU_ITEM(view), sub);
-
-#ifdef USE_GDL
-		void set_view_state (GtkMenuItem* item, Panel_* panel, bool visible)
-		{
-			if(panel->handler){
-				g_signal_handler_block(item, panel->handler);
-				gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(item), visible);
-				g_signal_handler_unblock(item, panel->handler);
-			}
-			dbg(2, "value=%i", visible);
-		}
-
-		void toggle_view (GtkMenuItem* menu_item, gpointer _panel_type)
+		void toggle_view (GSimpleAction* action, GVariant* parameter, gpointer _panel_type)
 		{
 			PF;
-			Panel_* panel = &panels[GPOINTER_TO_INT(_panel_type)];
+			Panel* panel = &panels[GPOINTER_TO_INT(_panel_type)];
 			GdlDockItem* item = (GdlDockItem*)panel->dock_item;
-			if(item){
-				if(gdl_dock_item_is_active(item))
+			if (item) {
+				if (gtk_widget_is_visible(panel->dock_item))
 					gdl_dock_item_hide_item(item);
 				else
 					gdl_dock_item_show_item(item);
 			} else {
 				panel->widget = panel->new();
 				GtkWidget* dock_item = gdl_dock_item_new (panel->name, panel->name, GDL_DOCK_ITEM_BEH_LOCKED);
-				gtk_container_add(GTK_CONTAINER(dock_item), panel->widget);
+				gdl_dock_object_add_child(GDL_DOCK_OBJECT(dock_item), panel->widget);
 
 				GdlDockObject* parent = (GdlDockObject*)window.dock;
 
@@ -162,161 +79,161 @@ make_context_menu ()
 
 				GDL_DOCK_OBJECT_GET_CLASS(parent)->dock(parent, (GdlDockObject*)dock_item, placement, NULL);
 
-				gtk_widget_show_all(panel->widget);
 				g_signal_emit_by_name(((GdlDockObject*)window.dock)->master, "dock-item-added", dock_item);
 			}
 		}
-#else
-		void set_view_toggle_state (GtkMenuItem* item, ViewOption* option)
+
+		for (int i=0;i<PANEL_TYPE_MAX;i++) {
+			Panel* option = &panels[i];
+
+			GVariant* variant = g_variant_new_boolean(false);
+			char* name = g_strdup(option->name);
+			name[0] = g_ascii_tolower(name[0]);
+			option->menu.action = (GAction*)g_simple_action_new_stateful(name, NULL, variant);
+			g_action_map_add_action (G_ACTION_MAP (group), G_ACTION (option->menu.action));
+			g_signal_connect(G_OBJECT(option->menu.action), "activate", G_CALLBACK(toggle_view), GINT_TO_POINTER(i));
+
+			char* id = g_strdup_printf("context-menu.%s", name);
+			option->menu.item = g_menu_item_new(option->name, id);
+			g_menu_append_item(G_MENU(view_model), option->menu.item);
+			g_object_unref(option->menu.item);
+		}
+
+		void _view_menu_on_layout_changed (GObject*, gpointer user_data)
 		{
-			option->value = !option->value;
-			gulong sig_id = g_signal_handler_find(item, G_SIGNAL_MATCH_FUNC, 0, 0, 0, option->on_toggle, NULL);
-			if(sig_id){
-				g_signal_handler_block(item, sig_id);
-				gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(item), option->value);
-				g_signal_handler_unblock(item, sig_id);
+			for (int i=0;i<PANEL_TYPE_MAX;i++) {
+				Panel* panel = &panels[i];
+				g_action_change_state(panel->menu.action, g_variant_new_boolean(panel->dock_item && gtk_widget_is_visible(panel->dock_item)));
 			}
 		}
+		Idle* idle = idle_new(_view_menu_on_layout_changed, NULL);
+		g_signal_connect(G_OBJECT(gdl_dock_object_get_master((GdlDockObject*)window.dock)), "layout-changed", (GCallback)idle->run, idle);
+		_view_menu_on_layout_changed(NULL, NULL);
+	}
 
-		void toggle_view (GtkMenuItem* item, gpointer _option)
-		{
-			PF;
-			ViewOption* option = (ViewOption*)_option;
-			option->on_toggle(option->value = gtk_check_menu_item_get_active(GTK_CHECK_MENU_ITEM(item)));
-		}
-#endif
-
-#ifdef USE_GDL
-		int i; for(i=0;i<PANEL_TYPE_MAX;i++){
-			Panel_* option = &panels[i];
-#else
-		int i; for(i=0;i<MAX_VIEW_OPTIONS;i++){
-			ViewOption* option = &app->view_options[i];
-#endif
-			GtkWidget* menu_item = gtk_check_menu_item_new_with_mnemonic(option->name);
-			gtk_menu_shell_append(GTK_MENU_SHELL(sub), menu_item);
-#ifdef USE_GDL
-			option->menu_item = menu_item;
-			gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menu_item), false); // TODO can leave til later
-			option->handler = g_signal_connect(G_OBJECT(menu_item), "activate", G_CALLBACK(toggle_view), GINT_TO_POINTER(i));
-#else
-			gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menu_item), option->value);
-			option->value = !option->value; //toggle before it gets toggled back.
-			set_view_toggle_state((GtkMenuItem*)menu_item, option);
-			g_signal_connect(G_OBJECT(menu_item), "activate", G_CALLBACK(toggle_view), option);
-#endif
-		}
-
-#ifdef USE_GDL
-		void add_item (GtkMenuShell* parent, const char* name, GCallback callback, gpointer user_data)
-		{
-			GtkWidget* item = gtk_menu_item_new_with_label(name);
-			gtk_container_add(GTK_CONTAINER(parent), item);
-			if(callback) g_signal_connect(G_OBJECT(item), "activate", G_CALLBACK(callback), user_data);
-		}
+	//
+	//  Layout menu
+	//
+	{
+		GMenuModel* layouts_model = (GMenuModel*)g_menu_new ();
+		g_menu_append_submenu (G_MENU(model), "Layouts", layouts_model);
 
 		{
 			static const char* current_layout = "__default__";
 
-			GtkWidget* layouts_menu = last->prev->data;
-			static GtkWidget* sub; sub = gtk_menu_new();
-			gtk_menu_item_set_submenu(GTK_MENU_ITEM(layouts_menu), sub);
-
-			void layout_activate (GtkMenuItem* item, gpointer _)
 			{
-				gdl_dock_layout_load_layout(window.layout, current_layout = gtk_menu_item_get_label(item));
+				void load_layout (GSimpleAction* action, GVariant* parameter, gpointer _)
+				{
+					char* label = NULL;
+					gdl_dock_layout_load_layout(window.layout, current_layout = label);
 
-				GList* menu_items = gtk_container_get_children((GtkContainer*)sub);
-				gtk_widget_set_sensitive(g_list_last(menu_items)->data, true); // enable the Save menu
-				g_list_free(menu_items);
+#ifdef GTK4_TODO
+					GList* menu_items = gtk_container_get_children((GtkContainer*)sub);
+					gtk_widget_set_sensitive(g_list_last(menu_items)->data, true); // enable the Save menu
+					g_list_free(menu_items);
+#endif
 
-				statusbar_print(1, "Layout %s loaded", current_layout);
+					statusbar_print(1, "Layout %s loaded", current_layout);
+				}
+
+				GSimpleAction* action = g_simple_action_new ("layout-load", NULL);
+#ifdef GTK4_TODO
+				// Add targets for each layout
+#endif
+				g_action_map_add_action (G_ACTION_MAP (group), G_ACTION (action));
+				g_signal_connect (action, "activate", G_CALLBACK (load_layout), NULL);
 			}
 
-			void layout_save (GtkMenuItem* item, gpointer _)
-			{
-				// will not be saved to disk until quit.
-				gdl_dock_layout_save_layout (window.layout, current_layout);
-				statusbar_print(1, "Layout %s saved", current_layout);
-			}
-
-			GList* layouts = gdl_dock_layout_get_layouts (window.layout, false);
-			GList* l = layouts;
-			for(;l;l=l->next){
-				add_item(GTK_MENU_SHELL(sub), l->data, (GCallback)layout_activate, NULL);
+#ifdef GTK4_TODO
+			// Yaml layouts need to be loaded from disk
+#endif
+			g_autoptr(GList) layouts = gdl_dock_layout_get_layouts (window.layout, false);
+			for (GList* l=layouts;l;l=l->next) {
+				g_menu_append (G_MENU(layouts_model), l->data, "context-menu.layout-action");
 				g_free(l->data);
 			}
-			g_list_free(layouts);
 
-			gtk_menu_shell_append (GTK_MENU_SHELL(sub), gtk_separator_menu_item_new());
+			GMenuModel* section = (GMenuModel*)g_menu_new ();
+			g_menu_append_section (G_MENU(layouts_model), NULL, section);
 
-			add_menu_items_from_defn(sub, 1, (MenuDef[]){{"Save", (GCallback)layout_save, GTK_STOCK_SAVE}}, NULL);
-			GList* children = gtk_container_get_children((GtkContainer*)sub);
-			gtk_widget_set_sensitive(g_list_last(children)->data, false);
-			g_list_free(children);
-		}
-
-		void _view_menu_on_layout_changed (GObject* object, gpointer user_data)
-		{
-#if 1
-			for(int i=0;i<PANEL_TYPE_MAX;i++){
-				Panel_* panel = &panels[i];
-				GdlDockItem* item = g_hash_table_lookup(((GdlDockMaster*)((GdlDockObject*)window.dock)->master)->dock_objects, panel->name);
-				if(item){
-					set_view_state((GtkMenuItem*)panel->menu_item, panel, gdl_dock_item_is_active(item));
-				}
-			}
-#else
-			GList* items = gdl_dock_get_named_items((GdlDock*)window.dock);
-			for(GList* l=items;l;l=l->next){
-				GdlDockItem* item = l->data;
-				Panel_* panel = NULL;
-				if((panel = panel_lookup((GdlDockObject*)item))){
-					set_view_state((GtkMenuItem*)panel->menu_item, panel, gdl_dock_item_is_active(item));
-				}
-			}
+			{
+				void layout_save (GSimpleAction* action, GVariant* parameter, gpointer _panel_type)
+				{
+#ifdef GTK4_TODO
+					// will not be saved to disk until quit.
+					gdl_dock_layout_save_layout (window.layout, current_layout);
+					statusbar_print(1, "Layout %s saved", current_layout);
 #endif
-		}
-		Idle* idle = idle_new(_view_menu_on_layout_changed, NULL);
-		g_signal_connect(G_OBJECT(((GdlDockObject*)window.dock)->master), "layout-changed", (GCallback)idle->run, idle);
+				}
+
+				GSimpleAction* action = g_simple_action_new ("layout-save", NULL);
+				g_action_map_add_action (G_ACTION_MAP (group), G_ACTION (action));
+				g_signal_connect (action, "activate", G_CALLBACK (layout_save), NULL);
+				add_menu_items_from_defn(menu, section, 1, (MenuDef[]){{"Save", "content-menu.save-layout", "document-save"}}, NULL);
+#ifdef GTK4_TODO
+				GList* children = gtk_container_get_children((GtkContainer*)sub);
+				gtk_widget_set_sensitive(g_list_last(children)->data, false);
+				g_list_free(children);
 #endif
+			}
+		}
 	}
 
-	GtkWidget* menu_item = gtk_check_menu_item_new_with_mnemonic("Add Recursively");
-	gtk_menu_shell_append(GTK_MENU_SHELL(sub), menu_item);
-	gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menu_item), app->config.add_recursive);
-	g_signal_connect(G_OBJECT(menu_item), "activate", G_CALLBACK(toggle_recursive_add), NULL);
+	//
+	// Prefs menu
+	//
+	{
+		GMenuModel* prefs_model = (GMenuModel*)g_menu_new ();
+		g_menu_append_submenu (G_MENU(model), "Prefs", prefs_model);
 
-	widgets.loop_playback = menu_item = gtk_check_menu_item_new_with_mnemonic("Loop Playback");
-	gtk_menu_shell_append(GTK_MENU_SHELL(sub), menu_item);
-	gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menu_item), play->config.loop);
-	g_signal_connect(G_OBJECT(menu_item), "activate", G_CALLBACK(toggle_loop_playback), NULL);
-	gtk_widget_set_no_show_all(menu_item, true);
+		{
+			void toggle_loop_playback (GSimpleAction* action, GVariant* value, gpointer)
+			{
+				play->config.loop = !play->config.loop;
+				g_simple_action_set_state (action, value);
+			}
 
-	if(themes){
+			GSimpleAction* action = g_simple_action_new_stateful ("toggle-loop", NULL, g_variant_new_boolean (play->config.loop));
+			g_action_map_add_action (G_ACTION_MAP (group), G_ACTION (action));
+			g_signal_connect (action, "change-state", G_CALLBACK (toggle_loop_playback), NULL);
+		}
+
+		{
+			void toggle_recursive_add (GSimpleAction* action, GVariant* value, gpointer)
+			{
+				app->config.add_recursive = !app->config.add_recursive;
+				g_simple_action_set_state (action, value);
+			}
+
+			GSimpleAction* action = g_simple_action_new_stateful ("toggle-recursive", NULL, g_variant_new_boolean (app->config.add_recursive));
+			g_action_map_add_action (G_ACTION_MAP (group), G_ACTION (action));
+			g_signal_connect (action, "change-state", G_CALLBACK (toggle_recursive_add), NULL);
+		}
+
+		add_menu_items_from_defn(menu, prefs_model, 2,
+			(MenuDef[]){
+				{"Add Recursively", "context-menu.toggle-recursive"},
+				{"Loop Playback", "context-menu.toggle-loop"}
+			},
+			NULL
+		);
+	}
+
+#ifdef GTK4_TODO
+	if (themes) {
 		GtkWidget* theme_menu = gtk_menu_item_new_with_label("Icon Themes");
 		gtk_container_add(GTK_CONTAINER(sub), theme_menu);
 
 		GtkWidget* sub_menu = themes->data;
 		gtk_menu_item_set_submenu(GTK_MENU_ITEM(theme_menu), sub_menu);
 	}
+#endif
 
-	void menu_on_audio_ready(gpointer _, gpointer __)
-	{
-		gtk_widget_set_sensitive(widgets.play_all, true);
-		gtk_widget_set_sensitive(widgets.stop_playback, true);
-		if (play->auditioner->seek) {
-			gtk_widget_show(widgets.loop_playback);
-		}
-	}
-	am_promise_add_callback(play->ready, menu_on_audio_ready, NULL);
-
-	gtk_widget_show_all(menu);
-	g_list_free(menu_items);
 	return menu;
 }
 
 
+#ifdef GTK4_TODO
 static void
 menu__add_to_db (GtkMenuItem* menuitem, gpointer user_data)
 {
@@ -346,7 +263,7 @@ menu__add_dir_to_db (GtkMenuItem* menuitem, gpointer user_data)
 	PF;
 	const char* path = vdtree_get_selected(app->dir_treeview2);
 	dbg(1, "path=%s", path);
-	if(path){
+	if (path) {
 		ScanResults results = {0,};
 		application_scan(path, &results);
 		hide_progress();
@@ -362,7 +279,7 @@ menu__play (GtkMenuItem* menuitem, gpointer user_data)
 
 	GList* selected = fm__selected_items(fm);
 	GList* l = selected;
-	for(;l;l=l->next){
+	for (;l;l=l->next) {
 		char* item = l->data;
 		dbg(1, "%s", item);
 		application_play_path(item);
@@ -370,5 +287,4 @@ menu__play (GtkMenuItem* menuitem, gpointer user_data)
 	}
 	g_list_free(selected);
 }
-
-
+#endif

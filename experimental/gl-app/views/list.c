@@ -1,23 +1,26 @@
-/**
-* +----------------------------------------------------------------------+
-* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2012-2021 Tim Orford <tim@orford.org>                  |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-*
-*/
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
+ | copyright (C) 2012-2023 Tim Orford <tim@orford.org>                  |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
+ */
+
 #include "config.h"
 #include "agl/utils.h"
 #include "agl/actor.h"
+#include "agl/event.h"
 #include "agl/text/renderer.h"
 #include "debug/debug.h"
 #include "agl/behaviours/key.h"
 #include "agl/behaviours/cache.h"
 #include "waveform/shader.h"
-#include "samplecat.h"
+#include "samplecat/list_store.h"
+#include "samplecat/support.h"
 #include "application.h"
 #include "behaviours/panel.h"
 #include "views/graph_debug.h"
@@ -138,10 +141,10 @@ list_view (gpointer _)
 	{
 	}
 
-	bool list_event (AGlActor* actor, GdkEvent* event, AGliPt xy)
+	bool list_event (AGlActor* actor, AGlEvent* event, AGliPt xy)
 	{
 		switch (event->type) {
-			case GDK_BUTTON_PRESS:
+			case AGL_BUTTON_PRESS:
 				switch (event->button.button) {
 					case 3:;
 						AMPromise* promise = am_promise_new(actor);
@@ -152,7 +155,7 @@ list_view (gpointer _)
 						return AGL_HANDLED;
 				}
 				// falling through ...
-			case GDK_BUTTON_RELEASE:
+			case AGL_BUTTON_RELEASE:
 				switch (event->button.button) {
 					case 1:
 						agl_actor__invalidate(actor);
@@ -238,7 +241,7 @@ list_view_select (ListView* list, int row)
 
 
 static bool
-nav_up (AGlActor* actor, GdkModifierType modifier)
+nav_up (AGlActor* actor, AGlModifierType modifier)
 {
 	PF;
 	ListView* list = (ListView*)actor;
@@ -249,7 +252,7 @@ nav_up (AGlActor* actor, GdkModifierType modifier)
 
 
 static bool
-nav_down (AGlActor* actor, GdkModifierType modifier)
+nav_down (AGlActor* actor, AGlModifierType modifier)
 {
 	PF;
 	ListView* list = (ListView*)actor;
@@ -260,7 +263,7 @@ nav_down (AGlActor* actor, GdkModifierType modifier)
 
 
 static bool
-debug_window (AGlActor* actor, GdkModifierType modifier)
+debug_window (AGlActor* actor, AGlModifierType modifier)
 {
 	PF;
 	graph_debug_window(actor->root);

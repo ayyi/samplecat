@@ -1,14 +1,15 @@
-/**
-* +----------------------------------------------------------------------+
-* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2020 Tim Orford <tim@orford.org> and others       |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-*
-*/
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
+ | copyright (C) 2007-2023 Tim Orford <tim@orford.org> and others       |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
+ */
+
 #define _GNU_SOURCE
 #include "config.h"
 #include <gdk-pixbuf/gdk-pixdata.h>
@@ -156,8 +157,8 @@ mysql__connect ()
 {
 	g_return_val_if_fail(samplecat.model, false);
 
-	if(!mysql.host){
-		if(!mysql_init(&mysql)){
+	if (!mysql.host) {
+		if (!mysql_init(&mysql)) {
 			printf("Failed to initiate MySQL connection.\n");
 			return 0;
 		}
@@ -171,17 +172,17 @@ mysql__connect ()
 	mysql.reconnect = true;
 #endif
 
-	if(!mysql_real_connect(&mysql, config->host, config->user, config->pass, config->name, 0, NULL, 0)){
-		if(mysql_errno(&mysql) == CR_CONNECTION_ERROR){
+	if (!mysql_real_connect(&mysql, config->host, config->user, config->pass, config->name, 0, NULL, 0)) {
+		if (mysql_errno(&mysql) == CR_CONNECTION_ERROR) {
 			warnprintf("cannot connect to database: MYSQL server not online.\n");
-		}else{
+		} else {
 			warnprintf("cannot connect to mysql database: %s\n", mysql_error(&mysql));
 		}
 		return false;
 	}
-	if(_debug_) printf("MySQL Server Version is %s\n", mysql_get_server_info(&mysql));
+	if (_debug_) printf("MySQL Server Version is %s\n", mysql_get_server_info(&mysql));
 
-	if(mysql_select_db(&mysql, config->name)){
+	if (mysql_select_db(&mysql, config->name)) {
 		errprintf("Failed to connect to Database: %s\n", mysql_error(&mysql));
 		return false;
 	}
@@ -192,13 +193,13 @@ mysql__connect ()
 	MYSQL_ESCAPE(dbname, config->name);
 	char* sql = g_malloc((100/*query string*/ + strlen(dbname)) * sizeof(char));
 	sprintf(sql, "SELECT column_name from INFORMATION_SCHEMA.COLUMNS where table_schema='%s' AND table_name='samples';", config->name);
-	if(mysql_query(&mysql, sql)){
+	if (mysql_query(&mysql, sql)) {
 		// probably out of disc space.
 		errprintf("Failed to get column_name: %s\n", mysql_error(&mysql));
 		free(dbname);
 		g_free(sql);
 		return false;
-	}else{
+	} else {
 		MYSQL_RES* sr = mysql_store_result(&mysql);
 		if (sr) {
 			if (mysql_num_rows(sr) == COLCOUNT) {
@@ -210,7 +211,7 @@ mysql__connect ()
 				/* ALTER TABLE */
 				MYSQL_ROW row;
 				while ((row = mysql_fetch_row(sr))) {
-					int i; for (i=0;i<COLCOUNT;i++) {
+					for (int i=0;i<COLCOUNT;i++) {
 						if (!strcmp(row[0], sct[i].key)) { colflag|=1<<i; break; }
 					}
 				}
@@ -218,7 +219,8 @@ mysql__connect ()
 			mysql_free_result(sr);
 		}
 	}
-	free(dbname); g_free(sql);
+	free(dbname);
+	g_free(sql);
 
 	if (!table_exists) {
 		/* CREATE Table */
@@ -240,8 +242,8 @@ mysql__connect ()
 	} else {
 		/* Alter Table if neccesary */
 		int i;
-		sql = g_malloc(1024*sizeof(char));
-		for (i=0;i<COLCOUNT;i++) if ((colflag&(1<<i))==0) {
+		sql = g_malloc(1024 * sizeof(char));
+		for (i=0;i<COLCOUNT;i++) if ((colflag&(1<<i)) == 0) {
 			sprintf(sql, "ALTER TABLE samples ADD %s;", sct[i].def);
 			dbg(0, "%s", sql);
 			if (mysql_real_query(&mysql, sql, strlen(sql))) {
@@ -300,10 +302,10 @@ mysql__insert (Sample* sample)
 		);
 	dbg(1, "sql=%s", sql);
 
-	if(mysql__exec_sql(sql) == 0){
+	if (mysql__exec_sql(sql) == 0) {
 		dbg(1, "ok");
 		id = mysql_insert_id(&mysql);
-	}else{
+	} else {
 		perr("not ok: %s", sql);
 	}
 	g_free(sql);
@@ -313,7 +315,7 @@ mysql__insert (Sample* sample)
 	free(mimetype);
 	free(ebur);
 	free(meta_data);
-	if(_metadata) g_free(_metadata);
+	if (_metadata) g_free(_metadata);
 	return id;
 }
 
@@ -324,7 +326,7 @@ mysql__delete_row (int id)
 	gboolean ok = true;
 	gchar* sql = g_strdup_printf("DELETE FROM samples WHERE id=%i", id);
 	dbg(2, "row: sql=%s", sql);
-	if(mysql_query(&mysql, sql)){
+	if (mysql_query(&mysql, sql)) {
 		perr("delete failed! sql=%s\n", sql);
 		ok = false;
 	}
@@ -352,7 +354,7 @@ mysql__update_int (int id, const char* key, const long int value)
 {
 	char sql[1024];
 	snprintf(sql, 1024, "UPDATE samples SET %s=%li WHERE id=%d", key, value, id);
-	if(mysql_query(&mysql, sql)){
+	if (mysql_query(&mysql, sql)) {
 		perr("update failed! sql=%s\n", sql);
 		return false;
 	}
@@ -365,7 +367,7 @@ mysql__update_float (int id, const char* key, const float value)
 {
 	char sql[1024];
 	snprintf(sql, 1024, "UPDATE samples SET %s=%f WHERE id=%d", key, value, id);
-	if(mysql_query(&mysql, sql)){
+	if (mysql_query(&mysql, sql)) {
 		perr("update failed! sql=%s\n", sql);
 		return false;
 	}
@@ -380,7 +382,7 @@ mysql__update_blob (int id, const char* key, const guint8* d, const guint len)
 	mysql_real_escape_string(&mysql, blob, (char*)d, len);
 	char* sql = malloc((strlen(blob) + 33/*query string*/ + 20/*int*/ + strlen(key)) * sizeof(char));
 	sprintf(sql, "UPDATE samples SET %s='%s' WHERE id=%i", key, blob, id);
-	if(mysql_query(&mysql, sql)){
+	if (mysql_query(&mysql, sql)) {
 		pwarn("update failed! sql=%s\n", sql);
 		free(blob);
 		free(sql);
@@ -388,36 +390,41 @@ mysql__update_blob (int id, const char* key, const guint8* d, const guint len)
 	}
 	free(blob);
 	free(sql);
+
 	return true;
 }
 
 
 static bool
-mysql__file_exists (const char* path, int *id)
+mysql__file_exists (const char* path, int* id)
 {
 	int rv = false;
-	const int len = strlen(path);
-	char* esc = malloc((len * 2 + 1) * sizeof(char));
-	mysql_real_escape_string(&mysql, esc, path, len);
-	char* sql = malloc((43/*query string*/ + strlen(esc)) * sizeof(char));
+
+	const int len = strlen (path);
+	if (len > 2048) return rv;
+
+	char* esc = malloc ((len * 2 + 1) * sizeof(char));
+	mysql_real_escape_string (&mysql, esc, path, len);
+	char* sql = malloc ((43/*query string*/ + strlen (esc)) * sizeof(char));
 	sprintf(sql, "SELECT id FROM samples WHERE full_path='%s';", esc);
 	dbg(2,"%s", sql);
+
 	if (id) *id = 0;
-	if(!mysql_query(&mysql, sql)){
-		MYSQL_RES* sr = mysql_store_result(&mysql);
+	if (!mysql_query (&mysql, sql)) {
+		MYSQL_RES* sr = mysql_store_result (&mysql);
 		if (sr) {
-			MYSQL_ROW row = mysql_fetch_row(sr);
+			MYSQL_ROW row = mysql_fetch_row (sr);
 			if (row) {
-				if (id) *id=atoi(row[0]);
+				if (id) *id = atoi (row[0]);
 				rv = true;
 			}
-			mysql_free_result(sr);
+			mysql_free_result (sr);
 		}
 	}
 	free(sql);
 	free(esc);
-	return rv;
 	
+	return rv;
 }
 
 
@@ -471,7 +478,7 @@ mysql__search_iter_new (int* n_results)
 
 	gboolean ok = true;
 
-	if(search_result) gwarn("previous query not free'd?");
+	if(search_result) pwarn("previous query not free'd?");
 
 	GString* q = g_string_new("SELECT * FROM samples WHERE 1 ");
 	const char* search = samplecat.model->filters2.search->value.c;
@@ -634,13 +641,13 @@ mysql__dir_iter_new ()
 {
 	#define DIR_LIST_QRY "SELECT DISTINCT filedir FROM samples ORDER BY filedir"
 
-	if(dir_iter_result) gwarn("previous query not free'd?");
+	if (dir_iter_result) pwarn("previous query not free'd?");
 
-	if(!mysql__exec_sql(DIR_LIST_QRY)){
+	if (!mysql__exec_sql(DIR_LIST_QRY)) {
 		dir_iter_result = mysql_store_result(&mysql);
 		dbg(2, "num_rows=%i", mysql_num_rows(dir_iter_result));
-	}
-	else{
+
+	} else {
 		dbg(0, "failed to find any records: %s", mysql_error(&mysql));
 	}
 }

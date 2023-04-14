@@ -1,19 +1,20 @@
-/**
-* +----------------------------------------------------------------------+
-* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2016-2021 Tim Orford <tim@orford.org>                  |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-*
-*/
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
+ | copyright (C) 2016-2023 Tim Orford <tim@orford.org>                  |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
+ */
+
 #include "config.h"
-#undef USE_GTK
 #include "debug/debug.h"
 #include "agl/ext.h"
 #include "agl/shader.h"
+#include "agl/event.h"
 #include "views/panel.h"
 #include "views/dock_v.h"
 
@@ -295,7 +296,7 @@ dock_v_view (gpointer _)
 		}
 	}
 
-	bool dock_event (AGlActor* actor, GdkEvent* event, AGliPt xy)
+	bool dock_event (AGlActor* actor, AGlEvent* event, AGliPt xy)
 	{
 		DockVView* dock = (DockVView*)actor;
 
@@ -303,13 +304,13 @@ dock_v_view (gpointer _)
 		{
 		}
 
-		switch (event->type){
-			case GDK_BUTTON_PRESS:
+		switch (event->type) {
+			case AGL_BUTTON_PRESS:
 				agl_actor__grab(actor);
 				//set_cursor(arrange->canvas->widget->window, CURSOR_H_DOUBLE_ARROW);
 				return AGL_HANDLED;
-			case GDK_MOTION_NOTIFY:
-				if(actor_context.grabbed == actor){
+			case AGL_MOTION_NOTIFY:
+				if (actor_context.grabbed == actor) {
 					int y = xy.y - actor->region.y1;
 
 					AGlActor* a2 = dock->handle.actor;
@@ -319,14 +320,14 @@ dock_v_view (gpointer _)
 
 					int min_diff = -agl_actor__height(a1);
 					int max_diff = agl_actor__height(a2);
-					if(((PanelView*)a1)->size_req.min.y > -1){
+					if (((PanelView*)a1)->size_req.min.y > -1) {
 						min_diff = ((PanelView*)a1)->size_req.min.y - agl_actor__height(a1) + PANEL_DRAG_HANDLE_HEIGHT;
 					}
-					if(((PanelView*)a1)->size_req.max.y > -1){
+					if (((PanelView*)a1)->size_req.max.y > -1) {
 						max_diff = ((PanelView*)a1)->size_req.max.y - agl_actor__height(a1) + PANEL_DRAG_HANDLE_HEIGHT;
 					}
 					int diff = CLAMP(y - a2->region.y1, min_diff, max_diff);
-					if(diff){
+					if (diff) {
 						a2->region.y1 = y;
 						agl_actor__set_size(a2);
 						agl_actor__invalidate(a2);
@@ -335,31 +336,31 @@ dock_v_view (gpointer _)
 						agl_actor__set_size(a1);
 						agl_actor__invalidate(a1);
 					}
-				}else{
+				} else {
 					AGlActor* f = find_handle_by_y(dock, xy.y);
-					if(f){
-						if(!dock->handle.opacity){
+					if (f) {
+						if (!dock->handle.opacity) {
 							//set_cursor(arrange->canvas->widget->window, CURSOR_H_DOUBLE_ARROW);
 							dock->animatables[0]->target_val.f = 1.0;
 							dock->handle.actor = f;
 							agl_actor__start_transition(actor, g_list_append(NULL, dock->animatables[0]), animation_done, NULL);
 						}
-					}else{
-						if(dock->handle.opacity){
+					} else {
+						if (dock->handle.opacity) {
 							dock->animatables[0]->target_val.f = 0.0;
 							agl_actor__start_transition(actor, g_list_append(NULL, dock->animatables[0]), animation_done, NULL);
 						}
 					}
 				}
 				return AGL_HANDLED;
-			case GDK_LEAVE_NOTIFY:
+			case AGL_LEAVE_NOTIFY:
 				dbg (1, "LEAVE_NOTIFY");
-				if(dock->handle.opacity > 0.0){
+				if (dock->handle.opacity > 0.0) {
 					dock->animatables[0]->target_val.f = 0.0;
 					agl_actor__start_transition(actor, g_list_append(NULL, dock->animatables[0]), animation_done, NULL);
 				}
 				break;
-			case GDK_BUTTON_RELEASE:
+			case AGL_BUTTON_RELEASE:
 			default:
 				break;
 		}

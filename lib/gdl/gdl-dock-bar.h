@@ -1,5 +1,4 @@
-/* -*- Mode: C; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 4 -*-
- *
+/*
  * This file is part of the GNOME Devtools Libraries.
  *
  * Copyright (C) 2003 Jeroen Zwartepoorte <jeroen@xs4all.nl>
@@ -19,10 +18,10 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#ifndef __GDL_DOCK_BAR_H__
-#define __GDL_DOCK_BAR_H__
+#pragma once
 
 #include <gtk/gtk.h>
+#include <gdl/gdl-dock.h>
 
 G_BEGIN_DECLS
 
@@ -39,6 +38,16 @@ typedef struct _GdlDockBar        GdlDockBar;
 typedef struct _GdlDockBarClass   GdlDockBarClass;
 typedef struct _GdlDockBarPrivate GdlDockBarPrivate;
 
+/**
+ * GdlDockBarStyle:
+ * @GDL_DOCK_BAR_ICONS: Buttons display only icons in the dockbar.
+ * @GDL_DOCK_BAR_TEXT: Buttons display only text labels in the dockbar.
+ * @GDL_DOCK_BAR_BOTH: Buttons display text and icons in the dockbar.
+ * @GDL_DOCK_BAR_AUTO: identical to @GDL_DOCK_BAR_BOTH.
+ *
+ * Used to customize the appearance of a #GdlDockBar.
+ *
+ **/
 typedef enum {
     GDL_DOCK_BAR_ICONS,
     GDL_DOCK_BAR_TEXT,
@@ -49,26 +58,29 @@ typedef enum {
 struct _GdlDockBar {
     GtkBox parent;
 
-    GdlDock *dock;
-
-    GdlDockBarPrivate *_priv;
+    /*< private >*/
+#ifndef GDL_DISABLE_DEPRECATED
+    GdlDock *deprecated_dock;
+#endif
+    GdlDockBarPrivate *priv;
 };
 
 struct _GdlDockBarClass {
-    GtkVBoxClass parent_class;
+    GtkBoxClass parent_class;
 };
 
-GType      gdl_dock_bar_get_type            (void); 
+GType           gdl_dock_bar_get_type       (void);
 
-GtkWidget *gdl_dock_bar_new                 (GdlDock     *dock);
+GtkWidget      *gdl_dock_bar_new            (GObject           *master);
 
-GtkOrientation gdl_dock_bar_get_orientation (GdlDockBar *dockbar);
-void           gdl_dock_bar_set_orientation (GdlDockBar *dockbar,
-                                             GtkOrientation orientation);
-void           gdl_dock_bar_set_style       (GdlDockBar *dockbar,
-                                             GdlDockBarStyle style);
-GdlDockBarStyle gdl_dock_bar_get_style      (GdlDockBar *dockbar);
+void            gdl_dock_bar_set_style      (GdlDockBar        *dockbar,
+                                             GdlDockBarStyle    style);
+GdlDockBarStyle gdl_dock_bar_get_style      (GdlDockBar        *dockbar);
+
+#ifndef GDL_DISABLE_DEPRECATED
+GtkOrientation gdl_dock_bar_get_orientation (GdlDockBar        *dockbar) G_GNUC_DEPRECATED_FOR(gtk_orientable_get_orientation);
+void           gdl_dock_bar_set_orientation (GdlDockBar        *dockbar,
+                                             GtkOrientation     orientation) G_GNUC_DEPRECATED_FOR(gtk_orientable_set_orientation);
+#endif
 
 G_END_DECLS
-
-#endif /* __GDL_DOCK_BAR_H__ */

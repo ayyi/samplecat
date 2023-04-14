@@ -1,31 +1,26 @@
-/**
-* +----------------------------------------------------------------------+
-* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2020 Tim Orford <tim@orford.org>                  |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-*
-*/
-#ifndef __support_h__
-#define __support_h__
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
+ | copyright (C) 2007-2023 Tim Orford <tim@orford.org>                  |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
+ */
+
+#pragma once
 
 #include <stdint.h>
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <gtk/gtk.h>
-#pragma GCC diagnostic warning "-Wdeprecated-declarations"
-#include "src/typedefs.h"
-#include "utils/ayyi_utils.h"
-#include "utils/mime_type.h"
+#include "file_manager/mimetype.h"
 #include "samplecat/support.h"
 
 #ifndef __ayyi_h__
 #ifndef g_error_free0
 #define g_error_free0(var) ((var == NULL) ? NULL : (var = (g_error_free (var), NULL)))
 #endif
-#define PF_DONE printf("%s(): done.\n", __func__);
 #endif
 #define call(FN, A, ...) if(FN) (FN)(A, ##__VA_ARGS__)
 
@@ -38,7 +33,9 @@
 
 struct _accel {
 	char          name[16];
+#ifdef GTK4_TODO
 	GtkStockItem* stock_item;
+#endif
 	struct s_key {
 		int        code;
 		int        mask;
@@ -47,6 +44,7 @@ struct _accel {
 	gpointer      user_data;
 };
 
+#ifdef GTK4_TODO
 void         colour_get_style_fg       (GdkColor*, GtkStateType);
 void         colour_get_style_bg       (GdkColor*, int state);
 void         colour_get_style_base     (GdkColor*, int state);
@@ -60,6 +58,7 @@ gboolean     is_black                  (GdkColor*);
 gboolean     is_white                  (GdkColor*);
 gboolean     is_dark                   (GdkColor*);
 gboolean     is_similar                (GdkColor* colour1, GdkColor* colour2, int min_diff);
+#endif
 gboolean     is_similar_rgb            (unsigned colour1, unsigned colour2);
 
 char*        str_array_join            (const char**, const char*);
@@ -67,7 +66,9 @@ char*        str_array_join            (const char**, const char*);
 gint         treecell_get_row          (GtkWidget*, GdkRectangle*);
 void         statusbar_print           (int n, char* fmt, ...);
 
+#ifdef GTK4_TODO
 void         make_accels               (GtkAccelGroup*, GimpActionGroup*, struct _accel*, int count, gpointer user_data);
+#endif
 
 const gchar* gimp_get_mod_name_shift   ();
 const gchar* gimp_get_mod_name_control ();
@@ -76,8 +77,6 @@ const gchar* gimp_get_mod_separator    ();
 const gchar* gimp_get_mod_string       (GdkModifierType modifiers);
 gchar*       gimp_strip_uline          (const gchar* str);
 gchar*       gimp_get_accel_string     (guint key, GdkModifierType modifiers);
-
-char*        remove_trailing_slash     (char* path);
 
 GList*       uri_list_to_glist         (const char* uri_list);
 void         uri_list_free             (GList*);
@@ -106,8 +105,3 @@ typedef struct {
 Idle*        idle_new                  (ObjectCallback, gpointer);
 void         idle_free                 (Idle*);
 
-#if 0
-void         print_widget_tree         (GtkWidget*);
-#endif
-
-#endif

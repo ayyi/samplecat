@@ -1,24 +1,21 @@
-/**
-* +----------------------------------------------------------------------+
-* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2020 Tim Orford <tim@orford.org>                  |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-*
-*/
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
+ | copyright (C) 2007-2023 Tim Orford <tim@orford.org>                  |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
+ */
 
-#ifndef __list_store_h__
-#define __list_store_h__
+#pragma once
 
 #include <glib.h>
 #include <glib-object.h>
 #include <samplecat/sample.h>
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <gtk/gtk.h>
-#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 
 G_BEGIN_DECLS
 
@@ -128,7 +125,4 @@ Sample*          samplecat_list_store_get_sample_by_row_index (int);
 Sample*          samplecat_list_store_get_sample_by_row_ref   (GtkTreeRowReference*);
 Sample*          samplecat_list_store_get_sample_by_path      (GtkTreePath*);
 
-
 G_END_DECLS
-
-#endif

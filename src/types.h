@@ -23,13 +23,4 @@ struct _palette {
 	guint blu[8];
 };
 
-struct _ScanResults {
-   int n_added;
-   int n_failed;
-   int n_dupes;
-};
-
-#define HOMOGENOUS 1
-#define NON_HOMOGENOUS 0
-
 #endif

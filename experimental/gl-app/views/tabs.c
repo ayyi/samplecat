@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
- | copyright (C) 2016-2022 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2016-2023 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -16,6 +16,7 @@
 #include "debug/debug.h"
 #include "agl/utils.h"
 #include "agl/fbo.h"
+#include "agl/event.h"
 #include "agl/text/renderer.h"
 #include "agl/behaviours/cache.h"
 #include "materials/icon_ring.h"
@@ -179,7 +180,7 @@ tabs_view (gpointer _)
 		}
 	}
 
-	bool tabs_event (AGlActor* actor, GdkEvent* event, AGliPt xy)
+	bool tabs_event (AGlActor* actor, AGlEvent* event, AGliPt xy)
 	{
 		TabsView* tabs = (TabsView*)actor;
 
@@ -190,18 +191,18 @@ tabs_view (gpointer _)
 		}
 
 		switch (event->type) {
-			case GDK_BUTTON_PRESS:
-			case GDK_BUTTON_RELEASE:;
+			case AGL_BUTTON_PRESS:
+			case AGL_BUTTON_RELEASE:;
 				int active = xy.x / tab_width;
 				dbg(1, "x=%i y=%i active=%i", xy.x, xy.y, active);
 				tabs_select_tab(tabs, active);
 				return AGL_HANDLED;
 
-			case GDK_LEAVE_NOTIFY:
+			case AGL_LEAVE_NOTIFY:
 				end_hover(tabs);
 				return AGL_HANDLED;
 
-			case GDK_MOTION_NOTIFY:;
+			case AGL_MOTION_NOTIFY:;
 				int tab = xy.x / tab_width;
 				if (xy.y > TAB_HEIGHT || tab >= g_list_length(tabs->tabs)) {
 					end_hover(tabs);

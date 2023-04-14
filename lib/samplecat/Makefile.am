@@ -15,6 +15,7 @@ libsamplecat_la_SOURCES = \
 	typedefs.h \
 	samplecat.c samplecat.h \
 	model.c model.h \
+	application.c application.h \
 	list_store.c list_store.h \
 	sample.c sample.h \
 	dir_list.c dir_list.h \
@@ -29,3 +30,5 @@ libsamplecat_la_SOURCES = \
 libsamplecat_la_LIBADD = \
 	player/libplayer.la
 
+EXTRA_DIST = \
+	usage.c

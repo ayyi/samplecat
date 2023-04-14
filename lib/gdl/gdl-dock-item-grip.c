@@ -1,4 +1,3 @@
-/* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 4; tab-width: 8 -*- */
 /*
  * gdl-dock-item-grip.c
  *
@@ -8,7 +7,7 @@
  *
  * Copyright (C) 1998 Ettore Perazzoli
  * Copyright (C) 1998 Elliot Lee
- * Copyright (C) 1995-1997 Peter Mattis, Spencer Kimball and Josh MacDonald 
+ * Copyright (C) 1995-1997 Peter Mattis, Spencer Kimball and Josh MacDonald
  * All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -22,26 +21,35 @@
  * Library General Public License for more details.
  *
  * You should have received a copy of the GNU Library General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library; if not, see <http://www.gnu.org/licenses/>.
  */
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
 
-#include "gdl-i18n.h"
-#include <stdbool.h>
 #include <string.h>
 #include <glib-object.h>
-#include "debug/debug.h"
-#include "gtk/menu.h"
+#include <gtk/gtk.h>
+#include "il8n.h"
+#include "debug.h"
+#include "utils.h"
 #include "gdl-dock-item.h"
 #include "gdl-dock-item-grip.h"
 #include "gdl-dock-item-button-image.h"
 #include "gdl-switcher.h"
-#include "gdl-tools.h"
+
+/**
+ * SECTION:gdl-dock-item-grip
+ * @title: GdlDockItemGrip
+ * @short_description: A grip for dock widgets.
+ * @see_also: GtlDockItem, GdlDockItemButtonImage
+ * @stability: Private
+ *
+ * This widget contains an area where the user can click to drag the dock item
+ * and two buttons. The first button allows to iconify the dock item.
+ * The second one allows to close the dock item.
+ */
 
 #define ALIGN_BORDER 5
 #define DRAG_HANDLE_SIZE 10
@@ -52,186 +60,185 @@ enum {
 };
 
 struct _GdlDockItemGripPrivate {
-    GtkWidget   *label;
-    GtkWidget   *menu;
+    GdlDockItem *item;
 
+    GtkWidget   *label;
+
+    GtkWidget   *close_button;
     GtkWidget   *iconify_button;
-    
+
     gboolean    handle_shown;
 };
- 
-GDL_CLASS_BOILERPLATE (GdlDockItemGrip, gdl_dock_item_grip, GtkContainer, GTK_TYPE_CONTAINER);
 
-static void gdl_dock_item_grip_close_clicked   (GtkMenuItem*, gpointer);
-static void gdl_dock_item_grip_iconify_clicked (GtkMenuItem*, gpointer);
-static void gdl_dock_item_grip_lock_clicked    (GtkMenuItem*, GdlDockItemGrip*);
-
-static MenuDef menu_def[] = {
-	{"Close",   G_CALLBACK(gdl_dock_item_grip_close_clicked),   GTK_STOCK_CLOSE},
-	{"Iconify", G_CALLBACK(gdl_dock_item_grip_iconify_clicked), GTK_STOCK_REMOVE},
-	{"Lock",    G_CALLBACK(gdl_dock_item_grip_lock_clicked),    GTK_STOCK_DIALOG_AUTHENTICATION},
+struct _GdlDockItemGripClassPrivate {
+    GtkCssProvider *css;
 };
 
+G_DEFINE_TYPE_WITH_CODE (GdlDockItemGrip, gdl_dock_item_grip, GTK_TYPE_WIDGET,
+	G_ADD_PRIVATE (GdlDockItemGrip)
+	g_type_add_class_private (g_define_type_id, sizeof (GdlDockItemGripClassPrivate));
+)
+
+/**
+ * gdl_dock_item_create_label_widget:
+ * @grip: The GdlDockItemGrip for which to create a label widget
+ *
+ * Creates a label for a given grip, containing an icon and title
+ * text if applicable.  The icon is created using either the
+ * #GdlDockObject:stock-id or #GdlDockObject:pixbuf-icon properties,
+ * depending on how the grip was created.  If both properties are %NULL,
+ * then the icon is omitted.  The title is taken from the
+ * #GdlDockObject:long-name property.  Again, if the property is %NULL,
+ * then the title is omitted.
+ *
+ * Returns: The newly-created label box for the grip.
+ */
 GtkWidget*
 gdl_dock_item_create_label_widget (GdlDockItemGrip *grip)
 {
-    GtkImage *image;
-    GtkLabel *label;
-    gchar *stock_id = NULL;
+    gchar *icon_name = NULL;
     gchar *title = NULL;
-  
-    GtkHBox *label_box = (GtkHBox*)gtk_hbox_new (FALSE, 0);
-    
-    g_object_get (G_OBJECT (grip->item), "stock-id", &stock_id, NULL);
-    if(stock_id) {   
-        image = GTK_IMAGE(gtk_image_new_from_stock (stock_id, GTK_ICON_SIZE_MENU));
-        
-        gtk_widget_show (GTK_WIDGET(image));
-        gtk_box_pack_start(GTK_BOX(label_box), GTK_WIDGET(image), FALSE, TRUE, 0);
-            
-        g_free (stock_id);
+    GdkPixbuf *pixbuf;
+
+    GtkBox* label_box = (GtkBox*)gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 0);
+
+    g_object_get (G_OBJECT (grip->priv->item), "stock-id", &icon_name, "pixbuf-icon", &pixbuf, NULL);
+    if (icon_name) {
+        GtkImage* image = GTK_IMAGE(gtk_image_new_from_icon_name (icon_name));
+
+        gtk_box_append (GTK_BOX(label_box), GTK_WIDGET(image));
+
+        g_free (icon_name);
+
+    } else if (pixbuf) {
+        GtkImage* image = GTK_IMAGE(gtk_image_new_from_pixbuf (pixbuf));
+
+        gtk_box_append (GTK_BOX(label_box), GTK_WIDGET(image));
     }
-        
-    g_object_get (G_OBJECT (grip->item), "long-name", &title, NULL);
+
+    g_object_get (G_OBJECT (grip->priv->item), "long-name", &title, NULL);
     if (title) {
-        label = GTK_LABEL(gtk_label_new(title));
+        GtkLabel* label = GTK_LABEL(gtk_label_new(title));
         gtk_label_set_ellipsize(label, PANGO_ELLIPSIZE_END);
         gtk_label_set_justify(label, GTK_JUSTIFY_LEFT);
-        gtk_misc_set_alignment(GTK_MISC(label), 0, 0.5);    
-        gtk_widget_show (GTK_WIDGET(label));
-        
+		gtk_widget_set_halign(GTK_WIDGET(label), GTK_ALIGN_START);
+
         if (gtk_widget_get_direction (GTK_WIDGET(grip)) == GTK_TEXT_DIR_RTL) {
-            gtk_box_pack_end(GTK_BOX(label_box), GTK_WIDGET(label), TRUE, TRUE, 1);
+            gtk_box_append (GTK_BOX(label_box), GTK_WIDGET(label));
         } else {
-            gtk_box_pack_start(GTK_BOX(label_box), GTK_WIDGET(label), TRUE, TRUE, 1);
+            gtk_box_append (GTK_BOX(label_box), GTK_WIDGET(label));
         }
-        
+
         g_free(title);
     }
-    
+
     return GTK_WIDGET(label_box);
 }
 
-static gint
-gdl_dock_item_grip_expose (GtkWidget      *widget,
-                           GdkEventExpose *event)
+static void
+gdl_dock_item_grip_draw (GtkWidget *widget, cairo_t *cr)
 {
-    GdlDockItemGrip *grip;
-    GdkRectangle handle_area;
-    GdkRectangle expose_area;
+    GdlDockItemGrip* grip = GDL_DOCK_ITEM_GRIP (widget);
 
-    grip = GDL_DOCK_ITEM_GRIP (widget);
-    
-    if(grip->_priv->handle_shown) {
-        
+    if (grip->priv->handle_shown) {
+    	cairo_rectangle_int_t handle_area;
+
+        GtkAllocation allocation;
+        gtk_widget_get_allocation (widget, &allocation);
         if (gtk_widget_get_direction (widget) != GTK_TEXT_DIR_RTL) {
-            handle_area.x = widget->allocation.x;
-            handle_area.y = widget->allocation.y;
+            handle_area.x = allocation.x;
+            handle_area.y = allocation.y;
             handle_area.width = DRAG_HANDLE_SIZE;
-            handle_area.height = widget->allocation.height;
+            handle_area.height = allocation.height;
         } else {
-            handle_area.x = widget->allocation.x + widget->allocation.width
-                - DRAG_HANDLE_SIZE;
-            handle_area.y = widget->allocation.y;
+            handle_area.x = allocation.x + allocation.width - DRAG_HANDLE_SIZE;
+            handle_area.y = allocation.y;
             handle_area.width = DRAG_HANDLE_SIZE;
-            handle_area.height = widget->allocation.height;  
+            handle_area.height = allocation.height;
         }
 
-        if (gdk_rectangle_intersect (&handle_area, &event->area, &expose_area)) {
-
-            gtk_paint_handle (widget->style, widget->window, widget->state,
-                              GTK_SHADOW_NONE, &expose_area, widget,
-                              "handlebox", handle_area.x, handle_area.y,
-                              handle_area.width, handle_area.height,
-                              GTK_ORIENTATION_VERTICAL);
-        
-        }
-        
+        gtk_render_handle (gtk_widget_get_style_context (widget), cr, handle_area.x, handle_area.y, handle_area.width, handle_area.height);
     }
 
-    return GTK_WIDGET_CLASS (parent_class)->expose_event (widget, event);
+    gint width = gtk_widget_get_allocated_width (widget);
+    gint height = gtk_widget_get_allocated_height (widget);
+
+    gtk_render_background (gtk_widget_get_style_context (widget), cr, 0, 0, width, height);
 }
 
 static void
-gdl_dock_item_grip_item_notify (GObject    *master,
-                                GParamSpec *pspec,
-                                gpointer    data)
+gdl_dock_item_grip_snapshot (GtkWidget *widget, GtkSnapshot *snapshot)
 {
-    GdlDockItemGrip *grip = GDL_DOCK_ITEM_GRIP (data);
+	int width = gtk_widget_get_width (widget);
+	int height = gtk_widget_get_height (widget);
 
-    if ((strcmp (pspec->name, "stock-id") == 0) ||
-        (strcmp (pspec->name, "long-name") == 0)) {        
-        
-        gdl_dock_item_grip_set_label (grip, gdl_dock_item_create_label_widget(grip));
- 
-    } else if (strcmp (pspec->name, "behavior") == 0) {
-        bool cursor = FALSE;
+	cairo_t* cr = gtk_snapshot_append_cairo (snapshot, &GRAPHENE_RECT_INIT ( 0, 0, width, height));
 
-        if (grip->_priv->iconify_button) {
-            if (GDL_DOCK_ITEM_CANT_ICONIFY (grip->item)) {
-                gtk_widget_hide (GTK_WIDGET (grip->_priv->iconify_button));
-            } else {
-                gtk_widget_show (GTK_WIDGET (grip->_priv->iconify_button));
-                cursor = TRUE;
-            }
-        }
-        if (grip->title_window && !cursor)
-            gdk_window_set_cursor (grip->title_window, NULL);
-    }
+	gdl_dock_item_grip_draw (widget, cr);
+
+	cairo_destroy (cr);
+
+	for (GtkWidget* c = gtk_widget_get_first_child(widget); c; (c = gtk_widget_get_next_sibling (c))) {
+		gtk_widget_snapshot_child (widget, c, snapshot);
+	}
 }
 
 static void
-gdl_dock_item_grip_destroy (GtkObject *object)
+gdl_dock_item_grip_item_notify (GObject *master, GParamSpec *pspec, gpointer data)
+{
+	GdlDockItemGrip *grip = GDL_DOCK_ITEM_GRIP (data);
+
+	if ((!strcmp (pspec->name, "stock-id")) || (!strcmp (pspec->name, "long-name"))) {
+		gdl_dock_item_grip_set_label (grip, gdl_dock_item_create_label_widget(grip));
+
+	} else if (!strcmp (pspec->name, "behavior")) {
+		if (grip->priv->close_button) {
+			gtk_widget_set_visible(GTK_WIDGET (grip->priv->close_button), !GDL_DOCK_ITEM_CANT_CLOSE (grip->priv->item));
+		}
+		if (grip->priv->iconify_button) {
+			gtk_widget_set_visible(GTK_WIDGET (grip->priv->iconify_button), !GDL_DOCK_ITEM_CANT_ICONIFY (grip->priv->item));
+		}
+	}
+}
+
+static void
+gdl_dock_item_grip_dispose (GObject *object)
 {
     GdlDockItemGrip *grip = GDL_DOCK_ITEM_GRIP (object);
-        
-    if (grip->_priv) {
-        GdlDockItemGripPrivate *priv = grip->_priv;
+    GdlDockItemGripPrivate *priv = grip->priv;
 
-        if (priv->label) {
-            gtk_widget_unparent(grip->_priv->label);
-            priv->label = NULL;
-        }
-
-        if (grip->item)
-            g_signal_handlers_disconnect_by_func (grip->item, gdl_dock_item_grip_item_notify, grip);
-        grip->item = NULL;
-
-        grip->_priv = NULL;
-        g_free (priv);
+    if (priv->label) {
+        gtk_widget_unparent(priv->label);
+        priv->label = NULL;
     }
-    
-    GDL_CALL_PARENT (GTK_OBJECT_CLASS, destroy, (object));
+
+    if (grip->priv->item) {
+        g_signal_handlers_disconnect_by_func (grip->priv->item, gdl_dock_item_grip_item_notify, grip);
+        grip->priv->item = NULL;
+    }
+
+    G_OBJECT_CLASS (gdl_dock_item_grip_parent_class)->dispose (object);
 }
 
 static void
-gdl_dock_item_grip_set_property (GObject      *object,
-                                 guint         prop_id,
-                                 const GValue *value,
-                                 GParamSpec   *pspec)
+gdl_dock_item_grip_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-    GdlDockItemGrip *grip;
-
     g_return_if_fail (GDL_IS_DOCK_ITEM_GRIP (object));
 
-    grip = GDL_DOCK_ITEM_GRIP (object);
-    
+    GdlDockItemGrip *grip = GDL_DOCK_ITEM_GRIP (object);
+
     switch (prop_id) {
         case PROP_ITEM:
-            grip->item = g_value_get_object (value);
-            if (grip->item) {
-                g_signal_connect (grip->item, "notify::long-name",
-                                  G_CALLBACK (gdl_dock_item_grip_item_notify),
-                                  grip);
-                g_signal_connect (grip->item, "notify::stock-id",
-                                  G_CALLBACK (gdl_dock_item_grip_item_notify),
-                                  grip);
-                g_signal_connect (grip->item, "notify::behavior",
-                                  G_CALLBACK (gdl_dock_item_grip_item_notify),
-                                  grip);
+            grip->priv->item = g_value_get_object (value);
+            if (grip->priv->item) {
+                g_signal_connect (grip->priv->item, "notify::long-name", G_CALLBACK (gdl_dock_item_grip_item_notify), grip);
+                g_signal_connect (grip->priv->item, "notify::stock-id", G_CALLBACK (gdl_dock_item_grip_item_notify), grip);
+                g_signal_connect (grip->priv->item, "notify::behavior", G_CALLBACK (gdl_dock_item_grip_item_notify), grip);
 
-                if (!GDL_DOCK_ITEM_CANT_ICONIFY (grip->item) && grip->_priv->iconify_button)
-                    gtk_widget_show (grip->_priv->iconify_button);
+                if (!GDL_DOCK_ITEM_CANT_CLOSE (grip->priv->item) && grip->priv->close_button)
+                    gtk_widget_set_visible (grip->priv->close_button, true);
+                if (!GDL_DOCK_ITEM_CANT_ICONIFY (grip->priv->item) && grip->priv->iconify_button)
+                    gtk_widget_set_visible (grip->priv->iconify_button, true);
             }
             break;
         default:
@@ -241,407 +248,330 @@ gdl_dock_item_grip_set_property (GObject      *object,
 }
 
 static void
-gdl_dock_item_grip_close_clicked (GtkMenuItem* _, gpointer _grip)
+gdl_dock_item_grip_close_clicked (GtkWidget *widget, GdlDockItemGrip *grip)
 {
-	GdlDockItemGrip* grip = _grip;
+    g_return_if_fail (grip->priv->item != NULL);
 
-    g_return_if_fail (grip->item);
-
-    gdl_dock_item_hide_item (grip->item);
+    gdl_dock_item_hide_item (grip->priv->item);
 }
 
 static void
-gdl_dock_item_grip_iconify_clicked (GtkMenuItem* menuitem, gpointer _grip)
+gdl_dock_item_grip_iconify_clicked (GtkWidget *widget, GdlDockItemGrip *grip)
 {
-	GdlDockItemGrip* grip = _grip;
+    g_return_if_fail (grip->priv->item != NULL);
 
-    g_return_if_fail (grip->item);
-
-    GtkWidget* parent = gtk_widget_get_parent (GTK_WIDGET (grip->item));
-    if (GDL_IS_SWITCHER (parent))
-    {
+    GtkWidget* parent = gtk_widget_get_parent (GTK_WIDGET (grip->priv->item));
+    if (GDL_IS_SWITCHER (parent)) {
         /* Note: We can not use gtk_container_foreach (parent) here because
          * during iconificatoin, the internal children changes in parent.
          * Instead we keep a list of items to iconify and iconify them
          * one by one.
          */
-        GList *node;
-        GList *items = gtk_container_get_children (GTK_CONTAINER (parent));
-        for (node = items; node != NULL; node = node->next)
-        {
+        GList *items = gtk_widget_get_children (parent);
+        for (GList* node = items; node != NULL; node = node->next) {
             GdlDockItem *item = GDL_DOCK_ITEM (node->data);
-            if (!GDL_DOCK_ITEM_CANT_ICONIFY (item))
+            if (!GDL_DOCK_ITEM_CANT_ICONIFY (item) && !gdl_dock_item_is_closed (item))
                 gdl_dock_item_iconify_item (item);
         }
         g_list_free (items);
+    } else {
+        gdl_dock_item_iconify_item (grip->priv->item);
     }
-    else
-    {
-        gdl_dock_item_iconify_item (grip->item);
-    }
-    
-    /* Workaround to unhighlight the iconify button. */
-    GTK_BUTTON (grip->_priv->iconify_button)->in_button = FALSE;
-    gtk_button_leave (GTK_BUTTON (grip->_priv->iconify_button));
-}
-  
-static void
-gdl_dock_item_grip_lock_clicked (GtkMenuItem* _, GdlDockItemGrip* grip)
-{
-    g_return_if_fail (grip);
 
-    gdl_dock_item_lock (grip->item);
+    /* Workaround to unhighlight the iconify button. See bug #676890
+     * Set button insensitive in order to set priv->in_button = FALSE
+     */
+    gtk_widget_set_state_flags (grip->priv->iconify_button, GTK_STATE_FLAG_INSENSITIVE, TRUE);
+    gtk_widget_set_state_flags (grip->priv->iconify_button, GTK_STATE_FLAG_NORMAL, TRUE);
 }
 
 static void
-gdl_dock_item_grip_instance_init (GdlDockItemGrip *grip)
+gdl_dock_item_grip_init (GdlDockItemGrip *grip)
 {
-    GTK_WIDGET_SET_FLAGS (grip, GTK_NO_WINDOW);
-    
-    grip->_priv = g_new0 (GdlDockItemGripPrivate, 1);
+	GdlDockItemGripPrivate* priv = grip->priv = gdl_dock_item_grip_get_instance_private (grip);
 
-    /* create the iconify button */
-    gtk_widget_push_composite_child ();
-    grip->_priv->iconify_button = gtk_button_new ();
-    gtk_widget_pop_composite_child ();
-    
-    GTK_WIDGET_UNSET_FLAGS (grip->_priv->iconify_button, GTK_CAN_FOCUS);
-    gtk_widget_set_parent (grip->_priv->iconify_button, GTK_WIDGET (grip));
-    gtk_button_set_relief (GTK_BUTTON (grip->_priv->iconify_button), GTK_RELIEF_NONE);
-    gtk_widget_show (grip->_priv->iconify_button);
+	grip->priv->label = NULL;
+	grip->priv->handle_shown = FALSE;
 
-    GtkWidget* image = gdl_dock_item_button_image_new(GDL_DOCK_ITEM_BUTTON_IMAGE_ICONIFY);
-    gtk_container_add (GTK_CONTAINER (grip->_priv->iconify_button), image);
-    gtk_widget_show (image);
-
-#if 1
-	gboolean button_on_event (GtkWidget* widget, GdkEventButton* event, gpointer _grip)
+	/* create the close button */
+	grip->priv->close_button = gtk_button_new ();
+	gtk_button_set_has_frame (GTK_BUTTON (priv->close_button), false);
+	gtk_widget_set_can_focus (grip->priv->close_button, FALSE);
+	gtk_widget_set_parent (grip->priv->close_button, GTK_WIDGET (grip));
 	{
-		GdlDockItemGrip* grip = _grip;
-
-		switch(event->type){
-			case GDK_BUTTON_PRESS:
-				if(!grip->_priv->menu)
-					grip->_priv->menu = make_menu(G_N_ELEMENTS(menu_def), menu_def, grip);
-
-				gtk_menu_popup(GTK_MENU(grip->_priv->menu), NULL, NULL, NULL, NULL, event->button, event->time);
-				return TRUE;
-				break;
-			default:
-				break;
-		}
-		return FALSE;
-	}
-	g_signal_connect(G_OBJECT(grip->_priv->iconify_button), "button-press-event", G_CALLBACK(button_on_event), grip);
-
-#else
-	// gtk_menu_attach_to_widget seems like a cleaner option, but this currently does not work
-
-	void gdl_dock_item_detach_menu (GtkWidget* widget, GtkMenu* menu)
-	{
-		GdlDockItemGrip* grip = GDL_DOCK_ITEM_GRIP (widget);
-		grip->_priv->menu = NULL;
+		GdkCursor* cursor = gdk_cursor_new_from_name ("default", NULL);
+		gtk_widget_set_cursor(GTK_WIDGET(grip->priv->close_button), cursor);
+		g_object_unref(cursor);
 	}
 
-	grip->_priv->menu = make_menu(grip);
-	gtk_menu_attach_to_widget (GTK_MENU(grip->_priv->menu), GTK_WIDGET (grip->_priv->iconify_button), gdl_dock_item_detach_menu);
-#endif
+	GtkWidget* image = gdl_dock_item_button_image_new(GDL_DOCK_ITEM_BUTTON_IMAGE_CLOSE);
+	gtk_button_set_child (GTK_BUTTON (grip->priv->close_button), image);
+
+	g_signal_connect (G_OBJECT (grip->priv->close_button), "clicked", G_CALLBACK (gdl_dock_item_grip_close_clicked), grip);
+
+	/* create the iconify button */
+	priv->iconify_button = gtk_button_new ();
+	gtk_button_set_has_frame (GTK_BUTTON (priv->iconify_button), false);
+	gtk_widget_set_can_focus (priv->iconify_button, FALSE);
+	gtk_widget_set_parent (priv->iconify_button, GTK_WIDGET (grip));
+	{
+		GdkCursor* cursor = gdk_cursor_new_from_name ("default", NULL);
+		gtk_widget_set_cursor(GTK_WIDGET(grip->priv->iconify_button), cursor);
+		g_object_unref(cursor);
+	}
+
+	image = gdl_dock_item_button_image_new(GDL_DOCK_ITEM_BUTTON_IMAGE_ICONIFY);
+	gtk_button_set_child (GTK_BUTTON (grip->priv->iconify_button), image);
+
+	g_signal_connect (G_OBJECT (grip->priv->iconify_button), "clicked", G_CALLBACK (gdl_dock_item_grip_iconify_clicked), grip);
+
+	gtk_widget_set_tooltip_text (grip->priv->iconify_button, _("Iconify this dock"));
+	gtk_widget_set_tooltip_text (grip->priv->close_button, _("Close this dock"));
+
+	GtkStyleContext* style = gtk_widget_get_style_context (GTK_WIDGET (priv->close_button));
+	gtk_style_context_add_provider (style, GTK_STYLE_PROVIDER(GDL_DOCK_ITEM_GRIP_GET_CLASS(grip)->priv->css), GTK_STYLE_PROVIDER_PRIORITY_USER);
+	style = gtk_widget_get_style_context (GTK_WIDGET (priv->iconify_button));
+	gtk_style_context_add_provider (style, GTK_STYLE_PROVIDER(GDL_DOCK_ITEM_GRIP_GET_CLASS(grip)->priv->css), GTK_STYLE_PROVIDER_PRIORITY_USER);
+
+    GdkCursor* cursor = gdk_cursor_new_from_name ("grab", NULL);
+	gtk_widget_set_cursor(GTK_WIDGET(grip), cursor);
+	g_object_unref(cursor);
 }
 
 static void
 gdl_dock_item_grip_realize (GtkWidget *widget)
 {
-    GdlDockItemGrip *grip = GDL_DOCK_ITEM_GRIP (widget);
-
-    GTK_WIDGET_CLASS (parent_class)->realize (widget);
-
-    g_return_if_fail (grip->_priv != NULL);
-    
-    if (!grip->title_window) {
-        GdkWindowAttr  attributes;
-        GdkCursor     *cursor;
-
-        g_return_if_fail (grip->_priv->label != NULL);
-
-        attributes.x           = grip->_priv->label->allocation.x;
-        attributes.y           = grip->_priv->label->allocation.y;
-        attributes.width       = grip->_priv->label->allocation.width;
-        attributes.height      = grip->_priv->label->allocation.height;
-        attributes.window_type = GDK_WINDOW_CHILD;
-        attributes.wclass      = GDK_INPUT_OUTPUT;
-        attributes.event_mask  = GDK_ALL_EVENTS_MASK;
-
-        grip->title_window = gdk_window_new (gtk_widget_get_parent_window (widget), &attributes, (GDK_WA_X | GDK_WA_Y));
-
-        gdk_window_set_user_data (grip->title_window, grip);
-
-        /* Unref the ref from parent realize for NO_WINDOW */
-        g_object_unref (widget->window);
-
-        /* Need to ref widget->window, because parent unrealize unrefs it */
-        widget->window = g_object_ref (grip->title_window);
-        GTK_WIDGET_UNSET_FLAGS(widget, GTK_NO_WINDOW);
-
-        /* Unset the background so as to make the colour match the parent window */
-        gtk_widget_modify_bg(widget, GTK_STATE_NORMAL, NULL);
- 
-        if (GDL_DOCK_ITEM_CANT_CLOSE (grip->item) &&
-            GDL_DOCK_ITEM_CANT_ICONIFY (grip->item))
-            cursor = NULL;
-        else 
-            cursor = gdk_cursor_new_for_display (gtk_widget_get_display (widget), GDK_HAND2);
-
-        gdk_window_set_cursor (grip->title_window, cursor);
-        if (cursor)
-            gdk_cursor_unref (cursor);
-    }
+    GTK_WIDGET_CLASS (gdl_dock_item_grip_parent_class)->realize (widget);
 }
 
 static void
 gdl_dock_item_grip_unrealize (GtkWidget *widget)
 {
-    GdlDockItemGrip *grip = GDL_DOCK_ITEM_GRIP (widget);
-
-    if (grip->title_window) {
-        GTK_WIDGET_SET_FLAGS(widget, GTK_NO_WINDOW);
-        gdk_window_set_user_data (grip->title_window, NULL);
-        gdk_window_destroy (grip->title_window);
-        grip->title_window = NULL;
-    }
-
-    GTK_WIDGET_CLASS (parent_class)->unrealize (widget);
+    GTK_WIDGET_CLASS (gdl_dock_item_grip_parent_class)->unrealize (widget);
 }
 
 static void
 gdl_dock_item_grip_map (GtkWidget *widget)
 {
-    GdlDockItemGrip *grip = GDL_DOCK_ITEM_GRIP (widget);
-
-    GTK_WIDGET_CLASS (parent_class)->map (widget);
-
-    if (grip->title_window)
-        gdk_window_show (grip->title_window);
+    GTK_WIDGET_CLASS (gdl_dock_item_grip_parent_class)->map (widget);
 }
 
 static void
 gdl_dock_item_grip_unmap (GtkWidget *widget)
 {
-    GdlDockItemGrip *grip = GDL_DOCK_ITEM_GRIP (widget);
-
-    if (grip->title_window)
-        gdk_window_hide (grip->title_window);
-
-    GTK_WIDGET_CLASS (parent_class)->unmap (widget);
+    GTK_WIDGET_CLASS (gdl_dock_item_grip_parent_class)->unmap (widget);
 }
 
 static void
-gdl_dock_item_grip_size_request (GtkWidget      *widget,
-                                 GtkRequisition *requisition)
+gdl_dock_item_grip_get_preferred_width (GtkWidget *widget, gint *minimum, gint *natural)
 {
-    GtkRequisition   child_requisition;
-    GtkContainer    *container;
-    GdlDockItemGrip *grip;
-    gint             layout_height = 0;
+    gint child_min, child_nat;
 
     g_return_if_fail (GDL_IS_DOCK_ITEM_GRIP (widget));
-    g_return_if_fail (requisition != NULL);
 
-    container = GTK_CONTAINER (widget);
-    grip = GDL_DOCK_ITEM_GRIP (widget);
-    
-    requisition->width = container->border_width * 2/* + ALIGN_BORDER*/;
-    requisition->height = container->border_width * 2;
+    GdlDockItemGrip* grip = GDL_DOCK_ITEM_GRIP (widget);
 
-    if(grip->_priv->handle_shown)
-        requisition->width += DRAG_HANDLE_SIZE;
-    
-    gtk_widget_size_request (grip->_priv->iconify_button, &child_requisition);
-    layout_height = MAX (layout_height, child_requisition.height);
-    if (GTK_WIDGET_VISIBLE (grip->_priv->iconify_button)) {
-        requisition->width += child_requisition.width;
+    *minimum = *natural = 0;
+
+    if (grip->priv->handle_shown) {
+        *minimum += DRAG_HANDLE_SIZE;
+        *natural += DRAG_HANDLE_SIZE;
     }
-   
-    gtk_widget_size_request (grip->_priv->label, &child_requisition);
-    requisition->width += child_requisition.width;
-    layout_height = MAX (layout_height, child_requisition.height);
-    
-    requisition->height += layout_height;
+
+    if (gtk_widget_get_visible (grip->priv->close_button)) {
+		gtk_widget_measure (grip->priv->close_button, GTK_ORIENTATION_HORIZONTAL, -1, &child_min, &child_nat, NULL, NULL);
+		*minimum += child_min;
+		*natural += child_nat;
+	}
+
+	if (gtk_widget_get_visible (grip->priv->iconify_button)) {
+		gtk_widget_measure (grip->priv->iconify_button, GTK_ORIENTATION_HORIZONTAL, -1, &child_min, &child_nat, NULL, NULL);
+		*minimum += child_min;
+		*natural += child_nat;
+	}
+
+								if (grip->priv->label) {
+	gtk_widget_measure (grip->priv->label, GTK_ORIENTATION_HORIZONTAL, -1, &child_min, &child_nat, NULL, NULL);
+	*minimum += child_min;
+	*natural += child_nat;
+								}
 }
 
 static void
-gdl_dock_item_grip_size_allocate (GtkWidget     *widget,
-                                  GtkAllocation *allocation)
+gdl_dock_item_grip_get_preferred_height (GtkWidget *widget, gint *minimum, gint *natural)
 {
-    GdlDockItemGrip *grip;
-    GtkContainer    *container;
-    GtkRequisition   close_requisition = { 0, };
-    GtkRequisition   iconify_requisition = { 0, };
-    GtkAllocation    child_allocation;
+    GtkRequisition min = {0,};
+    GtkRequisition nat = {0,};
 
     g_return_if_fail (GDL_IS_DOCK_ITEM_GRIP (widget));
-    g_return_if_fail (allocation != NULL);
-  
-    grip = GDL_DOCK_ITEM_GRIP (widget);
-    container = GTK_CONTAINER (widget);
 
-    GTK_WIDGET_CLASS (parent_class)->size_allocate (widget, allocation);
+    GdlDockItemGrip* grip = GDL_DOCK_ITEM_GRIP (widget);
 
-    gtk_widget_size_request (grip->_priv->iconify_button, &iconify_requisition);
-    
-    /* Calculate the Minimum Width where buttons will fit */
-    int min_width = close_requisition.width + iconify_requisition.width
-        + container->border_width * 2;
-    if(grip->_priv->handle_shown)
-      min_width += DRAG_HANDLE_SIZE;
-    const gboolean space_for_buttons = (allocation->width >= min_width);
-        
+    *minimum = *natural = 0;
+
+    gtk_widget_get_preferred_size (grip->priv->close_button, &min, &nat);
+    *minimum = MAX (*minimum, min.height);
+    *natural = MAX (*natural, nat.height);
+
+    gtk_widget_get_preferred_size (grip->priv->iconify_button, &min, &nat);
+    *minimum = MAX (*minimum, min.height);
+    *natural = MAX (*natural, nat.height);
+    								*minimum = 20;
+									*natural = 20;
+
+								if (grip->priv->label) {
+    gtk_widget_get_preferred_size (grip->priv->label, &min, &nat);
+    *minimum = MAX (*minimum, min.height);
+    *natural = MAX (*natural, nat.height);
+								}
+}
+
+static void
+gdl_dock_item_grip_measure (GtkWidget* widget, GtkOrientation orientation, int for_size, int* min, int* natural, int* min_baseline, int* natural_baseline)
+{
+	if (orientation == GTK_ORIENTATION_HORIZONTAL) {
+		gdl_dock_item_grip_get_preferred_width (widget, min, natural);
+	} else {
+		gdl_dock_item_grip_get_preferred_height (widget, min, natural);
+	}
+}
+
+static void
+gdl_dock_item_grip_size_allocate (GtkWidget *widget, int width, int height, int baseline)
+{
+    GtkRequisition iconify_requisition = { 0, };
+    GtkAllocation child_allocation = {0, };
+
+    g_return_if_fail (GDL_IS_DOCK_ITEM_GRIP (widget));
+
+    GdlDockItemGrip* grip = GDL_DOCK_ITEM_GRIP (widget);
+
+    GTK_WIDGET_CLASS (gdl_dock_item_grip_parent_class)->size_allocate (widget, width, height, baseline);
+
+    GtkRequisition close_requisition = { 0, };
+	gtk_widget_measure (grip->priv->close_button, GTK_ORIENTATION_HORIZONTAL, -1, NULL, &close_requisition.width, NULL, NULL);
+	gtk_widget_measure (grip->priv->close_button, GTK_ORIENTATION_VERTICAL, -1, NULL, &close_requisition.height, NULL, NULL);
+    gtk_widget_get_preferred_size (grip->priv->iconify_button, &iconify_requisition, NULL);
+
+	/* Calculate the Minimum Width where buttons will fit */
+	int min_width = close_requisition.width + iconify_requisition.width;
+	if (grip->priv->handle_shown)
+		min_width += DRAG_HANDLE_SIZE;
+	const gboolean space_for_buttons = (width >= min_width);
+
     /* Set up the rolling child_allocation rectangle */
     if (gtk_widget_get_direction (widget) == GTK_TEXT_DIR_RTL)
-        child_allocation.x = container->border_width/* + ALIGN_BORDER*/;
+        child_allocation.x = 0;
     else
-        child_allocation.x = allocation->width - container->border_width;
-    child_allocation.y = container->border_width;
+        child_allocation.x = width;
+
+    /* Layout Close Button */
+    if (gtk_widget_get_visible (grip->priv->close_button)) {
+
+        if (space_for_buttons) {
+            if (gtk_widget_get_direction (widget) != GTK_TEXT_DIR_RTL)
+                child_allocation.x -= close_requisition.width;
+
+            child_allocation.width = close_requisition.width;
+        } else {
+            child_allocation.width = 0;
+        }
+        child_allocation.height = close_requisition.height;
+
+        gtk_widget_size_allocate (grip->priv->close_button, &child_allocation, -1);
+
+        if (gtk_widget_get_direction (widget) == GTK_TEXT_DIR_RTL)
+            child_allocation.x += close_requisition.width;
+    }
 
     /* Layout Iconify Button */
-    if (GTK_WIDGET_VISIBLE (grip->_priv->iconify_button)) {
+    if (gtk_widget_get_visible (grip->priv->iconify_button)) {
 
-        if(space_for_buttons) {
+        if (space_for_buttons) {
             if (gtk_widget_get_direction (widget) != GTK_TEXT_DIR_RTL)
                 child_allocation.x -= iconify_requisition.width;
 
             child_allocation.width = iconify_requisition.width;
-            child_allocation.height = iconify_requisition.height;
         } else {
             child_allocation.width = 0;
         }
+        child_allocation.height = iconify_requisition.height;
 
-        gtk_widget_size_allocate (grip->_priv->iconify_button, &child_allocation);
+        gtk_widget_size_allocate (grip->priv->iconify_button, &child_allocation, -1);
 
         if (gtk_widget_get_direction (widget) == GTK_TEXT_DIR_RTL)
             child_allocation.x += iconify_requisition.width;
     }
-    
+
     /* Layout the Grip Handle*/
     if (gtk_widget_get_direction (widget) != GTK_TEXT_DIR_RTL) {
         child_allocation.width = child_allocation.x;
-        child_allocation.x = container->border_width/* + ALIGN_BORDER*/;
-        
-        if(grip->_priv->handle_shown) {
+        child_allocation.x = 0;
+
+        if (grip->priv->handle_shown) {
             child_allocation.x += DRAG_HANDLE_SIZE;
             child_allocation.width -= DRAG_HANDLE_SIZE;
         }
-        
+
     } else {
-        child_allocation.width = allocation->width -
-            (child_allocation.x - allocation->x)/* - ALIGN_BORDER*/;
-            
-        if(grip->_priv->handle_shown)
+        child_allocation.width = width - (child_allocation.x)/* - ALIGN_BORDER*/;
+
+        if (grip->priv->handle_shown)
             child_allocation.width -= DRAG_HANDLE_SIZE;
     }
-    
-    if(child_allocation.width < 0)
+
+    if (child_allocation.width < 0)
       child_allocation.width = 0;
-    
-    child_allocation.y = container->border_width;
-    child_allocation.height = allocation->height - container->border_width * 2;
-    if(grip->_priv->label) {
-      gtk_widget_size_allocate (grip->_priv->label, &child_allocation);
-    }
-     
-    if (grip->title_window) {
-        gdk_window_move_resize (grip->title_window,
-                                allocation->x,
-                                allocation->y,
-                                allocation->width,
-                                allocation->height);
+
+    child_allocation.y = 0;
+    child_allocation.height = height;
+    if (grip->priv->label) {
+      gtk_widget_size_allocate (grip->priv->label, &child_allocation, 0);
     }
 }
 
-static void 
-gdl_dock_item_grip_add (GtkContainer *container,
-                        GtkWidget    *widget)
-{
-    g_warning ("gtk_container_add not implemented for GdlDockItemGrip");
-}
-
-static void  
-gdl_dock_item_grip_remove (GtkContainer *container,
-                           GtkWidget    *widget)
+void
+gdl_dock_item_grip_remove (GtkWidget *container, GtkWidget *widget)
 {
     gdl_dock_item_grip_set_label (GDL_DOCK_ITEM_GRIP (container), NULL);
 }
 
 static void
-gdl_dock_item_grip_forall (GtkContainer *container,
-                           gboolean      include_internals,
-                           GtkCallback   callback,
-                           gpointer      callback_data)
-{
-    GdlDockItemGrip *grip;
-    
-    g_return_if_fail (GDL_IS_DOCK_ITEM_GRIP (container));
-    grip = GDL_DOCK_ITEM_GRIP (container);
-    
-    if (grip->_priv) {
-        if(grip->_priv->label) {
-            (* callback) (grip->_priv->label, callback_data);
-        }
-
-        if (include_internals) {
-            (* callback) (grip->_priv->iconify_button, callback_data);
-        }
-    }
-}
-
-static GType
-gdl_dock_item_grip_child_type (GtkContainer *container)
-{
-    return G_TYPE_NONE;
-}
-
-static void
 gdl_dock_item_grip_class_init (GdlDockItemGripClass *klass)
 {
-    GObjectClass *gobject_class;
-    GtkObjectClass *gtk_object_class;
-    GtkWidgetClass *widget_class;
-    GtkContainerClass *container_class;
+	GObjectClass* object_class = G_OBJECT_CLASS (klass);
+	GtkWidgetClass* widget_class = GTK_WIDGET_CLASS (klass);
 
-    parent_class = g_type_class_peek_parent (klass);
-    gobject_class = G_OBJECT_CLASS (klass);
-    gtk_object_class = GTK_OBJECT_CLASS (klass);
-    widget_class = GTK_WIDGET_CLASS (klass);
-    container_class = GTK_CONTAINER_CLASS (klass);
+	object_class->set_property = gdl_dock_item_grip_set_property;
+	object_class->dispose = gdl_dock_item_grip_dispose;
 
-    gobject_class->set_property = gdl_dock_item_grip_set_property;
+	widget_class->snapshot = gdl_dock_item_grip_snapshot;
 
-    gtk_object_class->destroy = gdl_dock_item_grip_destroy;
+	widget_class->realize = gdl_dock_item_grip_realize;
+	widget_class->unrealize = gdl_dock_item_grip_unrealize;
+	widget_class->map = gdl_dock_item_grip_map;
+	widget_class->unmap = gdl_dock_item_grip_unmap;
+	widget_class->measure = gdl_dock_item_grip_measure;
+	widget_class->size_allocate = gdl_dock_item_grip_size_allocate;
 
-    widget_class->expose_event = gdl_dock_item_grip_expose;
-    widget_class->realize = gdl_dock_item_grip_realize;
-    widget_class->unrealize = gdl_dock_item_grip_unrealize;
-    widget_class->map = gdl_dock_item_grip_map;
-    widget_class->unmap = gdl_dock_item_grip_unmap;
-    widget_class->size_request = gdl_dock_item_grip_size_request;
-    widget_class->size_allocate = gdl_dock_item_grip_size_allocate;
+	g_object_class_install_property (
+		object_class,
+		PROP_ITEM,
+		g_param_spec_object ("item", _("Controlling dock item"), _("Dockitem which 'owns' this grip"), GDL_TYPE_DOCK_ITEM, G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY)
+	);
 
-    container_class->add = gdl_dock_item_grip_add;
-    container_class->remove = gdl_dock_item_grip_remove;
-    container_class->forall = gdl_dock_item_grip_forall;
-    container_class->child_type = gdl_dock_item_grip_child_type;
+	klass->priv = G_TYPE_CLASS_GET_PRIVATE (klass, GDL_TYPE_DOCK_ITEM_GRIP, GdlDockItemGripClassPrivate);
 
-    g_object_class_install_property (
-        gobject_class, PROP_ITEM,
-        g_param_spec_object ("item", _("Controlling dock item"),
-                             _("Dockitem which 'owns' this grip"),
-                             GDL_TYPE_DOCK_ITEM,
-                             G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY));
-}
+	klass->priv->css = gtk_css_provider_new ();
+	static const gchar grip_style[] =
+		"* {\n"
+			"padding: 0px;\n"
+			"border-radius: 0;\n"
+			"min-height: 14px;\n"
+		"}";
+	gtk_css_provider_load_from_data (klass->priv->css, grip_style, -1);
 
-static void
-gdl_dock_item_grip_showhide_handle (GdlDockItemGrip *grip)
-{
-    gtk_widget_queue_resize (GTK_WIDGET (grip));
+	gtk_widget_class_set_css_name (GTK_WIDGET_CLASS(klass), "dock-grip");
 }
 
 /* ----- Public interface ----- */
@@ -649,15 +579,14 @@ gdl_dock_item_grip_showhide_handle (GdlDockItemGrip *grip)
 /**
  * gdl_dock_item_grip_new:
  * @item: The dock item that will "own" this grip widget.
- * 
+ *
  * Creates a new GDL dock item grip object.
  * Returns: The newly created dock item grip widget.
  **/
 GtkWidget *
 gdl_dock_item_grip_new (GdlDockItem *item)
 {
-    GdlDockItemGrip *grip = g_object_new (GDL_TYPE_DOCK_ITEM_GRIP, "item", item,
-                                          NULL);
+    GdlDockItemGrip *grip = g_object_new (GDL_TYPE_DOCK_ITEM_GRIP, "item", item, NULL);
 
     return GTK_WIDGET (grip);
 }
@@ -666,56 +595,84 @@ gdl_dock_item_grip_new (GdlDockItem *item)
  * gdl_dock_item_grip_set_label:
  * @grip: The grip that will get it's label widget set.
  * @label: The widget that will become the label.
- * 
+ *
  * Replaces the current label widget with another widget.
  **/
 void
-gdl_dock_item_grip_set_label (GdlDockItemGrip *grip,
-                              GtkWidget *label)
+gdl_dock_item_grip_set_label (GdlDockItemGrip *grip, GtkWidget *label)
 {
-    g_return_if_fail (grip != NULL);
+    g_return_if_fail (grip);
 
-    if (grip->_priv->label) {
-        gtk_widget_unparent(grip->_priv->label);
-        g_object_unref (grip->_priv->label);
-        grip->_priv->label = NULL;
+    if (grip->priv->label) {
+        gtk_widget_unparent(grip->priv->label);
+        g_clear_pointer(&grip->priv->label, g_object_unref);
     }
-    
+
     if (label) {
         g_object_ref (label);
         gtk_widget_set_parent (label, GTK_WIDGET (grip));
-        gtk_widget_show (label);
-        grip->_priv->label = label;
+        gtk_widget_set_visible (label, true);
+        grip->priv->label = label;
     }
 }
 /**
  * gdl_dock_item_grip_hide_handle:
- * @item: The dock item grip to hide the handle of.
- * 
+ * @grip: The dock item grip to hide the handle of.
+ *
  * This function hides the dock item's grip widget handle hatching.
  **/
-void 
+void
 gdl_dock_item_grip_hide_handle (GdlDockItemGrip *grip)
 {
-    g_return_if_fail (grip != NULL);
-    if (grip->_priv->handle_shown) {
-        grip->_priv->handle_shown = FALSE;
-        gdl_dock_item_grip_showhide_handle (grip);
-    };
+    g_return_if_fail (grip);
+
+    grip->priv->handle_shown = FALSE;
+    gtk_widget_set_visible (GTK_WIDGET (grip), false);
 }
 
 /**
  * gdl_dock_item_grip_show_handle:
  * @grip: The dock item grip to show the handle of.
- * 
+ *
  * This function shows the dock item's grip widget handle hatching.
  **/
 void
 gdl_dock_item_grip_show_handle (GdlDockItemGrip *grip)
 {
     g_return_if_fail (grip != NULL);
-    if (!grip->_priv->handle_shown) {
-        grip->_priv->handle_shown = TRUE;
-        gdl_dock_item_grip_showhide_handle (grip);
-    };
+    if (!grip->priv->handle_shown) {
+        grip->priv->handle_shown = TRUE;
+        gtk_widget_set_visible (GTK_WIDGET (grip), true);
+    }
+}
+
+/**
+ * gdl_dock_item_grip_set_cursor:
+ * @grip: The dock item grip
+ * @in_drag: %TRUE if a drag operation is started
+ *
+ * Change the cursor when a drag operation is started.
+ *
+ * Since: 3.6
+ **/
+void
+gdl_dock_item_grip_set_cursor (GdlDockItemGrip *grip, gboolean in_drag)
+{
+    /* We check the window since if the item could have been redocked and have
+     * been unrealized, maybe it's not realized again yet */
+}
+
+/**
+ * gdl_dock_item_grip_has_event:
+ * @grip: A #GdlDockItemGrip widget
+ * @event: A #GdkEvent
+ *
+ * Return %TRUE if the grip window has reveived the event.
+ *
+ * Returns: %TRUE if the grip has received the event
+ */
+gboolean
+gdl_dock_item_grip_has_event (GdlDockItemGrip *grip, GdkEvent *event)
+{
+	return FALSE;
 }

@@ -6,6 +6,13 @@ AM_CFLAGS = \
 noinst_LTLIBRARIES = libgtk.la
 
 libgtk_la_SOURCES = \
-	gimpactiongroup.c gimpactiongroup.h \
-	menu.c menu.h
+	cellrenderer_hypertext.c cellrenderer_hypertext.h \
+	icon_theme.c icon_theme.h \
+	menu.c menu.h \
+	utils.c utils.h \
+	scrolled_window.h
 
+unused_source = \
+	gimpactiongroup.c gimpactiongroup.h \
+	table.c table.h \
+	editablelabelbutton.c editablelabelbutton.h

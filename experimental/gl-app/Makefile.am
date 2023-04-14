@@ -22,7 +22,6 @@ AM_CFLAGS = \
 	-I$(top_srcdir)/lib/samplecat \
 	-I$(top_srcdir)/lib/waveform \
 	-I$(top_srcdir)/lib/waveform/lib/agl \
-	-I$(top_srcdir)/lib/waveform/gtkglext-1.0 \
 	-I$(top_srcdir)/experimental \
 	$(SAMPLECAT_CFLAGS) \
 	$(FFTW3_CFLAGS) \
@@ -36,11 +35,6 @@ AM_CFLAGS = \
 	$(MYSQL_CFLAGS)
 
 AM_CXXFLAGS = $(AM_CFLAGS)
-
-if !ENABLE_SYSTEM_GTKGLEXT
-LOCAL_GTK_LIBS = \
-	$(top_srcdir)/lib/waveform/gtkglext-1.0/.libs/libgtkglext.a
-endif
 
 samplecat_gl_LDADD = \
 	views/libviews.la \
@@ -59,12 +53,11 @@ samplecat_gl_LDADD = \
 	$(top_srcdir)/lib/waveform/lib/agl/.libs/libagl.a \
 	$(top_srcdir)/lib/file_manager/libfilemanager.a \
 	$(top_srcdir)/lib/gtk/libgtk.la \
-	$(LOCAL_GTK_LIBS) \
 	$(SAMPLECAT_LIBS) \
 	$(AYYI_LIBS) \
 	$(TRACKER_LIBS) \
 	$(SQLITE_LIBS) \
-	$(GTK_LIBS) \
+	$(GTK_LDFLAGS) \
 	$(GRAPHENE_LIBS) \
 	$(MYSQL_LDFLAGS) \
 	$(JACK_LIBS) $(SNDFILE_LIBS) ${SAMPLERATE_LIBS} \

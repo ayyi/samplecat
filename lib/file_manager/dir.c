@@ -1068,7 +1068,6 @@ dir_rescan (Directory* dir)
 
 	dir_set_scanning(dir, TRUE);
 	dir_merge_new(dir);
-	gdk_flush();
 
 	char filepath[FILENAME_MAX] = {0,};
 	struct dirent* ent;

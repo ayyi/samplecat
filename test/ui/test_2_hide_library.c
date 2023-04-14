@@ -5,6 +5,7 @@
 void
 test_2_hide_library ()
 {
+#ifdef GTK4_TODO
 	START_TEST;
 
 	assert(view_is_visible("Library"), "expected library panel visible");
@@ -40,5 +41,6 @@ test_2_hide_library ()
 	}
 
 	open_menu (then, NULL);
+#endif
 }
 

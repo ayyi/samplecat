@@ -1,0 +1,34 @@
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of the Ayyi project. https://www.ayyi.org          |
+ | copyright (C) 2004-2023 Tim Orford <tim@orford.org>                  |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
+ */
+
+#include "stdio.h"
+
+typedef enum {
+	PANEL_TYPE_XX,
+	PANEL_TYPE_MAX
+} PanelType;
+
+@REGISTER1
+
+void register_panels ()
+{
+	dock_registry_init();
+
+	@REGISTER2
+
+	for (int p=0;p<G_N_ELEMENTS(panels);p++) {
+		Panel* panel = &panels[p];
+		if (!panel->gtype)
+			register_gtk_fn(panel->name, panel->new);
+	}
+}
+

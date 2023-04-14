@@ -9,6 +9,7 @@ export G_DEBUG=gc-friendly
 	--suppressions=test/suppressions/pango.supp \
 	--suppressions=test/suppressions/glib.supp \
 	--suppressions=test/suppressions/gtk.supp \
+	--suppressions=test/suppressions/gtk4.supp \
 	--suppressions=test/suppressions/mesa.supp \
 	--suppressions=test/suppressions/fm.supp \
 	--suppressions=test/suppressions/samplecat.supp \

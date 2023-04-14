@@ -6,8 +6,8 @@ AM_CFLAGS = \
 	-I$(top_srcdir)/lib \
 	-I$(top_srcdir)/lib/waveform \
 	$(DBUS_CFLAGS) \
-	$(GLIB_CFLAGS) \
-	$(GDK_CFLAGS)
+	$(PIXBUF_CFLAGS) \
+	$(GLIB_CFLAGS)
 
 noinst_LTLIBRARIES = libplayer.la
 
@@ -30,4 +30,4 @@ libplayer_la_SOURCES = \
 	$(AUDITIONER_GPLAYER)
 
 player.vala.c: player.vala.vala
-	valac-0.36 -C -H player.vala.h player.vala.vala
+	valac-0.56 -C -H player.vala.h player.vala.vala

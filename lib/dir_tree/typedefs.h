@@ -178,7 +178,9 @@ struct _CollectTable
 	gint tip_delay_id;
 	CollectInfo *tip_info;
 
+#ifdef GTK4_TODO
 	GdkWindow *marker_window;
+#endif
 	CollectInfo *marker_info;
 
 	GtkWidget *status_label;
@@ -344,12 +346,16 @@ struct _LayoutWindow
 	GtkWidget *h_pane;
 	GtkWidget *v_pane;
 
+#ifdef GTK4_TODO
 	GtkTooltips *tooltips;
+#endif
 
 	/* menus, path selector */
 
+#ifdef GTK4_TODO
 	GtkActionGroup *action_group;
 	GtkUIManager *ui_manager;
+#endif
 
 	GtkWidget *path_entry;
 

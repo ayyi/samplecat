@@ -1,0 +1,2 @@
+#!/bin/sh
+docker build -t samplecat-debian-12-gtk4 .

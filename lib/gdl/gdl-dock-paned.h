@@ -21,8 +21,7 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#ifndef __GDL_DOCK_PANED_H__
-#define __GDL_DOCK_PANED_H__
+#pragma once
 
 #include <gdl/gdl-dock-item.h>
 
@@ -37,13 +36,14 @@ G_BEGIN_DECLS
 #define GDL_DOCK_PANED_GET_CLASS(obj)        (G_TYPE_INSTANCE_GET_CLASS ((obj), GDL_TYE_DOCK_PANED, GdlDockPanedClass))
 
 /* data types & structures */
-typedef struct _GdlDockPaned      GdlDockPaned;
-typedef struct _GdlDockPanedClass GdlDockPanedClass;
+typedef struct _GdlDockPaned        GdlDockPaned;
+typedef struct _GdlDockPanedClass   GdlDockPanedClass;
+typedef struct _GdlDockPanedPrivate GdlDockPanedPrivate;
 
 struct _GdlDockPaned {
     GdlDockItem  dock_item;
 
-    gboolean     position_changed;
+    GdlDockPanedPrivate *priv;
 };
 
 struct _GdlDockPanedClass {
@@ -52,13 +52,12 @@ struct _GdlDockPanedClass {
 
 
 /* public interface */
- 
+
 GType      gdl_dock_paned_get_type        (void);
 
 GtkWidget *gdl_dock_paned_new             (GtkOrientation orientation);
+void       gdl_dock_paned_add             (GdlDockPaned* container, GtkWidget*);
+void       gdl_dock_paned_remove_child    (GdlDockObject*, GdlDockItem*);
 
 
 G_END_DECLS
-
-#endif /* __GDL_DOCK_PANED_H__ */
-

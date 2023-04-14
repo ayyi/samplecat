@@ -1,23 +1,26 @@
-/**
-* +----------------------------------------------------------------------+
-* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2020 Tim Orford <tim@orford.org>                  |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-*
-*/
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
+ | copyright (C) 2007-2023 Tim Orford <tim@orford.org>                  |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
+ */
+
 #include "config.h"
 #include <glib.h>
 #include "utils/ayyi_utils.h"
 #include "debug/debug.h"
 #include "file_manager/file_manager.h"
 #include "samplecat.h"
+#include "application.h"
 #include "settings.h"
 
 extern char theme_name[64];
+extern SamplecatApplication* app;
 
 #define PALETTE_SIZE 17 // FIXME temporary - also in src/types.h
 
@@ -44,7 +47,7 @@ config_new (ConfigContext* ctx)
 		"jack_midiconnect=DISABLED\n"
 	);
 
-	if(!g_key_file_load_from_data(ctx->key_file, data, strlen(data), G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS, &error)){
+	if (!g_key_file_load_from_data(ctx->key_file, data, strlen(data), G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS, &error)) {
 		perr("error creating new key_file from data. %s\n", error->message);
 		g_error_free(error);
 		error = NULL;
@@ -64,21 +67,20 @@ config_load (ConfigContext* ctx, Config* config)
 	strcpy(config->mysql.name, "samplecat");
 #endif
 
-	int i;
-	for (i=0;i<PALETTE_SIZE;i++) {
+	for (int i=0;i<PALETTE_SIZE;i++) {
 		//currently these are overridden anyway
 		snprintf(config->colour[i], 7, "%s", "000000");
 	}
 
 	GError* error = NULL;
 	ctx->key_file = g_key_file_new();
-	if(g_key_file_load_from_file(ctx->key_file, ctx->filename, G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS, &error)){
+	if (g_key_file_load_from_file(ctx->key_file, ctx->filename, G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS, &error)) {
 		p_(1, "config loaded.");
 		gchar* groupname = g_key_file_get_start_group(ctx->key_file);
 		dbg (2, "group=%s.", groupname);
-		if(!strcmp(groupname, "Samplecat")){
-			for(int c=0;c<CONFIG_MAX;c++){
-				if(c == CONFIG_ICON_THEME){
+		if (!strcmp(groupname, "Samplecat")) {
+			for (int c=0;c<CONFIG_MAX;c++) {
+				if (c == CONFIG_ICON_THEME) {
 					ConfigOption* o = ctx->options[c];
 					char* str = g_key_file_get_string(ctx->key_file, groupname, o->name, NULL);
 					g_value_set_string(&o->val, str);
@@ -90,17 +92,17 @@ config_load (ConfigContext* ctx, Config* config)
 #else
 #define num_keys (11)
 #endif
-#define ADD_CONFIG_KEY(VAR, NAME) \
-			strcpy(keys[i], NAME); \
-			loc[i] = VAR; \
-			siz[i] = G_N_ELEMENTS(VAR); \
-			i++;
-
-			char  keys[num_keys+(PALETTE_SIZE-1)][64];
+			char  keys[num_keys+(PALETTE_SIZE-1)][32];
 			char*  loc[num_keys+(PALETTE_SIZE-1)];
 			size_t siz[num_keys+(PALETTE_SIZE-1)];
 
-			i = 0;
+			#define ADD_CONFIG_KEY(VAR, NAME) \
+				strcpy(keys[i], NAME); \
+				loc[i] = VAR; \
+				siz[i] = G_N_ELEMENTS(VAR); \
+				i++;
+
+			int i = 0;
 			ADD_CONFIG_KEY (config->database_backend, "database_backend");
 #ifdef USE_MYSQL
 			ADD_CONFIG_KEY (config->mysql.host,       "mysql_host");
@@ -120,75 +122,72 @@ config_load (ConfigContext* ctx, Config* config)
 			ADD_CONFIG_KEY (play->config.jack_autoconnect, "jack_autoconnect");
 			ADD_CONFIG_KEY (play->config.jack_midiconnect, "jack_midiconnect");
 
-			int k;
-			for (k=0;k<PALETTE_SIZE-1;k++) {
-				char tmp[16]; snprintf(tmp, 16, "colorkey%02d", k+1);
-				ADD_CONFIG_KEY(config->colour[k+1], tmp)
+			{
+				char tmp[16] = {0,};
+				for (int k=0;k<PALETTE_SIZE-1;k++) {
+					snprintf(tmp, 16, "colorkey%02d", k+1);
+					ADD_CONFIG_KEY(config->colour[k+1], tmp)
+				}
 			}
 
 			gchar* keyval;
-			for(k=0;k<(num_keys+PALETTE_SIZE-1);k++){
-				if((keyval = g_key_file_get_string(ctx->key_file, groupname, keys[k], &error))){
-					if(loc[k]){
+			for (int k=0;k<(num_keys+PALETTE_SIZE-1);k++) {
+				if ((keyval = g_key_file_get_string(ctx->key_file, groupname, keys[k], &error))) {
+					if (loc[k]) {
 						size_t keylen = siz[k];
 						snprintf(loc[k], keylen, "%s", keyval);
 						loc[k][keylen - 1] = '\0';
 					}
 					dbg(2, "%s=%s", keys[k], keyval);
 					g_free(keyval);
-				}else{
-					if(error->code != 3)
+				} else {
+					if (error->code != 3)
 						GERR_WARN;
 					g_error_clear(error);
 					if (!loc[k] || strlen(loc[k])==0) strcpy(loc[k], "");
 				}
 			}
 
-			if((keyval = g_key_file_get_string(ctx->key_file, groupname, "show_dir", &error))){
+			if ((keyval = g_key_file_get_string(ctx->key_file, groupname, "show_dir", &error))) {
 				samplecat_model_set_search_dir (samplecat.model, keyval);
 			}
-			if((keyval = g_key_file_get_string(ctx->key_file, groupname, "filter", &error))){
+			if ((keyval = g_key_file_get_string(ctx->key_file, groupname, "filter", &error))) {
 				observable_string_set(samplecat.model->filters2.search, keyval);
 			}
 
 			{
 				bool keyval = g_key_file_get_boolean(ctx->key_file, groupname, "add_recursive", &error);
-				if(error){
-					if(error->code != 3)
+				if (error) {
+					if (error->code != 3)
 						GERR_WARN;
 					g_error_clear(error)
-				}else{
+				} else {
 					config->add_recursive = keyval;
 				}
 
 				keyval = g_key_file_get_boolean(ctx->key_file, groupname, "loop_playback", &error);
-				if(error){
-					if(error->code == 3) g_error_clear(error)
-					else { GERR_WARN; }
-				}else{
+				if (error) {
+					if (error->code == 3) g_error_clear(error)
+					else GERR_WARN;
+				} else {
 					play->config.loop = keyval;
 				}
 			}
-
-#if 0
-#ifndef USE_GDL
-			app->view_options[SHOW_PLAYER]      = (ViewOption){"Player",      show_player,      strcmp(config->show_player, "false")};
-			app->view_options[SHOW_FILEMANAGER] = (ViewOption){"Filemanager", show_filemanager, true};
-			app->view_options[SHOW_WAVEFORM]    = (ViewOption){"Waveform",    show_waveform,    !strcmp(config->show_waveform, "true")};
-#ifdef HAVE_FFTW3
-			app->view_options[SHOW_SPECTROGRAM] = (ViewOption){"Spectrogram", show_spectrogram, !strcmp(config->show_spectrogram, "true")};
-#endif
-#endif
-#endif
+		} else {
+			pwarn("cannot find Samplecat key group.\n");
+			return false;
 		}
-		else{ pwarn("cannot find Samplecat key group.\n"); return false; }
 		g_free(groupname);
-	}else{
+
+	} else {
 		printf("unable to load config file: %s.\n", error->message);
-		g_error_free(error);
-		error = NULL;
-		config_new(ctx);
-		config_save(ctx);
+		g_clear_pointer(&error, g_error_free);
+
+		if (!app->temp_view) {
+			config_new(ctx);
+			config_save(ctx);
+		}
+
 		return false;
 	}
 
@@ -204,64 +203,54 @@ config_save (ConfigContext* ctx)
 	g_key_file_set_value(ctx->key_file, "Samplecat", "filter", samplecat.model->filters2.search->value.c ? samplecat.model->filters2.search->value.c : "");
 
 	// application specific settings
-	if(ctx->options){
+	if (ctx->options) {
 		char value[256];
 		int i = 0;
 		ConfigOption* option;
-		while((option = ctx->options[i++])){
+		while ((option = ctx->options[i++])) {
 			option->save(option);
 
-			if(G_VALUE_HOLDS_INT(&option->val)){
+			if (G_VALUE_HOLDS_INT(&option->val)) {
 				int val = g_value_get_int(&option->val);
 				dbg(2, "option: %s=%i", option->name, val);
-				if(val > g_value_get_int(&option->min) && val < g_value_get_int(&option->max)){
+				if (val > g_value_get_int(&option->min) && val < g_value_get_int(&option->max)) {
 					snprintf(value, 255, "%i", val);
 					g_key_file_set_value(ctx->key_file, "Samplecat", option->name, value);
 				}
-			}else if(G_VALUE_HOLDS_STRING(&option->val)){
+			} else if (G_VALUE_HOLDS_STRING(&option->val)) {
 				dbg(2, "option: %s=%s", option->name, g_value_get_string(&option->val));
 				if(g_value_get_string(&option->val)) g_key_file_set_value(ctx->key_file, "Samplecat", option->name, g_value_get_string(&option->val));
-			}else if(G_VALUE_HOLDS_BOOLEAN(&option->val)){
+			} else if (G_VALUE_HOLDS_BOOLEAN(&option->val)) {
 				dbg(2, "option: %s=%i", option->name, g_value_get_boolean(&option->val));
 				//snprintf(value, 255, "%s", g_value_get_boolean(&option->val) ? "true" : "false");
 				g_key_file_set_boolean(ctx->key_file, "Samplecat", option->name, g_value_get_boolean(&option->val));
-			}else{
+			} else {
 				dbg(2, "option: [manual]");
 			}
 		}
 	}
 
 	AyyiFilemanager* fm = file_manager__get();
-	if(fm && fm->real_path){
+	if (fm && fm->real_path) {
 		g_key_file_set_value(ctx->key_file, "Samplecat", "browse_dir", fm->real_path);
 	}
-
-#if 0
-#ifndef USE_GDL
-	g_key_file_set_value(ctx->key_file, "Samplecat", "show_player", app->view_options[SHOW_PLAYER].value ? "true" : "false");
-	g_key_file_set_value(ctx->key_file, "Samplecat", "show_waveform", app->view_options[SHOW_WAVEFORM].value ? "true" : "false");
-#ifdef HAVE_FFTW3
-	g_key_file_set_value(ctx->key_file, "Samplecat", "show_spectrogram", app->view_options[SHOW_SPECTROGRAM].value ? "true" : "false");
-#endif
-#endif
-#endif
 
 	GError* error = NULL;
 	gsize length;
 	gchar* string = g_key_file_to_data(ctx->key_file, &length, &error);
-	if(error){
+	if (error) {
 		dbg (0, "error saving config file: %s", error->message);
 		g_error_free(error);
 	}
 
-	if(ensure_config_dir()){
+	if (ensure_config_dir()) {
 
 		FILE* fp;
-		if(!(fp = fopen(ctx->filename, "w"))){
+		if (!(fp = fopen(ctx->filename, "w"))) {
 			logger_log(samplecat.logger, "cannot open config file for writing (%s).", ctx->filename);
 			return false;
 		}
-		if(fprintf(fp, "%s", string) < 0){
+		if (fprintf(fp, "%s", string) < 0) {
 			logger_log(samplecat.logger, "error writing data to config file (%s).", ctx->filename);
 		}
 		fclose(fp);

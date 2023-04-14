@@ -27,9 +27,7 @@
  */
 
 #include "config.h"
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <gtk/gtk.h>
-#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 #include "debug/debug.h"
 
 #include "support.h"
@@ -105,7 +103,7 @@ struct PurgeInfo
  * 'user_data' will be passed to all of the above functions.
  */
 GFSCache*
-g_fscache_new(GFSLoadFunc load, GFSUpdateFunc update, gpointer user_data)
+g_fscache_new (GFSLoadFunc load, GFSUpdateFunc update, gpointer user_data)
 {
 	GFSCache* cache       = g_new(GFSCache, 1);
 	cache->inode_to_stats = g_hash_table_new(hash_key, cmp_stats);
@@ -116,7 +114,7 @@ g_fscache_new(GFSLoadFunc load, GFSUpdateFunc update, gpointer user_data)
 	return cache;
 }
 
-void g_fscache_destroy(GFSCache *cache)
+void g_fscache_destroy (GFSCache *cache)
 {
 	g_return_if_fail(cache != NULL);
 
@@ -135,7 +133,7 @@ void g_fscache_destroy(GFSCache *cache)
  * Returns NULL on failure.
  */
 gpointer
-g_fscache_lookup(GFSCache *cache, const char *pathname)
+g_fscache_lookup (GFSCache *cache, const char *pathname)
 {
 	return g_fscache_lookup_full(cache, pathname, FSCACHE_LOOKUP_CREATE, NULL);
 }
@@ -147,7 +145,7 @@ g_fscache_lookup(GFSCache *cache, const char *pathname)
  * start loading some data and then with update_details = FALSE when you
  * put in the loaded object.
  */
-void g_fscache_insert(GFSCache *cache, const char *pathname, gpointer obj, gboolean update_details)
+void g_fscache_insert (GFSCache *cache, const char *pathname, gpointer obj, gboolean update_details)
 {
 	PF;
 	GFSCacheData* data = lookup_internal(cache, pathname, update_details ? FSCACHE_LOOKUP_INIT : FSCACHE_LOOKUP_INSERT);
@@ -195,7 +193,8 @@ g_fscache_lookup_full(GFSCache *cache, const char *pathname, FSCacheLookup looku
 /* Call the update() function on this item if it's in the cache
  * AND it's out-of-date.
  */
-void g_fscache_may_update(GFSCache *cache, const char *pathname)
+void
+g_fscache_may_update (GFSCache *cache, const char *pathname)
 {
 	GFSCacheKey	key;
 	GFSCacheData	*data;
@@ -223,7 +222,8 @@ void g_fscache_may_update(GFSCache *cache, const char *pathname)
 }
 
 /* Call the update() function on this item iff it's in the cache. */
-void g_fscache_update(GFSCache *cache, const char *pathname)
+void
+g_fscache_update (GFSCache *cache, const char *pathname)
 {
 	GFSCacheKey	key;
 	GFSCacheData	*data;
@@ -253,7 +253,8 @@ void g_fscache_update(GFSCache *cache, const char *pathname)
 /* Remove all cache entries last accessed more than 'age' seconds
  * ago.
  */
-void g_fscache_purge(GFSCache *cache, gint age)
+void
+g_fscache_purge (GFSCache *cache, gint age)
 {
 	struct PurgeInfo info;
 	
@@ -263,8 +264,7 @@ void g_fscache_purge(GFSCache *cache, gint age)
 	info.cache = cache;
 	info.now = time(NULL);
 
-	g_hash_table_foreach_remove(cache->inode_to_stats, purge_hash_entry,
-			(gpointer) &info);
+	g_hash_table_foreach_remove(cache->inode_to_stats, purge_hash_entry, (gpointer) &info);
 }
 
 
@@ -301,8 +301,8 @@ static void destroy_hash_entry(gpointer key, gpointer data, gpointer user_data)
 	g_free(data);
 }
 
-static gboolean purge_hash_entry(gpointer key, gpointer data,
-				 gpointer user_data)
+static gboolean
+purge_hash_entry(gpointer key, gpointer data, gpointer user_data)
 {
 	struct PurgeInfo *info = (struct PurgeInfo *) user_data;
 	GFSCacheData *cache_data = (GFSCacheData *) data;
@@ -327,22 +327,21 @@ static gboolean purge_hash_entry(gpointer key, gpointer data,
 /* As for g_fscache_lookup_full, but return the GFSCacheData rather than
  * the data it contains. Doesn't increment the refcount.
  */
-static GFSCacheData *lookup_internal(GFSCache *cache, const char *pathname,
-					FSCacheLookup lookup_type)
+static GFSCacheData*
+lookup_internal (GFSCache *cache, const char *pathname, FSCacheLookup lookup_type)
 {
-	struct stat 	info;
-	GFSCacheKey	key;
-	GFSCacheData	*data;
+	struct stat info;
 
-	g_return_val_if_fail(cache != NULL, NULL);
-	g_return_val_if_fail(pathname != NULL, NULL);
+	g_return_val_if_fail(cache, NULL);
+	g_return_val_if_fail(pathname, NULL);
 
 	if (stat(pathname, &info)) return NULL;
 
+	GFSCacheKey	key;
 	key.device = info.st_dev;
 	key.inode = info.st_ino;
 
-	data = g_hash_table_lookup(cache->inode_to_stats, &key);
+	GFSCacheData *data = g_hash_table_lookup(cache->inode_to_stats, &key);
 
 	if (data)
 	{

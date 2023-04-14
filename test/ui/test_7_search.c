@@ -3,6 +3,7 @@
 void
 test_7_search ()
 {
+#ifdef GTK4_TODO
 	START_TEST;
 
 	assert(view_is_visible("Search"), "expected search panel visible");
@@ -47,4 +48,5 @@ test_7_search ()
 	}
 
 	g_timeout_add(1000, _do_search, NULL);
+#endif
 }

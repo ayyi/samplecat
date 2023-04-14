@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
- | copyright (C) 2007-2022 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2007-2023 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -18,7 +18,8 @@
 #include "support.h"
 #include "model.h"
 #include "db/db.h"
-#include "samplecat.h"
+#include "samplecat/samplecat.h"
+#include "player/player.h"
 #include "list_store.h"
 #include "behaviours/panel.h"
 #include "views/panel.h"
@@ -322,11 +323,11 @@ application_set_auditioner ()
 void
 application_play (Sample* sample)
 {
-	if (play->status == PLAY_PAUSED) {
-		if (play->auditioner->playpause) {
-			play->auditioner->playpause(false);
+	if (play->state == PLAYER_PAUSED) {
+		if (play->auditioner->pause) {
+			play->auditioner->pause(false);
 		}
-		play->status = PLAY_PLAYING;
+		play->state = PLAYER_PLAYING;
 		return;
 	}
 

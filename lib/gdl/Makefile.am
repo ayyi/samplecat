@@ -6,19 +6,22 @@ GDL_CURRENT=3
 GDL_REVISION=0
 GDL_AGE=0
 
+if ENABLE_YAML
+YAML_LDFLAGS = \
+	$(top_srcdir)/lib/yaml/libyaml.a \
+	$(YAML_LIBS)
+endif
+
 AM_CFLAGS = \
 	-DG_LOG_DOMAIN=\"Gdl\" \
 	-DGDL_UIDIR=\""$(uidir)"\" \
-	-DGTK_DISABLE_DEPRECATION_WARNINGS \
-	-DGLIB_DISABLE_DEPRECATION_WARNINGS \
 	-I$(includedir) \
 	-I$(top_srcdir)/lib \
 	-I$(top_srcdir)/lib/waveform/lib/agl \
-	-I$(top_srcdir)/lib/waveform/gtkglext-1.0 \
 	$(GTK_CFLAGS) \
 	$(XML_CFLAGS)
 
-noinst_LIBRARIES = libgdl.a
+noinst_LTLIBRARIES = libgdl-4.la
 
 BUILT_SOURCES = \
 	libgdlmarshal.c \
@@ -32,9 +35,8 @@ CLEANFILES = \
 	libgdlmarshal.c \
 	libgdlmarshal.h
 
-libgdl_headers = \
+libgdl_4_headers = \
 	gdl.h \
-	gdl-tools.h \
 	gdl-dock.h \
 	gdl-dock-object.h \
 	gdl-dock-master.h \
@@ -42,11 +44,10 @@ libgdl_headers = \
 	gdl-dock-item-grip.h \
 	gdl-dock-layout.h \
 	gdl-dock-bar.h \
-	gdl-dock-placeholder.h \
-	debug.h
+	gdl-dock-placeholder.h
 	
-libgdl_a_SOURCES = \
-	$(libgdl_headers) \
+libgdl_4_la_SOURCES = \
+	$(libgdl_4_headers) \
 	gdl-dock-object.c \
 	gdl-dock-master.c \
 	gdl-dock.c \
@@ -59,45 +60,53 @@ libgdl_a_SOURCES = \
 	gdl-dock-notebook.c \
 	gdl-dock-paned.c \
 	gdl-dock-paned.h \
-	gdl-dock-tablabel.c \
-	gdl-dock-tablabel.h \
 	gdl-dock-layout.c \
 	gdl-dock-placeholder.c \
 	gdl-dock-bar.c \
 	gdl-switcher.c \
 	gdl-switcher.h \
-	gdl-i18n.h \
-	registry.c registry.h \
+	il8n.h \
+	registry.h registry.c \
+	utils.c utils.h \
+	debug.c debug.h \
 	libgdltypebuiltins.h \
 	libgdltypebuiltins.c \
 	libgdlmarshal.h \
 	libgdlmarshal.c
 
-#libgdl_a_LIBADD = \
-#	$(GDL_DEPENDENCIES_LIBS) \
-#	$(XML_LIBS)
+if BUILD_TESTS
+noinst_PROGRAMS=test-dock
 
-# libgdl_a_LDFLAGS = $(EXTRA_LDFLAGS) -version-info $(GDL_CURRENT):$(GDL_REVISION):$(GDL_AGE)
+test_dock_sources=test-dock.c
+test_dock_LDADD=libgdl-4.la \
+	$(top_srcdir)/lib/debug/libdebug.a \
+	$(top_srcdir)/lib/gtk/libgtk.la \
+	$(XML_LIBS) \
+	$(YAML_LDFLAGS) \
+	$(GTK_LDFLAGS)
+endif
 
-libgdlincludedir = $(includedir)/libgdl-1.0/gdl
+noinst_SCRIPTS = test-dock-seed.js test-dock-gjs.js
+
+libgdlincludedir = $(includedir)/libgdl-4.0/gdl
 libgdlinclude_HEADERS = \
-	$(libgdl_headers) \
+	$(libgdl_4_headers) \
 	libgdltypebuiltins.h
 
-uidir = $(datadir)/gdl/ui
-ui_DATA = layout.ui
-
 EXTRA_DIST = libgdlmarshal.list \
+	gdl-gtk-paned.c \
+	gdl-gtk-paned-handle.c \
 	tree-expand.xpm \
 	tree-contract.xpm \
-	layout.ui \
-	program.xpm static.xpm shared.xpm
+	program.xpm static.xpm shared.xpm \
+	$(noinst_SCRIPTS)
 
 # enumerations code generation
 
-libgdltypebuiltins.c: $(libgdl_headers)
+libgdltypebuiltins.c: $(libgdl_4_headers)
 	glib-mkenums \
 			--fhead "#include <glib-object.h>\n" \
+			--fhead "#undef GDL_DISABLE_DEPRECATED\n\n" \
 			--fhead "#include \"libgdltypebuiltins.h\"\n\n" \
 			--fprod "\n/* enumerations from \"@filename@\" */" \
 			--vhead "static const G@Type@Value _@enum_name@_values[] = {" \
@@ -113,7 +122,7 @@ libgdltypebuiltins.c: $(libgdl_headers)
 	&& sed -i '1s;^;#include "config.h"\n;' $(@F) \
 	&& rm -f xgen-gtbec
 
-libgdltypebuiltins.h: $(libgdl_headers)
+libgdltypebuiltins.h: $(libgdl_4_headers)
 	glib-mkenums \
 			--fhead "#ifndef __LIBGDLTYPEBUILTINS_H__\n" \
 			--fhead "#define __LIBGDLTYPEBUILTINS_H__ 1\n\n" \
@@ -142,3 +151,29 @@ libgdlmarshal.c: libgdlmarshal.h
 	&& sed -i '1s;^;#include "config.h"\n;' $(@F) \
 	&& rm -f xgen-gmc
 
+-include $(INTROSPECTION_MAKEFILE)
+INTROSPECTION_GIRS =
+INTROSPECTION_SCANNER_ARGS = --add-include-path=$(srcdir)
+INTROSPECTION_COMPILER_ARGS = --includedir=$(srcdir)
+
+if HAVE_INTROSPECTION
+introspection_sources = $(libgdl_4_la_SOURCES)
+
+Gdl-4.gir: libgdl-4.la
+Gdl_4_gir_INCLUDES = GObject-2.0 Gtk-4.0
+Gdl_4_gir_CFLAGS = $(INCLUDES) \
+		   -UGDL_DISABLE_DEPRECATED
+Gdl_4_gir_LIBS = libgdl-4.la
+Gdl_4_gir_FILES = $(introspection_sources)
+Gdl_4_gir_EXPORT_PACKAGES = gdl-3.0
+Gdl_4_gir_SCANNERFLAGS = --c-include gdl/gdl.h
+INTROSPECTION_GIRS += Gdl-3.gir
+
+girdir = $(datadir)/gir-1.0
+gir_DATA = $(INTROSPECTION_GIRS)
+
+typelibdir = $(libdir)/girepository-1.0
+typelib_DATA = $(INTROSPECTION_GIRS:.gir=.typelib)
+
+CLEANFILES += $(gir_DATA) $(typelib_DATA)
+endif

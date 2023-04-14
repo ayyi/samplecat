@@ -1,6 +1,4 @@
-/* -*- Mode: C; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 4 -*- 
- *
- * gdl-dock-master.h - Object which manages a dock ring
+/* gdl-dock-master.h - Object which manages a dock ring
  *
  * This file is part of the GNOME Devtools Libraries.
  *
@@ -28,7 +26,6 @@
 #include <gtk/gtk.h>
 #include <gdl/gdl-dock-object.h>
 
-
 G_BEGIN_DECLS
 
 /* standard macros */
@@ -44,6 +41,17 @@ typedef struct _GdlDockMaster        GdlDockMaster;
 typedef struct _GdlDockMasterClass   GdlDockMasterClass;
 typedef struct _GdlDockMasterPrivate GdlDockMasterPrivate;
 
+/**
+ * GdlSwitcherStyle:
+ * @GDL_SWITCHER_STYLE_TEXT: Tabs display only text labels.
+ * @GDL_SWITCHER_STYLE_ICON: Tabs display only icons.
+ * @GDL_SWITCHER_STYLE_BOTH: Tabs display text and icons.
+ * @GDL_SWITCHER_STYLE_TOOLBAR: Same as @GDL_SWITCHER_STYLE_BOTH.
+ * @GDL_SWITCHER_STYLE_TABS: Tabs display like notebook tabs.
+ * @GDL_SWITCHER_STYLE_NONE: Do not display tabs.
+ *
+ * Used to customize the appearance of the tabs in #GdlDockNotebook.
+ */
 typedef enum {
     GDL_SWITCHER_STYLE_TEXT,
     GDL_SWITCHER_STYLE_ICON,
@@ -56,13 +64,7 @@ typedef enum {
 struct _GdlDockMaster {
     GObject               object;
 
-    GHashTable           *dock_objects;
-    GList                *toplevel_docks;
-    GdlDockObject        *controller;      /* GUI root object */
-    
-    gint                  dock_number;     /* for toplevel dock numbering */
-    
-    GdlDockMasterPrivate *_priv;
+    GdlDockMasterPrivate *priv;
 };
 
 struct _GdlDockMasterClass {
@@ -74,12 +76,22 @@ struct _GdlDockMasterClass {
 
 /* additional macros */
 
+#ifndef GDL_DISABLE_DEPRECATED
+/**
+ * GDL_DOCK_OBJECT_GET_MASTER:
+ * @object: A #GdlDockObject
+ *
+ * Retrieve the #GdlDockMaster object managing the object.
+ *
+ * Deprecated: 3.6: Use gdl_dock_object_get_master()
+ */
 #define GDL_DOCK_OBJECT_GET_MASTER(object) \
     (GDL_DOCK_OBJECT (object)->master ? \
         GDL_DOCK_MASTER (GDL_DOCK_OBJECT (object)->master) : NULL)
+#endif
 
 /* public interface */
- 
+
 GType          gdl_dock_master_get_type         (void);
 
 void           gdl_dock_master_add              (GdlDockMaster *master,
@@ -102,7 +114,7 @@ GdlDockObject *gdl_dock_master_get_controller   (GdlDockMaster *master);
 void           gdl_dock_master_set_controller   (GdlDockMaster *master,
                                                  GdlDockObject *new_controller);
 
-void           gdl_dock_print_recursive         (GdlDockMaster *master);
+gchar         *gdl_dock_master_get_dock_name    (GdlDockMaster *master);
 
 G_END_DECLS
 

@@ -68,6 +68,7 @@ gint tree_path_to_row(GtkTreePath *tpath);
  * val is percent from 1 to 100, or -1 for default (usually 10%)
  * direction is -1 darker, 0 auto, 1 lighter
  */
+#ifdef GTK4_TODO
 void shift_color(GdkColor *src, gshort val, gint direction);
 
 /*
@@ -77,6 +78,7 @@ void shift_color(GdkColor *src, gshort val, gint direction);
  * shift_value is 1 to 100, representing the percent of the shift.
  */
 void style_shift_color(GtkStyle *style, GtkStateType type, gshort shift_value, gint direction);
+#endif
 
 /*
  * The standard shift percent for alternating list row colors

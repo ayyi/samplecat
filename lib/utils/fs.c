@@ -31,3 +31,19 @@ with_dir (const char* path, GError** error, bool (*fn)(GDir*, const char*, gpoin
 	}
 }
 
+
+bool
+with_fp (const char* filename, const char* mode, bool (*fn)(FILE*, gpointer), gpointer user_data)
+{
+	FILE* fp = fopen(filename, mode);
+	if (!fp) {
+		pwarn("cannot open config file (%s).", filename);
+		return false;
+	}
+
+	bool ok = fn(fp, user_data);
+
+	fclose(fp);
+
+	return ok;
+}

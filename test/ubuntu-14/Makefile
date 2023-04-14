@@ -1,7 +1,0 @@
-all:
-	git clone https://github.com/ayyi/samplecat.git
-	cd samplecat && \
-		git submodule update --init && git submodule foreach git pull origin master && \
-		./autogen.sh && \
-		./configure && \
-		make

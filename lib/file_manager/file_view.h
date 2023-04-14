@@ -1,17 +1,17 @@
-/**
-* +----------------------------------------------------------------------+
-* | This file is part of the Ayyi project. http://ayyi.org               |
-* | copyright (C) 2011-2018 Tim Orford <tim@orford.org>                  |
-* | copyright (C) 2006, Thomas Leonard and others                        |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-*
-*/
-#ifndef __view_details_h__
-#define __view_details_h__
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of the Ayyi project. http://ayyi.org               |
+ | copyright (C) 2011-2023 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2006, Thomas Leonard and others                        |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
+ */
+
+#pragma once
 
 #include <gtk/gtk.h>
 
@@ -49,18 +49,20 @@ typedef struct _ViewDetails {
     int               drag_box_y[2];
 
     gboolean          use_alt_colours;
+#ifdef GTK4_TODO
     GdkColor          alt_bg;
     GdkColor          alt_fg;
+#endif
 } ViewDetails;
 
 
-#define VIEW_DETAILS(obj) (GTK_CHECK_CAST((obj), view_details_get_type(), ViewDetails))
+#define VIEW_DETAILS(obj) (G_TYPE_CHECK_INSTANCE_CAST((obj), view_details_get_type(), ViewDetails))
 
 GtkWidget* view_details_new      (AyyiFilemanager* filer_window);
 GType      view_details_get_type ();
 
+#ifdef GTK4_TODO
 void       view_details_dnd_get  (GtkWidget*, GdkDragContext*, GtkSelectionData*, guint info, guint time, gpointer data);
 
 void       view_details_set_alt_colours(ViewDetails*, GdkColor* bg, GdkColor* fg);
-
-#endif /* __VIEW_DETAILS_H__ */
+#endif

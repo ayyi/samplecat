@@ -4,7 +4,7 @@ test_1_empty_search ()
 {
 	START_TEST;
 
-	assert(gtk_widget_get_realized(app->window), "window not realized");
+	assert(gtk_widget_get_realized((GtkWidget*)gtk_application_get_active_window(GTK_APPLICATION(app))), "window not realized");
 
 	gboolean _do_search (gpointer _)
 	{
@@ -13,14 +13,14 @@ test_1_empty_search ()
 		print_widget_tree(app->window);
 #endif
 
-		int n_rows = gtk_tree_model_iter_n_children(gtk_tree_view_get_model((GtkTreeView*)app->libraryview->widget), NULL);
+		int n_rows = gtk_tree_model_iter_n_children(gtk_tree_view_get_model((GtkTreeView*)APPLICATION(app)->libraryview->widget), NULL);
 		assert_and_stop(n_rows > 0, "no library items");
 
 		search("Hello");
 
 		bool is_empty ()
 		{
-			return gtk_tree_model_iter_n_children(gtk_tree_view_get_model((GtkTreeView*)app->libraryview->widget), NULL) == 0;
+			return gtk_tree_model_iter_n_children(gtk_tree_view_get_model((GtkTreeView*)APPLICATION(app)->libraryview->widget), NULL) == 0;
 		}
 
 		void then (gpointer _)

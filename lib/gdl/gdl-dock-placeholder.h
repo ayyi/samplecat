@@ -1,5 +1,4 @@
-/* -*- Mode: C; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 4 -*- 
- *
+/*
  * gdl-dock-placeholder.h - Placeholders for docking items
  *
  * This file is part of the GNOME Devtools Libraries.
@@ -28,6 +27,8 @@
 
 G_BEGIN_DECLS
 
+#ifndef GDL_DISABLE_DEPRECATED
+
 /* standard macros */
 #define GDL_TYPE_DOCK_PLACEHOLDER             (gdl_dock_placeholder_get_type ())
 #define GDL_DOCK_PLACEHOLDER(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), GDL_TYPE_DOCK_PLACEHOLDER, GdlDockPlaceholder))
@@ -44,7 +45,7 @@ typedef struct _GdlDockPlaceholderPrivate GdlDockPlaceholderPrivate;
 struct _GdlDockPlaceholder {
     GdlDockObject              object;
 
-    GdlDockPlaceholderPrivate *_priv;
+    GdlDockPlaceholderPrivate *priv;
 };
 
 struct _GdlDockPlaceholderClass {
@@ -62,7 +63,7 @@ GtkWidget  *gdl_dock_placeholder_new      (const gchar       *name,
 
 void        gdl_dock_placeholder_attach   (GdlDockPlaceholder *ph,
                                            GdlDockObject      *object);
-
+#endif
 
 G_END_DECLS
 

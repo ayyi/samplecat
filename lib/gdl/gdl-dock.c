@@ -1,10 +1,9 @@
-/* -*- Mode: C; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 4 -*- 
- *
+/*
  * This file is part of the GNOME Devtools Libraries.
  *
  * Copyright (C) 2002 Gustavo Giráldez <gustavo.giraldez@gmx.net>
  *               2007 Naba Kumar  <naba@gnome.org>
- * 
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -24,28 +23,35 @@
 #include <config.h>
 #endif
 
-#include "gdl-i18n.h"
+#include "il8n.h"
 #include <stdlib.h>
 #include <string.h>
-#include "debug/debug.h"
+#include "debug.h"
 
-#include "gdl-tools.h"
 #include "gdl-dock.h"
 #include "gdl-dock-master.h"
 #include "gdl-dock-paned.h"
 #include "gdl-dock-notebook.h"
-#include "gdl-dock-placeholder.h"
+//#include "gdl-preview-window.h"
 
 #include "libgdlmarshal.h"
 
-#ifndef __FUNCTION__
-#define __FUNCTION__ __func__
-#endif
+/**
+ * SECTION:gdl-dock
+ * @title: GdlDock
+ * @short_description: A docking area widget.
+ * @see_also: #GdlDockItem, #GdlDockMaster
+ * @stability: Unstable
+ *
+ * A #GdlDock is the toplevel widget which in turn hold a tree of #GdlDockItem
+ * widgets.
+ *
+ * Several dock widgets can exchange widgets if they share the same master.
+ */
 
 /* ----- Private prototypes ----- */
 
 static void  gdl_dock_class_init      (GdlDockClass *class);
-static void  gdl_dock_instance_init   (GdlDock *dock);
 
 static GObject *gdl_dock_constructor  (GType                  type,
                                        guint                  n_construct_properties,
@@ -64,26 +70,15 @@ static void  gdl_dock_notify_cb       (GObject      *object,
 
 static void  gdl_dock_set_title       (GdlDock      *dock);
 
-static void  gdl_dock_destroy         (GtkObject    *object);
+static void  gdl_dock_dispose         (GObject      *object);
 
-static void  gdl_dock_size_request    (GtkWidget      *widget,
-                                       GtkRequisition *requisition);
-static void  gdl_dock_size_allocate   (GtkWidget      *widget,
-                                       GtkAllocation  *allocation);
+static void gdl_dock_measure          (GtkWidget* widget, GtkOrientation orientation, int for_size, int* min, int* natural, int* min_baseline, int* natural_baseline);
+
+static void  gdl_dock_size_allocate   (GtkWidget      *widget, int, int, int);
 static void  gdl_dock_map             (GtkWidget      *widget);
 static void  gdl_dock_unmap           (GtkWidget      *widget);
 static void  gdl_dock_show            (GtkWidget      *widget);
 static void  gdl_dock_hide            (GtkWidget      *widget);
-
-static void  gdl_dock_add             (GtkContainer *container,
-                                       GtkWidget    *widget);
-static void  gdl_dock_remove          (GtkContainer *container,
-                                       GtkWidget    *widget);
-static void  gdl_dock_forall          (GtkContainer *container,
-                                       gboolean      include_internals,
-                                       GtkCallback   callback,
-                                       gpointer      callback_data);
-static GType  gdl_dock_child_type   (GtkContainer *container);
 
 static void     gdl_dock_detach       (GdlDockObject    *object,
                                        gboolean          recursive);
@@ -101,7 +96,9 @@ static gboolean gdl_dock_reorder      (GdlDockObject    *object,
                                        GdlDockPlacement  new_position,
                                        GValue           *other_data);
 
+#ifdef GTK4_TODO
 static gboolean gdl_dock_floating_window_delete_event_cb (GtkWidget *widget);
+#endif
 
 static gboolean gdl_dock_child_placement  (GdlDockObject    *object,
                                            GdlDockObject    *child,
@@ -115,18 +112,21 @@ static void     gdl_dock_present          (GdlDockObject    *object,
 
 struct _GdlDockPrivate
 {
+    GdlDockObject   *root;
+
     /* for floating docks */
     gboolean            floating;
     GtkWidget          *window;
     gboolean            auto_title;
-    
+
     gint                float_x;
     gint                float_y;
     gint                width;
     gint                height;
 
-    /* auxiliary fields */
-    GdkGC              *xor_gc;
+    GtkWidget          *area_window;
+
+    gboolean            skip_taskbar;
 };
 
 enum {
@@ -141,7 +141,8 @@ enum {
     PROP_WIDTH,
     PROP_HEIGHT,
     PROP_FLOAT_X,
-    PROP_FLOAT_Y
+    PROP_FLOAT_Y,
+    PROP_SKIP_TASKBAR
 };
 
 static guint dock_signals [LAST_SIGNAL] = { 0 };
@@ -151,28 +152,21 @@ static guint dock_signals [LAST_SIGNAL] = { 0 };
 
 /* ----- Private functions ----- */
 
-GDL_CLASS_BOILERPLATE (GdlDock, gdl_dock, GdlDockObject, GDL_TYPE_DOCK_OBJECT);
+G_DEFINE_TYPE_WITH_CODE (GdlDock, gdl_dock, GDL_TYPE_DOCK_OBJECT, G_ADD_PRIVATE (GdlDock))
 
 static void
 gdl_dock_class_init (GdlDockClass *klass)
 {
-    GObjectClass       *g_object_class;
-    GtkObjectClass     *gtk_object_class;
-    GtkWidgetClass     *widget_class;
-    GtkContainerClass  *container_class;
-    GdlDockObjectClass *object_class;
-    
-    g_object_class = G_OBJECT_CLASS (klass);
-    gtk_object_class = GTK_OBJECT_CLASS (klass);
-    widget_class = GTK_WIDGET_CLASS (klass);
-    container_class = GTK_CONTAINER_CLASS (klass);
-    object_class = GDL_DOCK_OBJECT_CLASS (klass);
-    
-    g_object_class->constructor = gdl_dock_constructor;
-    g_object_class->set_property = gdl_dock_set_property;
-    g_object_class->get_property = gdl_dock_get_property;
-    
-    /* properties */
+	GObjectClass* g_object_class = G_OBJECT_CLASS (klass);
+	GtkWidgetClass* widget_class = GTK_WIDGET_CLASS (klass);
+	GdlDockObjectClass* object_class = GDL_DOCK_OBJECT_CLASS (klass);
+
+	g_object_class->constructor = gdl_dock_constructor;
+	g_object_class->set_property = gdl_dock_set_property;
+	g_object_class->get_property = gdl_dock_get_property;
+	g_object_class->dispose = gdl_dock_dispose;
+
+	/* properties */
 
     g_object_class_install_property (
         g_object_class, PROP_FLOATING,
@@ -181,14 +175,14 @@ gdl_dock_class_init (GdlDockClass *klass)
                               FALSE,
                               G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |
                               GDL_DOCK_PARAM_EXPORT));
-    
+
     g_object_class_install_property (
         g_object_class, PROP_DEFAULT_TITLE,
         g_param_spec_string ("default-title", _("Default title"),
                              _("Default title for the newly created floating docks"),
                              NULL,
                              G_PARAM_READWRITE));
-    
+
     g_object_class_install_property (
         g_object_class, PROP_WIDTH,
         g_param_spec_int ("width", _("Width"),
@@ -196,7 +190,7 @@ gdl_dock_class_init (GdlDockClass *klass)
                           -1, G_MAXINT, -1,
                           G_PARAM_READWRITE | G_PARAM_CONSTRUCT |
                           GDL_DOCK_PARAM_EXPORT));
-    
+
     g_object_class_install_property (
         g_object_class, PROP_HEIGHT,
         g_param_spec_int ("height", _("Height"),
@@ -204,7 +198,7 @@ gdl_dock_class_init (GdlDockClass *klass)
                           -1, G_MAXINT, -1,
                           G_PARAM_READWRITE | G_PARAM_CONSTRUCT |
                           GDL_DOCK_PARAM_EXPORT));
-    
+
     g_object_class_install_property (
         g_object_class, PROP_FLOAT_X,
         g_param_spec_int ("floatx", _("Float X"),
@@ -212,7 +206,7 @@ gdl_dock_class_init (GdlDockClass *klass)
                           G_MININT, G_MAXINT, 0,
                           G_PARAM_READWRITE | G_PARAM_CONSTRUCT |
                           GDL_DOCK_PARAM_EXPORT));
-    
+
     g_object_class_install_property (
         g_object_class, PROP_FLOAT_Y,
         g_param_spec_int ("floaty", _("Float Y"),
@@ -220,35 +214,52 @@ gdl_dock_class_init (GdlDockClass *klass)
                           G_MININT, G_MAXINT, 0,
                           G_PARAM_READWRITE | G_PARAM_CONSTRUCT |
                           GDL_DOCK_PARAM_EXPORT));
-    
-    gtk_object_class->destroy = gdl_dock_destroy;
 
-    widget_class->size_request = gdl_dock_size_request;
+    /**
+     * GdlDock:skip-taskbar:
+     *
+     * Whether or not to prevent a floating dock window from appearing in the
+     * taskbar. Note that this only affects floating windows that are created
+     * after this flag is set; existing windows are not affected.  Usually,
+     * this property is used when you create the dock.
+     *
+     * Since: 3.6
+     */
+    g_object_class_install_property (
+        g_object_class, PROP_SKIP_TASKBAR,
+        g_param_spec_boolean ("skip-taskbar",
+                              _("Skip taskbar"),
+                              _("Whether or not to prevent a floating dock window from appearing in the taskbar"),
+                              TRUE,
+                              G_PARAM_READWRITE | G_PARAM_CONSTRUCT |
+                              GDL_DOCK_PARAM_EXPORT));
+
+	widget_class->measure = gdl_dock_measure;
     widget_class->size_allocate = gdl_dock_size_allocate;
     widget_class->map = gdl_dock_map;
     widget_class->unmap = gdl_dock_unmap;
     widget_class->show = gdl_dock_show;
     widget_class->hide = gdl_dock_hide;
-    
-    container_class->add = gdl_dock_add;
-    container_class->remove = gdl_dock_remove;
-    container_class->forall = gdl_dock_forall;
-    container_class->child_type = gdl_dock_child_type;
-    
-    object_class->is_compound = TRUE;
-    
+
+    gdl_dock_object_class_set_is_compound (object_class, TRUE);
     object_class->detach = gdl_dock_detach;
     object_class->reduce = gdl_dock_reduce;
     object_class->dock_request = gdl_dock_dock_request;
     object_class->dock = gdl_dock_dock;
-    object_class->reorder = gdl_dock_reorder;    
+    object_class->reorder = gdl_dock_reorder;
     object_class->child_placement = gdl_dock_child_placement;
     object_class->present = gdl_dock_present;
-    
+
     /* signals */
 
-    dock_signals [LAYOUT_CHANGED] = 
-        g_signal_new ("layout-changed", 
+    /**
+     * GdlDock::layout-changed:
+     *
+     * Signals that the layout has changed, one or more widgets have been moved,
+     * added or removed.
+     */
+    dock_signals [LAYOUT_CHANGED] =
+        g_signal_new ("layout-changed",
                       G_TYPE_FROM_CLASS (klass),
                       G_SIGNAL_RUN_LAST,
                       G_STRUCT_OFFSET (GdlDockClass, layout_changed),
@@ -262,132 +273,118 @@ gdl_dock_class_init (GdlDockClass *klass)
 }
 
 static void
-gdl_dock_instance_init (GdlDock *dock)
+gdl_dock_init (GdlDock *dock)
 {
-    GTK_WIDGET_SET_FLAGS (GTK_WIDGET (dock), GTK_NO_WINDOW);
+	dock->priv = gdl_dock_get_instance_private(dock);
 
-    dock->root = NULL;
-    dock->_priv = g_new0 (GdlDockPrivate, 1);
-    dock->_priv->width = -1;
-    dock->_priv->height = -1;
+    dock->priv->width = -1;
+    dock->priv->height = -1;
 }
 
-static gboolean 
-gdl_dock_floating_configure_event_cb (GtkWidget         *widget,
-                                      GdkEventConfigure *event,
-                                      gpointer           user_data)
+#ifdef GTK4_TODO
+static gboolean
+gdl_dock_floating_configure_event_cb (GtkWidget *widget, GdkEventConfigure *event, gpointer user_data)
 {
-    GdlDock *dock;
-    
     g_return_val_if_fail (user_data != NULL && GDL_IS_DOCK (user_data), TRUE);
 
-    dock = GDL_DOCK (user_data);
-    dock->_priv->float_x = event->x;
-    dock->_priv->float_y = event->y;
-    dock->_priv->width = event->width;
-    dock->_priv->height = event->height;
+    GdlDock* dock = GDL_DOCK (user_data);
+    dock->priv->float_x = event->x;
+    dock->priv->float_y = event->y;
+    dock->priv->width = event->width;
+    dock->priv->height = event->height;
 
     return FALSE;
 }
+#endif
 
 static GObject *
-gdl_dock_constructor (GType                  type,
-                      guint                  n_construct_properties,
-                      GObjectConstructParam *construct_param)
+gdl_dock_constructor (GType type, guint n_construct_properties, GObjectConstructParam *construct_param)
 {
-    GObject *g_object;
-    
-    g_object = GDL_CALL_PARENT_WITH_DEFAULT (G_OBJECT_CLASS, 
-                                               constructor, 
-                                               (type,
-                                                n_construct_properties,
-                                                construct_param),
-                                               NULL);
+    GObject* g_object = G_OBJECT_CLASS (gdl_dock_parent_class)-> constructor (type, n_construct_properties, construct_param);
     if (g_object) {
         GdlDock *dock = GDL_DOCK (g_object);
-        GdlDockMaster *master;
-        
+
         /* create a master for the dock if none was provided in the construction */
-        master = GDL_DOCK_OBJECT_GET_MASTER (GDL_DOCK_OBJECT (dock));
+        GdlDockMaster* master = GDL_DOCK_MASTER (gdl_dock_object_get_master (GDL_DOCK_OBJECT (dock)));
         if (!master) {
-            GDL_DOCK_OBJECT_UNSET_FLAGS (dock, GDL_DOCK_AUTOMATIC);
+            gdl_dock_object_set_manual (GDL_DOCK_OBJECT (dock));
             master = g_object_new (GDL_TYPE_DOCK_MASTER, NULL);
             /* the controller owns the master ref */
             gdl_dock_object_bind (GDL_DOCK_OBJECT (dock), G_OBJECT (master));
         }
 
-        if (dock->_priv->floating) {
+        if (dock->priv->floating) {
             /* create floating window for this dock */
-            dock->_priv->window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
-            g_object_set_data (G_OBJECT (dock->_priv->window), "dock", dock);
-            
+            dock->priv->window = gtk_window_new ();
+            g_object_set_data (G_OBJECT (dock->priv->window), "dock", dock);
+
             /* set position and default size */
-            gtk_window_set_position (GTK_WINDOW (dock->_priv->window),
-                                     GTK_WIN_POS_MOUSE);
-            gtk_window_set_default_size (GTK_WINDOW (dock->_priv->window),
-                                         dock->_priv->width,
-                                         dock->_priv->height);
-            gtk_window_set_type_hint (GTK_WINDOW (dock->_priv->window),
-                                      GDK_WINDOW_TYPE_HINT_NORMAL);
-            
-            /* metacity ignores this */
-            gtk_window_move (GTK_WINDOW (dock->_priv->window),
-                             dock->_priv->float_x,
-                             dock->_priv->float_y);
-            
+#ifdef GTK4_TODO
+            gtk_window_set_position (GTK_WINDOW (dock->priv->window), GTK_WIN_POS_MOUSE);
+#endif
+            gtk_window_set_default_size (GTK_WINDOW (dock->priv->window), dock->priv->width, dock->priv->height);
+#ifdef GTK4_TODO
+            gtk_window_set_type_hint (GTK_WINDOW (dock->priv->window), GDK_WINDOW_TYPE_HINT_TOOLBAR);
+#endif
+
+            gdl_dock_set_skip_taskbar (dock, dock->priv->skip_taskbar);
+
+#ifdef GTK4_TODO
+            gtk_window_move (GTK_WINDOW (dock->priv->window), dock->priv->float_x, dock->priv->float_y);
+#endif
+
             /* connect to the configure event so we can track down window geometry */
-            g_signal_connect (dock->_priv->window, "configure_event",
-                              (GCallback) gdl_dock_floating_configure_event_cb,
-                              dock);
-            
+#ifdef GTK4_TODO
+            g_signal_connect (dock->priv->window, "configure_event", (GCallback) gdl_dock_floating_configure_event_cb, dock);
+#endif
+
             /* set the title and connect to the long_name notify queue
-               so we can reset the title when this prop changes */
+             so we can reset the title when this prop changes */
             gdl_dock_set_title (dock);
-            g_signal_connect (dock, "notify::long-name",
-                              (GCallback) gdl_dock_notify_cb, NULL);
-            
-            gtk_container_add (GTK_CONTAINER (dock->_priv->window), GTK_WIDGET (dock));
-    
-            g_signal_connect (dock->_priv->window, "delete_event",
-                              G_CALLBACK (gdl_dock_floating_window_delete_event_cb), 
-                              NULL);
-        }
-        GDL_DOCK_OBJECT_SET_FLAGS (dock, GDL_DOCK_ATTACHED);
-    }
-    
-    return g_object;
+            g_signal_connect (dock, "notify::long-name", (GCallback) gdl_dock_notify_cb, NULL);
+
+            gtk_window_set_child (GTK_WINDOW (dock->priv->window), GTK_WIDGET (dock));
+
+#ifdef GTK4_TODO
+            g_signal_connect (dock->priv->window, "delete_event", G_CALLBACK (gdl_dock_floating_window_delete_event_cb), NULL);
+#endif
+		}
+
+		gtk_widget_set_hexpand (GTK_WIDGET (dock), true);
+		gtk_widget_set_vexpand (GTK_WIDGET (dock), true);
+	}
+
+	return g_object;
 }
 
 static void
-gdl_dock_set_property  (GObject      *object,
-                        guint         prop_id,
-                        const GValue *value,
-                        GParamSpec   *pspec)
+gdl_dock_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
     GdlDock *dock = GDL_DOCK (object);
-    
+
     switch (prop_id) {
         case PROP_FLOATING:
-            dock->_priv->floating = g_value_get_boolean (value);
+            dock->priv->floating = g_value_get_boolean (value);
             break;
         case PROP_DEFAULT_TITLE:
-            if (GDL_DOCK_OBJECT (object)->master)
-                g_object_set (GDL_DOCK_OBJECT (object)->master,
-                              "default-title", g_value_get_string (value),
-                              NULL);
+            if (gdl_dock_object_get_master (GDL_DOCK_OBJECT (object)) != NULL)
+                g_object_set (gdl_dock_object_get_master (GDL_DOCK_OBJECT (object)), "default-title", g_value_get_string (value), NULL);
             break;
         case PROP_WIDTH:
-            dock->_priv->width = g_value_get_int (value);
+            dock->priv->width = g_value_get_int (value);
             break;
         case PROP_HEIGHT:
-            dock->_priv->height = g_value_get_int (value);
+            dock->priv->height = g_value_get_int (value);
             break;
         case PROP_FLOAT_X:
-            dock->_priv->float_x = g_value_get_int (value);
+            dock->priv->float_x = g_value_get_int (value);
             break;
         case PROP_FLOAT_Y:
-            dock->_priv->float_y = g_value_get_int (value);
+            dock->priv->float_y = g_value_get_int (value);
             break;
+	case PROP_SKIP_TASKBAR:
+            gdl_dock_set_skip_taskbar (dock, g_value_get_boolean (value));
+	    break;
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
             break;
@@ -398,57 +395,74 @@ gdl_dock_set_property  (GObject      *object,
         case PROP_HEIGHT:
         case PROP_FLOAT_X:
         case PROP_FLOAT_Y:
-            if (dock->_priv->floating && dock->_priv->window) {
-                gtk_window_resize (GTK_WINDOW (dock->_priv->window),
-                                   dock->_priv->width,
-                                   dock->_priv->height);
+            if (dock->priv->floating && dock->priv->window) {
+#ifdef GTK4_TODO
+                gtk_window_resize (GTK_WINDOW (dock->priv->window), dock->priv->width, dock->priv->height);
+#endif
             }
             break;
     }
 }
 
 static void
-gdl_dock_get_property  (GObject      *object,
-                        guint         prop_id,
-                        GValue       *value,
-                        GParamSpec   *pspec)
+gdl_dock_get_property  (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
     GdlDock *dock = GDL_DOCK (object);
 
     switch (prop_id) {
         case PROP_FLOATING:
-            g_value_set_boolean (value, dock->_priv->floating);
+            g_value_set_boolean (value, dock->priv->floating);
             break;
         case PROP_DEFAULT_TITLE:
-            if (GDL_DOCK_OBJECT (object)->master) {
+            if (gdl_dock_object_get_master (GDL_DOCK_OBJECT (object)) != NULL) {
                 gchar *default_title;
-                g_object_get (GDL_DOCK_OBJECT (object)->master,
-                              "default-title", &default_title,
-                              NULL);
-#if GLIB_CHECK_VERSION(2,3,0)
+                g_object_get (gdl_dock_object_get_master (GDL_DOCK_OBJECT (object)), "default-title", &default_title, NULL);
+
                 g_value_take_string (value, default_title);
-#else
-                g_value_set_string_take_ownership (value, default_title);
-#endif
             }
             else
                 g_value_set_string (value, NULL);
             break;
         case PROP_WIDTH:
-            g_value_set_int (value, dock->_priv->width);
+            g_value_set_int (value, dock->priv->width);
             break;
         case PROP_HEIGHT:
-            g_value_set_int (value, dock->_priv->height);
+            g_value_set_int (value, dock->priv->height);
             break;
         case PROP_FLOAT_X:
-            g_value_set_int (value, dock->_priv->float_x);
+            g_value_set_int (value, dock->priv->float_x);
             break;
         case PROP_FLOAT_Y:
-            g_value_set_int (value, dock->_priv->float_y);
+            g_value_set_int (value, dock->priv->float_y);
+            break;
+        case PROP_SKIP_TASKBAR:
+            g_value_set_boolean (value, dock->priv->skip_taskbar);
             break;
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
             break;
+    }
+}
+
+/**
+ * gdl_dock_set_skip_taskbar:
+ * @dock: The dock whose property should be set.
+ * @skip: %TRUE if floating docks should be prevented from appearing in the taskbar
+ *
+ * Sets whether or not a floating dock window should be prevented from
+ * appearing in the system taskbar.
+ *
+ * Since: 3.6
+ */
+void
+gdl_dock_set_skip_taskbar (GdlDock *dock, gboolean skip)
+{
+    dock->priv->skip_taskbar = (skip != FALSE);
+
+    if (dock->priv->window && dock->priv->window) {
+#ifdef GTK4_TODO
+        gtk_window_set_skip_taskbar_hint (GTK_WINDOW (dock->priv->window), dock->priv->skip_taskbar);
+#endif
     }
 }
 
@@ -457,150 +471,133 @@ gdl_dock_set_title (GdlDock *dock)
 {
     GdlDockObject *object = GDL_DOCK_OBJECT (dock);
     gchar         *title = NULL;
-    gboolean       free_title = FALSE;
-    
-    if (!dock->_priv->window)
+
+    if (!dock->priv->window)
         return;
-    
-    if (!dock->_priv->auto_title && object->long_name) {
-        title = object->long_name;
+
+    if (!dock->priv->auto_title && gdl_dock_object_get_long_name (object)) {
+        title = g_strdup (gdl_dock_object_get_long_name (object));
     }
-    else if (object->master) {
-        g_object_get (object->master, "default-title", &title, NULL);
-        free_title = TRUE;
+    else if (gdl_dock_object_get_master (object) != NULL) {
+        g_object_get (G_OBJECT (gdl_dock_object_get_master (object)), "default-title", &title, NULL);
     }
 
-    if (!title && dock->root) {
-        g_object_get (dock->root, "long-name", &title, NULL);
-        free_title = TRUE;
+    if (!title && dock->priv->root) {
+        g_object_get (dock->priv->root, "long-name", &title, NULL);
     }
-    
+
     if (!title) {
         /* set a default title in the long_name */
-        dock->_priv->auto_title = TRUE;
-        free_title = FALSE;
-        title = object->long_name = g_strdup_printf (
-            _("Dock #%d"), GDL_DOCK_MASTER (object->master)->dock_number++);
+        dock->priv->auto_title = TRUE;
+        title = gdl_dock_master_get_dock_name (GDL_DOCK_MASTER (gdl_dock_object_get_master (object)));
     }
 
-    gtk_window_set_title (GTK_WINDOW (dock->_priv->window), title);
-    if (free_title)
-        g_free (title);
+    gtk_window_set_title (GTK_WINDOW (dock->priv->window), title);
+
+    g_free (title);
 }
 
 static void
-gdl_dock_notify_cb (GObject    *object,
-                    GParamSpec *pspec,
-                    gpointer    user_data)
+gdl_dock_notify_cb (GObject *object, GParamSpec *pspec, gpointer user_data)
 {
     GdlDock *dock;
-    
+    gchar* long_name;
+
     g_return_if_fail (object != NULL || GDL_IS_DOCK (object));
-    
-    dock = GDL_DOCK (object);
-    dock->_priv->auto_title = FALSE;
-    gdl_dock_set_title (dock);
-}
 
-static void
-gdl_dock_destroy (GtkObject *object)
-{
-    GdlDock *dock = GDL_DOCK (object);
+    g_object_get (object, "long-name", &long_name, NULL);
 
-    if (dock->_priv) {
-        GdlDockPrivate *priv = dock->_priv;
-        dock->_priv = NULL;
-
-        if (priv->window) {
-            gtk_widget_destroy (priv->window);
-            priv->floating = FALSE;
-            priv->window = NULL;
-        }
-        
-        /* destroy the xor gc */
-        if (priv->xor_gc) {
-            g_object_unref (priv->xor_gc);
-            priv->xor_gc = NULL;
-        }
-
-        g_free (priv);
+    if (long_name) {
+        dock = GDL_DOCK (object);
+        dock->priv->auto_title = FALSE;
+        gdl_dock_set_title (dock);
     }
-    
-    GDL_CALL_PARENT (GTK_OBJECT_CLASS, destroy, (object));
+    g_free (long_name);
 }
 
 static void
-gdl_dock_size_request (GtkWidget      *widget,
-                       GtkRequisition *requisition)
+gdl_dock_dispose (GObject *object)
 {
-    GdlDock       *dock;
-    GtkContainer  *container;
-    guint          border_width;
+    GdlDockPrivate *priv = GDL_DOCK (object)->priv;
 
+    if (priv->window) {
+        gtk_window_destroy (GTK_WINDOW (priv->window));
+        priv->floating = FALSE;
+        priv->window = NULL;
+    }
+
+    if (priv->area_window) {
+		GtkWindow** area_window = (GtkWindow**)&priv->area_window;
+        g_clear_pointer(area_window, gtk_window_destroy);
+    }
+
+    G_OBJECT_CLASS (gdl_dock_parent_class)->dispose (object);
+}
+
+static void
+gdl_dock_get_size (GtkWidget *widget, GtkOrientation orientation, gint *minimum, gint *natural)
+{
     g_return_if_fail (widget != NULL);
     g_return_if_fail (GDL_IS_DOCK (widget));
 
-    dock = GDL_DOCK (widget);
-    container = GTK_CONTAINER (widget);
-    border_width = container->border_width;
+    GdlDock *dock = GDL_DOCK (widget);
+
+    *minimum = *natural = 0;
 
     /* make request to root */
-    if (dock->root && GTK_WIDGET_VISIBLE (dock->root))
-        gtk_widget_size_request (GTK_WIDGET (dock->root), requisition);
-    else {
-        requisition->width = 0;
-        requisition->height = 0;
-    };
-
-    requisition->width += 2 * border_width;
-    requisition->height += 2 * border_width;
-
-    widget->requisition = *requisition;
+    if (dock->priv->root && gtk_widget_get_visible (GTK_WIDGET (dock->priv->root))) {
+		gtk_widget_measure (GTK_WIDGET (dock->priv->root), orientation, -1, minimum, natural, NULL, NULL);
+    }
 }
 
 static void
-gdl_dock_size_allocate (GtkWidget     *widget,
-                        GtkAllocation *allocation)
+gdl_dock_get_preferred_width (GtkWidget *widget, gint *minimum, gint *natural)
 {
-    GdlDock       *dock;
-    GtkContainer  *container;
-    guint          border_width;
+    gdl_dock_get_size (widget, GTK_ORIENTATION_HORIZONTAL, minimum, natural);
+}
 
-    g_return_if_fail (widget != NULL);
+static void
+gdl_dock_get_preferred_height (GtkWidget *widget, gint *minimum, gint *natural)
+{
+    gdl_dock_get_size (widget, GTK_ORIENTATION_VERTICAL, minimum, natural);
+}
+
+static void
+gdl_dock_measure (GtkWidget* widget, GtkOrientation orientation, int for_size, int* min, int* natural, int* min_baseline, int* natural_baseline)
+{
+	if (orientation == GTK_ORIENTATION_HORIZONTAL)
+		gdl_dock_get_preferred_width (widget, min, natural);
+	else
+		gdl_dock_get_preferred_height (widget, min, natural);
+}
+
+static void
+gdl_dock_size_allocate (GtkWidget *widget, int width, int height, int baseline)
+{
+    g_return_if_fail (widget);
     g_return_if_fail (GDL_IS_DOCK (widget));
-    
-    dock = GDL_DOCK (widget);
-    container = GTK_CONTAINER (widget);
-    border_width = container->border_width;
 
-    widget->allocation = *allocation;
+    GdlDock *dock = GDL_DOCK (widget);
 
-    /* reduce allocation by border width */
-    allocation->x += border_width;
-    allocation->y += border_width;
-    allocation->width = MAX (1, allocation->width - 2 * border_width);
-    allocation->height = MAX (1, allocation->height - 2 * border_width);
+    //gtk_widget_allocate (widget, width, height, baseline, NULL);
 
-    if (dock->root && GTK_WIDGET_VISIBLE (dock->root))
-        gtk_widget_size_allocate (GTK_WIDGET (dock->root), allocation);
+    if (dock->priv->root && gtk_widget_get_visible (GTK_WIDGET (dock->priv->root)))
+        gtk_widget_allocate (GTK_WIDGET (dock->priv->root), width, height, baseline, NULL);
 }
 
 static void
 gdl_dock_map (GtkWidget *widget)
 {
-    GtkWidget *child;
-    GdlDock   *dock;
-
-    g_return_if_fail (widget != NULL);
+    g_return_if_fail (widget);
     g_return_if_fail (GDL_IS_DOCK (widget));
 
-    dock = GDL_DOCK (widget);
+    GdlDock* dock = GDL_DOCK (widget);
 
-    GDL_CALL_PARENT (GTK_WIDGET_CLASS, map, (widget));
+    GTK_WIDGET_CLASS (gdl_dock_parent_class)->map (widget);
 
-    if (dock->root) {
-        child = GTK_WIDGET (dock->root);
-        if (GTK_WIDGET_VISIBLE (child) && !GTK_WIDGET_MAPPED (child))
+    if (dock->priv->root) {
+        GtkWidget* child = GTK_WIDGET (dock->priv->root);
+        if (gtk_widget_get_visible (child) && !gtk_widget_get_mapped (child))
             gtk_widget_map (child);
     }
 }
@@ -608,237 +605,212 @@ gdl_dock_map (GtkWidget *widget)
 static void
 gdl_dock_unmap (GtkWidget *widget)
 {
-    GtkWidget *child;
-    GdlDock   *dock;
-    
     g_return_if_fail (widget != NULL);
     g_return_if_fail (GDL_IS_DOCK (widget));
 
-    dock = GDL_DOCK (widget);
+    GdlDock* dock = GDL_DOCK (widget);
 
-    GDL_CALL_PARENT (GTK_WIDGET_CLASS, unmap, (widget));
+    GTK_WIDGET_CLASS (gdl_dock_parent_class)->unmap (widget);
 
-    if (dock->root) {
-        child = GTK_WIDGET (dock->root);
-        if (GTK_WIDGET_VISIBLE (child) && GTK_WIDGET_MAPPED (child))
+    if (dock->priv->root) {
+        GtkWidget* child = GTK_WIDGET (dock->priv->root);
+        if (gtk_widget_get_visible (child) && gtk_widget_get_mapped (child))
             gtk_widget_unmap (child);
     }
-    
-    if (dock->_priv->window)
-        gtk_widget_unmap (dock->_priv->window);
+
+    if (dock->priv->window)
+        gtk_widget_unmap (dock->priv->window);
 }
 
 static void
-gdl_dock_foreach_automatic (GdlDockObject *object,
-                            gpointer       user_data)
+gdl_dock_foreach_automatic (GdlDockObject *object, gpointer user_data)
 {
     void (* function) (GtkWidget *) = user_data;
 
-    if (GDL_DOCK_OBJECT_AUTOMATIC (object))
+    if (gdl_dock_object_is_automatic (object))
         (* function) (GTK_WIDGET (object));
 }
 
 static void
 gdl_dock_show (GtkWidget *widget)
 {
-    GdlDock *dock;
-    
-    g_return_if_fail (widget != NULL);
+    g_return_if_fail (widget);
     g_return_if_fail (GDL_IS_DOCK (widget));
-    
-    GDL_CALL_PARENT (GTK_WIDGET_CLASS, show, (widget));
-    
-    dock = GDL_DOCK (widget);
-    if (dock->_priv->floating && dock->_priv->window)
-        gtk_widget_show (dock->_priv->window);
 
-    if (GDL_DOCK_IS_CONTROLLER (dock)) {
-        gdl_dock_master_foreach_toplevel (GDL_DOCK_OBJECT_GET_MASTER (dock),
-                                          FALSE, (GFunc) gdl_dock_foreach_automatic,
-                                          gtk_widget_show);
+    GTK_WIDGET_CLASS (gdl_dock_parent_class)->show (widget);
+
+    GdlDock* dock = GDL_DOCK (widget);
+    if (dock->priv->floating && dock->priv->window)
+        gtk_widget_show (dock->priv->window);
+
+    GdlDockMaster* master = GDL_DOCK_MASTER (gdl_dock_object_get_master (GDL_DOCK_OBJECT (dock)));
+    if (GDL_DOCK (gdl_dock_master_get_controller (master)) == dock) {
+        gdl_dock_master_foreach_toplevel (master, FALSE, (GFunc) gdl_dock_foreach_automatic, gtk_widget_show);
     }
 }
 
 static void
 gdl_dock_hide (GtkWidget *widget)
 {
-    GdlDock *dock;
-    
     g_return_if_fail (widget != NULL);
     g_return_if_fail (GDL_IS_DOCK (widget));
-    
-    GDL_CALL_PARENT (GTK_WIDGET_CLASS, hide, (widget));
-    
-    dock = GDL_DOCK (widget);
-    if (dock->_priv->floating && dock->_priv->window)
-        gtk_widget_hide (dock->_priv->window);
 
-    if (GDL_DOCK_IS_CONTROLLER (dock)) {
-        gdl_dock_master_foreach_toplevel (GDL_DOCK_OBJECT_GET_MASTER (dock),
-                                          FALSE, (GFunc) gdl_dock_foreach_automatic,
-                                          gtk_widget_hide);
+    GTK_WIDGET_CLASS (gdl_dock_parent_class)->hide (widget);
+
+    GdlDock* dock = GDL_DOCK (widget);
+    if (dock->priv->floating && dock->priv->window)
+        gtk_widget_hide (dock->priv->window);
+
+    GdlDockMaster* master = GDL_DOCK_MASTER (gdl_dock_object_get_master (GDL_DOCK_OBJECT (dock)));
+    if (GDL_DOCK (gdl_dock_master_get_controller (master)) == dock) {
+        gdl_dock_master_foreach_toplevel (master, FALSE, (GFunc) gdl_dock_foreach_automatic, gtk_widget_hide);
     }
 }
 
-static void
-gdl_dock_add (GtkContainer *container,
-              GtkWidget    *widget)
+void
+gdl_dock_add (GdlDock *container, GtkWidget *widget)
 {
-    g_return_if_fail (container != NULL);
+    g_return_if_fail (container);
     g_return_if_fail (GDL_IS_DOCK (container));
     g_return_if_fail (GDL_IS_DOCK_ITEM (widget));
 
-    gdl_dock_add_item (GDL_DOCK (container), 
-                       GDL_DOCK_ITEM (widget), 
-                       GDL_DOCK_TOP);  /* default position */
+    gdl_dock_add_item (container, GDL_DOCK_ITEM (widget), GDL_DOCK_TOP);  /* default position */
 }
 
-static void
-gdl_dock_remove (GtkContainer *container,
-                 GtkWidget    *widget)
+void
+gdl_dock_remove (GdlDock *dock, GtkWidget *widget)
 {
-    GdlDock  *dock;
-    gboolean  was_visible;
+    g_return_if_fail (dock);
+    g_return_if_fail (widget);
 
-    g_return_if_fail (container != NULL);
-    g_return_if_fail (widget != NULL);
+    gboolean was_visible = gtk_widget_get_visible (widget);
 
-    dock = GDL_DOCK (container);
-    was_visible = GTK_WIDGET_VISIBLE (widget);
-
-    if (GTK_WIDGET (dock->root) == widget) {
-        dock->root = NULL;
-        GDL_DOCK_OBJECT_UNSET_FLAGS (widget, GDL_DOCK_ATTACHED);
+    if (GTK_WIDGET (dock->priv->root) == widget) {
+        dock->priv->root = NULL;
         gtk_widget_unparent (widget);
 
-        if (was_visible && GTK_WIDGET_VISIBLE (GTK_WIDGET (container)))
+        if (was_visible && gtk_widget_get_visible (GTK_WIDGET (dock)))
             gtk_widget_queue_resize (GTK_WIDGET (dock));
     }
 }
 
-static void
-gdl_dock_forall (GtkContainer *container,
-                 gboolean      include_internals,
-                 GtkCallback   callback,
-                 gpointer      callback_data)
+void
+gdl_dock_forall (GdlDock *dock, gboolean include_internals, GtkCallback callback, gpointer callback_data)
 {
-    GdlDock *dock;
+    g_return_if_fail (dock);
+    g_return_if_fail (GDL_IS_DOCK (dock));
+    g_return_if_fail (callback);
 
-    g_return_if_fail (container != NULL);
-    g_return_if_fail (GDL_IS_DOCK (container));
-    g_return_if_fail (callback != NULL);
-
-    dock = GDL_DOCK (container);
-
-    if (dock->root)
-        (*callback) (GTK_WIDGET (dock->root), callback_data);
+    if (dock->priv->root)
+        (*callback) (GTK_WIDGET (dock->priv->root), callback_data);
 }
 
-static GType
-gdl_dock_child_type (GtkContainer *container)
+GType
+gdl_dock_child_type (GdlDock *container)
 {
     return GDL_TYPE_DOCK_ITEM;
 }
 
 static void
-gdl_dock_detach (GdlDockObject *object,
-                 gboolean       recursive)
+gdl_dock_detach (GdlDockObject *object, gboolean recursive)
 {
     GdlDock *dock = GDL_DOCK (object);
-    
+
     /* detach children */
-    if (recursive && dock->root) {
-        gdl_dock_object_detach (dock->root, recursive);
+    if (recursive && dock->priv->root) {
+        gdl_dock_object_detach (dock->priv->root, recursive);
     }
-    GDL_DOCK_OBJECT_UNSET_FLAGS (object, GDL_DOCK_ATTACHED);
 }
 
 static void
 gdl_dock_reduce (GdlDockObject *object)
 {
     GdlDock *dock = GDL_DOCK (object);
-    
-    if (dock->root)
-        return;
-    
-    if (GDL_DOCK_OBJECT_AUTOMATIC (dock)) {
-        gtk_widget_destroy (GTK_WIDGET (dock));
 
-    } else if (!GDL_DOCK_OBJECT_ATTACHED (dock)) {
+    if (dock->priv->root)
+        return;
+
+    GtkWidget* widget = GTK_WIDGET (object);
+    GtkWidget* parent = gtk_widget_get_parent (widget);
+
+    if (gdl_dock_object_is_automatic (GDL_DOCK_OBJECT (dock))) {
+        if (parent)
+			gtk_widget_unparent (widget);
+
+    } else if (gdl_dock_object_is_closed (GDL_DOCK_OBJECT (dock))) {
         /* if the user explicitly detached the object */
-        if (dock->_priv->floating)
+        if (dock->priv->floating) {
             gtk_widget_hide (GTK_WIDGET (dock));
-        else {
-            GtkWidget *widget = GTK_WIDGET (object);
-            if (widget->parent) 
-                gtk_container_remove (GTK_CONTAINER (widget->parent), widget);
+        } else {
+            if (parent)
+                //gtk_container_remove (GTK_CONTAINER (parent), widget);
+				gtk_widget_unparent (widget);
         }
     }
 }
 
 static gboolean
-gdl_dock_dock_request (GdlDockObject  *object,
-                       gint            x,
-                       gint            y,
-                       GdlDockRequest *request)
+gdl_dock_dock_request (GdlDockObject *object, gint x, gint y, GdlDockRequest *request)
 {
-    GdlDock            *dock;
-    guint               bw;
     gint                rel_x, rel_y;
-    GtkAllocation      *alloc;
+    GtkAllocation       alloc;
     gboolean            may_dock = FALSE;
     GdlDockRequest      my_request;
 
     g_return_val_if_fail (GDL_IS_DOCK (object), FALSE);
 
     /* we get (x,y) in our allocation coordinates system */
-    
-    dock = GDL_DOCK (object);
-    
+
+    GdlDock* dock = GDL_DOCK (object);
+
     /* Get dock size. */
-    alloc = &(GTK_WIDGET (dock)->allocation);
-    bw = GTK_CONTAINER (dock)->border_width;
+    gtk_widget_get_allocation (GTK_WIDGET (dock), &alloc);
+#ifdef GTK4_TODO
+    guint bw = gtk_container_get_border_width (GTK_CONTAINER (dock));
+#else
+	guint bw = 0;
+#endif
 
     /* Get coordinates relative to our allocation area. */
-    rel_x = x - alloc->x;
-    rel_y = y - alloc->y;
+    rel_x = x - alloc.x;
+    rel_y = y - alloc.y;
 
     if (request)
         my_request = *request;
-        
+
     /* Check if coordinates are in GdlDock widget. */
-    if (rel_x > 0 && rel_x < alloc->width &&
-        rel_y > 0 && rel_y < alloc->height) {
+    if (rel_x > 0 && rel_x < alloc.width &&
+        rel_y > 0 && rel_y < alloc.height) {
 
         /* It's inside our area. */
         may_dock = TRUE;
 
 	/* Set docking indicator rectangle to the GdlDock size. */
-        my_request.rect.x = alloc->x + bw;
-        my_request.rect.y = alloc->y + bw;
-        my_request.rect.width = alloc->width - 2*bw;
-        my_request.rect.height = alloc->height - 2*bw;
+        my_request.rect.x = alloc.x + bw;
+        my_request.rect.y = alloc.y + bw;
+        my_request.rect.width = alloc.width - 2*bw;
+        my_request.rect.height = alloc.height - 2*bw;
 
-	/* If GdlDock has no root item yet, set the dock itself as 
+	/* If GdlDock has no root item yet, set the dock itself as
 	   possible target. */
-        if (!dock->root) {
+        if (!dock->priv->root) {
             my_request.position = GDL_DOCK_TOP;
             my_request.target = object;
         } else {
-            my_request.target = dock->root;
+            my_request.target = dock->priv->root;
 
             /* See if it's in the border_width band. */
             if (rel_x < bw) {
                 my_request.position = GDL_DOCK_LEFT;
                 my_request.rect.width *= SPLIT_RATIO;
-            } else if (rel_x > alloc->width - bw) {
+            } else if (rel_x > alloc.width - bw) {
                 my_request.position = GDL_DOCK_RIGHT;
                 my_request.rect.x += my_request.rect.width * (1 - SPLIT_RATIO);
                 my_request.rect.width *= SPLIT_RATIO;
             } else if (rel_y < bw) {
                 my_request.position = GDL_DOCK_TOP;
                 my_request.rect.height *= SPLIT_RATIO;
-            } else if (rel_y > alloc->height - bw) {
+            } else if (rel_y > alloc.height - bw) {
                 my_request.position = GDL_DOCK_BOTTOM;
                 my_request.rect.y += my_request.rect.height * (1 - SPLIT_RATIO);
                 my_request.rect.height *= SPLIT_RATIO;
@@ -846,32 +818,28 @@ gdl_dock_dock_request (GdlDockObject  *object,
                 /* Otherwise try our children. */
                 /* give them allocation coordinates (we are a
                    GTK_NO_WINDOW) widget */
-                may_dock = gdl_dock_object_dock_request (GDL_DOCK_OBJECT (dock->root), 
-                                                         x, y, &my_request);
+                may_dock = gdl_dock_object_dock_request (GDL_DOCK_OBJECT (dock->priv->root), x, y, &my_request);
             }
         }
     }
 
     if (may_dock && request)
         *request = my_request;
-    
+
     return may_dock;
 }
 
 static void
-gdl_dock_dock (GdlDockObject    *object,
-               GdlDockObject    *requestor,
-               GdlDockPlacement  position,
-               GValue           *user_data)
+gdl_dock_dock (GdlDockObject *object, GdlDockObject *requestor, GdlDockPlacement position, GValue *user_data)
 {
-    GdlDock *dock;
-    
+	ENTER;
+
     g_return_if_fail (GDL_IS_DOCK (object));
     /* only dock items allowed at this time */
     g_return_if_fail (GDL_IS_DOCK_ITEM (requestor));
 
-    dock = GDL_DOCK (object);
-    
+    GdlDock *dock = GDL_DOCK (object);
+
     if (position == GDL_DOCK_FLOATING) {
         GdlDockItem *item = GDL_DOCK_ITEM (requestor);
         gint x, y, width, height;
@@ -889,65 +857,65 @@ gdl_dock_dock (GdlDockObject    *object,
             x = y = 0;
             width = height = -1;
         }
-        
-        gdl_dock_add_floating_item (dock, item,
-                                    x, y, width, height);
+
+        gdl_dock_add_floating_item (dock, item, x, y, width, height);
     }
-    else if (dock->root) {
+    else if (dock->priv->root) {
         /* This is somewhat a special case since we know which item to
            pass the request on because we only have on child */
-        gdl_dock_object_dock (dock->root, requestor, position, NULL);
+        gdl_dock_object_dock (dock->priv->root, requestor, position, NULL);
         gdl_dock_set_title (dock);
-        
+
     }
     else { /* Item about to be added is root item. */
         GtkWidget *widget = GTK_WIDGET (requestor);
-        
-        dock->root = requestor;
-        GDL_DOCK_OBJECT_SET_FLAGS (requestor, GDL_DOCK_ATTACHED);
+
+        dock->priv->root = requestor;
         gtk_widget_set_parent (widget, GTK_WIDGET (dock));
-        
+
         gdl_dock_item_show_grip (GDL_DOCK_ITEM (requestor));
 
-        /* Realize the item (create its corresponding GdkWindow) when 
+        /* Realize the item (create its corresponding GdkWindow) when
            GdlDock has been realized. */
-        if (GTK_WIDGET_REALIZED (dock))
+        if (gtk_widget_get_realized (GTK_WIDGET (dock)))
             gtk_widget_realize (widget);
-        
-        /* Map the widget if it's visible and the parent is visible and has 
-           been mapped. This is done to make sure that the GdkWindow is 
+
+        /* Map the widget if it's visible and the parent is visible and has
+           been mapped. This is done to make sure that the GdkWindow is
            visible. */
-        if (GTK_WIDGET_VISIBLE (dock) && 
-            GTK_WIDGET_VISIBLE (widget)) {
-            if (GTK_WIDGET_MAPPED (dock))
+        if (gtk_widget_get_visible (GTK_WIDGET (dock)) &&
+            gtk_widget_get_visible (widget)) {
+            if (gtk_widget_get_mapped (GTK_WIDGET (dock)))
                 gtk_widget_map (widget);
-            
+
             /* Make the widget resize. */
             gtk_widget_queue_resize (widget);
         }
         gdl_dock_set_title (dock);
     }
+	LEAVE;
 }
-    
+
+#ifdef GTK4_TODO
 static gboolean
 gdl_dock_floating_window_delete_event_cb (GtkWidget *widget)
 {
-    GdlDock *dock;
-    
     g_return_val_if_fail (GTK_IS_WINDOW (widget), FALSE);
-    
-    dock = GDL_DOCK (g_object_get_data (G_OBJECT (widget), "dock"));
-    if (dock->root) {
+
+    GdlDock* dock = GDL_DOCK (g_object_get_data (G_OBJECT (widget), "dock"));
+    if (dock->priv->root) {
         /* this will call reduce on ourselves, hiding the window if appropiate */
-        gdl_dock_item_hide_item (GDL_DOCK_ITEM (dock->root));
+        if(!GDL_DOCK_ITEM_CANT_CLOSE (GDL_DOCK_ITEM (dock->priv->root))) {
+            gdl_dock_item_hide_item (GDL_DOCK_ITEM (dock->priv->root));
+        }
     }
 
     return TRUE;
 }
+#endif
 
 static void
-_gdl_dock_foreach_build_list (GdlDockObject *object,
-                              gpointer       user_data)
+_gdl_dock_foreach_build_list (GdlDockObject *object, gpointer user_data)
 {
     GList **l = (GList **) user_data;
 
@@ -956,89 +924,89 @@ _gdl_dock_foreach_build_list (GdlDockObject *object,
 }
 
 static gboolean
-gdl_dock_reorder (GdlDockObject    *object,
-                  GdlDockObject    *requestor,
-                  GdlDockPlacement  new_position,
-                  GValue           *other_data)
+gdl_dock_reorder (GdlDockObject *object, GdlDockObject *requestor, GdlDockPlacement new_position, GValue *other_data)
 {
     GdlDock *dock = GDL_DOCK (object);
     gboolean handled = FALSE;
-    
-    if (dock->_priv->floating &&
-        new_position == GDL_DOCK_FLOATING &&
-        dock->root == requestor) {
-        
-        if (other_data && G_VALUE_HOLDS (other_data, GDK_TYPE_RECTANGLE)) {
-            GdkRectangle *rect;
 
-            rect = g_value_get_boxed (other_data);
-            gtk_window_move (GTK_WINDOW (dock->_priv->window),
-                             rect->x,
-                             rect->y);
+    if (dock->priv->floating &&
+        new_position == GDL_DOCK_FLOATING &&
+        dock->priv->root == requestor) {
+
+        if (other_data && G_VALUE_HOLDS (other_data, GDK_TYPE_RECTANGLE)) {
+#ifdef GTK4_TODO
+            GdkRectangle* rect = g_value_get_boxed (other_data);
+            gtk_window_move (GTK_WINDOW (dock->priv->window), rect->x, rect->y);
+#endif
             handled = TRUE;
         }
     }
-    
+
     return handled;
 }
 
-static gboolean 
-gdl_dock_child_placement (GdlDockObject    *object,
-                          GdlDockObject    *child,
-                          GdlDockPlacement *placement)
+static gboolean
+gdl_dock_child_placement (GdlDockObject *object, GdlDockObject *child, GdlDockPlacement *placement)
 {
     GdlDock *dock = GDL_DOCK (object);
     gboolean retval = TRUE;
-    
-    if (dock->root == child) {
+
+    if (dock->priv->root == child) {
         if (placement) {
             if (*placement == GDL_DOCK_NONE || *placement == GDL_DOCK_FLOATING)
                 *placement = GDL_DOCK_TOP;
         }
-    } else 
+    } else
         retval = FALSE;
 
     return retval;
 }
 
-static void 
-gdl_dock_present (GdlDockObject *object,
-                  GdlDockObject *child)
+static void
+gdl_dock_present (GdlDockObject *object, GdlDockObject *child)
 {
     GdlDock *dock = GDL_DOCK (object);
 
-    if (dock->_priv->floating)
-        gtk_window_present (GTK_WINDOW (dock->_priv->window));
+    if (dock->priv->floating)
+        gtk_window_present (GTK_WINDOW (dock->priv->window));
 }
 
 
 /* ----- Public interface ----- */
 
+/**
+ * gdl_dock_new:
+ *
+ * Create a new dock.
+ *
+ * Returns: (transfer full): A new #GdlDock widget.
+ */
 GtkWidget *
 gdl_dock_new (void)
 {
-    GObject *dock;
+    GObject *dock = g_object_new (GDL_TYPE_DOCK, NULL);
+    gdl_dock_object_set_manual (GDL_DOCK_OBJECT (dock));
 
-    dock = g_object_new (GDL_TYPE_DOCK, NULL);
-    GDL_DOCK_OBJECT_UNSET_FLAGS (dock, GDL_DOCK_AUTOMATIC);
-    
     return GTK_WIDGET (dock);
 }
 
+/**
+ * gdl_dock_new_from:
+ * @original: The original #GdlDock
+ * @floating: %TRUE to create a floating dock
+ *
+ * Create a new dock widget having the same master than @original.
+ *
+ * Returns: (transfer full): A new #GdlDock widget
+ */
 GtkWidget *
-gdl_dock_new_from (GdlDock  *original,
-                   gboolean  floating)
+gdl_dock_new_from (GdlDock *original, gboolean floating)
 {
-    GObject *new_dock;
-    
     g_return_val_if_fail (original != NULL, NULL);
-    
-    new_dock = g_object_new (GDL_TYPE_DOCK, 
-                             "master", GDL_DOCK_OBJECT_GET_MASTER (original), 
-                             "floating", floating,
-                             NULL);
-    GDL_DOCK_OBJECT_UNSET_FLAGS (new_dock, GDL_DOCK_AUTOMATIC);
-    
+
+    GObject* new_dock = g_object_new (GDL_TYPE_DOCK, "master", gdl_dock_object_get_master (GDL_DOCK_OBJECT (original)), "floating", floating, NULL);
+    gdl_dock_object_set_manual (GDL_DOCK_OBJECT (new_dock));
+
     return GTK_WIDGET (new_dock);
 }
 
@@ -1048,28 +1016,31 @@ gdl_dock_new_from (GdlDock  *original,
  * require a center dock on this item.
  */
 static GdlDockPlacement
-gdl_dock_refine_placement (GdlDock *dock, GdlDockItem *dock_item,
-                           GdlDockPlacement placement)
+gdl_dock_refine_placement (GdlDock *dock, GdlDockItem *dock_item, GdlDockPlacement placement)
 {
-    GtkRequisition object_size;
-    
-    gdl_dock_item_preferred_size (dock_item, &object_size);
-    g_return_val_if_fail (GTK_WIDGET (dock)->allocation.width > 0, placement);
-    g_return_val_if_fail (GTK_WIDGET (dock)->allocation.height > 0, placement);
-    g_return_val_if_fail (object_size.width > 0, placement);
-    g_return_val_if_fail (object_size.height > 0, placement);
+    GtkAllocation allocation;
+    gtk_widget_get_allocation (GTK_WIDGET (dock), &allocation);
 
-    if (placement == GDL_DOCK_LEFT || placement == GDL_DOCK_RIGHT) {
-        /* Check if dock_object touches center in terms of width */
-        if (GTK_WIDGET (dock)->allocation.width/2 > object_size.width) {
-            return GDL_DOCK_CENTER;
-        }
-    } else if (placement == GDL_DOCK_TOP || placement == GDL_DOCK_BOTTOM) {
-        /* Check if dock_object touches center in terms of height */
-        if (GTK_WIDGET (dock)->allocation.height/2 > object_size.height) {
-            return GDL_DOCK_CENTER;
-        }
-    }
+	if (allocation.width > 0) {
+		g_return_val_if_fail (allocation.height > 0, placement);
+
+	    GtkRequisition object_size;
+    	gdl_dock_item_preferred_size (dock_item, &object_size);
+		g_return_val_if_fail (object_size.width > 0, placement);
+		g_return_val_if_fail (object_size.height > 0, placement);
+
+		if (placement == GDL_DOCK_LEFT || placement == GDL_DOCK_RIGHT) {
+			/* Check if dock_object touches center in terms of width */
+			if (allocation.width/2 > object_size.width) {
+				return GDL_DOCK_CENTER;
+			}
+		} else if (placement == GDL_DOCK_TOP || placement == GDL_DOCK_BOTTOM) {
+			/* Check if dock_object touches center in terms of height */
+			if (allocation.height/2 > object_size.height) {
+				return GDL_DOCK_CENTER;
+			}
+		}
+	}
     return placement;
 }
 
@@ -1079,43 +1050,38 @@ gdl_dock_refine_placement (GdlDock *dock, GdlDockItem *dock_item,
  * for center placement, area determines it.
  */
 static GdlDockItem*
-gdl_dock_select_larger_item (GdlDockItem *dock_item_1,
-                             GdlDockItem *dock_item_2,
-                             GdlDockPlacement placement,
-                             gint level /* for debugging */)
+gdl_dock_select_larger_item (GdlDockItem *dock_item_1, GdlDockItem *dock_item_2, GdlDockPlacement placement, gint level /* for debugging */)
 {
     GtkRequisition size_1, size_2;
-    
+
     g_return_val_if_fail (dock_item_1 != NULL, dock_item_2);
     g_return_val_if_fail (dock_item_2 != NULL, dock_item_1);
-    
+
     gdl_dock_item_preferred_size (dock_item_1, &size_1);
     gdl_dock_item_preferred_size (dock_item_2, &size_2);
-    
+
+#ifdef GTK4_TODO
     g_return_val_if_fail (size_1.width > 0, dock_item_2);
+#else
+	if (size_1.width < 1) { cdbg(0, "TODO not yet allocated"); return dock_item_2; }
+#endif
     g_return_val_if_fail (size_1.height > 0, dock_item_2);
     g_return_val_if_fail (size_2.width > 0, dock_item_1);
     g_return_val_if_fail (size_2.height > 0, dock_item_1);
-    
-    if (placement == GDL_DOCK_LEFT || placement == GDL_DOCK_RIGHT)
-    {
+
+    if (placement == GDL_DOCK_LEFT || placement == GDL_DOCK_RIGHT) {
         /* For left/right placement, height is what matters */
-        return (size_1.height >= size_2.height?
-                    dock_item_1 : dock_item_2);
-    } else if (placement == GDL_DOCK_TOP || placement == GDL_DOCK_BOTTOM)
-    {
+        return (size_1.height >= size_2.height?  dock_item_1 : dock_item_2);
+    } else if (placement == GDL_DOCK_TOP || placement == GDL_DOCK_BOTTOM) {
         /* For top/bottom placement, width is what matters */
-        return (size_1.width >= size_2.width?
-                    dock_item_1 : dock_item_2);
+        return (size_1.width >= size_2.width ? dock_item_1 : dock_item_2);
     } else if (placement == GDL_DOCK_CENTER) {
         /* For center place, area is what matters */
-        return ((size_1.width * size_1.height)
-                    >= (size_2.width * size_2.height)?
-                    dock_item_1 : dock_item_2);
+        return ((size_1.width * size_1.height) >= (size_2.width * size_2.height) ?  dock_item_1 : dock_item_2);
     } else if (placement == GDL_DOCK_NONE) {
-	return dock_item_1;
+        return dock_item_1;
     } else {
-        g_warning ("Should not reach here: %s:%d", __FUNCTION__, __LINE__);
+        g_warning ("Should not reach here: %s:%d", __func__, __LINE__);
     }
     return dock_item_1;
 }
@@ -1128,132 +1094,143 @@ gdl_dock_select_larger_item (GdlDockItem *dock_item_1,
  * what user wants and the heuristic should be therefore sufficient.
  */
 static GdlDockItem*
-gdl_dock_find_best_placement_item (GdlDockItem *dock_item,
-                                   GdlDockPlacement placement,
-                                   gint level /* for debugging */)
+gdl_dock_find_best_placement_item (GdlDockItem *dock_item, GdlDockPlacement placement, gint level /* for debugging */)
 {
+	ENTER;
+
     GdlDockItem *ret_item = NULL;
-    
-    if (GDL_IS_DOCK_PANED (dock_item))
-    {
+
+    if (GDL_IS_DOCK_PANED (dock_item)) {
+    	GList* children = GDL_DOCK_OBJECT_GET_CLASS (dock_item)->children(GDL_DOCK_OBJECT (dock_item));
+		g_assert(g_list_length(children) == 2);
+		GtkWidget* child1 = children->data;
+		GtkWidget* child2 = children->next->data;
+		g_list_free(children);
+
         GtkOrientation orientation;
-        GdlDockItem *dock_item_1, *dock_item_2;
-        GList* children;
-        
-        children = gtk_container_get_children (GTK_CONTAINER (dock_item));
-        
-        g_assert (g_list_length (children) == 2);
-        
         g_object_get (dock_item, "orientation", &orientation, NULL);
         if ((orientation == GTK_ORIENTATION_HORIZONTAL &&
              placement == GDL_DOCK_LEFT) ||
             (orientation == GTK_ORIENTATION_VERTICAL &&
              placement == GDL_DOCK_TOP)) {
             /* Return left or top pane widget */
-            ret_item =
-                gdl_dock_find_best_placement_item (GDL_DOCK_ITEM
-                                                   (children->data),
-                                                   placement, level + 1);
+            ret_item = gdl_dock_find_best_placement_item (GDL_DOCK_ITEM (child1), placement, level + 1);
         } else if ((orientation == GTK_ORIENTATION_HORIZONTAL &&
                     placement == GDL_DOCK_RIGHT) ||
                    (orientation == GTK_ORIENTATION_VERTICAL &&
                     placement == GDL_DOCK_BOTTOM)) {
                         /* Return right or top pane widget */
-            ret_item =
-                gdl_dock_find_best_placement_item (GDL_DOCK_ITEM
-                                                   (children->next->data),
-                                                   placement, level + 1);
+            ret_item = gdl_dock_find_best_placement_item (GDL_DOCK_ITEM (child2), placement, level + 1);
         } else {
             /* Evaluate which of the two sides is bigger */
-            dock_item_1 =
-                gdl_dock_find_best_placement_item (GDL_DOCK_ITEM
-                                                   (children->data),
-                                                   placement, level + 1);
-            dock_item_2 =
-                gdl_dock_find_best_placement_item (GDL_DOCK_ITEM
-                                                   (children->next->data),
-                                                   placement, level + 1);
-            ret_item = gdl_dock_select_larger_item (dock_item_1,
-                                                    dock_item_2,
-                                                    placement, level);
+            GdlDockItem* dock_item_1 = gdl_dock_find_best_placement_item (GDL_DOCK_ITEM (child1), placement, level + 1);
+            GdlDockItem* dock_item_2 = gdl_dock_find_best_placement_item (GDL_DOCK_ITEM (child2), placement, level + 1);
+            ret_item = gdl_dock_select_larger_item (dock_item_1, dock_item_2, placement, level);
         }
-        g_list_free (children);
-    }
-    else if (GDL_IS_DOCK_ITEM (dock_item))
-    {
+    } else if (GDL_IS_DOCK_ITEM (dock_item)) {
         ret_item = dock_item;
+    } else {
+        g_warning ("%s: unexpected GdlDockItem type: %s", __func__, G_OBJECT_TYPE_NAME(dock_item));
     }
-    else
-    {
-        /* should not be here */
-        g_warning ("Should not reach here: %s:%d", __FUNCTION__, __LINE__);
-    }
+	LEAVE;
     return ret_item;
 }
 
+/**
+ * gdl_dock_add_item:
+ * @dock: A #GdlDock widget
+ * @item: A #GdlDockItem widget
+ * @placement: A position for the widget
+ *
+ * Dock in @dock, the widget @item at the position defined by @placement. The
+ * function takes care of finding the right parent widget eventually creating
+ * it if needed.
+ */
 void
-gdl_dock_add_item (GdlDock          *dock,
-                   GdlDockItem      *item,
-                   GdlDockPlacement  placement)
+gdl_dock_add_item (GdlDock *dock, GdlDockItem *item, GdlDockPlacement placement)
 {
+	ENTER;
+
+    GdlDockObject *parent = NULL;
+    GdlDockPlacement place;
+
     g_return_if_fail (dock != NULL);
     g_return_if_fail (item != NULL);
 
-    if (placement == GDL_DOCK_FLOATING)
+    /* Check if a placeholder widget already exist in the same dock */
+    GdlDockObject* placeholder = gdl_dock_master_get_object (GDL_DOCK_MASTER (gdl_dock_object_get_master (GDL_DOCK_OBJECT (dock))), gdl_dock_object_get_name (GDL_DOCK_OBJECT (item)));
+    if ((placeholder != GDL_DOCK_OBJECT (item)) && (placeholder != NULL)) {
+        if (gdl_dock_object_get_toplevel (placeholder) == dock) {
+            parent = gdl_dock_object_get_parent_object (placeholder);
+        } else {
+#ifdef GTK4_TODO
+            gtk_widget_destroy (GTK_WIDGET (placeholder));
+#else
+			cdbg(0, "TODO destroy widget. parent=%p", gtk_widget_get_parent (GTK_WIDGET (placeholder)));
+#endif
+        }
+    }
+
+    if (parent && gdl_dock_object_child_placement (parent, placeholder, &place)) {
+        gdl_dock_object_freeze (GDL_DOCK_OBJECT (parent));
+#ifdef GTK4_TODO
+        gtk_widget_destroy (GTK_WIDGET (placeholder));
+#else
+		cdbg(0, "TODO destroy widget. parent=%p", gtk_widget_get_parent (GTK_WIDGET (placeholder)));
+#endif
+
+        gdl_dock_object_dock (GDL_DOCK_OBJECT (parent), GDL_DOCK_OBJECT (item), place, NULL);
+        gdl_dock_object_thaw (GDL_DOCK_OBJECT (parent));
+    } else if (placement == GDL_DOCK_FLOATING) {
         /* Add the item to a new floating dock */
         gdl_dock_add_floating_item (dock, item, 0, 0, -1, -1);
 
-    else {
-        GdlDockItem *best_dock_item;
+    } else {
         /* Non-floating item. */
-        if (dock->root) {
-            GdlDockPlacement local_placement;
-            //GtkRequisition preferred_size;
-            
-            best_dock_item =
-                gdl_dock_find_best_placement_item (GDL_DOCK_ITEM (dock->root),
-                                                   placement, 0);
-            local_placement = gdl_dock_refine_placement (dock, best_dock_item,
-                                                         placement);
-if(local_placement != placement) gwarn("placement changed");
-            gdl_dock_object_dock (GDL_DOCK_OBJECT (best_dock_item),
-                                  GDL_DOCK_OBJECT (item),
-                                  local_placement, NULL);
+        if (dock->priv->root) {
+            GdlDockItem* best_dock_item = gdl_dock_find_best_placement_item (GDL_DOCK_ITEM (dock->priv->root), placement, 0);
+            GdlDockPlacement local_placement = gdl_dock_refine_placement (dock, best_dock_item, placement);
+            gdl_dock_object_dock (GDL_DOCK_OBJECT (best_dock_item), GDL_DOCK_OBJECT (item), local_placement, NULL);
         } else {
-            gdl_dock_object_dock (GDL_DOCK_OBJECT (dock),
-                                  GDL_DOCK_OBJECT (item),
-                                  placement, NULL);
+            gdl_dock_object_dock (GDL_DOCK_OBJECT (dock), GDL_DOCK_OBJECT (item), placement, NULL);
         }
     }
+	LEAVE;
 }
 
+/**
+ * gdl_dock_add_floating_item:
+ * @dock: A #GdlDock widget
+ * @item: A #GdlDockItem widget
+ * @x: X coordinate of the floating item
+ * @y: Y coordinate of the floating item
+ * @width: width of the floating item
+ * @height: height of the floating item
+ *
+ * Dock an item as a floating item. It creates a new window containing a new
+ * dock widget sharing the same master where the item is docked.
+ */
 void
-gdl_dock_add_floating_item (GdlDock        *dock,
-                            GdlDockItem    *item,
-                            gint            x,
-                            gint            y,
-                            gint            width,
-                            gint            height)
+gdl_dock_add_floating_item (GdlDock *dock, GdlDockItem *item, gint x, gint y, gint width, gint height)
 {
-    GdlDock *new_dock;
-    
-    g_return_if_fail (dock != NULL);
-    g_return_if_fail (item != NULL);
-    
-    new_dock = GDL_DOCK (g_object_new (GDL_TYPE_DOCK, 
-                                       "master", GDL_DOCK_OBJECT_GET_MASTER (dock), 
+    g_return_if_fail (dock);
+    g_return_if_fail (item);
+
+    GdlDock* new_dock = GDL_DOCK (g_object_new (GDL_TYPE_DOCK,
+                                       "master", gdl_dock_object_get_master (GDL_DOCK_OBJECT (dock)),
                                        "floating", TRUE,
                                        "width", width,
                                        "height", height,
                                        "floatx", x,
                                        "floaty", y,
+                                       "skip-taskbar", dock->priv->skip_taskbar,
                                        NULL));
-    
-    if (GTK_WIDGET_VISIBLE (dock)) {
+
+    if (gtk_widget_get_visible (GTK_WIDGET (dock))) {
         gtk_widget_show (GTK_WIDGET (new_dock));
-        if (GTK_WIDGET_MAPPED (dock))
+        if (gtk_widget_get_mapped (GTK_WIDGET (dock)))
             gtk_widget_map (GTK_WIDGET (new_dock));
-        
+
         /* Make the widget resize. */
         gtk_widget_queue_resize (GTK_WIDGET (new_dock));
     }
@@ -1261,53 +1238,63 @@ gdl_dock_add_floating_item (GdlDock        *dock,
     gdl_dock_add_item (GDL_DOCK (new_dock), item, GDL_DOCK_TOP);
 }
 
+/**
+ * gdl_dock_get_item_by_name:
+ * @dock: A #GdlDock widget
+ * @name: An item name
+ *
+ * Looks for an #GdlDockItem widget bound to the master of the dock item. It
+ * does not search only in the children of this particular dock widget.
+ *
+ * Returns: (transfer none): A #GdlDockItem widget or %NULL
+ */
 GdlDockItem *
-gdl_dock_get_item_by_name (GdlDock     *dock,
-                           const gchar *name)
+gdl_dock_get_item_by_name (GdlDock *dock, const gchar *name)
 {
-    GdlDockObject *found;
-    
+
     g_return_val_if_fail (dock != NULL && name != NULL, NULL);
-    
+
     /* proxy the call to our master */
-    found = gdl_dock_master_get_object (GDL_DOCK_OBJECT_GET_MASTER (dock), name);
+    GdlDockObject* found = gdl_dock_master_get_object (GDL_DOCK_MASTER (gdl_dock_object_get_master (GDL_DOCK_OBJECT (dock))), name);
 
     return (found && GDL_IS_DOCK_ITEM (found)) ? GDL_DOCK_ITEM (found) : NULL;
 }
 
-GdlDockPlaceholder *
-gdl_dock_get_placeholder_by_name (GdlDock     *dock,
-                                  const gchar *name)
-{
-    GdlDockObject *found;
-    
-    g_return_val_if_fail (dock != NULL && name != NULL, NULL);
-    
-    /* proxy the call to our master */
-    found = gdl_dock_master_get_object (GDL_DOCK_OBJECT_GET_MASTER (dock), name);
-
-    return (found && GDL_IS_DOCK_PLACEHOLDER (found)) ?
-        GDL_DOCK_PLACEHOLDER (found) : NULL;
-}
-
+/**
+ * gdl_dock_get_named_items:
+ * @dock: A #GdlDock widget
+ *
+ * Returns a list of all item bound to the master of the dock, not only
+ * the children of this particular dock widget.
+ *
+ * Returns: (element-type GdlDockObject) (transfer container): A list of #GdlDockItem. The list should be freedwith g_list_free(),
+ * but the item still belong to the master.
+ */
 GList *
 gdl_dock_get_named_items (GdlDock *dock)
 {
     GList *list = NULL;
-    
-    g_return_val_if_fail (dock != NULL, NULL);
 
-    gdl_dock_master_foreach (GDL_DOCK_OBJECT_GET_MASTER (dock),
-                             (GFunc) _gdl_dock_foreach_build_list, &list);
+    g_return_val_if_fail (dock, NULL);
+
+    gdl_dock_master_foreach (GDL_DOCK_MASTER (gdl_dock_object_get_master (GDL_DOCK_OBJECT (dock))), (GFunc) _gdl_dock_foreach_build_list, &list);
 
     return list;
 }
 
+/**
+ * gdl_dock_object_get_toplevel:
+ * @object: A #GdlDockObject
+ *
+ * Get the top level #GdlDock widget of @object or %NULL if cannot be found.
+ *
+ * Returns: (allow-none) (transfer none): A #GdlDock or %NULL.
+ */
 GdlDock *
 gdl_dock_object_get_toplevel (GdlDockObject *object)
 {
     GdlDockObject *parent = object;
-    
+
     g_return_val_if_fail (object != NULL, NULL);
 
     while (parent && !GDL_IS_DOCK (parent))
@@ -1316,44 +1303,58 @@ gdl_dock_object_get_toplevel (GdlDockObject *object)
     return parent ? GDL_DOCK (parent) : NULL;
 }
 
-void
-gdl_dock_xor_rect (GdlDock      *dock,
-                   GdkRectangle *rect)
+
+/**
+ * gdl_dock_get_root:
+ * @dock: A #GdlDockObject
+ *
+ * Get the first child of the #GdlDockObject.
+ *
+ * Returns: (allow-none) (transfer none): A #GdlDockObject or %NULL.
+ */
+GdlDockObject*
+gdl_dock_get_root (GdlDock *dock)
 {
-    GtkWidget *widget;
-    gint8      dash_list [2];
+    g_return_val_if_fail (GDL_IS_DOCK (dock), NULL);
 
-    widget = GTK_WIDGET (dock);
+    return dock->priv->root;
+}
 
-    if (!dock->_priv->xor_gc) {
-        if (GTK_WIDGET_REALIZED (widget)) {
-            GdkGCValues values;
+/**
+ * gdl_dock_show_preview:
+ * @dock: A #GdlDock widget
+ * @rect: The position and the size of the preview window
+ *
+ * Show a preview window used to materialize the dock target.
+ */
+void
+gdl_dock_show_preview (GdlDock *dock, cairo_rectangle_int_t *rect)
+{
+#ifdef GTK4_TODO
+    gint x, y;
+    GdkWindow* window = gtk_widget_get_window (GTK_WIDGET (dock));
+    gdk_window_get_origin (window, &x, &y);
 
-            values.function = GDK_INVERT;
-            values.subwindow_mode = GDK_INCLUDE_INFERIORS;
-            dock->_priv->xor_gc = gdk_gc_new_with_values 
-                (widget->window, &values, GDK_GC_FUNCTION | GDK_GC_SUBWINDOW);
-        } else 
-            return;
-    };
+    if (!dock->priv->area_window) {
+        dock->priv->area_window = gdl_preview_window_new ();
+    }
 
-    gdk_gc_set_line_attributes (dock->_priv->xor_gc, 1,
-                                GDK_LINE_ON_OFF_DASH,
-                                GDK_CAP_NOT_LAST,
-                                GDK_JOIN_BEVEL);
-    
-    dash_list [0] = 1;
-    dash_list [1] = 1;
-    
-    gdk_gc_set_dashes (dock->_priv->xor_gc, 1, dash_list, 2);
+    rect->x += x;
+    rect->y += y;
 
-    gdk_draw_rectangle (widget->window, dock->_priv->xor_gc, 0, 
-                        rect->x, rect->y,
-                        rect->width, rect->height);
+    gdl_preview_window_update (GDL_PREVIEW_WINDOW (dock->priv->area_window), rect);
+#endif
+}
 
-    gdk_gc_set_dashes (dock->_priv->xor_gc, 0, dash_list, 2);
-
-    gdk_draw_rectangle (widget->window, dock->_priv->xor_gc, 0, 
-                        rect->x + 1, rect->y + 1,
-                        rect->width - 2, rect->height - 2);
+/**
+ * gdl_dock_hide_preview:
+ * @dock: A #GdlDock widget
+ *
+ * Hide the preview window used to materialize the dock target.
+ */
+void
+gdl_dock_hide_preview (GdlDock *dock)
+{
+    if (dock->priv->area_window)
+        gtk_widget_hide (dock->priv->area_window);
 }

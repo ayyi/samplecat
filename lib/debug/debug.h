@@ -12,7 +12,6 @@
 #endif
 #define gerr(A, ...) g_critical("%s(): "A, __func__, ##__VA_ARGS__)
 #define perr(A, ...) errprintf2(__func__, A"\n", ##__VA_ARGS__)
-#define gwarn(A, ...) g_warning("%s(): "A, __func__, ##__VA_ARGS__);
 #define pwarn(A, ...) g_warning("%s(): "A, __func__, ##__VA_ARGS__)
 #define PF0 {printf("%s()...\n", __func__);}
 #define PF {if (_debug_) printf("%s()...\n", __func__);}
@@ -20,7 +19,7 @@
 #define PF_DONE printf("%s(): done.\n", __func__);
 #define P_GERR if (error){ gerr("%s\n", error->message); g_error_free(error); error = NULL; }
 #define GERR_INFO if (error){ printf("%s\n", error->message); g_error_free(error); error = NULL; }
-#define GERR_WARN if (error){ gwarn("%s", error->message); g_error_free(error); error = NULL; }
+#define GERR_WARN if (error){ pwarn("%s", error->message); g_error_free(error); error = NULL; }
 
 void        debug_printf             (const char* func, int level, const char* format, ...);
 void        warnprintf               (const char* format, ...);
@@ -34,5 +33,13 @@ extern int _debug_;                  // debug level. 0=off.
 
 extern char ayyi_warn[32];
 extern char ayyi_err [32];
+
+extern char ayyi_white [12];
+extern char ayyi_red   [10];
+extern char ayyi_green [10];
+extern char ayyi_grey  [12];
+extern char ayyi_bold  [12];
+extern char ayyi_warn  [32];
+extern char ayyi_err   [32];
 
 #endif

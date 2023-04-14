@@ -1,9 +1,8 @@
-/* -*- Mode: C; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 4 -*- 
- *
+/*
  * gdl-dock-item-button-image.h
  *
  * Author: Joel Holdsworth <joel@airwebreathe.org.uk>
- * 
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
  * License as published by the Free Software Foundation; either
@@ -15,13 +14,10 @@
  * Library General Public License for more details.
  *
  * You should have received a copy of the GNU Library General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library; if not, see <http://www.gnu.org/licenses/>.
  */
- 
-#ifndef __gdl_dock_item_button_image_h__
-#define __gdl_dock_item_button_image_h__
+
+#pragma once
 
 #include <gtk/gtk.h>
 
@@ -34,7 +30,18 @@ G_BEGIN_DECLS
 #define GDL_IS_DOCK_ITEM_BUTTON_IMAGE_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), GDL_TYPE_DOCK_ITEM_BUTTON_IMAGE))
 #define GDL_DOCK_ITEM_BUTTON_IMAGE_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS ((obj), GDL_TYPE_DOCK_ITEM_BUTTON_IMAGE, GdlDockItemButtonImageClass))
 
+
+/**
+ * GdlDockItemButtonImageType:
+ * @GDL_DOCK_ITEM_BUTTON_IMAGE_CLOSE: Display a small cross
+ * @GDL_DOCK_ITEM_BUTTON_IMAGE_ICONIFY: Display a small triangle
+ *
+ * Define the image displayed.
+ *
+ */
+/* Data Types & Structures */
 typedef enum {
+    GDL_DOCK_ITEM_BUTTON_IMAGE_CLOSE,
     GDL_DOCK_ITEM_BUTTON_IMAGE_ICONIFY
 } GdlDockItemButtonImageType;
 
@@ -43,7 +50,7 @@ typedef struct _GdlDockItemButtonImageClass GdlDockItemButtonImageClass;
 
 struct _GdlDockItemButtonImage {
     GtkWidget parent;
-    
+
     GdlDockItemButtonImageType image_type;
 };
 
@@ -53,8 +60,6 @@ struct _GdlDockItemButtonImageClass {
 
 /* Data Public Functions */
 GType      gdl_dock_item_button_image_get_type (void);
-GtkWidget *gdl_dock_item_button_image_new      (GdlDockItemButtonImageType);
+GtkWidget *gdl_dock_item_button_image_new (GdlDockItemButtonImageType image_type);
 
 G_END_DECLS
-
-#endif

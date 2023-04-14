@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
- | copyright (C) 2007-2022 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2007-2023 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -12,21 +12,20 @@
 
 #include "config.h"
 #include <string.h>
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <gtk/gtk.h>
-#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 #include <glib-object.h>
 #include "debug/debug.h"
-#include <sample.h>
+#include "gtk/icon_theme.h"
+#include "file_manager/pixmaps.h"
+#include "types.h"
+#include "sample.h"
 #include "support.h"
 #include "model.h"
 #include "db/db.h"
 #include "samplecat.h"
 #include "library.h"
 #include "progress_dialog.h"
-#ifndef USE_GDL
 #include "window.h"
-#endif
 #include "application.h"
 
 extern char theme_name[64];
@@ -57,13 +56,18 @@ static void     application_set_auditioner (Application*);
 
 static void     application_play_next      ();
 
+static GActionEntry app_entries[] =
+{
+	{ "play-all", application_play_all, },
+	{ "player-stop", player_stop, },
+};
+
 
 Application*
 application_construct (GType object_type)
 {
-	Application* app = g_object_new (object_type, NULL);
-	app->cache_dir = g_build_filename (g_get_home_dir(), ".config", PACKAGE, "cache", NULL);
-	app->configctx.dir = g_build_filename (g_get_home_dir(), ".config", PACKAGE, NULL);
+	Application* app = g_object_new (object_type, "application-id", "org.ayyi.samplecat", "flags", G_APPLICATION_NON_UNIQUE, NULL);
+	app->gui_thread = pthread_self();
 
 	return app;
 }
@@ -72,11 +76,11 @@ application_construct (GType object_type)
 Application*
 application_new ()
 {
-	app = application_construct (TYPE_APPLICATION);
+	PF;
+
+	Application* self = application_construct (TYPE_APPLICATION);
 
 	colour_box_init();
-
-	app->configctx.filename = g_strdup_printf("%s/.config/" PACKAGE "/" PACKAGE, g_get_home_dir());
 
 #if (defined HAVE_JACK)
 	play->enable_effect = true;
@@ -87,46 +91,7 @@ application_new ()
 	play->playback_speed = 1.0;
 #endif
 
-	samplecat_init();
-
-	{
-		ConfigContext* ctx = &app->configctx;
-		app->configctx.options = g_malloc0(CONFIG_MAX * sizeof(ConfigOption*));
-
-		void get_theme_name(ConfigOption* option)
-		{
-			g_value_set_string(&option->val, theme_name);
-		}
-		ctx->options[CONFIG_ICON_THEME] = config_option_new_string("icon_theme", get_theme_name);
-	}
-
-	void on_filter_changed (Observable* filter, AGlVal value, gpointer user_data)
-	{
-		application_search();
-	}
-	for(int i = 0; i < N_FILTERS; i++){
-		agl_observable_subscribe (samplecat.model->filters3[i], on_filter_changed, NULL);
-	}
-
-	application_set_auditioner(app);
-
-	void icon_theme_changed(Application* application, char* theme, gpointer data){ application_search(); }
-	g_signal_connect((gpointer)app, "icon-theme", G_CALLBACK(icon_theme_changed), NULL);
-
-	void listmodel__sample_changed(SamplecatModel* m, Sample* sample, int prop, void* val, gpointer _app)
-	{
-		samplecat_list_store_on_sample_changed((SamplecatListStore*)samplecat.store, sample, prop, val);
-	}
-	g_signal_connect((gpointer)samplecat.model, "sample-changed", G_CALLBACK(listmodel__sample_changed), app);
-
-	void log_message(GObject* o, char* message, gpointer _)
-	{
-		dbg(1, "---> %s", message);
-		statusbar_print(1, PACKAGE_NAME". Version "PACKAGE_VERSION);
-	}
-	g_signal_connect(samplecat.logger, "message", G_CALLBACK(log_message), NULL);
-
-	return app;
+	return self;
 }
 
 
@@ -145,22 +110,39 @@ application_free (Application* self)
 #endif
 
 
-void
-application_emit_icon_theme_changed (Application* self, const gchar* s)
+static void
+application_activate (GApplication* base)
 {
-	g_return_if_fail (self);
-	g_return_if_fail (s);
+	PF;
 
-	g_signal_emit_by_name (self, "icon-theme", s);
+	G_APPLICATION_CLASS (application_parent_class)->activate(base);
+
+	type_init();
+	icon_theme_init(NULL);
+
+	// Pick a valid icon theme
+	// Preferably from the config file, otherwise from the hardcoded list
+	const char* themes[] = {NULL, "oxygen", "breeze", NULL};
+	themes[0] = g_value_get_string(&app->configctx.options[CONFIG_ICON_THEME]->val);
+	const char* theme = find_icon_theme(themes[0] ? &themes[0] : &themes[1]);
+	icon_theme_set_theme(theme);
+
+    GtkCssProvider* provider = gtk_css_provider_new ();
+    gtk_css_provider_load_from_resource (provider, "/samplecat/resources/style.css");
+	gtk_style_context_add_provider_for_display (gdk_display_get_default(), GTK_STYLE_PROVIDER(provider), GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+
+	pixmaps_init();
+	samplecat.store = (GtkListStore*)samplecat_list_store_new();
+	window_new (GTK_APPLICATION (base), NULL);
+	statusbar_print(2, PACKAGE_NAME" "PACKAGE_VERSION);
+	application_search();
 }
 
 
 static GObject*
 application_constructor (GType type, guint n_construct_properties, GObjectConstructParam* construct_properties)
 {
-	GObjectClass* parent_class = G_OBJECT_CLASS (application_parent_class);
-	GObject* obj = parent_class->constructor (type, n_construct_properties, construct_properties);
-	return obj;
+	return G_OBJECT_CLASS (application_parent_class)->constructor (type, n_construct_properties, construct_properties);
 }
 
 
@@ -168,8 +150,11 @@ static void
 application_class_init (ApplicationClass* klass)
 {
 	application_parent_class = g_type_class_peek_parent (klass);
+
 	G_OBJECT_CLASS (klass)->constructor = application_constructor;
 	G_OBJECT_CLASS (klass)->finalize = application_finalize;
+
+	((GApplicationClass*)klass)->activate = application_activate;
 
 	g_signal_new ("config_loaded", TYPE_APPLICATION, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_VOID__VOID, G_TYPE_NONE, 0);
 	g_signal_new ("search_starting", TYPE_APPLICATION, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_VOID__VOID, G_TYPE_NONE, 0);
@@ -183,12 +168,82 @@ application_class_init (ApplicationClass* klass)
 static void
 application_instance_init (Application* self)
 {
-	self->state = NONE;
-
 	play = player_new();
 
 	play->next = application_play_next;
 	play->play_selected = application_play_selected;
+
+	g_action_map_add_action_entries (G_ACTION_MAP (self), app_entries, G_N_ELEMENTS (app_entries), self);
+
+	gtk_application_set_accels_for_action (GTK_APPLICATION (self), "app.play", (const char*[]){ "<Ctrl>P", NULL });
+	{
+		GAction* action = g_action_map_lookup_action (G_ACTION_MAP(app), "play-all");
+		if (action) {
+			g_simple_action_set_enabled (G_SIMPLE_ACTION(action), false);
+		}
+	}
+
+	void on_filter_changed (Observable* filter, AGlVal value, gpointer user_data)
+	{
+		application_search();
+	}
+	for (int i = 0; i < N_FILTERS; i++) {
+		agl_observable_subscribe (samplecat.model->filters3[i], on_filter_changed, NULL);
+	}
+
+	application_set_auditioner(self);
+
+	void icon_theme_changed(Application* application, char* theme, gpointer data){ application_search(); }
+	g_signal_connect((gpointer)app, "icon-theme", G_CALLBACK(icon_theme_changed), NULL);
+
+	void listmodel__sample_changed (SamplecatModel* m, Sample* sample, int prop, void* val, gpointer _app)
+	{
+		samplecat_list_store_on_sample_changed((SamplecatListStore*)samplecat.store, sample, prop, val);
+	}
+	g_signal_connect((gpointer)samplecat.model, "sample-changed", G_CALLBACK(listmodel__sample_changed), app);
+
+	void log_message (GObject* o, char* message, gpointer _)
+	{
+		dbg(1, "---> %s", message);
+		statusbar_print(1, PACKAGE_NAME". Version "PACKAGE_VERSION);
+	}
+	g_signal_connect(samplecat.logger, "message", G_CALLBACK(log_message), NULL);
+
+	void on_player_state_change (GObject* o, GParamSpec*, gpointer _)
+	{
+		dbg(1, "---> %s", g_enum_to_string (PLAYER_TYPE_STATE, play->state));
+		statusbar_print(1, "%s", g_enum_to_string (PLAYER_TYPE_STATE, play->state));
+
+		GAction* action = g_action_map_lookup_action (G_ACTION_MAP(app), "player-stop");
+		if (action) {
+			g_simple_action_set_enabled (G_SIMPLE_ACTION(action), play->state != PLAYER_STOPPED);
+		}
+		action = g_action_map_lookup_action (G_ACTION_MAP(app), "play-all");
+		if (action) {
+			g_simple_action_set_enabled (G_SIMPLE_ACTION(action), true);
+		}
+	}
+	g_signal_connect(play, "notify::state", G_CALLBACK(on_player_state_change), NULL);
+
+	void menu_on_audio_ready (gpointer _, gpointer __)
+	{
+#ifdef GTK4_TODO
+		if (play->auditioner->seek) {
+			gtk_widget_show(widgets.loop_playback);
+		}
+#endif
+	}
+	am_promise_add_callback(play->ready, menu_on_audio_ready, NULL);
+
+#ifdef DEBUG
+	char** actions = gtk_application_list_action_descriptions (GTK_APPLICATION(self));
+	if (!actions) dbg(0, "no actions found with accelerators");
+	char* action;
+	for (int i=0;(action = actions[i]);i++) {
+		printf("  * %s", action);
+	}
+	g_strfreev(actions);
+#endif
 }
 
 
@@ -205,8 +260,7 @@ application_get_type ()
 	static volatile gsize application_type_id__volatile = 0;
 	if (g_once_init_enter ((gsize*)&application_type_id__volatile)) {
 		static const GTypeInfo g_define_type_info = { sizeof (ApplicationClass), (GBaseInitFunc) NULL, (GBaseFinalizeFunc) NULL, (GClassInitFunc) application_class_init, (GClassFinalizeFunc) NULL, NULL, sizeof (Application), 0, (GInstanceInitFunc) application_instance_init, NULL };
-		GType application_type_id;
-		application_type_id = g_type_register_static (G_TYPE_OBJECT, "Application", &g_define_type_info, 0);
+		GType application_type_id = g_type_register_static (samplecat_application_get_type (), "Application", &g_define_type_info, 0);
 		g_once_init_leave (&application_type_id__volatile, application_type_id);
 	}
 	return application_type_id__volatile;
@@ -214,7 +268,7 @@ application_get_type ()
 
 
 void
-application_quit(Application* app)
+application_quit (Application* app)
 {
 	PF;
 	player_stop();
@@ -223,9 +277,9 @@ application_quit(Application* app)
 
 
 void
-application_set_ready()
+application_set_ready ()
 {
-	app->loaded = true;
+	((Application*)app)->loaded = true;
 	dbg(1, "loaded");
 
 	// make config saveable
@@ -233,44 +287,46 @@ application_set_ready()
 	{
 		ConfigContext* ctx = &app->configctx;
 
-		void get_width(ConfigOption* option)
+		void get_width (ConfigOption* option)
 		{
 			gint width = 0;
-			if(app->window && GTK_WIDGET_REALIZED(app->window)){
-				gtk_window_get_size(GTK_WINDOW(app->window), &width, NULL);
+			GtkWidget* window = (GtkWidget*)gtk_application_get_active_window(GTK_APPLICATION(app));
+			if (window && gtk_widget_get_realized(window)) {
+				width = gtk_widget_get_allocated_width(window);
 			}
 			g_value_set_int(&option->val, width);
 		}
 		ctx->options[CONFIG_WINDOW_WIDTH] = config_option_new_int("window_width", get_width, 20, 4096);
 
-		void get_height(ConfigOption* option)
+		void get_height (ConfigOption* option)
 		{
+			GtkWidget* window = (GtkWidget*)gtk_application_get_active_window(GTK_APPLICATION(app));
+
 			gint height = 0;
-			if(app->window && GTK_WIDGET_REALIZED(app->window)){
-				gtk_window_get_size(GTK_WINDOW(app->window), NULL, &height);
+			if (window && gtk_widget_get_realized(window)) {
+				height = gtk_widget_get_allocated_height(window);
 			}
 			g_value_set_int(&option->val, height);
 		}
 		ctx->options[CONFIG_WINDOW_HEIGHT] = config_option_new_int("window_height", get_height, 20, 4096);
 
-		void get_col1_width(ConfigOption* option)
+		void get_col1_width (ConfigOption* option)
 		{
-			GtkTreeViewColumn* column = gtk_tree_view_get_column(GTK_TREE_VIEW(app->libraryview->widget), 1);
+			GtkTreeViewColumn* column = gtk_tree_view_get_column(GTK_TREE_VIEW(((Application*)app)->libraryview->widget), 1);
 			g_value_set_int(&option->val, gtk_tree_view_column_get_width(column));
 		}
 		ctx->options[CONFIG_COL1_WIDTH] = config_option_new_int("col1_width", get_col1_width, 10, 1024);
 
-		void get_auditioner(ConfigOption* option)
+		void get_auditioner (ConfigOption* option)
 		{
-			if(strlen(app->config.auditioner))
+			if (strlen(app->config.auditioner))
 				g_value_set_string(&option->val, app->config.auditioner);
 		}
 		ctx->options[4] = config_option_new_string("auditioner", get_auditioner);
 
-		void get_colours(ConfigOption* option)
+		void get_colours (ConfigOption* option)
 		{
-			int i;
-			for (i=1;i<PALETTE_SIZE;i++) {
+			for (int i=1;i<PALETTE_SIZE;i++) {
 				char keyname[32];
 				snprintf(keyname, 32, "colorkey%02d", i);
 				g_key_file_set_value(app->configctx.key_file, "Samplecat", keyname, app->config.colour[i]);
@@ -278,13 +334,13 @@ application_set_ready()
 		}
 		ctx->options[5] = config_option_new_manual(get_colours);
 
-		void get_add_recursive(ConfigOption* option)
+		void get_add_recursive (ConfigOption* option)
 		{
 			g_value_set_boolean(&option->val, app->config.add_recursive);
 		}
 		ctx->options[6] = config_option_new_bool("add_recursive", get_add_recursive);
 
-		void get_loop_playback(ConfigOption* option)
+		void get_loop_playback (ConfigOption* option)
 		{
 			g_value_set_boolean(&option->val, play->config.loop);
 		}
@@ -300,7 +356,7 @@ static bool auditioner_nullS(Sample* s) {return true;}
 static void
 _set_auditioner ()
 {
-	if (!app->no_gui) { printf("auditioner: "); fflush(stdout); }
+	printf("auditioner: "); fflush(stdout);
 
 	const static Auditioner a_null = {
 		&auditioner_nullC,
@@ -327,7 +383,7 @@ _set_auditioner ()
 		play->auditioner = & a_ayyidbus;
 		if (!play->auditioner->check()) {
 			connected = true;
-			if (!app->no_gui) printf("ayyi_audition\n");
+			printf("ayyi_audition\n");
 		}
 	}
 #endif
@@ -381,7 +437,7 @@ application_set_auditioner (Application* a)
  * fill the display with the results matching the current set of filters.
  */
 void
-application_search()
+application_search ()
 {
 	PF;
 
@@ -393,193 +449,21 @@ application_search()
 }
 
 
-/*
- *  Path must not contain trailing slash
- */
-void
-application_scan (const char* path, ScanResults* results)
+GList*
+application_get_selection ()
 {
-	g_return_if_fail(path);
-
-	app->state = SCANNING;
-	worker_go_slow = true;
-	statusbar_print(1, "scanning...");
-
-	application_add_dir(path, results);
-
-	gchar* fail_msg = results->n_failed ? g_strdup_printf(", %i failed", results->n_failed) : "";
-	gchar* dupes_msg = results->n_dupes ? g_strdup_printf(", %i duplicates", results->n_dupes) : "";
-	statusbar_print(1, "add finished: %i files added%s%s", results->n_added, fail_msg, dupes_msg);
-	if (results->n_failed) g_free(fail_msg);
-	if (results->n_dupes) g_free(dupes_msg);
-
-	app->state = NONE;
-	worker_go_slow = false;
-}
-
-
-/*
- *  uri must be "unescaped" before calling this fn. Method string must be removed.
- */
-bool
-application_add_file (const char* path, ScanResults* result)
-{
-	if (BACKEND_IS_NULL) return false;
-
-	/* check if file already exists in the store
-	 * -> don't add it again
-	 */
-	if (samplecat.model->backend.file_exists(path, NULL)) {
-		if (!app->no_gui) statusbar_print(1, "duplicate: %s", path);
-		if (_debug_) g_warning("duplicate file: %s", path);
-		Sample* s = sample_get_by_filename(path);
-		if (s) {
-			//sample_refresh(s, false);
-			samplecat_model_refresh_sample (samplecat.model, s, false);
-			sample_unref(s);
-		} else {
-			dbg(1, "sample found in db but not in model.");
-		}
-		result->n_dupes++;
-		return false;
-	}
-
-	if (!app->no_gui) dbg(1, "%s", path);
-
-	Sample* sample = sample_new_from_filename((char*)path, false);
-	if (!sample) {
-		if (app->state != SCANNING){
-			if (_debug_) pwarn("cannot add file: file-type is not supported");
-			statusbar_print(1, "cannot add file: file-type is not supported");
-		}
-		return false;
-	}
-
-	if (_debug_ && app->no_gui) { printf("%s\n", path); fflush(stdout); }
-
-	if (!sample_get_file_info(sample)) {
-		pwarn("cannot add file: reading file info failed. type=%s", sample->mimetype);
-		if(!app->no_gui) statusbar_print(1, "cannot add file: reading file info failed");
-		sample_unref(sample);
-		return false;
-	}
-
-#ifdef CHECK_SIMILAR
-	/* check if same file already exists with different path */
-	GList* existing;
-	if ((existing = samplecat.model->backend.filter_by_audio(sample))) {
-		GList* l = existing; int i;
-#ifdef INTERACTIVE_IMPORT
-		GString* note = g_string_new("Similar or identical file(s) already present in database:\n");
-#endif
-		for (i=1;l;l=l->next, i++) {
-			/* TODO :prompt user: ask to delete one of the files
-			 * - import/update the remaining file(s)
-			 */
-			dbg(1, "found similar or identical file: %s", l->data);
-#ifdef INTERACTIVE_IMPORT
-			if (i < 10)
-				g_string_append_printf(note, "%d: '%s'\n", i, (char*) l->data);
-#endif
-		}
-#ifdef INTERACTIVE_IMPORT
-		if (i > 9)
-			g_string_append_printf(note, "..\n and %d more.", i - 9);
-
-		g_string_append_printf(note, "Add this file: '%s' ?", sample->full_path);
-		if (do_progress_question(note->str) != 1) {
-			// 0, aborted: -> whole add_file loop is aborted on next do_progress() call.
-			// 1, OK
-			// 2, cancelled: -> only this file is skipped
-			sample_unref(sample);
-			g_string_free(note, true);
-			return false;
-		}
-		g_string_free(note, true);
-#endif /* END interactive import */
-		g_list_foreach(existing, (GFunc)g_free, NULL);
-		g_list_free(existing);
-	}
-#endif // END CHECK_SIMILAR
-
-	sample->online = 1;
-	sample->id = samplecat.model->backend.insert(sample);
-	if (sample->id < 0) {
-		sample_unref(sample);
-		return false;
-	}
-	dbg(1, "       %s", sample->name);
-	dbg(1, "       %s", sample->sample_dir);
-	dbg(1, "       %s", sample->full_path);
-
-	samplecat_list_store_add((SamplecatListStore*)samplecat.store, sample);
-
-	samplecat_model_add(samplecat.model);
-
-	result->n_added++;
-
-	sample_unref(sample);
-	return true;
-}
-
-
-/**
- *	Scan the directory and try and add any files found.
- */
-void
-application_add_dir (const char* path, ScanResults* result)
-{
-	PF;
-
-	char filepath[PATH_MAX];
-	const gchar* file;
-	GError* error = NULL;
-	GDir* dir;
-
-	if ((dir = g_dir_open(path, 0, &error))) {
-		while ((file = g_dir_read_name(dir))) {
-			if (file[0] == '.') continue;
-
-			snprintf(filepath, PATH_MAX, "%s%c%s", path, G_DIR_SEPARATOR, file);
-			filepath[PATH_MAX - 1] = '\0';
-			if (do_progress(0, 0)) break;
-
-			if(!g_file_test(filepath, G_FILE_TEST_IS_DIR)){
-				if (g_file_test(filepath, G_FILE_TEST_IS_SYMLINK) && !g_file_test(filepath, G_FILE_TEST_IS_REGULAR)) {
-					dbg(0, "ignoring dangling symlink: %s", filepath);
-				} else {
-					if (application_add_file(filepath, result)) {
-						if (!app->no_gui) statusbar_print(1, "%i files added", result->n_added);
-					}
-				}
-			}
-			// IS_DIR
-			else if (app->config.add_recursive) {
-				application_add_dir(filepath, result);
-			}
-		}
-		//hide_progress(); ///no: keep window open until last recursion.
-		g_dir_close(dir);
-	} else {
-		result->n_failed++;
-
-		if (error->code == 2)
-			pwarn("%s\n", error->message); // permission denied
-		else
-			perr("cannot open directory. %i: %s\n", error->code, error->message);
-		g_error_free0(error);
-	}
+	return listview__get_selection();
 }
 
 
 void
 application_play (Sample* sample)
 {
-	if (play->status == PLAY_PAUSED) {
-		if (play->auditioner->playpause) {
-			play->auditioner->playpause(false);
+	if (play->state == PLAYER_PAUSED) {
+		if (play->auditioner->pause) {
+			play->auditioner->pause(false);
 		}
-		play->status = PLAY_PLAYING;
+		play->state = PLAYER_PLAYING;
 		return;
 	}
 
@@ -590,9 +474,6 @@ application_play (Sample* sample)
 			statusbar_print(1, "playing 1 of %i ...", g_list_length(play->queue));
 		else
 			statusbar_print(1, "");
-#ifndef USE_GDL
-		if (app->view_options[SHOW_PLAYER].value) show_player(true);
-#endif
 
 	} else {
 		statusbar_print(1, "File not playable");
@@ -601,17 +482,7 @@ application_play (Sample* sample)
 
 
 void
-application_pause ()
-{
-	if(play->auditioner->playpause){
-		play->auditioner->playpause(true);
-	}
-	play->status = PLAY_PAUSED;
-}
-
-
-void
-application_play_selected()
+application_play_selected ()
 {
 	PF;
 	Sample* sample = samplecat.model->selection;
@@ -639,7 +510,7 @@ application_play_all ()
 		return;
 	}
 
-	gboolean foreach_func(GtkTreeModel* model, GtkTreePath* path, GtkTreeIter* iter, gpointer user_data)
+	gboolean foreach_func (GtkTreeModel* model, GtkTreePath* path, GtkTreeIter* iter, gpointer user_data)
 	{
 		//ADD_TO_QUEUE(samplecat_list_store_get_sample_by_path(path));
 		play->queue = g_list_append(play->queue, samplecat_list_store_get_sample_by_path(path)); // there is a ref already added, so another one is not needed when adding to the queue.

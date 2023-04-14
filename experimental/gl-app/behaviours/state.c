@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
- | copyright (C) 2019-2022 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2019-2023 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -15,7 +15,6 @@
 #include "glib.h"
 #include "debug/debug.h"
 #include "agl/actor.h"
-#include "samplecat/support.h"
 #include "state.h"
 
 static void state_init (AGlBehaviour*, AGlActor*);
@@ -68,7 +67,7 @@ state_free (AGlBehaviour* behaviour)
 				g_clear_pointer(&param->val.c, g_free);
 			}
 		}
-		g_free0(state->params);
+		g_clear_pointer(&state->params, g_free);
 	}
 	g_free(state);
 }
@@ -81,7 +80,7 @@ state_init (AGlBehaviour* behaviour, AGlActor* actor)
 
 
 bool
-state_set_named_parameter (AGlActor* actor, char* name, char* value)
+state_set_named_parameter (AGlActor* actor, const char* name, char* value)
 {
 	StateBehaviour* state = (StateBehaviour*)agl_actor__find_behaviour(actor, state_get_class());
 	if (state) {
@@ -105,7 +104,7 @@ state_set_named_parameter (AGlActor* actor, char* name, char* value)
 
 
 bool
-state_has_parameter (AGlActor* actor, char* name)
+state_has_parameter (AGlActor* actor, const char* name)
 {
 	StateBehaviour* state = (StateBehaviour*)agl_actor__find_behaviour(actor, state_get_class());
 	if (state) {

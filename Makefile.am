@@ -15,7 +15,7 @@ BUILT_SOURCES = resources.c
 green = "\033[1;32m"
 normal = "\033[0;39m"
 
-resources.c: resources.xml resources/gtkrc
+resources.c: resources.xml resources/style.css
 	@echo -en $(green)
 	@echo compiling resources ...
 	@echo -en $(normal)
@@ -34,4 +34,7 @@ EXTRA_DIST = samplecat.1 \
 	icons/samplecat.xpm \
 	samples.sql \
 	resources.xml \
-	resources/gtkrc
+	resources/style.css
+
+tags: dummy
+	ctags -R --languages=c --exclude=*.x .

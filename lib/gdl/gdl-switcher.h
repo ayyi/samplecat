@@ -1,10 +1,9 @@
-/* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 4; tab-width: 8 -*- */
 /* gdl-switcher.h
  *
  * Copyright (C) 2003  Ettore Perazzoli
  *               2007  Naba Kumar
  *
-* This library is free software; you can redistribute it and/or
+ * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
  * License as published by the Free Software Foundation; either
  * version 2 of the License, or (at your option) any later version.
@@ -15,9 +14,7 @@
  * Library General Public License for more details.
  *
  * You should have received a copy of the GNU Library General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  *
  * Authors: Ettore Perazzoli <ettore@ximian.com>
@@ -37,18 +34,22 @@ G_BEGIN_DECLS
 #define GDL_IS_SWITCHER(obj)         (G_TYPE_CHECK_INSTANCE_TYPE ((obj), GDL_TYPE_SWITCHER))
 #define GDL_IS_SWITCHER_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((obj), GDL_TYPE_SWITCHER))
 
-typedef struct _GdlSwitcher        GdlSwitcher;
-typedef struct _GdlSwitcherPrivate GdlSwitcherPrivate;
-typedef struct _GdlSwitcherClass   GdlSwitcherClass;
+typedef struct _GdlSwitcher             GdlSwitcher;
+typedef struct _GdlSwitcherPrivate      GdlSwitcherPrivate;
+typedef struct _GdlSwitcherClass        GdlSwitcherClass;
+typedef struct _GdlSwitcherClassPrivate GdlSwitcherClassPrivate;
 
 struct _GdlSwitcher {
-    GtkNotebook parent;
+    GtkWidget parent;
+    GtkNotebook* notebook;
 
     GdlSwitcherPrivate *priv;
 };
 
 struct _GdlSwitcherClass {
-    GtkNotebookClass parent_class;
+    GtkWidgetClass parent_class;
+
+    GdlSwitcherClassPrivate *priv;
 };
 
 GType      gdl_switcher_get_type     (void);
@@ -60,6 +61,7 @@ gint       gdl_switcher_insert_page  (GdlSwitcher *switcher,
                                       const gchar *label,
                                       const gchar *tooltips,
                                       const gchar *stock_id,
+                                      GdkPixbuf *pixbuf_icon,
                                       gint position);
 G_END_DECLS
 

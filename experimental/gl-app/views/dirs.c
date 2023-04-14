@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
- | copyright (C) 2016-2021 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2016-2023 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -13,10 +13,12 @@
 #include "config.h"
 #include "agl/utils.h"
 #include "agl/actor.h"
+#include "agl/event.h"
 #include "agl/behaviours/cache.h"
 #include "waveform/shader.h"
 #include "debug/debug.h"
-#include "samplecat.h"
+#include "samplecat/model.h"
+#include "samplecat/dir_list.h"
 #include "dh_link.h"
 #include "behaviours/panel.h"
 #include "views/dirs.h"
@@ -115,10 +117,10 @@ directories_view (gpointer _)
 		actor->region.y2 = MIN(actor->region.y2, actor->region.y1 + (view->cache.n_rows + 1) * row_height);
 	}
 
-	bool dirs_event (AGlActor* actor, GdkEvent* event, AGliPt xy)
+	bool dirs_event (AGlActor* actor, AGlEvent* event, AGliPt xy)
 	{
 		switch (event->type) {
-			case GDK_BUTTON_RELEASE:
+			case AGL_BUTTON_RELEASE:
 				{
 					int row = xy.y / row_height;
 					dbg(1, "y=%i row=%i", xy.y, row);

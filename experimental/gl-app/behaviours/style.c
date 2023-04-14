@@ -10,7 +10,6 @@
 *
 */
 #include "config.h"
-#undef USE_GTK
 #include "glib.h"
 #include "debug/debug.h"
 #include "agl/actor.h"

@@ -1,12 +1,12 @@
 #include "config.h"
 #include <stdio.h>
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <gtk/gtk.h>
-#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 #include "debug/debug.h"
 #include "application.h"
 #include "support.h"
 #include "progress_dialog.h"
+
+#ifdef GTK4_TODO
 
 #define NOPROGBARWIN 1
 
@@ -201,3 +201,4 @@ do_progress_question (gchar *msg /* TODO: question-ID, config, options */ )
 	// return decision 
 	return pw.btn;
 }
+#endif

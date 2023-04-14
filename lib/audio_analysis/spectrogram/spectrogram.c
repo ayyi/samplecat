@@ -423,15 +423,15 @@ fft_thread(gpointer data)
 	g_async_queue_ref(msg_queue);
 
 	GList* msg_list = NULL;
-	while(1){
+	while (1) {
 		//any new work ?
-		void process_messages(gboolean* got_cancel)
+		void process_messages (gboolean* got_cancel)
 		{
 			*got_cancel = false;
-			while(g_async_queue_length(msg_queue)){
+			while (g_async_queue_length(msg_queue)) {
 				Message* message = g_async_queue_pop(msg_queue);
 				dbg(1, "new message");
-				switch(message->type){
+				switch (message->type) {
 					case QUEUE:
 						msg_list = g_list_append(msg_list, message->render);
 						break;
@@ -451,11 +451,11 @@ fft_thread(gpointer data)
 		gboolean got_cancel = false;
 		process_messages(&got_cancel);
 
-		while(msg_list){
-			gboolean do_callback(gpointer _render)
+		while (msg_list) {
+			gboolean do_callback (gpointer _render)
 			{
 				RENDER* render = _render;
-				if(_debug_ && !render->pixbuf) gwarn("no pixbuf.");
+				if (_debug_ && !render->pixbuf) pwarn("no pixbuf.");
 
 				render->callback(render->sndfilepath, render->pixbuf, render->user_data);
 

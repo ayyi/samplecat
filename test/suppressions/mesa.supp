@@ -520,3 +520,9 @@
    ...
    fun:_mesa_FramebufferTexture2D
 }
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   ...
+   fun:create_new_program
+}

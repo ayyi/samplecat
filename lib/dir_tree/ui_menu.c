@@ -15,9 +15,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <gtk/gtk.h>
-#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 
 #include "ui_menu.h"
 
@@ -28,6 +26,7 @@
  *-----------------------------------------------------------------------------
  */ 
 
+#ifdef GTK4_TODO
 static void menu_item_finish(GtkWidget *menu, GtkWidget *item, GCallback func, gpointer data)
 {
 	if (func) g_signal_connect(G_OBJECT(item), "activate", func, data);
@@ -178,4 +177,4 @@ gint popup_menu_position_clamp(GtkMenu *menu, gint *x, gint *y, gint height)
 
 	return adjusted;
 }
-
+#endif

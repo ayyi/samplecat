@@ -1,20 +1,21 @@
-/**
-* +----------------------------------------------------------------------+
-* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2016-2020 Tim Orford <tim@orford.org>                  |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-*
-*/
-#define __wf_private__
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
+ | copyright (C) 2016-2023 Tim Orford <tim@orford.org>                  |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
+ */
+
 #include "config.h"
 #include "debug/debug.h"
 #include "agl/utils.h"
 #include "agl/shader.h"
 #include "agl/x11.h"
+#include "agl/event.h"
 #include "wf/promise.h"
 #include "icon/utils.h"
 #include "waveform/utils.h"
@@ -150,12 +151,12 @@ popup_destroy ()
 
 
 static bool
-context_menu_event (AGlActor* actor, GdkEvent* event, AGliPt xy)
+context_menu_event (AGlActor* actor, AGlEvent* event, AGliPt xy)
 {
 	switch(event->type){
-		case GDK_BUTTON_PRESS:
+		case AGL_BUTTON_PRESS:
 			break;
-		case GDK_BUTTON_RELEASE:
+		case AGL_BUTTON_RELEASE:
 			switch(event->button.button){
 				case 1:;
 					int row = xy.y / 16;
@@ -168,23 +169,23 @@ context_menu_event (AGlActor* actor, GdkEvent* event, AGliPt xy)
 					return AGL_HANDLED;
 			}
 			return AGL_HANDLED;
-		case GDK_ENTER_NOTIFY:
+		case AGL_ENTER_NOTIFY:
 			hover_row = xy.y / 16;
 			animatable.target_val.f = 1.0;
 			agl_actor__start_transition(actor, g_list_append(NULL, &animatable), NULL, NULL);
 			break;
-		case GDK_LEAVE_NOTIFY:
+		case AGL_LEAVE_NOTIFY:
 			animatable.target_val.f = 0.0;
 			agl_actor__start_transition(actor, g_list_append(NULL, &animatable), NULL, NULL);
 			break;
-		case GDK_MOTION_NOTIFY:;
+		case AGL_MOTION_NOTIFY:;
 			int _hover_row = xy.y / 16;
 			if(_hover_row != hover_row){
 				hover_row = _hover_row;
 				agl_actor__invalidate(actor);
 			}
 			break;
-		case GDK_FOCUS_CHANGE:
+		case AGL_FOCUS_CHANGE:
 			g_idle_add(popup_destroy, NULL);
 			break;
 		default:

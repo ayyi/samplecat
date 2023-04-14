@@ -2,6 +2,7 @@
 void
 test_5_show_waveform ()
 {
+#ifdef GTK4_TODO
 	START_TEST;
 
 	assert(view_not_visible("Waveform"), "expected waveform panel not visible");
@@ -29,4 +30,5 @@ test_5_show_waveform ()
 	}
 
 	open_menu(then, NULL);
+#endif
 }

@@ -33,6 +33,7 @@ libtool
 .libs
 layouts/layout_ui.c
 layouts/layouts.c
+lib/yaml/test
 src/vala/*.[ch]
 src/resources.c
 experimental/gl-app/samplecat_gl
@@ -40,6 +41,8 @@ experimental/gl-app/shaders/shaders.c
 test/ubuntu-18/Dockerfile
 test/ubuntu-20/Dockerfile
 !test/ubuntu-20/Dockerfile.in
+test/ubuntu-22/Dockerfile
+!test/ubuntu-22/Dockerfile.in
 test/arch/Dockerfile
 test/unit/unit_test
 test/unit/list.c
@@ -69,3 +72,5 @@ test-driver
 test/.cache/
 test/.config/
 /home
+src/panels/register.c
+!src/panels/register.c.in

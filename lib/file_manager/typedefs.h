@@ -58,27 +58,6 @@ typedef struct _ViewIter ViewIter;
  */
 typedef struct _MIME_type MIME_type;
 
-/* Icon is an abstract base class for pinboard and panel icons.
- * It contains the name and path of the icon, as well as its DirItem.
- */
-//typedef struct _Icon Icon;
-
-/* There will be one of these if the pinboard is in use. It contains
- * the name of the pinboard and links to the pinned Icons inside.
- */
-typedef struct _Pinboard Pinboard;
-
-/* There is one of these for each panel window open. Panels work rather
- * like little pinboards, but with a more rigid layout.
- */
-typedef struct _Panel Panel;
-
-/* Each option has a static Option structure. This is initialised by
- * calling option_add_int() or similar. See options.c for details.
- * This structure is read-only.
- */
-//typedef struct _Option Option;
-
 /* A filesystem cache provides a quick and easy way to load files.
  * When a cache is created, functions to load and update files are
  * registered to it. Requesting an object from the cache will load
@@ -87,9 +66,6 @@ typedef struct _Panel Panel;
  * Caches are used to access directories, images and XML files.
  */
 typedef struct _GFSCache GFSCache;
-
-/* Each cached XML file is represented by one of these */
-typedef struct _XMLwrapper XMLwrapper;
 
 /* This holds a pre-parsed version of a filename, which can be quickly
  * compared with another CollateKey for intelligent sorting.

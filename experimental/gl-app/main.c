@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
- | copyright (C) 2007-2022 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2007-2023 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -17,6 +17,7 @@
 #include <X11/keysym.h>
 #include <debug/debug.h>
 #include "agl/x11.h"
+#include "agl/event.h"
 #include "file_manager/mimetype.h"
 #include "file_manager/pixmaps.h"
 #include "file_manager/diritem.h"
@@ -73,8 +74,6 @@ main (int argc, char* argv[])
 
 	app = application_new();
 
-	gtk_init_check(&argc, &argv);
-
 	int opt;
 	while ((opt = getopt_long (argc, argv, short_options, long_options, NULL)) != -1) {
 		switch (opt) {
@@ -115,11 +114,11 @@ main (int argc, char* argv[])
 
 	agl_scene_get_class()->behaviour_classes[0] = style_get_class();
 
-	bool on_event (AGlActor* actor, GdkEvent* event, AGliPt xy)
+	bool on_event (AGlActor* actor, AGlEvent* event, AGliPt xy)
 	{
 		switch (event->type) {
-			case GDK_KEY_PRESS:
-			case GDK_KEY_RELEASE:;
+			case AGL_KEY_PRESS:
+			case AGL_KEY_RELEASE:;
 				AGlActor* list = agl_actor__find_by_name(actor, "List");
 				if (list) {
 					return list->on_event(list, event, xy);
@@ -214,7 +213,7 @@ add_content (gpointer _)
 
 	config_load(&app->config_ctx, &app->config);
 
-	if (app->config.database_backend && can_use(samplecat.model->backends, app->config.database_backend)) {
+	if (can_use(samplecat.model->backends, app->config.database_backend)) {
 		#define list_clear(L) g_list_free(L); L = NULL;
 		list_clear(samplecat.model->backends);
 		samplecat_model_add_backend(app->config.database_backend);
@@ -232,6 +231,7 @@ add_content (gpointer _)
 		return EXIT_FAILURE;
 	}
 
+	samplecat.store = (GtkListStore*)samplecat_list_store_new();
 	samplecat_list_store_do_search((SamplecatListStore*)samplecat.store);
 
 	application_set_auditioner();

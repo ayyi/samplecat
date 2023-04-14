@@ -8,7 +8,6 @@ AM_CFLAGS = \
 	-I../../lib \
 	-I../../lib/waveform \
 	-I../../lib/waveform/lib/agl \
-	-I$(top_srcdir)/lib/waveform/gtkglext-1.0 \
 	$(DBUS_CFLAGS) \
 	$(GTK_CFLAGS)
 
@@ -16,13 +15,7 @@ unit_test_SOURCES = \
 	test.c
 
 if ENABLE_OPENGL
-if ENABLE_SYSTEM_GTKGLEXT
-else
-GTKGLEXT_LDFLAGS = \
-	$(top_srcdir)/lib/waveform/gtkglext-1.0/.libs/libgtkglext.a
-endif
 OPENGL_LDFLAGS = \
-	$(GTKGLEXT_LDFLAGS) \
 	$(GL_LDFLAGS)
 endif
 
@@ -52,7 +45,7 @@ unit_test_LDADD = \
 	${SAMPLERATE_LIBS} \
 	$(FFTW3_LIBS) \
 	$(OPENGL_LDFLAGS) \
-	$(GTK_LIBS) \
+	$(GTK_LDFLAGS) \
 	$(LIBASS_LDFLAGS) \
 	$(X11_LDFLAGS) \
 	$(GRAPHENE_LIBS) \

@@ -62,6 +62,12 @@ Samplecat samplecat;
 extern Samplecat samplecat;
 #endif
 
+typedef struct {
+   int n_added;
+   int n_failed;
+   int n_dupes;
+} ScanResults;
+
 typedef struct { double x1, y1, x2, y2; } DRect;
 typedef struct { int start, end; } iRange;
 

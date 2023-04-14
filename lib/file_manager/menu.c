@@ -25,9 +25,7 @@
 #include <errno.h>
 #include <string.h>
 #include <dirent.h>
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <gtk/gtk.h>
-#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 #include <glib/gstdio.h>
 
 #include "debug/debug.h"
@@ -40,6 +38,8 @@
 #include "menu.h"
 
 //static gint updating_menu = 0;      // Non-zero => ignore activations
+
+#ifdef GTK4_TODO
 
 typedef enum {
 	FILE_COPY_ITEM,
@@ -641,4 +641,4 @@ file_op (gpointer data, FileOp action, GtkWidget* unused)
 			return;
 	}
 }
-
+#endif

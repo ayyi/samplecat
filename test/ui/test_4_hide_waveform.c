@@ -5,6 +5,7 @@
 void
 test_4_hide_waveform ()
 {
+#ifdef GTK4_TODO
 	START_TEST;
 
 	assert(view_is_visible("Waveform"), "expected waveform visible");
@@ -35,5 +36,6 @@ test_4_hide_waveform ()
 	}
 
 	open_menu(then, NULL);
+#endif
 }
 

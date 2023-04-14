@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
- | copyright (C) 2007-2022 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2007-2023 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -25,7 +25,7 @@
 static void update_waveform_view        (Sample*);
 static void on_waveform_view_realise    (GtkWidget*, gpointer);
 static void on_waveform_view_show       (GtkWidget*, gpointer);
-static void on_waveform_view_set_parent (GtkWidget*, GtkObject*, gpointer);
+static void on_waveform_view_set_parent (GObject*, GParamSpec*, gpointer);
 
 #ifdef WITH_VALGRIND
 static void on_waveform_view_finalize   (gpointer, GObject*);
@@ -77,7 +77,7 @@ waveform_panel_new ()
 
 	g_signal_connect((gpointer)window.waveform, "realize", G_CALLBACK(on_waveform_view_realise), NULL);
 	g_signal_connect((gpointer)window.waveform, "show", G_CALLBACK(on_waveform_view_show), NULL);
-	g_signal_connect((gpointer)window.waveform, "parent-set", G_CALLBACK(on_waveform_view_set_parent), NULL);
+	g_signal_connect((gpointer)window.waveform, "notify::parent", G_CALLBACK(on_waveform_view_set_parent), NULL);
 
 	void waveform_on_audio_ready (gpointer _, gpointer __)
 	{
@@ -232,11 +232,7 @@ void
 show_waveform (bool enable)
 {
 	if (window.waveform) {
-#ifdef USE_GDL
-		show_widget_if(window.waveform->parent, enable);
-#else
-		show_widget_if(window.waveform, enable);
-#endif
+		show_widget_if(gtk_widget_get_parent(window.waveform), enable);
 		if (enable) {
 			gboolean show_wave ()
 			{
@@ -256,20 +252,6 @@ show_waveform (bool enable)
 }
 
 
-#ifndef USE_GDL
-void
-ensure_waveform (GtkWidget* container)
-{
-	if (!window.waveform) {
-		window.waveform = waveform_panel_new();
-
-		gtk_box_pack_start(GTK_BOX(container), window.waveform, EXPAND_FALSE, FILL_TRUE, 0);
-		gtk_widget_set_size_request(window.waveform, 100, 96);
-	}
-}
-#endif
-
-
 static void
 on_waveform_view_realise (GtkWidget* widget, gpointer user_data)
 {
@@ -283,7 +265,7 @@ on_waveform_view_show (GtkWidget* widget, gpointer user_data)
 
 
 static void
-on_waveform_view_set_parent (GtkWidget* widget, GtkObject* old_parent, gpointer user_data)
+on_waveform_view_set_parent (GObject *master, GParamSpec *pspec, gpointer data)
 {
 }
 

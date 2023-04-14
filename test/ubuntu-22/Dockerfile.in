@@ -1,0 +1,12 @@
+FROM registry.gitlab.com/ayyi.org/docker/ubuntu-22
+
+/* Includes support for running Opengl applications.                  */
+/* Ffmpeg included for creating test data (adds ~100MB to image size) */
+RUN apt-get -y update && DEBIAN_FRONTEND=noninteractive apt-get install -y \\
+
+#include "dependencies"
+
+ADD add_samples /root/
+ADD scripts/Makefile /root/
+
+CMD make

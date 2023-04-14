@@ -41,7 +41,7 @@ mx_test_SOURCES = main.c \
 	list_model.c list_model.h \
 	list_view.c list_view.h \
 	list_item.c list_item.h \
-	$(top_srcdir)/src/icon_theme.c $(top_srcdir)/src/icon_theme.h
+	$(top_srcdir)/lib/gtk/icon_theme.c $(top_srcdir)/lib/gtk/icon_theme.h
 
 ###$(top_srcdir)/lib/utils/ayyi_utils.c $(top_srcdir)/lib/utils/ayyi_utils.h
 

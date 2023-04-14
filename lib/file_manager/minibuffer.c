@@ -29,9 +29,7 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <pwd.h>
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <gtk/gtk.h>
-#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 #include <gdk/gdkkeysyms.h>
 #include <debug/debug.h>
 
@@ -41,6 +39,8 @@
 #include "display.h"
 #include "diritem.h"
 
+#ifdef USE_MINIBUFFER
+#ifdef GTK4_TODO
 #ifdef SHELL
 static GList* shell_history = NULL;
 #endif
@@ -63,6 +63,7 @@ void
 minibuffer_init (void)
 {
 }
+#endif
 
 
 /*
@@ -72,22 +73,24 @@ minibuffer_init (void)
 void
 create_minibuffer (AyyiFilemanager* fm)
 {
-	GtkWidget* hbox = gtk_hbox_new(FALSE, 0);
-	gtk_widget_set_no_show_all(hbox, TRUE);
+	GtkWidget* hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
+	gtk_widget_set_visible(hbox, false);
 	
 	//gtk_box_pack_start(GTK_BOX(hbox), new_help_button((HelpFunc) show_help, filer_window), FALSE, TRUE, 0);
 
 	GtkWidget* label = gtk_label_new("");
-	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, TRUE, 2);
+	gtk_box_append(GTK_BOX(hbox), label);
 
 	GtkWidget* mini = gtk_entry_new();
-	gtk_box_pack_start(GTK_BOX(hbox), mini, TRUE, TRUE, 0);
+	gtk_box_append(GTK_BOX(hbox), mini);
 	gtk_widget_set_name(mini, "fixed-style");
+#ifdef GTK4_TODO
 	g_signal_connect(mini, "key_press_event", G_CALLBACK(mini_key_press_event), fm);
 	g_signal_connect(mini, "changed", G_CALLBACK(changed), fm);
 
 	// Grabbing focus musn't select the text...
 	g_signal_connect_swapped(mini, "grab-focus", G_CALLBACK(grab_focus), mini);
+#endif
 
 	fm->mini = (Mini){
 		.entry = mini,
@@ -97,8 +100,9 @@ create_minibuffer (AyyiFilemanager* fm)
 }
 
 
+#ifdef GTK4_TODO
 void
-minibuffer_show(AyyiFilemanager* fm, MiniType mini_type)
+minibuffer_show (AyyiFilemanager* fm, MiniType mini_type)
 {
 	int pos = -1;
 	ViewIter cursor;
@@ -1164,4 +1168,5 @@ grab_focus (GtkWidget *minibuffer)
 
 	return 1;
 }
-
+#endif
+#endif // USE_MINIBUFFER

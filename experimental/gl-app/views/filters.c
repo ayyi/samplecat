@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
- | copyright (C) 2017-2022 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2017-2023 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -10,16 +10,15 @@
  |
  */
 
-#define __wf_private__
-
 #include "config.h"
 #include <X11/keysym.h>
 #include "debug/debug.h"
 #include "agl/actor.h"
 #include "agl/fbo.h"
+#include "agl/event.h"
 #include "agl/text/pango.h"
 #include "agl/behaviours/cache.h"
-#include "samplecat.h"
+#include "samplecat/model.h"
 #include "shader.h"
 #include "behaviours/panel.h"
 #include "views/filters.h"
@@ -139,7 +138,7 @@ filters_view (gpointer _)
 	{
 	}
 
-	bool filters_event (AGlActor* actor, GdkEvent* event, AGliPt xy)
+	bool filters_event (AGlActor* actor, AGlEvent* event, AGliPt xy)
 	{
 		FiltersView* view = (FiltersView*)actor;
 
@@ -155,24 +154,24 @@ filters_view (gpointer _)
 		}
 
 		switch (event->type) {
-			case GDK_BUTTON_PRESS:
-			case GDK_BUTTON_RELEASE:
+			case AGL_BUTTON_PRESS:
+			case AGL_BUTTON_RELEASE:
 				switch (event->button.button) {
 					case 1:;
 						int j = pick(view, xy.x);
 						dbg(0, "click! pick=%i", j);
 						if (j > -1) {
-							if(event->type == GDK_BUTTON_RELEASE)
+							if(event->type == AGL_BUTTON_RELEASE)
 								observable_string_set(view->filters[j].filter, g_strdup(""));
 							return AGL_HANDLED;
 						}
 				}
 				break;
-			case GDK_MOTION_NOTIFY:
+			case AGL_MOTION_NOTIFY:
 				mouse = xy.x;
 				agl_actor__invalidate(actor);
 				break;
-			case GDK_LEAVE_NOTIFY:
+			case AGL_LEAVE_NOTIFY:
 				agl_actor__invalidate(actor);
 				break;
 			default:
