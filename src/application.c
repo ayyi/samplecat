@@ -55,11 +55,15 @@ static void     application_finalize       (GObject*);
 static void     application_set_auditioner (Application*);
 
 static void     application_play_next      ();
+static void     application_play_selected  ();
+static void     pause_toggle_activate      (GSimpleAction* action, GVariant* parameter, gpointer app);
 
 static GActionEntry app_entries[] =
 {
 	{ "play-all", application_play_all, },
 	{ "player-stop", player_stop, },
+	{ "player-play", application_play_selected, },
+	{ "player-pause", pause_toggle_activate},
 };
 
 
@@ -132,7 +136,6 @@ application_activate (GApplication* base)
 	gtk_style_context_add_provider_for_display (gdk_display_get_default(), GTK_STYLE_PROVIDER(provider), GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
 
 	pixmaps_init();
-	samplecat.store = (GtkListStore*)samplecat_list_store_new();
 	window_new (GTK_APPLICATION (base), NULL);
 	statusbar_print(2, PACKAGE_NAME" "PACKAGE_VERSION);
 	application_search();
@@ -162,6 +165,8 @@ application_class_init (ApplicationClass* klass)
 	g_signal_new ("on_quit", TYPE_APPLICATION, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_VOID__VOID, G_TYPE_NONE, 0);
 	g_signal_new ("theme_changed", TYPE_APPLICATION, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_VOID__VOID, G_TYPE_NONE, 0);
 	g_signal_new ("layout_changed", TYPE_APPLICATION, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_VOID__VOID, G_TYPE_NONE, 0);
+
+	types_init();
 }
 
 
@@ -214,14 +219,13 @@ application_instance_init (Application* self)
 		dbg(1, "---> %s", g_enum_to_string (PLAYER_TYPE_STATE, play->state));
 		statusbar_print(1, "%s", g_enum_to_string (PLAYER_TYPE_STATE, play->state));
 
-		GAction* action = g_action_map_lookup_action (G_ACTION_MAP(app), "player-stop");
-		if (action) {
-			g_simple_action_set_enabled (G_SIMPLE_ACTION(action), play->state != PLAYER_STOPPED);
-		}
-		action = g_action_map_lookup_action (G_ACTION_MAP(app), "play-all");
+		g_simple_action_set_enabled (G_SIMPLE_ACTION(g_action_map_lookup_action (G_ACTION_MAP(app), "player-stop")), play->state != PLAYER_STOPPED);
+		g_simple_action_set_enabled (G_SIMPLE_ACTION(g_action_map_lookup_action (G_ACTION_MAP(app), "player-play")), play->state < PLAYER_PLAY_PENDING);
+		GAction* action = g_action_map_lookup_action (G_ACTION_MAP(app), "play-all");
 		if (action) {
 			g_simple_action_set_enabled (G_SIMPLE_ACTION(action), true);
 		}
+		g_simple_action_set_enabled (G_SIMPLE_ACTION(g_action_map_lookup_action (G_ACTION_MAP(app), "player-pause")), play->state != PLAYER_STOPPED);
 	}
 	g_signal_connect(play, "notify::state", G_CALLBACK(on_player_state_change), NULL);
 
@@ -312,7 +316,9 @@ application_set_ready ()
 
 		void get_col1_width (ConfigOption* option)
 		{
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 			GtkTreeViewColumn* column = gtk_tree_view_get_column(GTK_TREE_VIEW(((Application*)app)->libraryview->widget), 1);
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 			g_value_set_int(&option->val, gtk_tree_view_column_get_width(column));
 		}
 		ctx->options[CONFIG_COL1_WIDTH] = config_option_new_int("col1_width", get_col1_width, 10, 1024);
@@ -414,7 +420,7 @@ application_set_auditioner (Application* a)
 
 	void set_auditioner_on_connected (GError* error, gpointer _)
 	{
-		if(error){
+		if (error) {
 			statusbar_print(1, "Player: %s", error->message);
 		}
 	}
@@ -463,7 +469,7 @@ application_play (Sample* sample)
 		if (play->auditioner->pause) {
 			play->auditioner->pause(false);
 		}
-		play->state = PLAYER_PLAYING;
+		player_set_state(PLAYER_PLAYING);
 		return;
 	}
 
@@ -481,7 +487,7 @@ application_play (Sample* sample)
 }
 
 
-void
+static void
 application_play_selected ()
 {
 	PF;
@@ -493,6 +499,15 @@ application_play_selected ()
 	dbg(0, "MIDI PLAY %s", sample->full_path);
 
 	application_play(sample);
+}
+
+
+static void
+pause_toggle_activate (GSimpleAction* action, GVariant* parameter, gpointer app)
+{
+	play->state == PLAYER_PAUSED
+		? application_play(NULL)
+		: player_pause();
 }
 
 

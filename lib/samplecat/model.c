@@ -125,7 +125,7 @@ samplecat_idle_queue (SamplecatIdle* idle)
 {
 	g_return_if_fail (idle);
 
-	gboolean ____lambda_func (gpointer self)
+	gboolean samplecat_idle_run (gpointer self)
 	{
 		SamplecatIdle* idle = self;
 
@@ -136,7 +136,7 @@ samplecat_idle_queue (SamplecatIdle* idle)
 	}
 
 	if (!idle->priv->id) {
-		idle->priv->id = g_idle_add_full(G_PRIORITY_DEFAULT_IDLE, ____lambda_func, samplecat_idle_ref(idle), samplecat_idle_unref);
+		idle->priv->id = g_idle_add_full(G_PRIORITY_DEFAULT_IDLE, samplecat_idle_run, samplecat_idle_ref(idle), samplecat_idle_unref);
 	}
 }
 
@@ -497,13 +497,11 @@ samplecat_model_queue_sample_changed (SamplecatModel* self, Sample* sample, gint
 		}
 	}
 
-	SamplecatSampleChange* c = g_new(SamplecatSampleChange, 1);
-	*c = (SamplecatSampleChange){
+	self->modified = g_list_append (self->modified, SC_NEW(SamplecatSampleChange,
 		.sample = sample_ref(sample),
 		.prop = prop,
 		.val = val,
-	};
-	self->modified = g_list_append (self->modified, c);
+	));
 
 	samplecat_idle_queue (self->priv->sample_changed_idle);
 }
@@ -581,8 +579,9 @@ samplecat_model_update_sample (SamplecatModel* self, Sample* sample, gint prop, 
 		case COL_COLOUR:
 		{
 			guint colour_index = *((guint*)val);
-			if ((ok = backend.update_int (sample->id, "colour", colour_index))){
+			if ((ok = backend.update_int (sample->id, "colour", colour_index))) {
 				sample->colour_index = (gint) colour_index;
+				val = &sample->colour_index; // ensure pointer sent to async fn does not expire
 			}
 			break;
 		}
@@ -593,7 +592,7 @@ samplecat_model_update_sample (SamplecatModel* self, Sample* sample, gint prop, 
 		}
 		case COL_X_NOTES:
 		{
-			if((ok = backend.update_string (sample->id, "notes", (gchar*)val))){
+			if ((ok = backend.update_string (sample->id, "notes", (gchar*)val))) {
 				gchar* str = g_strdup ((const gchar*)val);
 				_g_free0 (sample->notes);
 				sample->notes = str;
@@ -617,9 +616,9 @@ samplecat_model_update_sample (SamplecatModel* self, Sample* sample, gint prop, 
 			ok &= backend.update_int (sample->id, "bit_rate", (guint) sample->bit_rate);
 			ok &= backend.update_int (sample->id, "bit_depth", (guint) sample->bit_depth);
 
-			if(sample->peaklevel) ok &= backend.update_float (sample->id, "peaklevel", sample->peaklevel);
+			if (sample->peaklevel) ok &= backend.update_float (sample->id, "peaklevel", sample->peaklevel);
 
-			if(sample->ebur && sample->ebur[0]) ok = backend.update_string (sample->id, "ebur", sample->ebur);
+			if (sample->ebur && sample->ebur[0]) ok = backend.update_string (sample->id, "ebur", sample->ebur);
 
 			if (sample->overview) {
 				guint len = 0U;

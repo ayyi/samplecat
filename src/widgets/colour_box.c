@@ -16,9 +16,7 @@
 #include "debug/debug.h"
 #include "gtk/menu.h"
 #include "types.h"
-#include "support.h"
 #include "application.h"
-#include "dnd.h"
 #include "colour_box.h"
 
 typedef struct
@@ -35,7 +33,6 @@ static bool        colour_box_add                  (uint32_t);
 #ifdef GTK4_TODO
 static void        colour_box__set_colour          (int, uint32_t);
 static gboolean    colour_box__on_event            (GtkWidget*, GdkEvent*, gpointer);
-static int         colour_box__drag_dataget        (GtkWidget*, GdkDragContext*, GtkSelectionData*, guint info, guint time, gpointer);
 static GtkWidget*  colour_box__make_context_menu   ();
 static int         colour_box__lookup_idx          (GtkWidget*);
 #endif
@@ -73,12 +70,31 @@ colour_box_new (GtkWidget* parent)
 
 	GtkWidget* e;
 	for (int i=PALETTE_SIZE-1;i>=0;i--) {
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 		e = colour_button[i] = gtk_color_button_new();
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 
-#ifdef GTK4_TODO
-		gtk_drag_source_set(e, GDK_BUTTON1_MASK | GDK_BUTTON2_MASK, dnd_file_drag_types, dnd_file_drag_types_count, GDK_ACTION_COPY | GDK_ACTION_MOVE | GDK_ACTION_LINK);
-		g_signal_connect(G_OBJECT(e), "drag-data-get", G_CALLBACK(colour_box__drag_dataget), GUINT_TO_POINTER(i));
-#endif
+		GdkContentProvider* listview__on_drag_prepare (GtkDragSource *source, double x, double y, gpointer i)
+		{
+			GValue value = G_VALUE_INIT;
+			g_value_init (&value, AYYI_TYPE_COLOUR);
+			value.data[0].v_int = GPOINTER_TO_INT(i);
+
+			return gdk_content_provider_new_for_value (&value);
+		}
+
+		void on_drag_begin (GtkDragSource* source, GdkDrag* drag, GtkWidget* self)
+		{
+			GdkPaintable* icon = GDK_PAINTABLE(gtk_icon_theme_lookup_icon (icon_theme, "text-x-generic-symbolic", NULL, 32, 1, 0, 0));
+			gtk_drag_source_set_icon (source, icon, 0, 0);
+			g_object_unref (icon);
+		}
+
+		GtkDragSource* drag_source = gtk_drag_source_new ();
+		g_signal_connect (drag_source, "prepare", G_CALLBACK (listview__on_drag_prepare), GINT_TO_POINTER(i));
+		g_signal_connect (drag_source, "drag-begin", G_CALLBACK (on_drag_begin), e);
+
+		gtk_widget_add_controller (e, GTK_EVENT_CONTROLLER (drag_source));
 
 #ifdef GTK4_TODO
 #if 1 // do not allow to change 'neutral' colour.
@@ -100,7 +116,6 @@ colour_box_new (GtkWidget* parent)
 	void _on_theme_change (Application* a, char* t, gpointer _){ colour_box_update(); }
 	g_signal_connect((gpointer)app, "theme-changed", G_CALLBACK(_on_theme_change), NULL);
 
-#ifdef GTK4_TODO
 	void _config_loaded (Application* a, gpointer _)
 	{
 		for (int i=0;i<PALETTE_SIZE;i++) {
@@ -111,7 +126,6 @@ colour_box_new (GtkWidget* parent)
 		}
 	}
 	g_signal_connect((gpointer)app, "config-loaded", G_CALLBACK(_config_loaded), NULL);
-#endif
 
 	if (gtk_widget_get_realized(window)) {
 		colour_box_update();
@@ -148,13 +162,13 @@ static void
 colour_box_update ()
 {
 #ifdef GTK4_TODO
-	GdkColor colour;
 	char colour_string[16];
 	for(int i=PALETTE_SIZE-1;i>=0;i--){
 		GtkWidget* widget = colour_button[i];
-		if(colour_button[i] && strlen(app->config.colour[i])){
+		if (colour_button[i] && strlen(app->config.colour[i])) {
 			snprintf(colour_string, 16, "#%s", app->config.colour[i]);
-			if(!gdk_color_parse(colour_string, &colour)){
+			GdkColor colour;
+			if (!gdk_color_parse(colour_string, &colour)) {
 				warnprintf("%s(): %i: parsing of colour string failed. %s\n", __func__, i, colour_string);
 				continue;
 			}
@@ -165,7 +179,7 @@ colour_box_update ()
 
 			gtk_widget_show(widget);
 		}
-		else gtk_widget_hide(widget);
+		else gtk_widget_set_visible(widget, false);
 	}
 #endif
 }
@@ -252,23 +266,6 @@ colour_box__on_event (GtkWidget* widget, GdkEvent* event, gpointer user_data)
 
 
 #ifdef GTK4_TODO
-static int
-colour_box__drag_dataget (GtkWidget *widget, GdkDragContext *drag_context, GtkSelectionData *data, guint info, guint time, gpointer user_data)
-{
-	char text[16];
-	PF;
-
-	int box_num = GPOINTER_TO_UINT(user_data); // box_num corresponds to the colour index.
-
-	// convert to a pseudo uri string
-	sprintf(text, "colour:%i%c%c", (box_num + 1) % 16, 13, 10); //1 based to avoid atoi problems.
-
-	gtk_selection_data_set(data, GDK_SELECTION_TYPE_STRING, BITS_PER_CHAR_8, (guchar*)text, strlen(text));
-
-	return false;
-}
-
-
 static GtkWidget*
 colour_box__make_context_menu ()
 {

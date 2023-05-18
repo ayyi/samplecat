@@ -111,16 +111,8 @@ main (int argc, char** argv)
 			dbg(2, "...");
 			samplecat_set_backend(BACKEND_TRACKER);
 
-			//hide unsupported inspector notes
+			// hide unsupported inspector notes
 			GtkWidget* notes = app->inspector->text;
-#if 1 
-			// may not work -- it could re-appear ?! show_fields()??
-			if (notes) gtk_widget_hide(notes);
-#else // THIS NEEDS TESTING:
-			g_object_ref(notes); //stops gtk deleting the unparented widget.
-			gtk_container_remove(GTK_CONTAINER(notes->parent), notes);
-#endif
-
 			if (notes) gtk_widget_hide(notes);
 
 			if (search_pending) {
@@ -138,9 +130,8 @@ main (int argc, char** argv)
 #endif
 
 	if (app->temp_view) {
-		gchar* dir = g_get_current_dir();
+		g_autofree gchar* dir = g_get_current_dir();
 		g_strlcpy(app->config.browse_dir, dir, PATH_MAX);
-		g_free(dir);
 	}
 
 #ifndef DEBUG_NO_THREADS

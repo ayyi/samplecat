@@ -626,7 +626,7 @@ gdl_dock_object_dock_unimplemented (GdlDockObject *object, GdlDockObject *reques
 static void
 gdl_dock_object_real_present (GdlDockObject *object, GdlDockObject *child)
 {
-    gtk_widget_show (GTK_WIDGET (object));
+    gtk_widget_set_visible (GTK_WIDGET (object), true);
 }
 
 

@@ -201,6 +201,8 @@ player_play (Sample* sample)
 void
 player_on_play_finished ()
 {
+	player_set_state(PLAYER_STOPPED);
+
 	if (play_timeout_id) {
 		g_source_destroy(g_main_context_find_source_by_id(NULL, play_timeout_id));
 		play_timeout_id = 0;
@@ -224,7 +226,6 @@ player_stop ()
 	if (play->auditioner) {
 		play->auditioner->stop();
 	}
-	player_set_state(PLAYER_STOPPED);
 
 	player_on_play_finished();
 }

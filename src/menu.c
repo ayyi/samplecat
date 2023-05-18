@@ -86,10 +86,9 @@ make_context_menu (GtkWidget* widget)
 		for (int i=0;i<PANEL_TYPE_MAX;i++) {
 			Panel* option = &panels[i];
 
-			GVariant* variant = g_variant_new_boolean(false);
 			char* name = g_strdup(option->name);
 			name[0] = g_ascii_tolower(name[0]);
-			option->menu.action = (GAction*)g_simple_action_new_stateful(name, NULL, variant);
+			option->menu.action = (GAction*)g_simple_action_new_stateful(name, NULL, g_variant_new_boolean(false));
 			g_action_map_add_action (G_ACTION_MAP (group), G_ACTION (option->menu.action));
 			g_signal_connect(G_OBJECT(option->menu.action), "activate", G_CALLBACK(toggle_view), GINT_TO_POINTER(i));
 

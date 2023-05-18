@@ -652,8 +652,8 @@ static void JACKconnect(GError** error) {
 
 	j_client = jack_client_open("samplecat", (jack_options_t) 0, NULL);
 
-	if(!j_client) {
-		*error = g_error_new_literal(g_quark_from_static_string(AUDITIONER_DOMAIN), 1, "could not connect to JACK");
+	if (!j_client) {
+		if (error) *error = g_error_new_literal(g_quark_from_static_string(AUDITIONER_DOMAIN), 1, "could not connect to JACK");
 		return;
 	}
 

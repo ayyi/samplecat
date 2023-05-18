@@ -36,12 +36,12 @@ ui_test_LDADD = \
 	../../lib/gtk/cellrenderer_hypertext.o \
 	../../src/widgets/colour_box.o \
 	../../src/dh_tree.o \
-	../../src/dnd.o \
 	../../src/panels/library.o \
 	../../src/progress_dialog.o \
 	../../src/resources.o \
 	../../src/support.o \
 	../../src/window.o \
+	../../src/types.o \
 	../../lib/gtk/icon_theme.o \
 	$(FFTW_LDADD) \
 	$(top_srcdir)/lib/test/libtest.la \

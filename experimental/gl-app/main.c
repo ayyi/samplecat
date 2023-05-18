@@ -231,7 +231,6 @@ add_content (gpointer _)
 		return EXIT_FAILURE;
 	}
 
-	samplecat.store = (GtkListStore*)samplecat_list_store_new();
 	samplecat_list_store_do_search((SamplecatListStore*)samplecat.store);
 
 	application_set_auditioner();

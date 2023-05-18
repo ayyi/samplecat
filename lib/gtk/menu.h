@@ -19,6 +19,7 @@ typedef struct
 	const char* name;
 	const char* action;
 	const char* icon;
+	const char* target;
 } MenuDef;
 
 GtkWidget* make_menu                (int size, MenuDef[size], gpointer);

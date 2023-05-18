@@ -189,17 +189,15 @@ static void vdtree_expand_by_data(ViewDirTree *vdt, FileData *fd, gint expand)
 		}
 }
 
-#ifdef GTK4_TODO
-static void vdtree_color_set(ViewDirTree *vdt, FileData *fd, gint color_set)
+static void
+vdtree_color_set (ViewDirTree *vdt, FileData *fd, gint color_set)
 {
-	GtkTreeModel *store;
 	GtkTreeIter iter;
-
 	if (!vdtree_find_row(vdt, fd, &iter, NULL)) return;
-	store = gtk_tree_view_get_model(GTK_TREE_VIEW(vdt->treeview));
+
+	GtkTreeModel *store = gtk_tree_view_get_model(GTK_TREE_VIEW(vdt->treeview));
 	gtk_tree_store_set(GTK_TREE_STORE(store), &iter, DIR_COLUMN_COLOR, color_set, -1);
 }
-#endif
 
 #ifdef LATER
 static gint vdtree_rename_row_cb(TreeEditData *td, const gchar *old, const gchar *new, gpointer data)
@@ -1521,9 +1519,8 @@ static gint vdtree_press_key_cb(GtkWidget *widget, GdkEventKey *event, gpointer 
 }
 #endif
 
-#ifdef GTK4_TODO
 static gint
-vdtree_clicked_on_expander(GtkTreeView *treeview, GtkTreePath *tpath, GtkTreeViewColumn *column, gint x, gint y, gint *left_of_expander)
+vdtree_clicked_on_expander (GtkTreeView *treeview, GtkTreePath *tpath, GtkTreeViewColumn *column, gint x, gint y, gint *left_of_expander)
 {
 	gint depth;
 	gint size;
@@ -1534,6 +1531,9 @@ vdtree_clicked_on_expander(GtkTreeView *treeview, GtkTreePath *tpath, GtkTreeVie
 
 #ifdef GTK4_TODO
 	gtk_widget_style_get(GTK_WIDGET(treeview), "expander-size", &size, "horizontal-separator", &sep, NULL);
+#else
+	sep = 0;
+	size = 0;
 #endif
 	depth = gtk_tree_path_get_depth(tpath);
 
@@ -1547,37 +1547,35 @@ vdtree_clicked_on_expander(GtkTreeView *treeview, GtkTreePath *tpath, GtkTreeVie
 
 	return FALSE;
 }
-#endif
 
-#ifdef GTK4_TODO
-static gint
-vdtree_press_cb(GtkWidget *widget, GdkEventButton *bevent, gpointer data)
+static void
+vdtree_on_button_press (GtkGestureClick* gesture, int n_press, double x, double y, gpointer widget)
 {
 	PF;
-	ViewDirTree *vdt = data;
-	GtkTreePath *tpath;
-	GtkTreeViewColumn *column;
-	GtkTreeIter iter;
+	ViewDirTree *vdt = widget;
 	NodeData *nd = NULL;
 
-	if (gtk_tree_view_get_path_at_pos(GTK_TREE_VIEW(widget), bevent->x, bevent->y, &tpath, &column, NULL, NULL))
-		{
-		GtkTreeModel *store;
-		gint left_of_expander;
+	int button = gtk_gesture_single_get_current_button(GTK_GESTURE_SINGLE(gesture));
 
-		store = gtk_tree_view_get_model(GTK_TREE_VIEW(widget));
+	g_autoptr(GtkTreePath) tpath;
+	GtkTreeViewColumn *column;
+	if (gtk_tree_view_get_path_at_pos(GTK_TREE_VIEW(vdt->treeview), x, y, &tpath, &column, NULL, NULL))
+		{
+		GtkTreeModel *store = gtk_tree_view_get_model(GTK_TREE_VIEW(vdt->treeview));
+		GtkTreeIter iter;
 		gtk_tree_model_get_iter(store, &iter, tpath);
 		gtk_tree_model_get(store, &iter, DIR_COLUMN_POINTER, &nd, -1);
-		gtk_tree_view_set_cursor(GTK_TREE_VIEW(widget), tpath, NULL, FALSE);
+		gtk_tree_view_set_cursor(GTK_TREE_VIEW(vdt->treeview), tpath, NULL, FALSE);
 
-		if (vdtree_clicked_on_expander(GTK_TREE_VIEW(widget), tpath, column, bevent->x, bevent->y, &left_of_expander))
+		gint left_of_expander;
+		if (vdtree_clicked_on_expander(GTK_TREE_VIEW(vdt->treeview), tpath, column, x, y, &left_of_expander))
 			{
 			vdt->click_fd = NULL;
 
 			/* clicking this region should automatically reveal an expander, if necessary
 			 * treeview bug: the expander will not expand until a button_motion_event highlights it.
 			 */
-			if (bevent->button == 1 &&
+			if (button == 1 &&
 			    !left_of_expander &&
 			    !gtk_tree_view_row_expanded(GTK_TREE_VIEW(vdt->treeview), tpath))
 				{
@@ -1585,42 +1583,41 @@ vdtree_press_cb(GtkWidget *widget, GdkEventButton *bevent, gpointer data)
 				vdtree_icon_set_by_iter(vdt, &iter, vdt->pf->open);
 				}
 
-			gtk_tree_path_free(tpath);
-			return FALSE;
+			return;
 			}
 
-		gtk_tree_path_free(tpath);
 		}
 
 	vdt->click_fd = (nd) ? nd->fd : NULL;
 	vdtree_color_set(vdt, vdt->click_fd, TRUE);
 
-	if (bevent->button == 3)
+#ifdef GTK4_TODO
+	if (button == 3)
 		{
 		vdt->popup = vdtree_pop_menu(vdt, vdt->click_fd);
 		gtk_menu_popup(GTK_MENU(vdt->popup), NULL, NULL, NULL, NULL, bevent->button, bevent->time);
 		}
-
-	return (bevent->button != 1);
+#endif
 }
 
-static gint
-vdtree_release_cb(GtkWidget *widget, GdkEventButton *bevent, gpointer data)
+static void
+vdtree_release_cb (GtkGestureClick* gesture, int n_press, double x, double y, gpointer data)
 {
 	ViewDirTree *vdt = data;
 	GtkTreePath *tpath;
 	GtkTreeIter iter;
 	NodeData *nd = NULL;
 
-	if (!vdt->click_fd) return FALSE;
+	if (!vdt->click_fd) return;
 	vdtree_color_set(vdt, vdt->click_fd, FALSE);
 
-	if (bevent->button != 1) return TRUE;
+	int button = gtk_gesture_single_get_current_button(GTK_GESTURE_SINGLE(gesture));
+	if (button != 1) return;
 
-	if ((bevent->x != 0 || bevent->y != 0) &&
-	    gtk_tree_view_get_path_at_pos(GTK_TREE_VIEW(widget), bevent->x, bevent->y, &tpath, NULL, NULL, NULL))
+	if ((x != 0 || y != 0) &&
+	    gtk_tree_view_get_path_at_pos(GTK_TREE_VIEW(vdt->treeview), x, y, &tpath, NULL, NULL, NULL))
 		{
-		GtkTreeModel* store = gtk_tree_view_get_model(GTK_TREE_VIEW(widget));
+		GtkTreeModel* store = gtk_tree_view_get_model(GTK_TREE_VIEW(vdt->treeview));
 		gtk_tree_model_get_iter(store, &iter, tpath);
 		gtk_tree_model_get(store, &iter, DIR_COLUMN_POINTER, &nd, -1);
 		gtk_tree_path_free(tpath);
@@ -1630,10 +1627,7 @@ vdtree_release_cb(GtkWidget *widget, GdkEventButton *bevent, gpointer data)
 		{
 		vdtree_select_row(vdt, vdt->click_fd);
 		}
-
-	return FALSE;
 }
-#endif
 
 static void vdtree_row_expanded(GtkTreeView *treeview, GtkTreeIter *iter, GtkTreePath *tpath, gpointer data)
 {
@@ -1688,15 +1682,15 @@ static void vdtree_setup_root(ViewDirTree *vdt)
 	vdtree_populate_path(vdt, path, FALSE, FALSE); //add child nodes to tree_model.
 }
 
-static void vdtree_activate_cb(GtkTreeView *tview, GtkTreePath *tpath, GtkTreeViewColumn *column, gpointer data)
+static void
+vdtree_activate_cb (GtkTreeView *tview, GtkTreePath *tpath, GtkTreeViewColumn *column, gpointer data)
 {
 	PF;
 	ViewDirTree *vdt = data;
-	GtkTreeModel *store;
 	GtkTreeIter iter;
 	NodeData *nd;
 
-	store = gtk_tree_view_get_model(tview);
+	GtkTreeModel *store = gtk_tree_view_get_model(tview);
 	gtk_tree_model_get_iter(store, &iter, tpath);
 	gtk_tree_model_get(store, &iter, DIR_COLUMN_POINTER, &nd, -1);
 
@@ -1704,7 +1698,8 @@ static void vdtree_activate_cb(GtkTreeView *tview, GtkTreePath *tpath, GtkTreeVi
 }
 
 #ifdef GTK4_TODO
-static GdkColor *vdtree_color_shifted(GtkWidget *widget)
+static GdkColor*
+vdtree_color_shifted (GtkWidget *widget)
 {
 	static GdkColor color;
 	static GtkWidget *done = NULL;
@@ -1798,7 +1793,6 @@ vdtree_new (const gchar *path, gint expand)
 	);
 
 #ifdef GTK4_TODO
-	gtk_scrolled_window_set_shadow_type(GTK_SCROLLED_WINDOW(vdt->widget), GTK_SHADOW_IN);
 	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(vdt->widget), GTK_POLICY_AUTOMATIC, GTK_POLICY_ALWAYS);
 #endif
 	g_signal_connect(G_OBJECT(vdt->widget), "destroy", G_CALLBACK(vdtree_destroy_cb), vdt);
@@ -1816,15 +1810,11 @@ vdtree_new (const gchar *path, gint expand)
 	gtk_tree_sortable_set_default_sort_func(GTK_TREE_SORTABLE(store), vdtree_sort_cb, vdt, NULL);
 	gtk_tree_sortable_set_sort_column_id(GTK_TREE_SORTABLE(store), GTK_TREE_SORTABLE_DEFAULT_SORT_COLUMN_ID, GTK_SORT_ASCENDING);
 
-	g_signal_connect(G_OBJECT(vdt->treeview), "row_activated",
-			 G_CALLBACK(vdtree_activate_cb), vdt);
-	g_signal_connect(G_OBJECT(vdt->treeview), "row_expanded",
-			 G_CALLBACK(vdtree_row_expanded), vdt);
-	g_signal_connect(G_OBJECT(vdt->treeview), "row_collapsed",
-			 G_CALLBACK(vdtree_row_collapsed), vdt);
+	g_signal_connect(G_OBJECT(vdt->treeview), "row_activated", G_CALLBACK(vdtree_activate_cb), vdt);
+	g_signal_connect(G_OBJECT(vdt->treeview), "row_expanded", G_CALLBACK(vdtree_row_expanded), vdt);
+	g_signal_connect(G_OBJECT(vdt->treeview), "row_collapsed", G_CALLBACK(vdtree_row_collapsed), vdt);
 #if 0
-	g_signal_connect(G_OBJECT(store), "row_deleted",
-			 G_CALLBACK(vdtree_row_deleted_cb), vdt);
+	g_signal_connect(G_OBJECT(store), "row_deleted", G_CALLBACK(vdtree_row_deleted_cb), vdt);
 #endif
 
 	GtkTreeSelection *selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(vdt->treeview));
@@ -1856,10 +1846,13 @@ vdtree_new (const gchar *path, gint expand)
 
 #ifdef GTK4_TODO
 	vdtree_dnd_init(vdt);
-
-	g_signal_connect(G_OBJECT(vdt->treeview), "button_press_event", G_CALLBACK(vdtree_press_cb), vdt);
-	g_signal_connect(G_OBJECT(vdt->treeview), "button_release_event", G_CALLBACK(vdtree_release_cb), vdt);
 #endif
+
+	GtkGesture* click = gtk_gesture_click_new ();
+	g_signal_connect (click, "pressed", G_CALLBACK(vdtree_on_button_press), vdt);
+	g_signal_connect (click, "released", G_CALLBACK(vdtree_release_cb), vdt);
+	gtk_gesture_single_set_button (GTK_GESTURE_SINGLE (click), 0);
+	gtk_widget_add_controller (GTK_WIDGET(vdt->treeview), GTK_EVENT_CONTROLLER (click));
 
 	vdtree_set_path(vdt, path);
 

@@ -155,9 +155,9 @@ gdl_switcher_visible_changed (GObject* object, GParamSpec* spec, gpointer user_d
     Button* button = user_data;
 
     if (gtk_widget_get_visible (button->page)) {
-        gtk_widget_show (button->button_widget);
+        gtk_widget_set_visible (button->button_widget, true);
     } else {
-        gtk_widget_hide (button->button_widget);
+        gtk_widget_set_visible (button->button_widget, false);
     }
     GdlSwitcher* switcher = GDL_SWITCHER (gtk_widget_get_parent (button->button_widget));
     gdl_switcher_update_lone_button_visibility (switcher);
@@ -240,15 +240,15 @@ gdl_switcher_update_lone_button_visibility (GdlSwitcher *switcher)
             if (alone == NULL) {
                 alone = button->button_widget;
             } else {
-                gtk_widget_show (alone);
-                gtk_widget_show (button->button_widget);
+                gtk_widget_set_visible (alone, true);
+                gtk_widget_set_visible (button->button_widget, true);
                 alone = NULL;
                 break;
             }
         }
     }
 
-    if (alone) gtk_widget_hide (alone);
+    if (alone) gtk_widget_set_visible (alone, false);
 }
 
 static void
@@ -530,11 +530,7 @@ do_layout (GdlSwitcher *switcher)
 
    	for (GSList* p = switcher->priv->buttons; p; p = p->next) {
         Button *button = p->data;
-		if (allocation.height < 40) {
-			gtk_widget_hide(button->button_widget);
-		} else {
-			gtk_widget_show(button->button_widget);
-		}
+		gtk_widget_set_visible(button->button_widget, allocation.height >= 40);
 	}
 
     int y = 0;
@@ -931,14 +927,13 @@ gdl_switcher_add_button (GdlSwitcher *switcher, const gchar *label, const gchar 
 	gtk_button_set_relief (GTK_BUTTON (button_widget), GTK_RELIEF_HALF);
 #endif
 	if (switcher->priv->show && gtk_widget_get_visible (page))
-		gtk_widget_show (button_widget);
+		gtk_widget_set_visible (button_widget, true);
 	g_signal_connect (button_widget, "toggled", G_CALLBACK (button_toggled_callback), switcher);
 	GtkWidget* hbox = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 3);
 #ifdef GTK4_TODO
 	gtk_container_set_border_width (GTK_CONTAINER (hbox), 0);
 #endif
 	gtk_button_set_child (GTK_BUTTON (button_widget), hbox);
-	gtk_widget_show (hbox);
 
 	GtkWidget *icon_widget;
 	if (stock_id) {
@@ -948,8 +943,6 @@ gdl_switcher_add_button (GdlSwitcher *switcher, const gchar *label, const gchar 
 	} else {
 		icon_widget = gtk_image_new_from_icon_name ("go-next-symbolic");
 	}
-
-	gtk_widget_show (icon_widget);
 
 	GtkWidget *label_widget;
 	if (!label) {
@@ -962,7 +955,6 @@ gdl_switcher_add_button (GdlSwitcher *switcher, const gchar *label, const gchar 
 #ifdef GTK4_TODO
 	gtk_misc_set_alignment (GTK_MISC (label_widget), 0.0, 0.5);
 #endif
-	gtk_widget_show (label_widget);
 
 	gtk_widget_set_tooltip_text (button_widget, tooltips);
 
@@ -981,7 +973,6 @@ gdl_switcher_add_button (GdlSwitcher *switcher, const gchar *label, const gchar 
 	}
 #ifdef GTK4_TODO
 	GtkWidget* arrow = gtk_arrow_new (GTK_ARROW_UP, GTK_SHADOW_NONE);
-	gtk_widget_show (arrow);
 	gtk_box_append (GTK_BOX (hbox), arrow);
 #endif
 
@@ -1055,7 +1046,7 @@ gdl_switcher_insert_page (GdlSwitcher *switcher, GtkWidget *page, GtkWidget *tab
 
     if (!tab_widget) {
         tab_widget = gtk_label_new (label);
-        if (gtk_widget_get_visible (page)) gtk_widget_show (tab_widget);
+        if (gtk_widget_get_visible (page)) gtk_widget_set_visible (tab_widget, true);
     }
     gint switcher_id = gdl_switcher_get_page_id (page);
     gdl_switcher_add_button (switcher, label, tooltips, stock_id, pixbuf_icon, switcher_id, page);
@@ -1098,19 +1089,19 @@ set_switcher_style_toolbar (GdlSwitcher *switcher, GdlSwitcherStyle switcher_sty
 		switch (switcher_style) {
 			case GDL_SWITCHER_STYLE_TEXT:
 				gtk_box_append (GTK_BOX (button->hbox), button->label);
-				gtk_widget_show (button->label);
+				gtk_widget_set_visible (button->label, true);
 				break;
 
 			case GDL_SWITCHER_STYLE_ICON:
 				gtk_box_append (GTK_BOX (button->hbox), button->icon);
-				gtk_widget_show (button->icon);
+				gtk_widget_set_visible (button->icon, true);
 				break;
 
 			case GDL_SWITCHER_STYLE_BOTH:
 				gtk_box_append (GTK_BOX (button->hbox), button->icon);
 				gtk_box_append (GTK_BOX (button->hbox), button->label);
-				gtk_widget_show (button->icon);
-				gtk_widget_show (button->label);
+				gtk_widget_set_visible (button->icon, true);
+				gtk_widget_set_visible (button->label, true);
 				break;
 
 			default:
@@ -1158,9 +1149,9 @@ gdl_switcher_set_show_buttons (GdlSwitcher *switcher, gboolean show)
         Button *button = p->data;
 
         if (show && gtk_widget_get_visible (button->page))
-            gtk_widget_show (button->button_widget);
+            gtk_widget_set_visible (button->button_widget, true);
         else
-            gtk_widget_hide (button->button_widget);
+            gtk_widget_set_visible (button->button_widget, false);
     }
     gdl_switcher_update_lone_button_visibility (switcher);
     switcher->priv->show = show;

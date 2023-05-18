@@ -95,7 +95,9 @@ list_view (gpointer _)
 		col[4] = MAX(col[4], actor->region.x2);
 
 		GtkTreeIter iter;
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 		if (!gtk_tree_model_get_iter_first((GtkTreeModel*)samplecat.store, &iter)) return true;
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 
 		int i = 0;
 		for (;i<view->scroll_offset;i++) {

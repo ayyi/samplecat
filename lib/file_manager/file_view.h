@@ -9,6 +9,9 @@
  | as published by the Free Software Foundation.                        |
  +----------------------------------------------------------------------+
  |
+ |  ViewDetails inherits from GtkTreeView and also implements the
+ |  GtkTreeModel interface.
+ |
  */
 
 #pragma once
@@ -17,9 +20,6 @@
 
 typedef struct _ViewDetailsClass ViewDetailsClass;
 
-/*
- *  ViewDetails inherits from GtkTreeView and implements the GtkTreeModel interface.
- */
 typedef struct _ViewDetails {
     GtkTreeView       treeview;
     GtkTreeSelection* selection;
@@ -62,7 +62,5 @@ GtkWidget* view_details_new      (AyyiFilemanager* filer_window);
 GType      view_details_get_type ();
 
 #ifdef GTK4_TODO
-void       view_details_dnd_get  (GtkWidget*, GdkDragContext*, GtkSelectionData*, guint info, guint time, gpointer data);
-
 void       view_details_set_alt_colours(ViewDetails*, GdkColor* bg, GdkColor* fg);
 #endif

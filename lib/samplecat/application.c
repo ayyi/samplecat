@@ -41,7 +41,7 @@ static void     samplecat_application_activate (GApplication*);
 static void     samplecat_application_finalize      (GObject*);
 static GType    samplecat_application_get_type_once (void);
 
-#define ADD_PLAYER(A) app->players = g_list_append(app->players, A)
+#define ADD_PLAYER(A) (app->players = g_list_append(app->players, A))
 
 
 SamplecatApplication*
@@ -111,7 +111,7 @@ samplecat_application_local_command_line (GApplication* self, gchar*** arguments
 			case 'p':
 				if (can_use(app->players, optarg)) {
 					g_clear_pointer(&app->players, g_list_free);
-					ADD_PLAYER(optarg);
+					ADD_PLAYER(g_strdup(optarg));
 					player_opt = true;
 				} else {
 					warnprintf("requested player is not available: '%s'\navailable backends:\n", optarg);
@@ -156,14 +156,16 @@ samplecat_application_local_command_line (GApplication* self, gchar*** arguments
 		g_clear_pointer(&((*arguments)[i]), g_free);
 	}
 
-	if (!player_opt && app->config.auditioner[0]) {
-		if (can_use(sa->players, app->config.auditioner)) {
-			g_clear_pointer(&sa->players, g_list_free);
-			ADD_PLAYER(app->config.auditioner);
+	if (player_opt) {
+		g_strlcpy(app->config.auditioner, sa->players->data, 8);
+	} else {
+		if (app->config.auditioner[0]) {
+			if (can_use(sa->players, app->config.auditioner)) {
+				g_clear_pointer(&sa->players, g_list_free);
+				ADD_PLAYER(app->config.auditioner);
+			}
 		}
 	}
-
-	if (player_opt) g_strlcpy(app->config.auditioner, sa->players->data, 8);
 
 	if (app->args.add) {
 		/* initial import from commandline */

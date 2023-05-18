@@ -1,22 +1,18 @@
-/**
-* +----------------------------------------------------------------------+
-* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2020 Tim Orford <tim@orford.org>                  |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-*
-*/
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
+ | copyright (C) 2007-2023 Tim Orford <tim@orford.org>                  |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
+ */
+
 #define __audtioner_c__
 #include "config.h"
 #undef USE_GTK
-#include <stdio.h>
-#include <stdlib.h>
-#define __USE_GNU
-#include <string.h>
-#include <unistd.h>
 #include <glib.h>
 #include <dbus/dbus-glib-bindings.h>
 
@@ -68,13 +64,13 @@ on_really_connected (char* status, int len, GError* error, gpointer user_data)
 {
 	C* c = user_data;
 
-	if(!error){
+	if (!error) {
 		dbus_g_proxy_add_signal(dbus->proxy, "PlaybackStopped", G_TYPE_INVALID);
 		dbus_g_proxy_add_signal(dbus->proxy, "Position", G_TYPE_INT, G_TYPE_DOUBLE, G_TYPE_INVALID);
 
 		void on_stopped (DBusGProxy* proxy, gpointer user_data)
 		{
-			if(!play->queue){
+			if (!play->queue) {
 				player_on_play_finished();
 			}
 		}
@@ -87,7 +83,7 @@ on_really_connected (char* status, int len, GError* error, gpointer user_data)
 		dbus_g_proxy_connect_signal (dbus->proxy, "Position", G_CALLBACK(on_position), NULL, NULL);
 	}
 
-	if(c->callback) c->callback(error, c->user_data);
+	if (c->callback) c->callback(error, c->user_data);
 
 	g_free(c);
 }
@@ -104,11 +100,11 @@ auditioner_connect (ErrorCallback callback, gpointer user_data)
 		GError* error = NULL;
 
 		DBusGConnection* bus = dbus_g_bus_get(DBUS_BUS_SESSION, &error);
-		if(!bus){
+		if (!bus) {
 			error = g_error_new_literal(g_quark_from_static_string(AUDITIONER_DOMAIN), 1, "failed to get dbus connection");
 			goto error;
 		}
-		if(!(dbus->proxy = dbus_g_proxy_new_for_name (bus, APPLICATION_SERVICE_NAME, DBUS_APP_PATH, DBUS_INTERFACE))){
+		if (!(dbus->proxy = dbus_g_proxy_new_for_name (bus, APPLICATION_SERVICE_NAME, DBUS_APP_PATH, DBUS_INTERFACE))) {
 			error = g_error_new_literal(g_quark_from_static_string(AUDITIONER_DOMAIN), 1, "failed to get Auditioner");
 			goto error;
 		}
@@ -121,7 +117,7 @@ auditioner_connect (ErrorCallback callback, gpointer user_data)
 		return G_SOURCE_REMOVE;
 
 	error:
-		if(c->callback) c->callback(error, c->user_data);
+		if (c->callback) c->callback(error, c->user_data);
 		g_error_free(error);
 		return G_SOURCE_REMOVE;
 	}
@@ -170,7 +166,7 @@ auditioner_play_all ()
 
 	void play_next ()
 	{
-		if(!play->queue){
+		if (!play->queue) {
 			dbus_g_proxy_disconnect_signal(dbus->proxy, "PlaybackStopped", G_CALLBACK(stop), NULL);
 		}
 		play->next();
@@ -204,10 +200,10 @@ audtioner_status_reply (DBusGProxy* proxy, DBusGProxyCall* call, gpointer data)
 
 	c->callback(status, queue_size, error, c->user_data);
 
-	if(error){
+	if (error) {
 		printf("%s\n", error->message);
 		g_error_free(error);
-	}else{
+	} else {
 		g_free(status);
 	}
 	g_free(c);

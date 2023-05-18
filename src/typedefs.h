@@ -24,7 +24,6 @@
 
 typedef struct _libraryview       LibraryView;
 typedef struct _Inspector         Inspector;
-typedef struct _PlayCtrl          PlayCtrl;
 typedef struct _view_option       ViewOption;
 typedef struct _accel             Accel;
 typedef struct _GimpActionGroup   GimpActionGroup;

@@ -183,7 +183,7 @@ fm__change_to (AyyiFilemanager* fm, const char* path, const char* from)
 
 	char* from_dup = from && *from ? g_strdup(from) : NULL;
 
-	if(fm->directory) detach(fm);
+	if (fm->directory) detach(fm);
 	g_free(fm->real_path);
 	g_free(fm->sym_path);
 	fm->real_path = real_path;
@@ -211,9 +211,7 @@ fm__change_to (AyyiFilemanager* fm, const char* path, const char* from)
 
 	//if (filer_window->mini_type == MINI_PATH) g_idle_add((GSourceFunc) minibuffer_show_cb, filer_window);
 
-#ifdef GTK4_TODO
-	fm__menu_on_view_change(fm->menu);
-#endif
+	fm__menu_on_view_change(gtk_popover_menu_get_menu_model (GTK_POPOVER_MENU(fm->menu)));
 }
 
 
@@ -243,8 +241,7 @@ set_selection_state (AyyiFilemanager* fm, gboolean normal)
 
 	fm->selection_state = normal ? GTK_STATE_SELECTED : GTK_STATE_INSENSITIVE;
 
-	if (old_state != fm->selection_state
-	    && view_count_selected(fm->view))
+	if (old_state != fm->selection_state && view_count_selected(fm->view))
 		gtk_widget_queue_draw(GTK_WIDGET(fm->view));
 #endif
 }

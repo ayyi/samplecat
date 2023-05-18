@@ -19,15 +19,13 @@
 #include "config.h"
 
 #include <stdbool.h>
-#include <string.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <gtk/gtk.h>
+#include <glib.h>
 #include <gdk/gdkkeysyms.h>
 #include "debug/debug.h"
 #include "support.h"
 #include "file_manager.h"
 #include "pixmaps.h"
+#include "display.h"
 
 GList* all_filer_windows = NULL;
 static AyyiFilemanager* new_file_manager = NULL;
@@ -75,6 +73,64 @@ file_manager__new_window (const char* path)
 
 	fm__change_to(new_file_manager, path, NULL);
 
+	{
+		void delete (GSimpleAction* action, GVariant* parameter, gpointer fm)
+		{
+		}
+
+		void go_up_dir (GSimpleAction* action, GVariant* parameter, gpointer fm)
+		{
+			fm__change_to_parent(fm);
+		}
+
+		void go_down_dir (GSimpleAction* action, GVariant* parameter, gpointer fm)
+		{
+		}
+
+		void cd (GSimpleAction* action, GVariant* parameter, gpointer fm)
+		{
+		}
+
+		void refresh (GSimpleAction* action, GVariant* parameter, gpointer fm)
+		{
+			file_manager__update_all();
+		}
+
+		void set_sort (GSimpleAction* action, GVariant* parameter, gpointer fm)
+		{
+		}
+
+		void minibuffer (GSimpleAction* action, GVariant* parameter, gpointer fm)
+		{
+		}
+
+		void reverse_sort (GSimpleAction* action, GVariant* parameter, gpointer _fm)
+		{
+			AyyiFilemanager* fm = _fm;
+
+			GtkSortType order = fm->sort_order;
+			if (order == GTK_SORT_ASCENDING)
+				order = GTK_SORT_DESCENDING;
+			else
+				order = GTK_SORT_ASCENDING;
+
+			display_set_sort_type(fm, fm->sort_type, order);
+		}
+
+		GActionEntry entries[] = {
+			{ "delete", delete, NULL, NULL, NULL },
+			{ "go-up-dir", go_up_dir, NULL, NULL, NULL },
+			{ "go-down-dir", go_down_dir, NULL, NULL, NULL },
+			{ "cd", cd, NULL, NULL, NULL },
+			{ "refresh", refresh, NULL, NULL, NULL },
+			{ "set-sort", set_sort, NULL, NULL, NULL },
+			{ "minibuffer", minibuffer, NULL, NULL, NULL },
+			{ "reverse-sort", reverse_sort, NULL, NULL, NULL },
+		};
+		GSimpleActionGroup* action_group = g_simple_action_group_new ();
+		g_action_map_add_action_entries (G_ACTION_MAP (action_group), entries, G_N_ELEMENTS (entries), new_file_manager);
+		gtk_widget_insert_action_group (GTK_WIDGET(new_file_manager->view), "fm", G_ACTION_GROUP (action_group));
+	}
 	return new_file_manager->window;
 }
 
@@ -131,7 +187,7 @@ file_manager__plugin_load (const gchar* filepath)
 	GModule* handle = g_module_open(filepath, 0);
 #endif
 
-	if(!handle) {
+	if (!handle) {
 		pwarn("cannot open %s (%s)!", filepath, g_module_error());
 		return NULL;
 	}
@@ -167,7 +223,7 @@ file_manager__plugin_load (const gchar* filepath)
 		pwarn("File '%s' is not a valid Filtype plugin", filepath);
 	}
 	
-	if(!success) {
+	if (!success) {
 		g_module_close(handle);
 		return NULL;
 	}

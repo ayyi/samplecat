@@ -56,8 +56,6 @@ struct _ViewDetailsClass {
 # define S_ISDOOR(mode) (FALSE)
 #endif
 
-#define _g_object_unref0(var) ((var == NULL) ? NULL : (var = (g_object_unref (var), NULL)))
-
 /* Static prototypes */
 static void     view_details_finalize            (GObject*);
 static void     view_details_class_init          (gpointer gclass, gpointer data);
@@ -129,9 +127,8 @@ view_details_new (AyyiFilemanager* fm)
 	view_details->use_alt_colours = false;
 	view_details->filer_window->view = (ViewIface*)view_details;
 
-#ifdef GTK4_TODO
 	view_details->filer_window->menu = fm__make_context_menu();
-#endif
+	gtk_widget_set_parent (view_details->filer_window->menu, GTK_WIDGET(view_details));
 
 	view_details->scroll_win = gtk_scrolled_window_new();
 	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(view_details->scroll_win), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
@@ -147,6 +144,79 @@ view_details_new (AyyiFilemanager* fm)
 	details_update_header_visibility(view_details);
 
 	g_signal_connect(G_OBJECT(view_details), "realize", G_CALLBACK(view_details_on_realise), NULL);
+
+	// set up as dnd source
+	{
+		GdkContentProvider*
+		view_details_on_drag_prepare (GtkDragSource *source, double x, double y, GtkWidget* self)
+		{
+			ViewDetails* view = (ViewDetails*)self;
+
+			GSList* paths = ({
+				GSList* l = NULL;
+
+				ViewIter iter;
+				make_iter(view, &iter, 0);
+
+				DirItem* item;
+				while ((item = iter.next(&iter))) {
+					if (get_selected(view, iter.i)) {
+						DirItem* item = iter.peek(&iter);
+						l = g_slist_append (l, g_file_new_for_path (item->leafname));
+					}
+				}
+				l;
+			});
+
+			GValue value = G_VALUE_INIT;
+			g_value_init (&value, GDK_TYPE_FILE_LIST);
+			g_value_set_boxed (&value, paths);
+
+			g_slist_free_full(paths, g_object_unref);
+
+			return gdk_content_provider_new_for_value (&value);
+		}
+
+		void view_details_on_drag_begin (GtkDragSource* source, GdkDrag* drag, GtkWidget* self)
+		{
+			ViewDetails* view = (ViewDetails*)self;
+
+			ViewIter iter;
+			make_iter(view, &iter, 0);
+
+			DirItem* item;
+			while ((item = iter.next(&iter))) {
+				if (view_get_selected((ViewIface*)view, &iter)) {
+					g_autoptr(GtkTreePath) path = gtk_tree_path_new();
+					gtk_tree_path_append_index(path, iter.i);
+
+					g_autoptr(GdkPaintable) icon = gtk_tree_view_create_row_drag_icon (GTK_TREE_VIEW(self), path);
+					gtk_drag_source_set_icon (source, icon, 0, 0);
+
+					break;
+				}
+			}
+		}
+
+		GtkDragSource* drag_source = gtk_drag_source_new ();
+		g_signal_connect (drag_source, "prepare", G_CALLBACK (view_details_on_drag_prepare), view_details);
+		g_signal_connect (drag_source, "drag-begin", G_CALLBACK (view_details_on_drag_begin), view_details);
+
+		gtk_widget_add_controller (GTK_WIDGET(view_details), GTK_EVENT_CONTROLLER (drag_source));
+	}
+	{
+		void listview__on_row_clicked (GtkGestureClick* gesture, int n_press, double x, double y, gpointer widget)
+		{
+			//if (((ViewDetails*)widget)->filer_window->menu)
+				//gtk_menu_popup(GTK_MENU(((ViewDetails*)widget)->filer_window->menu), NULL, NULL, NULL, NULL, (ev) ? ev->button : 0, gdk_event_get_time((GdkEvent*)ev));
+				gtk_popover_popup(GTK_POPOVER(((ViewDetails*)widget)->filer_window->menu));
+		}
+
+		GtkGesture* click = gtk_gesture_click_new ();
+		g_signal_connect (click, "pressed", G_CALLBACK (listview__on_row_clicked), view_details);
+		gtk_gesture_single_set_button (GTK_GESTURE_SINGLE (click), 3);
+		gtk_widget_add_controller (GTK_WIDGET(view_details), GTK_EVENT_CONTROLLER (click));
+	}
 
 	return GTK_WIDGET(view_details);
 }
@@ -642,30 +712,6 @@ view_details_key_press (GtkWidget* widget, GdkEventKey* event)
 
 
 #ifdef GTK4_TODO
-static gboolean
-view_details_button_press (GtkWidget* widget, GdkEventButton* ev)
-{
-	PF;
-	//GtkTreeView* treeview = (GtkTreeView *) widget;
-
-	if(ev->type == GDK_BUTTON_PRESS && ev->button == 3){
-		if(((ViewDetails*)widget)->filer_window->menu) gtk_menu_popup(GTK_MENU(((ViewDetails*)widget)->filer_window->menu),
-                   NULL, NULL, NULL, NULL,
-                   (ev) ? ev->button : 0,
-                   gdk_event_get_time((GdkEvent*)ev));
-	}
-
-	//if (bev->window != gtk_tree_view_get_bin_window(tree))
-		return GTK_WIDGET_CLASS(parent_class)->button_press_event(widget, ev);
-
-	//if (dnd_motion_press(widget, bev)) filer_perform_action(filer_window, bev);
-
-	return FALSE; //must return FALSE to allow gtk to do focus handling.
-}
-#endif
-
-
-#ifdef GTK4_TODO
 static int
 get_lasso_index (ViewDetails *view_details, int y)
 {
@@ -958,7 +1004,6 @@ view_details_class_init (gpointer gclass, gpointer data)
 #ifdef GTK4_TODO
 	widget->scroll_event = view_details_scroll;
 	//widget->key_press_event = view_details_key_press;
-	widget->button_press_event = view_details_button_press;
 	//widget->button_release_event = view_details_button_release;
 	widget->motion_notify_event = view_details_motion_notify;
 	widget->expose_event = view_details_expose;
@@ -1173,13 +1218,12 @@ view_details_style_changed (ViewIface *view, int flags)
 	GtkTreePath* path = gtk_tree_path_new();
 	gtk_tree_path_append_index(path, 0);
 
-	int i;
-	for (i = 0; i < n; i++)
+	for (int i = 0; i < n; i++)
 	{
 		ViewItem* item = items[i];
 		GtkTreeIter iter = {.user_data = GINT_TO_POINTER(i)};
 
-		_g_object_unref0(item->image);
+		g_clear_pointer(&item->image, g_object_unref);
 		gtk_tree_model_row_changed((GtkTreeModel*)view, path, &iter);
 		gtk_tree_path_next(path);
 	}
@@ -1471,14 +1515,7 @@ view_details_count_selected (ViewIface* view)
 {
 	ViewDetails *view_details = (ViewDetails *) view;
 
-#if GTK_MINOR_VERSION >= 2
 	return gtk_tree_selection_count_selected_rows(view_details->selection);
-#else
-	int count = 0;
-	
-	gtk_tree_selection_selected_foreach(view_details->selection, view_details_count_inc, &count);
-	return count;
-#endif
 }
 
 
@@ -1917,49 +1954,6 @@ view_details_auto_scroll_callback (ViewIface* view)
 
 
 #ifdef GTK4_TODO
-void
-view_details_dnd_get (GtkWidget* widget, GdkDragContext* context, GtkSelectionData* selection_data, guint info, guint time, gpointer data)
-{
-	//outgoing drop. provide the dropee with info on which files were dropped.
-
-	ViewDetails* view = (ViewDetails*)widget;
-
-	gint length = 0;
-	GList* drop_list = NULL;
-
-	DirItem* item;
-	ViewIter iter;
-	view_get_iter((ViewIface*)view, &iter, 0);
-	while((item = iter.next(&iter))){
-		if(view_get_selected((ViewIface*)view, &iter)){
-			gchar* path = g_build_filename(view->filer_window->real_path, item->leafname, NULL);
-			// g_list_prepend() is faster but wrong order :(
-			drop_list = g_list_append(drop_list, path);
-			break;
-		}
-	}
-
-	gchar* uri_text = NULL;
-	switch (info) {
-		case TARGET_URI_LIST:
-		case TARGET_TEXT_PLAIN:
-			uri_text = uri_text_from_list(drop_list, &length, (info == TARGET_TEXT_PLAIN));
-			break;
-	}
-
-	if (uri_text) {
-		gtk_selection_data_set(selection_data, selection_data->target, BITS_PER_CHAR_8, (guchar*)uri_text, length);
-		g_free(uri_text);
-	}
-
-	if(drop_list){
-		GList* l = drop_list;
-		for(;l;l=l->next) g_free(l->data); //free path strings.
-		g_list_free(drop_list);
-	}
-}
-
-
 void
 view_details_set_alt_colours (ViewDetails* view, GdkColor* bg, GdkColor* fg)
 {

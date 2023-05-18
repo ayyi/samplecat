@@ -159,6 +159,11 @@ else
   HAVE_GLIB_2_67="no"
 fi;
 
+if `pkg-config glib-2.0 --atleast-version=2.76`; then
+  HAVE_GLIB_2_76="yes"
+  AC_DEFINE(HAVE_GLIB_2_76, 1, [We have at least glib version 2.76])
+fi;
+
 PKG_CHECK_MODULES(GTHREAD, gthread-2.0,, [true])
 AC_SUBST(GTHREAD_CFLAGS)
 AC_SUBST(GTHREAD_LIBS)

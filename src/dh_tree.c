@@ -126,14 +126,14 @@ book_tree_class_init (DhBookTreeClass *klass)
 static void
 book_tree_init (DhBookTree *tree)
 {
-	DhBookTreePriv *priv;
-        
-	priv        = g_new0 (DhBookTreePriv, 1);
+	DhBookTreePriv *priv = g_new0 (DhBookTreePriv, 1);
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 	priv->store = gtk_tree_store_new (N_COLUMNS, 
 					  GDK_TYPE_PIXBUF,
 					  GDK_TYPE_PIXBUF,
 					  G_TYPE_STRING,
 					  G_TYPE_POINTER);
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 
 	tree->priv = priv;
 

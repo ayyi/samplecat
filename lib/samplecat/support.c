@@ -112,8 +112,8 @@ file_extension (const char* path, char* extn)
 gboolean
 can_use (GList* l, const char* d)
 {
-	for(;l;l=l->next){
-		if(!strcmp(l->data, d)){
+	for (;l;l=l->next) {
+		if (!strcmp(l->data, d)) {
 			return true;
 		}
 	}

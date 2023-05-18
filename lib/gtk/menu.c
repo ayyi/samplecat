@@ -41,41 +41,43 @@ make_menu (int size, MenuDef menu_def[size], gpointer user_data)
 void
 add_menu_items_from_defn (GtkWidget* widget, GMenuModel* model, int size, MenuDef defn[size], gpointer user_data)
 {
-	GMenuModel* section = model;
-#ifdef GTK4_TODO
-	GtkWidget* parent = widget;
-	GtkWidget* sub = NULL;
-#endif
+	int s = 0;
+	GMenuModel* section[3] = { model, };
+	gboolean in_section = false;
 
 	for (int i=0;i<size;i++) {
 		MenuDef* item = &defn[i];
 		switch (item->name[0]) {
 			case '-':
-				section = (GMenuModel*)g_menu_new ();
-				g_menu_append_section (G_MENU(model), NULL, section);
+				if (!in_section) s++;
+				in_section = true;
+				section[s] = (GMenuModel*)g_menu_new ();
+				g_menu_append_section (G_MENU(model), NULL, section[s]);
 				break;
-#ifdef GTK4_TODO
 			case '<':
-				gtk_menu_item_set_submenu(GTK_MENU_ITEM(sub), parent);
-				parent = widget;
+				s--;
 				break;
 			case '>':
 				item = &defn[++i]; // following item must be the submenu parent item.
-				parent = gtk_menu_new();
+				if (!in_section) s++;
+				in_section = false;
 
-				GtkWidget* _sub = sub = gtk_image_menu_item_new_with_label(item->label);
-				if(item->stock_id){
-					menu_item_image_from_stock(widget, _sub, item->stock_id);
+				section[s] = (GMenuModel*)g_menu_new ();
+				if (!item->target) {
+					g_menu_append_submenu (G_MENU(section[s-1]), item->name, section[s]);
+				} else {
+					GMenuItem* mi = g_menu_item_new_submenu(item->name,  section[s]);
+					g_menu_item_set_action_and_target (mi, item->action, "s", item->target);
+					g_menu_append_item(G_MENU(section[s - 1]), mi);
+					g_object_unref(mi);
 				}
-				gtk_container_add(GTK_CONTAINER(widget), _sub);
 
 				break;
-#endif
 			default:
 				if (item->icon) {
 					GMenuItem* mi = g_menu_item_new ("Label", "item->action");
 					g_menu_item_set_attribute (mi, "custom", "s", item->action, NULL); // connect the menu item to the action
-					g_menu_append_item (G_MENU(section), mi);
+					g_menu_append_item (G_MENU(section[s]), mi);
 
 					GtkWidget* box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
 					GtkWidget* button = gtk_button_new();
@@ -88,7 +90,7 @@ add_menu_items_from_defn (GtkWidget* widget, GMenuModel* model, int size, MenuDe
 					}
 					if (!gtk_popover_menu_add_child(GTK_POPOVER_MENU(widget), button, item->action)) dbg(0, "not added %i", item->action);
 				} else {
-					g_menu_append (G_MENU(section), item->name, item->action);
+					g_menu_append (G_MENU(section[s]), item->name, item->action);
 				}
 #ifdef GTK4_TODO
 				if (item->callback)

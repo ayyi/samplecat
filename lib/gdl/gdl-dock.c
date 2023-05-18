@@ -641,11 +641,13 @@ gdl_dock_show (GtkWidget *widget)
 
     GdlDock* dock = GDL_DOCK (widget);
     if (dock->priv->floating && dock->priv->window)
-        gtk_widget_show (dock->priv->window);
+        gtk_widget_set_visible (dock->priv->window, true);
 
     GdlDockMaster* master = GDL_DOCK_MASTER (gdl_dock_object_get_master (GDL_DOCK_OBJECT (dock)));
     if (GDL_DOCK (gdl_dock_master_get_controller (master)) == dock) {
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         gdl_dock_master_foreach_toplevel (master, FALSE, (GFunc) gdl_dock_foreach_automatic, gtk_widget_show);
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
     }
 }
 
@@ -659,11 +661,13 @@ gdl_dock_hide (GtkWidget *widget)
 
     GdlDock* dock = GDL_DOCK (widget);
     if (dock->priv->floating && dock->priv->window)
-        gtk_widget_hide (dock->priv->window);
+        gtk_widget_set_visible (dock->priv->window, false);
 
     GdlDockMaster* master = GDL_DOCK_MASTER (gdl_dock_object_get_master (GDL_DOCK_OBJECT (dock)));
     if (GDL_DOCK (gdl_dock_master_get_controller (master)) == dock) {
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         gdl_dock_master_foreach_toplevel (master, FALSE, (GFunc) gdl_dock_foreach_automatic, gtk_widget_hide);
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
     }
 }
 
@@ -740,7 +744,7 @@ gdl_dock_reduce (GdlDockObject *object)
     } else if (gdl_dock_object_is_closed (GDL_DOCK_OBJECT (dock))) {
         /* if the user explicitly detached the object */
         if (dock->priv->floating) {
-            gtk_widget_hide (GTK_WIDGET (dock));
+            gtk_widget_set_visible (GTK_WIDGET (dock), false);
         } else {
             if (parent)
                 //gtk_container_remove (GTK_CONTAINER (parent), widget);
@@ -1356,5 +1360,5 @@ void
 gdl_dock_hide_preview (GdlDock *dock)
 {
     if (dock->priv->area_window)
-        gtk_widget_hide (dock->priv->area_window);
+        gtk_widget_set_visible (dock->priv->area_window, false);
 }

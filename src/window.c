@@ -36,7 +36,6 @@
 #include "model.h"
 #include "application.h"
 #include "library.h"
-#include "dnd.h"
 #include "progress_dialog.h"
 #include "player.h"
 #ifdef USE_OPENGL
@@ -62,7 +61,6 @@
 #include "filters.c"
 
 #ifdef GTK4_TODO
-extern void view_details_dnd_get (GtkWidget*, GdkDragContext*, GtkSelectionData*, guint info, guint time, gpointer data);
 extern void on_quit              (GtkMenuItem*, gpointer);
 #endif
 
@@ -370,8 +368,6 @@ window_new (GtkApplication* gtk, gpointer user_data)
 		}
 	}
 	g_signal_connect(G_OBJECT(samplecat.store), "content-changed", G_CALLBACK(store_content_changed), NULL);
-
-	dnd_setup();
 
 	window_on_layout_changed();
 

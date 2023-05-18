@@ -104,8 +104,21 @@
 }
 {
    <insert_a_suppression_name_here>
-   Memcheck:Param
+   Memcheck:Value8
    ...
-   fun:gdk_x11_surface_get_geometry
+   fun:pixman_region32_union
 }
-
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Cond
+   fun:captured_motion
+   fun:_gtk_marshal_VOID__DOUBLE_DOUBLEv
+   ...
+   fun:gtk_event_controller_motion_handle_event
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Cond
+   fun:_gtk_tree_view_column_get_cell_at_pos
+   fun:gtk_tree_view_click_gesture_pressed
+}

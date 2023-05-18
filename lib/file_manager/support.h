@@ -1,6 +1,6 @@
 /*
  +----------------------------------------------------------------------+
- | This file is part of the Ayyi project. http://ayyi.org               |
+ | This file is part of the Ayyi project. https://www.ayyi.org          |
  | copyright (C) 2011-2023 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
@@ -56,7 +56,6 @@ guchar*      file_copy             (const guchar* from, const guchar* to);
 void         file_move             (const char* path, const char* dest);
 char*        fork_exec_wait        (const char** argv);
 
-gchar*       uri_text_from_list    (GList*, gint* len, gint plain_text);
 GList*       uri_list_from_text    (gchar* data, gint files_only);
 gchar*       uri_text_escape       (const gchar* text);
 void         uri_text_decode       (gchar* text);

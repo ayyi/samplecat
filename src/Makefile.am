@@ -59,7 +59,8 @@ YAML_LDFLAGS = \
 endif
 
 samplecat_SOURCES = \
-	typedefs.h types.h \
+	typedefs.h \
+	types.c types.h \
 	main.c \
 	resources.c \
 	application.c application.h \
@@ -67,7 +68,6 @@ samplecat_SOURCES = \
 	window.c window.h \
 	progress_dialog.c progress_dialog.h \
 	dh_tree.c dh_tree.h \
-	dnd.c dnd.h \
 	support.c support.h \
 	$(FFT_SRC) \
 	$(OPENGL_SRC) \

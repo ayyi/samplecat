@@ -1,19 +1,17 @@
-/**
-* +----------------------------------------------------------------------+
-* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2020 Tim Orford <tim@orford.org>                  |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-*
-*/
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
+ | copyright (C) 2007-2023 Tim Orford <tim@orford.org>                  |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
+ */
+
 #include "config.h"
-#define __USE_GNU
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <gtk/gtk.h>
-#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 #include "debug/debug.h"
 #include "decoder/ad.h"
 #include "file_manager/support.h" // to_utf8()
@@ -35,9 +33,7 @@ sample_new ()
 {
 	Sample* sample = g_new0(Sample, 1);
 	sample->id = -1;
-	sample->colour_index = 0;
-	sample_ref(sample);
-	return sample;
+	return sample_ref(sample);
 }
 
 
@@ -61,7 +57,7 @@ sample_new_from_filename (char* path, bool path_alloced)
 	}
 	sample->mimetype = g_strdup_printf("%s/%s", mime_type->media_type, mime_type->subtype);
 
-	if(mimetype_is_unsupported(mime_type, sample->mimetype)){
+	if (mimetype_is_unsupported(mime_type, sample->mimetype)) {
 		dbg(1, "file type \"%s\" not supported.", sample->mimetype);
 		sample_unref(sample);
 		return NULL;
@@ -69,13 +65,13 @@ sample_new_from_filename (char* path, bool path_alloced)
 
 	sample->mtime = file_mtime(path);
 
-	if(!sample->name){
+	if (!sample->name) {
 		gchar* bn = g_path_get_basename(sample->full_path);
 		sample->name= to_utf8(bn);
 		g_free(bn);
 	}
 
-	if(!sample->sample_dir){
+	if (!sample->sample_dir) {
 		gchar* dn = g_path_get_dirname(sample->full_path);
 		sample->sample_dir = to_utf8(dn);
 		g_free(dn);
@@ -124,7 +120,9 @@ sample_free (Sample* sample)
 	if (sample->ref_count > 0) {
 		pwarn("freeing sample with refcount: %d", sample->ref_count);
 	}
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 	if (sample->row_ref) gtk_tree_row_reference_free(sample->row_ref);
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 	if (sample->name) g_free(sample->name);
 	if (sample->full_path) g_free(sample->full_path);
 	if (sample->mimetype) g_free(sample->mimetype);

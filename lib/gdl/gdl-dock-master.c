@@ -491,21 +491,17 @@ gdl_dock_master_get_property  (GObject      *object,
 }
 
 static void
-gdl_dock_master_drag_begin (GdlDockItem *item,
-                            gpointer     data)
+gdl_dock_master_drag_begin (GdlDockItem *item, gpointer data)
 {
-    GdlDockMaster  *master;
-    GdlDockRequest *request;
-
     g_return_if_fail (data != NULL);
     g_return_if_fail (item != NULL);
 
-    master = GDL_DOCK_MASTER (data);
+    GdlDockMaster* master = GDL_DOCK_MASTER (data);
 
     if (!master->priv->drag_request)
         master->priv->drag_request = g_new0 (GdlDockRequest, 1);
 
-    request = master->priv->drag_request;
+    GdlDockRequest* request = master->priv->drag_request;
 
     /* Set the target to itself so it won't go floating with just a click. */
     request->applicant = GDL_DOCK_OBJECT (item);
@@ -518,18 +514,13 @@ gdl_dock_master_drag_begin (GdlDockItem *item,
 }
 
 static void
-gdl_dock_master_drag_end (GdlDockItem *item,
-                          gboolean     cancelled,
-                          gpointer     data)
+gdl_dock_master_drag_end (GdlDockItem *item, gboolean cancelled, gpointer data)
 {
-    GdlDockMaster  *master;
-    GdlDockRequest *request;
-
     g_return_if_fail (data != NULL);
     g_return_if_fail (item != NULL);
 
-    master = GDL_DOCK_MASTER (data);
-    request = master->priv->drag_request;
+    GdlDockMaster* master = GDL_DOCK_MASTER (data);
+    GdlDockRequest* request = master->priv->drag_request;
 
     g_return_if_fail (GDL_DOCK_OBJECT (item) == request->applicant);
 
@@ -550,9 +541,6 @@ static void
 gdl_dock_master_drag_motion (GdlDockItem *item, GdkDevice *device, gint root_x, gint root_y, gpointer data)
 {
 #ifdef GTK4_TODO
-    GdlDockMaster  *master;
-    GdlDockRequest  my_request, *request;
-    GdkWindow      *window;
     GdkWindow      *widget_window;
     gint            win_x, win_y;
     gint            x, y;
@@ -561,23 +549,22 @@ gdl_dock_master_drag_motion (GdlDockItem *item, GdkDevice *device, gint root_x, 
 
     g_return_if_fail (item != NULL && data != NULL);
 
-    master = GDL_DOCK_MASTER (data);
-    request = master->priv->drag_request;
+    GdlDockMaster* master = GDL_DOCK_MASTER (data);
+    GdlDockRequest* request = master->priv->drag_request;
 
     g_return_if_fail (GDL_DOCK_OBJECT (item) == request->applicant);
 
-    my_request = *request;
+    GdlDockRequest my_request = *request;
 
     /* first look under the pointer */
-    window = gdk_device_get_window_at_position (device, &win_x, &win_y);
+    GdkWindow* window = gdk_device_get_window_at_position (device, &win_x, &win_y);
     if (window) {
         GtkWidget *widget;
         /* ok, now get the widget who owns that window and see if we can
            get to a GdlDock by walking up the hierarchy */
         gdk_window_get_user_data (window, (gpointer) &widget);
         if (GTK_IS_WIDGET (widget)) {
-            while (widget && (!GDL_IS_DOCK (widget) ||
-	          gdl_dock_object_get_master (GDL_DOCK_OBJECT (widget)) != G_OBJECT (master)))
+            while (widget && (!GDL_IS_DOCK (widget) || gdl_dock_object_get_master (GDL_DOCK_OBJECT (widget)) != G_OBJECT (master)))
                 widget = gtk_widget_get_parent (widget);
             if (widget) {
                 gint win_w, win_h;
@@ -586,8 +573,7 @@ gdl_dock_master_drag_motion (GdlDockItem *item, GdkDevice *device, gint root_x, 
 
                 /* verify that the pointer is still in that dock
                    (the user could have moved it) */
-                gdk_window_get_geometry (widget_window,
-                                         NULL, NULL, &win_w, &win_h);
+                gdk_window_get_geometry (widget_window, NULL, NULL, &win_w, &win_h);
                 gdk_window_get_origin (widget_window, &win_x, &win_y);
                 if (root_x >= win_x && root_x < win_x + win_w &&
                     root_y >= win_y && root_y < win_y + win_h)
@@ -608,13 +594,10 @@ gdl_dock_master_drag_motion (GdlDockItem *item, GdkDevice *device, gint root_x, 
                                                  x, y, &my_request);
     }
     else {
-        GList *l;
-
         /* try to dock the item in all the docks in the ring in turn */
-        for (l = master->priv->toplevel_docks; l; l = l->next) {
-            GdkWindow *dock_window;
+        for (GList* l = master->priv->toplevel_docks; l; l = l->next) {
             dock = GDL_DOCK (l->data);
-            dock_window = gtk_widget_get_window (GTK_WIDGET (dock));
+            GdkWindow *dock_window = gtk_widget_get_window (GTK_WIDGET (dock));
             if (!dock_window)
                 continue;
 
@@ -631,10 +614,9 @@ gdl_dock_master_drag_motion (GdlDockItem *item, GdkDevice *device, gint root_x, 
 
 
     if (!may_dock) {
-	/* Special case for GdlDockItems : they must respect the flags */
-	if(GDL_IS_DOCK_ITEM(item)
-	&& gdl_dock_item_get_behavior_flags (GDL_DOCK_ITEM(item)) & GDL_DOCK_ITEM_BEH_NEVER_FLOATING)
-	    return;
+		/* Special case for GdlDockItems : they must respect the flags */
+		if (GDL_IS_DOCK_ITEM(item) && gdl_dock_item_get_behavior_flags (GDL_DOCK_ITEM(item)) & GDL_DOCK_ITEM_BEH_NEVER_FLOATING)
+		    return;
 
         dock = NULL;
         my_request.target = GDL_DOCK_OBJECT (gdl_dock_object_get_toplevel (request->applicant));
@@ -727,7 +709,7 @@ gdl_dock_master_hide_preview (GdlDockMaster *master)
     }
     if (master->priv->area_window)
     {
-        gtk_widget_hide (master->priv->area_window);
+        gtk_widget_set_visible (master->priv->area_window, false);
     }
 }
 
@@ -874,14 +856,13 @@ gdl_dock_master_add (GdlDockMaster *master, GdlDockObject *object)
     }
 
     if (GDL_IS_DOCK (object)) {
-        gboolean floating;
-
         /* if this is the first toplevel we are adding, name it controller */
         if (!master->priv->toplevel_docks)
             /* the dock should already have the ref */
             master->priv->controller = object;
 
         /* add dock to the toplevel list */
+        gboolean floating;
         g_object_get (object, "floating", &floating, NULL);
         if (floating)
             master->priv->toplevel_docks = g_list_prepend (master->priv->toplevel_docks, object);
@@ -904,8 +885,7 @@ gdl_dock_master_add (GdlDockMaster *master, GdlDockObject *object)
         /* register to "locked" notification if the item has a grip,
          * and add the item to the corresponding hash */
         if (GDL_DOCK_ITEM_HAS_GRIP (GDL_DOCK_ITEM (object))) {
-            g_signal_connect (object, "notify::locked",
-                              G_CALLBACK (item_notify_cb), master);
+            g_signal_connect (object, "notify::locked", G_CALLBACK (item_notify_cb), master);
             item_notify_cb (object, NULL, master);
         }
 
@@ -915,12 +895,9 @@ gdl_dock_master_add (GdlDockMaster *master, GdlDockObject *object)
             GDL_IS_SWITCHER (gdl_dock_item_get_child (GDL_DOCK_ITEM (object))))
         {
             GtkWidget *child = gdl_dock_item_get_child (GDL_DOCK_ITEM (object));
-            g_object_set (child, "switcher-style",
-                          master->priv->switcher_style, NULL);
-            g_object_set (child, "tab-pos",
-                          master->priv->tab_pos, NULL);
-            g_object_set (child, "tab-reorderable",
-                          master->priv->tab_reorderable, NULL);
+            g_object_set (child, "switcher-style", master->priv->switcher_style, NULL);
+            g_object_set (child, "tab-pos", master->priv->tab_pos, NULL);
+            g_object_set (child, "tab-reorderable", master->priv->tab_reorderable, NULL);
         }
 
         /* post a layout_changed emission if the item is not automatic

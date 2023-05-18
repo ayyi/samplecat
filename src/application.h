@@ -97,7 +97,6 @@ void         application_search                  ();
 GList*       application_get_selection           ();
 
 void         application_play                    (Sample*);
-void         application_play_selected           ();
 void         application_play_all                ();
 void         application_play_path               (const char*);
 

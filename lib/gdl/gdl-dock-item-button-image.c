@@ -53,9 +53,11 @@ gdl_dock_item_button_image_draw (GtkWidget *widget, cairo_t *cr)
     /* Set up the pen */
     cairo_set_line_width(cr, 1.0);
 
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
     GtkStyleContext* context = gtk_widget_get_style_context (widget);
     GdkRGBA color;
     gtk_style_context_get_color (context, &color);
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
     color.alpha = 0.55;
     gdk_cairo_set_source_rgba(cr, &color);
 
@@ -138,6 +140,7 @@ gdl_dock_item_button_image_init (GdlDockItemButtonImage *button_image)
 static void
 gdl_dock_item_button_image_measure (GtkWidget* widget, GtkOrientation orientation, int for_size, int* min, int* natural, int* min_baseline, int* natural_baseline)
 {
+																			//cdbg(0, "%i", ICON_SIZE);
 	*min = *natural = ICON_SIZE;
 }
 
@@ -165,6 +168,7 @@ gdl_dock_item_button_image_new (GdlDockItemButtonImageType image_type)
 {
     GdlDockItemButtonImage *button_image = g_object_new (GDL_TYPE_DOCK_ITEM_BUTTON_IMAGE, NULL);
     button_image->image_type = image_type;
+	gtk_widget_set_margin_top ((GtkWidget*)button_image, 0);
 
     return GTK_WIDGET (button_image);
 }

@@ -611,7 +611,9 @@ inspector_update (SamplecatModel* m, Sample* sample, gpointer user_data)
 	}
 
 	// forget previous inspector item
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 	_gtk_tree_row_reference_free0(i->row_ref);
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 	i->row_id = 0;
 
 #ifdef USE_TRACKER

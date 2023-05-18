@@ -13,7 +13,9 @@ test_1_empty_search ()
 		print_widget_tree(app->window);
 #endif
 
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 		int n_rows = gtk_tree_model_iter_n_children(gtk_tree_view_get_model((GtkTreeView*)APPLICATION(app)->libraryview->widget), NULL);
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 		assert_and_stop(n_rows > 0, "no library items");
 
 		search("Hello");

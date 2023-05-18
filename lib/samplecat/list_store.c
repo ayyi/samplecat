@@ -62,7 +62,9 @@ samplecat_list_store_construct (GType object_type)
 		G_TYPE_POINTER,
 		G_TYPE_INT64,
 	};
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 	gtk_list_store_set_column_types ((GtkListStore*) self, 14, types);
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 
 	return self;
 }
@@ -327,7 +329,7 @@ samplecat_list_store_get_type (void)
  * @return needs to be sample_unref();
  */
 Sample*
-samplecat_list_store_get_sample_by_iter(GtkTreeIter* iter)
+samplecat_list_store_get_sample_by_iter (GtkTreeIter* iter)
 {
 	Sample* sample;
 	gtk_tree_model_get(GTK_TREE_MODEL(samplecat.store), iter, COL_SAMPLEPTR, &sample, -1);
@@ -358,7 +360,7 @@ samplecat_list_store_get_sample_by_row_index (int row)
  * @return needs to be sample_unref();
  */
 Sample*
-samplecat_list_store_get_sample_by_row_ref(GtkTreeRowReference* ref)
+samplecat_list_store_get_sample_by_row_ref (GtkTreeRowReference* ref)
 {
 	GtkTreePath* path;
 	if (!ref || !gtk_tree_row_reference_valid(ref)) return NULL;
@@ -377,11 +379,11 @@ samplecat_list_store_get_sample_by_row_ref(GtkTreeRowReference* ref)
  * @return needs to be sample_unref();
  */
 Sample*
-samplecat_list_store_get_sample_by_path(GtkTreePath* path)
+samplecat_list_store_get_sample_by_path (GtkTreePath* path)
 {
 	GtkTreeModel* model = GTK_TREE_MODEL(samplecat.store);
 	GtkTreeIter iter;
-	if(!gtk_tree_model_get_iter(model, &iter, path)) return NULL;
+	if (!gtk_tree_model_get_iter(model, &iter, path)) return NULL;
 
 	Sample* sample = samplecat_list_store_get_sample_by_iter(&iter);
 	if (sample && !sample->row_ref) sample->row_ref = gtk_tree_row_reference_new(GTK_TREE_MODEL(samplecat.store), path);

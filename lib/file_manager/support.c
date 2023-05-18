@@ -296,9 +296,13 @@ shell_escape (const guchar* word)
 		word++;
 	}
 
+#ifdef HAVE_GLIB_2_76
+	return (guchar*)g_string_free_and_steal(tmp);
+#else
 	guchar* retval = (guchar*)tmp->str;
 	g_string_free(tmp, FALSE);
 	return retval;
+#endif
 }
 
 
@@ -308,7 +312,7 @@ shell_escape (const guchar* word)
  *  g_free() the result.
  */
 char*
-readlink_dup(const char* source)
+readlink_dup (const char* source)
 {
 	char path[MAXPATHLEN + 1];
 
@@ -1218,53 +1222,6 @@ fork_exec_wait (const char** argv)
 }
 
 
-gchar*
-uri_text_from_list (GList *list, gint *len, gint plain_text)
-{
-    gchar *uri_text = NULL;
-    GString *string;
-    GList *work;
-
-    if (!list) {
-        if (len) *len = 0;
-        return NULL;
-    }
-
-    string = g_string_new("");
-
-    work = list;
-    while (work) {
-        const gchar *name8; /* dnd filenames are in utf-8 */
-
-        name8 = work->data;
-
-        if (!plain_text)
-            {
-            gchar *escaped;
-
-            escaped = uri_text_escape(name8);
-            g_string_append(string, "file:");
-            g_string_append(string, escaped);
-            g_free(escaped);
-
-            g_string_append(string, "\r\n");
-            }
-        else
-            {
-            g_string_append(string, name8);
-            if (work->next) g_string_append(string, "\n");
-            }
-
-        work = work->next;
-        }
-
-    uri_text = string->str;
-    if (len) *len = string->len;
-    g_string_free(string, FALSE);
-
-    return uri_text;
-}
-
 static void
 uri_list_parse_encoded_chars (GList *list)
 {
@@ -1279,6 +1236,7 @@ uri_list_parse_encoded_chars (GList *list)
         work = work->next;
         }
 }
+
 
 GList*
 uri_list_from_text (gchar *data, gint files_only)
@@ -1367,7 +1325,6 @@ gchar*
 uri_text_escape (const gchar *text)
 {
     GString *string;
-    gchar *result;
     const gchar *p;
 
     if (!text) return NULL;
@@ -1388,8 +1345,12 @@ uri_text_escape (const gchar *text)
         p++;
         }
 
-    result = string->str;
-    g_string_free(string, FALSE);
+#ifdef HAVE_GLIB_2_76
+    gchar *result = g_string_free_and_steal(string);
+#else
+	gchar *result = string->str;
+	g_string_free(string, FALSE);
+#endif
 
     /* dropped filenames are expected to be utf-8 compatible */
     if (!g_utf8_validate(result, -1, NULL))
