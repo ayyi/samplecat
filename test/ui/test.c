@@ -92,13 +92,13 @@ application_main (int argc, char** argv)
 #endif
 	);
 
-	if (app->config.database_backend && can_use(model->backends, app->config.database_backend)) {
+	if (can_use(model->backends, app->config.database_backend)) {
 		g_clear_pointer(&model->backends, g_list_free);
 		samplecat_model_add_backend(app->config.database_backend);
 	}
 
-	if (!player_opt && app->config.auditioner) {
-		if(can_use(app->players, app->config.auditioner)){
+	if (!player_opt) {
+		if (can_use(app->players, app->config.auditioner)) {
 			g_clear_pointer(&app->players, g_list_free);
 			ADD_PLAYER(app->config.auditioner);
 		}

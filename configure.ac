@@ -158,6 +158,11 @@ else
   HAVE_GLIB_2_67="no"
 fi;
 
+if `pkg-config glib-2.0 --atleast-version=2.76`; then
+  HAVE_GLIB_2_76="yes"
+  AC_DEFINE(HAVE_GLIB_2_76, 1, [We have at least glib version 2.76])
+fi;
+
 GDK_CFLAGS=`pkg-config --cflags gdk-2.0`
 AC_SUBST(GDK_CFLAGS)
 
@@ -280,6 +285,13 @@ AM_CONDITIONAL(ENABLE_FFMPEG, test "$enable_ffmpeg" = "yes")
 AC_SUBST(FFMPEG_CFLAGS)
 AC_SUBST(FFMPEG_LIBS)
 
+if `pkg-config libavcodec --atleast-version=60.0.0`; then
+  HAVE_FFMPEG_60="yes"
+  AC_DEFINE(HAVE_FFMPEG_60, 1, [We have at least ffmpeg version 60])
+else
+  HAVE_FFMPEG_60="no"
+fi;
+
 dnl -----------------------------------------------------------------------------
 
 if test "$enable_dnotify" = "yes"; then
@@ -366,7 +378,7 @@ AC_CHECK_LIB(yaml, yaml_parser_scan,
 		YAML_LIBS="-lyaml"
 		AC_CHECK_HEADERS(yaml.h)
 	],
-	[],
+	[AC_MSG_ERROR([libyaml not found])],
 	[-lyaml])
 AC_SUBST(YAML_LIBS)
 AM_CONDITIONAL(ENABLE_YAML, [test "$YAML_LIBS" = "-lyaml"])
