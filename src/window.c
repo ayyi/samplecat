@@ -736,7 +736,7 @@ make_fileview_pane ()
 		g_signal_connect(G_OBJECT(file_view), "drag_data_get", G_CALLBACK(view_details_dnd_get), NULL);
 	}
 
-	const char* dir = (app->config.browse_dir && app->config.browse_dir[0] && g_file_test(app->config.browse_dir, G_FILE_TEST_IS_DIR))
+	const char* dir = (app->config.browse_dir[0] && g_file_test(app->config.browse_dir, G_FILE_TEST_IS_DIR))
 		? app->config.browse_dir
 		: g_get_home_dir();
 	fman_left(dir);

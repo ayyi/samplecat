@@ -1,14 +1,15 @@
-/**
-* +----------------------------------------------------------------------+
-* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2020 Tim Orford <tim@orford.org> and others       |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-*
-*/
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
+ | copyright (C) 2007-2024 Tim Orford <tim@orford.org> and others       |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
+ */
+
 #define _GNU_SOURCE
 #include "config.h"
 #include <gdk-pixbuf/gdk-pixdata.h>
@@ -400,15 +401,17 @@ mysql__file_exists (const char* path, int *id)
 	char* esc = malloc((len * 2 + 1) * sizeof(char));
 	mysql_real_escape_string(&mysql, esc, path, len);
 	char* sql = malloc((43/*query string*/ + strlen(esc)) * sizeof(char));
+#pragma GCC diagnostic ignored "-Wformat-overflow"
 	sprintf(sql, "SELECT id FROM samples WHERE full_path='%s';", esc);
+#pragma GCC diagnostic warning "-Wformat-overflow"
 	dbg(2,"%s", sql);
 	if (id) *id = 0;
-	if(!mysql_query(&mysql, sql)){
+	if (!mysql_query(&mysql, sql)) {
 		MYSQL_RES* sr = mysql_store_result(&mysql);
 		if (sr) {
 			MYSQL_ROW row = mysql_fetch_row(sr);
 			if (row) {
-				if (id) *id=atoi(row[0]);
+				if (id) *id = atoi(row[0]);
 				rv = true;
 			}
 			mysql_free_result(sr);
@@ -426,17 +429,17 @@ mysql__filter_by_audio (Sample* s)
 {
 	GList* rv = NULL;
 	GString* sql = g_string_new("SELECT full_path FROM samples WHERE 1");
-	if (s->channels>0)
+	if (s->channels > 0)
 		g_string_append_printf(sql, " AND channels=%i", s->channels);
-	if (s->sample_rate>0)
+	if (s->sample_rate > 0)
 		g_string_append_printf(sql, " AND sample_rate=%i", s->sample_rate);
-	if (s->frames>0)
+	if (s->frames > 0)
 		g_string_append_printf(sql, " AND frames=%"PRIi64, s->frames);
-	if (s->bit_rate>0)
+	if (s->bit_rate > 0)
 		g_string_append_printf(sql, " AND bit_rate=%i", s->bit_rate);
-	if (s->bit_depth>0)
+	if (s->bit_depth > 0)
 		g_string_append_printf(sql, " AND bit_depth=%i", s->bit_depth);
-	if (s->peaklevel>0)
+	if (s->peaklevel > 0)
 		g_string_append_printf(sql, " AND peaklevel=%f", s->peaklevel);
 
 	g_string_append_printf(sql, ";");

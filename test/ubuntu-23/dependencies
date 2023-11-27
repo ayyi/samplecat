@@ -1,0 +1,12 @@
+ca-certificates \
+libsndfile1-dev \
+ffmpeg \
+libavcodec-dev libavformat-dev libavutil-dev libavfilter-dev \
+gtk+2.0-dev \
+libgraphene-1.0-dev \
+libxml2-dev \
+libyaml-dev \
+libsqlite3-dev \
+libgl1-mesa-dev \
+mesa-utils \
+xserver-xorg-video-all

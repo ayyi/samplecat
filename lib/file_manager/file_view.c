@@ -1155,11 +1155,11 @@ static void
 resort (ViewDetails *view_details)
 {
 	ViewItem **items = (ViewItem **) view_details->items->pdata;
-	gint i, len = view_details->items->len;
+	guint len = view_details->items->len;
 
 	if (!len) return;
 
-	for (i = len - 1; i >= 0; i--) items[i]->old_pos = i;
+	for (int i = len - 1; i >= 0; i--) items[i]->old_pos = i;
 
 	switch (view_details->filer_window->sort_type){
 		case SORT_NAME: view_details->sort_fn = sort_by_name; break;
@@ -1175,8 +1175,7 @@ resort (ViewDetails *view_details)
 	g_ptr_array_sort_with_data(view_details->items, (GCompareDataFunc) wrap_sort, view_details);
 
 	guint* new_order = g_new(guint, len);
-	for (i = len - 1; i >= 0; i--)
-	{
+	for (int i = len - 1; i >= 0; i--) {
 		new_order[i] = items[i]->old_pos;
 	}
 

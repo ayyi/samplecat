@@ -261,7 +261,7 @@ resort (DirectoryView* view)
 {
 	DirectoryViewPrivate* v = view->priv;
 	ViewItem** items = (ViewItem**)view->items->pdata;
-	gint len = view->items->len;
+	guint len = view->items->len;
 
 	if (!len) return;
 
@@ -280,7 +280,7 @@ resort (DirectoryView* view)
 
 	g_ptr_array_sort_with_data(view->items, (GCompareDataFunc)wrap_sort, view);
 
-	guint* new_order = g_new(guint, len);
+	guint* new_order = g_malloc(len * sizeof(guint));
 	for (int i = len - 1; i >= 0; i--) {
 		new_order[i] = items[i]->old_pos;
 	}
