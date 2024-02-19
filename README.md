@@ -69,7 +69,7 @@ If using the jack player, you can use the jack_autoconnect config option to defi
 The default value is "system:playback_". Set it to "DISABLED" if you dont want auto-connect.
 
 
-config
+Config
 ------
 
 You can manually edit the config file

@@ -1,16 +1,16 @@
-/**
-* +----------------------------------------------------------------------+
-* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2019 Tim Orford <tim@orford.org>                  |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-*
-*/
-#ifndef __player_h__
-#define __player_h__
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
+ | copyright (C) 2007-2024 Tim Orford <tim@orford.org>                  |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
+ */
+
+#pragma once
 
 #include <stdbool.h>
 #include <glib-object.h>
@@ -30,6 +30,7 @@ typedef struct {
     int     (*playpause)  (int);
     void    (*seek)       (double);
     guint   (*position)   ();
+    void    (*set_level)  (double);
 } Auditioner;
 
 typedef enum {
@@ -96,6 +97,7 @@ void    player_stop                 ();
 void    player_set_position         (gint64);
 void    player_set_position_seconds (float);
 void    player_on_play_finished     ();
+void    player_set_level            (double);
 
 bool    player_is_stopped           ();
 bool    player_is_playing           ();
@@ -103,5 +105,3 @@ bool    player_is_playing           ();
 G_END_DECLS
 
 extern Player* play;
-
-#endif

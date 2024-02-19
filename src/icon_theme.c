@@ -78,15 +78,15 @@ icon_theme_init ()
 const char*
 find_icon_theme (const char* themes[])
 {
-	gboolean exists (const char* theme, char** paths)
+	bool exists (const char* theme, char** paths)
 	{
-		gboolean found = FALSE;
+		bool found = FALSE;
 		char* p;
-		for(int i=0;(p=paths[i]);i++){
+		for (int i=0;(p=paths[i]);i++) {
 			char* dir = g_build_filename(p, theme, NULL);
 			found = g_file_test (dir, G_FILE_TEST_EXISTS);
 			g_free(dir);
-			if(found){
+			if (found) {
 				break;
 			}
 		}

@@ -179,8 +179,7 @@ static gchar*
 samplecat_value_idle_collect_value (GValue* value, guint n_collect_values, GTypeCValue* collect_values, guint collect_flags)
 {
 	if (collect_values[0].v_pointer) {
-		SamplecatIdle* object;
-		object = collect_values[0].v_pointer;
+		SamplecatIdle* object = collect_values[0].v_pointer;
 		if (object->parent_instance.g_class == NULL) {
 			return g_strconcat ("invalid unclassed object pointer for value type `", G_VALUE_TYPE_NAME (value), "'", NULL);
 		} else if (!g_value_type_compatible (G_TYPE_FROM_INSTANCE (object), G_VALUE_TYPE (value))) {
@@ -197,8 +196,7 @@ samplecat_value_idle_collect_value (GValue* value, guint n_collect_values, GType
 static gchar*
 samplecat_value_idle_lcopy_value (const GValue* value, guint n_collect_values, GTypeCValue* collect_values, guint collect_flags)
 {
-	SamplecatIdle** object_p;
-	object_p = collect_values[0].v_pointer;
+	SamplecatIdle** object_p = collect_values[0].v_pointer;
 	if (!object_p) {
 		return g_strdup_printf ("value location for `%s' passed as NULL", G_VALUE_TYPE_NAME (value));
 	}

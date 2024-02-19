@@ -78,9 +78,14 @@ MIME_type* inode_door;
 void
 type_init (void)
 {
-	if(icon_theme) return;
+	if (icon_theme || type_hash) return;
 
-	icon_theme = gtk_icon_theme_get_default();
+	type_hash = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
+
+	GdkScreen* screen = gdk_screen_get_default ();
+	if (!screen) return;
+
+	icon_theme = gtk_icon_theme_get_for_screen (screen);
 
 #ifdef DEBUG
 	gint n_elements;
@@ -91,8 +96,6 @@ type_init (void)
 	}
 	g_strfreev(*path);
 #endif
-
-	type_hash = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
 
 	text_plain = get_mime_type("text/plain", TRUE);
 	inode_directory = get_mime_type("inode/directory", TRUE);
