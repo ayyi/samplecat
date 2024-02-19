@@ -1,22 +1,17 @@
-/**
-* +----------------------------------------------------------------------+
-* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2020 Tim Orford <tim@orford.org>                  |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-*
-*/
-#define __audtioner_c__
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
+ | copyright (C) 2007-2024 Tim Orford <tim@orford.org>                  |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
+ */
+
 #include "config.h"
 #undef USE_GTK
-#include <stdio.h>
-#include <stdlib.h>
-#define __USE_GNU
-#include <string.h>
-#include <unistd.h>
 #include <glib.h>
 #include <dbus/dbus-glib-bindings.h>
 
@@ -45,6 +40,7 @@ static bool auditioner_play       (Sample*);
 static void auditioner_stop       ();
 static void auditioner_play_all   ();
 static void auditioner_status     (StatusCallback, gpointer);
+static void auditioner_set_level  (double);
 
 const Auditioner a_ayyidbus = {
 	&auditioner_check,
@@ -53,7 +49,7 @@ const Auditioner a_ayyidbus = {
 	&auditioner_play,
 	&auditioner_play_all,
 	&auditioner_stop,
-	NULL,
+	.set_level = auditioner_set_level,
 };
 
 
@@ -68,13 +64,13 @@ on_really_connected (char* status, int len, GError* error, gpointer user_data)
 {
 	C* c = user_data;
 
-	if(!error){
+	if (!error) {
 		dbus_g_proxy_add_signal(dbus->proxy, "PlaybackStopped", G_TYPE_INVALID);
 		dbus_g_proxy_add_signal(dbus->proxy, "Position", G_TYPE_INT, G_TYPE_DOUBLE, G_TYPE_INVALID);
 
 		void on_stopped (DBusGProxy* proxy, gpointer user_data)
 		{
-			if(!play->queue){
+			if (!play->queue) {
 				player_on_play_finished();
 			}
 		}
@@ -85,9 +81,17 @@ on_really_connected (char* status, int len, GError* error, gpointer user_data)
 			player_set_position_seconds(seconds);
 		}
 		dbus_g_proxy_connect_signal (dbus->proxy, "Position", G_CALLBACK(on_position), NULL, NULL);
+
+#if 0
+		// Samplecat has its own queue, it does not use the auditioner queue
+
+		dbus_g_proxy_add_signal(dbus->proxy, "QueueChange", G_TYPE_INT, G_TYPE_INVALID);
+		void on_queue_change (DBusGProxy* proxy, int len, gpointer user_data) {}
+		dbus_g_proxy_connect_signal (dbus->proxy, "QueueChange", G_CALLBACK(on_queue_change), NULL, NULL);
+#endif
 	}
 
-	if(c->callback) c->callback(error, c->user_data);
+	if (c->callback) c->callback(error, c->user_data);
 
 	g_free(c);
 }
@@ -156,12 +160,13 @@ auditioner_play (Sample* sample)
 }
 
 
-void
+static void
 auditioner_stop ()
 {
 	dbg(1, "...");
 	dbus_g_proxy_call_no_reply(dbus->proxy, "StopPlayback", G_TYPE_STRING, "", G_TYPE_INVALID);
 }
+
 
 void
 auditioner_play_all ()
@@ -170,7 +175,7 @@ auditioner_play_all ()
 
 	void play_next ()
 	{
-		if(!play->queue){
+		if (!play->queue) {
 			dbus_g_proxy_disconnect_signal(dbus->proxy, "PlaybackStopped", G_CALLBACK(stop), NULL);
 		}
 		play->next();
@@ -183,6 +188,18 @@ auditioner_play_all ()
 	stop = playall__on_stopped;
 
 	dbus_g_proxy_connect_signal (dbus->proxy, "PlaybackStopped", G_CALLBACK(playall__on_stopped), NULL, NULL);
+}
+
+
+static void
+auditioner_set_level (double level)
+{
+	GError* error = NULL;
+	dbus_g_proxy_call(dbus->proxy, "Level", &error, G_TYPE_DOUBLE, level, G_TYPE_INVALID, G_TYPE_INVALID);
+	if (error) {
+		pwarn("error: %s", error->message);
+		g_error_free(error);
+	}
 }
 
 

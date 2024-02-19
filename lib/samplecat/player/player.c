@@ -1,14 +1,15 @@
-/**
-* +----------------------------------------------------------------------+
-* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2020 Tim Orford <tim@orford.org>                  |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-*
-*/
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
+ | copyright (C) 2007-2024 Tim Orford <tim@orford.org>                  |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
+ */
+
 #include "config.h"
 #include "debug/debug.h"
 #include "samplecat/sample.h"
@@ -97,7 +98,7 @@ player_connect (ErrorCallback callback, gpointer user_data)
 		gpointer user_data;
 	} C;
 
-	void player_on_connected(GError* error, gpointer _)
+	void player_on_connected (GError* error, gpointer _)
 	{
 		C* c = _;
 
@@ -114,17 +115,17 @@ player_connect (ErrorCallback callback, gpointer user_data)
 bool
 player_play (Sample* sample)
 {
-	gboolean play_update(gpointer _)
+	gboolean play_update (gpointer _)
 	{
-		if(play->auditioner->position) play->position = play->auditioner->position();
-		if(play->position != UINT_MAX) g_signal_emit_by_name (play, "position");
+		if (play->auditioner->position) play->position = play->auditioner->position();
+		if (play->position != UINT_MAX) g_signal_emit_by_name (play, "position");
 
 		return G_SOURCE_CONTINUE;
 	}
 
 	play->status = PLAY_PLAY_PENDING;
 
-	if(play->auditioner->play(sample)){
+	if (play->auditioner->play(sample)) {
 		g_clear_pointer(&play->sample, sample_unref);
 
 		play->status = PLAY_PLAYING;
@@ -133,7 +134,7 @@ player_play (Sample* sample)
 
 		g_signal_emit_by_name (play, "play");
 
-		if(play->auditioner->position && !play_timeout_id) {
+		if (play->auditioner->position && !play_timeout_id) {
 			GSource* source = g_timeout_source_new (50);
 			g_source_set_callback (source, play_update, NULL, NULL);
 			play_timeout_id = g_source_attach (source, NULL);
@@ -191,10 +192,18 @@ player_set_position (gint64 frames)
 void
 player_set_position_seconds (float seconds)
 {
-	if(play->sample){
+	if (play->sample) {
 		play->position = seconds * 1000;
 		g_signal_emit_by_name (play, "position");
 	}
+}
+
+
+void
+player_set_level (double level)
+{
+	if (play->auditioner->set_level)
+		play->auditioner->set_level(level);
 }
 
 

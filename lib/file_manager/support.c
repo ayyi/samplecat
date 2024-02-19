@@ -13,7 +13,6 @@
 #include "config.h"
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <unistd.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -236,7 +235,7 @@ format_size (off_t size)
  *  to a static buffer, valid until the next call.
  */
 const char*
-pretty_permissions(mode_t m)
+pretty_permissions (mode_t m)
 {
 	static char buffer[] = "rwx,rwx,rwx/UG"
 #ifdef S_ISVTX
@@ -289,20 +288,20 @@ pretty_time (const time_t *time)
 guchar*
 shell_escape (const guchar* word)
 {
-	GString* tmp = g_string_new(NULL);
+	GString* str = g_string_new(NULL);
 
 	while (*word) {
 		if (strchr(" ?*['\"$~\\|();!`&", *word))
-			g_string_append_c(tmp, '\\');
-		g_string_append_c(tmp, *word);
+			g_string_append_c(str, '\\');
+		g_string_append_c(str, *word);
 		word++;
 	}
 
 #ifdef HAVE_GLIB_2_76
-	return (guchar*)g_string_free_and_steal(tmp);
+	return (guchar*)g_string_free_and_steal(str);
 #else
-	guchar* retval = (guchar*)tmp->str;
-	g_string_free(tmp, FALSE);
+	guchar* retval = (guchar*)str->str;
+	g_string_free(str, FALSE);
 	return retval;
 #endif
 }
@@ -363,7 +362,8 @@ struct _MD5Context {
 };
 
 #if G_BYTE_ORDER == G_BIG_ENDIAN
-static void byteSwap(guint32 *buf, unsigned words)
+static void
+byteSwap (guint32 *buf, unsigned words)
 {
 	md5byte *p = (md5byte *)buf;
 
@@ -383,7 +383,7 @@ static void byteSwap(guint32 *buf, unsigned words)
  * initialization constants.
  */
 static void
-MD5Init(MD5Context *ctx)
+MD5Init (MD5Context *ctx)
 {
 	ctx->buf[0] = 0x67452301;
 	ctx->buf[1] = 0xefcdab89;
@@ -400,7 +400,7 @@ MD5Init(MD5Context *ctx)
  * of bytes.
  */
 static void
-MD5Update(MD5Context *ctx, md5byte const *buf, unsigned len)
+MD5Update (MD5Context *ctx, md5byte const *buf, unsigned len)
 {
 	guint32 t;
 
@@ -441,7 +441,7 @@ MD5Update(MD5Context *ctx, md5byte const *buf, unsigned len)
  * Returns the newly allocated string of the hash.
  */
 static char*
-MD5Final(MD5Context *ctx)
+MD5Final (MD5Context *ctx)
 {
 	char *retval;
 	int i;
@@ -501,7 +501,7 @@ MD5Final(MD5Context *ctx)
  * the data and converts bytes into longwords for this routine.
  */
 static void
-MD5Transform(guint32 buf[4], guint32 const in[16])
+MD5Transform (guint32 buf[4], guint32 const in[16])
 {
 	register guint32 a, b, c, d;
 
@@ -709,7 +709,7 @@ collate_key_new (const guchar* name)
 }
 
 void
-collate_key_free(CollateKey *key)
+collate_key_free (CollateKey *key)
 {
 	CollatePart *part;
 
@@ -719,7 +719,7 @@ collate_key_free(CollateKey *key)
 }
 
 int
-collate_key_cmp(const CollateKey *key1, const CollateKey *key2, gboolean caps_first)
+collate_key_cmp (const CollateKey *key1, const CollateKey *key2, gboolean caps_first)
 {
 	g_return_val_if_fail(key1, 0);
 	g_return_val_if_fail(key2, 0);
@@ -1229,17 +1229,14 @@ fork_exec_wait (const char** argv)
 gchar*
 uri_text_from_list (GList *list, gint *len, gint plain_text)
 {
-    GString *string;
-    GList *work;
-
     if (!list) {
         if (len) *len = 0;
         return NULL;
     }
 
-    string = g_string_new("");
+    GString* string = g_string_new("");
 
-    work = list;
+    GList* work = list;
     while (work) {
         const gchar *name8; /* dnd filenames are in utf-8 */
 
@@ -1377,14 +1374,11 @@ escape_code (guchar c)
 gchar*
 uri_text_escape (const gchar *text)
 {
-    GString *string;
-    const gchar *p;
-
     if (!text) return NULL;
 
-    string = g_string_new("");
+    GString* string = g_string_new("");
 
-    p = text;
+    const gchar* p = text;
     while (*p != '\0')
         {
         if (escape_test(*p))

@@ -241,10 +241,12 @@ main (int argc, char** argv)
 
 	// Pick a valid icon theme
 	// Preferably from the config file, otherwise from the hardcoded list
-	const char* themes[] = {NULL, "oxygen", "breeze", NULL};
-	themes[0] = g_value_get_string(&app->configctx.options[CONFIG_ICON_THEME]->val);
-	const char* theme = find_icon_theme(themes[0] ? &themes[0] : &themes[1]);
-	icon_theme_set_theme(theme);
+	if (!app->no_gui) {
+		const char* themes[] = {NULL, "oxygen", "breeze", NULL};
+		themes[0] = g_value_get_string(&app->configctx.options[CONFIG_ICON_THEME]->val);
+		const char* theme = find_icon_theme(themes[0] ? &themes[0] : &themes[1]);
+		icon_theme_set_theme(theme);
+	}
 
 	db_init(
 #ifdef USE_MYSQL
@@ -274,10 +276,12 @@ main (int argc, char** argv)
 #endif
 	app->gui_thread = pthread_self();
 
-	icon_theme_init();
-	pixmaps_init();
-
-	if(app->no_gui) console__init();
+	if (!app->no_gui) {
+		icon_theme_init();
+		pixmaps_init();
+	} else{
+		console__init();
+	}
 
 	if (!db_connect()) {
 		g_warning("cannot connect to any database.");

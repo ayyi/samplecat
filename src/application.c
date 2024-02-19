@@ -309,7 +309,7 @@ _set_auditioner ()
 		&auditioner_nullS,
 		NULL,
 		&auditioner_null,
-		NULL, NULL, NULL
+		NULL,
 	};
 
 	bool connected = false;
@@ -587,7 +587,7 @@ application_play (Sample* sample)
 
 	if (player_play(sample)) {
 		if (play->queue)
-			statusbar_print(1, "playing 1 of %i ...", g_list_length(play->queue));
+			statusbar_print(1, "playing 1 of %i ...", g_list_length(play->queue) + 1);
 		else
 			statusbar_print(1, "");
 #ifndef USE_GDL
@@ -611,7 +611,7 @@ application_pause ()
 
 
 void
-application_play_selected()
+application_play_selected ()
 {
 	PF;
 	Sample* sample = samplecat.model->selection;
@@ -639,11 +639,11 @@ application_play_all ()
 		return;
 	}
 
-	gboolean foreach_func(GtkTreeModel* model, GtkTreePath* path, GtkTreeIter* iter, gpointer user_data)
+	gboolean foreach_func (GtkTreeModel* model, GtkTreePath* path, GtkTreeIter* iter, gpointer user_data)
 	{
-		//ADD_TO_QUEUE(samplecat_list_store_get_sample_by_path(path));
-		play->queue = g_list_append(play->queue, samplecat_list_store_get_sample_by_path(path)); // there is a ref already added, so another one is not needed when adding to the queue.
-		return G_SOURCE_CONTINUE;
+		// Not using ADD_TO_QUEUE as there is a ref already added, so another one is not needed when adding to the queue.
+		play->queue = g_list_append(play->queue, samplecat_list_store_get_sample_by_path(path));
+		return FALSE;
 	}
 	gtk_tree_model_foreach(GTK_TREE_MODEL(samplecat.store), foreach_func, NULL);
 
