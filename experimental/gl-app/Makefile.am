@@ -1,5 +1,5 @@
 
-SUBDIRS = shaders views behaviours
+SUBDIRS = shaders views behaviours test
 
 bin_PROGRAMS = samplecat_gl
 
@@ -27,7 +27,6 @@ AM_CFLAGS = \
 	$(SAMPLECAT_CFLAGS) \
 	$(FFTW3_CFLAGS) \
 	$(OPENGL_CFLAGS) \
-	$(JACK_CFLAGS) \
 	$(SAMPLERATE_CFLAGS) \
 	$(SNDFILE_CFLAGS) \
 	$(FFMPEG_CFLAGS) \
@@ -67,7 +66,8 @@ samplecat_gl_LDADD = \
 	$(GTK_LIBS) \
 	$(GRAPHENE_LIBS) \
 	$(MYSQL_LDFLAGS) \
-	$(JACK_LIBS) $(SNDFILE_LIBS) ${SAMPLERATE_LIBS} \
+	$(JACK_LIBS) $(SNDFILE_LIBS) \
+	${SAMPLERATE_LIBS} \
 	$(GTHREAD_LIBS) \
 	$(FFTW3_LIBS) \
 	$(GL_LDFLAGS) \

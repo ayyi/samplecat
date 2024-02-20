@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
- | copyright (C) 2012-2021 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2012-2024 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -10,7 +10,6 @@
  |
  */
 
-#define __wf_private__
 #include "config.h"
 #include <X11/keysym.h>
 #include <gdk/gdkkeysyms.h>
@@ -38,7 +37,6 @@ static int instance_count = 0;
 static AGlActorClass actor_class = {0, "Search", (AGlActorNew*)search_view, search_free};
 
 static AGl* agl = NULL;
-static char* font = NULL;
 
 static int search_view_height (SearchView*);
 
@@ -62,8 +60,6 @@ search_view_get_class ()
 		agl_actor_class__add_behaviour(&actor_class, cache_get_class());
 		agl_actor_class__add_behaviour(&actor_class, state_get_class());
 		agl_actor_class__add_behaviour(&actor_class, key_get_class());
-
-		font = g_strdup_printf("%s 10", APP_STYLE.font);
 	}
 
 	return &actor_class;
@@ -132,7 +128,7 @@ search_view (gpointer _)
 
 	AGlActor* input = agl_actor__add_child((AGlActor*)view, text_input(NULL));
 	text_input_set_placeholder((TextInput*)input, "Search");
-	agl_observable_set_int (((TextInput*)input)->font, 10);
+	agl_observable_set_int (((TextInput*)input)->font, FONT_SIZE);
 
 	CacheBehaviour* cache = (CacheBehaviour*)((AGlActor*)view)->behaviours[0];
 	cache->on_invalidate = (AGlActorFn)search_layout;
@@ -153,7 +149,6 @@ static void
 search_free (AGlActor* actor)
 {
 	if (!--instance_count) {
-		g_clear_pointer(&font, g_free);
 		agl = NULL;
 	}
 

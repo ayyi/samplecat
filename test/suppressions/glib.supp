@@ -36,3 +36,19 @@
    ...
    fun:_dl_init
 }
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Cond
+   ...
+   fun:rsvg_handle_get_pixbuf
+   ...
+   fun:agl_actor__paint
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Cond
+   ...
+   fun:rsvg_handle_get_pixbuf
+   ...
+   fun:load_default_pixmaps
+}

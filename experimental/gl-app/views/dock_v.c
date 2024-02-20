@@ -366,7 +366,7 @@ dock_v_view (gpointer _)
 		return AGL_NOT_HANDLED;
 	}
 
-	DockVView* dock = AGL_NEW(DockVView,
+	DockVView* dock = agl_actor__new(DockVView,
 		.panel = {
 			.actor = {
 				.class = &actor_class,
@@ -412,8 +412,7 @@ AGlActor*
 dock_v_add_panel (DockVView* dock, AGlActor* panel)
 {
 	dock->panels = g_list_append(dock->panels, panel);
-	agl_actor__add_child((AGlActor*)dock, panel);
-	return panel;
+	return agl_actor__add_child((AGlActor*)dock, panel);
 }
 
 

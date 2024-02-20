@@ -35,7 +35,6 @@ static AGlActorClass actor_class = {0, "Panel", (AGlActorNew*)panel_view, panel_
 static int instance_count = 0;
 static AGliPt origin = {0,};
 static AGliPt mouse = {0,};
-static char* font = NULL;
 
 extern AGlMaterialClass ring_material_class;
 static AGlMaterial* ring_material = NULL;
@@ -55,9 +54,6 @@ _init ()
 {
 	if (!agl) {
 		agl = agl_get_instance();
-
-		font = g_strdup_printf("%s 10", APP_STYLE.font);
-		agl_set_font_string(font); // initialise the pango context
 
 		ring_material = ring_new();
 	}
@@ -95,7 +91,7 @@ panel_view (gpointer _)
 
 			ring_material_class.render(ring_material);
 
-			agl_set_font_string(font);
+			agl_set_font_string((char*)STYLE.font);
 			agl_print(24, 0, 0, 0x777777ff, panel->title);
 		}
 
@@ -155,7 +151,7 @@ panel_view (gpointer _)
 			PangoFontDescription* font_desc = pango_font_description_new();
 			pango_font_description_set_family(font_desc, "Sans");
 
-			pango_font_description_set_size(font_desc, 7 * PANGO_SCALE);
+			pango_font_description_set_size(font_desc, FONT_SIZE * PANGO_SCALE);
 			pango_font_description_set_weight(font_desc, PANGO_WEIGHT_BOLD);
 			pango_layout_set_font_description(panel->layout, font_desc);
 

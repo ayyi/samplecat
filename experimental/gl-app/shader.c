@@ -1,14 +1,15 @@
-/**
-* +----------------------------------------------------------------------+
-* | This file is part of the Ayyi project. http://www.ayyi.org           |
-* | copyright (C) 2015-2021 Tim Orford <tim@orford.org>                  |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-*
-*/
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of the Ayyi project. https://www.ayyi.org          |
+ | copyright (C) 2015-2024 Tim Orford <tim@orford.org>                  |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
+ */
+
 #include "config.h"
 #undef USE_GTK
 #include <GL/gl.h>
@@ -16,6 +17,7 @@
 #include "debug/debug.h"
 #include "agl/ext.h"
 #include "waveform/utils.h"
+#include "behaviours/style.h"
 #include "gl-app/shader.h"
 #include "gl-app/shaders/shaders.c"
 
@@ -41,11 +43,12 @@ CircleShader circle_shader = {{
 }};
 
 
+#define R (FONT_SIZE / 1.4275)
 AGlShader ring = {
 	NULL, NULL, 0,
 	(AGlUniformInfo[]) {
-	   {"radius",    1, GL_FLOAT, -1, {7,  }},
-	   {"centre",    2, GL_FLOAT, -1, {8,8,}},
+	   {"radius",    1, GL_FLOAT, -1, {R, }},
+	   {"centre",    2, GL_FLOAT, -1, {R+1,R+1,}},
 	   {"colour",    4, GL_FLOAT, -1, {0,  }},
 	   {"bg_colour", 4, GL_FLOAT, -1, {0,0,0,1}},
 	   END_OF_UNIFORMS
