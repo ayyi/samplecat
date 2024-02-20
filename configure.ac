@@ -579,6 +579,7 @@ AC_CONFIG_FILES([experimental/gl-app/Makefile])
 AC_CONFIG_FILES([experimental/gl-app/shaders/Makefile])
 AC_CONFIG_FILES([experimental/gl-app/views/Makefile])
 AC_CONFIG_FILES([experimental/gl-app/behaviours/Makefile])
+AC_CONFIG_FILES([experimental/gl-app/test/Makefile])
 AC_OUTPUT
 
 jplayer="no"

@@ -299,12 +299,12 @@ add_node (yaml_parser_t* parser, char* node_name, Stack* stack)
 				break;
 			case YAML_MAPPING_END_EVENT:
 				if (stack->sp > 0) {
-					dbg(2, "<- sp=%i: adding '%s' to '%s'", stack->sp, stack->items[stack->sp] ? stack->items[stack->sp]->name : NULL, stack->items[stack->sp - 1] ? stack->items[stack->sp - 1]->name : NULL);
 					AGlActor* actor = stack->items[stack->sp];
 					AGlActor* parent = stack->items[stack->sp - 1];
+					dbg(2, "<- sp=%i: adding '%s' to '%s'", stack->sp, actor ? actor->name : NULL, parent ? parent->name : NULL);
 					AGlActorClass* parent_class = parent->class;
 					if (parent_class == dock_v_get_class() || parent_class == dock_h_get_class()) {
-						dock_v_add_panel((DockVView*)stack->items[stack->sp], STACK_POP());
+						dock_v_add_panel((DockVView*)parent, STACK_POP());
 						{
 							if (actor->class == panel_view_get_class()) {
 								g_return_val_if_fail(g_list_length(actor->children) == 1, false);
@@ -321,7 +321,7 @@ add_node (yaml_parser_t* parser, char* node_name, Stack* stack)
 					} else if (parent_class == tabs_view_get_class()) {
 						tabs_view__add_tab((TabsView*)parent, actor->name, STACK_POP());
 					} else {
-						agl_actor__add_child(stack->items[stack->sp], STACK_POP());
+						agl_actor__add_child(parent, STACK_POP());
 					}
 					g_signal_emit_by_name(app, "actor-added", actor);
 				}
@@ -468,16 +468,19 @@ open_settings_file ()
 	char* paths[] = {
 		g_strdup_printf("%s/.config/" PACKAGE, g_get_home_dir()),
 		g_build_filename(PACKAGE_DATA_DIR "/" PACKAGE, NULL),
-		g_build_filename(cwd, NULL)
+		g_build_filename(cwd, NULL),
+		g_build_filename(cwd, "experimental/gl-app", NULL)
 	};
 	g_free(cwd);
 
 	FILE* fp;
 	for (int i=0;i<G_N_ELEMENTS(paths);i++) {
-		char* filename = g_strdup_printf("%s/"PACKAGE".yaml", paths[i]);
+		g_autofree char* filename = g_strdup_printf("%s/"PACKAGE".yaml", paths[i]);
 		fp = fopen(filename, "rb");
-		g_free(filename);
-		if (fp) break;
+		if (fp) {
+			dbg(1, "using: %s", filename);
+			break;
+		}
 	}
 	if (!fp) {
 		fprintf(stderr, "unable to load config file %s/"PACKAGE".yaml\n", paths[0]);

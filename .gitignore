@@ -39,6 +39,7 @@ src/vala/*.[ch]
 src/resources.c
 experimental/gl-app/samplecat_gl
 experimental/gl-app/shaders/shaders.c
+experimental/gl-app/test/dock
 test/arch/Dockerfile
 test/unit/unit_test
 test/unit/list.c

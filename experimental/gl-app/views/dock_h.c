@@ -337,7 +337,7 @@ dock_h_view (gpointer _)
 		return AGL_NOT_HANDLED;
 	}
 
-	DockHView* dock = AGL_NEW(DockHView,
+	DockHView* dock = agl_actor__new(DockHView,
 		.panel = {
 			.actor = {
 				.class = &actor_class,
@@ -378,11 +378,10 @@ dock_free (AGlActor* actor)
 
 
 AGlActor*
-dock_h_add_panel (DockHView* dock, AGlActor* panel)
+dock_h_add_panel (DockHView* dock, PanelView* panel)
 {
 	dock->panels = g_list_append(dock->panels, panel);
-	agl_actor__add_child((AGlActor*)dock, panel);
-	return panel;
+	return agl_actor__add_child((AGlActor*)dock, (AGlActor*)panel);
 }
 
 

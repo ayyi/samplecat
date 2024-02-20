@@ -1,16 +1,16 @@
-/**
-* +----------------------------------------------------------------------+
-* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2016-2019 Tim Orford <tim@orford.org>                  |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-*
-*/
-#ifndef __views_dock_h_h__
-#define __views_dock_h_h__
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
+ | copyright (C) 2016-2024 Tim Orford <tim@orford.org>                  |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
+ */
+
+#pragma once
 
 #include "panel.h"
 
@@ -27,8 +27,6 @@ typedef struct {
 AGlActorClass* dock_h_get_class      ();
 
 AGlActor* dock_h_view                (gpointer);
-AGlActor* dock_h_add_panel           (DockHView*, AGlActor*);
+AGlActor* dock_h_add_panel           (DockHView*, PanelView*);
 void      dock_h_move_panel_to_index (DockHView*, AGlActor*, int);
 void      dock_h_move_panel_to_y     (DockHView*, AGlActor*, int);
-
-#endif

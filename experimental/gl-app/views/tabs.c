@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
- | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
- | copyright (C) 2016-2022 Tim Orford <tim@orford.org>                  |
+ | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
+ | copyright (C) 2016-2024 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -10,8 +10,6 @@
  |
  */
 
-#define __wf_private__
-
 #include "config.h"
 #include "debug/debug.h"
 #include "agl/utils.h"
@@ -19,13 +17,13 @@
 #include "agl/text/renderer.h"
 #include "agl/behaviours/cache.h"
 #include "materials/icon_ring.h"
-#include "application.h"
+#include "behaviours/style.h"
 #include "shader.h"
 #include "views/tabs.h"
 
 extern void agl_actor__render_from_fbo (AGlActor*);
 
-#define TAB_HEIGHT 30
+#define TAB_HEIGHT (LINE_HEIGHT + 10)
 #define GAP 30
 
 static void tabs_free (AGlActor*);
