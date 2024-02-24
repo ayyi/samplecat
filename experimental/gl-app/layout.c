@@ -198,7 +198,7 @@ add_node (yaml_parser_t* parser, const yaml_event_t*, const char* node_name, gpo
 	while (yaml_parser_parse(parser, &event)) {
 		switch (event.type) {
 			case YAML_SCALAR_EVENT:
-				dbg(2, "YAML_SCALAR_EVENT: value='%s' %i plain=%i style=%i", event.data.scalar.value, event.data.scalar.length, event.data.scalar.plain_implicit, event.data.scalar.style);
+				dbg(2, "YAML_SCALAR_EVENT: value='%s' %li plain=%i style=%i", event.data.scalar.value, event.data.scalar.length, event.data.scalar.plain_implicit, event.data.scalar.style);
 
 				g_strlcpy(key, (char*)event.data.scalar.value, 64);
 

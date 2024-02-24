@@ -1,14 +1,15 @@
-/**
-* +----------------------------------------------------------------------+
-* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2020 Tim Orford <tim@orford.org>                  |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-*
-*/
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
+ | copyright (C) 2007-2024 Tim Orford <tim@orford.org>                  |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
+ */
+
 #include "config.h"
 #include <glib.h>
 #include <glib-object.h>
@@ -70,12 +71,12 @@ struct _SamplecatModelPrivate {
 	guint          selection_change_timeout;
 };
 
-static gpointer          samplecat_idle_ref        (gpointer instance);
-static void              samplecat_idle_unref      (gpointer instance);
-static GType             samplecat_idle_get_type   (void) G_GNUC_CONST;
-static SamplecatIdle*    samplecat_idle_new        (GSourceFunc _fn, void* _fn_target);
-static SamplecatIdle*    samplecat_idle_construct  (GType object_type, GSourceFunc _fn, void* _fn_target);
-static void              samplecat_idle_queue      (SamplecatIdle* self);
+static gpointer       samplecat_idle_ref        (gpointer instance);
+static void           samplecat_idle_unref      (gpointer instance);
+static GType          samplecat_idle_get_type   (void) G_GNUC_CONST;
+static SamplecatIdle* samplecat_idle_new        (GSourceFunc _fn, void* _fn_target);
+static SamplecatIdle* samplecat_idle_construct  (GType object_type, GSourceFunc _fn, void* _fn_target);
+static void           samplecat_idle_queue      (SamplecatIdle* self);
 
 static gpointer samplecat_idle_parent_class = NULL;
 static gchar    samplecat_model_unk[32];
@@ -179,8 +180,7 @@ static gchar*
 samplecat_value_idle_collect_value (GValue* value, guint n_collect_values, GTypeCValue* collect_values, guint collect_flags)
 {
 	if (collect_values[0].v_pointer) {
-		SamplecatIdle* object;
-		object = collect_values[0].v_pointer;
+		SamplecatIdle* object = collect_values[0].v_pointer;
 		if (object->parent_instance.g_class == NULL) {
 			return g_strconcat ("invalid unclassed object pointer for value type `", G_VALUE_TYPE_NAME (value), "'", NULL);
 		} else if (!g_value_type_compatible (G_TYPE_FROM_INSTANCE (object), G_VALUE_TYPE (value))) {
@@ -197,11 +197,11 @@ samplecat_value_idle_collect_value (GValue* value, guint n_collect_values, GType
 static gchar*
 samplecat_value_idle_lcopy_value (const GValue* value, guint n_collect_values, GTypeCValue* collect_values, guint collect_flags)
 {
-	SamplecatIdle** object_p;
-	object_p = collect_values[0].v_pointer;
+	SamplecatIdle** object_p = collect_values[0].v_pointer;
 	if (!object_p) {
 		return g_strdup_printf ("value location for `%s' passed as NULL", G_VALUE_TYPE_NAME (value));
 	}
+
 	if (!value->data[0].v_pointer) {
 		*object_p = NULL;
 	} else if (collect_flags & G_VALUE_NOCOPY_CONTENTS) {
@@ -363,6 +363,7 @@ __sample_changed_idle (gpointer _self)
 
 	return G_SOURCE_REMOVE;
 }
+
 
 const char* names[] = {"search", "directory", "category"};
 
@@ -651,88 +652,53 @@ gchar*
 samplecat_model_print_col_name (guint prop_type)
 {
 	gchar* result = NULL;
-	guint _tmp0_;
-	_tmp0_ = prop_type;
-	switch (_tmp0_) {
+
+	switch (prop_type) {
 		case COL_ICON:
-		{
 			result = "ICON";
 			return result;
-		}
 		case COL_IDX:
-		{
 			result = "IDX";
 			return result;
-		}
 		case COL_NAME:
-		{
 			result = "NAME";
 			return result;
-		}
 		case COL_FNAME:
-		{
 			result = "FILENAME";
 			return result;
-		}
 		case COL_KEYWORDS:
-		{
 			result = "KEYWORDS";
 			return result;
-		}
 		case COL_OVERVIEW:
-		{
 			result = "OVERVIEW";
 			return result;
-		}
 		case COL_LENGTH:
-		{
 			result = "LENGTH";
 			return result;
-		}
 		case COL_SAMPLERATE:
-		{
 			result = "SAMPLERATE";
 			return result;
-		}
 		case COL_CHANNELS:
-		{
 			result = "CHANNELS";
 			return result;
-		}
 		case COL_MIMETYPE:
-		{
 			result = "MIMETYPE";
 			return result;
-		}
 		case COL_PEAKLEVEL:
-		{
 			result = "PEAKLEVEL";
 			return result;
-		}
 		case COL_COLOUR:
-		{
 			result = "COLOUR";
 			return result;
-		}
 		case COL_SAMPLEPTR:
-		{
 			result = "SAMPLEPTR";
 			return result;
-		}
 		case COL_X_EBUR:
-		{
-			result = "X_EBUR";
-			return result;
-		}
+			return "X_EBUR";
 		case COL_X_NOTES:
-		{
-			result = "X_NOTES";
-			return result;
-		}
+			return "X_NOTES";
 		case COL_ALL:
-		{
 			return result = "ALL";
-		}
 		default:
 		{
 			gchar* a = g_strdup_printf ("UNKNOWN PROPERTY (%u)", prop_type);

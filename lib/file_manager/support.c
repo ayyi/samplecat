@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
- | This file is part of the Ayyi project. http://ayyi.org               |
- | copyright (C) 2011-2017 Tim Orford <tim@orford.org>                  |
+ | This file is part of the Ayyi project. https://www.ayyi.org          |
+ | copyright (C) 2011-2024 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -979,8 +979,9 @@ file_copy (const guchar* from, const guchar* to)
 void
 file_move (const char* path, const char* dest)
 {
-	if (is_sub_dir(make_dest_path(path, dest), path)) dbg(0, "!ERROR: Can't move/rename object into itself");
-	else {
+	if (is_sub_dir(make_dest_path(path, dest), path)) {
+		dbg(0, "!ERROR: Can't move/rename object into itself");
+	} else {
 		do_move(path, dest);
 		send_check_path(dest);
 	}
@@ -1149,7 +1150,8 @@ check_flags (void)
 }
 
 
-static void process_flag (char flag)
+static void
+process_flag (char flag)
 {
 	dbg(0, "...");
 #if 0

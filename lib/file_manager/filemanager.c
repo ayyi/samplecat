@@ -211,7 +211,7 @@ fm__change_to (AyyiFilemanager* fm, const char* path, const char* from)
 
 	//if (filer_window->mini_type == MINI_PATH) g_idle_add((GSourceFunc) minibuffer_show_cb, filer_window);
 
-	fm__menu_on_view_change(gtk_popover_menu_get_menu_model (GTK_POPOVER_MENU(fm->menu)));
+	fm__menu_on_view_change(fm);
 }
 
 
@@ -452,7 +452,7 @@ static inline gboolean
 is_hidden (const char* dir, DirItem* item)
 {
 	/* If the leaf name starts with '.' then the item is hidden */
-	if(item->leafname[0] == '.')
+	if (item->leafname[0] == '.')
 		return TRUE;
 
 	return FALSE;
@@ -464,11 +464,11 @@ fm__match_filter (AyyiFilemanager* fm, DirItem* item)
 {
 	g_return_val_if_fail(item, FALSE);
 
-	if(is_hidden(fm->real_path, item) && (!fm->temp_show_hidden && !fm->show_hidden)){
+	if (is_hidden(fm->real_path, item) && (!fm->temp_show_hidden && !fm->show_hidden)) {
 		return FALSE;
 	}
 
-	switch(fm->filter) {
+	switch (fm->filter) {
 		case FILER_SHOW_GLOB:
 			return fnmatch(fm->filter_string, item->leafname, 0)==0 || (item->base_type==TYPE_DIRECTORY && !fm->filter_directories);
 
@@ -485,12 +485,12 @@ fm__match_filter (AyyiFilemanager* fm, DirItem* item)
  *   (must call filer_detach_rescan).
  */
 gboolean
-fm__set_filter(AyyiFilemanager* fm, FilterType type, const gchar* filter_string)
+fm__set_filter (AyyiFilemanager* fm, FilterType type, const gchar* filter_string)
 {
 	// Is this new filter the same as the old one?
 	if (fm->filter == type)
 	{
-		switch(fm->filter){
+		switch (fm->filter) {
 			case FILER_SHOW_ALL:
 				return FALSE;
 			case FILER_SHOW_GLOB:
@@ -510,7 +510,7 @@ fm__set_filter(AyyiFilemanager* fm, FilterType type, const gchar* filter_string)
 
 	fm->filter = type;
 
-	switch(type)
+	switch (type)
 	{
 		case FILER_SHOW_ALL:
 			// No extra work
@@ -532,7 +532,7 @@ fm__set_filter(AyyiFilemanager* fm, FilterType type, const gchar* filter_string)
 
 /* Set this image to be loaded some time in the future */
 void
-fm__create_thumb(AyyiFilemanager* fm, const gchar *path)
+fm__create_thumb (AyyiFilemanager* fm, const gchar *path)
 {
 	dbg(0, "%s", path);
 	if (g_list_find_custom(fm->thumb_queue, path, (GCompareFunc) strcmp))	return;
@@ -552,7 +552,7 @@ fm__create_thumb(AyyiFilemanager* fm, const gchar *path)
  * and start creating or updating the thumbnails as needed.
  */
 void
-fm__create_thumbs(AyyiFilemanager* fm)
+fm__create_thumbs (AyyiFilemanager* fm)
 {
 	if (!fm->show_thumbs) return;
 

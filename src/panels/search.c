@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
- | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
- | copyright (C) 2007-2023 Tim Orford <tim@orford.org>                  |
+ | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
+ | copyright (C) 2007-2024 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -16,7 +16,7 @@
 #include "gdl/gdl-dock-item.h"
 #include "support.h"
 #include "application.h"
-													#include "gtk/utils.h"
+#include "widgets/suggestion_entry.h"
 
 #define TYPE_SEARCH            (search_get_type ())
 #define SEARCH(obj)            (G_TYPE_CHECK_INSTANCE_CAST ((obj), TYPE_SEARCH, Search))
@@ -44,6 +44,7 @@ static GObject* search_constructor (GType type, guint n_construct_properties, GO
 static struct {
 	GtkWidget* search;
 	GtkWidget* toolbar;
+	GtkStringList* recent;
 } window;
 
 static void tagshow_selector_new ();
@@ -54,6 +55,8 @@ search_class_init (SearchClass * klass, gpointer klass_data)
 {
 	search_parent_class = g_type_class_peek_parent (klass);
 
+	window.recent = gtk_string_list_new(NULL);
+
 	G_OBJECT_CLASS (klass)->constructor = search_constructor;
 }
 
@@ -63,46 +66,56 @@ search_constructor (GType type, guint n_construct_properties, GObjectConstructPa
 	GObjectClass* parent_class = G_OBJECT_CLASS (search_parent_class);
 	GObject* obj = parent_class->constructor (type, n_construct_properties, construct_properties);
 	g_object_set(obj, "expand", false, NULL);
+
+	gtk_widget_set_size_request((GtkWidget*)obj, -1, 60);
+
 	return obj;
 }
 
 static void
 search_instance_init (Search* self, gpointer klass)
 {
+	Observable* filter = samplecat.model->filters2.search;
+
 	GtkWidget* vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 2);
 	gdl_dock_item_set_child(GDL_DOCK_ITEM(self), vbox);
 
 	GtkWidget* row1 = window.toolbar = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
 	gtk_box_append(GTK_BOX(vbox), row1);
 
-	void on_focus_out (GtkEventControllerFocus* self, gpointer user_data)
 	{
-		PF;
-		const gchar* text = gtk_entry_buffer_get_text(gtk_entry_get_buffer(GTK_ENTRY(window.search)));
-		observable_string_set(samplecat.model->filters2.search, g_strdup(text));
+		GtkWidget* entry = suggestion_entry_new();
+		gtk_widget_set_hexpand (entry, TRUE);
+		g_object_set (entry, "placeholder-text", "Search", NULL);
+		suggestion_entry_set_model(SUGGESTION_ENTRY (entry), G_LIST_MODEL (window.recent));
+		g_object_unref(window.recent);
+
+		gtk_box_append(GTK_BOX(row1), entry);
+
+		void on_search_filter_changed (Observable* _filter, AGlVal value, gpointer entry)
+		{
+			if (strcmp(value.c, gtk_editable_get_text(GTK_EDITABLE(entry))))
+				gtk_editable_set_text (GTK_EDITABLE(entry), value.c);
+		}
+		agl_observable_subscribe_with_state (filter, on_search_filter_changed, entry);
+
+		void on_text_changed (GtkEditable* editable, gpointer user_data)
+		{
+			const char* text = gtk_editable_get_text(GTK_EDITABLE(editable));
+			observable_string_set(samplecat.model->filters2.search, g_strdup(text));
+
+		}
+		g_signal_connect(entry, "search-changed", (void*)on_text_changed, NULL);
+
+		void on_activate (SuggestionEntry* self, gpointer user_data)
+		{
+			if (g_list_model_get_n_items((GListModel*)window.recent) >= 20) {
+				gtk_string_list_remove(window.recent, 0);
+			}
+			gtk_string_list_append(window.recent, gtk_editable_get_text(gtk_editable_get_delegate((GtkEditable*)self)));
+		}
+		g_signal_connect(G_OBJECT(entry), "activate", G_CALLBACK(on_activate), NULL);
 	}
-
-	Observable* filter = samplecat.model->filters2.search;
-	GtkWidget* entry = window.search = gtk_entry_new();
-	gtk_entry_set_max_length(GTK_ENTRY(entry), 64);
-	gtk_entry_set_icon_from_icon_name (GTK_ENTRY(entry), GTK_ENTRY_ICON_PRIMARY, "system-search-symbolic");
-	GtkEntryBuffer* text = gtk_entry_get_buffer(GTK_ENTRY(entry));
-	if (filter->value.c) gtk_entry_buffer_set_text(text, filter->value.c, -1);
-	gtk_widget_set_name(entry, "search-entry");
-	gtk_widget_set_hexpand(entry, true);
-	gtk_box_append(GTK_BOX(row1), entry);
-
-	GtkEventController* focus = gtk_event_controller_focus_new();
-	g_signal_connect(focus, "leave", G_CALLBACK(on_focus_out), NULL);
-
-	gtk_entry_set_activates_default(GTK_ENTRY(entry), TRUE);
-	g_signal_connect(G_OBJECT(entry), "activate", G_CALLBACK(on_focus_out), NULL);
-
-	void on_search_filter_changed (Observable* _filter, AGlVal value, gpointer _entry)
-	{
-		gtk_entry_buffer_set_text(gtk_entry_get_buffer(GTK_ENTRY(_entry)), value.c, -1);
-	}
-	agl_observable_subscribe (filter, on_search_filter_changed, entry);
 
 	tagshow_selector_new();
 }
@@ -113,34 +126,30 @@ tagshow_selector_new ()
 {
 	#define ALL_CATEGORIES "All categories"
 
-	GtkWidget* combo = gtk_combo_box_text_new();
-	GtkComboBox* combo_ = GTK_COMBO_BOX(combo);
-	gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(combo), ALL_CATEGORIES);
-	for (int i=0;i<G_N_ELEMENTS(samplecat.model->categories);i++) {
-		gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(combo), samplecat.model->categories[i]);
-	}
-	gtk_combo_box_set_active(combo_, 0);
-	gtk_box_append(GTK_BOX(window.toolbar), combo);
+	GtkStringList* list = gtk_string_list_new((const char* const*)samplecat.model->categories);
+	gtk_string_list_splice(list, 0, 0, (const char* const[]){ALL_CATEGORIES, NULL});
+	GtkWidget* dropdown = gtk_drop_down_new(G_LIST_MODEL(list), NULL);
+	gtk_box_append(GTK_BOX(window.toolbar), dropdown);
 
-	void on_view_category_changed (GtkComboBox* widget, gpointer user_data)
+	void on_view_category_changed (GtkDropDown* dropdown, GParamSpec* pspec, GtkStringList* list)
 	{
-		// update the sample list with the new view-category
+		// update the sample-list with the new view-category
 		PF;
 
-		char* category = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(widget));
-		if (!strcmp(category, ALL_CATEGORIES)) g_free0(category);
-		observable_string_set(samplecat.model->filters2.category, category);
+  		int row = gtk_drop_down_get_selected(dropdown);
+		const char* category = gtk_string_list_get_string(list, row);
+		observable_string_set(samplecat.model->filters2.category, strdup(category));
 	}
-	g_signal_connect(combo, "changed", G_CALLBACK(on_view_category_changed), NULL);
+	g_signal_connect(dropdown, "notify::selected", G_CALLBACK(on_view_category_changed), list);
 
-	void on_category_filter_changed (Observable* filter, AGlVal value, gpointer combo)
+	void on_category_filter_changed (Observable* filter, AGlVal value, gpointer dropdown)
 	{
 		if (!filter->value.c || !strlen(filter->value.c)) {
-			gtk_combo_box_set_active(GTK_COMBO_BOX(combo), 0);
+			gtk_drop_down_set_selected((GtkDropDown*)dropdown, 0);
 		}
 	}
 
-	agl_observable_subscribe (samplecat.model->filters2.category, on_category_filter_changed, combo);
+	agl_observable_subscribe(samplecat.model->filters2.category, on_category_filter_changed, dropdown);
 }
 
 
@@ -162,4 +171,3 @@ search_get_type (void)
 	}
 	return search_type_id__once;
 }
-

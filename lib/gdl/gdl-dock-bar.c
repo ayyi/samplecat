@@ -283,7 +283,9 @@ gdl_dock_bar_add_item (GdlDockBar *dockbar, GdlDockItem *item)
 #endif
             g_free (stock_id);
         } else if (pixbuf_icon) {
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
             image = gtk_image_new_from_pixbuf (pixbuf_icon);
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
         } else {
 #ifdef GTK4_TODO
             image = gtk_image_new_from_stock (GTK_STOCK_NEW, GTK_ICON_SIZE_SMALL_TOOLBAR);

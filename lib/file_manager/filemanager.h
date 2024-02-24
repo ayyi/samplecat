@@ -1,16 +1,16 @@
-/**
-* +----------------------------------------------------------------------+
-* | This file is part of the Ayyi project. http://ayyi.org               |
-* | copyright (C) 2011-2017 Tim Orford <tim@orford.org>                  |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-*
-*/
-#ifndef __filemanager_h__
-#define __filemanager_h__
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of the Ayyi project. https://www.ayyi.org          |
+ | copyright (C) 2011-2024 Tim Orford <tim@orford.org>                  |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
+ */
+
+#pragma once
 
 #include <glib.h>
 #include <glib-object.h>
@@ -111,7 +111,10 @@ struct _AyyiFilemanager {
     gint                       auto_scroll;     // Timer
 #endif
 
-    GtkWidget*                 menu;
+    struct {
+       GtkWidget*              widget;
+       GMenuModel*             model;
+    }                          menu;
 
     TargetFunc	               target_cb;
     gpointer	               target_data;
@@ -159,5 +162,3 @@ void             ayyi_filemanager_emit_dir_changed (AyyiFilemanager*);
 gboolean         fm__exists                        (AyyiFilemanager*);
 
 G_END_DECLS
-
-#endif

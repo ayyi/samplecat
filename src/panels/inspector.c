@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
- | copyright (C) 2007-2023 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2007-2024 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -25,6 +25,7 @@
 #include "application.h"
 #include "sample.h"
 #include "gdl/utils.h"
+#include "widgets/tagged-entry.h"
 
 #define TYPE_INSPECTOR            (inspector_get_type ())
 #define INSPECTOR(obj)            (G_TYPE_CHECK_INSTANCE_CAST ((obj), TYPE_INSPECTOR, Inspector))
@@ -129,10 +130,8 @@ G_DEFINE_TYPE_WITH_PRIVATE (Inspector, inspector, GTK_TYPE_SCROLLED_WINDOW)
 static void inspector_clear              (Inspector*);
 static void inspector_update             (SamplecatModel*, Sample*, gpointer);
 static void inspector_set_labels         (Inspector*, Sample*);
-#ifdef GTK4_TODO
 static void hide_fields                  (Inspector*);
 static void show_fields                  (Inspector*);
-#endif
 static void inspector_remove_cells       (Inspector*, RowRange*);
 #ifdef GTK4_TODO
 static bool on_notes_focus_out           (GtkWidget*, GdkEvent*, gpointer);
@@ -177,7 +176,9 @@ inspector_init (Inspector* inspector)
 
 	//-----------
 
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 	i->image = gtk_image_new_from_pixbuf(NULL);
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 	gtk_widget_set_valign (i->image, GTK_ALIGN_START);
 //	gtk_misc_set_padding(GTK_MISC(i->image), MARGIN_LEFT, 2);
 	gtk_box_append(GTK_BOX(i->vbox), i->image);
@@ -194,15 +195,53 @@ inspector_init (Inspector* inspector)
 	s++;
 
 #ifdef GTK4_TODO
-	i->tags = (GtkWidget*)editable_label_button_new("Tags");
+	i->rows.a.tags.widget = (GtkWidget*)editable_label_button_new("Tags");
 #else
-	i->rows.a.tags.widget = (GtkWidget*)label_new("Tags");
+	{
+		i->rows.a.tags.widget = demo_tagged_entry_new();
+
+		void set_tags (DemoTaggedEntry* entry)
+		{
+			const char* text = gtk_editable_get_text(GTK_EDITABLE(entry));
+
+			GPtrArray* tags = tagged_entry_get_tags(entry);
+			g_ptr_array_add(tags, (char*)text);
+			char str[128] = {0,};
+			for (int i=0;i<tags->len;i++) {
+				if (i) g_strlcat(str, " ", 128);
+				g_strlcat(str, (char*)g_ptr_array_index(tags, i), 128);
+			}
+			g_ptr_array_free(tags, false);
+
+			if (samplecat_model_update_sample(samplecat.model, samplecat.model->selection, COL_KEYWORDS, (void*)str)) {
+				statusbar_print(1, "keywords updated");
+			} else {
+				statusbar_print(1, "failed to update keywords");
+			}
+		}
+
+		void add_tag (GtkButton* button, DemoTaggedEntry* entry)
+		{
+			set_tags(entry);
+		}
+
+		GtkWidget* button = gtk_button_new_with_mnemonic ("Add _Tag");
+		g_signal_connect (button, "clicked", G_CALLBACK (add_tag), i->rows.a.tags.widget);
+		gtk_grid_attach(GTK_GRID(table), button, 1, 1, 1, 1);
+
+		void tag_removed (DemoTaggedEntry* entry, gpointer user_data)
+		{
+			set_tags(entry);
+		}
+
+		g_signal_connect (i->rows.a.tags.widget, "tag-removed", G_CALLBACK (tag_removed), i->rows.a.tags.widget);
+	}
 #endif
 	gtk_widget_set_halign (i->rows.a.tags.widget, GTK_ALIGN_START);
-	gtk_grid_attach(GTK_GRID(table), rows.tags.widget, 0, s, 2, 1);
+	gtk_grid_attach(GTK_GRID(table), i->rows.a.tags.widget, 0, s, 2, 1);
 	s++;
 
-	for(;s<N_ROWS;s++){
+	for (;s<N_ROWS;s++) {
 		GtkWidget* label = label_new(i->rows.row[s].name);
 		gtk_widget_set_halign (label, GTK_ALIGN_START);
 		gtk_grid_attach(GTK_GRID(table), label, 0, s+1, 1, 1);
@@ -240,10 +279,10 @@ inspector_init (Inspector* inspector)
 
 	g_signal_connect((gpointer)samplecat.model, "selection-changed", G_CALLBACK(inspector_update), inspector);
 
-	void sample_changed (SamplecatModel* m, Sample* sample, int what, void* data, gpointer _inspector)
+	void sample_changed (SamplecatModel* m, Sample* sample, int what, void* data, Inspector* inspector)
 	{
-		if (sample->id == ((Inspector*)_inspector)->priv->row_id)
-			inspector_update(m, sample, _inspector);
+		if (sample->id == (inspector)->priv->row_id)
+			inspector_update(m, sample, inspector);
 	}
 	g_signal_connect((gpointer)samplecat.model, "sample-changed", G_CALLBACK(sample_changed), inspector);
 
@@ -255,27 +294,6 @@ inspector_init (Inspector* inspector)
 
 	Idle* idle = idle_new(_inspector_on_layout_changed, NULL);
 	g_signal_connect(app, "layout-changed", (GCallback)idle->run, idle);
-
-	void on_tags_changed (GtkWidget* label, const char* new_text, gpointer user_data)
-	{
-		Inspector* inspector = user_data;
-		InspectorPrivate* i = inspector->priv;
-
-		g_return_if_fail(i->row_id);
-		g_return_if_fail(i->row_ref);
-
-		dbg(1, "id=%i", i->row_id);
-
-		Sample* sample = samplecat_list_store_get_sample_by_row_ref(i->row_ref);
-		g_return_if_fail(sample);
-		if (samplecat_model_update_sample (samplecat.model, sample, COL_KEYWORDS, (void*)new_text)) {
-			statusbar_print(1, "keywords updated");
-		} else {
-			statusbar_print(1, "failed to update keywords");
-		}
-		sample_unref(sample);
-	}
-	g_signal_connect(G_OBJECT(rows.tags.widget), "edited", G_CALLBACK(on_tags_changed), inspector);
 }
 
 
@@ -486,13 +504,11 @@ inspector_set_labels (Inspector* inspector, Sample* sample)
 	char bitrate[32]; bitrate_format(bitrate, sample->bit_rate);
 	char bitdepth[32]; bitdepth_format(bitdepth, sample->bit_depth);
 
-	char* path = to_utf8(sample->full_path);
+	g_autofree char* path = to_utf8(sample->full_path);
 
 	gtk_label_set_text(GTK_LABEL(i->name),       sample->name);
-	gtk_label_set_text(GTK_LABEL(rows->filename.widget),   path);
-#ifdef GTK4_TODO
-	gtk_label_set_text(GTK_LABEL(tags),          (sample->keywords && strlen(sample->keywords)) ? sample->keywords : "<no tags>");
-#endif
+	gtk_label_set_text(GTK_LABEL(rows->filename.widget), path);
+	tagged_entry_set_tags_from_string((DemoTaggedEntry*)i->rows.a.tags.widget, sample->keywords);
 	gtk_label_set_text(GTK_LABEL(ROW(length)),    length);
 	gtk_label_set_text(GTK_LABEL(ROW(frames)),    frames);
 	gtk_label_set_text(GTK_LABEL(ROW(samplerate)),fs_str);
@@ -505,10 +521,10 @@ inspector_set_labels (Inspector* inspector, Sample* sample)
 
 	char* ebu = sample->ebur ? sample->ebur : "";
 	if (ebu && strlen(ebu) > 1) {
-		if(!i->ebur.first_child) inspector_add_ebu_cells(inspector);
+		if (!i->ebur.first_child) inspector_add_ebu_cells(inspector);
 	} else {
 		inspector_remove_cells(inspector, &i->ebur);
-		if(!i->wide) i->meta.start = 12;
+		if (!i->wide) i->meta.start = 12;
 	}
 
 #ifdef GTK4_TODO
@@ -573,27 +589,30 @@ inspector_set_labels (Inspector* inspector, Sample* sample)
 		gtk_widget_set_visible(i->image, false);
 	}
 
+#endif
 	show_fields(inspector);
 	g_free(level);
 	g_free(ch_str);
-	g_free(path);
 
 	//store a reference to the row id in the inspector widget:
 	// needed to later updated "notes" for that sample
 	// as well to check for updates
 	// *** row_ref is deprecated. use database id instead.
 	i->row_id = sample->id;
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 	_gtk_tree_row_reference_free0(i->row_ref);
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 	if (sample->row_ref) {
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 		i->row_ref = gtk_tree_row_reference_copy(sample->row_ref);
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 	} else {
 		dbg(2, "setting row_ref failed");
 		i->row_ref = NULL;
 		/* can not edit tags or notes w/o reference */
-		gtk_widget_hide(GTK_WIDGET(i->text));
-		gtk_widget_hide(GTK_WIDGET(i->tags));
+		gtk_widget_set_visible(GTK_WIDGET(i->text), false);
+		gtk_widget_set_visible(GTK_WIDGET(i->rows.a.tags.widget), false);
 	}
-#endif
 }
 
 
@@ -619,8 +638,8 @@ inspector_update (SamplecatModel* m, Sample* sample, gpointer user_data)
 #ifdef USE_TRACKER
 	if (BACKEND_IS_TRACKER) {
 		if (!sample->length) {
-			//this sample hasnt been previously selected, and non-db info isnt available.
-			//-get the info directly from the file, and set it into the main treeview.
+			// this sample hasnt been previously selected, and non-db info isnt available.
+			// -get the info directly from the file, and set it into the main treeview.
 			MIME_type* mime_type = type_from_path(sample->name);
 			char mime_string[64];
 			snprintf(mime_string, 64, "%s/%s", mime_type->media_type, mime_type->subtype);
@@ -652,14 +671,11 @@ inspector_update (SamplecatModel* m, Sample* sample, gpointer user_data)
 static void
 inspector_clear (Inspector* inspector)
 {
-#ifdef GTK4_TODO
 	hide_fields(inspector);
-#endif
 	gtk_image_clear(GTK_IMAGE(inspector->priv->image));
 }
 
 
-#ifdef GTK4_TODO
 static void
 hide_fields (Inspector* inspector)
 {
@@ -672,21 +688,19 @@ hide_fields (Inspector* inspector)
 	}
 #endif
 }
-#endif
 
 
-#ifdef GTK4_TODO
 static void
 show_fields (Inspector* inspector)
 {
 	InspectorPrivate* i = inspector->priv;
+	Rows* rows = &i->rows.a;
 
-	GtkWidget* fields[] = {i->filename, i->tags, i->length, SAMPLERATE, CHANNELS, ROW(mimetype), i->table, ROW(level), i->text, i->bitdepth, i->bitrate};
+	GtkWidget* fields[] = {rows->filename.widget, rows->tags.widget, rows->length.widget, rows->samplerate.widget, rows->channels.widget, ROW(mimetype), i->table, ROW(level), i->text, rows->bitdepth.widget, rows->bitrate.widget};
 	for (int f=0;f<G_N_ELEMENTS(fields);f++) {
 		gtk_widget_set_visible(GTK_WIDGET(fields[f]), true);
 	}
 }
-#endif
 
 
 #ifdef GTK4_TODO
@@ -705,7 +719,7 @@ on_notes_focus_out (GtkWidget* widget, GdkEvent* event, gpointer userdata)
 	gchar* notes = gtk_text_buffer_get_text(textbuf, &start_iter, &end_iter, true);
 
 	Sample* sample = samplecat.model->selection;
-	if(sample && (sample->id == i->row_id) && (!sample->notes || strcmp(notes, sample->notes))){
+	if (sample && (sample->id == i->row_id) && (!sample->notes || strcmp(notes, sample->notes))) {
 		statusbar_print(1,
 			samplecat_model_update_sample (samplecat.model, sample, COL_X_NOTES, notes)
 				? "notes updated"

@@ -4,7 +4,6 @@ VALA_DIR =
 SUBDIRS = widgets panels $(VALA_DIR)
 
 AM_CFLAGS = \
-	-O2 \
 	-DPACKAGE_DATA_DIR=\""$(datadir)"\" \
 	-DPACKAGE_LOCALE_DIR=\""$(prefix)/$(DATADIRNAME)/locale"\" \
 	-DIMAGES_DIR=\"$(imagesdir)\" \
@@ -35,10 +34,6 @@ if ENABLE_AYYI
 AYYI_SRC = ayyi.c ayyi.h ayyi_model.c ayyi_model.h
 endif
 
-if ENABLE_FFTW3
-FFT_SRC = spectrogram_widget.c spectrogram_widget.h
-endif
-
 if ENABLE_OPENGL
 if ENABLE_FFTW3
 OPENGL_FFTW_SRC = gl_spectrogram_view.c gl_spectrogram_view.h
@@ -67,9 +62,7 @@ samplecat_SOURCES = \
 	application-nogui.c application-nogui.h \
 	window.c window.h \
 	progress_dialog.c progress_dialog.h \
-	dh_tree.c dh_tree.h \
 	support.c support.h \
-	$(FFT_SRC) \
 	$(OPENGL_SRC) \
 	$(AYYI_SRC)
 

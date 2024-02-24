@@ -28,7 +28,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include "debug.h"
-												#include "gtk/utils.h"
 
 #include "gdl-dock-object.h"
 #include "gdl-dock-master.h"
@@ -773,7 +772,6 @@ gdl_dock_object_foreach_child (GdlDockObject *object, GdlDockObjectFn fn, gpoint
 		GDL_DOCK_OBJECT_GET_CLASS (object)->foreach_child (object, fn, data);
 		return;
 	}
-
 	GtkWidget* child = gtk_widget_get_first_child (GTK_WIDGET (object));
 	for (; child; child = gtk_widget_get_next_sibling (child)) {
 		if (GDL_IS_DOCK_OBJECT (child)) {

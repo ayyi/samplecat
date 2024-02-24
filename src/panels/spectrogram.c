@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
- | copyright (C) 2007-2023 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2007-2024 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -66,6 +66,10 @@ static GType spectrogram_area_get_type_once (void);
 
 static void spectrogram_area_set_file (SpectrogramArea*, gchar*);
 
+struct {
+	GtkWidget* widget;
+} instance = {0,};
+
 
 static inline gpointer
 spectrogram_area_get_instance_private (SpectrogramArea* self)
@@ -78,6 +82,7 @@ SpectrogramArea*
 spectrogram_area_construct (GType object_type)
 {
 	SpectrogramArea* self = (SpectrogramArea*) g_object_new (object_type, NULL);
+	instance.widget = (GtkWidget*)self;
 	AGlGtkArea* area = (AGlGtkArea*)self;
 
 	AGlActor* node = agl_actor__add_child ((AGlActor*)area->scene, texture_node(NULL));
@@ -223,3 +228,21 @@ spectrogram_area_set_file (SpectrogramArea* self, gchar* filename)
 	get_spectrogram (filename, __spectrogram_ready, self);
 }
 
+
+void
+spectrogram_on_show_hide (bool enable)
+{
+	if (enable && !instance.widget) {
+		Sample* selection = samplecat.model->selection;
+		if (selection) {
+			dbg(1, "selection=%s", selection->full_path);
+#ifndef USE_OPENGL
+			spectrogram_widget_set_file((SpectrogramWidget*)window.spectrogram, selection->full_path);
+#endif
+		}
+	}
+
+	if (instance.widget) {
+		gtk_widget_set_visible(instance.widget, enable);
+	}
+}

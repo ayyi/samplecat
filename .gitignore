@@ -31,8 +31,8 @@ cscope.*
 ltmain.sh
 libtool
 .libs
-layouts/layout_ui.c
-layouts/layouts.c
+layouts2/layout_ui.c
+layouts2/layouts.c
 lib/yaml/test
 src/vala/*.[ch]
 src/resources.c
@@ -43,6 +43,8 @@ test/ubuntu-20/Dockerfile
 !test/ubuntu-20/Dockerfile.in
 test/ubuntu-22/Dockerfile
 !test/ubuntu-22/Dockerfile.in
+test/ubuntu-23/Dockerfile
+!test/ubuntu-23/Dockerfile.in
 test/arch/Dockerfile
 test/unit/unit_test
 test/unit/list.c

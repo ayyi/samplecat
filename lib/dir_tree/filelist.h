@@ -37,7 +37,7 @@ gint filter_name_exists(const gchar *name);
 void filter_write_list(FILE *f);
 void filter_parse(const gchar *text);
 
-gint ishidden(const gchar *name);
+gint ishidden(const gchar *name) __attribute__ ((no_instrument_function));
 
 
 GList *path_list_filter(GList *list, gint is_dir_list);

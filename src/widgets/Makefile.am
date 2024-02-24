@@ -9,6 +9,17 @@ AM_CFLAGS = \
 
 noinst_LTLIBRARIES = libwidgets.la
 
+if ENABLE_FFTW3
+if ENABLE_OPENGL
+else
+FFT_SRC = spectrogram_widget.c spectrogram_widget.h
+endif
+endif
+
 libwidgets_la_SOURCES = \
-	colour_box.c colour_box.h
+	dh_tree.c dh_tree.h \
+	suggestion_entry.c suggestion_entry.h \
+	colour-box.c colour-box.h \
+	tagged-entry.c tagged-entry.h \
+	$(FFT_SRC)
 

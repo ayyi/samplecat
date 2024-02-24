@@ -718,65 +718,6 @@ void layout_recent_add_path(const gchar *path)
 
 #define CB G_CALLBACK
 
-static GtkActionEntry menu_entries[] = {
-  { "FileMenu",		NULL,		N_("_File") },
-  { "EditMenu",		NULL,		N_("_Edit") },
-  { "AdjustMenu",	NULL,		N_("_Adjust") },
-  { "ViewMenu",		NULL,		N_("_View") },
-  { "HelpMenu",		NULL,		N_("_Help") },
-
-  { "NewWindow",	GTK_STOCK_NEW,	N_("New _window"),	NULL,		NULL,	CB(layout_menu_new_window_cb) },
-  { "NewCollection",	GTK_STOCK_INDEX,N_("_New collection"),	"C",		NULL,	CB(layout_menu_new_cb) },
-  { "OpenCollection",	GTK_STOCK_OPEN,	N_("_Open collection..."),"O",		NULL,	CB(layout_menu_open_cb) },
-  { "OpenRecent",	NULL,		N_("Open _recent") },
-  { "Search",		GTK_STOCK_FIND,	N_("_Search..."),	"F3",		NULL,	CB(layout_menu_search_cb) },
-  { "FindDupes",	GTK_STOCK_FIND,	N_("_Find duplicates..."),"D",		NULL,	CB(layout_menu_dupes_cb) },
-  { "Print",		GTK_STOCK_PRINT,N_("_Print..."),	"<shift>P",	NULL,	CB(layout_menu_print_cb) },
-  { "NewFolder",	NULL,		N_("N_ew folder..."),	"<control>F",	NULL,	CB(layout_menu_dir_cb) },
-  { "Copy",		NULL,		N_("_Copy..."),		"<control>C",	NULL,	CB(layout_menu_copy_cb) },
-  { "Move",		NULL,		N_("_Move..."),		"<control>M",	NULL,	CB(layout_menu_move_cb) },
-  { "Rename",		NULL,		N_("_Rename..."),	"<control>R",	NULL,	CB(layout_menu_rename_cb) },
-  { "Delete",	GTK_STOCK_DELETE,	N_("_Delete..."),	"<control>D",	NULL,	CB(layout_menu_delete_cb) },
-  { "CloseWindow",	GTK_STOCK_CLOSE,N_("C_lose window"),	"<control>W",	NULL,	CB(layout_menu_close_cb) },
-  { "Quit",		GTK_STOCK_QUIT, N_("_Quit"),		"<control>Q",	NULL,	CB(layout_menu_exit_cb) },
-
-  { "Editor0",		NULL,		"editor0",		"<control>1",	NULL,	CB(layout_menu_edit_cb) },
-  { "Editor1",		NULL,		"editor1",		"<control>2",	NULL,	CB(layout_menu_edit_cb) },
-  { "Editor2",		NULL,		"editor2",		"<control>3",	NULL,	CB(layout_menu_edit_cb) },
-  { "Editor3",		NULL,		"editor3",		"<control>4",	NULL,	CB(layout_menu_edit_cb) },
-  { "Editor4",		NULL,		"editor4",		"<control>5",	NULL,	CB(layout_menu_edit_cb) },
-  { "Editor5",		NULL,		"editor5",		"<control>6",	NULL,	CB(layout_menu_edit_cb) },
-  { "Editor6",		NULL,		"editor6",		"<control>7",	NULL,	CB(layout_menu_edit_cb) },
-  { "Editor7",		NULL,		"editor7",		"<control>8",	NULL,	CB(layout_menu_edit_cb) },
-  { "Editor8",		NULL,		"editor8",		"<control>9",	NULL,	CB(layout_menu_edit_cb) },
-  { "Editor9",		NULL,		"editor9",		"<control>0",	NULL,	CB(layout_menu_edit_cb) },
-  { "RotateCW",		NULL,	N_("_Rotate clockwise"),	"bracketright",	NULL,	CB(layout_menu_alter_90_cb) },
-  { "RotateCCW",	NULL,	N_("Rotate _counterclockwise"),	"bracketleft",	NULL,	CB(layout_menu_alter_90cc_cb) },
-  { "Rotate180",	NULL,		N_("Rotate 1_80"),	"<shift>R",	NULL,	CB(layout_menu_alter_180_cb) },
-  { "Mirror",		NULL,		N_("_Mirror"),		"<shift>M",	NULL,	CB(layout_menu_alter_mirror_cb) },
-  { "Flip",		NULL,		N_("_Flip"),		"<shift>F",	NULL,	CB(layout_menu_alter_flip_cb) },
-  { "Properties",GTK_STOCK_PROPERTIES,	N_("_Properties"),	"<control>P",	NULL,	CB(layout_menu_info_cb) },
-  { "SelectAll",	NULL,		N_("Select _all"),	"<control>A",	NULL,	CB(layout_menu_select_all_cb) },
-  { "SelectNone",	NULL,		N_("Select _none"), "<control><shift>A",NULL,	CB(layout_menu_unselect_all_cb) },
-  { "Preferences",GTK_STOCK_PREFERENCES,N_("P_references..."),	"<control>O",	NULL,	CB(layout_menu_config_cb) },
-  { "Maintenance",	NULL,		N_("_Thumbnail maintenance..."),NULL,	NULL,	CB(layout_menu_remove_thumb_cb) },
-  { "Wallpaper",	NULL,		N_("Set as _wallpaper"),NULL,		NULL,	CB(layout_menu_wallpaper_cb) },
-
-  { "ZoomIn",	GTK_STOCK_ZOOM_IN,	N_("Zoom _in"),		"equal",	NULL,	CB(layout_menu_zoom_in_cb) },
-  { "ZoomOut",	GTK_STOCK_ZOOM_OUT,	N_("Zoom _out"),	"minus",	NULL,	CB(layout_menu_zoom_out_cb) },
-  { "Zoom100",	GTK_STOCK_ZOOM_100,	N_("Zoom _1:1"),	"Z",		NULL,	CB(layout_menu_zoom_1_1_cb) },
-  { "ZoomFit",	GTK_STOCK_ZOOM_FIT,	N_("_Zoom to fit"),	"X",		NULL,	CB(layout_menu_zoom_fit_cb) },
-  { "FullScreen",	NULL,		N_("F_ull screen"),	"F",		NULL,	CB(layout_menu_fullscreen_cb) },
-  { "HideTools",	NULL,		N_("_Hide file list"),	"<control>H",	NULL,	CB(layout_menu_hide_cb) },
-  { "SlideShow",	NULL,		N_("Toggle _slideshow"),"S",		NULL,	CB(layout_menu_slideshow_cb) },
-  { "Refresh",	GTK_STOCK_REFRESH,	N_("_Refresh"),		"R",		NULL,	CB(layout_menu_refresh_cb) },
-
-  { "HelpContents",	GTK_STOCK_HELP,	N_("_Contents"),	"F1",		NULL,	CB(layout_menu_help_cb) },
-  { "HelpShortcuts",	NULL,		N_("_Keyboard shortcuts"),NULL,		NULL,	CB(layout_menu_help_keys_cb) },
-  { "HelpNotes",	NULL,		N_("_Release notes"),	NULL,		NULL,	CB(layout_menu_notes_cb) },
-  { "About",		NULL,		N_("_About"),		NULL,		NULL,	CB(layout_menu_about_cb) }
-};
-
 static GtkToggleActionEntry menu_toggle_entries[] = {
   { "Thumbnails",	NULL,		N_("_Thumbnails"),	"T",		NULL,	CB(layout_menu_thumb_cb) },
   { "FolderTree",	NULL,		N_("Tr_ee"),		"<control>T",	NULL,	CB(layout_menu_tree_cb) },

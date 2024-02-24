@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
- | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
- | copyright (C) 2007-2023 Tim Orford <tim@orford.org>                  |
+ | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
+ | copyright (C) 2007-2024 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -25,7 +25,6 @@
 #include "file_manager/pixmaps.h"
 #include "gtk/cellrenderer_hypertext.h"
 
-#include "typedefs.h"
 #include "types.h"
 #include "support.h"
 #include "model.h"
@@ -77,7 +76,9 @@ listview__new ()
 
 	lv->scroll = scrolled_window_new();
 
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 	GtkWidget* view = lv->widget = gtk_tree_view_new_with_model(GTK_TREE_MODEL(samplecat.store));
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 	gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(lv->scroll), view);
 	g_signal_connect(view, "realize", G_CALLBACK(listview__on_realise), NULL);
 #ifdef GTK4_TODO
@@ -276,7 +277,6 @@ listview__new ()
 			} else if (G_VALUE_HOLDS (value, G_TYPE_FILE)) {
 				GFile* file = g_value_get_object (value);
 				g_autofree char* path = g_file_get_path(file);
-
 				ScanResults result = {0,};
 				if (is_dir(path))
 					samplecat_application_add_dir(path, &result);
@@ -424,9 +424,9 @@ listview__on_row_clicked (GtkGestureClick* gesture, int n_press, double x, doubl
 
 	  // popup menu
 	  case 3:
-		dbg (2, "right button press!");
+		dbg (2, "right button press");
 
-		//if one or no rows selected, select one:
+		// if one or no rows selected, select one
 		GtkTreeSelection* selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(instance->widget));
 		if (gtk_tree_selection_count_selected_rows(selection) <= 1) {
 			GtkTreePath* path;
@@ -438,12 +438,6 @@ listview__on_row_clicked (GtkGestureClick* gesture, int n_press, double x, doubl
 				listview__on_cursor_change(treeview, NULL);
 			}
 		}
-
-#ifdef GTK4_TODO
-		if (app->context_menu) {
-			gtk_menu_popup(GTK_MENU(app->context_menu), NULL, NULL, NULL, NULL, event->button, event->time);
-		}
-#endif
 		break;
 
 	  default:

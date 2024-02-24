@@ -526,7 +526,9 @@ static void
 do_layout (GdlSwitcher *switcher)
 {
 	GtkAllocation allocation;
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 	gtk_widget_get_allocation (GTK_WIDGET(switcher), &allocation);
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 
    	for (GSList* p = switcher->priv->buttons; p; p = p->next) {
         Button *button = p->data;

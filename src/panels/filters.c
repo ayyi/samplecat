@@ -56,13 +56,13 @@ filters_new ()
 				char* text = label_text(filter);
 				gtk_button_set_label((GtkButton*)button, text);
 				g_free(text);
-				show_widget_if(button, filter->value.c && strlen(filter->value.c));
+				gtk_widget_set_visible(button, filter->value.c && strlen(filter->value.c));
 			}
 		}
 
 		void on_filter_changed (Observable* filter, AGlVal value, gpointer user_data)
 		{
-			dbg(1, "value=%s", value);
+			dbg(1, "value=%s", value.c);
 			set_label(filter, g_hash_table_lookup(buttons, filter));
 		}
 

@@ -74,7 +74,7 @@ gdl_dock_layout_foreach_object_print (GdlDockObject *object, gpointer user_data)
 		}
 	}
 
-	printf(f, "", rec_depth, name ? name : "", class_name, gtk_widget_get_allocated_width(GTK_WIDGET(object)), gtk_widget_get_allocated_height(GTK_WIDGET(object)), attributes);
+	printf(f, "", rec_depth, name ? name : "", class_name, gtk_widget_get_width(GTK_WIDGET(object)), gtk_widget_get_height(GTK_WIDGET(object)), attributes);
 
 	g_return_if_fail (object != NULL && GDL_IS_DOCK_OBJECT (object));
 

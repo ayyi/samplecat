@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
- | copyright (C) 2007-2023 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2007-2024 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -14,8 +14,7 @@
 #include <gtk/gtk.h>
 #include "debug/debug.h"
 
-#define UNDERLINE printf("-----------------------------------------------------\n")
-#define MAX_DEPTH 10
+#define MAX_DEPTH 14
 
 #ifdef DEBUG
 	static void print_children (GtkWidget* widget, int* depth);
@@ -35,11 +34,13 @@
 			g_object_get(widget, "long-name", &long_name, NULL);
 		}
 		char size[32];
-		sprintf(size, "%i x %i", gtk_widget_get_allocated_width(widget), gtk_widget_get_allocated_height(widget));
+		sprintf(size, "%i x %i", gtk_widget_get_width(widget), gtk_widget_get_height(widget));
 		char visible[16];
 		g_strlcpy(visible, gtk_widget_get_visible(widget) ? "" : " NOT VISIBLE", 15);
-		if (!strcmp(G_OBJECT_TYPE_NAME(widget), "GtkPanedHandle"))
+		if (!strcmp(G_OBJECT_TYPE_NAME(widget), "GdlGtkPanedHandle"))
 			printf("%s", ayyi_grey);
+		if (!strcmp(G_OBJECT_TYPE_NAME(widget), "GtkBox"))
+			printf("%s", ayyi_blue);
 		printf(indent, " ", G_OBJECT_CLASS_NAME(G_OBJECT_GET_CLASS(widget)), gtk_widget_get_name(widget), widget, long_name ? long_name : "", size, visible, text_content);
 		printf("%s", ayyi_white);
 		if (long_name) g_free(long_name);
@@ -91,12 +92,12 @@ print_widget_tree (GtkWidget* widget)
 {
 	g_return_if_fail(widget);
 
-	UNDERLINE;
+	underline();
 
 	int depth = 0;
 	print_item(widget, &depth);
 
-	UNDERLINE;
+	underline();
 }
 #endif
 

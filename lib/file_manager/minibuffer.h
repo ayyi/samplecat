@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
- | This file is part of the Ayyi project. http://ayyi.org               |
- | copyright (C) 2011-2023 Tim Orford <tim@orford.org>                  |
+ | This file is part of the Ayyi project. https://www.ayyi.org          |
+ | copyright (C) 2011-2024 Tim Orford <tim@orford.org>                  |
  | copyright (C) 2006, Thomas Leonard and others                        |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
@@ -13,7 +13,7 @@
 
 #pragma once
 
-#undef USE_MINIBUFFER
+#define USE_MINIBUFFER
 
 void minibuffer_init   (void);
 void create_minibuffer (AyyiFilemanager*);

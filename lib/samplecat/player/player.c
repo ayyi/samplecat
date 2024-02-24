@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
- | copyright (C) 2007-2023 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2007-2024 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -95,7 +95,7 @@ player_get_type ()
 	if (g_once_init_enter ((gsize*)&player_type_id__volatile)) {
 		static const GTypeInfo g_define_type_info = { sizeof (PlayerClass), (GBaseInitFunc) NULL, (GBaseFinalizeFunc) NULL, (GClassInitFunc) player_class_init, (GClassFinalizeFunc) NULL, NULL, sizeof (Player), 0, (GInstanceInitFunc) player_instance_init, NULL };
 		GType player_type_id;
-		player_type_id = g_type_register_static (G_TYPE_OBJECT, "Player", &g_define_type_info, 0);
+		player_type_id = g_type_register_static (G_TYPE_OBJECT, "PlayerController", &g_define_type_info, 0);
 		g_once_init_leave (&player_type_id__volatile, player_type_id);
 	}
 	return player_type_id__volatile;

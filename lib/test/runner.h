@@ -55,7 +55,7 @@ extern Test_t TEST;
 void       test_errprintf      (char* format, ...);
 void       test_log_start      (const char* func);
 void       wait_for            (ReadyTest, WaitCallback, gpointer);
-#ifdef __GTK_H__
+#ifdef GTK_TYPE_WIDGET
 GtkWidget* find_widget_by_name (GtkWidget*, const char*);
 #endif
 

@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
- | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
- | copyright (C) 2007-2023 Tim Orford <tim@orford.org>                  |
+ | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
+ | copyright (C) 2007-2024 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -13,13 +13,29 @@
 #include "config.h"
 #include <math.h>
 #include <gtk/gtk.h>
+#include "gtk/menu.h"
 #include "debug/debug.h"
 #include "application.h"
+#include "support.h"
 #include "file_manager/file_manager.h"
 #include "file_manager/menu.h"
 #include "file_manager/pixmaps.h"
 
 static void fileview_on_row_selected (GtkTreeView*, gpointer);
+static void add_to_db_on_activate    (GSimpleAction*, GVariant*, gpointer);
+static void play_on_activate         (GSimpleAction*, GVariant*, gpointer);
+#ifdef GTK4_TODO
+static void menu__add_dir_to_db      (GSimpleAction*, GVariant*, gpointer);
+
+Accel fm_tree_keys[] = {
+	{"Add to database", NULL, {{(char)'y',}, {0,}}, menu__add_dir_to_db,   NULL},
+};
+#endif
+
+Accel menu_keys[] = {
+	{"Add to database", NULL, {{(char)'a',}, {0,}}, add_to_db_on_activate, GINT_TO_POINTER(0)},
+	{"Play"           , NULL, {{(char)'p',}, {0,}}, play_on_activate,      NULL              },
+};
 
 
 GtkWidget*
@@ -48,7 +64,11 @@ fileview_new ()
 		g_signal_connect((gpointer)app, "icon-theme", G_CALLBACK(icon_theme_changed), dir_list);
 
 #ifdef GTK4_TODO
-		make_menu_actions(fm_tree_keys, G_N_ELEMENTS(fm_tree_keys), vdtree_add_menu_item);
+		// TODO menu is created dynanically on demand, so we can't yet access the menu or the model
+		GMenuModel* section = (GMenuModel*)g_menu_new ();
+		GMenuModel* model = gtk_popover_menu_get_menu_model (GTK_POPOVER_MENU(dir_list->popup));
+		g_menu_append_section (G_MENU(model), NULL, section);
+		make_menu_actions(GTK_WIDGET(dir_list), fm_tree_keys, G_N_ELEMENTS(fm_tree_keys), vdtree_add_menu_item, section);
 #endif
 	}
 
@@ -71,9 +91,10 @@ fileview_new ()
 		}
 		g_signal_connect((gpointer)app, "icon-theme", G_CALLBACK(icon_theme_changed), file_view);
 
-#ifdef GTK4_TODO
-		make_menu_actions(menu_keys, G_N_ELEMENTS(menu_keys), fm__add_menu_item);
-#endif
+		GMenuModel* section = (GMenuModel*)g_menu_new ();
+		g_menu_append_section (G_MENU(fm->menu.model), NULL, section);
+
+		make_menu_actions(file_view, menu_keys, G_N_ELEMENTS(menu_keys), fm__add_menu_item, section);
 
 		// set up fileview as dnd source
 #ifdef GTK4_TODO
@@ -132,3 +153,65 @@ fileview_on_row_selected (GtkTreeView* treeview, gpointer user_data)
 		}
 	}
 }
+
+
+static void
+add_to_db_on_activate (GSimpleAction* action, GVariant* parameter, gpointer app)
+{
+	PF;
+	AyyiFilemanager* fm = file_manager__get();
+
+	DirItem* item;
+	ViewIter iter;
+	view_get_iter(fm->view, &iter, 0);
+	while ((item = iter.next(&iter))) {
+		if (view_get_selected(fm->view, &iter)) {
+			gchar* filepath = g_build_filename(fm->real_path, item->leafname, NULL);
+#ifdef GTK4_TODO
+			if (do_progress(0, 0)) break;
+#endif
+			ScanResults results = {0,};
+			samplecat_application_add_file(filepath, &results);
+			if (results.n_added) statusbar_print(1, "file added");
+			g_free(filepath);
+		}
+	}
+#ifdef GTK4_TODO
+	hide_progress();
+#endif
+}
+
+
+static void
+play_on_activate (GSimpleAction* action, GVariant* parameter, gpointer app)
+{
+	PF;
+#ifdef GTK4_TODO
+	AyyiFilemanager* fm = file_manager__get();
+
+	GList* selected = fm__selected_items(fm);
+	GList* l = selected;
+	for (;l;l=l->next) {
+		char* item = l->data;
+		dbg(1, "%s", item);
+		application_play_path(item);
+		g_free(item);
+	}
+	g_list_free(selected);
+#endif
+}
+
+
+#ifdef GTK4_TODO
+static void
+menu__add_dir_to_db (GSimpleAction* action, GVariant* parameter, gpointer user_data)
+{
+	PF;
+	const char* path = vdtree_get_selected(((Application*)app)->dir_treeview2);
+	dbg(1, "path=%s", path);
+	if (path) {
+		ScanResults results = {0,};
+		samplecat_application_scan(path, &results);
+	}
+}
+#endif

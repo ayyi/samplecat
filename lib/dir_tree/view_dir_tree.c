@@ -11,6 +11,8 @@
  * This software comes with no warranty of any kind, use at your own risk!
  */
 #include "config.h"
+#undef GDK_VERSION_MIN_REQUIRED
+#define GDK_VERSION_MIN_REQUIRED GDK_VERSION_4_8
 #include <gtk/gtk.h>
 #include "debug/debug.h"
 #include "utils/ayyi_utils.h"
@@ -71,9 +73,7 @@ struct _NodeData
 static gint vdtree_populate_path_by_iter(ViewDirTree *vdt, GtkTreeIter *iter, gint force, const gchar *target_path);
 static FileData *vdtree_populate_path(ViewDirTree *vdt, const gchar *path, gint expand, gint force);
 
-#ifdef GTK4_TODO
 static GList* menu_items = NULL;
-#endif
 
 /*
  *----------------------------------------------------------------------------
@@ -524,8 +524,7 @@ vdtree_pop_menu (ViewDirTree *vdt, FileData *fd)
 	*/
 
 	GtkWidget* menu = popup_menu_short_lived();
-	g_signal_connect(G_OBJECT(menu), "destroy",
-			 G_CALLBACK(vdtree_popup_destroy_cb), vdt);
+	g_signal_connect(G_OBJECT(menu), "destroy", G_CALLBACK(vdtree_popup_destroy_cb), vdt);
 
 /*
 	menu_item_add_stock_sensitive(menu, "_Up to parent", GTK_STOCK_GO_UP,
@@ -630,7 +629,8 @@ static void vdtree_dnd_get(GtkWidget *widget, GdkDragContext *context,
 		}
 }
 
-static void vdtree_dnd_begin(GtkWidget *widget, GdkDragContext *context, gpointer data)
+static void
+vdtree_dnd_begin (GtkWidget *widget, GdkDragContext *context, gpointer data)
 {
 	PF;
 	ViewDirTree *vdt = data;
@@ -662,8 +662,7 @@ static void vdtree_dnd_drop_receive(GtkWidget *widget,
 
 	vdt->click_fd = NULL;
 
-	if (gtk_tree_view_get_path_at_pos(GTK_TREE_VIEW(widget), x, y,
-					  &tpath, NULL, NULL, NULL))
+	if (gtk_tree_view_get_path_at_pos(GTK_TREE_VIEW(widget), x, y, &tpath, NULL, NULL, NULL))
 		{
 		GtkTreeModel *store;
 		NodeData *nd;
@@ -678,8 +677,8 @@ static void vdtree_dnd_drop_receive(GtkWidget *widget,
 
 	if (!fd) return;
 
-        if (info == TARGET_URI_LIST)
-                {
+	if (info == TARGET_URI_LIST)
+		{
 		GList *list;
 		gint active;
 
@@ -1953,12 +1952,10 @@ vdtree_on_icon_theme_changed(ViewDirTree *vdt)
 }
 
 
-#ifdef GTK4_TODO
 void
-vdtree_add_menu_item(GtkAction* action)
+vdtree_add_menu_item (GMenuModel* section, GAction* action)
 {
 	g_return_if_fail(action);
 
 	menu_items = g_list_append(menu_items, action);
 }
-#endif

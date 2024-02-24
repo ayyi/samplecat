@@ -652,13 +652,12 @@ gdl_dock_layout_load_layout (GdlDockLayout *layout, const gchar *name)
     g_return_val_if_fail (layout != NULL, FALSE);
 
 #ifdef GDL_DOCK_YAML
-	for(int i=0;i<N_LAYOUT_DIRS && layout->dirs[i];i++){
-		char* path = g_strdup_printf("%s/%s.yaml", layout->dirs[i], name);
-		if(g_file_test(path, G_FILE_TEST_EXISTS)){
-			if(gdl_dock_layout_load_yaml(layout->priv->master, path))
+	for (int i=0;i<N_LAYOUT_DIRS && layout->dirs[i];i++) {
+		g_autofree char* path = g_strdup_printf("%s/%s.yaml", layout->dirs[i], name);
+		if (g_file_test(path, G_FILE_TEST_EXISTS)) {
+			if (gdl_dock_layout_load_yaml(layout->priv->master, path))
 				return true;
 		}
-		g_free(path);
 	}
 #endif
 
@@ -1011,6 +1010,9 @@ gdl_dock_layout_setup_object2 (GdlDockMaster* master, Stack* stack, gint *n_afte
 			RegistryItem* item = gdl_dock_object_get_name(object) ? g_hash_table_lookup(registry, gdl_dock_object_get_name(object)) : NULL;
 			if (item)
 				child = item->info.gtkfn();
+			else
+				if (G_TYPE_FROM_CLASS(constructor->object_class) == GDL_TYPE_DOCK_ITEM)
+					pwarn("dont have either gtype or registry entry");
 		}
 
 		if (child)
@@ -1146,7 +1148,7 @@ dock_handler (yaml_parser_t* parser, const yaml_event_t* event, const char* name
 			else if (gdl_dock_object_is_compound (parent)) {
 				gdl_dock_object_add_child (parent, GTK_WIDGET (object));
 				if (gtk_widget_get_visible (GTK_WIDGET (parent)))
-					gtk_widget_show (GTK_WIDGET (object));
+					gtk_widget_set_visible (GTK_WIDGET (object), true);
 			}
 
 		} else {
@@ -1197,9 +1199,36 @@ load_dock (yaml_parser_t* parser, const yaml_event_t* event, const char*, gpoint
 }
 
 
+#ifdef DEBUG
+static bool
+validate_dock (GdlDockMaster* master)
+{
+	static int error; error = 0;
+
+	void gdl_dock_layout_foreach_validate (GdlDockObject *object, gpointer context)
+	{
+		if (GDL_DOCK_OBJECT_GET_CLASS (object)->validate)
+			error |= GDL_DOCK_OBJECT_GET_CLASS (object)->validate(object);
+
+		if (gdl_dock_object_is_compound (object)) {
+			gdl_dock_object_foreach_child (object, gdl_dock_layout_foreach_validate, context);
+		}
+	}
+
+	gdl_dock_master_foreach_toplevel (master, TRUE, (GFunc) gdl_dock_layout_foreach_validate, NULL);
+
+	return !error;
+}
+#endif
+
+
 static bool
 gdl_dock_layout_load_yaml (GdlDockMaster *master, const char* filename)
 {
+#ifdef DEBUG
+	if (gdl_debug) printf("using layout: %s\n", filename);
+#endif
+
 	bool fn (FILE* fp, gpointer _master)
 	{
 		Stack stack = {.master = _master};
@@ -1218,6 +1247,10 @@ gdl_dock_layout_load_yaml (GdlDockMaster *master, const char* filename)
 		pwarn("load failed: %s", filename);
 #endif
 	}
+
+#ifdef DEBUG
+	validate_dock(master);
+#endif
 
 	return ok;
 }

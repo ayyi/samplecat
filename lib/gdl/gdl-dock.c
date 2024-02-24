@@ -756,47 +756,47 @@ gdl_dock_reduce (GdlDockObject *object)
 static gboolean
 gdl_dock_dock_request (GdlDockObject *object, gint x, gint y, GdlDockRequest *request)
 {
-    gint                rel_x, rel_y;
-    GtkAllocation       alloc;
-    gboolean            may_dock = FALSE;
-    GdlDockRequest      my_request;
+	gboolean            may_dock = FALSE;
+	GdlDockRequest      my_request;
 
-    g_return_val_if_fail (GDL_IS_DOCK (object), FALSE);
+	g_return_val_if_fail (GDL_IS_DOCK (object), FALSE);
 
-    /* we get (x,y) in our allocation coordinates system */
+	/* we get (x,y) in our allocation coordinates system */
 
-    GdlDock* dock = GDL_DOCK (object);
+	GdlDock* dock = GDL_DOCK (object);
 
     /* Get dock size. */
-    gtk_widget_get_allocation (GTK_WIDGET (dock), &alloc);
+	graphene_rect_t alloc;
+#pragma GCC diagnostic ignored "-Wunused-result"
+	gtk_widget_compute_bounds(GTK_WIDGET(dock), GTK_WIDGET(dock), &alloc);
+#pragma GCC diagnostic warning "-Wunused-result"
 #ifdef GTK4_TODO
-    guint bw = gtk_container_get_border_width (GTK_CONTAINER (dock));
+	guint bw = gtk_container_get_border_width (GTK_CONTAINER (dock));
 #else
 	guint bw = 0;
 #endif
 
-    /* Get coordinates relative to our allocation area. */
-    rel_x = x - alloc.x;
-    rel_y = y - alloc.y;
+	/* Get coordinates relative to our allocation area. */
+	gint rel_x = x - alloc.origin.x;
+	gint rel_y = y - alloc.origin.y;
 
-    if (request)
-        my_request = *request;
+	if (request)
+		my_request = *request;
 
-    /* Check if coordinates are in GdlDock widget. */
-    if (rel_x > 0 && rel_x < alloc.width &&
-        rel_y > 0 && rel_y < alloc.height) {
+	/* Check if coordinates are in GdlDock widget. */
+	if (rel_x > 0 && rel_x < alloc.size.width &&
+		rel_y > 0 && rel_y < alloc.size.height) {
 
-        /* It's inside our area. */
-        may_dock = TRUE;
+		/* It's inside our area. */
+		may_dock = TRUE;
 
-	/* Set docking indicator rectangle to the GdlDock size. */
-        my_request.rect.x = alloc.x + bw;
-        my_request.rect.y = alloc.y + bw;
-        my_request.rect.width = alloc.width - 2*bw;
-        my_request.rect.height = alloc.height - 2*bw;
+		/* Set docking indicator rectangle to the GdlDock size. */
+		my_request.rect.x = alloc.origin.x + bw;
+		my_request.rect.y = alloc.origin.y + bw;
+		my_request.rect.width = alloc.size.width - 2*bw;
+		my_request.rect.height = alloc.size.height - 2*bw;
 
-	/* If GdlDock has no root item yet, set the dock itself as
-	   possible target. */
+		/* If GdlDock has no root item yet, set the dock itself as possible target. */
         if (!dock->priv->root) {
             my_request.position = GDL_DOCK_TOP;
             my_request.target = object;
@@ -807,14 +807,14 @@ gdl_dock_dock_request (GdlDockObject *object, gint x, gint y, GdlDockRequest *re
             if (rel_x < bw) {
                 my_request.position = GDL_DOCK_LEFT;
                 my_request.rect.width *= SPLIT_RATIO;
-            } else if (rel_x > alloc.width - bw) {
+            } else if (rel_x > alloc.size.width - bw) {
                 my_request.position = GDL_DOCK_RIGHT;
                 my_request.rect.x += my_request.rect.width * (1 - SPLIT_RATIO);
                 my_request.rect.width *= SPLIT_RATIO;
             } else if (rel_y < bw) {
                 my_request.position = GDL_DOCK_TOP;
                 my_request.rect.height *= SPLIT_RATIO;
-            } else if (rel_y > alloc.height - bw) {
+            } else if (rel_y > alloc.size.height - bw) {
                 my_request.position = GDL_DOCK_BOTTOM;
                 my_request.rect.y += my_request.rect.height * (1 - SPLIT_RATIO);
                 my_request.rect.height *= SPLIT_RATIO;
@@ -1231,7 +1231,7 @@ gdl_dock_add_floating_item (GdlDock *dock, GdlDockItem *item, gint x, gint y, gi
                                        NULL));
 
     if (gtk_widget_get_visible (GTK_WIDGET (dock))) {
-        gtk_widget_show (GTK_WIDGET (new_dock));
+        gtk_widget_set_visible (GTK_WIDGET (new_dock), TRUE);
         if (gtk_widget_get_mapped (GTK_WIDGET (dock)))
             gtk_widget_map (GTK_WIDGET (new_dock));
 

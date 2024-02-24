@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
- | copyright (C) 2007-2023 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2007-2024 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -13,7 +13,6 @@
 #include "config.h"
 #include <string.h>
 #include <gtk/gtk.h>
-#include <glib-object.h>
 #include "debug/debug.h"
 #include "gtk/icon_theme.h"
 #include "file_manager/pixmaps.h"
@@ -58,12 +57,23 @@ static void     application_play_next      ();
 static void     application_play_selected  ();
 static void     pause_toggle_activate      (GSimpleAction* action, GVariant* parameter, gpointer app);
 
+#ifdef GTK4_TODO
+static void
+clear_filter (GSimpleAction* action, GVariant* parameter, gpointer app)
+{
+}
+#endif
+
+
 static GActionEntry app_entries[] =
 {
 	{ "play-all", application_play_all, },
 	{ "player-stop", player_stop, },
 	{ "player-play", application_play_selected, },
 	{ "player-pause", pause_toggle_activate},
+#ifdef GTK4_TODO
+	{ "clear-filter", clear_filter, }
+#endif
 };
 
 
@@ -121,9 +131,6 @@ application_activate (GApplication* base)
 
 	G_APPLICATION_CLASS (application_parent_class)->activate(base);
 
-	type_init();
-	icon_theme_init(NULL);
-
 	// Pick a valid icon theme
 	// Preferably from the config file, otherwise from the hardcoded list
 	const char* themes[] = {NULL, "oxygen", "breeze", NULL};
@@ -139,6 +146,11 @@ application_activate (GApplication* base)
 	window_new (GTK_APPLICATION (base), NULL);
 	statusbar_print(2, PACKAGE_NAME" "PACKAGE_VERSION);
 	application_search();
+
+#ifdef USE_PROFILING
+	extern void instrumentation_print ();
+	instrumentation_print();
+#endif
 }
 
 
@@ -242,9 +254,10 @@ application_instance_init (Application* self)
 #ifdef DEBUG
 	char** actions = gtk_application_list_action_descriptions (GTK_APPLICATION(self));
 	if (!actions) dbg(0, "no actions found with accelerators");
+	printf("actions:\n");
 	char* action;
 	for (int i=0;(action = actions[i]);i++) {
-		printf("  * %s", action);
+		printf("  * %s\n", action);
 	}
 	g_strfreev(actions);
 #endif
@@ -296,7 +309,7 @@ application_set_ready ()
 			gint width = 0;
 			GtkWidget* window = (GtkWidget*)gtk_application_get_active_window(GTK_APPLICATION(app));
 			if (window && gtk_widget_get_realized(window)) {
-				width = gtk_widget_get_allocated_width(window);
+				width = gtk_widget_get_width(window);
 			}
 			g_value_set_int(&option->val, width);
 		}
@@ -308,7 +321,7 @@ application_set_ready ()
 
 			gint height = 0;
 			if (window && gtk_widget_get_realized(window)) {
-				height = gtk_widget_get_allocated_height(window);
+				height = gtk_widget_get_height(window);
 			}
 			g_value_set_int(&option->val, height);
 		}
@@ -355,9 +368,9 @@ application_set_ready ()
 }
 
 
-static int  auditioner_nullC() {return 0;}
+static int  auditioner_nullC() { return 0; }
 static void auditioner_null() {;}
-static bool auditioner_nullS(Sample* s) {return true;}
+static bool auditioner_nullS(Sample* s) { return true; }
 
 static void
 _set_auditioner ()
@@ -371,7 +384,7 @@ _set_auditioner ()
 		&auditioner_nullS,
 		NULL,
 		&auditioner_null,
-		NULL, NULL, NULL
+		NULL,
 	};
 
 	bool connected = false;

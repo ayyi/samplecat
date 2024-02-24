@@ -57,7 +57,6 @@ main (int argc, char** argv)
 
 	bool want_gui = true;
 	for (int i=1;i<argc;i++) {
-		printf(" * %s\n", argv[i]);
 		if (!strcmp(argv[i], "--no-gui") || !strcmp(argv[i], "-G"))
 			want_gui = false;
 		if (!strcmp(argv[i], "--version") || !strcmp(argv[i], "-V")) {
@@ -163,6 +162,8 @@ main (int argc, char** argv)
 	gtk_osxapplication_ready(osxApp);
 #endif
 	int status = g_application_run (G_APPLICATION (app), argc, argv);
+
+	dbg(1, "application quit %i", status);
 
 #ifdef GTK4_TODO
 	play->auditioner->stop();

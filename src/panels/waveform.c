@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
- | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
- | copyright (C) 2007-2023 Tim Orford <tim@orford.org>                  |
+ | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
+ | copyright (C) 2007-2024 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -228,11 +228,14 @@ update_waveform_view (Sample* sample)
 }
 
 
+/*
+ *   Registered as the show/hide function for the panel
+ */
 void
 show_waveform (bool enable)
 {
 	if (window.waveform) {
-		show_widget_if(gtk_widget_get_parent(window.waveform), enable);
+		gtk_widget_set_visible(gtk_widget_get_parent(window.waveform), enable);
 		if (enable) {
 			gboolean show_wave ()
 			{

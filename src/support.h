@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
- | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
- | copyright (C) 2007-2023 Tim Orford <tim@orford.org>                  |
+ | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
+ | copyright (C) 2007-2024 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -31,19 +31,6 @@
 #define FILL_TRUE 1
 #define FILL_FALSE 0
 
-struct _accel {
-	char          name[16];
-#ifdef GTK4_TODO
-	GtkStockItem* stock_item;
-#endif
-	struct s_key {
-		int        code;
-		int        mask;
-	}             key[2];
-	gpointer      callback;
-	gpointer      user_data;
-};
-
 #ifdef GTK4_TODO
 void         colour_get_style_fg       (GdkColor*, GtkStateType);
 void         colour_get_style_bg       (GdkColor*, int state);
@@ -60,8 +47,6 @@ gboolean     is_dark                   (GdkColor*);
 gboolean     is_similar                (GdkColor* colour1, GdkColor* colour2, int min_diff);
 #endif
 gboolean     is_similar_rgb            (unsigned colour1, unsigned colour2);
-
-char*        str_array_join            (const char**, const char*);
 
 gint         treecell_get_row          (GtkWidget*, GdkRectangle*);
 void         statusbar_print           (int n, char* fmt, ...);
@@ -83,14 +68,9 @@ void         uri_list_free             (GList*);
 const gchar* vfs_get_method_string     (const gchar* substring, gchar** method_string);
 char*        vfs_unescape_string       (const gchar* escaped_string, const gchar* illegal_characters);
 
-void         show_widget_if            (GtkWidget*, gboolean);
 GtkWidget*   scrolled_window_new       ();
 
 gboolean     keyword_is_dupe           (const char* keyword, const char* existing);
-
-#if 0
-GPtrArray*   list_dir                  (const guchar* path);
-#endif
 
 typedef void (*ObjectCallback)         (GObject*, gpointer);
 

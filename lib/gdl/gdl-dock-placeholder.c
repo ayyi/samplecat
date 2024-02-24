@@ -386,7 +386,9 @@ find_biggest_dock_item (GdlDockObject *container, GtkWidget **biggest_child, gin
             child = g_list_next (child);
             continue;
         }
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         gtk_widget_get_allocation (child_widget, &allocation);
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
         gint area = allocation.width * allocation.height;
 
         if (area > *biggest_child_area) {

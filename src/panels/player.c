@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
- | copyright (C) 2007-2023 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2007-2024 Tim Orford <tim@orford.org>                  |
  | copyright (C) 2011 Robin Gareus <robin@gareus.org>                   |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
@@ -23,14 +23,14 @@
   #include "player/jack_player.h"
 #endif
 
-#include "player.h"
-
 typedef struct
 {
 	GtkWidget* widget;
 
-	GtkWidget* slider1; // player position
-	GtkWidget* slider2; // player pitch
+	struct {
+	   GtkWidget* position;
+	   GtkWidget* pitch;
+	}          sliders;
 	GtkWidget* slider3; // player speed
 	GtkWidget* cbfx;    // player enable FX
 	GtkWidget* cblnk;   // link speed/pitch
@@ -46,6 +46,8 @@ static Btns btns;
 static GtkWidget** btn = (GtkWidget**)& btns;
 
 static PlayCtrl* playercontrol;
+
+void player_control_on_show_hide (bool);
 
 static void  pc_add_widgets       ();
 
@@ -69,23 +71,23 @@ player_control_new ()
 
 	PlayCtrl* pc = playercontrol = g_new0(PlayCtrl, 1);
 
-	GtkWidget* top = pc->widget = gtk_scrolled_window_new();
-	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(top), GTK_POLICY_NEVER, GTK_POLICY_NEVER);
+	pc->widget = gtk_scrolled_window_new();
+	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(pc->widget), GTK_POLICY_NEVER, GTK_POLICY_NEVER);
 	gtk_widget_set_size_request(pc->widget, -1, 40);
 
 	void pc_on_audio_ready (gpointer user_data, gpointer _)
 	{
 		pc_add_widgets();
 
-		if (playercontrol->slider1)
-			gtk_widget_set_sensitive(playercontrol->slider1, false);
+		if (playercontrol->sliders.position)
+			gtk_widget_set_sensitive(playercontrol->sliders.position, false);
 
 		player_control_on_show_hide(true);
 	}
 
 	am_promise_add_callback(play->ready, pc_on_audio_ready, NULL);
 
-	return top;
+	return pc->widget;
 }
 
 
@@ -101,7 +103,7 @@ pc_add_widgets ()
 	#define MarginLeft (5)
 
 	if (play->auditioner->position && play->auditioner->seek) { // JACK seek-slider
-		GtkWidget* slider = pc->slider1 = gtk_scale_new_with_range(GTK_ORIENTATION_HORIZONTAL, 0.0, 1.0, 1.0 / (float)OVERVIEW_WIDTH);
+		GtkWidget* slider = pc->sliders.position = gtk_scale_new_with_range(GTK_ORIENTATION_HORIZONTAL, 0.0, 1.0, 1.0 / (float)OVERVIEW_WIDTH);
 		gtk_widget_set_size_request(slider, OVERVIEW_WIDTH + BORDERMARGIN + BORDERMARGIN, -1);
 		gtk_widget_set_tooltip_text(slider, "playhead position / seek");
 		gtk_scale_set_draw_value(GTK_SCALE(slider), false);
@@ -147,7 +149,7 @@ pc_add_widgets ()
 		gtk_box_pack_start(GTK_BOX(vbox), align10, EXPAND_FALSE, FILL_FALSE, 0);
 #endif
 
-		GtkWidget* slider2 = pc->slider2 = gtk_scale_new_with_range(GTK_ORIENTATION_HORIZONTAL, -1200, 1200, 1.0);
+		GtkWidget* slider2 = pc->sliders.pitch = gtk_scale_new_with_range(GTK_ORIENTATION_HORIZONTAL, -1200, 1200, 1.0);
 		gtk_widget_set_size_request(slider2, OVERVIEW_WIDTH + BORDERMARGIN + BORDERMARGIN, -1);
 		gtk_range_set_value(GTK_RANGE(slider2), play->effect_param[0]);
 		gtk_widget_set_tooltip_text(slider2, "Pitch in Cents (1/100 semitone)");
@@ -243,7 +245,7 @@ static void
 cb_pitch_toggled (GtkToggleButton *btn, gpointer user_data)
 {
 	play->enable_effect = gtk_toggle_button_get_active (btn);
-	gtk_widget_set_sensitive(playercontrol->slider2, play->enable_effect);
+	gtk_widget_set_sensitive(playercontrol->sliders.pitch, play->enable_effect);
 	gtk_widget_set_sensitive(playercontrol->cblnk, play->enable_effect);
 	if (!play->enable_effect) gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(playercontrol->cblnk), false);
 }
@@ -254,7 +256,7 @@ cb_link_toggled (GtkToggleButton *btn, gpointer user_data)
 {
 	play->link_speed_pitch = gtk_toggle_button_get_active (btn);
 	if (play->link_speed_pitch) {
-		speed_value_changed(GTK_RANGE(playercontrol->slider3), playercontrol->slider2);
+		speed_value_changed(GTK_RANGE(playercontrol->slider3), playercontrol->sliders.pitch);
 	}
 }
 #endif
@@ -276,37 +278,37 @@ update_slider (gpointer _)
 	PlayCtrl* pc = playercontrol;
 
 #ifdef GTK4_TODO
-	if (pc->slider1 && gtk_widget_has_grab(GTK_WIDGET(pc->slider1))) return; // user is manipulating the slider
+	if (pc->sliders.position && gtk_widget_has_grab(GTK_WIDGET(pc->sliders.position))) return; // user is manipulating the slider
 #endif
 	if (!play->auditioner->position) return;
 
 #if (defined ENABLE_LADSPA)
-	if ( gtk_widget_get_sensitive(pc->slider2)
+	if ( gtk_widget_get_sensitive(pc->sliders.pitch)
 			&& (!play->enable_effect || !play->effect_enabled)) {
 		/* Note: play->effect_enabled is set by player thread
 		 * and not yet up-to-date in player_control_on_show_hide() */
-		gtk_widget_set_sensitive(pc->slider2, false);
+		gtk_widget_set_sensitive(pc->sliders.pitch, false);
 	}
 #endif
 
 	double v = play->auditioner->position();
 	if (v >= 0) {
-		g_signal_handler_block(pc->slider1, slider1sigid);
-		gtk_range_set_value(GTK_RANGE(pc->slider1), v);
-		g_signal_handler_unblock(pc->slider1, slider1sigid);
+		g_signal_handler_block(pc->sliders.position, slider1sigid);
+		gtk_range_set_value(GTK_RANGE(pc->sliders.position), v);
+		g_signal_handler_unblock(pc->sliders.position, slider1sigid);
 	}
 	else if (v == -2.0)
 		return; // seek in progress
 	else { 
 		/* playback is done */
-		if (pc->slider1)
-			gtk_widget_set_sensitive(pc->slider1, false);
+		if (pc->sliders.position)
+			gtk_widget_set_sensitive(pc->sliders.position, false);
 #if (defined ENABLE_LADSPA)
 		gtk_widget_set_sensitive(pc->cbfx, true);
 #ifndef VARISPEED
 		gtk_widget_set_sensitive(pc->slider3, true);
 #endif
-		gtk_widget_set_sensitive(pc->slider2, true);
+		gtk_widget_set_sensitive(pc->sliders.pitch, true);
 #endif
 	}
 }
@@ -318,7 +320,7 @@ player_control_on_show_hide (bool enable)
 {
 	PlayCtrl* pc = playercontrol;
 
-	#define WIDGETS_CREATED (pc->slider1) // not created until audio is ready.
+	#define WIDGETS_CREATED (pc->sliders.position) // not created until audio is ready.
 
 	static guint play_start_handler;
 #ifdef HAVE_JACK
@@ -357,12 +359,12 @@ player_control_on_show_hide (bool enable)
 		gtk_widget_set_sensitive(playercontrol->slider3, false);
 #endif
 		if (!play->enable_effect) {
-			gtk_widget_set_sensitive(playercontrol->slider2, false);
+			gtk_widget_set_sensitive(playercontrol->sliders.pitch, false);
 		}
 #endif
 	} else {
 		/* hide player */
-		if (WIDGETS_CREATED) gtk_widget_set_sensitive(playercontrol->slider1, false);
+		if (WIDGETS_CREATED) gtk_widget_set_sensitive(playercontrol->sliders.position, false);
 	}
 
 #ifdef HAVE_JACK
@@ -370,20 +372,20 @@ player_control_on_show_hide (bool enable)
 	{
 		PlayCtrl* pc = playercontrol;
 
-		if (pc->slider1) {
+		if (pc->sliders.position) {
 			Sample* playing = play->sample;
 			if (playing->sample_rate) {
-				GtkAdjustment* a = gtk_range_get_adjustment ((GtkRange*)pc->slider1);
+				GtkAdjustment* a = gtk_range_get_adjustment ((GtkRange*)pc->sliders.position);
 				gtk_adjustment_set_upper(a, (playing->frames * 1000) / playing->sample_rate);
 			}
-			gtk_widget_set_sensitive(pc->slider1, true);
+			gtk_widget_set_sensitive(pc->sliders.position, true);
 		}
 	}
 
 	void pc_on_stop (GObject* _player, gpointer _pc)
 	{
-		if (playercontrol->slider1)
-			gtk_widget_set_sensitive(playercontrol->slider1, false);
+		if (playercontrol->sliders.position)
+			gtk_widget_set_sensitive(playercontrol->sliders.position, false);
 	}
 
 	if (player_is_stopped()) pc_on_stop(NULL, NULL);
@@ -407,4 +409,3 @@ player_control_on_show_hide (bool enable)
 	on_player_state_change(NULL, NULL, NULL);
 #endif
 }
-

@@ -1747,30 +1747,29 @@ gdl_dock_item_tab_button (GtkWidget *widget, GdkEventButton *event, gpointer dat
         return;
 
     switch (event->button) {
-    case 1:
-        /* set dragoff_{x,y} as we the user clicked on the middle of the
-           drag handle */
-        switch (item->priv->orientation) {
-        case GTK_ORIENTATION_HORIZONTAL:
-            gtk_widget_get_allocation (GTK_WIDGET (data), &allocation);
-            /*item->priv->dragoff_x = item->priv->grip_size / 2;*/
-            item->priv->dragoff_y = allocation.height / 2;
+        case 1:
+            /* set dragoff_{x,y} as we the user clicked on the middle of the drag handle */
+            switch (item->priv->orientation) {
+            case GTK_ORIENTATION_HORIZONTAL:
+                gtk_widget_get_allocation (GTK_WIDGET (data), &allocation);
+                /*item->priv->dragoff_x = item->priv->grip_size / 2;*/
+                item->priv->dragoff_y = allocation.height / 2;
+                break;
+            case GTK_ORIENTATION_VERTICAL:
+                /*item->priv->dragoff_x = GTK_WIDGET (data)->allocation.width / 2;*/
+                item->priv->dragoff_y = item->priv->grip_size / 2;
+                break;
+            };
+            gdl_dock_item_drag_start (item);
             break;
-        case GTK_ORIENTATION_VERTICAL:
-            /*item->priv->dragoff_x = GTK_WIDGET (data)->allocation.width / 2;*/
-            item->priv->dragoff_y = item->priv->grip_size / 2;
+
+        case 3:
+            gdl_dock_item_popup_menu (item, button, event->button.x, event->button.y);
             break;
-        };
-        gdl_dock_item_drag_start (item);
-        break;
 
-    case 3:
-        gdl_dock_item_popup_menu (item, button, event->button.x, event->button.y);
-        break;
-
-    default:
-        break;
-    };
+        default:
+            break;
+    }
 }
 #endif
 
@@ -2099,8 +2098,7 @@ gdl_dock_item_set_tablabel (GdlDockItem *item, GtkWidget *tablabel)
 {
     g_return_if_fail (item != NULL);
 
-    if (item->priv->intern_tab_label)
-    {
+    if (item->priv->intern_tab_label) {
         item->priv->intern_tab_label = FALSE;
         g_signal_handler_disconnect (item, item->priv->notify_label);
         g_signal_handler_disconnect (item, item->priv->notify_stock_id);
@@ -2240,7 +2238,7 @@ gdl_dock_item_hide_item (GdlDockItem *item)
 {
     g_return_if_fail (item != NULL);
 
-    gtk_widget_hide (GTK_WIDGET (item));
+    gtk_widget_set_visible (GTK_WIDGET (item), false);
 
     return;
 }
@@ -2260,7 +2258,7 @@ gdl_dock_item_iconify_item (GdlDockItem *item)
     g_return_if_fail (item != NULL);
 
     item->priv->iconified = TRUE;
-    gtk_widget_hide (GTK_WIDGET (item));
+    gtk_widget_set_visible (GTK_WIDGET (item), FALSE);
 }
 
 /**
@@ -2297,7 +2295,7 @@ gdl_dock_item_show_item (GdlDockItem *item)
     }
 
     item->priv->iconified = FALSE;
-    gtk_widget_show (GTK_WIDGET (item));
+    gtk_widget_set_visible (GTK_WIDGET (item), TRUE);
 
     return;
 }
@@ -2361,16 +2359,19 @@ gdl_dock_item_preferred_size (GdlDockItem *item, GtkRequisition *req)
 void
 gdl_dock_item_get_drag_area (GdlDockItem *item, GdkRectangle *rect)
 {
-    GtkAllocation allocation;
+	g_return_if_fail (GDL_IS_DOCK_ITEM (item));
+	g_return_if_fail (rect != NULL);
 
-    g_return_if_fail (GDL_IS_DOCK_ITEM (item));
-    g_return_if_fail (rect != NULL);
-
-    rect->x = item->priv->dragoff_x;
-    rect->y = item->priv->dragoff_y;
-    gtk_widget_get_allocation (GTK_WIDGET (item), &allocation);
-    rect->width = MAX (item->priv->preferred_width, allocation.width);
-    rect->height = MAX (item->priv->preferred_height, allocation.height);
+	graphene_rect_t bounds;
+#pragma GCC diagnostic ignored "-Wunused-result"
+	gtk_widget_compute_bounds(GTK_WIDGET(item), GTK_WIDGET(item), &bounds);
+	*rect = (GdkRectangle){
+		.x = item->priv->dragoff_x,
+		.y = item->priv->dragoff_y,
+		.width = bounds.size.width,
+		.height = bounds.size.height,
+	};
+#pragma GCC diagnostic warning "-Wunused-result"
 }
 
 /**

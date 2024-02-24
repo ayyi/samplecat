@@ -21,7 +21,6 @@ endif
 
 if ENABLE_FFTW3
 FFTW_LDADD = \
-	../../src/spectrogram_widget.o \
 	../../src/gl_spectrogram_view.o
 endif
 
@@ -34,8 +33,6 @@ endif
 ui_test_LDADD = \
 	../../src/application.o \
 	../../lib/gtk/cellrenderer_hypertext.o \
-	../../src/widgets/colour_box.o \
-	../../src/dh_tree.o \
 	../../src/panels/library.o \
 	../../src/progress_dialog.o \
 	../../src/resources.o \
@@ -55,6 +52,7 @@ ui_test_LDADD = \
 	$(top_srcdir)/lib/gtk/libgtk.la \
 	$(top_srcdir)/src/panels/libpanels.la \
 	$(top_srcdir)/lib/utils/libutils.a \
+	$(top_srcdir)/src/widgets/.libs/libwidgets.a \
 	$(DBUS_LIBS) \
 	$(DEBUG_LDFLAGS) \
 	$(OPENGL_LDFLAGS) \

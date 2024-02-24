@@ -27,7 +27,7 @@ AC_CONFIG_SUBDIRS([lib/waveform])
 
 # At least level 2 optimisation is needed to allow GCC to
 # determine that not all nested functions require trampolines.
-CFLAGS="$CFLAGS -O2"
+CFLAGS="$CFLAGS -O2 -Wno-format-overflow"
 
 # Check for debugging flag
 debug="no"
@@ -41,6 +41,17 @@ else
 	CFLAGS="$CFLAGS -DNDEBUG"
 	CXXFLAGS="$CXXFLAGS -DNDEBUG"
 fi
+
+profiling="no"
+AC_ARG_ENABLE(profiling,
+	[AS_HELP_STRING(--enable-profiling, [Enable profiling (false)])],
+	[profiling="$enableval"])
+if test "$profiling" = "yes"; then
+	AC_DEFINE(USE_PROFILING,1,[Enable internal profiling])
+	CFLAGS="$CFLAGS  -ggdb -fno-omit-frame-pointer -finstrument-functions -rdynamic -finstrument-functions-exclude-file-list=timing,debug.c -finstrument-functions-exclude-function-list=debug_printf,ts_timelog,gdl_dock_get_type,gdl_dock_object_get_type,gdl_dock_item_get_type,gdl_dock_paned_get_type,gdl_gtk_paned_get_type,gdl_dock_object_get_name,g_strdup_inline,strcmp2"
+	CXXFLAGS="$CFLAGS"
+fi
+AM_CONDITIONAL(BUILD_PROFILING, test "$profiling" = "yes")
 
 # default 'auto' configutaion
 AC_ARG_ENABLE(mysql,    AC_HELP_STRING([--disable-mysql], [disable use of Mysql as backend]),enable_mysql=$enableval, enable_mysql="auto")
@@ -114,14 +125,10 @@ GTK_LDFLAGS=`pkg-config --libs gtk4`
 AC_SUBST(GTK_CFLAGS)
 AC_SUBST(GTK_LDFLAGS)
 
-if `pkg-config gtk+-2.0 --atleast-version=2.12`; then
-  HAVE_GTK_2_12="yes"
-  AC_DEFINE(HAVE_GTK_2_12, 1, [We have at least gtk version 2.12])
-else
-  HAVE_GTK_2_12="no"
-fi;
-
 AC_DEFINE(USE_GTK,1,[Enable GTK in libwaveform])
+
+### Enable this to turn off all Gtk deprecation warnings such as for GtkTreeView
+###AC_DEFINE(GDK_VERSION_MIN_REQUIRED, GDK_VERSION_4_8, [Ignore post 4.8 deprecations])
 
 GMODULE_LIBS=`pkg-config gmodule-2.0 --libs`
 AC_SUBST(GMODULE_LIBS)
@@ -369,7 +376,7 @@ AC_CHECK_LIB(yaml, yaml_parser_scan,
 		YAML_LIBS="-lyaml"
 		AC_CHECK_HEADERS(yaml.h)
 	],
-	[],
+	[AC_MSG_ERROR([libyaml not found])],
 	[-lyaml])
 AC_SUBST(YAML_LIBS)
 AM_CONDITIONAL(ENABLE_YAML, [test "$YAML_LIBS" = "-lyaml"])
@@ -550,7 +557,7 @@ AC_CONFIG_FILES([lib/gdl/Makefile])
 AC_CONFIG_FILES([lib/gtk/Makefile])
 AC_CONFIG_FILES([lib/test/Makefile])
 AC_CONFIG_FILES([lib/yaml/Makefile])
-AC_CONFIG_FILES([layouts/Makefile])
+AC_CONFIG_FILES([layouts2/Makefile])
 AC_CONFIG_FILES([src/Makefile])
 AC_CONFIG_FILES([src/panels/Makefile])
 AC_CONFIG_FILES([src/widgets/Makefile])
@@ -598,6 +605,7 @@ AC_MSG_RESULT([Building ayyi support:        $enable_ayyi])
 AC_MSG_RESULT([Building dock support:        $enable_dock])
 AC_MSG_RESULT([Building valgrind:            $enable_valgrind])
 AC_MSG_RESULT([Extra debugging:              $enable_debug])
+AC_MSG_RESULT([Building profiling:           $profiling])
 AC_MSG_RESULT([Use system Gtk OpenGL:        $enable_system_gtkglext])
 AC_MSG_RESULT([])
 

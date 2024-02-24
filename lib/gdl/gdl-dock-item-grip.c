@@ -111,7 +111,9 @@ gdl_dock_item_create_label_widget (GdlDockItemGrip *grip)
         g_free (icon_name);
 
     } else if (pixbuf) {
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         GtkImage* image = GTK_IMAGE(gtk_image_new_from_pixbuf (pixbuf));
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 
         gtk_box_append (GTK_BOX(label_box), GTK_WIDGET(image));
     }
@@ -144,7 +146,9 @@ gdl_dock_item_grip_draw (GtkWidget *widget, cairo_t *cr)
     	cairo_rectangle_int_t handle_area;
 
         GtkAllocation allocation;
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         gtk_widget_get_allocation (widget, &allocation);
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
         if (gtk_widget_get_direction (widget) != GTK_TEXT_DIR_RTL) {
             handle_area.x = allocation.x;
             handle_area.y = allocation.y;
@@ -157,11 +161,13 @@ gdl_dock_item_grip_draw (GtkWidget *widget, cairo_t *cr)
             handle_area.height = allocation.height;
         }
 
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         gtk_render_handle (gtk_widget_get_style_context (widget), cr, handle_area.x, handle_area.y, handle_area.width, handle_area.height);
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
     }
 
-    gint width = gtk_widget_get_allocated_width (widget);
-    gint height = gtk_widget_get_allocated_height (widget);
+    gint width = gtk_widget_get_width (widget);
+    gint height = gtk_widget_get_height (widget);
 
     gtk_render_background (gtk_widget_get_style_context (widget), cr, 0, 0, width, height);
 }

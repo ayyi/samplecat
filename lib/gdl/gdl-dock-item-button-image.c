@@ -46,8 +46,8 @@ gdl_dock_item_button_image_draw (GtkWidget *widget, cairo_t *cr)
     GdlDockItemButtonImage* button_image = GDL_DOCK_ITEM_BUTTON_IMAGE (widget);
 
     /* Center the icon inside the widget */
-    int offset_x = (gtk_widget_get_allocated_width (widget) - ICON_SIZE) / 2;
-    int offset_y = (gtk_widget_get_allocated_height (widget) - ICON_SIZE) / 2;
+    int offset_x = (gtk_widget_get_width (widget) - ICON_SIZE) / 2;
+    int offset_y = (gtk_widget_get_height (widget) - ICON_SIZE) / 2;
     cairo_translate (cr, offset_x, offset_y);
 
     /* Set up the pen */

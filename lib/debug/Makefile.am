@@ -10,8 +10,13 @@ AM_CFLAGS = \
 
 noinst_LIBRARIES = libdebug.a
 
+if BUILD_PROFILING
+PROFILING_SRC = instrument.c
+endif
+
 libdebug_a_SOURCES = \
-	debug.c debug.h
+	debug.c debug.h \
+	$(PROFILING_SRC)
 
 BUILT_SOURCES =
 CLEANFILES =

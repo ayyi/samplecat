@@ -152,7 +152,9 @@ gdl_dock_notebook_class_init (GdlDockNotebookClass *klass)
     klass->priv = G_TYPE_CLASS_GET_PRIVATE (klass, GDL_TYPE_DOCK_NOTEBOOK, GdlDockNotebookClassPrivate);
 
     klass->priv->css = gtk_css_provider_new ();
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
     gtk_css_provider_load_from_data (klass->priv->css, notebook_style, -1);
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 }
 
 static void
@@ -186,7 +188,6 @@ gdl_dock_notebook_init (GdlDockNotebook *notebook)
 	gtk_widget_add_controller (GTK_WIDGET (notebook), GTK_EVENT_CONTROLLER (click));
 
 	gtk_notebook_set_scrollable (switcher->notebook, TRUE);
-	gtk_widget_show (child);
 }
 
 static void

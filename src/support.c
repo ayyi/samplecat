@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
- | copyright (C) 2007-2023 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2007-2024 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -24,54 +24,6 @@
 #define HEX_ESCAPE '%'
 #define N_(A) A 
 #define gettext(A) A
-
-
-#if 0
-/* Used as the sort function for sorting GPtrArrays */
-gint 
-_strcmp (gconstpointer a, gconstpointer b)
-{
-	const char *aa = *(char **) a;
-	const char *bb = *(char **) b;
-
-	return g_strcasecmp(aa, bb);
-}
-
-/* Returns an array listing all the names in the directory 'path'.
- * The array is sorted.
- * '.' and '..' are skipped.
- * On error, the error is reported with g_warning and NULL is returned.
- */
-GPtrArray*
-list_dir (const guchar *path)
-{
-	GDir *dir;
-	GError *error = NULL;
-	const char *leaf;
-	GPtrArray *names;
-	
-	dir = g_dir_open((char*)path, 0, &error);
-	if (error)
-	{
-		g_warning("Can't list directory:\n%s", error->message);
-		g_error_free(error);
-		return NULL;
-	}
-
-	names = g_ptr_array_new();
-
-	while ((leaf = g_dir_read_name(dir))) {
-		if (leaf[0] != '.')
-			g_ptr_array_add(names, g_strdup(leaf));
-	}
-
-	g_dir_close(dir);
-
-	g_ptr_array_sort(names, _strcmp);
-
-	return names;
-}
-#endif
 
 
 #ifdef GTK4_TODO
@@ -238,32 +190,6 @@ is_similar_rgb (unsigned colour1, unsigned colour2)
 	return FALSE;
 }
 #endif
-
-
-char*
-str_array_join (const char** array, const char* separator)
-{
-	//result must be freed using g_free()
-	g_return_val_if_fail(separator, NULL);
-
-	int sep_len = strlen(separator);
-	int i = 0;
-	int len = 0;
-	while(array[i]){
-		len += strlen(array[i]) + sep_len;
-		i++;
-	}
-	if(!len) return NULL;
-	char* s = g_new0(char, len);
-	char* t = s;
-	i = 0;
-	while(array[i]){
-		strcat(s, array[i]);
-		strcat(s, separator);
-		i++;
-	}
-	return t;
-}
 
 
 gint
@@ -797,14 +723,6 @@ vfs_unescape_string (const gchar *escaped_string, const gchar *illegal_character
     g_assert (out - result <= strlen (escaped_string));
     return result;
 
-}
-
-
-void
-show_widget_if (GtkWidget* widget, gboolean show)
-{
-	if(show) gtk_widget_show(widget);
-	else gtk_widget_hide(widget);
 }
 
 

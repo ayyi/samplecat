@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
- | This file is part of the Ayyi project. http://ayyi.org               |
- | copyright (C) 2011-2023 Tim Orford <tim@orford.org>                  |
+ | This file is part of the Ayyi project. https://www.ayyi.org          |
+ | copyright (C) 2011-2024 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | ROX-Filer, filer for the ROX desktop project, v2.3                   |
  | Copyright (C) 2005, the ROX-Filer team.                              |
@@ -27,6 +27,8 @@ enum {SET_MEDIA, SET_TYPE};
 
 char theme_name[64] = {'\0',};
 GtkIconTheme* icon_theme = NULL;
+
+void type_init (void) __attribute__ ((constructor));
 
 static MIME_type* get_mime_type    (const gchar* type_name, gboolean can_create);
 #if 0

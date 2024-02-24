@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
- | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
- | copyright (C) 2007-2023 Tim Orford <tim@orford.org> and others       |
+ | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
+ | copyright (C) 2007-2024 Tim Orford <tim@orford.org> and others       |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -645,7 +645,7 @@ mysql__dir_iter_new ()
 
 	if (!mysql__exec_sql(DIR_LIST_QRY)) {
 		dir_iter_result = mysql_store_result(&mysql);
-		dbg(2, "num_rows=%i", mysql_num_rows(dir_iter_result));
+		dbg(2, "num_rows=%li", mysql_num_rows(dir_iter_result));
 
 	} else {
 		dbg(0, "failed to find any records: %s", mysql_error(&mysql));

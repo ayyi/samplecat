@@ -86,6 +86,9 @@ static GList*   gdl_dock_paned_children        (GdlDockObject*    object);
 static void     gdl_dock_paned_foreach_child   (GdlDockObject*    object,
                                                 GdlDockObjectFn   fn,
                                                 gpointer          user_data);
+#ifdef DEBUG
+static bool     gdl_dock_paned_validate        (GdlDockObject* object);
+#endif
 
 
 /* ----- Class variables and definitions ----- */
@@ -124,6 +127,9 @@ gdl_dock_paned_class_init (GdlDockPanedClass *klass)
     object_class->child_placement = gdl_dock_paned_child_placement;
     object_class->children = gdl_dock_paned_children;
     object_class->foreach_child = gdl_dock_paned_foreach_child;
+#ifdef DEBUG
+    object_class->validate = gdl_dock_paned_validate;
+#endif
 
     gdl_dock_item_class_set_has_grip (item_class, FALSE);
     item_class->set_orientation = gdl_dock_paned_set_orientation;
@@ -212,6 +218,7 @@ gdl_dock_paned_create_child (GdlDockPaned *paned, GtkOrientation orientation)
     g_signal_connect (child, "button-press-event", (GCallback) gdl_dock_paned_button_cb, (gpointer) item);
     g_signal_connect (child, "button-release-event", (GCallback) gdl_dock_paned_button_cb, (gpointer) item);
 #else
+																// TODO is called twice?
 	g_signal_connect (GDL_GTK_PANED(child)->drag_gesture, "drag-begin", G_CALLBACK (gdl_dock_item_drag_begin), item);
 	g_signal_connect (GDL_GTK_PANED(child)->drag_gesture, "drag-end", G_CALLBACK (gdl_dock_item_drag_end), item);
 #endif
@@ -335,7 +342,9 @@ gdl_dock_paned_request_foreach (GdlDockObject *object, gpointer user_data)
 
     /* Translate parent coordinate to child coordinate */
     double child_x, child_y;
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
     gtk_widget_translate_coordinates (data->parent, GTK_WIDGET (object), data->x, data->y, &child_x, &child_y);
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 
     GdlDockRequest my_request = *data->request;
     gboolean may_dock = gdl_dock_object_dock_request (object, child_x, child_y, &my_request);
@@ -622,10 +631,13 @@ gdl_dock_paned_children (GdlDockObject* object)
 static void
 gdl_dock_paned_foreach_child (GdlDockObject *object, GdlDockObjectFn fn, gpointer user_data)
 {
-	GdlGtkPaned* child = GDL_GTK_PANED(gdl_dock_item_get_child (GDL_DOCK_ITEM (object)));
+	GdlGtkPaned* paned = GDL_GTK_PANED(gdl_dock_item_get_child (GDL_DOCK_ITEM (object)));
 
-	fn (GDL_DOCK_OBJECT (gdl_gtk_paned_get_start_child(child)), user_data);
-	fn (GDL_DOCK_OBJECT (gdl_gtk_paned_get_end_child(child)), user_data);
+	fn (GDL_DOCK_OBJECT (gdl_gtk_paned_get_start_child(paned)), user_data);
+
+	GtkWidget* child = gdl_gtk_paned_get_end_child(paned);
+	if (child)
+		fn (GDL_DOCK_OBJECT (child), user_data);
 }
 
 /* ----- Public interface ----- */
@@ -649,3 +661,19 @@ gdl_dock_paned_new (GtkOrientation orientation)
     return GTK_WIDGET (paned);
 }
 
+
+#ifdef DEBUG
+static bool
+gdl_dock_paned_validate (GdlDockObject* object)
+{
+	GdlGtkPaned* paned = GDL_GTK_PANED(gdl_dock_item_get_child (GDL_DOCK_ITEM (object)));
+
+	if (!gdl_gtk_paned_get_start_child(paned))
+		return false;
+	if (!gdl_gtk_paned_get_end_child(paned)) {
+		printf("Invalid layout: Paned is missing a child\n");
+		return false;
+	}
+	return true;
+}
+#endif

@@ -1,25 +1,25 @@
-/**
-* +----------------------------------------------------------------------+
-* | This file is part of the Ayyi project. http://ayyi.org               |
-* | copyright (C) 2011-2018 Tim Orford <tim@orford.org>                  |
-* +----------------------------------------------------------------------+
-* | ROX-Filer, filer for the ROX desktop project, v2.3                   |
-* | Copyright (C) 2005, the ROX-Filer team.                              |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-*
-*/
-#ifndef __mimetype_h__
-#define __mimetype_h__
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of the Ayyi project. https://www.ayyi.org          |
+ | copyright (C) 2011-2024 Tim Orford <tim@orford.org>                  |
+ +----------------------------------------------------------------------+
+ | ROX-Filer, filer for the ROX desktop project, v2.3                   |
+ | Copyright (C) 2005, the ROX-Filer team.                              |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
+ */
+
+#pragma once
 
 #include <glib.h>
 #include "file_manager/typedefs.h"
 
 extern char theme_name[];
-#ifdef __GTK_H__
+#ifdef GTK_TYPE_WIDGET
 extern GtkIconTheme* icon_theme;
 #endif
 
@@ -51,7 +51,6 @@ struct _MIME_type
 };
 
 
-void               type_init                (void);
 MIME_type*         type_get_type            (const guchar* path);
 MIME_type*         mime_type_lookup         (const char* type);
 MIME_type*         type_from_path           (const char* path);
@@ -71,7 +70,3 @@ GList*             mime_type_name_list      (void);
 
 #define EXECUTABLE_FILE(item) ((item)->mime_type && (item)->mime_type->executable && \
 				((item)->flags & ITEM_FLAG_EXEC_FILE))
-
-#endif
-
-

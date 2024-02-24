@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
- | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
- | copyright (C) 2023-2023 Tim Orford <tim@orford.org>                  |
+ | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
+ | copyright (C) 2023-2024 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -77,6 +77,8 @@ static gboolean
 samplecat_application_local_command_line (GApplication* self, gchar*** arguments, int* exit_status)
 {
 	SamplecatApplication* sa = (SamplecatApplication*)self;
+
+	*exit_status = 0;
 
 	int argc = g_strv_length (*arguments);
 
@@ -429,9 +431,6 @@ samplecat_application_add_dir (const char* path, ScanResults* result)
 
 			snprintf(filepath, PATH_MAX, "%s%c%s", path, G_DIR_SEPARATOR, file);
 			filepath[PATH_MAX - 1] = '\0';
-#ifdef GTK4_TODO
-			if (do_progress(0, 0)) break;
-#endif
 
 			if (!g_file_test(filepath, G_FILE_TEST_IS_DIR)) {
 				if (g_file_test(filepath, G_FILE_TEST_IS_SYMLINK) && !g_file_test(filepath, G_FILE_TEST_IS_REGULAR)) {
@@ -446,8 +445,9 @@ samplecat_application_add_dir (const char* path, ScanResults* result)
 			else if (app->config.add_recursive) {
 				samplecat_application_add_dir(filepath, result);
 			}
+
+			g_main_context_dispatch (NULL);
 		}
-		//hide_progress(); ///no: keep window open until last recursion.
 		g_dir_close(dir);
 	} else {
 		result->n_failed++;

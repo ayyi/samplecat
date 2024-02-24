@@ -92,7 +92,7 @@ struct _GdlDockMasterClass {
 
 /* public interface */
 
-GType          gdl_dock_master_get_type         (void);
+GType          gdl_dock_master_get_type         (void) __attribute__ ((no_instrument_function));
 
 void           gdl_dock_master_add              (GdlDockMaster *master,
                                                  GdlDockObject *object);

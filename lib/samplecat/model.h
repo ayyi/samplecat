@@ -1,17 +1,16 @@
-/**
-* +----------------------------------------------------------------------+
-* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2020 Tim Orford <tim@orford.org>                  |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-*
-*/
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
+ | copyright (C) 2007-2024 Tim Orford <tim@orford.org>                  |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
+ */
 
-#ifndef __model_h__
-#define __model_h__
+#pragma once
 
 #include <glib.h>
 #include <glib-object.h>
@@ -47,7 +46,7 @@ struct _SamplecatModel {
     GList*                 backends;
     SamplecatBackend       backend;
 
-    char*                  categories[10];
+    const char*            categories[11];
 
     union {
         Observable* filters3[N_FILTERS];
@@ -83,5 +82,3 @@ void              samplecat_model_move_files     (GList*, const gchar* dest_path
 #define samplecat_model_add_backend(A) samplecat.model->backends = g_list_append(samplecat.model->backends, A)
 
 G_END_DECLS
-
-#endif

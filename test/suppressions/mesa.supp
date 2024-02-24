@@ -526,3 +526,9 @@
    ...
    fun:create_new_program
 }
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   ...
+   fun:gsk_gl_compiler_compile
+}

@@ -4,9 +4,7 @@
  * This software comes with no warranty of any kind, use at your own risk!
  */
 #include "config.h"
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <gtk/gtk.h>
-#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 #include "debug/debug.h"
 #include "file_manager/file_manager.h"
 #include "view_dir_tree.h"
@@ -261,7 +259,8 @@ static void file_util_move_multiple(FileDataMult *fdm)
 	file_data_multiple_free(fdm);
 }
 
-static void file_util_move_single(FileDataSingle *fds)
+static void
+file_util_move_single (FileDataSingle *fds)
 {
 	PF;
     if (fds->dest && fds->source && strcmp(fds->dest, fds->source) == 0)
@@ -372,7 +371,8 @@ static void file_util_move_single(FileDataSingle *fds)
     file_data_single_free(fds);
 }
 
-void file_util_move_simple(GList *list, const gchar *dest_path)
+void
+file_util_move_simple (GList *list, const gchar *dest_path)
 {
     if (!list) return;
     if (!dest_path)
@@ -399,18 +399,17 @@ void file_util_move_simple(GList *list, const gchar *dest_path)
 }
 
 static void
-observer__files_moved(GList* file_list, const char* dest)
+observer__files_moved (GList* file_list, const char* dest)
 {
 	PF;
-	GList* l = file_list;
-	for(;l;l=l->next){
-		dbg(0, "%s", l->data);
+	for (GList* l=file_list;l;l=l->next) {
+		dbg(0, "%s", (char*)l->data);
 	}
 
 	char msg[256];
-	if(g_list_length(file_list) > 1){
+	if (g_list_length(file_list) > 1) {
 		snprintf(msg, 255, "%i files moved.", g_list_length(file_list));
-	}else{
+	} else {
 		snprintf(msg, 255, "file: '%s' moved.", (char*)file_list->data);
 	}
 	statusbar_print(1, msg);

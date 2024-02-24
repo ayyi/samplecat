@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
- | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
- | copyright (C) 2007-2023 Tim Orford <tim@orford.org>                  |
+ | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
+ | copyright (C) 2007-2024 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -96,7 +96,6 @@ main (int argc, char* argv[])
 		}
 	}
 
-	type_init();
 	pixmaps_init();
 
 	g_log_set_default_handler(log_handler, NULL);
@@ -198,7 +197,7 @@ add_content (gpointer _)
 {
 	void scene_set_size (AGlActor* scene)
 	{
-		dbg(2, "%i", ((AGlActor*)app->scene)->region.x2);
+		dbg(2, "%f", ((AGlActor*)app->scene)->region.x2);
 
 		AGlActor* container = ((AGlActor*)app->scene)->children->data;
 		container->region = (AGlfRegion){20, 20, agl_actor__width(scene) - 20, agl_actor__height(scene) - 20};
@@ -284,7 +283,7 @@ add_content (gpointer _)
 
 		static void scene_set_size2 (AGlActor* scene)
 		{
-			dbg(2, "%i", ((AGlActor*)app->scene)->region.x2);
+			dbg(2, "%f", ((AGlActor*)app->scene)->region.x2);
 
 			actors.files->region = (AGlfRegion){20, 20, agl_actor__width(scene) - 10, agl_actor__height(scene) - 20};
 

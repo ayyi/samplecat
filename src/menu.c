@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
- | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
- | copyright (C) 2007-2023 Tim Orford <tim@orford.org>                  |
+ | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
+ | copyright (C) 2007-2024 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -9,12 +9,6 @@
  +----------------------------------------------------------------------+
  |
  */
-
-#ifdef GTK4_TODO
-static void menu__add_to_db      (GtkMenuItem*, gpointer);
-static void menu__add_dir_to_db  (GtkMenuItem*, gpointer);
-static void menu__play           (GtkMenuItem*, gpointer);
-#endif
 
 
 static GtkWidget*
@@ -31,7 +25,6 @@ make_context_menu (GtkWidget* widget)
 	gtk_widget_insert_action_group (menu, "context-menu", G_ACTION_GROUP(group));
 
 	MenuDef menu_def[] = {
-		{"Action-1",       "library.action-1",      "edit-delete-symbolic"},
 		{"Delete",         "library.delete-rows",   "edit-delete-symbolic"},
 		{"Update",         "library.update-rows",   "view-refresh-symbolic"},
 		{"Reset Colours",  "library.reset-colours", ""},
@@ -230,60 +223,3 @@ make_context_menu (GtkWidget* widget)
 
 	return menu;
 }
-
-
-#ifdef GTK4_TODO
-static void
-menu__add_to_db (GtkMenuItem* menuitem, gpointer user_data)
-{
-	PF;
-	AyyiFilemanager* fm = file_manager__get();
-
-	DirItem* item;
-	ViewIter iter;
-	view_get_iter(fm->view, &iter, 0);
-	while((item = iter.next(&iter))){
-		if(view_get_selected(fm->view, &iter)){
-			gchar* filepath = g_build_filename(fm->real_path, item->leafname, NULL);
-			if(do_progress(0, 0)) break;
-			ScanResults results = {0,};
-			application_add_file(filepath, &results);
-			if(results.n_added) statusbar_print(1, "file added");
-			g_free(filepath);
-		}
-	}
-	hide_progress();
-}
-
-
-static void
-menu__add_dir_to_db (GtkMenuItem* menuitem, gpointer user_data)
-{
-	PF;
-	const char* path = vdtree_get_selected(app->dir_treeview2);
-	dbg(1, "path=%s", path);
-	if (path) {
-		ScanResults results = {0,};
-		application_scan(path, &results);
-		hide_progress();
-	}
-}
-
-
-static void
-menu__play (GtkMenuItem* menuitem, gpointer user_data)
-{
-	PF;
-	AyyiFilemanager* fm = file_manager__get();
-
-	GList* selected = fm__selected_items(fm);
-	GList* l = selected;
-	for (;l;l=l->next) {
-		char* item = l->data;
-		dbg(1, "%s", item);
-		application_play_path(item);
-		g_free(item);
-	}
-	g_list_free(selected);
-}
-#endif

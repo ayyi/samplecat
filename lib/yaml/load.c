@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of the Ayyi project. https://www.ayyi.org          |
- | copyright (C) 2007-2023 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2007-2024 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -72,7 +72,7 @@ yaml_load_section (yaml_parser_t* parser, YamlHandler scalars[], YamlMappingHand
 	while (yaml_parser_parse(parser, &event)) {
 		switch (event.type) {
 			case YAML_SCALAR_EVENT:
-				dbg(2, "YAML_SCALAR_EVENT: value='%s' %i plain=%i style=%i", event.data.scalar.value, event.data.scalar.length, event.data.scalar.plain_implicit, event.data.scalar.style);
+				dbg(2, "YAML_SCALAR_EVENT: value='%s' %li plain=%i style=%i", event.data.scalar.value, event.data.scalar.length, event.data.scalar.plain_implicit, event.data.scalar.style);
 
 				if (!key[0]) {
 					g_strlcpy(key, (char*)event.data.scalar.value, 64);

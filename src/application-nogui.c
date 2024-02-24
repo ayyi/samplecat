@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
- | copyright (C) 2007-2023 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2007-2024 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -96,14 +96,15 @@ no_gui_application_instance_init (NoGuiApplication* self, gpointer klass)
 	((SamplecatApplication*)self)->temp_view = true;
 
 	play = player_new();
-	type_init();
 	pixmaps_init();
 
 	void store_content_changed (GtkListStore* store, gpointer self)
 	{
 		PF;
 		GtkTreeIter iter;
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 		if (!gtk_tree_model_get_iter_first((GtkTreeModel*)store, &iter)) { gerr ("cannot get iter."); return; }
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 		int row_count = 0;
 		do {
 			if (++row_count < 100) {

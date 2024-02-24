@@ -20,14 +20,12 @@
  */
 
 #include "config.h"
-#include <stdio.h>
-#include <stdlib.h>
+#undef GDK_VERSION_MIN_REQUIRED
+#define GDK_VERSION_MIN_REQUIRED GDK_VERSION_4_8
 #include <gdk/gdkkeysyms.h>
 #include <gtk/gtk.h>
 #include "debug/debug.h"
 #include "file_manager/mimetype.h"
-
-#include "support.h"
 #include "dh_tree.h"
 
 #define d(x)

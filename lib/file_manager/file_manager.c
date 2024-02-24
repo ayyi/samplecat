@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of the Ayyi project. http://ayyi.org               |
- | copyright (C) 2011-2023 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2011-2024 Tim Orford <tim@orford.org>                  |
  | copyright (C) 2006, Thomas Leonard and others                        |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
@@ -25,6 +25,7 @@
 #include "support.h"
 #include "file_manager.h"
 #include "pixmaps.h"
+#include "minibuffer.h"
 #include "display.h"
 
 GList* all_filer_windows = NULL;
@@ -48,7 +49,6 @@ file_manager__init ()
 {
 	new_file_manager = ayyi_filemanager_new();
 
-	type_init();
 	pixmaps_init();
 	dir_init();
 
@@ -76,6 +76,12 @@ file_manager__new_window (const char* path)
 	{
 		void delete (GSimpleAction* action, GVariant* parameter, gpointer fm)
 		{
+			GList* paths = fm__selected_items(fm);
+			for(GList* l=paths;l;l=l->next){
+				dbg(1, "deleting file: %s\n", (char*)l->data);
+				unlink((char*)l->data);
+			}
+			destroy_glist(&paths);
 		}
 
 		void go_up_dir (GSimpleAction* action, GVariant* parameter, gpointer fm)
@@ -83,12 +89,24 @@ file_manager__new_window (const char* path)
 			fm__change_to_parent(fm);
 		}
 
-		void go_down_dir (GSimpleAction* action, GVariant* parameter, gpointer fm)
+		void go_down_dir (GSimpleAction* action, GVariant* _target, gpointer fm)
 		{
-		}
+#ifdef GTK4_TODO
+			AyyiFilemanager* fm = file_manager__get();
 
-		void cd (GSimpleAction* action, GVariant* parameter, gpointer fm)
-		{
+			GList* children = gtk_container_get_children(GTK_CONTAINER(menuitem));
+			for (;children;children=children->next) {
+				GtkWidget* child = children->data;
+				if (GTK_IS_LABEL(child)) {
+					const gchar* leaf = gtk_label_get_text((GtkLabel*)child);
+					gchar* filename = g_build_filename(fm->real_path, leaf, NULL);
+
+					fm__change_to(fm, filename, NULL);
+
+					g_free(filename);
+				}
+			}
+#endif
 		}
 
 		void refresh (GSimpleAction* action, GVariant* parameter, gpointer fm)
@@ -96,12 +114,27 @@ file_manager__new_window (const char* path)
 			file_manager__update_all();
 		}
 
-		void set_sort (GSimpleAction* action, GVariant* parameter, gpointer fm)
+		void set_sort (GSimpleAction* action, GVariant* sort_order, gpointer fm)
 		{
+			display_set_sort_type((AyyiFilemanager*)fm, g_variant_get_int32 (sort_order), GTK_SORT_ASCENDING);
 		}
 
-		void minibuffer (GSimpleAction* action, GVariant* parameter, gpointer fm)
+		void minibuffer (GSimpleAction* action, GVariant* command, gpointer _fm)
 		{
+			AyyiFilemanager* fm = _fm;
+			MiniType type = g_variant_get_int32(command);
+
+			switch (type) {
+				case MINI_SHELL:
+					// Item needs to remain selected
+					fm->temp_item_selected = FALSE;
+
+					minibuffer_show(fm, type);
+					break;
+				default:
+			}
+
+
 		}
 
 		void reverse_sort (GSimpleAction* action, GVariant* parameter, gpointer _fm)
@@ -117,15 +150,23 @@ file_manager__new_window (const char* path)
 			display_set_sort_type(fm, fm->sort_type, order);
 		}
 
+		void
+		submenu_open_close (GSimpleAction* action, GVariant* value, gpointer fm)
+		{
+			if (g_variant_get_boolean(value)) {
+			}
+		}
+
+
 		GActionEntry entries[] = {
 			{ "delete", delete, NULL, NULL, NULL },
 			{ "go-up-dir", go_up_dir, NULL, NULL, NULL },
 			{ "go-down-dir", go_down_dir, NULL, NULL, NULL },
-			{ "cd", cd, NULL, NULL, NULL },
 			{ "refresh", refresh, NULL, NULL, NULL },
-			{ "set-sort", set_sort, NULL, NULL, NULL },
-			{ "minibuffer", minibuffer, NULL, NULL, NULL },
+			{ "set-sort", set_sort, "i", NULL, NULL },
+			{ "minibuffer", minibuffer, "i", NULL, NULL },
 			{ "reverse-sort", reverse_sort, NULL, NULL, NULL },
+			{ "cd-menu", NULL, "b", "false", submenu_open_close },
 		};
 		GSimpleActionGroup* action_group = g_simple_action_group_new ();
 		g_action_map_add_action_entries (G_ACTION_MAP (action_group), entries, G_N_ELEMENTS (entries), new_file_manager);
@@ -286,5 +327,3 @@ file_manager__load_plugins ()
 
 	dbg(1, "filetype plugins loaded: %i.", found);
 }
-
-

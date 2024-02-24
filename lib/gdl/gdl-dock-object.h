@@ -182,6 +182,9 @@ struct _GdlDockObjectClass {
     GList*   (* children)        (GdlDockObject    *object);
     void     (* foreach_child)   (GdlDockObject    *object,
                                   GdlDockObjectFn, gpointer);
+#ifdef DEBUG
+    bool     (* validate)        (GdlDockObject    *object);
+#endif
 };
 
 /* additional macros */
@@ -370,7 +373,7 @@ void          gdl_dock_object_class_set_is_compound (GdlDockObjectClass *object_
    (i.e. those that are needed for layout rebuilding) */
 #define GDL_TYPE_DOCK_PARAM   (gdl_dock_param_get_type ())
 
-GType gdl_dock_param_get_type (void);
+GType gdl_dock_param_get_type (void)  __attribute__ ((no_instrument_function));
 
 /* functions for setting/retrieving nick names for serializing GdlDockObject types */
 const gchar          *gdl_dock_object_nick_from_type    (GType        type);

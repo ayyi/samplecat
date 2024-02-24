@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
- | This file is part of Samplecat. http://samplecat.orford.org          |
- | copyright (C) 2007-2023 Tim Orford <tim@orford.org>                  |
+ | This file is part of Samplecat. https://samplecat.orford.org         |
+ | copyright (C) 2007-2024 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -17,7 +17,7 @@
 #include "gtk/menu.h"
 #include "types.h"
 #include "application.h"
-#include "colour_box.h"
+#include "colour-box.h"
 
 typedef struct
 {

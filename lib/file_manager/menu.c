@@ -16,28 +16,13 @@
   Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 */
 #include "config.h"
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/wait.h>
-#include <sys/param.h>
-#include <fcntl.h>
-#include <errno.h>
-#include <string.h>
-#include <dirent.h>
 #include <gtk/gtk.h>
-#include <glib/gstdio.h>
 
 #include "debug/debug.h"
 #include "gtk/menu.h"
-#include "support.h"
 #include "file_manager.h"
-#include "dir.h"
 #include "display.h"
-#include "minibuffer.h"
 #include "menu.h"
-
-//static gint updating_menu = 0;      // Non-zero => ignore activations
 
 
 typedef enum {
@@ -56,13 +41,8 @@ typedef enum {
 	FILE_SET_TYPE,
 } FileOp;
 
-#ifdef GTK4_TODO
-static void       menu__go_down_dir    (GtkMenuItem*, gpointer);
-#endif
 static bool       fm__make_subdir_menu (AyyiFilemanager*, GMenuModel*);
 #ifdef GTK4_TODO
-static void       fm_menu__set_sort    (GtkMenuItem*, gpointer);
-static void       mini_buffer          (GtkMenuItem*, gpointer);
 static void       file_op              (gpointer, FileOp, GtkWidget*);
 #endif
 
@@ -112,15 +92,7 @@ static GtkItemFactoryEntry fm_menu_def[] = {
 {N_("New"),         NULL, NULL, 0, "<Branch>"},
 {">" N_("Directory"),       NULL, new_directory, 0, NULL},
 {">" N_("Blank file"),      NULL, new_file, 0, "<StockItem>", GTK_STOCK_NEW},
-{N_("Window"),          NULL, NULL, 0, "<Branch>"},
-{">" N_("Parent, New Window"),  NULL, open_parent, 0, "<StockItem>", GTK_STOCK_GO_UP},
-{">" N_("Parent, Same Window"), NULL, open_parent_same, 0, NULL},
-{">" N_("Home Directory"),  "<Ctrl>Home", home_directory, 0, "<StockItem>", GTK_STOCK_HOME},
-{">" N_("Show Bookmarks"),  "<Ctrl>B", show_bookmarks, 0, "<StockItem>", ROX_STOCK_BOOKMARKS},
-{">" N_("Follow Symbolic Links"),   NULL, follow_symlinks, 0, NULL},
 
-{">" N_("Close Window"),    "<Ctrl>Q", close_window, 0, "<StockItem>", GTK_STOCK_CLOSE},
-{">",               NULL, NULL, 0, "<Separator>"},
 {">" N_("Enter Path..."),   "slash", mini_buffer, MINI_PATH, NULL},
 {">" N_("Shell Command..."),    "<Shift>exclam", mini_buffer, MINI_SHELL, NULL},
 {">" N_("Terminal Here"),   "grave", xterm_here, FALSE, NULL},
@@ -131,10 +103,6 @@ static GtkItemFactoryEntry fm_menu_def[] = {
 
 #ifdef GTK4_TODO
 static MenuDef fm_menu_def[] = {
-	{"-"},
-	{"Delete",          G_CALLBACK(file_op),           GTK_STOCK_DELETE, FILE_DELETE},
-	{"-"},
-	{"Go up directory", G_CALLBACK(menu__go_up_dir),   GTK_STOCK_GO_UP},
 	{">"},
 	{"Cd",              NULL,                          GTK_STOCK_DIRECTORY},
 	{"<"},
@@ -144,22 +112,22 @@ static MenuDef fm_menu_def[] = {
 };
 #else
 MenuDef fm_menu_def[] = {
-	{"Delete",          "fm.delete",       "window-close-symbolic"},
+	{"Delete",          "fm.delete",       "window-close-symbolic", FILE_DELETE},
 	{"-"},
 	{"Go up directory", "fm.go-up-dir",    "go-up-symbolic"},
 	{">"},
-	{"Cd",              "fm.cd",           "folder-symbolic"},
+	{"Cd",              "fm.cd-menu",      "folder-symbolic"},
 	{"<"},
-	{"Filter Files...", "fm.minibuffer",   "filter_small"/*, MINI_FILTER*/},
+	{"Filter Files...", "fm.minibuffer",   "filter_small", MINI_FILTER},
 	{"Refresh",         "fm.refresh",      "view-refresh-symbolic"},
 	{">"},
 	{"Sort",            NULL,              "view-sort-ascending"},
-	{"Sort by Name",    "fm.set-sort", 0/*, SORT_NAME*/},
-	{"Sort by Type",    "fm.set-sort", 0/*, SORT_TYPE*/},
-	{"Sort by Date",    "fm.set-sort", 0/*, SORT_DATE*/},
-	{"Sort by Size",    "fm.set-sort", 0/*, SORT_SIZE*/},
-	{"Sort by Owner",   "fm.set-sort", 0/*, SORT_OWNER*/},
-	{"Sort by Group",   "fm.set-sort", 0/*, SORT_GROUP*/},
+	{"Sort by Name",    "fm.set-sort", 0, SORT_NAME},
+	{"Sort by Type",    "fm.set-sort", 0, SORT_TYPE},
+	{"Sort by Date",    "fm.set-sort", 0, SORT_DATE},
+	{"Sort by Size",    "fm.set-sort", 0, SORT_SIZE},
+	{"Sort by Owner",   "fm.set-sort", 0, SORT_OWNER},
+	{"Sort by Group",   "fm.set-sort", 0, SORT_GROUP},
 	{"Reversed",        "fm.reverse-sort"},
 	{"<"},
 };
@@ -172,6 +140,7 @@ menu_on_dir_changed (GtkWidget* widget, char* dir, gpointer menu_item)
 	AyyiFilemanager* fm = file_manager__get();
 	dbg(2, "dir=%s name=%s", fm->real_path, dir);
 	g_return_if_fail(fm->real_path);
+
 	g_menu_item_set_label (menu_item, fm->real_path);
 }
 
@@ -179,15 +148,16 @@ menu_on_dir_changed (GtkWidget* widget, char* dir, gpointer menu_item)
 GtkWidget*
 fm__make_context_menu ()
 {
-	GMenuModel* model = (GMenuModel*)g_menu_new ();
+	AyyiFilemanager* fm = file_manager__get();
 
-	GtkWidget* menu = gtk_popover_menu_new_from_model (model);
+	GMenuModel* model = fm->menu.model = (GMenuModel*)g_menu_new ();
+
+	GtkWidget* menu = fm->menu.widget = gtk_popover_menu_new_from_model (model);
 	gtk_popover_set_has_arrow (GTK_POPOVER(menu), false);
 	gtk_popover_set_position (GTK_POPOVER(menu), GTK_POS_LEFT);
 
 	// Show the current directory name
 	// Initially the dir path is not set. It is updated in the dir-changed callback.
-	AyyiFilemanager* fm = file_manager__get();
 	const char* name = fm->real_path ? fm->real_path : "Directory";
 	GMenuModel* section = (GMenuModel*)g_menu_new ();
 #if 0
@@ -195,11 +165,12 @@ fm__make_context_menu ()
 #else
 	GMenuItem* section_item = g_menu_item_new_section (name, section);
 	g_menu_append_item (G_MENU(model), section_item);
+							// to update later: g_menu_item_set_label (GMenuItem* menu_item, const gchar* label)
 #endif
 
 	add_menu_items_from_defn (menu, section, G_N_ELEMENTS(fm_menu_def), fm_menu_def, NULL);
 
-	fm__menu_on_view_change(model);
+	fm__menu_on_view_change(fm);
 
 	g_signal_connect(file_manager__get(), "dir_changed", G_CALLBACK(menu_on_dir_changed), section_item);
 
@@ -253,13 +224,10 @@ fm__make_subdir_menu (AyyiFilemanager* fm, GMenuModel* model)
 
 			if (items) {
 				items = g_list_sort(items, (GCompareFunc)g_ascii_strcasecmp);
-
-				for (GList* l=items;l;l=l->next) {
+				int i = 0;
+				for (GList* l=items;l;l=l->next,i++) {
 					gchar* name = l->data;
-					g_menu_append (G_MENU(model), name, "fm.go-down-dir");
-#ifdef GTK4_TODO
-					g_signal_connect(G_OBJECT(item), "activate", G_CALLBACK(menu__go_down_dir), NULL);
-#endif
+					add_icon_menu_item2 (GTK_POPOVER_MENU(fm->menu.widget), G_MENU(model), &(MenuDef){name, "fm.go-down-dir", "inode-directory-symbolic", i});
 					g_free(name);
 				}
 				g_list_free(items);
@@ -275,17 +243,14 @@ fm__make_subdir_menu (AyyiFilemanager* fm, GMenuModel* model)
 
 
 /*
- *  For application-level menu additions.
+ *  Allow the application to add additional context-menu items.
  */
-#ifdef GTK4_TODO
 void
-fm__add_menu_item (GtkAction* action)
+fm__add_menu_item (GMenuModel* section, GAction* action, char* title)
 {
-	AyyiFilemanager* fm = file_manager__get();
-
-	GtkWidget* menu_item = gtk_action_create_menu_item(action);
-	gtk_menu_shell_append(GTK_MENU_SHELL(fm->menu), menu_item);
-	gtk_widget_show(menu_item);
+	const gchar* name = g_action_get_name (action);
+	g_autofree gchar* detailed_name = g_strdup_printf("app.%s", name);
+	g_menu_append (G_MENU(section), title, detailed_name);
 }
 
 
@@ -293,8 +258,9 @@ fm__add_menu_item (GtkAction* action)
  *  Append the given menu_item and its subtree to the file_manager context menu.
  *  The filemanager context menu is a public property so this fn can be bypassed if desired.
  */
+#ifdef GTK4_TODO
 void
-fm__add_submenu(GtkWidget* menu_item)
+fm__add_submenu (GtkWidget* menu_item)
 {
 	AyyiFilemanager* fm = file_manager__get();
 
@@ -304,6 +270,7 @@ fm__add_submenu(GtkWidget* menu_item)
 #endif
 
 
+#ifdef PRINT_MENUS
 static void
 print_submenu (GMenuModel* menu)
 {
@@ -323,7 +290,6 @@ print_submenu (GMenuModel* menu)
 		GVariant* value;
 		while (g_menu_attribute_iter_get_next (attrs, &name, &value)) {
 			const char* v = g_variant_get_string(value, NULL);
-			dbg(0, " attr: * %s=%s", name, v);
 		}
 
 		g_autoptr(GMenuLinkIter) iter = g_menu_model_iterate_item_links(menu, i);
@@ -334,11 +300,13 @@ print_submenu (GMenuModel* menu)
 		}
 	}
 }
+#endif
 
 
 void
-fm__menu_on_view_change (GMenuModel* model)
+fm__menu_on_view_change (AyyiFilemanager* fm)
 {
+	GMenuModel* model = gtk_popover_menu_get_menu_model (GTK_POPOVER_MENU(fm->menu.widget));
 	GMenuModel* top = g_menu_model_get_item_link (model, 0, "section");
 	gint n = g_menu_model_get_n_items (top);
 	for (int j=0;j<n;j++) {
@@ -349,7 +317,7 @@ fm__menu_on_view_change (GMenuModel* model)
 			g_menu_link_iter_next (iter);
 			GMenuModel* submenu = g_menu_link_iter_get_value (iter);
 			g_menu_remove_all (G_MENU(submenu));
-			if (!fm__make_subdir_menu(file_manager__get(), submenu)) {
+			if (!fm__make_subdir_menu(fm, submenu)) {
 				g_autoptr(GMenuLinkIter) iter = g_menu_model_iterate_item_links(top, j);
 				while (g_menu_link_iter_next (iter)) {
 					const gchar* name = g_menu_link_iter_get_name (iter);
@@ -357,8 +325,10 @@ fm__menu_on_view_change (GMenuModel* model)
 					dbg(0, "       link: %s %p", name, item);
 				}
 			}
-
+#ifdef PRINT_MENUS
 			print_submenu(top);
+			print_submenu(submenu);
+#endif
 
 			break;
 		}
@@ -368,105 +338,7 @@ fm__menu_on_view_change (GMenuModel* model)
 
 #ifdef GTK4_TODO
 static void
-menu__go_down_dir (GtkMenuItem* menuitem, gpointer user_data)
-{
-	AyyiFilemanager* fm = file_manager__get();
-
-	GList* children = gtk_container_get_children(GTK_CONTAINER(menuitem));
-	for (;children;children=children->next) {
-		GtkWidget* child = children->data;
-		if (GTK_IS_LABEL(child)) {
-			const gchar* leaf = gtk_label_get_text((GtkLabel*)child);
-			gchar* filename = g_build_filename(fm->real_path, leaf, NULL);
-
-			fm__change_to(fm, filename, NULL);
-
-			g_free(filename);
-		}
-	}
-}
-
-
-#if 0
-/* Returns TRUE if the keys were installed (first call only) */
-gboolean
-ensure_filer_menu ()
-{
-	GList           *items;
-	guchar          *tmp;
-	GtkWidget       *item;
-
-	//if (!filer_keys_need_init) return FALSE;
-	//filer_keys_need_init = FALSE;
-
-	GtkItemFactory* item_factory = menu_create(fm_menu_def, sizeof(fm_menu_def) / sizeof(*fm_menu_def), "<filer>", NULL);
-
-	/*
-	GET_MENU_ITEM(filer_menu, "filer");
-	GET_SMENU_ITEM(filer_file_menu, "filer", "File");
-	GET_SSMENU_ITEM(filer_hidden_menu, "filer", "Display", "Show Hidden");
-	GET_SSMENU_ITEM(filer_filter_dirs_menu, "filer", "Display", "Filter Directories With Files");
-	GET_SSMENU_ITEM(filer_reverse_menu, "filer", "Display", "Reversed");
-	GET_SSMENU_ITEM(filer_auto_size_menu, "filer", "Display", "Automatic");
-	GET_SSMENU_ITEM(filer_thumb_menu, "filer", "Display", "Show Thumbnails");
-	GET_SSMENU_ITEM(item, "filer", "File", "Set Type...");
-	filer_set_type = GTK_BIN(item)->child;
-
-	GET_SMENU_ITEM(filer_new_menu, "filer", "New");
-	GET_SSMENU_ITEM(item, "filer", "Window", "Follow Symbolic Links");
-	filer_follow_sym = GTK_BIN(item)->child;
-
-	// File '' label...
-	items = gtk_container_get_children(GTK_CONTAINER(filer_menu));
-	filer_file_item = GTK_BIN(g_list_nth(items, 1)->data)->child;
-	g_list_free(items);
-
-	// Shift Open... label
-	items = gtk_container_get_children(GTK_CONTAINER(filer_file_menu));
-	file_shift_item = GTK_BIN(g_list_nth(items, 5)->data)->child;
-	g_list_free(items);
-
-	GET_SSMENU_ITEM(item, "filer", "Window", "New Window");
-	filer_new_window = GTK_BIN(item)->child;
-
-	g_signal_connect(filer_menu, "unmap_event", G_CALLBACK(menu_closed), NULL);
-	g_signal_connect(filer_file_menu, "unmap_event", G_CALLBACK(menu_closed), NULL);
-	g_signal_connect(filer_keys, "accel_changed", G_CALLBACK(save_menus), NULL);
-	*/
-
-	return TRUE;
-}
-#endif
-
-
-static void
-fm_menu__set_sort (GtkMenuItem* menuitem, gpointer user_data)
-{
-	//if (updating_menu) return;
-
-	//g_return_if_fail(window_with_focus != NULL);
-
-	display_set_sort_type(file_manager__get(), GPOINTER_TO_INT(user_data), GTK_SORT_ASCENDING);
-}
-
-
-static void
-mini_buffer (GtkMenuItem* menuitem, gpointer user_data)
-{
-	MiniType type = (MiniType)GPOINTER_TO_INT(user_data);
-
-	AyyiFilemanager* fm = file_manager__get();
-
-	// Item needs to remain selected...
-	if (type == MINI_SHELL)
-		fm->temp_item_selected = FALSE;
-
-	minibuffer_show(fm, type);
-}
-
-
-static void
-target_callback(AyyiFilemanager* fm, ViewIter* iter, gpointer action)
+target_callback (AyyiFilemanager* fm, ViewIter* iter, gpointer action)
 {
 	g_return_if_fail(fm);
 
@@ -481,19 +353,6 @@ target_callback(AyyiFilemanager* fm, ViewIter* iter, gpointer action)
 
 	view_clear_selection(fm->view);
 	fm->temp_item_selected = FALSE;
-}
-
-
-static void
-delete(AyyiFilemanager* fm)
-{
-	GList* paths = fm__selected_items(fm);
-	GList* l = paths;
-	for(;l;l=l->next){
-		dbg(1, "deleting file: %s\n", (char*)l->data);
-		g_unlink((char*)l->data);
-	}
-	destroy_glist(&paths);
 }
 
 
@@ -562,7 +421,6 @@ file_op (gpointer data, FileOp action, GtkWidget* unused)
 			//send_to(window_with_focus);
 			return;
 		case FILE_DELETE:
-			delete(fm);
 			return;
 		case FILE_USAGE:
 			//usage(window_with_focus);

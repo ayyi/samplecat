@@ -14,7 +14,7 @@ libpanels_la_SOURCES = \
 	directories.c directories.h \
 	files.c \
 	inspector.c \
-	player.c player.h \
+	player.c \
 	spectrogram.c \
 	search.c \
 	tags.c \
@@ -44,14 +44,14 @@ register.c: register.c.in Makefile.am ../../config.status
 		for i in $(ITEMS); do sed -i -e "s/@REGISTER1/@REGISTER1\nextern GType $$(echo $${i} | tr [A-Z] [a-z])_get_type();/" __register.c.in ; done && \
 		for i in $(ITEMS); do sed -i -e "s/@REGISTER2/panels[PANEL_TYPE_$$i].gtype = $$(echo $${i} | tr [A-Z] [a-z])_get_type();\n\t@REGISTER2/" __register.c.in ; done && \
 		sed -i -e "/_XX/d" __register.c.in && \
-		sed -i -e "s/XXXXXXXXX     spectrogram_/spectrogram_area_/" __register.c.in && \
-		sed -i -e "/spectrogram_/d" __register.c.in && \
+		sed -i -e "s/spectrogram_n/spectrogram_area_n/" __register.c.in && \
+		sed -i -e "s/spectrogram_g/spectrogram_area_g/" __register.c.in && \
 		sed -i -e "/library_/d" __register.c.in && \
-		sed -i -e "/filters_/d" __register.c.in && \
-		sed -i -e "/player_/d" __register.c.in && \
+		sed -i -e "/filters_get_type/d" __register.c.in && \
+		sed -i -e "/player_get/d" __register.c.in && \
 		sed -i -e "/directories_/d" __register.c.in && \
 		sed -i -e "/files_/d" __register.c.in && \
-		sed -i -e "/waveform_/d" __register.c.in && \
+		sed -i -e "/waveform_get_type/d" __register.c.in && \
 		sed -i -e "/@REGISTER/d" __register.c.in && \
 		cp __register.c.in $(@F) && \
 		rm __register.c.in

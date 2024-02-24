@@ -9,8 +9,7 @@
  * This software comes with no warranty of any kind, use at your own risk!
  */
 
-#ifndef VIEW_DIR_TREE_H
-#define VIEW_DIR_TREE_H
+#pragma once
 
 #include <dir_tree/typedefs.h>
 
@@ -25,9 +24,4 @@ const gchar* vdtree_row_get_path         (ViewDirTree*, gint row);
 const char*  vdtree_get_selected         (ViewDirTree*);
 
 void         vdtree_on_icon_theme_changed(ViewDirTree*);
-#ifdef GTK4_TODO
-void         vdtree_add_menu_item        (GtkAction*);
-#endif
-
-#endif
-
+void         vdtree_add_menu_item        (GMenuModel*, GAction*);

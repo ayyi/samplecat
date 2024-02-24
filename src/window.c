@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
- | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
- | copyright (C) 2007-2023 Tim Orford <tim@orford.org>                  |
+ | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
+ | copyright (C) 2007-2024 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -27,7 +27,6 @@
 #endif
 #include "file_manager.h"
 #include "file_manager/menu.h"
-#include "samplecat/worker.h"
 #include "player/player.h"
 #include "audio_analysis/waveform/waveform.h"
 #include "src/typedefs.h"
@@ -35,17 +34,7 @@
 #include "support.h"
 #include "model.h"
 #include "application.h"
-#include "library.h"
 #include "progress_dialog.h"
-#include "player.h"
-#ifdef USE_OPENGL
-#include "waveform/view_plus.h"
-#endif
-#ifdef HAVE_FFTW3
-#ifndef USE_OPENGL
-#include "spectrogram_widget.h"
-#endif
-#endif
 #ifdef ROTATOR
 #include "rotator.h"
 #endif
@@ -56,7 +45,7 @@
 #endif
 #endif
 
-#include "../layouts/layouts.c"
+#include "../layouts2/layouts.c"
 
 #include "filters.c"
 
@@ -70,17 +59,6 @@ extern void on_quit              (GtkMenuItem*, gpointer);
 typedef GtkWidget* (NewPanelFn)();
 typedef void       (ShowPanelFn)(bool);
 
-extern NewPanelFn dir_panel_new, spectrogram_area_new,
-	fileview_new,
-#ifdef USE_OPENGL
-	waveform_panel_new
-#endif
-	;
-
-#ifdef USE_OPENGL
-ShowPanelFn show_waveform;
-#endif
-
 typedef struct {
    char*          name;
    NewPanelFn*    new;
@@ -88,6 +66,7 @@ typedef struct {
    GtkOrientation orientation;
    GType          gtype;
    DockParameter* params;
+
    GtkWidget*     widget;
    GtkWidget*     dock_item;
 
@@ -97,39 +76,12 @@ typedef struct {
    }              menu;
 } Panel;
 
-Panel panels[] = {
-   {"Library",     listview__new},
-   {"Search",      },
-   {"Tags",        },
-   {"Filters",     filters_new},
-   {"Inspector",   },
-   {"Directories", dir_panel_new},
-   {"Filemanager", fileview_new},
-   {"Player",      player_control_new, player_control_on_show_hide},
-#ifdef USE_OPENGL
-   {"Waveform",    waveform_panel_new, show_waveform},
-#endif
-#ifdef HAVE_FFTW3
-#ifdef USE_OPENGL
-   {"Spectrogram", spectrogram_area_new, show_spectrogram, GTK_ORIENTATION_HORIZONTAL},
-#else
-   {"Spectrogram", spectrogram_widget_new, show_spectrogram, GTK_ORIENTATION_HORIZONTAL},
-#endif
-#endif
-#ifdef ROTATOR
-   {"Rotator",     _rotator_new},
-#endif
-};
-
 #include "register.c"
 
 struct _window {
    GtkWidget*     vbox;
    GtkWidget*     dock;
    GdlDockLayout* layout;
-#ifndef USE_OPENGL
-   GtkWidget*     spectrogram;
-#endif
 } window = {0,};
 
 #ifdef GTK4_TODO
@@ -142,14 +94,11 @@ static void       window_on_allocate              (GtkWidget*, GtkAllocation*, g
 #endif
 static gboolean   window_on_configure             (GtkWidget*, gpointer);
 
-static Panel*    panel_lookup_by_name            (const char*);
-static Panel*    panel_lookup_by_gtype           (GType);
+static Panel*     panel_lookup_by_name            (const char*);
+static Panel*     panel_lookup_by_gtype           (GType);
 
 #include "menu.c"
 
-#ifdef GTK4_TODO
-static void       make_menu_actions               (struct _accel[], int, void (*add_to_menu)(GtkAction*));
-#endif
 static void       window_on_layout_changed        ();
 
 #ifdef GTK4_TODO
@@ -170,27 +119,22 @@ _rotator_new ()
 #endif
 
 #ifdef GTK4_TODO
-Accel menu_keys[] = {
-	{"Add to database",NULL,        {{(char)'a',    0               },  {0, 0}}, menu__add_to_db,       GINT_TO_POINTER(0)},
-	{"Play"           ,NULL,        {{(char)'p',    0               },  {0, 0}}, menu__play,            NULL              },
-};
-
 Accel window_keys[] = {
 	{"Quit",           NULL,        {{(char)'q',    GDK_CONTROL_MASK},  {0, 0}}, on_quit,               GINT_TO_POINTER(0)},
 	{"Close",          NULL,        {{(char)'w',    GDK_CONTROL_MASK},  {0, 0}}, on_quit,               GINT_TO_POINTER(0)},
 	{"Delete",         NULL,        {{GDK_Delete,   0               },  {0, 0}}, k_delete_row,          NULL},
 	{"Layout Manager", NULL,        {{(char)'l',    GDK_CONTROL_MASK},  {0, 0}}, k_show_layout_manager, NULL},
 };
+#endif
 
-Accel fm_tree_keys[] = {
-    {"Add to database",NULL,        {{(char)'y',    0               },  {0, 0}}, menu__add_dir_to_db,   NULL},
-};
-
+#ifdef GTK4_TODO
 static GtkAccelGroup* accel_group = NULL;
 #endif
 
 const char* preferred_width = "preferred-width";
 const char* preferred_height = "preferred-height";
+
+#define LAYOUTS_DIR "layouts2"
 
 
 GtkWidget*
@@ -231,9 +175,9 @@ window_new (GtkApplication* gtk, gpointer user_data)
 
 	window.layout =	gdl_dock_layout_new(gdl_dock_object_get_master(GDL_DOCK_OBJECT(dock)));
 	g_autofree gchar* cwd = g_get_current_dir();
-	window.layout->dirs[0] = g_strdup_printf("%s/layouts", app->configctx.dir);
-	window.layout->dirs[1] = g_strdup_printf("%s/samplecat/layouts", SYSCONFDIR);
-	window.layout->dirs[2] = g_strdup_printf("%s/layouts", cwd);
+	window.layout->dirs[0] = g_strdup_printf("%s/"LAYOUTS_DIR, app->configctx.dir);
+	window.layout->dirs[1] = g_strdup_printf("%s/samplecat/"LAYOUTS_DIR, SYSCONFDIR);
+	window.layout->dirs[2] = g_strdup_printf("%s/"LAYOUTS_DIR, cwd);
 
 	GtkWidget* dockbar = gdl_dock_bar_new(gdl_dock_object_get_master(GDL_DOCK_OBJECT(dock)));
 	gdl_dock_bar_set_style(GDL_DOCK_BAR(dockbar), GDL_DOCK_BAR_TEXT);
@@ -319,7 +263,7 @@ window_new (GtkApplication* gtk, gpointer user_data)
 	gtk_window_add_accel_group(GTK_WINDOW(app->window), accel_group);
 #endif
 
-	gtk_widget_show((GtkWidget*)win);
+	gtk_widget_set_visible((GtkWidget*)win, true);
 
 #ifndef USE_OPENGL
 	void window_on_selection_change (SamplecatModel* m, Sample* sample, gpointer user_data)
@@ -351,6 +295,12 @@ window_new (GtkApplication* gtk, gpointer user_data)
 #endif
 	}
 	g_signal_connect((gpointer)app, "on-quit", G_CALLBACK(window_on_quit), NULL);
+
+	gboolean window_on_close_request (GtkWindow* window, gpointer user_data) {
+		window_on_quit((Application*)app, user_data);
+		return FALSE;
+	}
+	g_signal_connect((gpointer)gtk_application_get_active_window(GTK_APPLICATION(app)), "close-request", G_CALLBACK(window_on_close_request), NULL);
 
 	void store_content_changed (GtkListStore* store, gpointer data)
 	{
@@ -509,8 +459,19 @@ window_on_configure (GtkWidget* widget, gpointer user_data)
 		}
 
 		window_load_layout(app->temp_view ? "File Manager" : app->args.layout ? app->args.layout : "__default__");
-#ifdef GTK4_TODO
-		if (_debug_) gdl_dock_print((GdlDockMaster*)((GdlDockObject*)window.dock)->master);
+
+#ifdef DEBUG
+		gboolean on_idle ()
+		{
+			extern void gdl_dock_print (GdlDockMaster*);
+			extern void print_widget_tree (GtkWidget* widget);
+
+			gdl_dock_print((GdlDockMaster*)((GdlDockObject*)window.dock)->master);
+			print_widget_tree(window.dock);
+
+			return G_SOURCE_REMOVE;
+		}
+		if (_debug_) g_idle_add(on_idle, NULL);
 #endif
 
 		void window_activate_layout ()
@@ -599,68 +560,13 @@ message_panel__add_msg (const gchar* msg, const gchar* stock_id)
 #endif
 
 
-#ifdef GTK4_TODO
-static void
-make_menu_actions (Accel keys[], int count, void (*add_to_menu)(GtkAction*))
-{
-	// take the raw definitions and create actions and (optionally) menu items for them.
-
-	GtkActionGroup* group = gtk_action_group_new("File Manager");
-	accel_group = gtk_accel_group_new();
-
-	for (int k=0;k<count;k++) {
-		Accel* key = &keys[k];
-
-		GtkAction* action = gtk_action_new(key->name, key->name, "Tooltip", key->stock_item ? key->stock_item->stock_id : "gtk-file");
-		gtk_action_group_add_action(GTK_ACTION_GROUP(group), action);
-
-		GClosure* closure = g_cclosure_new(G_CALLBACK(key->callback), key->user_data, NULL);
-		g_signal_connect_closure(G_OBJECT(action), "activate", closure, FALSE);
-		gchar path[64]; sprintf(path, "<%s>/Categ/%s", gtk_action_group_get_name(GTK_ACTION_GROUP(group)), key->name);
 #if 0
-		gtk_accel_group_connect(accel_group, key->key[0].code, key->key[0].mask, GTK_ACCEL_MASK, closure);
-#else
-		gtk_accel_group_connect_by_path(accel_group, path, closure);
-#endif
-		gtk_accel_map_add_entry(path, key->key[0].code, key->key[0].mask);
-		gtk_action_set_accel_path(action, path);
-		gtk_action_set_accel_group(action, accel_group);
-
-		if(add_to_menu) add_to_menu(action);
-	}
-}
-#endif
-
-
-#ifdef HAVE_FFTW3
-void
-show_spectrogram (bool enable)
-{
-	if (enable && !panels[PANEL_TYPE_SPECTROGRAM].widget) {
-		Sample* selection = samplecat.model->selection;
-		if (selection) {
-			dbg(1, "selection=%s", selection->full_path);
-#ifndef USE_OPENGL
-			spectrogram_widget_set_file((SpectrogramWidget*)window.spectrogram, selection->full_path);
-#endif
-		}
-	}
-
-	if (panels[PANEL_TYPE_SPECTROGRAM].widget) {
-		show_widget_if(panels[PANEL_TYPE_SPECTROGRAM].widget, enable);
-	}
-
-	window_on_layout_changed();
-}
-#endif
-
-
-void
+static void
 show_filemanager (bool enable)
 {
 #if 1
 	// using gtk_widget_show() appears to work, but the correct way would be to use gdl_dock_item_hide_item() and gdl_dock_item_show_item()
-	show_widget_if((GtkWidget*)gdl_dock_get_item_by_name(GDL_DOCK(window.dock), "files"), enable);
+	gtk_widget_set_visible((GtkWidget*)gdl_dock_get_item_by_name(GDL_DOCK(window.dock), "files"), enable);
 #else
 	GdlDockItem* get_dock_parent(GdlDockItem* item)
 	{
@@ -690,17 +596,7 @@ show_filemanager (bool enable)
 	}
 #endif
 }
-
-
-void
-show_player (bool enable)
-{
-#ifdef GTK4_TODO
-	show_widget_if(panels[PANEL_TYPE_PLAYER].widget, enable);
-
-	player_control_on_show_hide(enable);
 #endif
-}
 
 
 static void
@@ -786,7 +682,7 @@ window_load_layout (const char* layout_name)
 					gchar* name = layout_name && strlen(layout_name)
 						? g_strdup(layout_name)
 						: g_strndup(filename, strlen(filename) - 4);
-					char* path = g_strdup_printf("%s/layouts/%s.xml", app->configctx.dir, name);
+					char* path = g_strdup_printf("%s/"LAYOUTS_DIR"/%s.xml", app->configctx.dir, name);
 					if (gdl_dock_layout_load_from_xml_file(window.layout, path)) {
 						if (!strcmp(name, "__default__")) { // only activate one layout
 							have_layout = _load_xml_layout(name);
@@ -818,13 +714,13 @@ window_save_layout ()
 	PF;
 	g_return_if_fail(window.layout);
 
-	char* dir = g_build_filename(app->configctx.dir, "layouts", NULL);
+	char* dir = g_build_filename(app->configctx.dir, LAYOUTS_DIR, NULL);
 	if (!g_mkdir_with_parents(dir, 488)) {
 
 #ifdef GDL_DOCK_YAML
-		char* filename = g_build_filename(app->configctx.dir, "layouts", "__default__.yaml", NULL);
+		char* filename = g_build_filename(app->configctx.dir, LAYOUTS_DIR, "__default__.yaml", NULL);
 #else
-		char* filename = g_build_filename(app->configctx.dir, "layouts", "__default__.xml", NULL);
+		char* filename = g_build_filename(app->configctx.dir, LAYOUTS_DIR, "__default__.xml", NULL);
 #endif
 		if (gdl_dock_layout_save_to_file(window.layout, filename)) {
 		}

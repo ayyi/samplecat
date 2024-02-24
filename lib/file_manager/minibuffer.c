@@ -54,6 +54,7 @@ static void         search_in_dir        (AyyiFilemanager*, int dir);
 static const gchar* mini_contents        (AyyiFilemanager*);
 static gboolean     grab_focus           (GtkWidget*);
 static gboolean     select_if_glob       (ViewIter*, gpointer data);
+#endif
 
 /****************************************************************
  *			EXTERNAL INTERFACE			*
@@ -63,7 +64,6 @@ void
 minibuffer_init (void)
 {
 }
-#endif
 
 
 /*
@@ -100,17 +100,20 @@ create_minibuffer (AyyiFilemanager* fm)
 }
 
 
-#ifdef GTK4_TODO
 void
 minibuffer_show (AyyiFilemanager* fm, MiniType mini_type)
 {
+#ifdef GTK4_TODO
 	int pos = -1;
 	ViewIter cursor;
+#endif
 	
 	g_return_if_fail(fm);
 	g_return_if_fail(fm->mini.entry);
 
+#ifdef GTK4_TODO
 	GtkEntry* mini = GTK_ENTRY(fm->mini.entry);
+#endif
 #if 0
 	entry_set_error(filer_window->minibuffer, FALSE);
 #endif
@@ -126,6 +129,7 @@ minibuffer_show (AyyiFilemanager* fm, MiniType mini_type)
 			mini_type == MINI_FILTER ? "Pattern:" :
 			"?");
 
+#ifdef GTK4_TODO
 	switch (mini_type) {
 		case MINI_PATH:
 			view_show_cursor(fm->view);
@@ -189,12 +193,14 @@ minibuffer_show (AyyiFilemanager* fm, MiniType mini_type)
 	gtk_editable_set_position(GTK_EDITABLE(mini), pos);
 
 	gtk_widget_set_no_show_all(fm->mini.area, FALSE);
-	gtk_widget_show_all(fm->mini.area);
+#endif
+	gtk_widget_set_visible(fm->mini.area, true);
 
 	gtk_widget_grab_focus(fm->mini.entry);
 }
 
 
+#ifdef GTK4_TODO
 void
 minibuffer_hide (AyyiFilemanager* fm)
 {
@@ -898,7 +904,7 @@ typedef struct {
 } SelectData;
 
 static gboolean
-select_if_test(ViewIter* iter, gpointer user_data)
+select_if_test (ViewIter* iter, gpointer user_data)
 {
 	DirItem *item;
 	SelectData *data = user_data;
@@ -963,7 +969,7 @@ filter_return_pressed (AyyiFilemanager* fm, guint etime)
 
 
 static gint
-mini_key_press_event(GtkWidget* widget, GdkEventKey* event, AyyiFilemanager* fm)
+mini_key_press_event (GtkWidget* widget, GdkEventKey* event, AyyiFilemanager* fm)
 {
 	if (event->keyval == GDK_Escape)
 	{

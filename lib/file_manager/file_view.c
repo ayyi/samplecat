@@ -20,6 +20,8 @@
 /* view_details.c - display a list of files in a TreeView */
 
 #include "config.h"
+#undef GDK_VERSION_MIN_REQUIRED
+#define GDK_VERSION_MIN_REQUIRED GDK_VERSION_4_8
 
 #include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
@@ -127,16 +129,14 @@ view_details_new (AyyiFilemanager* fm)
 	view_details->use_alt_colours = false;
 	view_details->filer_window->view = (ViewIface*)view_details;
 
-	view_details->filer_window->menu = fm__make_context_menu();
-	gtk_widget_set_parent (view_details->filer_window->menu, GTK_WIDGET(view_details));
+	view_details->filer_window->menu.widget = fm__make_context_menu();
+	gtk_widget_set_parent (view_details->filer_window->menu.widget, GTK_WIDGET(view_details));
 
 	view_details->scroll_win = gtk_scrolled_window_new();
 	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(view_details->scroll_win), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
 	gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(view_details->scroll_win), (GtkWidget*)view_details);
-	gtk_widget_show(view_details->scroll_win);
 #if 0
-	gtk_range_set_adjustment(GTK_RANGE(filer_window->scrollbar),
-		gtk_tree_view_get_vadjustment(GTK_TREE_VIEW(view_details)));
+	gtk_range_set_adjustment(GTK_RANGE(filer_window->scrollbar), gtk_tree_view_get_vadjustment(GTK_TREE_VIEW(view_details)));
 #endif
 
 	if (view_details->filer_window->sort_type != -1) view_details_sort((ViewIface*)view_details);
@@ -209,7 +209,7 @@ view_details_new (AyyiFilemanager* fm)
 		{
 			//if (((ViewDetails*)widget)->filer_window->menu)
 				//gtk_menu_popup(GTK_MENU(((ViewDetails*)widget)->filer_window->menu), NULL, NULL, NULL, NULL, (ev) ? ev->button : 0, gdk_event_get_time((GdkEvent*)ev));
-				gtk_popover_popup(GTK_POPOVER(((ViewDetails*)widget)->filer_window->menu));
+				gtk_popover_popup(GTK_POPOVER(((ViewDetails*)widget)->filer_window->menu.widget));
 		}
 
 		GtkGesture* click = gtk_gesture_click_new ();
@@ -1323,7 +1323,7 @@ view_details_add_items (ViewIface* view, GPtrArray* new_items)
 			.item = item,
 			.utf8_name = !g_utf8_validate(leafname, -1, NULL) ? to_utf8(leafname) : NULL
 		};
-		dbg(2, "leaf=%20s owner=%3i size=%i", leafname, item->uid, item->size);
+		dbg(2, "leaf=%20s owner=%3i size=%zu", leafname, item->uid, item->size);
 
 		g_ptr_array_add(items, vitem);
 
@@ -1652,7 +1652,8 @@ view_details_cursor_visible (ViewIface* view)
 }
 
 
-static void view_details_set_base (ViewIface* view, ViewIter* iter)
+static void
+view_details_set_base (ViewIface* view, ViewIter* iter)
 {
 	ViewDetails *view_details = (ViewDetails *) view;
 

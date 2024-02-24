@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
- | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
- | copyright (C) 2007-2023 Tim Orford <tim@orford.org>                  |
+ | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
+ | copyright (C) 2007-2024 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -18,7 +18,7 @@
 #include "debug/debug.h"
 #include "gdl/gdl-dock-item.h"
 #include "support.h"
-#include "widgets/colour_box.h"
+#include "widgets/colour-box.h"
 #include "application.h"
 
 #define TYPE_TAGS            (tags_get_type ())
@@ -62,7 +62,6 @@ tags_class_init (TagsClass * klass, gpointer klass_data)
 	G_OBJECT_CLASS (klass)->constructor = tags_constructor;
 }
 
-
 static GObject *
 tags_constructor (GType type, guint n_construct_properties, GObjectConstructParam* construct_properties)
 {
@@ -71,7 +70,6 @@ tags_constructor (GType type, guint n_construct_properties, GObjectConstructPara
 	g_object_set(obj, "expand", false, NULL);
 	return obj;
 }
-
 
 static void
 tags_instance_init (Tags* self, gpointer klass)
@@ -102,7 +100,9 @@ on_category_set_clicked (GtkComboBox* widget, gpointer user_data)
 	PF;
 
 	// get the selected category
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 	gchar* category = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(panel.category));
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 
 	GList* selectionlist = application_get_selection();
 	if (!selectionlist) { statusbar_print(1, "no files selected."); return; }
