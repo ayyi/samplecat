@@ -13,6 +13,7 @@
 #include "config.h"
 #include <gtk/gtk.h>
 #include "debug/debug.h"
+#include "gdl/gdl-dock-item.h"
 
 #define MAX_DEPTH 14
 
@@ -45,17 +46,18 @@
 		printf("%s", ayyi_white);
 		if (long_name) g_free(long_name);
 
-#ifdef GTK4_TODO
 		if (GDL_IS_DOCK_ITEM(widget)) {
-			GtkWidget* b = ((GdlDockItem*)widget)->child;
-			if (b) {
+			GtkWidget* child = ((GdlDockItem*)widget)->child;
+			if (child) {
 				(*depth)++;
-				print_item(b, depth);
+				print_item(child, depth);
 				(*depth)--;
+			} else {
+				snprintf(indent, 127, "%%%is  %s%%s%s\n", *depth * 3, ayyi_red, ayyi_white);
+				printf(indent, " ", "NO CHILD");
 			}
 		}
 		else
-#endif
 			if (*depth < MAX_DEPTH) print_children(widget, depth);
 	}
 
@@ -70,21 +72,6 @@
 		}
 		(*depth)--;
 		return;
-
-		/*
-		if (GTK_IS_CONTAINER(widget)) {
-			GList* children = gtk_container_get_children(GTK_CONTAINER(widget));
-			for (GList* l = children; l; l = l->next) {
-				print_item(l->data, depth);
-			}
-			g_list_free(children);
-		}
-		else if (GDL_IS_DOCK_ITEM(widget)) {
-			(*depth)++;
-			print_item(widget, depth);
-			(*depth)--;
-		}
-		*/
 	}
 
 void

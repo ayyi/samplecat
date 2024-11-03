@@ -68,6 +68,7 @@ tags_constructor (GType type, guint n_construct_properties, GObjectConstructPara
 	GObjectClass* parent_class = G_OBJECT_CLASS (tags_parent_class);
 	GObject* obj = parent_class->constructor (type, n_construct_properties, construct_properties);
 	g_object_set(obj, "expand", false, NULL);
+	gtk_widget_set_size_request((GtkWidget*)obj, -1, 100);
 	return obj;
 }
 
@@ -84,7 +85,6 @@ tags_instance_init (Tags* self, gpointer klass)
 
 	panel.colour = colour_box_new(panel.hbox2);
 	panel.category = tag_selector_new();
-
 
 	gtk_box_append(GTK_BOX(vbox), panel.hbox1);
 	gtk_box_append(GTK_BOX(vbox), panel.hbox2);

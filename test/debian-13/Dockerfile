@@ -1,7 +1,7 @@
-FROM debian:bookworm
+FROM debian:trixie
 RUN apt-get -y update && apt-get install -y \
 	openssh-client \
-	gcc make automake libtool pkg-config gdb \
+	g++ make automake libtool pkg-config gdb \
 	git \
 	vim \
 	libsqlite3-dev \

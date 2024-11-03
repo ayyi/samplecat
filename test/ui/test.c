@@ -39,6 +39,12 @@ static void set_home_dir (char** argv);
 int
 application_main (int argc, char** argv)
 {
+#ifdef HAVE_GTK_4_16
+	g_setenv ("GDK_DISABLE", "egl", false);
+#else
+	g_setenv ("GDK_DEBUG", "gl-glx", false);
+#endif
+
 	g_log_set_default_handler (log_handler, NULL);
 
 	set_home_dir (argv);
@@ -108,11 +114,6 @@ application_main (int argc, char** argv)
 
 	if (player_opt) g_strlcpy(app->config.auditioner, app->players->data, 8);
 
-#ifdef __APPLE__
-	GtkOSXApplication* osxApp = (GtkOSXApplication*)
-	g_object_new(GTK_TYPE_OSX_APPLICATION, NULL);
-#endif
-
 	icon_theme_init();
 	pixmaps_init();
 
@@ -152,10 +153,11 @@ application_main (int argc, char** argv)
 #endif
 
 	application_set_ready();
+	int status = g_application_run (G_APPLICATION (app), argc, argv);
 
 	statusbar_print(2, PACKAGE_NAME". Version "PACKAGE_VERSION);
 
-	return 0;
+	return status;
 }
 
 

@@ -41,6 +41,7 @@ static bool auditioner_play       (Sample*);
 static void auditioner_stop       ();
 static void auditioner_play_all   ();
 static void auditioner_status     (StatusCallback, gpointer);
+static void auditioner_set_level  (double);
 
 const Auditioner a_ayyidbus = {
 	&auditioner_check,
@@ -49,7 +50,7 @@ const Auditioner a_ayyidbus = {
 	&auditioner_play,
 	&auditioner_play_all,
 	&auditioner_stop,
-	NULL,
+	.set_level = auditioner_set_level,
 };
 
 
@@ -182,6 +183,18 @@ auditioner_play_all ()
 }
 
 
+static void
+auditioner_set_level (double level)
+{
+	GError* error = NULL;
+	dbus_g_proxy_call(dbus->proxy, "Level", &error, G_TYPE_DOUBLE, level, G_TYPE_INVALID, G_TYPE_INVALID);
+	if (error) {
+		pwarn("error: %s", error->message);
+		g_error_free(error);
+	}
+}
+
+
 typedef struct {
     StatusCallback callback;
     gpointer user_data;
@@ -215,5 +228,3 @@ auditioner_status (StatusCallback callback, gpointer user_data)
 {
 	dbus_g_proxy_begin_call(dbus->proxy, "getStatus", audtioner_status_reply, SC_NEW(C2, .callback=callback, .user_data=user_data), NULL, G_TYPE_INVALID);
 }
-
-

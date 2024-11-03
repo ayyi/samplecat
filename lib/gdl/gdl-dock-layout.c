@@ -991,38 +991,50 @@ gdl_dock_layout_setup_object2 (GdlDockMaster* master, Stack* stack, gint *n_afte
 		/* construct the object if we have to */
 		/* set the master, so toplevels are created correctly and
 		   other objects are bound */
+		GtkWidget* child = NULL;
+		bool need_child = true;
+		if (name) {
+			GType gtype = g_type_from_name(name);
+			if (gtype) {
+				object = g_object_new(gtype, NULL);
+				if (GDL_IS_DOCK_ITEM(object)) {
+					need_child = false;
+				} else {
+					child = (GtkWidget*)object;
+					object = NULL;
+				}
+			}
+		}
+		if (need_child)
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-		object = g_object_newv (G_TYPE_FROM_CLASS(constructor->object_class), constructor->n_params, (GParameter*)constructor->params);
+			object = g_object_newv (G_TYPE_FROM_CLASS(constructor->object_class), constructor->n_params, (GParameter*)constructor->params);
 #pragma GCC diagnostic warning "-Wdeprecated-declarations"
 
 		if (GDL_IS_DOCK_ITEM(object) && !gdl_dock_object_is_compound(object))
 			stack->added[stack->added_sp++] = (GdlDockItem*)object;
 
+		if (need_child) {
+			if (!child) {
+				RegistryItem* item = gdl_dock_object_get_name(object) ? g_hash_table_lookup(registry, gdl_dock_object_get_name(object)) : NULL;
+				if (item)
+					child = item->info.gtkfn();
+				else
+					if (G_TYPE_FROM_CLASS(constructor->object_class) == GDL_TYPE_DOCK_ITEM)
+						pwarn("dont have either gtype or registry entry");
+			}
+
+			if (child) {
+				GDL_DOCK_OBJECT_UNSET_FLAGS(object, GDL_DOCK_AUTOMATIC);
+
+				gdl_dock_object_add_child(object, child);
+			}
+		}
+
 		/*
 		 *  The 'master' property has to be set _after_ construction so that
 		 *  the 'automatic' property can be correctly set beforehand.
 		 */
-		GtkWidget* child = NULL;
-		GType gtype = name ? g_type_from_name(name) : 0;
-		if (gtype) {
-			child = g_object_new(gtype, NULL);
-		} else {
-			RegistryItem* item = gdl_dock_object_get_name(object) ? g_hash_table_lookup(registry, gdl_dock_object_get_name(object)) : NULL;
-			if (item)
-				child = item->info.gtkfn();
-			else
-				if (G_TYPE_FROM_CLASS(constructor->object_class) == GDL_TYPE_DOCK_ITEM)
-					pwarn("dont have either gtype or registry entry");
-		}
-
-		if (child)
-			GDL_DOCK_OBJECT_UNSET_FLAGS(object, GDL_DOCK_AUTOMATIC);
-
 		gdl_dock_object_bind (object, (GObject*)stack->master);
-
-		if (child) {
-			gdl_dock_object_add_child(object, child);
-		}
 
 		constructor->done = true;
 		constructor->object_class = NULL;

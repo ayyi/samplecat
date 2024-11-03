@@ -5,10 +5,31 @@ button {
 	border-radius: 0;
 }
 
-paned > separator {
-	margin-left: 10px;
-	margin-right: 10px;
+dock-item {
+	border: 1px solid #bbb;
+	margin: 4px;
+	padding: 4px;
+	border-radius: 4px;
 }
+
+paned > separator {
+	background-image: image(rgb(240, 240, 240));
+}
+
+paned > separator:hover {
+	background-image: image(rgb(100, 100, 100));
+}
+
+paned.horizontal > separator {
+	margin: 0 4px;
+	padding: 0 4px;
+}
+
+paned.vertical > separator {
+	margin: 3px 0;
+	padding: 3px 0;
+}
+
 
 /* dock-grip label */
 dock-title {
@@ -17,7 +38,6 @@ dock-title {
 }
 
 dock-grip {
-	background-color: #d7e0e3;
 	padding: 0;
 }
 
@@ -69,5 +89,11 @@ tag button {
 }
 
 entry.tagged {
-  border-spacing: 4px;
+	border-spacing: 4px;
+}
+
+label#spp {
+	background-color: #000;
+	color: #fff;
+	padding-left: 4px;
 }

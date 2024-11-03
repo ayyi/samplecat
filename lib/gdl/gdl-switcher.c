@@ -815,12 +815,6 @@ gdl_switcher_class_init (GdlSwitcherClass *klass)
     GtkWidgetClass *widget_class = GTK_WIDGET_CLASS (klass);
     GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
-    static const gchar button_style[] =
-       "* {\n"
-           "outline-width : 1px;\n"
-           "padding: 0;\n"
-       "}";
-
 #ifdef GTK4_TODO
     container_class->remove = gdl_switcher_remove;
 #endif
@@ -860,8 +854,16 @@ gdl_switcher_class_init (GdlSwitcherClass *klass)
 
     klass->priv = G_TYPE_CLASS_GET_PRIVATE (klass, GDL_TYPE_SWITCHER, GdlSwitcherClassPrivate);
 
+    static const gchar button_style[] =
+       "* {\n"
+           "outline-width : 1px;\n"
+           "padding: 0;\n"
+       "}";
+
     klass->priv->css = gtk_css_provider_new ();
-    gtk_css_provider_load_from_data (klass->priv->css, button_style, -1);
+	gtk_css_provider_load_from_string(klass->priv->css, button_style);
+
+	gtk_widget_class_set_css_name (widget_class, "switcher");
 }
 
 static void

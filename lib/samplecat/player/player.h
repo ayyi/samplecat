@@ -30,6 +30,7 @@ typedef struct {
     int     (*pause)      (int);
     void    (*seek)       (double);
     guint   (*position)   ();
+    void    (*set_level)  (double);
 } Auditioner;
 
 G_BEGIN_DECLS
@@ -97,6 +98,7 @@ void    player_stop                 ();
 void    player_pause                ();
 void    player_set_position         (gint64);
 void    player_set_position_seconds (float);
+void    player_set_level            (double);
 void    player_on_play_finished     ();
 
 bool    player_is_stopped           ();

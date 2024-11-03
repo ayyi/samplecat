@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
- | copyright (C) 2007-2023 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2007-2024 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -11,6 +11,7 @@
  */
 
 #define __main_c__
+
 #include "config.h"
 #include <libgen.h>
 #include <gdk-pixbuf/gdk-pixdata.h>
@@ -47,6 +48,12 @@ SamplecatApplication* app = NULL;
 int 
 main (int argc, char** argv)
 {
+#ifdef HAVE_GTK_4_16
+	g_setenv ("GDK_DISABLE", "egl", false);
+#else
+	g_setenv ("GDK_DEBUG", "gl-glx", false);
+#endif
+
 #ifdef __APPLE__
 	program_name = argv[0];
 #endif
@@ -155,8 +162,6 @@ main (int argc, char** argv)
 #else
 	//if(BACKEND_IS_NULL) listview__show_db_missing();
 #endif
-
-	application_set_ready();
 
 #ifdef __APPLE__
 	gtk_osxapplication_ready(osxApp);

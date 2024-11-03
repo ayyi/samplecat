@@ -198,7 +198,7 @@ inspector_init (Inspector* inspector)
 	i->rows.a.tags.widget = (GtkWidget*)editable_label_button_new("Tags");
 #else
 	{
-		i->rows.a.tags.widget = demo_tagged_entry_new();
+		ROW(tags) = demo_tagged_entry_new();
 
 		void set_tags (DemoTaggedEntry* entry)
 		{
@@ -226,7 +226,7 @@ inspector_init (Inspector* inspector)
 		}
 
 		GtkWidget* button = gtk_button_new_with_mnemonic ("Add _Tag");
-		g_signal_connect (button, "clicked", G_CALLBACK (add_tag), i->rows.a.tags.widget);
+		g_signal_connect (button, "clicked", G_CALLBACK (add_tag), ROW(tags));
 		gtk_grid_attach(GTK_GRID(table), button, 1, 1, 1, 1);
 
 		void tag_removed (DemoTaggedEntry* entry, gpointer user_data)
@@ -237,8 +237,8 @@ inspector_init (Inspector* inspector)
 		g_signal_connect (i->rows.a.tags.widget, "tag-removed", G_CALLBACK (tag_removed), i->rows.a.tags.widget);
 	}
 #endif
-	gtk_widget_set_halign (i->rows.a.tags.widget, GTK_ALIGN_START);
-	gtk_grid_attach(GTK_GRID(table), i->rows.a.tags.widget, 0, s, 2, 1);
+	gtk_widget_set_halign (ROW(tags), GTK_ALIGN_START);
+	gtk_grid_attach(GTK_GRID(table), ROW(tags), 0, s, 2, 1);
 	s++;
 
 	for (;s<N_ROWS;s++) {
@@ -696,7 +696,7 @@ show_fields (Inspector* inspector)
 	InspectorPrivate* i = inspector->priv;
 	Rows* rows = &i->rows.a;
 
-	GtkWidget* fields[] = {rows->filename.widget, rows->tags.widget, rows->length.widget, rows->samplerate.widget, rows->channels.widget, ROW(mimetype), i->table, ROW(level), i->text, rows->bitdepth.widget, rows->bitrate.widget};
+	GtkWidget* fields[] = {rows->filename.widget, ROW(tags), rows->length.widget, rows->samplerate.widget, rows->channels.widget, ROW(mimetype), i->table, ROW(level), i->text, rows->bitdepth.widget, rows->bitrate.widget};
 	for (int f=0;f<G_N_ELEMENTS(fields);f++) {
 		gtk_widget_set_visible(GTK_WIDGET(fields[f]), true);
 	}

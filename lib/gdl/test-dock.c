@@ -18,7 +18,7 @@ on_style_button_toggled (GtkCheckButton *button, GdlDock *dock)
 	GdlDockMaster *master = GDL_DOCK_MASTER (gdl_dock_object_get_master (GDL_DOCK_OBJECT (dock)));
 	GdlSwitcherStyle style = GPOINTER_TO_INT (g_object_get_data (G_OBJECT (button), "__style_id"));
 	if (gtk_check_button_get_active (button)) {
-	    g_object_set (master, "switcher-style", style, NULL);
+		g_object_set (master, "switcher-style", style, NULL);
 	}
 }
 
@@ -33,7 +33,7 @@ create_style_button (GtkWidget *dock, GtkWidget *box, GtkWidget *group, GdlSwitc
 	gtk_check_button_set_group (GTK_CHECK_BUTTON (button1), GTK_CHECK_BUTTON (group));
 	g_object_set_data (G_OBJECT (button1), "__style_id", GINT_TO_POINTER (style));
 	if (current_style == style) {
-	    gtk_check_button_set_active (GTK_CHECK_BUTTON (button1), TRUE);
+		gtk_check_button_set_active (GTK_CHECK_BUTTON (button1), TRUE);
 	}
 	g_signal_connect (button1, "toggled", G_CALLBACK (on_style_button_toggled), dock);
 	gtk_box_append (GTK_BOX (box), button1);
@@ -177,7 +177,7 @@ activate (GtkApplication* app, gpointer user_data)
 
 	/* create the dockbar */
 	GtkWidget* dockbar = gdl_dock_bar_new (G_OBJECT (dock));
-    gdl_dock_bar_set_style(GDL_DOCK_BAR(dockbar), GDL_DOCK_BAR_TEXT);
+	gdl_dock_bar_set_style(GDL_DOCK_BAR(dockbar), GDL_DOCK_BAR_TEXT);
 
 	GtkWidget* box = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 5);
 	gtk_widget_set_valign(box, GTK_ALIGN_FILL);
@@ -211,12 +211,12 @@ activate (GtkApplication* app, gpointer user_data)
 	gdl_dock_add_item (GDL_DOCK (dock), GDL_DOCK_ITEM (items [0]), GDL_DOCK_BOTTOM);
 
 	for (int i = 1; i < 3; i++) {
-	    gchar name[10];
-	    snprintf (name, sizeof (name), "Item #%d", i + 4);
-	    items [i] = gdl_dock_item_new_with_icon (name, name, "go-next-symbolic", GDL_DOCK_ITEM_BEH_NORMAL);
-	    gdl_dock_item_set_child (GDL_DOCK_ITEM (items [i]), create_text_item ());
+		gchar name[10];
+		snprintf (name, sizeof (name), "Item #%d", i + 4);
+		items [i] = gdl_dock_item_new_with_icon (name, name, "go-next-symbolic", GDL_DOCK_ITEM_BEH_NORMAL);
+		gdl_dock_item_set_child (GDL_DOCK_ITEM (items [i]), create_text_item ());
 
-	    gdl_dock_object_dock (GDL_DOCK_OBJECT (items [0]), GDL_DOCK_OBJECT (items [i]), GDL_DOCK_CENTER, NULL);
+		gdl_dock_object_dock (GDL_DOCK_OBJECT (items [0]), GDL_DOCK_OBJECT (items [i]), GDL_DOCK_CENTER, NULL);
 	};
 
 	/* tests: manually dock and move around some of the items */
@@ -272,7 +272,7 @@ main (int argc, char **argv)
 
 	int status = g_application_run (G_APPLICATION (app), argc, argv);
 
-  	g_object_unref (layout);
+	g_object_unref (layout);
 	g_object_unref (app);
 
 	return status;

@@ -34,7 +34,9 @@ typedef struct
 	GtkWidget* slider3; // player speed
 	GtkWidget* cbfx;    // player enable FX
 	GtkWidget* cblnk;   // link speed/pitch
-	GtkWidget* pbpause; // playback pause button
+	struct {
+	   GtkWidget* next;
+	}          pb;
 } PlayCtrl;
 
 typedef struct {
@@ -112,12 +114,83 @@ pc_add_widgets ()
 		slider1sigid = g_signal_connect((gpointer)slider, "value-changed", G_CALLBACK(slider_value_changed), NULL);
 	}
 
+	if (!(play->auditioner->position && play->auditioner->seek)) {
+		GtkWidget* label = gtk_label_new("<span size=\"200%\">00:00</span> 000");
+		gtk_label_set_use_markup((GtkLabel*)label, true);
+		gtk_widget_set_name(label, "spp");
+		gtk_label_set_xalign((GtkLabel*)label, 0.);
+		gtk_box_append(GTK_BOX(vbox), label);
+
+		void on_position (GObject* player, void* label)
+		{
+			static guint timer = 0;
+			static guint inactivity = 0;
+
+			static int prev_position = 0;
+			static int64_t offset = 0;
+
+			gboolean on_timeout (void* label)
+			{
+				int t = 0;
+				static int dt = 0;
+
+				int64_t wall = g_get_monotonic_time() / 1000;
+				int64_t tnow = wall - offset;
+				if (play->position == prev_position) {
+					t = tnow + dt / 2;
+					dt /= 2;
+				} else {
+					dt = tnow - play->position;
+					if (ABS(dt) > 4000) {
+						t = play->position;
+						dt = 0;
+					} else {
+						t = play->position + dt / 2;
+					}
+					offset = wall - t;
+					prev_position = play->position;
+				}
+
+				int minutes = t / 1000 / 60;
+				int secs = t / 1000 - minutes * 60;
+				int ms = t - 1000 * (secs + minutes * 60);
+
+				char str[40];
+				snprintf(str, 39, "<span size=\"200%%\">%02i:%02i</span> %03i", minutes % 1000, secs % 100, ms % 1000);
+				gtk_label_set_markup((GtkLabel*)label, str);
+
+				return G_SOURCE_CONTINUE;
+			}
+
+			gboolean keep_alive (void* label)
+			{
+				inactivity = 0;
+				int64_t wall = g_get_monotonic_time() / 1000;
+				int64_t tnow = wall - offset;
+
+				if (tnow - prev_position > 3000) {
+					g_source_remove(timer);
+					timer = 0;
+					inactivity = 0;
+
+					return G_SOURCE_REMOVE;
+				}
+
+				return G_SOURCE_CONTINUE;
+			}
+
+			if (!timer) timer = g_timeout_add(100, on_timeout, label);
+			if (!inactivity) inactivity = g_timeout_add_seconds(4, keep_alive, label);
+		}
+		g_signal_connect(play, "position", (GCallback)on_position, label);
+	}
+
 	//
 	// Play-control toggle buttons
 	//
+	GtkWidget* btnbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 10);
 	{
-		GtkWidget* pbctrl = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 10);
-		gtk_box_append(GTK_BOX(vbox), pbctrl);
+		gtk_box_append(GTK_BOX(vbox), btnbox);
 
 		struct {
 			char* icon;
@@ -131,15 +204,14 @@ pc_add_widgets ()
 		for (int i=0;i<n_buttons;i++) {
 			btn[i] = gtk_toggle_button_new ();
 			gtk_button_set_icon_name ((GtkButton*)btn[i], b[i].icon);
-			gtk_box_append(GTK_BOX(pbctrl), btn[i]);
+			gtk_box_append(GTK_BOX(btnbox), btn[i]);
 			gtk_widget_set_hexpand(btn[i], true);
 			gtk_actionable_set_action_name (GTK_ACTIONABLE(btn[i]), b[i].action);
 		}
 	}
 
 	if (play->auditioner->position && play->auditioner->seek) {
-
-#if (defined ENABLE_LADSPA) // experimental
+#if (defined ENABLE_LADSPA)
 		/* note: we could do speed-changes w/o LADSPA, but it'd be EVEN MORE ifdefs */
 
 		/* pitch LADSPA/rubberband */
@@ -198,6 +270,30 @@ pc_add_widgets ()
 		slider3sigid = g_signal_connect((gpointer)slider3, "value-changed", G_CALLBACK(speed_value_changed), slider2);
 #endif /* LADSPA-rubberband/VARISPEED */
 	}
+
+	if (play->auditioner->set_level) {
+		GtkWidget* slider = gtk_scale_new_with_range(GTK_ORIENTATION_HORIZONTAL, 0., 100., 1.);
+		gtk_widget_set_tooltip_text(slider, "Volume");
+		gtk_range_set_value(GTK_RANGE(slider), 100.);
+		gtk_box_append(GTK_BOX(vbox), slider);
+
+		void
+		level_slider_changed (GtkRange* range, gpointer user_data)
+		{
+			player_set_level(gtk_range_get_value(range));
+		}
+		g_signal_connect((gpointer)slider, "value-changed", G_CALLBACK(level_slider_changed), NULL);
+	}
+
+	pc->pb.next = ({
+		GtkWidget* widget = gtk_button_new_from_icon_name("go-next-symbolic");
+		gtk_widget_set_size_request(widget, 100, -1);
+		gtk_widget_set_hexpand(widget, true);
+		gtk_box_append(GTK_BOX(btnbox), widget);
+
+		gtk_actionable_set_action_name (GTK_ACTIONABLE(widget), "app.player-next");
+		widget;
+	});
 }
 
 
@@ -272,7 +368,7 @@ slider_value_changed (GtkRange *range, gpointer user_data)
 }
 
 #ifdef HAVE_JACK
-void
+static void
 update_slider (gpointer _)
 {
 	PlayCtrl* pc = playercontrol;
@@ -400,8 +496,8 @@ player_control_on_show_hide (bool enable)
 	{
 		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(btns.stop), play->state == PLAYER_STOPPED);
 		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(btns.play), play->state > PLAYER_PAUSED);
-		if (playercontrol->pbpause) {
-			gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(playercontrol->pbpause), play->state == PLAYER_PAUSED);
+		if (btns.pause) {
+			gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(btns.pause), play->state == PLAYER_PAUSED);
 		}
 	}
 	if (!pause_handler) pause_handler = g_signal_connect(play, "notify::state", G_CALLBACK(on_player_state_change), NULL);

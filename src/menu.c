@@ -64,11 +64,11 @@ make_context_menu (GtkWidget* widget)
 
 				GdlDockObject* parent = (GdlDockObject*)window.dock;
 
-				GtkAllocation allocation;
-				gtk_widget_get_allocation((GtkWidget*)parent, &allocation);
+				int width = gtk_widget_get_width((GtkWidget*)parent);
+				int height = gtk_widget_get_height((GtkWidget*)parent);
 				GdlDockPlacement placement = panel->orientation == GTK_ORIENTATION_HORIZONTAL
 					? GDL_DOCK_BOTTOM
-					: allocation.width > allocation.height ? GDL_DOCK_RIGHT : GDL_DOCK_BOTTOM;
+					: width > height ? GDL_DOCK_RIGHT : GDL_DOCK_BOTTOM;
 
 				GDL_DOCK_OBJECT_GET_CLASS(parent)->dock(parent, (GdlDockObject*)dock_item, placement, NULL);
 

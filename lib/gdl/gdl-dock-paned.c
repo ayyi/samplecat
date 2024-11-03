@@ -350,10 +350,12 @@ gdl_dock_paned_request_foreach (GdlDockObject *object, gpointer user_data)
     gboolean may_dock = gdl_dock_object_dock_request (object, child_x, child_y, &my_request);
     if (may_dock) {
         /* Translate request coordinate back to parent coordinate */
-		double x, y;
-        gtk_widget_translate_coordinates (GTK_WIDGET (object), data->parent, my_request.rect.x, my_request.rect.y, &x, &y);
-		my_request.rect.x = x;
-		my_request.rect.y = y;
+		graphene_point_t in = { my_request.rect.x, my_request.rect.y };
+		graphene_point_t out;
+		if (gtk_widget_compute_point (GTK_WIDGET (object), data->parent, &in, &out)) {
+			my_request.rect.x = out.x;
+			my_request.rect.y = out.y;
+		}
         data->may_dock = TRUE;
         *data->request = my_request;
     }

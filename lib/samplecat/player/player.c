@@ -254,10 +254,18 @@ player_set_position (gint64 frames)
 void
 player_set_position_seconds (float seconds)
 {
-	if (play->sample) {
+	if (true || play->sample) {
 		play->position = seconds * 1000;
 		g_signal_emit_by_name (play, "position");
 	}
+}
+
+
+void
+player_set_level (double level)
+{
+	if (play->auditioner->set_level)
+		play->auditioner->set_level(level);
 }
 
 

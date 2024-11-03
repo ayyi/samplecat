@@ -69,8 +69,8 @@ add_menu_items_from_defn (GtkWidget* widget, GMenuModel* model, int size, MenuDe
 					GMenuItem* mi = g_menu_item_new_submenu(item->name,  section[s]);
 					g_menu_item_set_attribute (mi, "submenu-action", "s", item->action);
 					if (false && item->icon) {
-  						g_menu_item_set_attribute (mi, "touch-icon", "s", item->icon);
-  						g_menu_item_set_attribute (mi, "icon", "s", item->icon); // setting an icon changes the layout but does not show an icon
+						g_menu_item_set_attribute (mi, "touch-icon", "s", item->icon);
+						g_menu_item_set_attribute (mi, "icon", "s", item->icon); // setting an icon changes the layout but does not show an icon
 					}
 					g_menu_append_item(G_MENU(section[s - 1]), mi);
 					g_object_unref(mi);

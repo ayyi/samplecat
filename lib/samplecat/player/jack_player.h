@@ -21,8 +21,9 @@
   along with this program; if not, write to the Free Software
   Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 */
-#ifndef __SAMPLEJACK_H_
-#define __SAMPLEJACK_H_
+
+#pragma once
+
 #include "samplecat/typedefs.h"
 
 #define VARISPEED 1 ///< allow to change speed while playing
@@ -53,4 +54,3 @@ void     jplay__seek       (double pos);
  * -1 if not playing, -2 if a seek is currently in progress.
  */
 guint    jplay__getposition();
-#endif

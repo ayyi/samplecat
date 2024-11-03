@@ -232,19 +232,14 @@ window_new (GtkApplication* gtk, gpointer user_data)
 		GtkWidget* hbox_statusbar = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
 		gtk_box_append(GTK_BOX(window.vbox), hbox_statusbar);
 
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 		GtkWidget* statusbar = ((Application*)app)->statusbar = gtk_statusbar_new();
-		//gtk_statusbar_set_has_resize_grip(GTK_STATUSBAR(statusbar), TRUE);	//why does give a warning??????
-#ifdef GTK4_TODO
-		gtk_statusbar_set_has_resize_grip(GTK_STATUSBAR(statusbar), FALSE);
-		gtk_container_set_border_width(GTK_CONTAINER(statusbar), 5);
-#endif
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 		gtk_box_append(GTK_BOX(hbox_statusbar), statusbar);
 
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 		GtkWidget* statusbar2 = ((Application*)app)->statusbar2 = gtk_statusbar_new();
-#ifdef GTK4_TODO
-		gtk_statusbar_set_has_resize_grip(GTK_STATUSBAR(statusbar2), FALSE);
-		gtk_container_set_border_width(GTK_CONTAINER(statusbar2), 5);
-#endif
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 		gtk_box_append(GTK_BOX(hbox_statusbar), statusbar2);
 	}
 
@@ -321,9 +316,12 @@ window_new (GtkApplication* gtk, gpointer user_data)
 
 	window_on_layout_changed();
 
-	void click_gesture_pressed (GtkGestureClick *gesture, int n_press, double widget_x, double widget_y, gpointer)
+	void click_gesture_pressed (GtkGestureClick *gesture, int n_press, double x, double y, gpointer)
 	{
 		if (((Application*)app)->context_menu) {
+			gtk_popover_set_position(GTK_POPOVER(((Application*)app)->context_menu), GTK_POS_BOTTOM);
+			gtk_popover_set_pointing_to(GTK_POPOVER(((Application*)app)->context_menu), &(GdkRectangle){ x, y, 1, 1 });
+			gtk_popover_set_offset(GTK_POPOVER(((Application*)app)->context_menu), 80, 0);
 			gtk_popover_popup(GTK_POPOVER(((Application*)app)->context_menu));
 		}
 	}
@@ -520,8 +518,6 @@ window_on_configure (GtkWidget* widget, gpointer user_data)
 
 	return false;
 }
-#ifdef GTK4_TODO
-#endif
 
 
 #ifdef GTK4_TODO

@@ -67,7 +67,7 @@ search_constructor (GType type, guint n_construct_properties, GObjectConstructPa
 	GObject* obj = parent_class->constructor (type, n_construct_properties, construct_properties);
 	g_object_set(obj, "expand", false, NULL);
 
-	gtk_widget_set_size_request((GtkWidget*)obj, -1, 60);
+	gtk_widget_set_size_request((GtkWidget*)obj, -1, 72);
 
 	return obj;
 }

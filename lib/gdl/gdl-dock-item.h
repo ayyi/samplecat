@@ -104,6 +104,8 @@ typedef struct _GdlDockItemClassPrivate GdlDockItemClassPrivate;
 struct _GdlDockItem {
     GdlDockObject        object;
 
+    GtkWidget*           child;
+
     /* < private> */
     GdlDockItemPrivate  *priv;
 };

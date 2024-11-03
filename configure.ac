@@ -1,10 +1,10 @@
-AC_PREREQ(2.59)
+AC_PREREQ([2.71])
 AC_INIT([Samplecat],[0.4.0],[tim@orford.org])
 AC_CONFIG_SRCDIR([src/main.c])
-AC_CONFIG_HEADER([config.h])
+AC_CONFIG_HEADERS([config.h])
 AC_CANONICAL_HOST
 AC_CANONICAL_TARGET
-AM_INIT_AUTOMAKE([no-dist-gzip dist-xz])
+AM_INIT_AUTOMAKE([no-dist-gzip dist-xz foreign])
 AM_PROG_AR
 
 # LT_REVISION=1
@@ -18,8 +18,8 @@ AC_TYPE_SIZE_T
 
 LT_INIT
 
-AC_LIBTOOL_DLOPEN
-AC_PROG_LIBTOOL
+_LT_SET_OPTION([LT_INIT],[dlopen])
+LT_INIT
 
 AC_SYS_LARGEFILE
 
@@ -53,25 +53,24 @@ if test "$profiling" = "yes"; then
 fi
 AM_CONDITIONAL(BUILD_PROFILING, test "$profiling" = "yes")
 
-# default 'auto' configutaion
-AC_ARG_ENABLE(mysql,    AC_HELP_STRING([--disable-mysql], [disable use of Mysql as backend]),enable_mysql=$enableval, enable_mysql="auto")
-AC_ARG_ENABLE(ffmpeg,   AC_HELP_STRING([--disable-ffmpeg], [disable use of FFMPEG]), enable_ffmpeg=$enableval, enable_ffmpeg="auto")
+AC_ARG_ENABLE(mysql,    AS_HELP_STRING([--disable-mysql],[disable use of Mysql as backend]),enable_mysql=$enableval, enable_mysql="auto")
+AC_ARG_ENABLE(ffmpeg,   AS_HELP_STRING([--disable-ffmpeg],[disable use of FFMPEG]), enable_ffmpeg=$enableval, enable_ffmpeg="auto")
 AC_ARG_ENABLE(dnotify,  AS_HELP_STRING([--disable-dnotify], [build with dnotify support]), enable_dnotify=$enableval, enable_dnotify="auto")
 AC_ARG_ENABLE(ayyi,     AS_HELP_STRING([--enable-ayyi],[build with ayyi support]),enable_ayyi=$enableval, enable_ayyi="no")
 AC_ARG_ENABLE(ayyidbus, AS_HELP_STRING([--disable-ayyidbus],[disable use of dbus]),enable_ayyidbus=$enableval, enable_ayyidbus="auto")
 AC_ARG_ENABLE(jack,     AS_HELP_STRING([--disable-jack],[build with JACK support]),enable_jack=$enableval, enable_jack="auto")
 AC_ARG_ENABLE(gplayer,  AS_HELP_STRING([--disable-gplayer],[build with external player]),enable_gplayer=$enableval, enable_gplayer="auto")
 AC_ARG_ENABLE(nks,      AS_HELP_STRING([--enable-nks],[build with nks support]),enable_nks=$enableval,enable_nks=auto)
-AC_ARG_ENABLE(sf2,      AC_HELP_STRING([--enable-sf2], [build with sf2 support. Currently this option doesnt do anything useful.]),enable_sf2="$enableval", enable_sf2="no")
+AC_ARG_ENABLE(sf2,      AS_HELP_STRING([--enable-sf2],[build with sf2 support. Currently this option doesnt do anything useful.]),enable_sf2="$enableval", enable_sf2="no")
 AC_ARG_ENABLE(tracker,  AS_HELP_STRING([--enable-tracker],[build with tracker support]),enable_tracker=$enableval, enable_tracker="auto")
 AC_ARG_ENABLE(sqlite,   AS_HELP_STRING([--enable-sqlite],[build with sqlite support]),enable_sqlite=$enableval, enable_sqlite="auto")
 AC_ARG_ENABLE(mx,       AS_HELP_STRING([--enable-mx], [build with mx support -- experimental]), enable_mx=$enableval, enable_mx="auto")
 AC_ARG_ENABLE(webkit,   AS_HELP_STRING([--enable-webkit], [build with webkit support -- experimental]), enable_webkit=$enableval, enable_webkit="auto")
 AC_ARG_ENABLE(gl-app,   AS_HELP_STRING([--enable-gl_app], [build the gl application -- experimental]), enable_gl_app=$enableval, enable_gl_app="auto")
-AC_ARG_ENABLE(opengl,   AC_HELP_STRING([--disable-opengl], [disable use of OpenGL]),enable_opengl=$enableval,enable_opengl="auto")
-AC_ARG_ENABLE(fftw,     AC_HELP_STRING([--disable-fftw], [disable usage of FFTW ]),enable_fftw=$enableval,enable_fftw="auto")
-AC_ARG_ENABLE(libass,   AC_HELP_STRING([--disable-libass], [disable usage of libass ]),enable_libass=$enableval,enable_libass="auto")
-AC_ARG_ENABLE(aubio,    AC_HELP_STRING([--enable-aubio], [enable use of aubio for bpm detection]), enable_aubio=$enableval, enable_aubio="auto")
+AC_ARG_ENABLE(opengl,   AS_HELP_STRING([--disable-opengl],[disable use of OpenGL]),enable_opengl=$enableval,enable_opengl="auto")
+AC_ARG_ENABLE(fftw,     AS_HELP_STRING([--disable-fftw],[disable usage of FFTW ]),enable_fftw=$enableval,enable_fftw="auto")
+AC_ARG_ENABLE(libass,   AS_HELP_STRING([--disable-libass],[disable usage of libass ]),enable_libass=$enableval,enable_libass="auto")
+AC_ARG_ENABLE(aubio,    AS_HELP_STRING([--enable-aubio],[enable use of aubio for bpm detection]), enable_aubio=$enableval, enable_aubio="auto")
 
 case $target_os in
 	*darwin*)
@@ -109,12 +108,10 @@ dnl ----------------------------------------------------------------------------
 AC_MSG_CHECKING([if -Wl,--as-needed works])
 LDFLAGS_save=$LDFLAGS
 LDFLAGS="$LDFLAGS -Wl,--as-needed"
-AC_TRY_LINK([], [],
-            [
-             AC_MSG_RESULT([yes])
-             LDFLAGS="$LIBOAUTH_LDFLAGS -Wl,--as-needed"
-            ], 
-            [AC_MSG_RESULT([no])])
+AC_LINK_IFELSE([AC_LANG_PROGRAM([[]], [[]])],[
+            AC_MSG_RESULT([yes])
+            LDFLAGS="$LIBOAUTH_LDFLAGS -Wl,--as-needed"
+           ],[AC_MSG_RESULT([no])])
 LDFLAGS=$LDFLAGS_save
 
 dnl -----------------------------------------------------------------------------
@@ -129,6 +126,27 @@ AC_DEFINE(USE_GTK,1,[Enable GTK in libwaveform])
 
 ### Enable this to turn off all Gtk deprecation warnings such as for GtkTreeView
 ###AC_DEFINE(GDK_VERSION_MIN_REQUIRED, GDK_VERSION_4_8, [Ignore post 4.8 deprecations])
+
+if `pkg-config gtk4 --atleast-version=4.14`; then
+  HAVE_GTK_4_14="yes"
+  AC_DEFINE(HAVE_GTK_4_14, 1, [We have at least gtk 4.14])
+else
+  HAVE_GTK_4_14="no"
+fi;
+
+if `pkg-config gtk4 --atleast-version=4.16`; then
+  HAVE_GTK_4_16="yes"
+  AC_DEFINE(HAVE_GTK_4_16, 1, [We have at least gtk 4.16])
+else
+  HAVE_GTK_4_16="no"
+fi;
+
+if `pkg-config gtk4 --atleast-version=4.18`; then
+  HAVE_GTK_4_18="yes"
+  AC_DEFINE(HAVE_GTK_4_18, 1, [We have at least gtk 4.18])
+else
+  HAVE_GTK_4_18="no"
+fi;
 
 GMODULE_LIBS=`pkg-config gmodule-2.0 --libs`
 AC_SUBST(GMODULE_LIBS)
@@ -178,6 +196,8 @@ AC_SUBST(GTHREAD_LIBS)
 PKG_CHECK_MODULES(GRAPHENE, graphene-1.0,, [true])
 AC_SUBST(GRAPHENE_CFLAGS)
 AC_SUBST(GRAPHENE_LIBS)
+
+AC_DEFINE(USE_GDK_PIXBUF, 1, [enable support for Gdk Pixbuf])
 
 dnl -----------------------------------------------------------------------------
 

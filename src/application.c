@@ -56,6 +56,7 @@ static void     application_set_auditioner (Application*);
 static void     application_play_next      ();
 static void     application_play_selected  ();
 static void     pause_toggle_activate      (GSimpleAction* action, GVariant* parameter, gpointer app);
+static void     next_activate              ();
 
 #ifdef GTK4_TODO
 static void
@@ -71,6 +72,7 @@ static GActionEntry app_entries[] =
 	{ "player-stop", player_stop, },
 	{ "player-play", application_play_selected, },
 	{ "player-pause", pause_toggle_activate},
+	{ "player-next", next_activate},
 #ifdef GTK4_TODO
 	{ "clear-filter", clear_filter, }
 #endif
@@ -129,6 +131,8 @@ application_activate (GApplication* base)
 {
 	PF;
 
+	application_set_ready ();
+
 	G_APPLICATION_CLASS (application_parent_class)->activate(base);
 
 	// Pick a valid icon theme
@@ -141,6 +145,7 @@ application_activate (GApplication* base)
     GtkCssProvider* provider = gtk_css_provider_new ();
     gtk_css_provider_load_from_resource (provider, "/samplecat/resources/style.css");
 	gtk_style_context_add_provider_for_display (gdk_display_get_default(), GTK_STYLE_PROVIDER(provider), GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+	g_object_unref (provider);
 
 	pixmaps_init();
 	window_new (GTK_APPLICATION (base), NULL);
@@ -149,7 +154,7 @@ application_activate (GApplication* base)
 
 #ifdef USE_PROFILING
 	extern void instrumentation_print ();
-	instrumentation_print();
+	if (_debug_ > 1) instrumentation_print();
 #endif
 }
 
@@ -524,6 +529,12 @@ pause_toggle_activate (GSimpleAction* action, GVariant* parameter, gpointer app)
 }
 
 
+static void
+next_activate ()
+{
+}
+
+
 #define ADD_TO_QUEUE(S) \
 	(app->play.queue = g_list_append(app->play.queue, sample_ref(S)))
 #define REMOVE_FROM_QUEUE(S) \
@@ -544,7 +555,9 @@ application_play_all ()
 		play->queue = g_list_append(play->queue, samplecat_list_store_get_sample_by_path(path)); // there is a ref already added, so another one is not needed when adding to the queue.
 		return G_SOURCE_CONTINUE;
 	}
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 	gtk_tree_model_foreach(GTK_TREE_MODEL(samplecat.store), foreach_func, NULL);
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 
 	if (play->queue) {
 		if (play->auditioner->play_all) play->auditioner->play_all(); // TODO remove this fn.

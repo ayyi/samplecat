@@ -121,6 +121,7 @@ gdl_dock_notebook_class_init (GdlDockNotebookClass *klass)
            "padding: 2px;\n"
        "}";
 
+    GtkWidgetClass *widget_class = GTK_WIDGET_CLASS (klass);
     GObjectClass* g_object_class = G_OBJECT_CLASS (klass);
     GdlDockObjectClass* object_class = GDL_DOCK_OBJECT_CLASS (klass);
     GdlDockItemClass* item_class = GDL_DOCK_ITEM_CLASS (klass);
@@ -152,9 +153,9 @@ gdl_dock_notebook_class_init (GdlDockNotebookClass *klass)
     klass->priv = G_TYPE_CLASS_GET_PRIVATE (klass, GDL_TYPE_DOCK_NOTEBOOK, GdlDockNotebookClassPrivate);
 
     klass->priv->css = gtk_css_provider_new ();
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-    gtk_css_provider_load_from_data (klass->priv->css, notebook_style, -1);
-#pragma GCC diagnostic warning "-Wdeprecated-declarations"
+	gtk_css_provider_load_from_string(klass->priv->css, notebook_style);
+
+	gtk_widget_class_set_css_name (widget_class, "dock-notebook");
 }
 
 static void
