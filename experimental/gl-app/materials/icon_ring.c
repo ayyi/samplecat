@@ -66,6 +66,7 @@ ring_free (AGlMaterial* material)
 	g_object_unref(icon->layout);
 }
 
+
 static void
 ring_render (AGlMaterial* material)
 {

@@ -403,8 +403,8 @@ observer__files_moved(GList* file_list, const char* dest)
 {
 	PF;
 	GList* l = file_list;
-	for(;l;l=l->next){
-		dbg(0, "%s", l->data);
+	for (;l;l=l->next) {
+		dbg(0, "%s", (char*)l->data);
 	}
 
 	char msg[256];

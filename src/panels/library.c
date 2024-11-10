@@ -200,7 +200,7 @@ listview__new ()
 
 	void listview_on_play (GObject* _player, gpointer _)
 	{
-		if (play->sample->row_ref) {
+		if (play->sample && play->sample->row_ref) {
 			listview__highlight_playing_by_ref(play->sample->row_ref);
 		}
 	}
@@ -295,7 +295,7 @@ listview__on_row_clicked (GtkWidget* widget, GdkEventButton* event, gpointer use
 				// overview column
 				dbg(2, "overview. column rect: %i %i %i %i", rect.x, rect.y, rect.width, rect.height);
 				if (play->auditioner) {
-					Sample* sample = samplecat_list_store_get_sample_by_path(path);
+					g_autoptr(Sample) sample = samplecat_list_store_get_sample_by_path(path);
 					if (play->sample) {
 						(sample->id == play->sample->id)
 							? player_stop(sample)
@@ -303,7 +303,6 @@ listview__on_row_clicked (GtkWidget* widget, GdkEventButton* event, gpointer use
 					} else {
 						application_play(sample);
 					}
-					sample_unref(sample);
 				}
 			} else {
 				gtk_tree_view_get_cell_area(treeview, path, app->libraryview->col_tags, &rect);

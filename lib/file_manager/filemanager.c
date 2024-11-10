@@ -181,7 +181,8 @@ fm__change_to (AyyiFilemanager* fm, const char* path, const char* from)
 
 	char* from_dup = from && *from ? g_strdup(from) : NULL;
 
-	if(fm->directory) detach(fm);
+	if (fm->directory) detach(fm);
+
 	g_free(fm->real_path);
 	g_free(fm->sym_path);
 	fm->real_path = real_path;
@@ -605,8 +606,7 @@ detach (AyyiFilemanager* fm)
 	g_return_if_fail(fm->directory);
 
 	dir_detach(fm->directory, (DirCallback)update_display, fm);
-	g_object_unref(fm->directory);
-	fm->directory = NULL;
+	g_clear_pointer(&fm->directory, g_object_unref);
 }
 
 

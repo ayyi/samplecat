@@ -2,7 +2,7 @@
   JACK audio player
   This file is part of the Samplecat project.
 
-  copyright (C) 2006-2019 Tim Orford <tim@orford.org>
+  copyright (C) 2006-2024 Tim Orford <tim@orford.org>
   copyright (C) 2011 Robin Gareus <robin@gareus.org>
 
   written by Robin Gareus
@@ -22,7 +22,6 @@
   Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 */
 #include "config.h"
-#undef USE_GTK
 #include <stdio.h>
 #include <errno.h>
 #include <unistd.h>
@@ -50,24 +49,23 @@
 #endif
 #include <jack/jack.h>
 
-#ifndef __APPLE__ 
+#ifndef __APPLE__
 #include <jack/ringbuffer.h>
 #else /* weak linking on OSX - ringbuffer is not exported as weak */
+
 typedef struct {
     char *buf;
     size_t len;
-}
-jack_ringbuffer_data_t ;
+} jack_ringbuffer_data_t;
 
 typedef struct {
     char	*buf;
     volatile size_t write_ptr;
     volatile size_t read_ptr;
-    size_t	size;
-    size_t	size_mask;
-    int	mlocked;
-}
-jack_ringbuffer_t ;
+    size_t	 size;
+    size_t	 size_mask;
+    int        mlocked;
+} jack_ringbuffer_t;
 
 jack_ringbuffer_t* jack_ringbuffer_create       (size_t sz)                               JACK_OPTIONAL_WEAK_EXPORT;
 void               jack_ringbuffer_free         (jack_ringbuffer_t*)                      JACK_OPTIONAL_WEAK_EXPORT;
@@ -79,11 +77,10 @@ size_t             jack_ringbuffer_read         (jack_ringbuffer_t*, char*, size
 size_t             jack_ringbuffer_write_space  (const jack_ringbuffer_t*)                JACK_OPTIONAL_WEAK_EXPORT;
 #endif
 
-
-static jack_client_t *j_client = NULL;
-static jack_port_t **j_output_port = NULL;
-static jack_default_audio_sample_t **j_out = NULL;
-static jack_ringbuffer_t *rb = NULL;
+static jack_client_t*                j_client = NULL;
+static jack_port_t**                 j_output_port = NULL;
+static jack_default_audio_sample_t** j_out = NULL;
+static jack_ringbuffer_t*            rb = NULL;
 
 
 #ifdef JACK_MIDI
@@ -143,8 +140,8 @@ static int64_t  play_position = 0;
 
 #if (defined ENABLE_LADSPA)
 static const char* m_use_effect = "ladspa-rubberband.so";
-#endif
 static const int   m_effectno   = 0;
+#endif
 
 pthread_t player_thread_id;
 pthread_mutex_t player_thread_lock = PTHREAD_MUTEX_INITIALIZER;
@@ -284,7 +281,9 @@ update_playposition (int64_t decoder_position, float varispeed)
 		play_position = m_frames + decoder_position - latency;
 }
 
-void *jack_player_thread(void *unused){
+void*
+jack_player_thread (void *unused)
+{
 	WfAudioInfo* nfo = &myplayer->info;
 	const int nframes = 1024;
 	float *tmpbuf = (float*) calloc(nframes * nfo->channels, sizeof(float));
@@ -293,8 +292,7 @@ void *jack_player_thread(void *unused){
 	size_t maxbufsiz = nframes;
 	int err = 0;
 	SRC_STATE* src_state = src_new(SRC_QUALITY, nfo->channels, NULL);
-	SRC_DATA src_data;
-	int nframes_r = floorf((float) nframes*m_fResampleRatio); ///< # of frames after resampling
+	int nframes_r = floorf((float) nframes * m_fResampleRatio); ///< # of frames after resampling
 #ifdef VARISPEED
 	maxbufsiz = (2+nframes_r) * 2;
 #else
@@ -302,14 +300,16 @@ void *jack_player_thread(void *unused){
 #endif
 	float *smpbuf = (float*) calloc(maxbufsiz * nfo->channels, sizeof(float));
 
-	src_data.input_frames  = nframes;
-	src_data.output_frames = nframes_r;
-	src_data.end_of_input  = 0;
-	src_data.src_ratio     = m_fResampleRatio;
-	src_data.input_frames_used = 0;
-	src_data.output_frames_gen = 0;
-	src_data.data_in       = tmpbuf;
-	src_data.data_out      = smpbuf;
+	SRC_DATA src_data = {
+		.input_frames  = nframes,
+		.output_frames = nframes_r,
+		.end_of_input  = 0,
+		.src_ratio     = m_fResampleRatio,
+		.input_frames_used = 0,
+		.output_frames_gen = 0,
+		.data_in       = tmpbuf,
+		.data_out      = smpbuf,
+	};
 #else
 	int nframes_r = nframes; // no resampling
 #endif
@@ -340,10 +340,10 @@ void *jack_player_thread(void *unused){
 
 	/** ALL SYSTEMS GO **/
 	player_active = 1;
-	while(thread_run) {
+	while (thread_run) {
 		int rv = ad_read(myplayer, tmpbuf, nframes * nfo->channels);
 
-		if (rv > 0) decoder_position += rv / nfo->channels;
+		if (rv > 0) decoder_position += rv;
 
 #ifdef JACK_MIDI
 		const float pp[3] = {play->effect_param[0], play->effect_param[1] + midi_note, play->effect_param[2] + midi_octave};
@@ -368,35 +368,35 @@ void *jack_player_thread(void *unused){
 		src_data.end_of_input  = 0;
 #endif
 
-		if (rv != nframes * nfo->channels) {
+		if (rv != nframes) {
 			dbg(1, "end of file.");
 			if (rv > 0) {
 #ifdef ENABLE_RESAMPLING
 # ifdef VARISPEED
-				if (1) 
+				if (1)
 # else
-				if(m_fResampleRatio != 1.0)
+				if (m_fResampleRatio != 1.0)
 # endif
 				{
-					src_data.input_frames = rv / nfo->channels;
+					src_data.input_frames = rv;
 #ifdef VARISPEED
-					src_data.output_frames = floorf((float)(rv / nfo->channels) * m_fResampleRatio * varispeed);
+					src_data.output_frames = floorf((float)(rv) * m_fResampleRatio * varispeed);
 #else
-					src_data.output_frames = floorf((float)(rv / nfo->channels) * m_fResampleRatio);
+					src_data.output_frames = floorf((float)(rv) * m_fResampleRatio);
 #endif
 					src_data.end_of_input = play->config.loop ? 0 : 1;
 					src_process(src_state, &src_data);
 					bufptr = smpbuf;
-					rv = src_data.output_frames_gen * nfo->channels;
+					rv = src_data.output_frames_gen;
 				}
 #endif
 				if (!ladspaerr) {
 					ladspah_set_param(myplugin, nfo->channels, 0 /*cents */, pp[0]); /* -100 .. 100 */
 					ladspah_set_param(myplugin, nfo->channels, 1 /*semitones */, pp[1]); /* -12 .. 12 */
 					ladspah_set_param(myplugin, nfo->channels, 2 /*octave */, pp[2]);    /*  -3 ..  3 */
-					ladspah_process_nch(myplugin, nfo->channels, bufptr, rv / nfo->channels);
+					ladspah_process_nch(myplugin, nfo->channels, bufptr, rv);
 				}
-				jack_ringbuffer_write(rb, (char *) bufptr, rv *  sizeof(float));
+				jack_ringbuffer_write(rb, (char *) bufptr, rv * nfo->channels * sizeof(float));
 			}
 			if (play->config.loop) {
 				ad_seek(myplayer, 0);
@@ -404,9 +404,9 @@ void *jack_player_thread(void *unused){
 #ifdef ENABLE_RESAMPLING
 				//src_reset (src_state); // XXX causes click
 # ifdef VARISPEED
-				if (1) 
+				if (1)
 # else
-				if(m_fResampleRatio != 1.0)
+				if (m_fResampleRatio != 1.0)
 # endif
 				{
 					src_data.end_of_input  = 0;
@@ -451,13 +451,13 @@ void *jack_player_thread(void *unused){
 		jack_ringbuffer_write(rb, (char *) bufptr, rbchunk);
 
 #if (defined ENABLE_RESAMPLING) && (defined VARISPEED)
-		while(thread_run && jack_ringbuffer_write_space(rb) <= maxbufsiz*nfo->channels*sizeof(float))
+		while (thread_run && jack_ringbuffer_write_space(rb) <= maxbufsiz*nfo->channels*sizeof(float))
 #else
-		while(thread_run && jack_ringbuffer_write_space(rb) <= rbchunk) 
+		while (thread_run && jack_ringbuffer_write_space(rb) <= rbchunk)
 #endif
 		{
 #if 1 // flush_ringbuffer on seek
-			if (playpause && seek_request != -1) break; 
+			if (playpause && seek_request != -1) break;
 #endif
 			pthread_cond_wait(&buffer_ready, &player_thread_lock);
 		}
@@ -500,8 +500,7 @@ void *jack_player_thread(void *unused){
 		thread_run = 0;
 		player_active = 0;
 		play->effect_enabled = false;
-		int i;
-		for(i=0;i<nfo->channels;i++) {
+		for (int i=0;i<nfo->channels;i++) {
 			ladspah_deinit(myplugin[i]);
 		}
 		JACKclose(); 
@@ -512,7 +511,7 @@ void *jack_player_thread(void *unused){
 	free(smpbuf);
 #endif
 	player_active = 0;
-	if(play->status != PLAY_PLAY_PENDING){
+	if (play->status != PLAY_PLAY_PENDING) {
 		play->next();
 	}
 	return NULL;
@@ -579,7 +578,7 @@ JACKaudiooutputinit(WfDecoder* d)
 	}
 
 #if (defined ENABLE_RESAMPLING) && !(defined VARISPEED)
-	m_fResampleRatio *= app->playback_speed; ///< fixed speed change. <1.0: speed-up, > 1.0: slow-down
+	m_fResampleRatio *= play->playback_speed; ///< fixed speed change. <1.0: speed-up, > 1.0: slow-down
 #endif
 
 	thread_run = 1;
@@ -607,7 +606,9 @@ JACKaudiooutputinit(WfDecoder* d)
 #endif
 }
 
-static void JACKclose() {
+static void
+JACKclose ()
+{
 	if(thread_run) {
 		thread_run = 0;
 		if(pthread_mutex_trylock(&player_thread_lock) == 0) {
@@ -717,7 +718,7 @@ static void JACKdisconnect() {
  * @return 0 on success, -1 on error.
  */
 static int
-jplay__play_pathX(const char* path, int reset_pitch)
+jplay__play_pathX (const char* path, int reset_pitch)
 {
 #ifdef JACK_MIDI
 	if (reset_pitch) {
@@ -727,10 +728,13 @@ jplay__play_pathX(const char* path, int reset_pitch)
 #endif
 
 	WfDecoder* d = g_new0(WfDecoder, 1);
-	if(!ad_open(d, path)) return -1;
+	if (!ad_open(d, path)) {
+		g_free(d);
+		return -1;
+	}
 
 	seek_request = -1.0;
-	if(thread_run || rb){
+	if (thread_run || rb) {
 		jplay__stop();
 	}
 

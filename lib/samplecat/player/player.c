@@ -18,7 +18,7 @@
 
 Player* play = NULL;
 
-static guint play_timeout_id = 0;
+static guint play_timer = 0;
 
 static gpointer player_parent_class = NULL;
 
@@ -128,32 +128,43 @@ player_play (Sample* sample)
 	if (play->auditioner->play(sample)) {
 		g_clear_pointer(&play->sample, sample_unref);
 
-		play->status = PLAY_PLAYING;
 		play->sample = sample_ref(sample);
-		play->position = UINT_MAX;
+		player_on_play();
 
-		g_signal_emit_by_name (play, "play");
-
-		if (play->auditioner->position && !play_timeout_id) {
+		if (play->auditioner->position && !play_timer) {
 			GSource* source = g_timeout_source_new (50);
 			g_source_set_callback (source, play_update, NULL, NULL);
-			play_timeout_id = g_source_attach (source, NULL);
+			play_timer = g_source_attach (source, NULL);
 		}
 		return true;
 	}
+
+	play->status = PLAY_STOPPED;
 	return false;
+}
+
+
+void
+player_on_play ()
+{
+	play->status = PLAY_PLAYING;
+	play->position = UINT_MAX;
+
+	g_signal_emit_by_name (play, "play");
 }
 
 
 void
 player_on_play_finished ()
 {
-	if (play_timeout_id) {
-		g_source_destroy(g_main_context_find_source_by_id(NULL, play_timeout_id));
-		play_timeout_id = 0;
+	play->status = PLAY_STOPPED;
+
+	if (play_timer) {
+		g_source_destroy(g_main_context_find_source_by_id(NULL, play_timer));
+		play_timer = 0;
 	}
 
-	if(_debug_) printf("PLAY STOP\n");
+	if (_debug_) printf("PLAY STOP\n");
 
 	g_signal_emit_by_name (play, "stop");
 
@@ -170,10 +181,9 @@ player_stop ()
 		g_list_free0(play->queue);
 	}
 
-	if(play->auditioner){
+	if (play->auditioner) {
 		play->auditioner->stop();
 	}
-	play->status = PLAY_STOPPED;
 
 	player_on_play_finished();
 }
@@ -182,7 +192,7 @@ player_stop ()
 void
 player_set_position (gint64 frames)
 {
-	if(play->sample && play->sample->sample_rate){
+	if (play->sample && play->sample->sample_rate) {
 		play->position = (frames * 1000) / play->sample->sample_rate;
 		g_signal_emit_by_name (play, "position");
 	}
@@ -192,10 +202,8 @@ player_set_position (gint64 frames)
 void
 player_set_position_seconds (float seconds)
 {
-	if (play->sample) {
-		play->position = seconds * 1000;
-		g_signal_emit_by_name (play, "position");
-	}
+	play->position = seconds * 1000;
+	g_signal_emit_by_name (play, "position");
 }
 
 

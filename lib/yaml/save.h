@@ -1,17 +1,18 @@
-/**
-* +----------------------------------------------------------------------+
-* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2020 Tim Orford <tim@orford.org>                  |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-*
-*/
-#ifndef __yaml_utils_h__
-#define __yaml_utils_h__
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
+ | copyright (C) 2007-2025 Tim Orford <tim@orford.org>                  |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
+ */
 
+#pragma once
+
+#include <stdbool.h>
 #include <yaml.h>
 #include <glib.h>
 #if __has_include ("agl/typedefs.h")
@@ -28,7 +29,7 @@
 	EMIT__(yaml_document_start_event_initialize(event, NULL, NULL, NULL, 0), event); \
 	EMIT__(yaml_mapping_start_event_initialize(event, NULL, (guchar*)"tag:yaml.org,2002:map", 1, YAML_BLOCK_MAPPING_STYLE), event);
 
-#define map_open_(E, A) \
+#define map_open(E, A) \
 	if(!yaml_scalar_event_initialize(E, NULL, str_tag, (guchar*)A, -1, PLAIN_IMPLICIT, 0, YAML_PLAIN_SCALAR_STYLE)) goto error; \
 	if(!yaml_emitter_emit(&emitter, E)) goto error; \
 	if(!yaml_mapping_start_event_initialize(E, NULL, map_tag, 1, YAML_BLOCK_MAPPING_STYLE)) goto error; \
@@ -95,6 +96,4 @@ extern unsigned char* str_tag;
 extern unsigned char* map_tag;
 extern unsigned char* seq_tag;
 extern yaml_emitter_t emitter;
-#endif
-
 #endif

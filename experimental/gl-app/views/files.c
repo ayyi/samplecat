@@ -485,7 +485,7 @@ filelist_view (void* _)
 
 			case GDK_BUTTON_RELEASE:
 				;int row = files_view_row_at_coord (view, 0, xy.y);
-				dbg(1, "RELEASE button=%i y=%i row=%i", event->button.button, xy.y - actor->region.y1, row);
+				dbg(1, "RELEASE button=%i y=%.0f row=%i", event->button.button, xy.y - actor->region.y1, row);
 				switch (event->button.button) {
 					case 1:
 						agl_observable_set_int (SELECTABLE((AGlActor*)view)->observable, row);

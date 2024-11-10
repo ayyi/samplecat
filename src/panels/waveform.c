@@ -92,12 +92,10 @@ waveform_panel_new ()
 
 		void waveform_on_position (GObject* _player, gpointer _)
 		{
-			g_return_if_fail(play->sample);
-
-			if (!((WaveformViewPlus*)window.waveform)->waveform) return;
-
-			if (window.layers.spp) {
-				wf_spp_actor_set_time((SppActor*)window.layers.spp, waveform_is_playing() ? play->position : UINT32_MAX);
+			if (play->sample && ((WaveformViewPlus*)window.waveform)->waveform) {
+				if (window.layers.spp) {
+					wf_spp_actor_set_time((SppActor*)window.layers.spp, waveform_is_playing() ? play->position : UINT32_MAX);
+				}
 			}
 		}
 

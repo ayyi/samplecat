@@ -81,3 +81,12 @@
    obj:/usr/lib64/libfontconfig.so*
    obj:/usr/lib64/libfontconfig.so*
 }
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Param
+   writev(vector[0])
+   ...
+   fun:pango_renderer_draw_glyphs
+   ...
+   fun:gdk_draw_layout
+}

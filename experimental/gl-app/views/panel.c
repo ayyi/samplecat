@@ -219,9 +219,9 @@ panel_view (gpointer _)
 			case GDK_KEY_RELEASE:;
 				GdkEventKey* e = (GdkEventKey*)event;
 				int keyval = e->keyval;
-				if(panel->actions.actions){
+				if (panel->actions.actions) {
 					KeyHandler* handler = g_hash_table_lookup(panel->actions.actions, &keyval);
-					if(handler) handler();
+					if (handler) handler();
 					return AGL_HANDLED;
 				}
 				break;

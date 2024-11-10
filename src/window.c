@@ -861,7 +861,7 @@ filters_new ()
 
 		void on_filter_changed (Observable* filter, AGlVal value, gpointer user_data)
 		{
-			dbg(1, "value=%s", value);
+			dbg(1, "value=%s", value.c);
 			set_label(filter, g_hash_table_lookup(buttons, filter));
 		}
 
@@ -968,45 +968,39 @@ delete_selected_rows ()
 }
 
 
+/*
+ *	 A filesystem file has been clicked on.
+ */
 static void
 window_on_fileview_row_selected (GtkTreeView* treeview, gpointer user_data)
 {
-	//a filesystem file has been clicked on.
 	PF;
 
 	AyyiFilemanager* fm = file_manager__get();
 
-	gchar* full_path = NULL;
-	DirItem* item;
-	ViewIter iter;
-	view_get_iter(fm->view, &iter, 0);
-	while ((item = iter.next(&iter))) {
-		if (view_get_selected(fm->view, &iter)) {
-			full_path = g_build_filename(fm->real_path, item->leafname, NULL);
-			break;
+	char* full_path = ({
+		char* fpath = NULL;
+		GtkTreePath* path = NULL;
+		gtk_tree_view_get_cursor(GTK_TREE_VIEW(fm->view), &path, NULL);
+		if (path) {
+			GtkTreeIter iter;
+			gtk_tree_model_get_iter(GTK_TREE_MODEL(fm->view), &iter, path);
+			gchar* leaf;
+			gtk_tree_model_get(GTK_TREE_MODEL(fm->view), &iter, 0, &leaf, -1);
+			fpath = g_build_filename(fm->real_path, leaf, NULL);
+			gtk_tree_path_free (path);
 		}
-	}
-	if (!full_path) return;
+		fpath;
+	});
 
-	dbg(1, "%s", full_path);
+	if (full_path) {
+		dbg(1, "%s", full_path);
 
-	/* TODO: do nothing if directory selected 
-	 * 
-	 * this happens when a dir is selected in the left tree-browser
-	 * while some file was previously selected in the right file-list
-	 * -> we get the new dir + old filename
-	 *
-	 * event-handling in window.c should use 
-	 *   gtk_tree_selection_set_select_function()
-	 * or block file-list events during updates after the
-	 * dir-tree brower selection changed.
-	 */
-
-	Sample* s = sample_new_from_filename(full_path, true);
-	if (s) {
-		s->online = true;
-		samplecat_model_set_selection (samplecat.model, s);
-		sample_unref(s);
+		g_autoptr(Sample) s = sample_new_from_filename(full_path, true);
+		if (s) {
+			s->online = true;
+			samplecat_model_set_selection (samplecat.model, s);
+		}
 	}
 }
 
@@ -1220,7 +1214,6 @@ window_load_layout (const char* layout_name)
 	}
 #endif
 
-	GError* error = NULL;
 	for (int i=0;i<N_LAYOUT_DIRS;i++) {
 		const char* dir = window.layout->dirs[i];
 		char* path = g_strdup_printf("%s/%s.yaml", dir, layout_name);
@@ -1237,6 +1230,7 @@ window_load_layout (const char* layout_name)
 	if (!have_layout) {
 		// fallback to using legacy xml file
 
+		GError* error = NULL;
 		GDir* dir = g_dir_open(window.layout->dirs[0], 0, &error);
 		if (!error) {
 			const gchar* filename;

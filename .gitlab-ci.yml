@@ -18,7 +18,7 @@ arch build:
     - apk add --update make gcc && rm -rf /var/cache/apk/*
   script:
     - echo $CI_COMMIT_BRANCH
-    - cd test/arch && ./build && ./run
+    - cd test/arch && make build && ./run
 
 services:
   - docker:dind

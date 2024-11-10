@@ -476,7 +476,7 @@ application_add_file (const char* path, ScanResults* result)
 			/* TODO :prompt user: ask to delete one of the files
 			 * - import/update the remaining file(s)
 			 */
-			dbg(1, "found similar or identical file: %s", l->data);
+			dbg(1, "found similar or identical file: %s", (char*)l->data);
 #ifdef INTERACTIVE_IMPORT
 			if (i < 10)
 				g_string_append_printf(note, "%d: '%s'\n", i, (char*) l->data);
@@ -596,6 +596,7 @@ application_play (Sample* sample)
 
 	} else {
 		statusbar_print(1, "File not playable");
+		application_play_next();
 	}
 }
 
@@ -648,13 +649,14 @@ application_play_all ()
 	gtk_tree_model_foreach(GTK_TREE_MODEL(samplecat.store), foreach_func, NULL);
 
 	if (play->queue) {
-		if (play->auditioner->play_all) play->auditioner->play_all(); // TODO remove this fn.
+		if (play->auditioner->play_all)
+			play->auditioner->play_all(); // TODO remove this fn.
 		application_play_next();
 	}
 }
 
 
-void
+static void
 application_play_next ()
 {
 	PF;
@@ -684,7 +686,9 @@ application_play_path (const char* path)
 	Sample* s = sample_new_from_filename((char*)path, false);
 	g_assert(s->ref_count == 1); // will be unreffed and freed in application_on_play_finished()
 	if (s) {
-		application_play(s);
+		if (sample_get_file_info(s)) {
+			application_play(s);
+		}
 	}
 }
 

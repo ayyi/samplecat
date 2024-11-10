@@ -18,7 +18,7 @@ test_1 ()
 		assert(!strcmp(path, sample->full_path), "full_path");
 
 		assert(!strcmp(sample->name, name), "mimetype %s (expected %s)", sample->name, name);
-		assert(!strcmp(sample->mimetype, "audio/x-wav"), "mimetype %s (expected %s)", sample->mimetype, "audio/x-wav");
+		assert(!strcmp(sample->mimetype, "audio/x-wav") || !strcmp(sample->mimetype, "audio/vnd.wave"), "mimetype %s (expected %s)", sample->mimetype, "audio/x-wav");
 
 		bool info_ok = sample_get_file_info(sample);
 		assert(info_ok, "get info");

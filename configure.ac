@@ -1,10 +1,10 @@
 AC_PREREQ(2.59)
-AC_INIT([Samplecat],[0.3.3],[tim@orford.org])
+AC_INIT([Samplecat],[0.3.4],[tim@orford.org])
 AC_CONFIG_SRCDIR([src/main.c])
 AC_CONFIG_HEADER([config.h])
 AC_CANONICAL_HOST
 AC_CANONICAL_TARGET
-AM_INIT_AUTOMAKE([no-dist-gzip dist-xz])
+AM_INIT_AUTOMAKE([no-dist-gzip dist-xz foreign])
 AM_PROG_AR
 
 # LT_REVISION=1
@@ -51,6 +51,7 @@ AC_ARG_ENABLE(ayyidbus, AS_HELP_STRING([--disable-ayyidbus],[disable use of dbus
 AC_ARG_ENABLE(jack,     AS_HELP_STRING([--disable-jack],[build with JACK support]),enable_jack=$enableval, enable_jack="auto")
 AC_ARG_ENABLE(gplayer,  AS_HELP_STRING([--disable-gplayer],[build with external player]),enable_gplayer=$enableval, enable_gplayer="auto")
 AC_ARG_ENABLE(nks,      AS_HELP_STRING([--enable-nks],[build with nks support]),enable_nks=$enableval,enable_nks=auto)
+AC_ARG_ENABLE(ladspa,   AS_HELP_STRING([--disable-ladspa],[build with ladpsa and rubberband support]),enable_ladspa=$enableval,enable_ladspa="auto")
 AC_ARG_ENABLE(sf2,      AC_HELP_STRING([--enable-sf2], [build with sf2 support. Currently this option doesnt do anything useful.]),enable_sf2="$enableval", enable_sf2="no")
 AC_ARG_ENABLE(tracker,  AS_HELP_STRING([--enable-tracker],[build with tracker support]),enable_tracker=$enableval, enable_tracker="auto")
 AC_ARG_ENABLE(sqlite,   AS_HELP_STRING([--enable-sqlite],[build with sqlite support]),enable_sqlite=$enableval, enable_sqlite="auto")
@@ -344,15 +345,16 @@ fi
 AM_CONDITIONAL(ENABLE_JACK, [test "$enable_jack" = "yes" -o "$enable_jackosx" = "yes"])
 
 #JACK player can re-sample and use LADSPA plugins
-enable_ladspa="no"
 enable_resampling="no"
-AS_IF([test "$enable_jack" = "yes" -o "$enable_jackosx" = "yes"], [
-	PKG_CHECK_MODULES(SAMPLERATE, samplerate,
-		[AC_DEFINE(ENABLE_RESAMPLING,1,[JACK player resampling])
-		enable_resampling="yes"
-		 dnl only use LADSPA/rubberband if libsamplerate is also available.
-		 AC_CHECK_HEADER(ladspa.h, enable_ladspa="yes", AC_MSG_ERROR([LADSPA is required  see http://www.ladspa.org/]))
-		], [true])
+AS_IF([test "$enable_ladspa" != "no"], [
+	AS_IF([test "$enable_jack" = "yes" -o "$enable_jackosx" = "yes"], [
+		PKG_CHECK_MODULES(SAMPLERATE, samplerate,
+			[AC_DEFINE(ENABLE_RESAMPLING,1,[JACK player resampling])
+			enable_resampling="yes"
+			 dnl only use LADSPA/rubberband if libsamplerate is also available.
+			 AC_CHECK_HEADER(ladspa.h, enable_ladspa="yes", AC_MSG_ERROR([LADSPA is required  see http://www.ladspa.org/]))
+			], [true])
+		])
 	])
 AC_SUBST(SAMPLERATE_CFLAGS)
 AC_SUBST(SAMPLERATE_LIBS)

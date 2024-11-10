@@ -1,14 +1,15 @@
-/**
-* +----------------------------------------------------------------------+
-* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2020 Tim Orford <tim@orford.org>                  |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-*
-*/
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
+ | copyright (C) 2007-2024 Tim Orford <tim@orford.org>                  |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
+ */
+
 #include "config.h"
 #include <glib.h>
 #include "utils/ayyi_utils.h"
@@ -25,8 +26,6 @@ extern char theme_name[64];
 static void
 config_new (ConfigContext* ctx)
 {
-	//g_key_file_has_group(GKeyFile *key_file, const gchar *group_name);
-
 	GError* error = NULL;
 	char data[256 * 256];
 	sprintf(data, "# this is the default config file for the Samplecat application.\n# pls enter your database details.\n"
@@ -44,7 +43,7 @@ config_new (ConfigContext* ctx)
 		"jack_midiconnect=DISABLED\n"
 	);
 
-	if(!g_key_file_load_from_data(ctx->key_file, data, strlen(data), G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS, &error)){
+	if (!g_key_file_load_from_data(ctx->key_file, data, strlen(data), G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS, &error)) {
 		perr("error creating new key_file from data. %s\n", error->message);
 		g_error_free(error);
 		error = NULL;
@@ -72,13 +71,13 @@ config_load (ConfigContext* ctx, Config* config)
 
 	GError* error = NULL;
 	ctx->key_file = g_key_file_new();
-	if(g_key_file_load_from_file(ctx->key_file, ctx->filename, G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS, &error)){
+	if (g_key_file_load_from_file(ctx->key_file, ctx->filename, G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS, &error)) {
 		p_(1, "config loaded.");
 		gchar* groupname = g_key_file_get_start_group(ctx->key_file);
 		dbg (2, "group=%s.", groupname);
-		if(!strcmp(groupname, "Samplecat")){
-			for(int c=0;c<CONFIG_MAX;c++){
-				if(c == CONFIG_ICON_THEME){
+		if (!strcmp(groupname, "Samplecat")) {
+			for (int c=0;c<CONFIG_MAX;c++) {
+				if (c == CONFIG_ICON_THEME) {
 					ConfigOption* o = ctx->options[c];
 					char* str = g_key_file_get_string(ctx->key_file, groupname, o->name, NULL);
 					g_value_set_string(&o->val, str);
@@ -126,7 +125,7 @@ config_load (ConfigContext* ctx, Config* config)
 				ADD_CONFIG_KEY(config->colour[k+1], tmp)
 			}
 
-			gchar* keyval;
+			gchar* keyval = NULL;
 			for(k=0;k<(num_keys+PALETTE_SIZE-1);k++){
 				if((keyval = g_key_file_get_string(ctx->key_file, groupname, keys[k], &error))){
 					if(loc[k]){
@@ -136,6 +135,7 @@ config_load (ConfigContext* ctx, Config* config)
 					}
 					dbg(2, "%s=%s", keys[k], keyval);
 					g_free(keyval);
+					keyval = NULL;
 				}else{
 					if(error->code != 3)
 						GERR_WARN;
@@ -146,9 +146,11 @@ config_load (ConfigContext* ctx, Config* config)
 
 			if((keyval = g_key_file_get_string(ctx->key_file, groupname, "show_dir", &error))){
 				samplecat_model_set_search_dir (samplecat.model, keyval);
+				keyval = NULL;
 			}
 			if((keyval = g_key_file_get_string(ctx->key_file, groupname, "filter", &error))){
 				observable_string_set(samplecat.model->filters2.search, keyval);
+				keyval = NULL;
 			}
 
 			{
@@ -159,6 +161,7 @@ config_load (ConfigContext* ctx, Config* config)
 					g_error_clear(error)
 				}else{
 					config->add_recursive = keyval;
+					keyval = NULL;
 				}
 
 				keyval = g_key_file_get_boolean(ctx->key_file, groupname, "loop_playback", &error);
@@ -167,6 +170,7 @@ config_load (ConfigContext* ctx, Config* config)
 					else { GERR_WARN; }
 				}else{
 					play->config.loop = keyval;
+					keyval = NULL;
 				}
 			}
 

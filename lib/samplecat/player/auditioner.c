@@ -66,17 +66,20 @@ on_really_connected (char* status, int len, GError* error, gpointer user_data)
 
 	if (!error) {
 		dbus_g_proxy_add_signal(dbus->proxy, "PlaybackStopped", G_TYPE_INVALID);
-		dbus_g_proxy_add_signal(dbus->proxy, "Position", G_TYPE_INT, G_TYPE_DOUBLE, G_TYPE_INVALID);
+		dbus_g_proxy_add_signal(dbus->proxy, "PlaybackStatus", G_TYPE_INT, G_TYPE_INVALID);
+		dbus_g_proxy_add_signal(dbus->proxy, "Position", G_TYPE_DOUBLE, G_TYPE_DOUBLE, G_TYPE_INVALID);
 
-		void on_stopped (DBusGProxy* proxy, gpointer user_data)
+		void on_status (DBusGProxy* proxy, int status, gpointer user_data)
 		{
-			if (!play->queue) {
+			if (status) {
+				player_on_play();
+			} else {
 				player_on_play_finished();
 			}
 		}
-		dbus_g_proxy_connect_signal (dbus->proxy, "PlaybackStopped", G_CALLBACK(on_stopped), NULL, NULL);
+		dbus_g_proxy_connect_signal (dbus->proxy, "PlaybackStatus", G_CALLBACK(on_status), NULL, NULL);
 
-		void on_position (DBusGProxy* proxy, int position, double seconds, gpointer user_data)
+		void on_position (DBusGProxy* proxy, double seconds, double length, gpointer user_data)
 		{
 			player_set_position_seconds(seconds);
 		}
@@ -108,11 +111,11 @@ auditioner_connect (ErrorCallback callback, gpointer user_data)
 		GError* error = NULL;
 
 		DBusGConnection* bus = dbus_g_bus_get(DBUS_BUS_SESSION, &error);
-		if(!bus){
+		if (!bus) {
 			error = g_error_new_literal(g_quark_from_static_string(AUDITIONER_DOMAIN), 1, "failed to get dbus connection");
 			goto error;
 		}
-		if(!(dbus->proxy = dbus_g_proxy_new_for_name (bus, APPLICATION_SERVICE_NAME, DBUS_APP_PATH, DBUS_INTERFACE))){
+		if (!(dbus->proxy = dbus_g_proxy_new_for_name (bus, APPLICATION_SERVICE_NAME, DBUS_APP_PATH, DBUS_INTERFACE))) {
 			error = g_error_new_literal(g_quark_from_static_string(AUDITIONER_DOMAIN), 1, "failed to get Auditioner");
 			goto error;
 		}
@@ -125,7 +128,7 @@ auditioner_connect (ErrorCallback callback, gpointer user_data)
 		return G_SOURCE_REMOVE;
 
 	error:
-		if(c->callback) c->callback(error, c->user_data);
+		if (c->callback) c->callback(error, c->user_data);
 		g_error_free(error);
 		return G_SOURCE_REMOVE;
 	}
@@ -221,10 +224,10 @@ audtioner_status_reply (DBusGProxy* proxy, DBusGProxyCall* call, gpointer data)
 
 	c->callback(status, queue_size, error, c->user_data);
 
-	if(error){
+	if (error) {
 		printf("%s\n", error->message);
 		g_error_free(error);
-	}else{
+	} else {
 		g_free(status);
 	}
 	g_free(c);
@@ -236,5 +239,3 @@ auditioner_status (StatusCallback callback, gpointer user_data)
 {
 	dbus_g_proxy_begin_call(dbus->proxy, "getStatus", audtioner_status_reply, SC_NEW(C2, .callback=callback, .user_data=user_data), NULL, G_TYPE_INVALID);
 }
-
-
