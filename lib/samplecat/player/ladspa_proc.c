@@ -83,7 +83,7 @@ int ladspah_init(LadSpa* p, const char* dll, const int plugin, int samplerate, s
 	const char * dlerr;
 	char *object_file = NULL;
 
-  p->inbuf = p->outbuf = NULL;
+	p->inbuf = p->outbuf = NULL;
 	p->dl_handle = NULL;
 	p->l_desc = NULL;
 	p->l_handle = 0;

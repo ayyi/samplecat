@@ -1225,7 +1225,7 @@ view_details_add_items (ViewIface* view, GPtrArray* new_items)
 			.item = item,
 			.utf8_name = !g_utf8_validate(leafname, -1, NULL) ? to_utf8(leafname) : NULL
 		};
-		dbg(2, "leaf=%20s owner=%3i size=%i", leafname, item->uid, item->size);
+		dbg(2, "leaf=%20s owner=%3i size=%zu", leafname, item->uid, item->size);
 
 		g_ptr_array_add(items, vitem);
 
@@ -1514,9 +1514,9 @@ view_details_set_selected(ViewIface *view, ViewIter *iter, gboolean selected)
 static gboolean
 get_selected(ViewDetails *view_details, int i)
 {
-	GtkTreeIter iter;
-
-	iter.user_data = GINT_TO_POINTER(i);
+	GtkTreeIter iter = {
+		.user_data = GINT_TO_POINTER(i)
+	};
 
 	return gtk_tree_selection_iter_is_selected(view_details->selection, &iter);
 }

@@ -61,3 +61,32 @@
    ...
    fun:xcb_writev
 }
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   ...
+   fun:gtk_parse_args
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Param
+   writev(vector[0])
+   ...
+   fun:XPutImage
+   ...
+   fun:cairo_fill
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: possible
+   ...
+   fun:gtk_stock_lookup
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Param
+   writev(vector[0])
+   ...
+   fun:XSetClipRectangles
+}

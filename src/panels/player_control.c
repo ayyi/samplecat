@@ -35,7 +35,9 @@ struct _PlayCtrl
 	GtkWidget* slider2; // player pitch
 	GtkWidget* slider3; // player speed
 	GtkWidget* cbfx;    // player enable FX
+#ifdef VARISPEED
 	GtkWidget* cblnk;   // link speed/pitch
+#endif
 	struct {
 	   GtkWidget* box;   // playback control box (pause/stop/next)
 	   GtkWidget* pause; // playback pause button
@@ -56,7 +58,9 @@ static guint slider2sigid, slider3sigid;
 static void  speed_value_changed  (GtkRange*, gpointer);
 static void  pitch_value_changed  (GtkRange*, gpointer);
 static void  pitch_toggled        (GtkToggleButton*, gpointer);
+#ifdef VARISPEED
 static void  cb_link_toggled      (GtkToggleButton*, gpointer);
+#endif
 #endif
 
 
@@ -65,28 +69,30 @@ player_control_new ()
 {
 	g_return_val_if_fail(!app->playercontrol, NULL);
 
-	PlayCtrl* pc = app->playercontrol = g_new0(PlayCtrl, 1);
-
-	GtkWidget* top = pc->widget = gtk_scrolled_window_new(NULL, NULL);
-	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(top), GTK_POLICY_NEVER, GTK_POLICY_NEVER);
-	gtk_widget_set_size_request(pc->widget, -1, 40);
+	PlayCtrl* pc = app->playercontrol = SC_NEW(PlayCtrl,
+		.widget = ({
+			GtkWidget* widget = gtk_scrolled_window_new(NULL, NULL);
+			gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(widget), GTK_POLICY_NEVER, GTK_POLICY_NEVER);
+			gtk_widget_set_size_request(widget, -1, 40);
+			widget;
+		}),
+	);
 
 	void pc_on_audio_ready (gpointer user_data, gpointer _)
 	{
 		pc_add_widgets();
 #ifdef USE_GDL // always visible
 		PlayCtrl* pc = app->playercontrol;
-		if(pc->slider1/* FIXME depends on player */) gtk_widget_set_sensitive(pc->slider1, false);
+		if (pc->slider1) gtk_widget_set_sensitive(pc->slider1, false);
 
 		gtk_widget_show_all(app->playercontrol->widget);
-							gtk_widget_show(app->playercontrol->widget); // is needed?
 		player_control_on_show_hide(true);
 #endif
 	}
 
 	am_promise_add_callback(play->ready, pc_on_audio_ready, NULL);
 
-	return top;
+	return pc->widget;
 }
 
 
@@ -106,21 +112,112 @@ pc_add_widgets ()
 	#define BORDERMARGIN (2)
 	#define MarginLeft (5)
 
+	GtkWidget* align (GtkWidget* widget)
+	{
+		GtkWidget* align = gtk_alignment_new(0.0, 0.5, 0.0, 0.0);
+		gtk_alignment_set_padding(GTK_ALIGNMENT(align), 0, 0, MarginLeft - BORDERMARGIN, 0);
+		gtk_container_add(GTK_CONTAINER(align), widget);
+		return align;
+	}
+
 	if (play->auditioner->position && play->auditioner->seek) { // JACK seek-slider
-
-		GtkWidget* align9 = gtk_alignment_new(0.0, 0.5, 0.0, 0.0);
-		gtk_alignment_set_padding(GTK_ALIGNMENT(align9), 0, 0, MarginLeft-BORDERMARGIN, 0);
-		gtk_box_pack_start(GTK_BOX(vbox), align9, EXPAND_FALSE, FILL_FALSE, 0);
-
 		GtkWidget* slider = pc->slider1 = gtk_hscale_new_with_range(0.0, 1.0, 1.0 / (float)OVERVIEW_WIDTH);
 		gtk_widget_set_size_request(slider, OVERVIEW_WIDTH + BORDERMARGIN + BORDERMARGIN, -1);
 		gtk_widget_set_tooltip_text(slider, "playhead position / seek");
-		gtk_scale_set_draw_value(GTK_SCALE(slider), false);
-		gtk_container_add(GTK_CONTAINER(align9), slider);
+		gtk_box_pack_start(GTK_BOX(vbox), align(slider), EXPAND_FALSE, FILL_FALSE, 0);
 
 		slider1sigid = g_signal_connect((gpointer)slider, "value-changed", G_CALLBACK(slider_value_changed), NULL);
-	} /* end JACK auditioner */
 
+		gchar* format_value (GtkScale* scale, gdouble value)
+		{
+			int mins = (int)(value / 1000.) / 60;
+			int secs = (int)value / 1000 - 60 * mins;
+			int sub = ((int)value % 1000) / 10;
+			return g_strdup_printf("%i:%02i:%02i", mins, secs, sub);
+		}
+		g_signal_connect((gpointer)slider, "format-value", G_CALLBACK(format_value), NULL);
+	}
+
+	if (!(play->auditioner->position && play->auditioner->seek)) {
+		static char* zero_string = "<span color=\"white\" size=\"200%\">00:00</span> 000";
+		GtkWidget* label = gtk_label_new(zero_string);
+		gtk_label_set_use_markup((GtkLabel*)label, true);
+		gtk_widget_set_name(label, "spp");
+		GtkWidget* wrapper = gtk_event_box_new();
+		gtk_widget_modify_bg(wrapper, GTK_STATE_NORMAL, &(GdkColor){0,});
+		gtk_container_add(GTK_CONTAINER(wrapper), align(label));
+		gtk_box_pack_start(GTK_BOX(vbox), wrapper, EXPAND_FALSE, FILL_FALSE, 0);
+
+		void on_position (GObject* player, void* label)
+		{
+			static guint timer = 0;
+			static guint inactivity = 0;
+
+			static int prev_position = 0;
+			static int64_t offset = 0;
+
+			gboolean on_timeout (void* label)
+			{
+				int t = 0;
+				static int dt = 0;
+
+				if (play->status != PLAY_PLAYING) {
+					g_source_remove(inactivity);
+					timer = 0;
+					inactivity = 0;
+					gtk_label_set_markup((GtkLabel*)label, zero_string);
+					return G_SOURCE_REMOVE;
+				}
+
+				int64_t wall = g_get_monotonic_time() / 1000;
+				int64_t tnow = wall - offset;
+				if (play->position == prev_position) {
+					t = tnow + dt / 2;
+					dt /= 2;
+				} else {
+					dt = tnow - play->position;
+					if (ABS(dt) > 4000) {
+						t = play->position;
+						dt = 0;
+					} else {
+						t = play->position + dt / 2;
+					}
+					offset = wall - t;
+					prev_position = play->position;
+				}
+
+				int minutes = t / 1000 / 60;
+				int secs = t / 1000 - minutes * 60;
+				int ms = t - 1000 * (secs + minutes * 60);
+
+				char str[72];
+				snprintf(str, 71, "<span color=\"#eee\"><span size=\"200%%\">%02i:%02i</span> %03i</span>", minutes % 1000, secs % 100, ms % 1000);
+				gtk_label_set_markup((GtkLabel*)label, str);
+
+				return G_SOURCE_CONTINUE;
+			}
+
+			gboolean keep_alive (void* label)
+			{
+				int64_t wall = g_get_monotonic_time() / 1000;
+				int64_t tnow = wall - offset;
+
+				if (tnow - prev_position > 3000) {
+					g_source_remove(timer);
+					timer = 0;
+					inactivity = 0;
+
+					return G_SOURCE_REMOVE;
+				}
+
+				return G_SOURCE_CONTINUE;
+			}
+
+			if (!timer) timer = g_timeout_add(100, on_timeout, label);
+			if (!inactivity) inactivity = g_timeout_add_seconds(4, keep_alive, label);
+		}
+		g_signal_connect(play, "position", (GCallback)on_position, label);
+	}
 	/* play ctrl buttons */
 	pc->pb.box = gtk_hbox_new(FALSE, 10);
 	gtk_widget_set_sensitive(pc->pb.box, false);
@@ -140,14 +237,6 @@ pc_add_widgets ()
 		g_signal_connect((gpointer)pc->pb.pause, "toggled", G_CALLBACK(playpause_toggled), NULL);
 	}
 
-	GtkWidget* align (GtkWidget* widget)
-	{
-		GtkWidget* align = gtk_alignment_new(0.0, 0.5, 0.0, 0.0);
-		gtk_alignment_set_padding(GTK_ALIGNMENT(align), 0, 0, MarginLeft - BORDERMARGIN, 0);
-		gtk_container_add(GTK_CONTAINER(align), widget);
-		return align;
-	}
-
 	if (play->auditioner->position && play->auditioner->seek) {
 
 #if (defined ENABLE_LADSPA)
@@ -163,7 +252,7 @@ pc_add_widgets ()
 	gtk_range_set_value(GTK_RANGE(slider2), play->effect_param[0]);
 	gtk_widget_set_tooltip_text(slider2, "Pitch in Cents (1/100 semitone)");
 	//gtk_scale_set_draw_value(GTK_SCALE(slider2), false);
-	gtk_container_add(GTK_CONTAINER(align10), slider2);	
+	gtk_container_add(GTK_CONTAINER(align10), slider2);
 
 	/* effect ctrl buttons */
 	GtkWidget* cb0 = pc->cbfx = gtk_check_button_new_with_label("enable pitch-shift");
@@ -205,8 +294,7 @@ pc_add_widgets ()
 		gtk_range_set_value(GTK_RANGE(slider), 100.);
 		gtk_box_pack_start(GTK_BOX(vbox), align(slider), EXPAND_FALSE, FILL_FALSE, 0);
 
-		void
-		level_slider_changed (GtkRange* range, gpointer user_data)
+		void level_slider_changed (GtkRange* range, gpointer user_data)
 		{
 			player_set_level(gtk_range_get_value(range));
 		}
@@ -250,7 +338,7 @@ pitch_value_changed (GtkRange* range, gpointer user_data)
 static void
 speed_value_changed (GtkRange* range, gpointer user_data)
 {
-	float v =  gtk_range_get_value(range);
+	float v = gtk_range_get_value(range);
 	play->playback_speed = v;
 #ifdef VARISPEED
 	if (play->link_speed_pitch) {
@@ -270,11 +358,14 @@ pitch_toggled (GtkToggleButton* btn, gpointer user_data)
 {
 	play->enable_effect = gtk_toggle_button_get_active (btn);
 	gtk_widget_set_sensitive(app->playercontrol->slider2, play->enable_effect);
+#ifdef VARISPEED
 	gtk_widget_set_sensitive(app->playercontrol->cblnk, play->enable_effect);
 	if (!play->enable_effect) gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(app->playercontrol->cblnk), false);
+#endif
 }
 
 
+#ifdef VARISPEED
 static void
 cb_link_toggled (GtkToggleButton *btn, gpointer user_data)
 {
@@ -283,6 +374,7 @@ cb_link_toggled (GtkToggleButton *btn, gpointer user_data)
 		speed_value_changed(GTK_RANGE(app->playercontrol->slider3), app->playercontrol->slider2);
 	}
 }
+#endif
 #endif
 
 
@@ -330,7 +422,7 @@ update_slider (gpointer _)
 	}
 	else if (v == -2.0)
 		return; // seek in progress
-	else { 
+	else {
 		/* playback is done */
 		if (pc->slider1)
 			gtk_widget_set_sensitive(pc->slider1, false);
@@ -354,8 +446,8 @@ player_control_on_show_hide (bool enable)
 	#define WIDGETS_CREATED (pc->slider1) // not created until audio is ready.
 
 	static guint play_start_handler = 0;
-#ifdef HAVE_JACK
 	static guint play_stop_handler = 0;
+#ifdef HAVE_JACK
 	static guint play_pos_handler = 0;
 #endif
 
@@ -364,16 +456,16 @@ player_control_on_show_hide (bool enable)
 #endif
 
 	if (!enable) {
-#ifdef HAVE_JACK
 		if (play_start_handler) {
 			g_signal_handler_disconnect((gpointer)app, play_start_handler);
 			play_start_handler = 0;
 			g_signal_handler_disconnect((gpointer)app, play_stop_handler);
 			play_stop_handler = 0;
+#ifdef HAVE_JACK
 			g_signal_handler_disconnect((gpointer)app, play_pos_handler);
 			play_pos_handler = 0;
-		}
 #endif
+		}
 		return;
 	}
 
@@ -432,8 +524,8 @@ player_control_on_show_hide (bool enable)
 	}
 
 	if (!play_start_handler) play_start_handler = g_signal_connect(play, "play", (GCallback)pc_on_play, pc);
-#ifdef HAVE_JACK
 	if (!play_stop_handler) play_stop_handler = g_signal_connect(play, "stop", (GCallback)pc_on_stop, pc);
+#ifdef HAVE_JACK
 	if (!play_pos_handler) play_pos_handler = g_signal_connect(play, "position", (GCallback)update_slider, pc);
 #endif
 }

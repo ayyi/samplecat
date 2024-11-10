@@ -63,7 +63,7 @@ context_menu_open_new (AGlScene* parent, AGliPt xy, Menu* menu, AMPromise* promi
 
 	popup = agl_window("Popup", xy.x + offset.x, xy.y + offset.y, size.x, size.y, false);
 
-	((AGlActor*)popup->scene)->name = "Popup";
+	((AGlActor*)popup->scene)->name = strdup("Popup");
 	agl_actor__add_child((AGlActor*)popup->scene, popup->scene->selected = context_menu(promise));
 
 	return popup;
@@ -75,7 +75,7 @@ _init ()
 {
 	static bool init_done = false;
 
-	if(!init_done){
+	if (!init_done) {
 		agl = agl_get_instance();
 
 		init_done = true;
@@ -92,7 +92,7 @@ context_menu_init (AGlActor* actor)
 static void
 context_menu_free (AGlActor* actor)
 {
-	if(_promise){
+	if (_promise) {
 		am_promise_resolve(_promise, 0);
 		_promise = NULL;
 	}
@@ -112,11 +112,11 @@ context_menu_paint (AGlActor* actor)
 	agl_use_program((AGlShader*)agl->shaders.plain);
 	agl_rect(-BORDER, hover_row * 16, agl_actor__width(actor), 16);
 
-	for(int i=0; i<_menu->len; i++){
+	for (int i=0; i<_menu->len; i++) {
 		MenuItem* item = &_menu->items[i];
-		if(item->title){
-			if(item->icon){
-				if(item->show_icon ? item->show_icon(item->user_data) : true){
+		if (item->title) {
+			if (item->icon) {
+				if (item->show_icon ? item->show_icon(item->user_data) : true) {
 					guint t = get_icon_texture_by_name(item->icon, 16);
 
 					agl_use_program((AGlShader*)agl->shaders.texture);
@@ -156,12 +156,12 @@ context_menu_event (AGlActor* actor, GdkEvent* event, AGliPt xy)
 		case GDK_BUTTON_PRESS:
 			break;
 		case GDK_BUTTON_RELEASE:
-			switch(event->button.button){
+			switch (event->button.button) {
 				case 1:;
 					int row = xy.y / 16;
-					if(row >= 0 && row < _menu->len){
+					if (row >= 0 && row < _menu->len) {
 						MenuItem* item = &_menu->items[row];
-						if(item->action) item->action(item->user_data);
+						if (item->action) item->action(item->user_data);
 					}
 
 					g_idle_add(popup_destroy, NULL);
@@ -179,7 +179,7 @@ context_menu_event (AGlActor* actor, GdkEvent* event, AGliPt xy)
 			break;
 		case GDK_MOTION_NOTIFY:;
 			int _hover_row = xy.y / 16;
-			if(_hover_row != hover_row){
+			if (_hover_row != hover_row) {
 				hover_row = _hover_row;
 				agl_actor__invalidate(actor);
 			}
@@ -207,5 +207,3 @@ context_menu (gpointer _)
 		.on_event = context_menu_event
 	);
 }
-
-

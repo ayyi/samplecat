@@ -222,7 +222,7 @@ pixbuf_to_blob (GdkPixbuf* in, guint *len)
 	unsigned char* dst = g_malloc(dsize * sizeof(char));
 	int rv = compress(dst, &dsize, (const unsigned char*)ser, length);
 	if (rv == Z_OK) {
-		dbg(1, "compressed pixbuf %d -> %d", length, dsize);
+		dbg(1, "compressed pixbuf %d -> %zu", length, dsize);
 		if (len) *len = dsize;
 		g_free(ser);
 		return dst;

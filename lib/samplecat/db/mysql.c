@@ -637,13 +637,12 @@ mysql__dir_iter_new ()
 {
 	#define DIR_LIST_QRY "SELECT DISTINCT filedir FROM samples ORDER BY filedir"
 
-	if(dir_iter_result) gwarn("previous query not free'd?");
+	if (dir_iter_result) gwarn("previous query not free'd?");
 
-	if(!mysql__exec_sql(DIR_LIST_QRY)){
+	if (!mysql__exec_sql(DIR_LIST_QRY)) {
 		dir_iter_result = mysql_store_result(&mysql);
-		dbg(2, "num_rows=%i", mysql_num_rows(dir_iter_result));
-	}
-	else{
+		dbg(2, "num_rows=%"PRIi64, mysql_num_rows(dir_iter_result));
+	} else {
 		dbg(0, "failed to find any records: %s", mysql_error(&mysql));
 	}
 }

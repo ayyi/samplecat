@@ -285,7 +285,7 @@ add_node (yaml_parser_t* parser, char* node_name, Stack* stack)
 	while (yaml_parser_parse(parser, &event)) {
 		switch (event.type) {
 			case YAML_SCALAR_EVENT:
-				dbg(2, "YAML_SCALAR_EVENT: value='%s' %i plain=%i style=%i", event.data.scalar.value, event.data.scalar.length, event.data.scalar.plain_implicit, event.data.scalar.style);
+				dbg(2, "YAML_SCALAR_EVENT: value='%s' %lu plain=%i style=%i", event.data.scalar.value, event.data.scalar.length, event.data.scalar.plain_implicit, event.data.scalar.style);
 
 				g_strlcpy(key, (char*)event.data.scalar.value, 64);
 
@@ -362,7 +362,7 @@ window_handler (yaml_parser_t* parser, const yaml_event_t* _event, char* _key, g
 	while (yaml_parser_parse(parser, &event)) {
 		switch (event.type) {
 			case YAML_SCALAR_EVENT:
-				dbg(2, "YAML_SCALAR_EVENT: value='%s' %i plain=%i style=%i", event.data.scalar.value, event.data.scalar.length, event.data.scalar.plain_implicit, event.data.scalar.style);
+				dbg(2, "YAML_SCALAR_EVENT: value='%s' %lu plain=%i style=%i", event.data.scalar.value, event.data.scalar.length, event.data.scalar.plain_implicit, event.data.scalar.style);
 
 				g_strlcpy(key, (char*)event.data.scalar.value, 64);
 
@@ -404,7 +404,7 @@ layout_set_size (gpointer data)
 
 
 static bool
-config_load_windows_yaml (yaml_parser_t* parser, const yaml_event_t* _, gpointer user_data)
+config_load_windows (yaml_parser_t* parser, const yaml_event_t* _, gpointer user_data)
 {
 	load_mapping(parser,
 		NULL,
@@ -464,17 +464,16 @@ config_load_windows_yaml (yaml_parser_t* parser, const yaml_event_t* _, gpointer
 static FILE*
 open_settings_file ()
 {
-	char* cwd = g_get_current_dir();
+	g_autofree char* cwd = g_get_current_dir();
 	char* paths[] = {
 		g_strdup_printf("%s/.config/" PACKAGE, g_get_home_dir()),
 		g_build_filename(PACKAGE_DATA_DIR "/" PACKAGE, NULL),
 		g_build_filename(cwd, NULL),
 		g_build_filename(cwd, "experimental/gl-app", NULL)
 	};
-	g_free(cwd);
 
 	FILE* fp;
-	for (int i=0;i<G_N_ELEMENTS(paths);i++) {
+	for (int i=0; i<G_N_ELEMENTS(paths); i++) {
 		g_autofree char* filename = g_strdup_printf("%s/"PACKAGE".yaml", paths[i]);
 		fp = fopen(filename, "rb");
 		if (fp) {
@@ -557,7 +556,7 @@ load_settings ()
 	FILE* fp = open_settings_file();
 
 	bool ret = fp && yaml_load(fp, (YamlHandler[]){
-		{"windows", config_load_windows_yaml},
+		{"windows", config_load_windows},
 		{NULL}
 	});
 
@@ -601,7 +600,7 @@ save_settings ()
 		if (c != scrollbar_view_get_class() && c != button_get_class() && c != &default_actor_class) {
 			g_return_val_if_fail(actor->name, false);
 
-			map_open_(event, actor->name);
+			map_open(event, actor->name);
 
 			if (!yaml_add_key_value_pair("type", c->name)) goto error;
 
@@ -624,7 +623,7 @@ save_settings ()
 					panel->size_req.max.x > -1 || panel->size_req.max.y > -1
 				};
 				if (b[0] || b[1] || b[2]) {
-					map_open_(event, "size-req");
+					map_open(event, "size-req");
 					if (b[0])
 						if(!yaml_add_key_value_pair_pt("min", &panel->size_req.min)) goto error;
 					if (b[1])
@@ -665,8 +664,8 @@ save_settings ()
 		return false;
 	}
 
-	map_open_(&event, "windows");
-	map_open_(&event, "window");
+	map_open(&event, "windows");
+	map_open(&event, "window");
 	if (!((AGlActor*)app->scene)->children || !add_child(&event, (AGlActor*)app->scene)) goto close;
 	end_map(&event);
 	end_map(&event);

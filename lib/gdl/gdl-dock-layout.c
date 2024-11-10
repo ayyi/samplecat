@@ -1097,9 +1097,7 @@ gdl_dock_layout_new (GdlDock *dock)
     if (dock)
         master = GDL_DOCK_OBJECT_GET_MASTER (dock);
     
-    return g_object_new (GDL_TYPE_DOCK_LAYOUT,
-                         "master", master,
-                         NULL);
+    return g_object_new (GDL_TYPE_DOCK_LAYOUT, "master", master, NULL);
 }
 
 static gboolean
@@ -1251,8 +1249,7 @@ gdl_dock_layout_save_layout (GdlDockLayout *layout,
     };
 
     /* create the new node */
-    node = xmlNewChild (layout->_priv->doc->children, NULL, 
-                        BAD_CAST LAYOUT_ELEMENT_NAME, NULL);
+    node = xmlNewChild (layout->_priv->doc->children, NULL, BAD_CAST LAYOUT_ELEMENT_NAME, NULL);
     xmlSetProp (node, BAD_CAST NAME_ATTRIBUTE_NAME, BAD_CAST layout_name);
 
     /* save the layout */
@@ -1271,8 +1268,7 @@ gdl_dock_layout_save_layout (GdlDockLayout *layout,
 */
 
 void
-gdl_dock_layout_delete_layout (GdlDockLayout *layout,
-                               const gchar   *name)
+gdl_dock_layout_delete_layout (GdlDockLayout *layout, const gchar *name)
 {
     xmlNodePtr node;
 
@@ -1594,12 +1590,12 @@ gdl_dock_layout_setup_object2 (GdlDockMaster* master, Stack* stack, gint *n_afte
 	g_return_val_if_fail(constructor->object_class, NULL);
 
 	char* name = NULL;
-	for(int i=0;i<constructor->n_params;i++){
+	for (int i=0;i<constructor->n_params;i++) {
 		GParameter* param = &constructor->params[i];
 		GParamSpec* pspec = g_object_class_find_property(constructor->object_class, param->name);
 		if (!GDL_DOCK_PARAM_CONSTRUCTION (pspec) && (pspec->flags & GDL_DOCK_PARAM_AFTER)) {
 		}
-		if(!strcmp(param->name, "name"))
+		if (!strcmp(param->name, "name"))
 			name = (char*)g_value_get_string(&param->value);
 	}
 
@@ -1616,7 +1612,7 @@ gdl_dock_layout_setup_object2 (GdlDockMaster* master, Stack* stack, gint *n_afte
 		   other objects are bound */
 		object = g_object_newv (G_TYPE_FROM_CLASS(constructor->object_class), constructor->n_params, constructor->params);
 
-		if(GDL_IS_DOCK_ITEM(object) && name)
+		if (GDL_IS_DOCK_ITEM(object) && name)
 			stack->added[stack->added_sp++] = (GdlDockItem*)object;
 
 		/*
@@ -1625,12 +1621,16 @@ gdl_dock_layout_setup_object2 (GdlDockMaster* master, Stack* stack, gint *n_afte
 		 */
 		RegistryItem* item = object->name ? g_hash_table_lookup(registry, object->name) : NULL;
 
-		if(item)
+		if (item)
 			GDL_DOCK_OBJECT_UNSET_FLAGS(object, GDL_DOCK_AUTOMATIC);
 
+		/*
+		 *  The 'master' property has to be set _after_ construction so that
+		 *  the 'automatic' property can be correctly set beforehand.
+		 */
 		gdl_dock_object_bind (object, (GObject*)stack->master);
 
-		if(item){
+		if (item) {
 			gtk_container_add(GTK_CONTAINER(object), item->info.gtkfn());
 			gtk_widget_show_all((GtkWidget*)object);
 		}
@@ -1641,14 +1641,14 @@ gdl_dock_layout_setup_object2 (GdlDockMaster* master, Stack* stack, gint *n_afte
 	} else {
 		/* set the parameters to the existing object */
 		for (int i = 0; i < constructor->n_params; i++)
-			if(strcmp(constructor->params[i].name, "name"))
+			if (strcmp(constructor->params[i].name, "name"))
 				g_object_set_property (G_OBJECT(object), constructor->params[i].name, &constructor->params[i].value);
 	}
 
 	/* free the parameters */
 	for (int i = 0; i < constructor->n_params; i++){
 		g_value_unset (&constructor->params[i].value);
-		if(strcmp(constructor->params[i].name, "long-name"))
+		if (strcmp(constructor->params[i].name, "long-name"))
 			g_free((char*)constructor->params[i].name);
 	}
 	constructor->n_params = 0;
@@ -1679,10 +1679,10 @@ add_param (yaml_parser_t* parser, const yaml_event_t* _event, gpointer _stack)
 	char* val = (char*)event.data.scalar.value;
 
 	GParamSpec* param = g_object_class_find_property (constructor->object_class, prop);
-	if(param){
-		if (!(param->flags & GDL_DOCK_PARAM_EXPORT)){
+	if (param) {
+		if (!(param->flags & GDL_DOCK_PARAM_EXPORT)) {
 			INDENT; pwarn("not export");
-		}else{
+		} else {
 			/* initialize value used for transformations */
 			GValue serialized = {0,};
 			g_value_init (&serialized, GDL_TYPE_DOCK_PARAM);
@@ -1862,7 +1862,7 @@ gdl_dock_layout_save_to_yaml (GdlDockMaster *master, const char* filename)
 			Context* context = user_data;
 
 			const char* type = gdl_dock_object_nick_from_type (G_TYPE_FROM_INSTANCE (object));
-			map_open_(&context->event, type);
+			map_open(&context->event, type);
 
 			guint n_props;
 			GParamSpec **props = g_object_class_list_properties (G_OBJECT_GET_CLASS (object), &n_props);

@@ -5,6 +5,6 @@ all:
 		./configure --enable-test && \
 		make && \
 		./src/samplecat --version
-	cd samplecat/lib/waveform && ./test/waveform_test
-	cd samplecat/test/unit && ./unit_test
+	cd samplecat/lib/waveform && ./test/waveform
+	cd samplecat/test/unit && make check
 	./add_samples

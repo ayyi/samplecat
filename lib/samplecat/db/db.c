@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
- | copyright (C) 2007-2021 Tim Orford <tim@orford.org> and others       |
+ | copyright (C) 2007-2025 Tim Orford <tim@orford.org> and others       |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -11,6 +11,7 @@
  */
 
 #define _GNU_SOURCE
+
 #include "config.h"
 #include <gdk-pixbuf/gdk-pixdata.h>
 #include "debug/debug.h"
@@ -282,7 +283,7 @@ blob_to_pixbuf (const unsigned char* blob, const guint len)
 		if (gdk_pixdata_deserialize(&pixdata, dsize, dst, NULL)) {
 			pixbuf = pixbuf_from_pixdata(&pixdata, TRUE, NULL);
 		}
-		dbg(2, "decompressed pixbuf %d -> %d", len, dsize);
+		dbg(2, "decompressed pixbuf %d -> %lu", len, dsize);
 	} else {
 		dbg(2, "decompression failed");
 		if (gdk_pixdata_deserialize(&pixdata, len, (guint8*)blob, NULL)) {

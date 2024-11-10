@@ -15,7 +15,9 @@
 *.log
 *.trs
 *.tmp
+*.syscap
 tmp*
+compile_commands.json
 src/samplecat
 configure
 compile
@@ -33,6 +35,7 @@ cscope.*
 ltmain.sh
 libtool
 .libs
+.ccls-cache
 layouts/layout_ui.c
 layouts/layouts.c
 src/vala/*.[ch]

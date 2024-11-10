@@ -33,11 +33,10 @@ static void sample_free (Sample*);
 Sample*
 sample_new ()
 {
-	Sample* sample = g_new0(Sample, 1);
-	sample->id = -1;
-	sample->colour_index = 0;
-	sample_ref(sample);
-	return sample;
+	return sample_ref(SC_NEW(Sample,
+		.id = -1,
+		.colour_index = 0,
+	));
 }
 
 
@@ -45,7 +44,7 @@ Sample*
 sample_new_from_filename (char* path, bool path_alloced)
 {
 	if (!file_exists(path)) {
-		perr("file not found: %s\n", path);
+		perr("file not found: %s", path);
 		if (path_alloced) g_free(path);
 		return NULL;
 	}
@@ -61,7 +60,7 @@ sample_new_from_filename (char* path, bool path_alloced)
 	}
 	sample->mimetype = g_strdup_printf("%s/%s", mime_type->media_type, mime_type->subtype);
 
-	if(mimetype_is_unsupported(mime_type, sample->mimetype)){
+	if (mimetype_is_unsupported(mime_type, sample->mimetype)) {
 		dbg(1, "file type \"%s\" not supported.", sample->mimetype);
 		sample_unref(sample);
 		return NULL;
@@ -171,8 +170,6 @@ sample_unref (Sample* sample)
 bool
 sample_get_file_info (Sample* sample)
 {
-	// ownership of allocated memory (ie the meta_data) is transferred to the caller.
-
 	if(!file_exists(sample->full_path)){
 		if(sample->online){
 			samplecat_model_update_sample (samplecat.model, sample, COL_ICON, NULL);

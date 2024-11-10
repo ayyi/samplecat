@@ -199,7 +199,7 @@ add_content (gpointer _)
 {
 	void scene_set_size (AGlActor* scene)
 	{
-		dbg(2, "%i", ((AGlActor*)app->scene)->region.x2);
+		dbg(2, "%.0f", ((AGlActor*)app->scene)->region.x2);
 
 		AGlActor* container = ((AGlActor*)app->scene)->children->data;
 		container->region = (AGlfRegion){20, 20, agl_actor__width(scene) - 20, agl_actor__height(scene) - 20};
@@ -285,7 +285,7 @@ add_content (gpointer _)
 
 		static void scene_set_size2 (AGlActor* scene)
 		{
-			dbg(2, "%i", ((AGlActor*)app->scene)->region.x2);
+			dbg(2, "%.0f", ((AGlActor*)app->scene)->region.x2);
 
 			actors.files->region = (AGlfRegion){20, 20, agl_actor__width(scene) - 10, agl_actor__height(scene) - 20};
 

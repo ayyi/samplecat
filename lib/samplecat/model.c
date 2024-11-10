@@ -440,6 +440,9 @@ samplecat_model_remove (SamplecatModel* self, gint id)
 }
 
 
+/*
+ *  Takes ownership of `dir`
+ */
 void
 samplecat_model_set_search_dir (SamplecatModel* self, gchar* dir)
 {
@@ -516,9 +519,8 @@ samplecat_model_refresh_sample (SamplecatModel* self, Sample* sample, gboolean f
 	time_t mtime = file_mtime (sample->full_path);
 	if (mtime > ((time_t) 0)) {
 		if (force_update || sample->mtime < mtime) {
-			Sample* test = sample_new_from_filename (sample->full_path, FALSE);
-			if (!(test)) {
-				_sample_unref0 (test);
+			g_autoptr(Sample) test = sample_new_from_filename (sample->full_path, FALSE);
+			if (!test) {
 				return;
 			}
 			if (sample_get_file_info (sample)) {
@@ -530,7 +532,6 @@ samplecat_model_refresh_sample (SamplecatModel* self, Sample* sample, gboolean f
 			} else {
 				dbg (0, "full update - reading file info failed!");
 			}
-			_sample_unref0 (test);
 		}
 		sample->mtime = mtime;
 		sample->online = TRUE;

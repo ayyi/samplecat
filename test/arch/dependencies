@@ -11,6 +11,7 @@ libsndfile \
 ffmpeg \
 ladspa \
 vim \
+glib2-devel \
 gtk2 \
 graphene \
 libyaml \

@@ -50,7 +50,7 @@ typedef struct {
 
 AGlBehaviourClass* state_get_class           ();
 AGlBehaviour*      state                     ();
-bool               state_set_named_parameter (AGlActor*, char* name, char* value);
-bool               state_has_parameter       (AGlActor*, char* name);
+bool               state_set_named_parameter (AGlActor*, const char* name, char* value);
+bool               state_has_parameter       (AGlActor*, const char* name);
 
 #endif

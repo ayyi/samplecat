@@ -74,7 +74,7 @@ warnprintf2 (const char* func, char* format, ...)
 
 
 void
-errprintf (char* format, ...)
+errprintf (const char* format, ...)
 {
 	// print an error string, then pass arguments on to vprintf.
 

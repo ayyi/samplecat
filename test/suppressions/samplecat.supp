@@ -41,3 +41,9 @@
    ...
    fun:g_thread_new
 }
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   ...
+   fun:get_mime_type.constprop.0
+}

@@ -26,7 +26,7 @@ while getopts ":i" opt; do
 				exit 1
 			fi
 			# - privileged is needed for opengl
-			docker run --rm -e branch="$branch" --privileged $display -v="/tmp/.X11-unix:/tmp/.X11-unix:rw" -i -t $container bash
+			docker run --rm -e branch="$branch" -e CI_COMMIT_BRANCH="$CI_COMMIT_BRANCH" --privileged $display -v="/tmp/.X11-unix:/tmp/.X11-unix:rw" -i -t $container bash
 			exit
 			;;
         \? ) echo -e $usage
