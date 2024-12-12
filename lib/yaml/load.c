@@ -200,25 +200,34 @@ handle_sequence_event (yaml_parser_t* parser, const yaml_event_t* event, YamlSeq
 
 
 bool
-find_event (yaml_parser_t* parser, yaml_event_t** event, const char* name)
+find_event (yaml_parser_t* parser, yaml_event_t* event, const char* name)
 {
 	bool found = false;
-	while (!found && yaml_parser_parse(parser, *event)) {
-		switch ((*event)->type) {
+	while (!found && yaml_parser_parse(parser, event)) {
+		switch (event->type) {
 			case YAML_SCALAR_EVENT:
-				if (!strcmp((char*)(*event)->data.scalar.value, name)) {
+				if (!strcmp((char*)event->data.scalar.value, name)) {
 					found = true;
 				}
 				break;
 			case YAML_NO_EVENT:
-				yaml_event_delete(*event);
+				yaml_event_delete(event);
 				return false;
 			default:
 				break;
 		}
-		yaml_event_delete(*event);
+		yaml_event_delete(event);
 	}
-	return false;
+	return found;
+}
+
+
+bool
+find_sequence (yaml_parser_t* parser, yaml_event_t* event, const char* name)
+{
+	if (!find_event(parser, event, name)) return false;
+	get_expected_event(parser, event, YAML_SEQUENCE_START_EVENT);
+	return true;
 }
 
 

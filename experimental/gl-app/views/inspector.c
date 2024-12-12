@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
- | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
- | copyright (C) 2017-2023 Tim Orford <tim@orford.org>                  |
+ | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
+ | copyright (C) 2017-2024 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -23,7 +23,7 @@
 
 #define _g_free0(var) (var = (g_free (var), NULL))
 
-#define row_height 20
+#define row_height LINE_HEIGHT
 
 #define agl_actor__scrollable_height(A) (A->scrollable.y2 - A->scrollable.y1)
 #define scrollable_height (view->cache.n_rows * row_height)

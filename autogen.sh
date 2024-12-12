@@ -8,7 +8,7 @@ echo 'Generating files...'
 libtoolize --automake
 aclocal
 autoheader -Wall
-automake --gnu --add-missing -Wall
+automake --gnu --add-missing -Wall -Wno-override
 autoconf
 
 if [ ! -f lib/waveform/autogen.sh ]; then

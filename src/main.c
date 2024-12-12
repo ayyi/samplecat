@@ -170,10 +170,8 @@ main (int argc, char** argv)
 
 	dbg(1, "application quit %i", status);
 
-#ifdef GTK4_TODO
 	play->auditioner->stop();
 	play->auditioner->disconnect();
-#endif
 
 	exit(status);
 }

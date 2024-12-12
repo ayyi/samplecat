@@ -87,7 +87,7 @@ list_view (gpointer _)
 	{
 		ListView* view = (ListView*)actor;
 
-		#define row_height 20
+		#define row_height LINE_HEIGHT
 		#define N_ROWS_VISIBLE(A) (agl_actor__height(((AGlActor*)A)) / row_height)
 		int n_rows = N_ROWS_VISIBLE(actor);
 

@@ -29,7 +29,7 @@
 	EMIT__(yaml_document_start_event_initialize(&event, NULL, NULL, NULL, 0), &event); \
 	EMIT__(yaml_mapping_start_event_initialize(&event, NULL, (guchar*)"tag:yaml.org,2002:map", 1, YAML_BLOCK_MAPPING_STYLE), &event);
 
-#define map_open_(E, A) \
+#define map_open(E, A) \
 	if(!yaml_scalar_event_initialize(E, NULL, str_tag, (guchar*)A, -1, PLAIN_IMPLICIT, 0, YAML_PLAIN_SCALAR_STYLE)) goto error; \
 	if(!yaml_emitter_emit(&emitter, E)) goto error; \
 	if(!yaml_mapping_start_event_initialize(E, NULL, map_tag, 1, YAML_BLOCK_MAPPING_STYLE)) goto error; \

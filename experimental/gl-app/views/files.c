@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
- | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
- | copyright (C) 2016-2023 Tim Orford <tim@orford.org>                  |
+ | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
+ | copyright (C) 2016-2024 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -9,8 +9,6 @@
  +----------------------------------------------------------------------+
  |
  */
-
-#define __wf_private__
 
 #include "config.h"
 #include "agl/fbo.h"
@@ -27,7 +25,7 @@
 
 #define _g_free0(var) (var = (g_free (var), NULL))
 
-#define ROW_HEIGHT        20
+#define ROW_HEIGHT        LINE_HEIGHT
 #define header_height     row_height
 #define RHS_PADDING       20 // dont draw under scrollbar
 #define N_ROWS_VISIBLE(A) ((int)(agl_actor__height(((AGlActor*)A))) / ((FilesView*)((AGlActor*)A)->parent)->row_height)

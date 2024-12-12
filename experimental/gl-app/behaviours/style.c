@@ -71,10 +71,10 @@ style_init (AGlBehaviour* behaviour, AGlActor* actor)
 	style->fg = 0x66aaffff;
 	style->text = 0xbbbbbbff;
 	style->selection = 0x6677ff77;
-	style->font = "Roboto";
+	style->family = "Roboto";
 
-	char* font = g_strdup_printf("%s 10", style->font);
-	agl_set_font_string(font); // initialise the pango context
-	g_free(font);
-
+	#define STRINGIZE(a) str(a)
+	#define str(SIZE) #SIZE
+	style->font = g_strdup_printf("%s "STRINGIZE(FONT_SIZE), style->family);
+	agl_set_font_string((char*)style->font); // initialise the pango context
 }

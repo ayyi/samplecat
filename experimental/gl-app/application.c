@@ -336,7 +336,7 @@ application_play (Sample* sample)
 	if (player_play(sample)) {
 #if 0
 		if(app->play.queue)
-			statusbar_print(1, "playing 1 of %i ...", g_list_length(app->play.queue));
+			statusbar_print(1, "playing 1 of %i ...", g_list_length(app->play.queue) + 1);
 		else
 			statusbar_print(1, "");
 	}else{

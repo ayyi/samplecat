@@ -179,6 +179,7 @@ dock_h_view (gpointer _)
 
 				void distribute(A L[], int _to_distribute, int n_resizable, int iter)
 				{
+					if (!n_resizable) return;
 					g_return_if_fail(_to_distribute > 0);
 
 					int to_distribute = _to_distribute;
@@ -187,7 +188,7 @@ dock_h_view (gpointer _)
 
 					#define CHECK_FULL(A) if(width + amount == max){ A->full = true; n_resizable--; }
 
-					int i; for(i=0;i<20;i++){
+					for (int i=0;i<20;i++) {
 						A* a = &L[i];
 						if (a->panel) {
 							if (!a->full) {
@@ -339,7 +340,7 @@ dock_h_view (gpointer _)
 		return AGL_NOT_HANDLED;
 	}
 
-	DockHView* dock = AGL_NEW(DockHView,
+	DockHView* dock = agl_actor__new(DockHView,
 		.panel = {
 			.actor = {
 				.class = &actor_class,
@@ -423,7 +424,7 @@ dock_h_move_panel_to_y (DockHView* dock, AGlActor* panel, int y)
 		int i = 0;
 		for(;l;l=l->next){
 			AGlActor* a = l->data;
-			dbg(0, "  %f", a->region.y1);
+			dbg(0, "  %.0f", a->region.y1);
 			if(a->region.y1 > y) return i;
 			i++;
 		}

@@ -156,7 +156,7 @@ panel_view (gpointer _)
 			PangoFontDescription* font_desc = pango_font_description_new();
 			pango_font_description_set_family(font_desc, "Sans");
 
-			pango_font_description_set_size(font_desc, 7 * PANGO_SCALE);
+			pango_font_description_set_size(font_desc, FONT_SIZE * PANGO_SCALE);
 			pango_font_description_set_weight(font_desc, PANGO_WEIGHT_BOLD);
 			pango_layout_set_font_description(panel->layout, font_desc);
 

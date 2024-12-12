@@ -29,6 +29,9 @@ test_LDADD = \
 	$(GTK_LDFLAGS) \
 	$(YAML_LIBS)
 
+TESTS = \
+	test
+
 suppression_dir = $(top_srcdir)/test/suppressions
 valgrind:
 	/usr/bin/valgrind \

@@ -25,9 +25,9 @@
 #define GERR_WARN if (error){ pwarn("%s", error->message); g_error_free(error); error = NULL; }
 
 void        debug_printf             (const char* func, int level, const char* format, ...) __attribute__ ((format (printf, 3, 4)));
-void        warnprintf               (const char* format, ...);
+void        warnprintf               (const char* format, ...) __attribute__ ((format (printf, 1, 2)));
 void        warnprintf2              (const char* func, char* format, ...);
-void        errprintf                (char* fmt, ...);
+void        errprintf                (char* fmt, ...) __attribute__ ((format (printf, 1, 2)));
 void        errprintf2               (const char* func, char* format, ...);
 
 void        underline                ();

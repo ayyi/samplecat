@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
- | This file is part of Samplecat. httpd://ayyi.github.io/samplecat/    |
- | copyright (C) 2020-2023 Tim Orford <tim@orford.org>                  |
+ | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
+ | copyright (C) 2020-2024 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -175,12 +175,12 @@ test_save ()
 		yaml_start(fp);
 
 		{
-			map_open_(&event, "root");
+			map_open(&event, "root");
 			{
-				map_open_(&event, "section");
+				map_open(&event, "section");
 				if (!yaml_add_key_value_pair("property-1", "value-1")) goto error;
 				{
-					map_open_(&event, "sub-section");
+					map_open(&event, "sub-section");
 					if (!yaml_add_key_value_pair("property-2", "value-2")) goto error;
 					end_map(&event);
 				}

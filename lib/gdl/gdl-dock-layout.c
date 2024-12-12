@@ -1288,7 +1288,7 @@ gdl_dock_layout_save_to_yaml (GdlDockMaster *master, const char* filename)
 			g_auto(yaml_event_t) event;
 
 			const char* type = gdl_dock_object_nick_from_type (G_TYPE_FROM_INSTANCE (object));
-			map_open_(&event, type);
+			map_open(&event, type);
 
 			guint n_props;
 			GParamSpec **props = g_object_class_list_properties (G_OBJECT_GET_CLASS (object), &n_props);

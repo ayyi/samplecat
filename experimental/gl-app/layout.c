@@ -58,6 +58,7 @@ config_load_point (yaml_parser_t* parser, const char*, gpointer _pt)
 					*a = atoi((char*)event.data.scalar.value);
 					break;
 				default:
+					pwarn("expected scalar event");
 					break;
 			}
 		}
@@ -266,7 +267,7 @@ add_node (yaml_parser_t* parser, const yaml_event_t*, const char* node_name, gpo
 
 				yaml_event_delete(&event);
 				return true;
-				break;
+
 			case YAML_NO_EVENT:
 			case YAML_SEQUENCE_START_EVENT:
 				pwarn("unexpected parser event type: YAML_SEQUENCE_START_EVENT");
@@ -311,8 +312,6 @@ window_handler (yaml_parser_t* parser, const yaml_event_t* _event, const char* _
 		},
 		&stack
 	);
-
-	return false;
 }
 
 
@@ -330,7 +329,8 @@ config_load_windows (yaml_parser_t* parser, const yaml_event_t* _, const char*, 
 	yaml_load_section(parser,
 		NULL,
 		(YamlMappingHandler[]){
-			{"window", window_handler}
+			{"window", window_handler},
+			{NULL}
 		},
 		NULL,
 		user_data
@@ -390,15 +390,17 @@ open_settings_file ()
 	char* paths[] = {
 		g_strdup_printf("%s/.config/" PACKAGE, g_get_home_dir()),
 		g_build_filename(PACKAGE_DATA_DIR "/" PACKAGE, NULL),
-		g_build_filename(cwd, NULL)
+		g_build_filename(cwd, NULL),
+		g_build_filename(cwd, "experimental/gl-app", NULL)
 	};
 
 	FILE* fp;
 	for (int i=0; i<G_N_ELEMENTS(paths); i++) {
-		char* filename = g_strdup_printf("%s/"PACKAGE".yaml", paths[i]);
-		fp = fopen(filename, "rb");
-		g_free(filename);
-		if (fp) break;
+		g_autofree char* filename = g_strdup_printf("%s/"PACKAGE".yaml", paths[i]);
+		if ((fp = fopen(filename, "rb"))) {
+			dbg(1, "using config file: %s", filename);
+			break;
+		}
 	}
 	if (!fp) {
 		fprintf(stderr, "unable to load config file %s/"PACKAGE".yaml\n", paths[0]);
@@ -423,7 +425,7 @@ get_window_size_from_settings ()
 
 		yaml_event_t e;
 		yaml_event_t* event = &e;
-		if (find_event(&parser, &event, "size")) {
+		if (find_sequence(&parser, event, "size")) {
 			config_load_point(&parser, NULL, &size);
 			yaml_event_delete(event);
 		}
@@ -472,16 +474,12 @@ load_settings ()
 		agl_actor_class__add_behaviour(wf_actor_get_class(), panel_get_class());
 	}
 
-	FILE* fp = open_settings_file();
+	g_autoptr(FILE) fp = open_settings_file();
 
-	bool ret = fp && yaml_load(fp, (YamlMappingHandler[]){
+	return fp && yaml_load(fp, (YamlMappingHandler[]){
 		{"windows", config_load_windows},
 		{NULL}
 	});
-
-	if(fp) fclose(fp);
-
-	return ret;
 }
 
 
@@ -519,7 +517,7 @@ save_settings ()
 		if (c != scrollbar_view_get_class() && c != button_get_class() && c != &default_actor_class) {
 			g_return_val_if_fail(actor->name, false);
 
-			map_open_(event, actor->name);
+			map_open(event, actor->name);
 
 			if (!yaml_add_key_value_pair("type", c->name)) goto error;
 
@@ -542,7 +540,7 @@ save_settings ()
 					panel->size_req.max.x > -1 || panel->size_req.max.y > -1
 				};
 				if (b[0] || b[1] || b[2]) {
-					map_open_(event, "size-req");
+					map_open(event, "size-req");
 					if (b[0])
 						if(!yaml_add_key_value_pair_pt("min", &panel->size_req.min)) goto error;
 					if (b[1])
@@ -583,8 +581,8 @@ save_settings ()
 		return false;
 	}
 
-	map_open_(&event, "windows");
-	map_open_(&event, "window");
+	map_open(&event, "windows");
+	map_open(&event, "window");
 	if (!((AGlActor*)app->scene)->children || !add_child(&event, (AGlActor*)app->scene)) goto close;
 	end_map(&event);
 	end_map(&event);

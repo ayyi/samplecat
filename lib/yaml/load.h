@@ -44,7 +44,8 @@ bool handle_scalar_event (yaml_parser_t*, const yaml_event_t*, YamlHandler[]);
 bool handle_mapping_event (yaml_parser_t*, const yaml_event_t*, YamlMappingHandler[]);
 bool handle_sequence_event (yaml_parser_t*, const yaml_event_t*, YamlSequenceHandler[]);
 
-bool find_event          (yaml_parser_t*, yaml_event_t**, const char*);
+bool find_event          (yaml_parser_t*, yaml_event_t*, const char*);
+bool find_sequence       (yaml_parser_t*, yaml_event_t*, const char*);
 
 bool yaml_set_string     (const yaml_event_t*, const char*, gpointer);
 void yaml_set_int        (const yaml_event_t*, gpointer);
@@ -63,3 +64,5 @@ bool yaml_set_bool       (const yaml_event_t*, const char*, gpointer);
 
 G_DEFINE_AUTO_CLEANUP_CLEAR_FUNC(yaml_event_t, yaml_event_delete)
 G_DEFINE_AUTO_CLEANUP_CLEAR_FUNC(yaml_parser_t, yaml_parser_delete)
+
+G_DEFINE_AUTOPTR_CLEANUP_FUNC(FILE, fclose)

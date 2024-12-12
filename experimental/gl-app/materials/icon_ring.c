@@ -1,20 +1,24 @@
-/**
-* +----------------------------------------------------------------------+
-* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2016-2020 Tim Orford <tim@orford.org>                  |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-*
-*/
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
+ | copyright (C) 2016-2024 Tim Orford <tim@orford.org>                  |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
+ */
+
 #include "config.h"
 #include "shader.h"
 #include "agl/text/pango.h"
+#include "behaviours/style.h"
 #include "materials/icon_ring.h"
 
 extern AGlShader ring;
+
+#define SIZE (2. * FONT_SIZE / 1.4275 + 4.)
 
 static void ring_init   ();
 static void ring_render (AGlMaterial*);
@@ -29,9 +33,9 @@ AGlMaterialClass ring_material_class = {
 
 
 AGlMaterial*
-ring_new()
+ring_new ()
 {
-	if(!ring.program){
+	if (!ring.program) {
 		agl_create_program(&ring);
 	}
 
@@ -49,13 +53,13 @@ ring_new()
 
 
 static void
-ring_init()
+ring_init ()
 {
 }
 
 
 static void
-ring_free(AGlMaterial* material)
+ring_free (AGlMaterial* material)
 {
 	IconMaterial* icon = (IconMaterial*)material;
 
@@ -64,7 +68,7 @@ ring_free(AGlMaterial* material)
 
 
 static void
-ring_render(AGlMaterial* material)
+ring_render (AGlMaterial* material)
 {
 	IconMaterial* icon = (IconMaterial*)material;
 
@@ -91,7 +95,7 @@ ring_render(AGlMaterial* material)
 	agl_rgba_to_float(((IconMaterial*)material)->bg, &c[0], &c[1], &c[2]);
 
 	agl_use_material(material);
-	agl_rect_((AGlRect){0, 0, 18, 18});
+	agl_rect_((AGlRect){0, 0, SIZE, SIZE});
 
 	agl_set_font("Roboto", 7, PANGO_WEIGHT_BOLD);
 	PangoRectangle logical_rect;
@@ -99,7 +103,7 @@ ring_render(AGlMaterial* material)
 	int width = logical_rect.width;
 	agl_print_layout(8 - width / 2, 3, 0, icon->colour, icon->layout);
 
-	agl_set_font_string("Roboto 10");
+	agl_set_font("Roboto", FONT_SIZE, PANGO_WEIGHT_NORMAL);
 }
 
 

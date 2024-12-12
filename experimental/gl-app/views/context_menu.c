@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
- | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
- | copyright (C) 2016-2023 Tim Orford <tim@orford.org>                  |
+ | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
+ | copyright (C) 2016-2024 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -17,8 +17,8 @@
 #include "agl/x11.h"
 #include "agl/event.h"
 #include "wf/promise.h"
-#include "icon/utils.h"
 #include "waveform/utils.h"
+#include "icon/utils.h"
 #include "application.h"
 #include "views/context_menu.h"
 
@@ -103,7 +103,7 @@ context_menu_free (AGlActor* actor)
 static bool
 context_menu_paint (AGlActor* actor)
 {
-	agl_set_font(STYLE.font, 10, PANGO_WEIGHT_BOLD);
+	agl_set_font((char*)STYLE.family, FONT_SIZE, PANGO_WEIGHT_BOLD);
 
 	PLAIN_COLOUR2 (agl->shaders.plain) = 0xffffffff;
 	agl_use_program((AGlShader*)agl->shaders.plain);
