@@ -586,7 +586,7 @@ gdl_dock_item_class_init (GdlDockItemClass *klass)
 
     /* set the style */
     klass->priv->css = gtk_css_provider_new ();
-    gtk_css_provider_load_from_data (klass->priv->css, style, -1);
+	gtk_css_provider_load_from_string(klass->priv->css, style);
 
 	gtk_widget_class_set_css_name (widget_class, "dock-item");
 }
@@ -597,9 +597,6 @@ gdl_dock_item_init (GdlDockItem *item)
 	//item->priv = gdl_dock_item_get_instance_private (item);
 	item->priv = (GdlDockItemPrivate*) g_type_instance_get_private ((GTypeInstance*)item, GDL_TYPE_DOCK_ITEM);
 
-#ifdef GTK4_TODO
-    gtk_widget_set_has_window (GTK_WIDGET (item), TRUE);
-#endif
 	gtk_widget_set_can_focus (GTK_WIDGET (item), TRUE);
 
 	item->child = NULL;
@@ -766,7 +763,7 @@ gdl_dock_item_set_property (GObject *g_object, guint prop_id, const GValue *valu
 			break;
 		case PROP_CLOSED:
 			if (g_value_get_boolean (value)) {
-				gtk_widget_hide (GTK_WIDGET (item));
+				gtk_widget_set_visible (GTK_WIDGET (item), false);
 			} else {
 				if (!item->priv->iconified && !gdl_dock_item_is_placeholder (item))
 					gtk_widget_set_visible (GTK_WIDGET (item), true);
@@ -887,7 +884,7 @@ gdl_dock_item_remove (GdlDockItem *container, GtkWidget *widget)
     item->child = NULL;
 
     if (was_visible)
-        gtk_widget_hide (GTK_WIDGET (container));
+        gtk_widget_set_visible (GTK_WIDGET (container), false);
 }
 
 static void
@@ -1063,6 +1060,7 @@ gdl_dock_item_size_allocate (GtkWidget *widget, int w, int h, int baseline)
         if (child_allocation.width < 0)
             child_allocation.width = 0;
         if (child_allocation.height < 0)
+            child_allocation.height = 0;
         gtk_widget_size_allocate (item->child, &child_allocation, -1);
     }
 }
@@ -1185,14 +1183,16 @@ gdl_dock_item_click_gesture_pressed (GtkGestureClick *gesture, int n_press, doub
     gboolean locked = !GDL_DOCK_ITEM_NOT_LOCKED (item);
     gboolean event_handled = FALSE;
 
-    GtkAllocation allocation;
-    gtk_widget_get_allocation (item->priv->grip, &allocation);
+	graphene_rect_t allocation;
+#pragma GCC diagnostic ignored "-Wunused-result"
+	gtk_widget_compute_bounds(item->priv->grip, item->priv->grip, &allocation);
+#pragma GCC diagnostic warning "-Wunused-result"
 
     /* Check if user clicked on the drag handle. */
     gboolean in_handle = (item->priv->orientation == GTK_ORIENTATION_HORIZONTAL)
-		? widget_x < allocation.width
+		? widget_x < allocation.size.width
 		: (item->priv->orientation == GTK_ORIENTATION_VERTICAL)
-			? widget_y < allocation.height
+			? widget_y < allocation.size.height
 			: false;
 
 	switch (button) {
@@ -1287,21 +1287,22 @@ gdl_dock_item_key_press (GtkWidget *widget, GdkEventKey *event)
 static gboolean
 gdl_dock_item_dock_request (GdlDockObject *object, gint x, gint y, GdlDockRequest *request)
 {
-    GtkAllocation  alloc;
-    gint           rel_x, rel_y;
-
     /* we get (x,y) in our allocation coordinates system */
 
-    /* Get item's allocation. */
-    gtk_widget_get_allocation (GTK_WIDGET (object), &alloc);
+	graphene_rect_t alloc;
+#pragma GCC diagnostic ignored "-Wunused-result"
+	gtk_widget_compute_bounds(GTK_WIDGET(object), GTK_WIDGET(gdl_dock_object_get_toplevel(object)), &alloc);
+#pragma GCC diagnostic warning "-Wunused-result"
 
     /* Get coordinates relative to our window. */
-    rel_x = x - alloc.x;
-    rel_y = y - alloc.y;
+    int rel_x = x - alloc.origin.x;
+    int rel_y = y - alloc.origin.y;
 
     /* Location is inside. */
-    if (rel_x > 0 && rel_x < alloc.width &&
-        rel_y > 0 && rel_y < alloc.height) {
+    if (
+		rel_x > 0 && rel_x < alloc.size.width &&
+		rel_y > 0 && rel_y < alloc.size.height
+	) {
         float rx, ry;
         GtkRequisition my, other;
         gint divider = -1;
@@ -1311,8 +1312,8 @@ gdl_dock_item_dock_request (GdlDockObject *object, gint x, gint y, GdlDockReques
         gdl_dock_item_preferred_size (GDL_DOCK_ITEM (object), &my);
 
         /* Calculate location in terms of the available space (0-100%). */
-        rx = (float) rel_x / alloc.width;
-        ry = (float) rel_y / alloc.height;
+        rx = (float) rel_x / alloc.size.width;
+        ry = (float) rel_y / alloc.size.height;
 
         /* Determine dock location. */
         if (rx < SPLIT_RATIO) {
@@ -1336,10 +1337,7 @@ gdl_dock_item_dock_request (GdlDockObject *object, gint x, gint y, GdlDockReques
             request->position = GDL_DOCK_CENTER;
 
         /* Reset rectangle coordinates to entire item. */
-        request->rect.x = 0;
-        request->rect.y = 0;
-        request->rect.width = alloc.width;
-        request->rect.height = alloc.height;
+		request->rect = (graphene_rect_t){ .size = { alloc.size.width, alloc.size.height }};
 
         GdlDockItemBehavior behavior = GDL_DOCK_ITEM(object)->priv->behavior;
 
@@ -1350,32 +1348,32 @@ gdl_dock_item_dock_request (GdlDockObject *object, gint x, gint y, GdlDockReques
                 case GDL_DOCK_TOP:
                     if (behavior & GDL_DOCK_ITEM_BEH_CANT_DOCK_TOP)
                         return FALSE;
-                    request->rect.height *= SPLIT_RATIO;
+                    request->rect.size.height *= SPLIT_RATIO;
                     break;
                 case GDL_DOCK_BOTTOM:
                     if (behavior & GDL_DOCK_ITEM_BEH_CANT_DOCK_BOTTOM)
                         return FALSE;
-                    request->rect.y += request->rect.height * (1 - SPLIT_RATIO);
-                    request->rect.height *= SPLIT_RATIO;
+                    request->rect.origin.y += request->rect.size.height * (1 - SPLIT_RATIO);
+                    request->rect.size.height *= SPLIT_RATIO;
                     break;
                 case GDL_DOCK_LEFT:
                     if (behavior & GDL_DOCK_ITEM_BEH_CANT_DOCK_LEFT)
                         return FALSE;
-                    request->rect.width *= SPLIT_RATIO;
+                    request->rect.size.width *= SPLIT_RATIO;
                     break;
                 case GDL_DOCK_RIGHT:
                     if (behavior & GDL_DOCK_ITEM_BEH_CANT_DOCK_RIGHT)
                         return FALSE;
-                    request->rect.x += request->rect.width * (1 - SPLIT_RATIO);
-                    request->rect.width *= SPLIT_RATIO;
+                    request->rect.origin.x += request->rect.size.width * (1 - SPLIT_RATIO);
+                    request->rect.size.width *= SPLIT_RATIO;
                     break;
                 case GDL_DOCK_CENTER:
                     if (behavior & GDL_DOCK_ITEM_BEH_CANT_DOCK_CENTER)
                         return FALSE;
-                    request->rect.x = request->rect.width * SPLIT_RATIO/2;
-                    request->rect.y = request->rect.height * SPLIT_RATIO/2;
-                    request->rect.width = (request->rect.width * (1 - SPLIT_RATIO/2)) - request->rect.x;
-                    request->rect.height = (request->rect.height * (1 - SPLIT_RATIO/2)) - request->rect.y;
+                    request->rect.origin.x = request->rect.size.width * SPLIT_RATIO/2;
+                    request->rect.origin.y = request->rect.size.height * SPLIT_RATIO/2;
+                    request->rect.size.width = (request->rect.size.width * (1 - SPLIT_RATIO/2)) - request->rect.origin.x;
+                    request->rect.size.height = (request->rect.size.height * (1 - SPLIT_RATIO/2)) - request->rect.origin.y;
                     break;
                 default:
                     break;
@@ -1384,8 +1382,8 @@ gdl_dock_item_dock_request (GdlDockObject *object, gint x, gint y, GdlDockReques
 
         /* adjust returned coordinates so they are have the same
            origin as our window */
-        request->rect.x += alloc.x;
-        request->rect.y += alloc.y;
+        request->rect.origin.x += alloc.origin.x;
+        request->rect.origin.y += alloc.origin.y;
 
         /* Set possible target location and return TRUE. */
         request->target = object;
@@ -1702,7 +1700,6 @@ gdl_dock_item_drag_start (GdlDockItem *item)
 static gboolean
 gdl_dock_item_drag_end (GdlDockItem *item, gboolean cancel)
 {
-#ifdef GTK4_TODO
     if (item->priv->in_drag) {
         /* Release pointer & keyboard. */
 #ifdef GTK4_TODO
@@ -1721,6 +1718,7 @@ gdl_dock_item_drag_end (GdlDockItem *item, gboolean cancel)
         return FALSE;
     }
 
+#ifdef GTK4_TODO
     /* Restore old cursor */
     gdl_dock_item_grip_set_cursor (GDL_DOCK_ITEM_GRIP (item->priv->grip), FALSE);
 #endif
@@ -2098,9 +2096,7 @@ gdl_dock_item_set_tablabel (GdlDockItem *item, GtkWidget *tablabel)
     }
 
     if (item->priv->tab_label) {
-        /* disconnect and unref the previous tablabel */
-        g_object_unref (item->priv->tab_label);
-        item->priv->tab_label = NULL;
+        g_clear_pointer (&item->priv->tab_label, g_object_unref);
     }
 
     if (tablabel) {

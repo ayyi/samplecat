@@ -237,8 +237,8 @@ gdl_dock_item_grip_set_property (GObject *object, guint prop_id, const GValue *v
         case PROP_ITEM:
             grip->priv->item = g_value_get_object (value);
             if (grip->priv->item) {
-                g_signal_connect (grip->priv->item, "notify::long-name", G_CALLBACK (gdl_dock_item_grip_item_notify), grip);
-                g_signal_connect (grip->priv->item, "notify::stock-id", G_CALLBACK (gdl_dock_item_grip_item_notify), grip);
+                behaviour_subject_connect ((GObject*)grip->priv->item, "long-name", (void*)gdl_dock_item_grip_item_notify, grip);
+                behaviour_subject_connect ((GObject*)grip->priv->item, "stock-id", (void*)gdl_dock_item_grip_item_notify, grip);
                 g_signal_connect (grip->priv->item, "notify::behavior", G_CALLBACK (gdl_dock_item_grip_item_notify), grip);
 
                 if (!GDL_DOCK_ITEM_CANT_CLOSE (grip->priv->item) && grip->priv->close_button)

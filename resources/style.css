@@ -97,3 +97,11 @@ label#spp {
 	color: #fff;
 	padding-left: 4px;
 }
+
+.directories treeexpander indent {
+	-gtk-icon-size: 16px;
+}
+
+.directories treeexpander label {
+	padding-left: 4px;
+}

@@ -65,6 +65,8 @@ libgdl_4_la_SOURCES = \
 	gdl-dock-bar.c \
 	gdl-switcher.c \
 	gdl-switcher.h \
+	layoutmanager.c \
+	layoutmanager.h \
 	il8n.h \
 	registry.h registry.c \
 	utils.c utils.h \

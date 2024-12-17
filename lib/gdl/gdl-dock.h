@@ -112,6 +112,8 @@ GdlDockObject *gdl_dock_get_root            (GdlDock       *dock);
 void           gdl_dock_show_preview        (GdlDock       *dock,
                                              GdkRectangle  *rect);
 void           gdl_dock_hide_preview        (GdlDock       *dock);
+void           gdl_dock_show_overlay        (GdlDock       *dock, GtkWidget* overlay);
+void           gdl_dock_hide_overlay        (GdlDock       *dock);
 
 void           gdl_dock_set_skip_taskbar    (GdlDock       *dock,
                                              gboolean       skip);

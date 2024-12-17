@@ -32,7 +32,7 @@
 #include "gdl-dock-master.h"
 #include "gdl-dock-paned.h"
 #include "gdl-dock-notebook.h"
-//#include "gdl-preview-window.h"
+#include "layoutmanager.h"
 
 #include "libgdlmarshal.h"
 
@@ -116,7 +116,7 @@ struct _GdlDockPrivate
 
     /* for floating docks */
     gboolean            floating;
-    GtkWidget          *window;
+    GtkWidget*          window;
     gboolean            auto_title;
 
     gint                float_x;
@@ -270,6 +270,8 @@ gdl_dock_class_init (GdlDockClass *klass)
                       0);
 
     klass->layout_changed = NULL;
+
+	gtk_widget_class_set_layout_manager_type (widget_class, TYPE_DOCK_LAYOUT);
 }
 
 static void
@@ -672,13 +674,13 @@ gdl_dock_hide (GtkWidget *widget)
 }
 
 void
-gdl_dock_add (GdlDock *container, GtkWidget *widget)
+gdl_dock_add (GdlDock *dock, GtkWidget *widget)
 {
-    g_return_if_fail (container);
-    g_return_if_fail (GDL_IS_DOCK (container));
+    g_return_if_fail (dock);
+    g_return_if_fail (GDL_IS_DOCK (dock));
     g_return_if_fail (GDL_IS_DOCK_ITEM (widget));
 
-    gdl_dock_add_item (container, GDL_DOCK_ITEM (widget), GDL_DOCK_TOP);  /* default position */
+    gdl_dock_add_item (dock, GDL_DOCK_ITEM (widget), GDL_DOCK_TOP);  /* default position */
 }
 
 void
@@ -777,8 +779,8 @@ gdl_dock_dock_request (GdlDockObject *object, gint x, gint y, GdlDockRequest *re
 #endif
 
 	/* Get coordinates relative to our allocation area. */
-	gint rel_x = x - alloc.origin.x;
-	gint rel_y = y - alloc.origin.y;
+	float rel_x = x - alloc.origin.x;
+	float rel_y = y - alloc.origin.y;
 
 	if (request)
 		my_request = *request;
@@ -791,10 +793,10 @@ gdl_dock_dock_request (GdlDockObject *object, gint x, gint y, GdlDockRequest *re
 		may_dock = TRUE;
 
 		/* Set docking indicator rectangle to the GdlDock size. */
-		my_request.rect.x = alloc.origin.x + bw;
-		my_request.rect.y = alloc.origin.y + bw;
-		my_request.rect.width = alloc.size.width - 2*bw;
-		my_request.rect.height = alloc.size.height - 2*bw;
+		my_request.rect.origin.x = alloc.origin.x + bw;
+		my_request.rect.origin.y = alloc.origin.y + bw;
+		my_request.rect.size.width = alloc.size.width - 2 * bw;
+		my_request.rect.size.height = alloc.size.height - 2 * bw;
 
 		/* If GdlDock has no root item yet, set the dock itself as possible target. */
         if (!dock->priv->root) {
@@ -806,18 +808,18 @@ gdl_dock_dock_request (GdlDockObject *object, gint x, gint y, GdlDockRequest *re
             /* See if it's in the border_width band. */
             if (rel_x < bw) {
                 my_request.position = GDL_DOCK_LEFT;
-                my_request.rect.width *= SPLIT_RATIO;
+                my_request.rect.size.width *= SPLIT_RATIO;
             } else if (rel_x > alloc.size.width - bw) {
                 my_request.position = GDL_DOCK_RIGHT;
-                my_request.rect.x += my_request.rect.width * (1 - SPLIT_RATIO);
-                my_request.rect.width *= SPLIT_RATIO;
+                my_request.rect.origin.x += my_request.rect.size.width * (1 - SPLIT_RATIO);
+                my_request.rect.size.width *= SPLIT_RATIO;
             } else if (rel_y < bw) {
                 my_request.position = GDL_DOCK_TOP;
-                my_request.rect.height *= SPLIT_RATIO;
+                my_request.rect.size.height *= SPLIT_RATIO;
             } else if (rel_y > alloc.size.height - bw) {
                 my_request.position = GDL_DOCK_BOTTOM;
-                my_request.rect.y += my_request.rect.height * (1 - SPLIT_RATIO);
-                my_request.rect.height *= SPLIT_RATIO;
+                my_request.rect.origin.y += my_request.rect.size.height * (1 - SPLIT_RATIO);
+                my_request.rect.size.height *= SPLIT_RATIO;
             } else {
                 /* Otherwise try our children. */
                 /* give them allocation coordinates (we are a
@@ -1022,30 +1024,32 @@ gdl_dock_new_from (GdlDock *original, gboolean floating)
 static GdlDockPlacement
 gdl_dock_refine_placement (GdlDock *dock, GdlDockItem *dock_item, GdlDockPlacement placement)
 {
-    GtkAllocation allocation;
-    gtk_widget_get_allocation (GTK_WIDGET (dock), &allocation);
+	graphene_rect_t allocation;
+#pragma GCC diagnostic ignored "-Wunused-result"
+	gtk_widget_compute_bounds(GTK_WIDGET(dock), GTK_WIDGET(dock), &allocation);
+#pragma GCC diagnostic warning "-Wunused-result"
 
-	if (allocation.width > 0) {
-		g_return_val_if_fail (allocation.height > 0, placement);
+	if (allocation.size.width > 0) {
+		g_return_val_if_fail (allocation.size.height > 0, placement);
 
-	    GtkRequisition object_size;
-    	gdl_dock_item_preferred_size (dock_item, &object_size);
+		GtkRequisition object_size;
+		gdl_dock_item_preferred_size (dock_item, &object_size);
 		g_return_val_if_fail (object_size.width > 0, placement);
 		g_return_val_if_fail (object_size.height > 0, placement);
 
 		if (placement == GDL_DOCK_LEFT || placement == GDL_DOCK_RIGHT) {
 			/* Check if dock_object touches center in terms of width */
-			if (allocation.width/2 > object_size.width) {
+			if (allocation.size.width / 2 > object_size.width) {
 				return GDL_DOCK_CENTER;
 			}
 		} else if (placement == GDL_DOCK_TOP || placement == GDL_DOCK_BOTTOM) {
 			/* Check if dock_object touches center in terms of height */
-			if (allocation.height/2 > object_size.height) {
+			if (allocation.size.height / 2 > object_size.height) {
 				return GDL_DOCK_CENTER;
 			}
 		}
 	}
-    return placement;
+	return placement;
 }
 
 /* Determines the larger item of the two based on the placement:
@@ -1102,10 +1106,10 @@ gdl_dock_find_best_placement_item (GdlDockItem *dock_item, GdlDockPlacement plac
 {
 	ENTER;
 
-    GdlDockItem *ret_item = NULL;
+	GdlDockItem *ret_item = NULL;
 
-    if (GDL_IS_DOCK_PANED (dock_item)) {
-    	GList* children = GDL_DOCK_OBJECT_GET_CLASS (dock_item)->children(GDL_DOCK_OBJECT (dock_item));
+	if (GDL_IS_DOCK_PANED (dock_item)) {
+		GList* children = GDL_DOCK_OBJECT_GET_CLASS (dock_item)->children(GDL_DOCK_OBJECT (dock_item));
 		g_assert(g_list_length(children) == 2);
 		GtkWidget* child1 = children->data;
 		GtkWidget* child2 = children->next->data;
@@ -1137,7 +1141,7 @@ gdl_dock_find_best_placement_item (GdlDockItem *dock_item, GdlDockPlacement plac
         g_warning ("%s: unexpected GdlDockItem type: %s", __func__, G_OBJECT_TYPE_NAME(dock_item));
     }
 	LEAVE;
-    return ret_item;
+	return ret_item;
 }
 
 /**
@@ -1361,4 +1365,23 @@ gdl_dock_hide_preview (GdlDock *dock)
 {
     if (dock->priv->area_window)
         gtk_widget_set_visible (dock->priv->area_window, false);
+}
+
+
+void
+gdl_dock_show_overlay (GdlDock *dock, GtkWidget* overlay)
+{
+	gtk_widget_insert_before (overlay, GTK_WIDGET (dock), NULL);
+	gtk_widget_set_visible (overlay, true);
+}
+
+
+void
+gdl_dock_hide_overlay (GdlDock *dock)
+{
+	for (GtkWidget* child = gtk_widget_get_first_child (GTK_WIDGET (dock)); child != NULL; child = gtk_widget_get_next_sibling (child)) {
+		if (child != GTK_WIDGET(dock->priv->root)) {
+			gtk_widget_set_visible(child, false);
+		}
+	}
 }

@@ -1,18 +1,13 @@
 /*
- * Copyright (C) 2023 Tim Orford
- *
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Library General Public
- * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
- *
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Library General Public License for more details.
- *
- * You should have received a copy of the GNU Library General Public
- * License along with this library; if not, see <http://www.gnu.org/licenses/>.
+ +----------------------------------------------------------------------+
+ | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
+ | copyright (C) 2023-2024 Tim Orford <tim@orford.org>                  |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
  */
 
 #include <gtk/gtk.h>
@@ -29,4 +24,18 @@ gtk_widget_get_children (GtkWidget* widget)
 	}
 
 	return l;
+}
+
+
+/*
+ *  Similar to connecting to a gobject notify signal but with an additional callback for the current value
+ */
+void
+behaviour_subject_connect (GObject* object, const char* prop, void (*callback)(GObject*, GParamSpec*, gpointer), gpointer user_data)
+{
+	GParamSpec* pspec = g_object_class_find_property (G_OBJECT_GET_CLASS(object), prop);
+	callback (object, pspec, user_data);
+
+	g_autofree char* signal = g_strdup_printf("notify::%s", prop);
+	g_signal_connect (object, signal, G_CALLBACK(callback), user_data);
 }

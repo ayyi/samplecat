@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
- | copyright (C) 2007-2023 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2007-2024 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -10,7 +10,6 @@
  |
  */
 
-#define __audtioner_c__
 #include "config.h"
 #undef USE_GTK
 #include <glib.h>
@@ -67,7 +66,7 @@ on_really_connected (char* status, int len, GError* error, gpointer user_data)
 
 	if (!error) {
 		dbus_g_proxy_add_signal(dbus->proxy, "PlaybackStopped", G_TYPE_INVALID);
-		dbus_g_proxy_add_signal(dbus->proxy, "Position", G_TYPE_INT, G_TYPE_DOUBLE, G_TYPE_INVALID);
+		dbus_g_proxy_add_signal(dbus->proxy, "Position", G_TYPE_DOUBLE, G_TYPE_DOUBLE, G_TYPE_INVALID);
 
 		void on_stopped (DBusGProxy* proxy, gpointer user_data)
 		{
@@ -77,7 +76,7 @@ on_really_connected (char* status, int len, GError* error, gpointer user_data)
 		}
 		dbus_g_proxy_connect_signal (dbus->proxy, "PlaybackStopped", G_CALLBACK(on_stopped), NULL, NULL);
 
-		void on_position (DBusGProxy* proxy, int position, double seconds, gpointer user_data)
+		void on_position (DBusGProxy* proxy, double seconds, double length, gpointer user_data)
 		{
 			player_set_position_seconds(seconds);
 		}
@@ -153,12 +152,13 @@ auditioner_play (Sample* sample)
 }
 
 
-void
+static void
 auditioner_stop ()
 {
 	dbg(1, "...");
 	dbus_g_proxy_call_no_reply(dbus->proxy, "StopPlayback", G_TYPE_STRING, "", G_TYPE_INVALID);
 }
+
 
 void
 auditioner_play_all ()

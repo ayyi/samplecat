@@ -17,7 +17,6 @@ endif
 endif
 
 libwidgets_la_SOURCES = \
-	dh_tree.c dh_tree.h \
 	suggestion_entry.c suggestion_entry.h \
 	colour-box.c colour-box.h \
 	tagged-entry.c tagged-entry.h \

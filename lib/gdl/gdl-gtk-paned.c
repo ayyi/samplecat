@@ -71,8 +71,10 @@ static int        gdl_gtk_paned_get_position           (GdlGtkPaned *paned);
 static void       gdl_gtk_paned_set_position           (GdlGtkPaned *paned,
                                                         int          position);
 
+#if 0
 static void       gdl_gtk_paned_set_wide_handle        (GdlGtkPaned    *paned,
                                                         gboolean     wide);
+#endif
 static gboolean   gdl_gtk_paned_get_wide_handle        (GdlGtkPaned    *paned);
 
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GdlGtkPaned, g_object_unref)
@@ -1414,7 +1416,9 @@ gdl_gtk_paned_set_property (GObject *object, guint prop_id, const GValue *value,
         }
       break;
     case PROP_WIDE_HANDLE:
+#if 0
       gdl_gtk_paned_set_wide_handle (paned, g_value_get_boolean (value));
+#endif
       break;
     case PROP_RESIZE_START_CHILD:
       gdl_gtk_paned_set_resize_start_child (paned, g_value_get_boolean (value));
@@ -2857,6 +2861,7 @@ gdl_gtk_paned_toggle_handle_focus (GdlGtkPaned *paned)
  *
  * Sets whether the separator should be wide.
  */
+#if 0
 void
 gdl_gtk_paned_set_wide_handle (GdlGtkPaned *paned, gboolean wide)
 {
@@ -2875,6 +2880,7 @@ gdl_gtk_paned_set_wide_handle (GdlGtkPaned *paned, gboolean wide)
       g_object_notify_by_pspec (G_OBJECT (paned), paned_props[PROP_WIDE_HANDLE]);
     }
 }
+#endif
 
 /**
  * gdl_gtk_paned_get_wide_handle: (attributes org.gtk.Method.get_property=wide-handle)

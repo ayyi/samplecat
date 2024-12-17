@@ -1,3 +1,4 @@
+#include "debug/debug.h"
 #include "gdl-dock-master.h"
 
 extern int indent;

@@ -30,7 +30,6 @@
 #include "gdl-dock.h"
 #include "gdl-dock-item.h"
 #include "gdl-dock-notebook.h"
-//#include "gdl-preview-window.h"
 #include "gdl-switcher.h"
 #include "debug.h"
 #include "libgdlmarshal.h"
@@ -90,24 +89,22 @@ static void     _gdl_dock_master_remove       (GdlDockObject      *object,
 
 static void     gdl_dock_master_drag_begin    (GdlDockItem        *item,
                                                gpointer            data);
-static void     gdl_dock_master_drag_end      (GdlDockItem        *item,
-                                               gboolean            cancelled,
-                                               gpointer            data);
+#if 0
 static void     gdl_dock_master_drag_motion   (GdlDockItem        *item,
                                                GdkDevice          *device,
                                                gint                x,
                                                gint                y,
                                                gpointer            data);
+#endif
 
 static void     _gdl_dock_master_foreach      (gpointer            key,
                                                gpointer            value,
                                                gpointer            user_data);
 
-#ifdef GTK4_TODO
+#if 0
 static void     gdl_dock_master_show_preview   (GdlDockMaster      *master);
-#endif
-
 static void     gdl_dock_master_hide_preview   (GdlDockMaster      *master);
+#endif
 
 static void     gdl_dock_master_layout_changed (GdlDockMaster     *master);
 static void     gdl_dock_master_dock_item_added(GdlDockMaster     *master, gpointer);
@@ -118,6 +115,7 @@ static void gdl_dock_master_set_tab_pos        (GdlDockMaster     *master,
                                                 GtkPositionType    pos);
 static void gdl_dock_master_set_tab_reorderable (GdlDockMaster    *master,
                                                 gboolean           reorderable);
+static void gdl_dock_master_create_overlay     (GdlDockMaster*     master);
 
 /* ----- Private data types and variables ----- */
 
@@ -143,7 +141,7 @@ struct _GdlDockMasterPrivate {
 
     gint            dock_number;     /* for toplevel dock numbering */
 
-    gint            number;             /* for naming nameless manual objects */
+    gint            number;          /* for naming nameless manual objects */
     gchar          *default_title;
 
     GdlDock        *rect_owner;
@@ -165,8 +163,7 @@ struct _GdlDockMasterPrivate {
     GtkPositionType tab_pos;
     gboolean        tab_reorderable;
 
-    /* Window for preview rect */
-    GtkWidget* area_window;
+    GtkWidget*      overlay;
 };
 
 #define COMPUTE_LOCKED(master)                                          \
@@ -177,7 +174,6 @@ struct _GdlDockMasterPrivate {
 #define GPOINTER_TO_BOOLEAN(i) ((gboolean) ((GPOINTER_TO_INT(i) == 2) ? TRUE : FALSE))
 
 static guint master_signals [LAST_SIGNAL] = { 0 };
-
 
 /* ----- Private interface ----- */
 
@@ -388,10 +384,12 @@ gdl_dock_master_dispose (GObject *object)
         master->priv->unlocked_items = NULL;
     }
 
+#if 0
     if (master->priv->area_window) {
         gtk_window_destroy (GTK_WINDOW (master->priv->area_window));
         master->priv->area_window = NULL;
     }
+#endif
 
     G_OBJECT_CLASS (gdl_dock_master_parent_class)->dispose (object);
 }
@@ -498,6 +496,10 @@ gdl_dock_master_drag_begin (GdlDockItem *item, gpointer data)
 
     GdlDockMaster* master = GDL_DOCK_MASTER (data);
 
+	if (!master->priv->overlay) {
+		gdl_dock_master_create_overlay(master);
+	}
+
     if (!master->priv->drag_request)
         master->priv->drag_request = g_new0 (GdlDockRequest, 1);
 
@@ -510,37 +512,15 @@ gdl_dock_master_drag_begin (GdlDockItem *item, gpointer data)
     if (G_IS_VALUE (&request->extra))
         g_value_unset (&request->extra);
 
+    master->priv->drag_request->dock = GTK_WIDGET(gdl_dock_object_get_toplevel(GDL_DOCK_OBJECT(item)));
+
     master->priv->rect_owner = NULL;
 }
 
-static void
-gdl_dock_master_drag_end (GdlDockItem *item, gboolean cancelled, gpointer data)
-{
-    g_return_if_fail (data != NULL);
-    g_return_if_fail (item != NULL);
-
-    GdlDockMaster* master = GDL_DOCK_MASTER (data);
-    GdlDockRequest* request = master->priv->drag_request;
-
-    g_return_if_fail (GDL_DOCK_OBJECT (item) == request->applicant);
-
-    /* Hide the preview window */
-    gdl_dock_master_hide_preview (master);
-
-    /* cancel conditions */
-    if (cancelled || request->applicant == request->target)
-        return;
-
-    /* dock object to the requested position */
-    gdl_dock_object_dock (request->target, request->applicant, request->position, &request->extra);
-
-    g_signal_emit (master, master_signals [LAYOUT_CHANGED], 0);
-}
-
+#if 0
 static void
 gdl_dock_master_drag_motion (GdlDockItem *item, GdkDevice *device, gint root_x, gint root_y, gpointer data)
 {
-#ifdef GTK4_TODO
     GdkWindow      *widget_window;
     gint            win_x, win_y;
     gint            x, y;
@@ -659,8 +639,8 @@ gdl_dock_master_drag_motion (GdlDockItem *item, GdkDevice *device, gint root_x, 
     /* draw the preview window */
     *request = my_request;
     gdl_dock_master_show_preview (master);
-#endif
 }
+#endif
 
 static void
 _gdl_dock_master_foreach (gpointer key, gpointer value, gpointer user_data)
@@ -673,7 +653,7 @@ _gdl_dock_master_foreach (gpointer key, gpointer value, gpointer user_data)
     (* data->function) (GTK_WIDGET (value), data->user_data);
 }
 
-#ifdef GTK4_TODO
+#if 0
 static void
 gdl_dock_master_show_preview (GdlDockMaster *master)
 {
@@ -696,6 +676,7 @@ gdl_dock_master_show_preview (GdlDockMaster *master)
 }
 #endif
 
+#if 0
 static void
 gdl_dock_master_hide_preview (GdlDockMaster *master)
 {
@@ -712,6 +693,7 @@ gdl_dock_master_hide_preview (GdlDockMaster *master)
         gtk_widget_set_visible (master->priv->area_window, false);
     }
 }
+#endif
 
 static void
 gdl_dock_master_layout_changed (GdlDockMaster *master)
@@ -754,11 +736,7 @@ idle_emit_layout_changed (gpointer user_data)
 }
 
 static void
-item_dock_cb (GdlDockObject    *object,
-              GdlDockObject    *requestor,
-              GdlDockPlacement  position,
-              GValue           *other_data,
-              gpointer          user_data)
+item_dock_cb (GdlDockObject* object, GdlDockObject* requestor, GdlDockPlacement position, GValue* other_data, gpointer user_data)
 {
     GdlDockMaster *master = user_data;
 
@@ -872,13 +850,15 @@ gdl_dock_master_add (GdlDockMaster *master, GdlDockObject *object)
         /* we are interested in the dock request this toplevel
          * receives to update the layout */
         g_signal_connect (object, "dock", G_CALLBACK (item_dock_cb), master);
-
     }
+
     else if (GDL_IS_DOCK_ITEM (object)) {
         /* we need to connect the item's signals */
         g_signal_connect (object, "dock_drag_begin", G_CALLBACK (gdl_dock_master_drag_begin), master);
+#if 0
         g_signal_connect (object, "dock_drag_motion", G_CALLBACK (gdl_dock_master_drag_motion), master);
         g_signal_connect (object, "dock_drag_end", G_CALLBACK (gdl_dock_master_drag_end), master);
+#endif
         g_signal_connect (object, "dock", G_CALLBACK (item_dock_cb), master);
         g_signal_connect (object, "detach", G_CALLBACK (item_detach_cb), master);
 
@@ -887,6 +867,54 @@ gdl_dock_master_add (GdlDockMaster *master, GdlDockObject *object)
         if (GDL_DOCK_ITEM_HAS_GRIP (GDL_DOCK_ITEM (object))) {
             g_signal_connect (object, "notify::locked", G_CALLBACK (item_notify_cb), master);
             item_notify_cb (object, NULL, master);
+
+			{
+				GtkDragSource* src = gtk_drag_source_new ();
+				GdkContentProvider* content = gdk_content_provider_new_typed (GDL_TYPE_DOCK_ITEM, object);
+				gtk_drag_source_set_content (src, content);
+				g_object_unref (content);
+				gtk_widget_add_controller (gdl_dock_item_get_grip(GDL_DOCK_ITEM (object)), GTK_EVENT_CONTROLLER (src));
+
+				void begin (GtkDragSource* src, GdkDrag* drag, gpointer item)
+				{
+					PF;
+					GdlDock* dock = GDL_DOCK(gdl_dock_object_get_toplevel(GDL_DOCK_OBJECT(item)));
+
+					gdl_dock_master_drag_begin (GDL_DOCK_ITEM(item), GDL_DOCK_OBJECT(item)->master);
+					gdl_dock_show_overlay (dock, ((GdlDockMaster*)GDL_DOCK_OBJECT(item)->master)->priv->overlay);
+				}
+				g_signal_connect(src, "drag-begin", (void*)begin, object);
+
+				void drag_end (GtkDragSource* self, GdkDrag* drag, gboolean delete_data, gpointer _item)
+				{
+					g_return_if_fail (_item);
+
+					GdlDockItem *item = _item;
+					GdlDockMaster* master = GDL_DOCK_MASTER(GDL_DOCK_OBJECT(item)->master);
+					GdlDockRequest* request = master->priv->drag_request;
+
+					bool cancelled = false; // TODO
+
+					g_return_if_fail (GDL_DOCK_OBJECT (item) == request->applicant);
+
+#if 1
+					gdl_dock_hide_overlay (GDL_DOCK(request->dock));
+#else
+					/* Hide the preview window */
+					gdl_dock_master_hide_preview (master);
+#endif
+
+					/* cancel conditions */
+					if (cancelled || request->applicant == request->target)
+						return;
+
+					/* dock the object at the requested position */
+					gdl_dock_object_dock (request->target, request->applicant, request->position, &request->extra);
+
+					g_signal_emit (master, master_signals [LAYOUT_CHANGED], 0);
+				}
+				g_signal_connect(src, "drag-end", (void*)drag_end, object);
+			}
         }
 
         /* If the item is notebook, set the switcher style and notebook
@@ -918,8 +946,7 @@ gdl_dock_master_add (GdlDockMaster *master, GdlDockObject *object)
  * Remove one dock widget from the master.
  */
 void
-gdl_dock_master_remove (GdlDockMaster *master,
-                        GdlDockObject *object)
+gdl_dock_master_remove (GdlDockMaster *master, GdlDockObject *object)
 {
     g_return_if_fail (master != NULL && object != NULL);
 
@@ -1199,4 +1226,118 @@ gdl_dock_master_set_tab_reorderable (GdlDockMaster *master, gboolean tab_reorder
 
     /* just to be sure hidden items are set too */
     gdl_dock_master_foreach (master, (GFunc) set_tab_reorderable_foreach, GBOOLEAN_TO_POINTER (tab_reorderable));
+}
+
+static void
+gdl_dock_master_create_overlay (GdlDockMaster* master)
+{
+	GtkWidget* overlay = master->priv->overlay = gtk_drawing_area_new();
+
+	void overlay_draw (GtkDrawingArea* area, cairo_t* cr, int width, int height, gpointer master)
+	{
+		graphene_rect_t rect = ((GdlDockMaster*)master)->priv->drag_request->rect;
+
+		cairo_set_line_width (cr, 1.0);
+		const double dashes[] = {1};
+		cairo_set_dash (cr, (double*)&dashes, 1, 0);
+
+		cairo_set_source_rgb (cr, 1.0, 1.0, 1.0);
+		cairo_rectangle (cr, rect.origin.x + 1, rect.origin.y + 1, rect.size.width, rect.size.height);
+		cairo_stroke (cr);
+
+		cairo_set_source_rgb (cr, 0.0, 0.0, 0.0);
+		cairo_rectangle (cr, rect.origin.x, rect.origin.y, rect.size.width, rect.size.height);
+		cairo_stroke (cr);
+	}
+
+	gtk_drawing_area_set_draw_func (GTK_DRAWING_AREA (overlay), overlay_draw, master, NULL);
+
+	{
+		GtkDropTarget* target = gtk_drop_target_new (G_TYPE_INVALID, GDK_ACTION_MOVE | GDK_ACTION_COPY);
+		gtk_drop_target_set_gtypes (target, (GType [1]) { GDL_TYPE_DOCK_ITEM }, 1);
+
+		GdkDragAction on_motion (GtkDropTarget* self, gdouble x, gdouble y, gpointer master)
+		{
+			GdlDockMasterPrivate* priv = ((GdlDockMaster*)master)->priv;
+
+			GtkWidget* widget = gtk_widget_pick (gtk_widget_get_first_child(GTK_WIDGET(priv->drag_request->dock)), x, y, GTK_PICK_DEFAULT);
+			GtkWidget* item = gtk_widget_get_ancestor(widget, GDL_TYPE_DOCK_ITEM);
+			dbg(2, "%.0fx%.0f %s %s", x, y, G_OBJECT_CLASS_NAME(G_OBJECT_GET_CLASS(widget)), G_OBJECT_CLASS_NAME(G_OBJECT_GET_CLASS(item)));
+
+			if (item) {
+#pragma GCC diagnostic ignored "-Wunused-result"
+				gtk_widget_compute_bounds(GTK_WIDGET(item), GTK_WIDGET(priv->drag_request->dock), &priv->drag_request->rect);
+#pragma GCC diagnostic warning "-Wunused-result"
+
+				GdlDockPlacement position;
+
+				if (GDL_DOCK_OBJECT(item) == priv->drag_request->applicant) {
+					position = GDL_DOCK_NONE;
+					priv->drag_request->rect = (graphene_rect_t){0,};
+
+				}
+				else if (GDL_IS_DOCK_NOTEBOOK(item)) {
+    				position = GDL_DOCK_CENTER;
+
+				} else {
+					GtkWidget* notebook = gtk_widget_get_ancestor(widget, GDL_TYPE_DOCK_NOTEBOOK);
+					if (notebook) {
+    					position = GDL_DOCK_CENTER;
+#pragma GCC diagnostic ignored "-Wunused-result"
+						gtk_widget_compute_bounds(GTK_WIDGET(notebook), GTK_WIDGET(priv->drag_request->dock), &priv->drag_request->rect);
+#pragma GCC diagnostic warning "-Wunused-result"
+					} else {
+						graphene_point_t* origin = &priv->drag_request->rect.origin;
+						graphene_size_t* size = &priv->drag_request->rect.size;
+
+						bool is_top = y < origin->y + size->height / 3;
+						bool is_bottom = y > origin->y + 2 * size->height / 3;
+						bool is_left = x < origin->x + size->width / 3;
+						bool is_right = x > origin->x + 2 * size->width / 3;
+						if (!is_top && !is_bottom && !is_left && !is_right) {
+							position = GDL_DOCK_CENTER;
+							origin->x += size->width / 8;
+							origin->y += size->height / 8;
+							size->width = 3 * size->width / 4;
+							size->height = 3 * size->height / 4;
+						} else if (is_top) {
+							position = GDL_DOCK_TOP;
+							size->height /= 3;
+						} else if (is_left) {
+							position = GDL_DOCK_LEFT;
+							size->width /= 3;
+						} else if (is_bottom) {
+							position = GDL_DOCK_BOTTOM;
+							size->height /= 3;
+							origin->y += 2 * size->height;
+						} else {
+							position = GDL_DOCK_RIGHT;
+							size->width /= 3;
+							origin->x += 2 * size->width;
+						}
+					}
+				}
+
+   				priv->drag_request->target = GDL_DOCK_OBJECT (item);
+				priv->drag_request->position = position;
+
+				gtk_widget_queue_draw(priv->overlay);
+			}
+
+			return GDK_ACTION_MOVE;
+		}
+		g_signal_connect (target, "motion", G_CALLBACK (on_motion), master);
+
+		gboolean on_drop (GtkDropTarget* target, const GValue* value, double x, double y, gpointer data)
+		{
+			if (G_VALUE_HOLDS (value, GDL_TYPE_DOCK_ITEM)) {
+				return true;
+			}
+
+			return false;
+		}
+		g_signal_connect (target, "drop", G_CALLBACK (on_drop), overlay);
+
+		gtk_widget_add_controller (GTK_WIDGET (overlay), GTK_EVENT_CONTROLLER (target));
+	}
 }

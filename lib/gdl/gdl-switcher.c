@@ -254,11 +254,9 @@ gdl_switcher_update_lone_button_visibility (GdlSwitcher *switcher)
 static void
 update_buttons (GdlSwitcher *switcher, int new_selected_id)
 {
-    GSList *p;
-
     switcher->priv->in_toggle = TRUE;
 
-    for (p = switcher->priv->buttons; p != NULL; p = p->next) {
+    for (GSList* p = switcher->priv->buttons; p != NULL; p = p->next) {
         Button *button = p->data;
 
         if (button->id == new_selected_id) {
@@ -283,15 +281,13 @@ static void
 button_toggled_callback (GtkToggleButton *toggle_button, GdlSwitcher *switcher)
 {
     int id = 0;
-    gboolean is_active = FALSE;
 
     if (switcher->priv->in_toggle)
         return;
 
     switcher->priv->in_toggle = TRUE;
 
-    if (gtk_toggle_button_get_active (toggle_button))
-        is_active = TRUE;
+    gboolean is_active = gtk_toggle_button_get_active (toggle_button);
 
     for (GSList* p = switcher->priv->buttons; p != NULL; p = p->next) {
         Button *button = p->data;
@@ -771,9 +767,19 @@ gdl_switcher_notify_cb (GObject *g_object, GParamSpec *pspec, GdlSwitcher *switc
 static void
 gdl_switcher_switch_page_cb (GtkNotebook *nb, GtkWidget *page_widget, gint page_num, GdlSwitcher *switcher)
 {
+#ifndef GTK4_TODO // why is signal blocker not working?
+	static int inside;
+	if (inside) return;
+	inside = true;
+#endif
+
     /* Change switcher button */
     gint switcher_id = gdl_switcher_get_page_id (page_widget);
     gdl_switcher_select_button (GDL_SWITCHER (switcher), switcher_id);
+
+#ifndef GTK4_TODO
+	inside = false;
+#endif
 }
 
 static void
@@ -790,21 +796,18 @@ gdl_switcher_page_added_cb (GtkNotebook *nb, GtkWidget *page, gint page_num, Gdl
 static void
 gdl_switcher_select_page (GdlSwitcher *switcher, gint id)
 {
-    GList* children = gtk_widget_get_children (GTK_WIDGET (switcher->notebook));
-    GList* node = children;
-    while (node) {
-        gint switcher_id;
-        switcher_id = gdl_switcher_get_page_id (GTK_WIDGET (node->data));
-        if (switcher_id == id) {
-            gint page_num = gtk_notebook_page_num (switcher->notebook, GTK_WIDGET (node->data));
-            g_signal_handlers_block_by_func (switcher, gdl_switcher_switch_page_cb, switcher);
-            gtk_notebook_set_current_page (switcher->notebook, page_num);
-            g_signal_handlers_unblock_by_func (switcher, gdl_switcher_switch_page_cb, switcher);
-            break;
-        }
-        node = g_list_next (node);
-    }
-    g_list_free (children);
+	GtkWidget* first = gtk_widget_get_first_child(GTK_WIDGET (switcher->notebook));
+	if (GTK_IS_STACK(first)) {
+		for (GtkWidget* c = gtk_widget_get_first_child(first); c; c = gtk_widget_get_next_sibling (c)) {
+			if (gdl_switcher_get_page_id (c) == id) {
+				int page_num = gtk_notebook_page_num (switcher->notebook, c);
+				g_signal_handlers_block_by_func (switcher, gdl_switcher_switch_page_cb, switcher);
+				gtk_notebook_set_current_page (switcher->notebook, page_num);
+				g_signal_handlers_unblock_by_func (switcher, gdl_switcher_switch_page_cb, switcher);
+				break;
+			}
+		}
+	}
 }
 
 /* Initialization.  */
@@ -927,16 +930,10 @@ gdl_switcher_add_button (GdlSwitcher *switcher, const gchar *label, const gchar 
 	ENTER;
 
 	GtkWidget* button_widget = gtk_toggle_button_new ();
-#ifdef GTK4_TODO
-	gtk_button_set_relief (GTK_BUTTON (button_widget), GTK_RELIEF_HALF);
-#endif
 	if (switcher->priv->show && gtk_widget_get_visible (page))
 		gtk_widget_set_visible (button_widget, true);
 	g_signal_connect (button_widget, "toggled", G_CALLBACK (button_toggled_callback), switcher);
 	GtkWidget* hbox = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 3);
-#ifdef GTK4_TODO
-	gtk_container_set_border_width (GTK_CONTAINER (hbox), 0);
-#endif
 	gtk_button_set_child (GTK_BUTTON (button_widget), hbox);
 
 	GtkWidget *icon_widget;

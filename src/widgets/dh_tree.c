@@ -125,13 +125,7 @@ static void
 book_tree_init (DhBookTree *tree)
 {
 	DhBookTreePriv *priv = g_new0 (DhBookTreePriv, 1);
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-	priv->store = gtk_tree_store_new (N_COLUMNS, 
-					  GDK_TYPE_PIXBUF,
-					  GDK_TYPE_PIXBUF,
-					  G_TYPE_STRING,
-					  G_TYPE_POINTER);
-#pragma GCC diagnostic warning "-Wdeprecated-declarations"
+	priv->store = gtk_tree_store_new (N_COLUMNS, GDK_TYPE_PIXBUF, GDK_TYPE_PIXBUF, G_TYPE_STRING, G_TYPE_POINTER);
 
 	tree->priv = priv;
 
@@ -149,14 +143,11 @@ book_tree_init (DhBookTree *tree)
 static void
 book_tree_finalize (GObject *object)
 {
-	DhBookTree     *tree;
-	DhBookTreePriv *priv;
-	
 	g_return_if_fail (object != NULL);
 	g_return_if_fail (DH_IS_BOOK_TREE (object));
 	
-	tree = DH_BOOK_TREE (object);
-	priv  = tree->priv;
+	DhBookTree* tree = DH_BOOK_TREE (object);
+	DhBookTreePriv* priv = tree->priv;
 
 	if (priv) {
 		g_object_unref (priv->store);
@@ -165,10 +156,8 @@ book_tree_finalize (GObject *object)
 		if (priv->pixbufs->pixbuf_closed) g_object_unref (priv->pixbufs->pixbuf_closed);
 		if (priv->pixbufs->pixbuf_helpdoc) g_object_unref (priv->pixbufs->pixbuf_helpdoc);
 		g_free (priv->pixbufs);
-			
-		g_free (priv);
-		
-		tree->priv = NULL;
+
+		g_clear_pointer (&tree->priv, g_free);
 	}
 
 	if (G_OBJECT_CLASS (parent_class)->finalize) {
@@ -179,25 +168,21 @@ book_tree_finalize (GObject *object)
 static void
 book_tree_add_columns (DhBookTree *tree)
 {
-	GtkCellRenderer   *renderer;
-	GtkTreeViewColumn *column;
-
-	column = gtk_tree_view_column_new ();
+	GtkTreeViewColumn* column = gtk_tree_view_column_new ();
 	
-	renderer = GTK_CELL_RENDERER (gtk_cell_renderer_pixbuf_new ());
+	GtkCellRenderer* renderer = GTK_CELL_RENDERER (gtk_cell_renderer_pixbuf_new ());
 	gtk_tree_view_column_pack_start (column, renderer, FALSE);
-	gtk_tree_view_column_set_attributes
-		(column, renderer,
-		 "pixbuf", COL_OPEN_PIXBUF,
-		 "pixbuf-expander-open", COL_OPEN_PIXBUF,
-		 "pixbuf-expander-closed", COL_CLOSED_PIXBUF,
-		 NULL);
+	gtk_tree_view_column_set_attributes(
+		column, renderer,
+		"pixbuf", COL_OPEN_PIXBUF,
+		"pixbuf-expander-open", COL_OPEN_PIXBUF,
+		"pixbuf-expander-closed", COL_CLOSED_PIXBUF,
+		NULL
+	);
 	
 	renderer = GTK_CELL_RENDERER (gtk_cell_renderer_text_new ());
 	gtk_tree_view_column_pack_start (column, renderer, TRUE);
-	gtk_tree_view_column_set_attributes (column, renderer,
-					     "text", COL_TITLE,
-					     NULL);
+	gtk_tree_view_column_set_attributes (column, renderer, "text", COL_TITLE, NULL);
 
 	gtk_tree_view_append_column (GTK_TREE_VIEW (tree), column);
 }
@@ -219,8 +204,7 @@ book_tree_populate_tree (DhBookTree *tree)
 	DhBookTreePriv *priv = tree->priv;
 
 	int i = 0;
-	GNode *node = g_node_first_child (*priv->link_tree);
-	for (; node; node = g_node_next_sibling (node)) {
+	for (GNode *node = g_node_first_child (*priv->link_tree); node; node = g_node_next_sibling (node)) {
 		book_tree_insert_node (tree, node, NULL);
 		i++;
 	}
@@ -230,27 +214,25 @@ book_tree_populate_tree (DhBookTree *tree)
 static void
 book_tree_insert_node (DhBookTree *tree, GNode *node, GtkTreeIter *parent_iter)
 {
-	DhBookTreePriv      *priv;
-	GtkTreeIter          iter;
-	DhLink              *link;
-        
+	GtkTreeIter iter;
+
 	g_return_if_fail (DH_IS_BOOK_TREE (tree));
 	g_return_if_fail (node != NULL);
 
-	priv = tree->priv;
-	link = (DhLink *) node->data;
+	DhBookTreePriv* priv = tree->priv;
+	DhLink* link = (DhLink *) node->data;
 	
 	gtk_tree_store_append (priv->store, &iter, parent_iter);
 
 	if (link->type == DH_LINK_TYPE_BOOK) {
-		gtk_tree_store_set (priv->store, &iter, 
+		gtk_tree_store_set (priv->store, &iter,
 				    COL_OPEN_PIXBUF,   priv->pixbufs->pixbuf_opened,
 				    COL_CLOSED_PIXBUF, priv->pixbufs->pixbuf_closed,
 				    COL_TITLE,         link->name,
 				    COL_LINK,          link,
 				    -1);
 	} else {
-		gtk_tree_store_set (priv->store, &iter, 
+		gtk_tree_store_set (priv->store, &iter,
 				    COL_OPEN_PIXBUF,   priv->pixbufs->pixbuf_helpdoc,
 				    COL_CLOSED_PIXBUF, priv->pixbufs->pixbuf_helpdoc,
 				    COL_TITLE,         link->name,
@@ -258,29 +240,23 @@ book_tree_insert_node (DhBookTree *tree, GNode *node, GtkTreeIter *parent_iter)
 				    -1);
 	}
 	
-	for (GNode* child = g_node_first_child (node);
-	     child;
-	     child = g_node_next_sibling (child)) {
+	for (GNode* child = g_node_first_child (node); child; child = g_node_next_sibling (child)) {
 		book_tree_insert_node (tree, child, &iter);
 	}
 }
-/*
-static void
-book_tree_remove_node (DhBookTree  *tree, GNode *node, GtkTreeIter *parent_iter)
-{
-}
-*/
 
+
+extern MIME_type *inode_directory;
 static void
 book_tree_create_pixbufs (DhBookTree *tree)
 {
 	g_return_if_fail (DH_IS_BOOK_TREE (tree));
-	
- 	DhBookTreePixbufs *pixbufs = g_new0 (DhBookTreePixbufs, 1);
 
-	pixbufs->pixbuf_closed = mime_type_get_pixbuf(mime_type_lookup("inode/directory"));
-	pixbufs->pixbuf_opened = mime_type_get_pixbuf(mime_type_lookup("inode/directory-open"));
-	pixbufs->pixbuf_helpdoc = mime_type_get_pixbuf(mime_type_lookup("inode/directory-open"));
+	DhBookTreePixbufs *pixbufs = g_new0 (DhBookTreePixbufs, 1);
+
+	pixbufs->pixbuf_closed = mime_type_get_pixbuf(inode_directory);
+	pixbufs->pixbuf_opened = mime_type_get_pixbuf(inode_directory);
+	pixbufs->pixbuf_helpdoc = mime_type_get_pixbuf(inode_directory);
 
 	tree->priv->pixbufs = pixbufs;
 }
@@ -303,7 +279,7 @@ book_tree_selection_changed_cb (GtkTreeSelection *selection, DhBookTree *tree)
 	}
 }
 
-GtkWidget *
+GtkWidget*
 dh_book_tree_new (GNode **books)
 {
 	DhBookTree *tree = g_object_new (DH_TYPE_BOOK_TREE, NULL);
@@ -316,7 +292,7 @@ dh_book_tree_new (GNode **books)
 }
 
 void
-dh_book_tree_reload(DhBookTree *tree)
+dh_book_tree_reload (DhBookTree *tree)
 {
 	DhBookTreePriv* priv = tree->priv;
 

@@ -26,10 +26,7 @@
 #define MAX_ICON_SIZE (400 * 1024)
 
 #include "config.h"
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <gtk/gtk.h>
-#pragma GCC diagnostic warning "-Wdeprecated-declarations"
-#include <errno.h>
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
@@ -64,7 +61,6 @@ static void examine_dir(const guchar *path, DirItem *item, struct stat *link_tar
 
 void diritem_init(void)
 {
-	//read_globicons();
 }
 
 

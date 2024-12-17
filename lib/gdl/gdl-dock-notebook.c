@@ -381,18 +381,16 @@ gdl_dock_notebook_set_orientation (GdlDockItem *item, GtkOrientation orientation
 static gboolean
 gdl_dock_notebook_child_placement (GdlDockObject *object, GdlDockObject *child, GdlDockPlacement *placement)
 {
-    GdlDockItem      *item = GDL_DOCK_ITEM (object);
-    GdlDockPlacement  pos = GDL_DOCK_NONE;
+    GdlDockItem *item = GDL_DOCK_ITEM (object);
+    GdlDockPlacement pos = GDL_DOCK_NONE;
 
     if (gdl_dock_item_get_child (item)) {
-        GList *children = gtk_widget_get_children (gdl_dock_item_get_child (item));
-        for (GList* l = children; l; l = l->next) {
-            if (l->data == (gpointer) child) {
+		for (GtkWidget* c = gtk_widget_get_first_child(gdl_dock_item_get_child (item)); c; c = gtk_widget_get_next_sibling (c)) {
+            if (c == (gpointer) child) {
                 pos = GDL_DOCK_CENTER;
                 break;
             }
         }
-        g_list_free (children);
     }
 
     if (pos != GDL_DOCK_NONE) {

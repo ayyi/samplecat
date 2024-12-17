@@ -900,15 +900,14 @@ gdl_dock_object_dock_request (GdlDockObject *object, gint x, gint y, GdlDockRequ
 void
 gdl_dock_object_dock (GdlDockObject *object, GdlDockObject *requestor, GdlDockPlacement position, GValue *other_data)
 {
-    g_return_if_fail (object != NULL && requestor != NULL);
+	g_return_if_fail (object != NULL && requestor != NULL);
 
-    if (object == requestor)
-        return;
+	if (object == requestor)
+		return;
 
-    if (!object->master)
-																									{
-        g_warning (_("Dock operation requested in a non-bound object %p. The application might crash"), object);
-																									}
+	if (!object->master)
+		g_warning (_("Dock operation requested in a non-bound object %p. The application might crash"), object);
+
 	ENTER;
 
     if (!gdl_dock_object_is_bound (requestor))

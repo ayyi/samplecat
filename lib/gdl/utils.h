@@ -28,3 +28,5 @@ typedef struct {
 typedef void (*GtkCallback) (GtkWidget *widget, gpointer data);
 
 GList* gtk_widget_get_children (GtkWidget*);
+
+void behaviour_subject_connect (GObject*, const char* prop, void (*callback)(GObject*, GParamSpec*, gpointer), gpointer);

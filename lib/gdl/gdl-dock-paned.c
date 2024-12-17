@@ -193,6 +193,7 @@ gdl_dock_paned_button_cb (GtkWidget *widget, GdkEventButton *event, gpointer use
 }
 #endif
 
+#if 0
 static void
 gdl_dock_item_drag_begin (GtkGestureDrag *gesture, double start_x, double start_y, GdlDockItem *item)
 {
@@ -202,6 +203,7 @@ static void
 gdl_dock_item_drag_end (GtkGestureDrag *gesture, double offset_x, double offset_y, GdlDockItem *item)
 {
 }
+#endif
 
 static void
 gdl_dock_paned_create_child (GdlDockPaned *paned, GtkOrientation orientation)
@@ -219,8 +221,10 @@ gdl_dock_paned_create_child (GdlDockPaned *paned, GtkOrientation orientation)
     g_signal_connect (child, "button-release-event", (GCallback) gdl_dock_paned_button_cb, (gpointer) item);
 #else
 																// TODO is called twice?
+#if 0
 	g_signal_connect (GDL_GTK_PANED(child)->drag_gesture, "drag-begin", G_CALLBACK (gdl_dock_item_drag_begin), item);
 	g_signal_connect (GDL_GTK_PANED(child)->drag_gesture, "drag-end", G_CALLBACK (gdl_dock_item_drag_end), item);
+#endif
 #endif
 }
 
@@ -350,11 +354,10 @@ gdl_dock_paned_request_foreach (GdlDockObject *object, gpointer user_data)
     gboolean may_dock = gdl_dock_object_dock_request (object, child_x, child_y, &my_request);
     if (may_dock) {
         /* Translate request coordinate back to parent coordinate */
-		graphene_point_t in = { my_request.rect.x, my_request.rect.y };
+		graphene_point_t in = my_request.rect.origin;
 		graphene_point_t out;
 		if (gtk_widget_compute_point (GTK_WIDGET (object), data->parent, &in, &out)) {
-			my_request.rect.x = out.x;
-			my_request.rect.y = out.y;
+			my_request.rect.origin = out;
 		}
         data->may_dock = TRUE;
         *data->request = my_request;
@@ -400,31 +403,28 @@ gdl_dock_paned_dock_request (GdlDockObject *object, gint x, gint y, GdlDockReque
 		may_dock = TRUE;
 
 		/* Set docking indicator rectangle to the widget size. */
-		my_request.rect.x = bw;
-        my_request.rect.y = bw;
-        my_request.rect.width = alloc.width - 2*bw;
-        my_request.rect.height = alloc.height - 2*bw;
+		my_request.rect = (graphene_rect_t){ .origin = {bw, bw}, .size = {alloc.width - 2 * bw, alloc.height - 2 * bw} };
 
         my_request.target = object;
 
         /* See if it's in the border_width band. */
         if (rel_x < bw) {
             my_request.position = GDL_DOCK_LEFT;
-            my_request.rect.width *= SPLIT_RATIO;
+            my_request.rect.size.width *= SPLIT_RATIO;
             divider = other.width;
         } else if (rel_x > alloc.width - bw) {
             my_request.position = GDL_DOCK_RIGHT;
-            my_request.rect.x += my_request.rect.width * (1 - SPLIT_RATIO);
-            my_request.rect.width *= SPLIT_RATIO;
+            my_request.rect.origin.x += my_request.rect.size.width * (1 - SPLIT_RATIO);
+            my_request.rect.size.width *= SPLIT_RATIO;
             divider = MAX (0, my.width - other.width);
         } else if (rel_y < bw) {
             my_request.position = GDL_DOCK_TOP;
-            my_request.rect.height *= SPLIT_RATIO;
+            my_request.rect.size.height *= SPLIT_RATIO;
             divider = other.height;
         } else if (rel_y > alloc.height - bw) {
             my_request.position = GDL_DOCK_BOTTOM;
-            my_request.rect.y += my_request.rect.height * (1 - SPLIT_RATIO);
-            my_request.rect.height *= SPLIT_RATIO;
+            my_request.rect.origin.y += my_request.rect.size.height * (1 - SPLIT_RATIO);
+            my_request.rect.size.height *= SPLIT_RATIO;
             divider = MAX (0, my.height - other.height);
 
         } else { /* Otherwise try our children. */
@@ -456,23 +456,23 @@ gdl_dock_paned_dock_request (GdlDockObject *object, gint x, gint y, GdlDockReque
                 if (gdl_dock_item_get_orientation (item) == GTK_ORIENTATION_HORIZONTAL) {
                     if (rel_y < alloc.height / 2) {
                         my_request.position = GDL_DOCK_TOP;
-                        my_request.rect.height *= SPLIT_RATIO;
+                        my_request.rect.size.height *= SPLIT_RATIO;
                         divider = other.height;
                     } else {
                         my_request.position = GDL_DOCK_BOTTOM;
-                        my_request.rect.y += my_request.rect.height * (1 - SPLIT_RATIO);
-                        my_request.rect.height *= SPLIT_RATIO;
+                        my_request.rect.origin.y += my_request.rect.size.height * (1 - SPLIT_RATIO);
+                        my_request.rect.size.height *= SPLIT_RATIO;
                         divider = MAX (0, my.height - other.height);
                     }
                 } else {
                     if (rel_x < alloc.width / 2) {
                         my_request.position = GDL_DOCK_LEFT;
-                        my_request.rect.width *= SPLIT_RATIO;
+                        my_request.rect.size.width *= SPLIT_RATIO;
                         divider = other.width;
                     } else {
                         my_request.position = GDL_DOCK_RIGHT;
-                        my_request.rect.x += my_request.rect.width * (1 - SPLIT_RATIO);
-                        my_request.rect.width *= SPLIT_RATIO;
+                        my_request.rect.origin.x += my_request.rect.size.width * (1 - SPLIT_RATIO);
+                        my_request.rect.size.width *= SPLIT_RATIO;
                         divider = MAX (0, my.width - other.width);
                     }
                 }
@@ -489,8 +489,8 @@ gdl_dock_paned_dock_request (GdlDockObject *object, gint x, gint y, GdlDockReque
         if (may_dock) {
             /* adjust returned coordinates so they are relative to
                our allocation */
-            my_request.rect.x += alloc.x;
-            my_request.rect.y += alloc.y;
+            my_request.rect.origin.x += alloc.x;
+            my_request.rect.origin.y += alloc.y;
         }
     }
 

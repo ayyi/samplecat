@@ -49,10 +49,7 @@
  */
 
 #define _GNU_SOURCE
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <gtk/gtk.h>
-#pragma GCC diagnostic warning "-Wdeprecated-declarations"
-#include <errno.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -1041,7 +1038,6 @@ dir_rescan (Directory* dir)
 	GPtrArray* names = g_ptr_array_new_full(16, g_free);
 
 #if 0
-	read_globicons();     //gets custom icon settings
 	mount_update(FALSE);
 #endif
 	if (dir->error)

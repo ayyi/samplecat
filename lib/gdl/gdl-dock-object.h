@@ -133,7 +133,8 @@ struct _GdlDockRequest {
     GdlDockObject               *applicant;
     GdlDockObject               *target;
     GdlDockPlacement            position;
-    cairo_rectangle_int_t       rect;
+    GtkWidget*                  dock;
+    graphene_rect_t             rect;
     GValue                      extra;
 };
 

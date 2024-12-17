@@ -92,7 +92,7 @@ waveform_panel_new ()
 
 		void waveform_on_position (GObject* _player, gpointer _)
 		{
-			g_return_if_fail(play->sample);
+			if (!play->sample) return;
 
 			if (!((WaveformViewPlus*)window.waveform)->waveform) return;
 
