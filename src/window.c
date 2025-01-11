@@ -261,18 +261,18 @@ window_new (GtkApplication* gtk, gpointer user_data)
 	gtk_widget_set_visible((GtkWidget*)win, true);
 
 #ifndef USE_OPENGL
-	void window_on_selection_change (SamplecatModel* m, Sample* sample, gpointer user_data)
+	void window_on_selection_change (SamplecatModel* m, GParamSpec* pspec, gpointer user_data)
 	{
 		PF;
 #ifdef HAVE_FFTW3
 		if (window.spectrogram) {
 			if (gdl_dock_item_is_active((GdlDockItem*)panels[PANEL_TYPE_SPECTROGRAM].dock_item)) {
-				spectrogram_widget_set_file ((SpectrogramWidget*)window.spectrogram, sample->full_path);
+				spectrogram_widget_set_file ((SpectrogramWidget*)window.spectrogram, m->selection->full_path);
 #endif
 			}
 		}
 	}
-	g_signal_connect((gpointer)samplecat.model, "selection-changed", G_CALLBACK(window_on_selection_change), NULL);
+	g_signal_connect((gpointer)samplecat.model, "notify::selection", G_CALLBACK(window_on_selection_change), NULL);
 #endif
 
 	void window_on_quit (Application* a, gpointer user_data)

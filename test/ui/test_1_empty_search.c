@@ -10,11 +10,12 @@ test_1_empty_search ()
 	{
 #if 0
 		extern void print_widget_tree (GtkWidget* widget);
-		print_widget_tree(app->window);
+		print_widget_tree((GtkWidget*)gtk_application_get_active_window(GTK_APPLICATION(app)));
 #endif
 
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-		int n_rows = gtk_tree_model_iter_n_children(gtk_tree_view_get_model((GtkTreeView*)APPLICATION(app)->libraryview->widget), NULL);
+		GdlDockItem* library = find_dock_item ("Library");
+		int n_rows = gtk_tree_model_iter_n_children(gtk_tree_view_get_model((GtkTreeView*)find_widget_by_type((GtkWidget*)library, GTK_TYPE_TREE_VIEW)), NULL);
 #pragma GCC diagnostic warning "-Wdeprecated-declarations"
 		assert_and_stop(n_rows > 0, "no library items");
 
@@ -22,7 +23,10 @@ test_1_empty_search ()
 
 		bool is_empty ()
 		{
-			return gtk_tree_model_iter_n_children(gtk_tree_view_get_model((GtkTreeView*)APPLICATION(app)->libraryview->widget), NULL) == 0;
+			GtkWidget* library = find_widget_by_type((GtkWidget*)find_dock_item ("Library"), GTK_TYPE_TREE_VIEW);
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+			return gtk_tree_model_iter_n_children(gtk_tree_view_get_model((GtkTreeView*)library), NULL) == 0;
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 		}
 
 		void then (gpointer _)

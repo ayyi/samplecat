@@ -255,9 +255,8 @@ tabs_free (AGlActor* actor)
 
 	g_list_free_full(tabs->tabs, g_free);
 
-	ring_material_class.free(ring_material);
-
 	if (!--instance_count) {
+		ring_material_class.free(ring_material);
 	}
 }
 

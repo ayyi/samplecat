@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
- | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
- | copyright (C) 2016-2023 Tim Orford <tim@orford.org>                  |
+ | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
+ | copyright (C) 2016-2024 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -67,10 +67,10 @@ directories_view (gpointer _)
 
 		int i = 0;
 		GNode* node = g_node_first_child (samplecat.model->dir_tree);
-		for(; node && i < view->cache.n_rows; node = g_node_next_sibling(node)){
+		for (; node && i < view->cache.n_rows; node = g_node_next_sibling(node)) {
 			DhLink* link = (DhLink*)node->data;
 
-			if(i == view->selection/* - view->scroll_offset*/){
+			if (i == view->selection/* - view->scroll_offset*/) {
 				PLAIN_COLOUR2 (agl->shaders.plain) = 0x6677ff77;
 				agl_use_program((AGlShader*)agl->shaders.plain);
 				agl_rect_((AGlRect){0, i * row_height - 2, agl_actor__width(actor), row_height});
@@ -79,7 +79,7 @@ directories_view (gpointer _)
 			agl_print(0, i * row_height, 0, 0xffffffff, strlen(link->uri) ? link->uri : link->name);
 
 			bool node_open = false;
-			if(node_open){
+			if (node_open) {
 				// recurse children
 			}
 			i++;
@@ -121,7 +121,7 @@ directories_view (gpointer _)
 	{
 		switch (event->type) {
 			case AGL_BUTTON_RELEASE:
-				{
+				if (event->button.button == 1) {
 					int row = xy.y / row_height;
 					dbg(1, "y=%i row=%i", xy.y, row);
 					dirs_select((DirectoriesView*)actor, row);
@@ -176,7 +176,7 @@ dirs_select (DirectoriesView* dirs, int row)
 		agl_actor__invalidate((AGlActor*)dirs);
 
 		GNode* node = g_node_nth_child (samplecat.model->dir_tree, row);
-		if(node){
+		if (node) {
 			DhLink* link = (DhLink*)node->data;
 			observable_string_set(samplecat.model->filters2.dir, g_strdup(link->uri));
 		}
@@ -193,12 +193,12 @@ dirs_on_filter_changed (AGlActor* _view)
 		view->selection = -1;
 	}else{
 		gchar** a = g_strsplit(samplecat.model->filters2.dir->value.c, "/", 100);
-		if(a[0] && a[1]){
+		if (a[0] && a[1]) {
 			char* target = a[1];
 
 			int i = 0;
 			GNode* node = g_node_first_child (samplecat.model->dir_tree);
-			for(; node; node = g_node_next_sibling(node), i++){
+			for (; node; node = g_node_next_sibling(node), i++) {
 				DhLink* link = (DhLink*)node->data;
 				gchar** split = g_strsplit(link->uri, "/", 100);
 				if(split[0] && split[1]){

@@ -12,7 +12,8 @@ CLEANFILES =
 libutils_a_SOURCES = \
 	ayyi_utils.c ayyi_utils.h \
 	fs.c fs.h \
-	timing.c timing.h
+	timing.c timing.h \
+	behaviour_subject.c behaviour_subject.h
 
 other_stuff = \
 	fscache.c fscache.h \

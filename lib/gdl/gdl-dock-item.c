@@ -91,7 +91,6 @@ static void  gdl_dock_item_size_allocate (GtkWidget *widget,
                                           int, int, int);
 static void  gdl_dock_item_map           (GtkWidget *widget);
 static void  gdl_dock_item_unmap         (GtkWidget *widget);
-static void  gdl_dock_item_realize       (GtkWidget *widget);
 
 static void  gdl_dock_item_move_focus_child (GdlDockItem      *item,
                                              GtkDirectionType  dir);
@@ -315,7 +314,6 @@ gdl_dock_item_class_init (GdlDockItemClass *klass)
     object_class->get_property = gdl_dock_item_get_property;
     object_class->dispose = gdl_dock_item_dispose;
 
-    widget_class->realize = gdl_dock_item_realize;
     widget_class->map = gdl_dock_item_map;
     widget_class->unmap = gdl_dock_item_unmap;
 	widget_class->measure = gdl_dock_item_measure;
@@ -598,6 +596,7 @@ gdl_dock_item_init (GdlDockItem *item)
 	item->priv = (GdlDockItemPrivate*) g_type_instance_get_private ((GTypeInstance*)item, GDL_TYPE_DOCK_ITEM);
 
 	gtk_widget_set_can_focus (GTK_WIDGET (item), TRUE);
+	gtk_widget_set_overflow (GTK_WIDGET (item), GTK_OVERFLOW_HIDDEN);
 
 	item->child = NULL;
 
@@ -930,16 +929,14 @@ gdl_dock_item_get_preferred_width (GtkWidget *widget, gint *minimum, gint *natur
             *minimum = *natural = 0;
     }
 
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
     GtkStyleContext *context = gtk_widget_get_style_context (widget);
     GtkBorder padding;
     gtk_style_context_get_padding (context, &padding);
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 
     *minimum += padding.left + padding.right;
     *natural += padding.left + padding.right;
-#ifdef GTK4_TODO__X
-    *minimum += 10 + 10;
-    *natural += 10 + 10;
-#endif
 }
 
 static void
@@ -954,7 +951,8 @@ gdl_dock_item_get_preferred_height (GtkWidget *widget, gint *minimum, gint *natu
     /* If our child is not visible, we still request its size, since
        we won't have any useful hint for our size otherwise.  */
     if (item->child)
-		gtk_widget_measure (item->child, GTK_ORIENTATION_VERTICAL, -1, &child_min, &child_nat, NULL, NULL);
+		// we have to ignore the measured height because in many cases the reported min height is the same as the natural height. We use the grip height as the min height.
+		gtk_widget_measure (item->child, GTK_ORIENTATION_VERTICAL, -1, NULL, &child_nat, NULL, NULL);
     else
         child_min = child_nat = 0;
 
@@ -976,16 +974,14 @@ gdl_dock_item_get_preferred_height (GtkWidget *widget, gint *minimum, gint *natu
         }
     }
 
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
     GtkStyleContext* context = gtk_widget_get_style_context (widget);
     GtkBorder padding;
     gtk_style_context_get_padding (context, &padding);
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 
     *minimum += padding.top + padding.bottom;
     *natural += padding.top + padding.bottom;
-#ifdef GTK4_TODO_____X
-	*minimum += 8 + 8;
-	*natural += 8 + 8;
-#endif
 }
 
 static void
@@ -1013,56 +1009,58 @@ gdl_dock_item_size_allocate (GtkWidget *widget, int w, int h, int baseline)
         gdk_surface_move_resize (gtk_widget_get_window (widget), allocation->x, allocation->y, allocation->width, allocation->height);
 #endif
 
-    if (item->child && gtk_widget_get_visible (item->child)) {
+	if (item->child) {
+		GtkRequisition grip_req = {0,};
 
-#ifdef GTK4_TODO
-        GtkStyleContext *context = gtk_widget_get_style_context (widget);
-        GtkStateFlags state = gtk_style_context_get_state (context);
-        GtkBorder padding;
-        gtk_style_context_get_padding (context, state, &padding);
-#endif
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+		GtkStyleContext *context = gtk_widget_get_style_context (widget);
+		GtkBorder padding;
+		gtk_style_context_get_padding (context, &padding);
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 
-#ifdef GTK4_TODO
-        GtkAllocation  child_allocation;
-        child_allocation.x = padding.left;
-        child_allocation.y = padding.top;
-        child_allocation.width = allocation->width - padding.left - padding.right;
-        child_allocation.height = allocation->height - padding.top - padding.bottom;
-#else
-		GtkAllocation child_allocation = {
-			.x = 0,
-			.y = 0,
-			.width = w - 2*0,
-			.height = h - 2*0,
-		};
-#endif
+		if (GDL_DOCK_ITEM_GRIP_SHOWN (item)) {
+			GtkAllocation grip_alloc = {
+				.x = padding.left,
+				.y = padding.top,
+				.width = w - padding.left - padding.right,
+				.height = h - padding.top - padding.bottom,
+			};
 
-        if (GDL_DOCK_ITEM_GRIP_SHOWN (item)) {
-            GtkAllocation grip_alloc = child_allocation;
-            GtkRequisition grip_req;
+			gtk_widget_get_preferred_size (item->priv->grip, &grip_req, NULL);
+			if (item->priv->orientation == GTK_ORIENTATION_HORIZONTAL) {
+				grip_alloc.width = grip_req.width;
+			} else {
+				grip_alloc.height = grip_req.height;
+			}
+			gtk_widget_size_allocate (item->priv->grip, &grip_alloc, -1);
+		}
 
-            gtk_widget_get_preferred_size (item->priv->grip, &grip_req, NULL);
+		if (gtk_widget_get_visible (item->child)) {
 
-            if (item->priv->orientation == GTK_ORIENTATION_HORIZONTAL) {
-                child_allocation.x += grip_req.width;
-                child_allocation.width -= grip_req.width;
-                grip_alloc.width = grip_req.width;
-            } else {
-                child_allocation.y += grip_req.height;
-                child_allocation.height -= grip_req.height;
-                grip_alloc.height = grip_req.height;
-            }
-            if (item->priv->grip)
-                gtk_widget_size_allocate (item->priv->grip, &grip_alloc, -1);
-        }
+			GtkAllocation child_allocation = {
+				.x = padding.left,
+				.y = padding.top,
+				.width = w - padding.left - padding.right,
+				.height = h - padding.top - padding.bottom,
+			};
 
-        /* Allocation can't be negative */
-        if (child_allocation.width < 0)
-            child_allocation.width = 0;
-        if (child_allocation.height < 0)
-            child_allocation.height = 0;
-        gtk_widget_size_allocate (item->child, &child_allocation, -1);
-    }
+			if (item->priv->orientation == GTK_ORIENTATION_HORIZONTAL) {
+				child_allocation.x += grip_req.width;
+				child_allocation.width -= grip_req.width;
+			} else {
+				child_allocation.y += grip_req.height;
+				child_allocation.height -= grip_req.height;
+			}
+
+			/* Allocation can't be negative */
+			if (child_allocation.width < 0)
+				child_allocation.width = 0;
+			if (child_allocation.height < 0)
+				child_allocation.height = 0;
+
+			gtk_widget_size_allocate (item->child, &child_allocation, -1);
+		}
+	}
 }
 
 static void
@@ -1115,46 +1113,6 @@ gdl_dock_item_unmap (GtkWidget *widget)
 
 	if (item->priv->grip)
 		gtk_widget_unmap (item->priv->grip);
-}
-
-static void
-gdl_dock_item_realize (GtkWidget *widget)
-{
-    g_return_if_fail (widget != NULL);
-    g_return_if_fail (GDL_IS_DOCK_ITEM (widget));
-
-    //gtk_widget_set_realized (widget, TRUE);
-    GTK_WIDGET_CLASS (gdl_dock_item_parent_class)->realize (widget);
-
-#ifdef GTK4_TODO
-    GdlDockItem* item = GDL_DOCK_ITEM (widget);
-
-    /* widget window */
-    GtkAllocation  allocation;
-    gtk_widget_get_allocation (widget, &allocation);
-    GdkWindowAttr attributes;
-    attributes.x = allocation.x;
-    attributes.y = allocation.y;
-    attributes.width = allocation.width;
-    attributes.height = allocation.height;
-    attributes.window_type = GDK_WINDOW_CHILD;
-    attributes.wclass = GDK_INPUT_OUTPUT;
-    attributes.visual = gtk_widget_get_visual (widget);
-    attributes.event_mask = (gtk_widget_get_events (widget) | GDK_EXPOSURE_MASK | GDK_BUTTON1_MOTION_MASK | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK);
-    gint attributes_mask;
-    attributes_mask = GDK_WA_X | GDK_WA_Y | GDK_WA_VISUAL;
-    GdkWindow* window = gdk_window_new (gtk_widget_get_parent_window (widget), &attributes, attributes_mask);
-    gtk_widget_set_window (widget, window);
-    gdk_window_set_user_data (window, widget);
-
-    gtk_style_context_set_background (gtk_widget_get_style_context (widget), window);
-
-    if (item->child)
-        gtk_widget_set_parent_window (item->child, window);
-
-    if (item->priv->grip)
-        gtk_widget_set_parent_window (item->priv->grip, window);
-#endif
 }
 
 static void
@@ -1407,7 +1365,6 @@ gdl_dock_item_dock (GdlDockObject *object, GdlDockObject *requestor, GdlDockPlac
 {
     GdlDockObject *new_parent = NULL;
     GdlDockObject *requestor_parent;
-    GtkAllocation  allocation;
     gboolean       add_ourselves_first = FALSE;
 
     guint	   available_space=0;
@@ -1421,9 +1378,12 @@ gdl_dock_item_dock (GdlDockObject *object, GdlDockObject *requestor, GdlDockPlac
     if (GDL_IS_DOCK_ITEM (parent)) {
         gdl_dock_item_preferred_size (GDL_DOCK_ITEM (parent), &parent_req);
     } else {
-        gtk_widget_get_allocation (GTK_WIDGET (parent), &allocation);
-        parent_req.height = allocation.height;
-        parent_req.width = allocation.width;
+		graphene_rect_t allocation;
+#pragma GCC diagnostic ignored "-Wunused-result"
+		gtk_widget_compute_bounds (GTK_WIDGET(parent), GTK_WIDGET(parent), &allocation);
+#pragma GCC diagnostic warning "-Wunused-result"
+        parent_req.height = allocation.size.height;
+        parent_req.width = allocation.size.width;
     }
 
     /* If preferred size is not set on the requestor (perhaps a new item),
@@ -2326,14 +2286,16 @@ gdl_dock_item_unlock (GdlDockItem *item)
 void
 gdl_dock_item_preferred_size (GdlDockItem *item, GtkRequisition *req)
 {
-    if (!req)
-        return;
+	if (!req)
+		return;
 
-    GtkAllocation allocation;
-    gtk_widget_get_allocation (GTK_WIDGET (item), &allocation);
+	graphene_rect_t allocation;
+#pragma GCC diagnostic ignored "-Wunused-result"
+	gtk_widget_compute_bounds (GTK_WIDGET(item), GTK_WIDGET(item), &allocation);
+#pragma GCC diagnostic warning "-Wunused-result"
 
-    req->width = MAX (item->priv->preferred_width, allocation.width);
-    req->height = MAX (item->priv->preferred_height, allocation.height);
+	req->width = MAX (item->priv->preferred_width, allocation.size.width);
+	req->height = MAX (item->priv->preferred_height, allocation.size.height);
 }
 
 /**
@@ -2354,13 +2316,13 @@ gdl_dock_item_get_drag_area (GdlDockItem *item, GdkRectangle *rect)
 	graphene_rect_t bounds;
 #pragma GCC diagnostic ignored "-Wunused-result"
 	gtk_widget_compute_bounds(GTK_WIDGET(item), GTK_WIDGET(item), &bounds);
+#pragma GCC diagnostic warning "-Wunused-result"
 	*rect = (GdkRectangle){
 		.x = item->priv->dragoff_x,
 		.y = item->priv->dragoff_y,
 		.width = bounds.size.width,
 		.height = bounds.size.height,
 	};
-#pragma GCC diagnostic warning "-Wunused-result"
 }
 
 /**
@@ -2513,6 +2475,17 @@ gdl_dock_item_class_set_has_grip (GdlDockItemClass *item_class, gboolean has_gri
     item_class->priv->has_grip = has_grip;
 }
 
+
+gboolean
+gdl_dock_item_is_expandable (GdlDockItem* item)
+{
+	g_return_val_if_fail(item->child, false);
+
+	gboolean expand = gtk_widget_get_visible(item->child);
+	if (expand)
+		g_object_get ((GObject*)item, "expand", &expand, NULL);
+	return expand;
+}
 
 
 /* ----- gtk orientation type exporter/importer ----- */

@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
-* | This file is part of Samplecat. http://samplecat.orford.org          |
-* | copyright (C) 2007-2021 Tim Orford <tim@orford.org>                  |
+* | This file is part of Samplecat. https://samplecat.orford.org         |
+* | copyright (C) 2007-2025 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -1506,7 +1506,7 @@ rotator_init (Rotator* tree_view)
 		g_idle_add((GSourceFunc)fade_out_really_done, AGL_NEW(C, .rotator = rotator, .actor = actor));
 	}
 
-	void rotator_on_selection_change (SamplecatModel* m, Sample* sample, gpointer _rotator)
+	void rotator_on_selection_change (SamplecatModel* m, GParamSpec* pspec, gpointer _rotator)
 	{
 		PF;
 		Rotator* rotator = _rotator;
@@ -1517,21 +1517,21 @@ rotator_init (Rotator* tree_view)
 			return (((SampleActor*)item)->sample == sample) ? 0 : 1;
 		}
 
-		GList* front = g_list_find_custom(_r->actors, sample, compare);
+		GList* front = g_list_find_custom(_r->actors, m->selection, compare);
 
 		int j = 0;
-		for(GList* l = _r->actors;l!=front;l=l->next) j++;
+		for (GList* l = _r->actors;l!=front;l=l->next) j++;
 
 		float _dz = 0;
 		bool forward = j < g_list_length(_r->actors) / 2;
-		if(forward){
+		if (forward) {
 			// rotating forward
 
 			for(GList* l = _r->actors; l != front; l = l->next){
 				wf_actor_fade_out(((SampleActor*)l->data)->actor, fade_out_done, rotator);
 				_dz += dz;
 			}
-		}else{
+		} else {
 			// rotating backward
 
 			for(GList* l = front; l; l = l->next){
@@ -1541,14 +1541,14 @@ rotator_init (Rotator* tree_view)
 		}
 
 		int i = 0;
-		for(GList* l=_r->actors;l;i++,l=l->next){
+		for (GList* l=_r->actors;l;i++,l=l->next) {
 			wf_actor_set_z (((SampleActor*)l->data)->actor, (forward ? _dz : -_dz) - i * dz, NULL, NULL);
 		}
 
 		_r->actors = g_list_move_to_front(_r->actors, front);
 	}
 
-	g_signal_connect((gpointer)samplecat.model, "selection-changed", G_CALLBACK(rotator_on_selection_change), tree_view);
+	g_signal_connect((gpointer)samplecat.model, "notify::selection", G_CALLBACK(rotator_on_selection_change), tree_view);
 }
 
 

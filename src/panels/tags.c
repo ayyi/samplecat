@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
- | copyright (C) 2007-2024 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2007-2025 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -68,7 +68,6 @@ tags_constructor (GType type, guint n_construct_properties, GObjectConstructPara
 	GObjectClass* parent_class = G_OBJECT_CLASS (tags_parent_class);
 	GObject* obj = parent_class->constructor (type, n_construct_properties, construct_properties);
 	g_object_set(obj, "expand", false, NULL);
-	gtk_widget_set_size_request((GtkWidget*)obj, -1, 100);
 	return obj;
 }
 

@@ -154,6 +154,11 @@ AC_SUBST(GMODULE_LIBS)
 PIXBUF_CFLAGS=`pkg-config gdk-pixbuf-2.0 --cflags`
 AC_SUBST(PIXBUF_CFLAGS)
 
+ATSPI_CFLAGS=`pkg-config atspi-2 --cflags`
+ATSPI_LDFLAGS=`pkg-config atspi-2 --libs`
+AC_SUBST(ATSPI_CFLAGS)
+AC_SUBST(ATSPI_LDFLAGS)
+
 dnl -----------------------------------------------------------------------------
 
 dnl added for suse-42

@@ -4,6 +4,7 @@
 #include "gdl-dock-notebook.h"
 #include "debug.h"
 #include "gtk/utils.h"
+#include "utils.h"
 
 #ifdef DEBUG
 
@@ -22,6 +23,14 @@ gdl_debug_printf (const char* func, int level, const char* format, ...)
 		fprintf(stderr, "\n");
 	}
 	va_end(args);
+}
+
+
+void
+leave (int* i)
+{
+	indent--;
+	indent = MAX(indent, 0);
 }
 
 
@@ -92,6 +101,26 @@ gdl_dock_print (GdlDockMaster *master)
 {
 	cdbg(0, "...");
 	gdl_dock_master_foreach_toplevel (master, TRUE, (GFunc) gdl_dock_layout_foreach_object_print, NULL);
+}
+
+
+const char*
+gdl_dock_object_id (GdlDockObject* object)
+{
+	if (!object) return NULL;
+
+	static char* str;
+
+	const char* class_name = G_OBJECT_CLASS_NAME(G_OBJECT_GET_CLASS(object));
+	char* name = NULL;
+	g_object_get (object, "name", &name, NULL);
+    gchar* title = NULL;
+    g_object_get (object, "long-name", &title, NULL);
+	if (name && title && !strcmp(name, title))
+		title = NULL;
+	set_str(str, g_strdup_printf("%s%s%s%s%s", class_name, name ? " " : "", name ? name : "", title ? " " : "", title ? title : ""));
+
+	return str;
 }
 
 #endif

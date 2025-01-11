@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
- | copyright (C) 2007-2024 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2007-2025 Tim Orford <tim@orford.org>                  |
  | copyright (C) 2011 Robin Gareus <robin@gareus.org>                   |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
@@ -89,6 +89,18 @@ player_control_new ()
 
 	am_promise_add_callback(play->ready, pc_on_audio_ready, NULL);
 
+	void pc_on_map (GtkWidget* widget, GtkWidget* pc)
+	{
+		if (play->ready->value.i) player_control_on_show_hide(true);
+	}
+	g_signal_connect(pc->widget, "map", G_CALLBACK(pc_on_map), pc);
+
+	void pc_on_unmap (GtkWidget* widget, GtkWidget* pc)
+	{
+		player_control_on_show_hide(false);
+	}
+	g_signal_connect(pc->widget, "unmap", G_CALLBACK(pc_on_unmap), pc);
+
 	return pc->widget;
 }
 
@@ -115,7 +127,8 @@ pc_add_widgets ()
 	}
 
 	if (!(play->auditioner->position && play->auditioner->seek)) {
-		GtkWidget* label = gtk_label_new("<span size=\"200%\">00:00</span> 000");
+		static char* zero_string = "<span size=\"200%\">00:00</span> 000";
+		GtkWidget* label = gtk_label_new(zero_string);
 		gtk_label_set_use_markup((GtkLabel*)label, true);
 		gtk_widget_set_name(label, "spp");
 		gtk_label_set_xalign((GtkLabel*)label, 0.);
@@ -133,6 +146,14 @@ pc_add_widgets ()
 			{
 				int t = 0;
 				static int dt = 0;
+
+				if (play->state != PLAYER_PLAYING) {
+					g_source_remove(inactivity);
+					timer = 0;
+					inactivity = 0;
+					gtk_label_set_markup((GtkLabel*)label, zero_string);
+					return G_SOURCE_REMOVE;
+				}
 
 				int64_t wall = g_get_monotonic_time() / 1000;
 				int64_t tnow = wall - offset;
@@ -164,7 +185,6 @@ pc_add_widgets ()
 
 			gboolean keep_alive (void* label)
 			{
-				inactivity = 0;
 				int64_t wall = g_get_monotonic_time() / 1000;
 				int64_t tnow = wall - offset;
 
@@ -395,7 +415,7 @@ update_slider (gpointer _)
 	}
 	else if (v == -2.0)
 		return; // seek in progress
-	else { 
+	else {
 		/* playback is done */
 		if (pc->sliders.position)
 			gtk_widget_set_sensitive(pc->sliders.position, false);

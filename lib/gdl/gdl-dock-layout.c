@@ -996,7 +996,13 @@ gdl_dock_layout_setup_object2 (GdlDockMaster* master, Stack* stack, gint *n_afte
 		if (name) {
 			GType gtype = g_type_from_name(name);
 			if (gtype) {
-				object = g_object_new(gtype, NULL);
+				if (GDL_IS_DOCK_ITEM_CLASS (g_type_class_ref (gtype))) {
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+					object = g_object_newv (gtype, constructor->n_params, (GParameter*)constructor->params);
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
+				} else {
+					object = g_object_new(gtype, NULL);
+				}
 				if (GDL_IS_DOCK_ITEM(object)) {
 					need_child = false;
 				} else {

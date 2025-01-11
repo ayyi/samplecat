@@ -730,8 +730,6 @@ idle_emit_layout_changed (gpointer user_data)
 																	cdbg(0, "emitting layout-changed ...");
     g_signal_emit (master, master_signals [LAYOUT_CHANGED], 0);
 
-	LEAVE;
-
     return FALSE;
 }
 

@@ -1,3 +1,4 @@
+g++ \
 libsndfile1-dev \
 ffmpeg \
 libavcodec-dev libavformat-dev libavutil-dev libavfilter-dev \

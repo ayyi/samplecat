@@ -43,12 +43,8 @@ dock_h_get_class ()
 static void
 _init ()
 {
-	static bool init_done = false;
-
-	if(!init_done){
+	if (!agl) {
 		agl = agl_get_instance();
-
-		init_done = true;
 	}
 }
 
@@ -65,7 +61,7 @@ dock_h_view (gpointer _)
 		DockHView* dock = (DockHView*)actor;
 
 		float x = 0.;
-		for(GList* l=dock->panels;l;l=l->next){
+		for (GList* l=actor->children;l;l=l->next) {
 			AGlActor* a = l->data;
 			if(x){
 				x = a->region.x1;
@@ -104,17 +100,16 @@ dock_h_view (gpointer _)
 
 	void dock_h_layout (AGlActor* actor)
 	{
-		DockHView* dock = (DockHView*)actor;
 		float height = agl_actor__height(actor);
 
 		typedef struct {
 			AGlActor* actor;
 			int       width;
 		} Item;
-		Item items[g_list_length(dock->panels)];
+		Item items[g_list_length(actor->children)];
 
 		int req = 0;
-		GList* l = dock->panels;
+		GList* l = actor->children;
 		int i = 0;
 		for (;l;l=l->next,i++) {
 			items[i] = (Item){l->data, 0};
@@ -124,7 +119,7 @@ dock_h_view (gpointer _)
 
 		// if the allocated horizontal size is correct, it should be preserved
 		if (items[G_N_ELEMENTS(items) - 1].actor->region.x2 == agl_actor__width(actor)) {
-			dbg(2, "width already correct: %f", agl_actor__width(actor));
+			dbg(2, "width already correct: %.0f", agl_actor__width(actor));
 
 			for (GList* l=actor->children;l;l=l->next) {
 				AGlActor* child = l->data;
@@ -134,8 +129,8 @@ dock_h_view (gpointer _)
 			return;
 		}
 
-		int hspace = agl_actor__width(actor) - SPACING * (g_list_length(dock->panels) - 1);
-		int n_flexible = g_list_length(dock->panels);
+		int hspace = agl_actor__width(actor) - SPACING * (g_list_length(actor->children) - 1);
+		int n_flexible = g_list_length(actor->children);
 		for (i=0;i<G_N_ELEMENTS(items);i++) {
 			Item* item = &items[i];
 			PanelView* panel = (PanelView*)item->actor;
@@ -249,7 +244,7 @@ dock_h_view (gpointer _)
 		}
 
 		x = 0;
-		for(l=dock->panels,i=0;l;l=l->next,i++){
+		for (l=actor->children,i=0;l;l=l->next,i++) {
 			AGlActor* a = (AGlActor*)l->data;
 			Item* item = &items[i];
 			PanelView* panel = (PanelView*)item->actor;
@@ -261,7 +256,7 @@ dock_h_view (gpointer _)
 			};
 			x += items[i].width + SPACING;
 		}
-		dbg(2, "-> total=%i / %f", x - SPACING, agl_actor__width(actor));
+		dbg(2, "-> total=%i / %.0f", x - SPACING, agl_actor__width(actor));
 
 		// copynpaste - PanelView set_size
 		// single child takes all space of panel
@@ -288,7 +283,7 @@ dock_h_view (gpointer _)
 			case AGL_MOTION_NOTIFY:
 				if(actor_context.grabbed == actor){
 					AGlActor* a2 = dock->handle.actor;
-					GList* l = g_list_find(dock->panels, a2);
+					GList* l = g_list_find(actor->children, a2);
 					AGlActor* a1 = l->prev->data;
 
 					int min_diff = -agl_actor__width(a1);
@@ -370,8 +365,6 @@ dock_free (AGlActor* actor)
 {
 	DockHView* dock = (DockHView*)actor;
 
-	g_clear_pointer(&dock->panels, g_list_free);
-
 	if (!--instance_count) {
 	}
 
@@ -383,7 +376,6 @@ dock_free (AGlActor* actor)
 AGlActor*
 dock_h_add_panel (DockHView* dock, AGlActor* panel)
 {
-	dock->panels = g_list_append(dock->panels, panel);
 	agl_actor__add_child((AGlActor*)dock, panel);
 	return panel;
 }
@@ -393,7 +385,7 @@ static AGlActor*
 find_handle_by_x (DockHView* dock, float pos)
 {
 	float x = 0;
-	GList* l = dock->panels;
+	GList* l = ((AGlActor*)dock)->children;
 	for(;l;l=l->next){
 		AGlActor* a = l->data;
 		x = a->region.x1;
@@ -409,8 +401,11 @@ void
 dock_h_move_panel_to_index (DockHView* dock, AGlActor* panel, int i)
 {
 	dbg(0, "i=%i", i);
-	dock->panels = g_list_remove(dock->panels, panel);
-	dock->panels = g_list_insert(dock->panels, panel, i);
+	AGlActor* actor = (AGlActor*)dock;
+
+	actor->children = g_list_remove(actor->children, panel);
+	actor->children = g_list_insert(actor->children, panel, i);
+
 	agl_actor__set_size((AGlActor*)dock);
 }
 
@@ -418,7 +413,7 @@ dock_h_move_panel_to_index (DockHView* dock, AGlActor* panel, int i)
 void
 dock_h_move_panel_to_y (DockHView* dock, AGlActor* panel, int y)
 {
-	int find_index(DockHView* dock, int y)
+	int find_index (DockHView* dock, int y)
 	{
 		GList* l = ((AGlActor*)dock)->children;
 		int i = 0;

@@ -1,5 +1,6 @@
 packages=--pkg config --pkg posix --pkg gtk4 --pkg gmodule-2.0 --pkg debug
 vapidir=--vapidir=. --vapidir=../../lib/debug
+valac=valac-0.56
 
 all:
 	valac -C -H spectrogram_widget.h --pkg gtk+-2.0 --pkg gmodule-2.0 spectrogram_widget.vala
@@ -16,7 +17,7 @@ application-samplecat.c: application-samplecat.vala
 	valac -C -H application-samplecat.h $(packages) $(vapidir) application-samplecat.vala
 
 model.c: model.vala
-	valac -C -H model.h $(packages) --pkg samplecat $(vapidir)
+	$(valac) -C -H model.h $(packages) --pkg samplecat $(vapidir) model.vala
 	@sed -i -e "/\#include <gobject\/gvaluecollector.h>/a#include <application.h>" model.c # append
 
 list_store.c: list_store.vala

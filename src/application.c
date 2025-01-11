@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
- | copyright (C) 2007-2024 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2007-2025 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -143,7 +143,11 @@ application_activate (GApplication* base)
 	icon_theme_set_theme(theme);
 
     GtkCssProvider* provider = gtk_css_provider_new ();
+#if 0
     gtk_css_provider_load_from_resource (provider, "/samplecat/resources/style.css");
+#else
+    gtk_css_provider_load_from_resource (provider, "/samplecat/resources/dark.css");
+#endif
 	gtk_style_context_add_provider_for_display (gdk_display_get_default(), GTK_STYLE_PROVIDER(provider), GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
 	g_object_unref (provider);
 

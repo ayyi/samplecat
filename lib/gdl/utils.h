@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Tim Orford
+ * Copyright (C) 2023-2025 Tim Orford
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -29,4 +29,4 @@ typedef void (*GtkCallback) (GtkWidget *widget, gpointer data);
 
 GList* gtk_widget_get_children (GtkWidget*);
 
-void behaviour_subject_connect (GObject*, const char* prop, void (*callback)(GObject*, GParamSpec*, gpointer), gpointer);
+#define set_str(P, NAME) ({ if (P) g_free(P); P = NAME; })

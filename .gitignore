@@ -38,13 +38,14 @@ src/vala/*.[ch]
 src/resources.c
 experimental/gl-app/samplecat_gl
 experimental/gl-app/shaders/shaders.c
+experimental/gl-app/test/dock
 test/ubuntu-18/Dockerfile
 test/ubuntu-20/Dockerfile
 !test/ubuntu-20/Dockerfile.in
 test/ubuntu-22/Dockerfile
 !test/ubuntu-22/Dockerfile.in
-test/ubuntu-23/Dockerfile
-!test/ubuntu-23/Dockerfile.in
+test/ubuntu-24/Dockerfile
+!test/ubuntu-24/Dockerfile.in
 test/arch/Dockerfile
 test/unit/unit_test
 test/unit/list.c

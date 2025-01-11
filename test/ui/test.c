@@ -44,6 +44,7 @@ application_main (int argc, char** argv)
 #else
 	g_setenv ("GDK_DEBUG", "gl-glx", false);
 #endif
+	g_setenv ("GDK_BACKEND", "x11", false);
 
 	g_log_set_default_handler (log_handler, NULL);
 
@@ -153,11 +154,10 @@ application_main (int argc, char** argv)
 #endif
 
 	application_set_ready();
-	int status = g_application_run (G_APPLICATION (app), argc, argv);
 
 	statusbar_print(2, PACKAGE_NAME". Version "PACKAGE_VERSION);
 
-	return status;
+	return 0;
 }
 
 

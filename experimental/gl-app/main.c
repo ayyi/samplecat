@@ -156,16 +156,17 @@ on_actor_added (Application* app, AGlActor* actor, gpointer data)
 	AGlActorClass* c = actor->class;
 
 	if (c == wf_actor_get_class()) {
-		void on_selection_change (SamplecatModel* m, Sample* sample, gpointer actor)
+		void on_selection_change (SamplecatModel* m, GParamSpec* pspec, gpointer actor)
 		{
 			PF;
+			Sample* sample = m->selection;
 
 			Waveform* waveform = waveform_new(sample->full_path);
 			wf_actor_set_waveform((WaveformActor*)actor, waveform, NULL, NULL);
 			g_object_unref(waveform);
 		}
 
-		g_signal_connect((gpointer)samplecat.model, "selection-changed", G_CALLBACK(on_selection_change), actor);
+		g_signal_connect((gpointer)samplecat.model, "notify::selection", G_CALLBACK(on_selection_change), actor);
 	}
 
 	if (c == files_view_get_class()) {

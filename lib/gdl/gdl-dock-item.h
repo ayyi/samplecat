@@ -340,6 +340,9 @@ GtkWidget*     gdl_dock_item_get_child             (GdlDockItem      *item);
 
 void           gdl_dock_item_class_set_has_grip    (GdlDockItemClass *item_class,
                                                     gboolean         has_grip);
+
+gboolean       gdl_dock_item_is_expandable         (GdlDockItem      *item);
+
 gboolean       gdl_dock_item_is_active             (GdlDockItem      *item);
 
 

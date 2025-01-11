@@ -16,7 +16,6 @@
 
 typedef struct {
    PanelView     panel;  // dock children must be PanelViews. DockVHiew inherits from PanelView so it can be a DockVView child.
-   GList*        panels; // list of type PanelView*
    struct {
       AGlActor*  actor;
       float      opacity;

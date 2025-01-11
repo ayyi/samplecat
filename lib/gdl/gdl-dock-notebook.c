@@ -275,7 +275,6 @@ gdl_dock_notebook_add (GdlDockObject *container, GtkWidget *widget)
 	//gtk_notebook_append_page (GTK_NOTEBOOK (GDL_DOCK_NOTEBOOK (container)->notebook), widget, GtkWidget* tab_label);
 
     gdl_dock_object_dock (container, GDL_DOCK_OBJECT (widget), GDL_DOCK_CENTER, NULL);
-	LEAVE;
 }
 
 void
@@ -359,8 +358,6 @@ gdl_dock_notebook_dock (GdlDockObject *object, GdlDockObject *requestor, GdlDock
 	}
 	else
 		GDL_DOCK_OBJECT_CLASS (gdl_dock_notebook_parent_class)->dock (object, requestor, position, other_data);
-
-	LEAVE;
 }
 
 static void

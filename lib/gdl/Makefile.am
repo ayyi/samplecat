@@ -83,6 +83,7 @@ test_dock_sources=test-dock.c
 test_dock_LDADD=libgdl-4.la \
 	$(top_srcdir)/lib/debug/libdebug.a \
 	$(top_srcdir)/lib/gtk/libgtk.la \
+	$(top_srcdir)/lib/utils/behaviour_subject.o \
 	$(XML_LIBS) \
 	$(YAML_LDFLAGS) \
 	$(GTK_LDFLAGS)

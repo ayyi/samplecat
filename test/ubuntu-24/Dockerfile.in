@@ -1,4 +1,4 @@
-FROM registry.gitlab.com/ayyi.org/docker/ubuntu-23
+FROM registry.gitlab.com/ayyi.org/docker/ubuntu-24
 
 /* Includes support for running Opengl applications.                  */
 /* Ffmpeg included for creating test data (adds ~100MB to image size) */

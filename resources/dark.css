@@ -1,0 +1,136 @@
+.background {
+	background-color: #222;
+	color: #fff;
+}
+
+entry, textview {
+	background-color: #000;
+	color: #fff;
+}
+
+button {
+	background-image: image(rgb(100,200,100));
+	border: 0;
+}
+
+treeview {
+	background-color: #666;
+}
+
+header button {
+	background-image: none;
+}
+
+/* no */
+dropdown {
+	background-color: #b96;
+}
+
+listview {
+	background-color: #b96;
+}
+
+dock-grip label {
+	color: #999;
+	text-transform: uppercase;
+	font-size: 75%;
+}
+
+dock-grip button {
+	background-image: none;
+	min-width: 12px;
+	min-height: 12px;
+	-gtk-icon-size: 12px;
+	margin: -3px 0 0;
+	padding: 0;
+	border: 0;
+}
+
+dock-grip button:hover {
+	color: #fff;
+}
+
+.gdl-button-image {
+	margin: 0;
+	border: 0;
+	padding: 0;
+}
+
+dock-item {
+	margin: 4px;
+	padding: 4px;
+}
+
+.vertical > dock-item, stack > dock-item {
+	padding: 0 4px;
+}
+
+switcher > button {
+	margin-left: 4px;
+}
+
+switcher > button:first-child {
+	margin-left: 8px;
+}
+
+paned > separator {
+	background-image: image(rgb(30, 30, 30));
+}
+
+paned > separator:hover {
+	background-image: image(rgb(150, 150, 150));
+}
+
+paned.horizontal > separator {
+	margin: 0 4px;
+	padding: 0 4px;
+}
+
+paned.vertical > separator {
+	margin: 3px 0;
+	padding: 3px 0;
+}
+
+button.color {
+	padding: 0;
+	border: 0;
+}
+
+grid {
+	margin: 5px;
+}
+
+tag {
+	margin: 4px 0px;
+	padding: 4px;
+	border-radius: 4px;
+	background: lightskyblue;
+}
+
+tag box {
+	border-spacing: 4px;
+}
+
+tag label,
+tag image {
+	color: white;
+}
+
+tag button {
+	min-height: 0;
+	min-width: 0;
+	padding: 0;
+	border: 1px solid white;
+}
+
+entry.tagged {
+	border-spacing: 4px;
+}
+
+.directories treeexpander indent {
+	-gtk-icon-size: 16px;
+}
+
+.directories treeexpander label {
+	padding-left: 4px;
+}

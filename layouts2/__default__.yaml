@@ -29,9 +29,8 @@ dock:
           item:
             name: Filters
       paned:
-        position: 400
+        position: 500
         notebook:
-          locked: 'no'
           page: '1'
           item:
             name: Library
@@ -40,5 +39,4 @@ dock:
             name: Filemanager
         item:
           name: Waveform
-          locked: 'no'
 ...

@@ -15,7 +15,7 @@ BUILT_SOURCES = resources.c
 green = "\033[1;32m"
 normal = "\033[0;39m"
 
-resources.c: resources.xml resources/style.css
+resources.c: resources.xml resources/style.css resources/dark.css
 	@echo -en $(green)
 	@echo compiling resources ...
 	@echo -en $(normal)

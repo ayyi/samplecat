@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
- | copyright (C) 2007-2024 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2007-2025 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -24,7 +24,6 @@
 #include "model.h"
 #include "application.h"
 #include "sample.h"
-#include "gdl/utils.h"
 #include "widgets/tagged-entry.h"
 
 #define TYPE_INSPECTOR            (inspector_get_type ())
@@ -128,7 +127,7 @@ static void     inspector_size_allocate (GtkWidget*, int, int, int);
 G_DEFINE_TYPE_WITH_PRIVATE (Inspector, inspector, GTK_TYPE_SCROLLED_WINDOW)
 
 static void inspector_clear              (Inspector*);
-static void inspector_update             (SamplecatModel*, Sample*, gpointer);
+static void inspector_update             (Inspector*, Sample*);
 static void inspector_set_labels         (Inspector*, Sample*);
 static void hide_fields                  (Inspector*);
 static void show_fields                  (Inspector*);
@@ -252,9 +251,8 @@ inspector_init (Inspector* inspector)
 
 	gtk_box_append(GTK_BOX(i->vbox), table);
 
-	{
-		// notes box
-
+	// notes box
+	gtk_box_append(GTK_BOX(i->vbox), ({
 		i->text = gtk_text_view_new();
 		i->notes = gtk_text_view_get_buffer(GTK_TEXT_VIEW(i->text));
 		gtk_text_view_set_accepts_tab(GTK_TEXT_VIEW(i->text), false);
@@ -263,7 +261,6 @@ inspector_init (Inspector* inspector)
 #ifdef GTK4_TODO
 		g_signal_connect(G_OBJECT(i->text), "focus-out-event", G_CALLBACK(on_notes_focus_out), inspector);
 #endif
-		gtk_box_append(GTK_BOX(i->vbox), i->text);
 
 #ifdef GTK4_TODO
 		GValue gval = {0,};
@@ -275,14 +272,20 @@ inspector_init (Inspector* inspector)
 		gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(i->text), GTK_WRAP_WORD_CHAR);
 		gtk_text_view_set_pixels_above_lines(GTK_TEXT_VIEW(i->text), 5);
 		gtk_text_view_set_pixels_below_lines(GTK_TEXT_VIEW(i->text), 5);
-	}
 
-	g_signal_connect((gpointer)samplecat.model, "selection-changed", G_CALLBACK(inspector_update), inspector);
+		i->text;
+	}));
+
+	void inspector_on_selection (SamplecatModel* m, GParamSpec* pspec, gpointer inspector)
+	{
+		inspector_update(inspector, m->selection);
+	}
+	g_signal_connect((gpointer)samplecat.model, "notify::selection", G_CALLBACK(inspector_on_selection), inspector);
 
 	void sample_changed (SamplecatModel* m, Sample* sample, int what, void* data, Inspector* inspector)
 	{
-		if (sample->id == (inspector)->priv->row_id)
-			inspector_update(m, sample, inspector);
+		if (sample->id == inspector->priv->row_id)
+			inspector_update(inspector, sample);
 	}
 	g_signal_connect((gpointer)samplecat.model, "sample-changed", G_CALLBACK(sample_changed), inspector);
 
@@ -298,7 +301,7 @@ inspector_init (Inspector* inspector)
 
 
 static void
-inspector_finalize (GObject * obj)
+inspector_finalize (GObject* obj)
 {
 	G_OBJECT_CLASS (inspector_parent_class)->finalize (obj);
 }
@@ -617,10 +620,9 @@ inspector_set_labels (Inspector* inspector, Sample* sample)
 
 
 static void
-inspector_update (SamplecatModel* m, Sample* sample, gpointer user_data)
+inspector_update (Inspector* inspector, Sample* sample)
 {
 	PF;
-	Inspector* inspector = (Inspector*)user_data;
 	InspectorPrivate* i = inspector->priv;
 
 	if (!sample) {
@@ -658,7 +660,7 @@ inspector_update (SamplecatModel* m, Sample* sample, gpointer user_data)
 
 	// - check if file is already in DB -> load sample-info
 	// - check if file is an audio-file -> read basic info directly from file
-	// - else just display the base-name in the inspector..
+	// - else just display the base-name in the inspector.
 	if (sample->id > -1 || sample_get_file_info(sample)) {
 		inspector_set_labels(inspector, sample);
 	} else {

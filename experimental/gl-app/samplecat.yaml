@@ -3,11 +3,11 @@ test_colour: '0xff00ff00'
 windows:
   window:
     ROOT:
-      type: 'ROOT'
+      type: ROOT
       position: [0, 0]
       size: [640, 300]
       Dock H:
-        type: 'Dock H'
+        type: Dock H
         position: [20, 20]
         size: [620, 280]
         size-req:
@@ -35,7 +35,6 @@ windows:
             preferred: [320, -1]
           Panel:
             type: 'Panel'
-            position: [0, 0]
             size: [328, 30]
             size-req:
               min: [-1, 22]
@@ -59,7 +58,6 @@ windows:
                 size: [328, 124]
               Files:
                 type: 'Files'
-                position: [0, 0]
                 size: [0, 0]
           Panel:
             type: 'Panel'
@@ -70,6 +68,5 @@ windows:
               max: [-1, 100]
             Waveform:
               type: 'Waveform'
-              position: [0, 0]
               size: [328, 60]
 ...

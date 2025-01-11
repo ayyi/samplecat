@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
- | copyright (C) 2020-2023 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2020-2025 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -9,6 +9,8 @@
  +----------------------------------------------------------------------+
  |
  */
+
+#include "widgets/suggestion_entry.h"
 
 
 #ifdef GTK4_TODO
@@ -193,7 +195,7 @@ view_not_visible (gpointer name)
 void
 search (const char* text)
 {
-	GtkWidget* search = find_widget_by_name((GtkWidget*)gtk_application_get_active_window(GTK_APPLICATION(app)), "search-entry");
+	GtkWidget* search = find_widget_by_type((GtkWidget*)find_dock_item ("Search"), SUGGESTION_TYPE_ENTRY);
 
 #if 0
 	send_key(search->window, GDK_KEY_H, 0);

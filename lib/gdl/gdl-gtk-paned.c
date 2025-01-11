@@ -49,33 +49,12 @@ static gboolean   gdl_gtk_paned_get_resize_start_child (GdlGtkPaned *paned);
 static void       gdl_gtk_paned_set_end_child          (GdlGtkPaned *paned,
                                                         GtkWidget   *child);
 
-static void       gdl_gtk_paned_set_shrink_start_child (GdlGtkPaned *paned,
-                                                        gboolean    resize);
-#if 0
-static gboolean   gdl_gtk_paned_get_shrink_start_child (GdlGtkPaned *paned);
-#endif
-
 static void       gdl_gtk_paned_set_resize_end_child   (GdlGtkPaned *paned,
                                                         gboolean     resize);
-#if 0
-static gboolean   gdl_gtk_paned_get_resize_end_child   (GdlGtkPaned *paned);
-#endif
-
-static void       gdl_gtk_paned_set_shrink_end_child   (GdlGtkPaned *paned,
-                                                        gboolean     resize);
-#if 0
-static gboolean   gdl_gtk_paned_get_shrink_end_child   (GdlGtkPaned *paned);
-#endif
 
 static int        gdl_gtk_paned_get_position           (GdlGtkPaned *paned);
 static void       gdl_gtk_paned_set_position           (GdlGtkPaned *paned,
                                                         int          position);
-
-#if 0
-static void       gdl_gtk_paned_set_wide_handle        (GdlGtkPaned    *paned,
-                                                        gboolean     wide);
-#endif
-static gboolean   gdl_gtk_paned_get_wide_handle        (GdlGtkPaned    *paned);
 
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GdlGtkPaned, g_object_unref)
 
@@ -688,11 +667,8 @@ enum {
   PROP_POSITION_SET,
   PROP_MIN_POSITION,
   PROP_MAX_POSITION,
-  PROP_WIDE_HANDLE,
   PROP_RESIZE_START_CHILD,
   PROP_RESIZE_END_CHILD,
-  PROP_SHRINK_START_CHILD,
-  PROP_SHRINK_END_CHILD,
   PROP_START_CHILD,
   PROP_END_CHILD,
   LAST_PROP,
@@ -734,8 +710,11 @@ static void     gdl_gtk_paned_size_allocate         (GtkWidget        *widget,
 static void     gdl_gtk_paned_unrealize             (GtkWidget        *widget);
 static void     gdl_gtk_paned_calc_position         (GdlGtkPaned      *paned,
                                                      int               allocation,
-                                                     int               start_child_req,
-                                                     int               end_child_req);
+                                                     int               start_child_min,
+                                                     int               end_child_min,
+                                                     int               start_child_nat,
+                                                     int               end_child_nat,
+                                                     int               handle_size);
 static void     gdl_gtk_paned_set_focus_child       (GtkWidget        *widget,
                                                      GtkWidget        *child);
 static void     gdl_gtk_paned_set_saved_focus       (GdlGtkPaned      *paned,
@@ -792,15 +771,10 @@ add_move_binding (GtkWidgetClass *widget_class, guint keyval, GdkModifierType ma
 static void
 get_handle_area (GdlGtkPaned *paned, graphene_rect_t *area)
 {
-  int extra = 0;
-
   if (!gtk_widget_compute_bounds (paned->handle_widget, GTK_WIDGET (paned), area))
     return;
 
-  if (!gdl_gtk_paned_get_wide_handle (paned))
-    extra = HANDLE_EXTRA_SIZE;
-
-  graphene_rect_inset (area, - extra, - extra);
+  graphene_rect_inset (area, - HANDLE_EXTRA_SIZE, - HANDLE_EXTRA_SIZE);
 }
 
 static void
@@ -966,19 +940,6 @@ gdl_gtk_paned_class_init (GdlGtkPanedClass *class)
                       GTK_PARAM_READABLE|G_PARAM_EXPLICIT_NOTIFY);
 
   /**
-   * GdlGtkPaned:wide-handle: (attributes org.gtk.Property.get=gdl_gtk_paned_get_wide_handle org.gtk.Property.set=gdl_gtk_paned_set_wide_handle)
-   *
-   * Whether the `GdlGtkPaned` should provide a stronger visual separation.
-   *
-   * For example, this could be set when a paned contains two
-   * [class@Gtk.Notebook]s, whose tab rows would otherwise merge visually.
-   */
-  paned_props[PROP_WIDE_HANDLE] =
-    g_param_spec_boolean ("wide-handle", NULL, NULL,
-                          FALSE,
-                          GTK_PARAM_READWRITE|G_PARAM_EXPLICIT_NOTIFY);
-
-  /**
    * GdlGtkPaned:resize-start-child: (attributes org.gtk.Property.get=gdl_gtk_paned_get_resize_start_child org.gtk.Property.set=gdl_gtk_paned_set_resize_start_child)
    *
    * Determines whether the first child expands and shrinks
@@ -997,28 +958,6 @@ gdl_gtk_paned_class_init (GdlGtkPanedClass *class)
    */
   paned_props[PROP_RESIZE_END_CHILD] =
     g_param_spec_boolean ("resize-end-child", NULL, NULL,
-                          TRUE,
-                          GTK_PARAM_READWRITE|G_PARAM_EXPLICIT_NOTIFY);
-
-  /**
-   * GdlGtkPaned:shrink-start-child: (attributes org.gtk.Property.get=gdl_gtk_paned_get_shrink_start_child org.gtk.Property.set=gdl_gtk_paned_set_shrink_start_child)
-   *
-   * Determines whether the first child can be made smaller
-   * than its requisition.
-   */
-  paned_props[PROP_SHRINK_START_CHILD] =
-    g_param_spec_boolean ("shrink-start-child", NULL, NULL,
-                          TRUE,
-                          GTK_PARAM_READWRITE|G_PARAM_EXPLICIT_NOTIFY);
-
-  /**
-   * GdlGtkPaned:shrink-end-child: (attributes org.gtk.Property.get=gdl_gtk_paned_get_shrink_end_child org.gtk.Property.set=gdl_gtk_paned_set_shrink_end_child)
-   *
-   * Determines whether the second child can be made smaller
-   * than its requisition.
-   */
-  paned_props[PROP_SHRINK_END_CHILD] =
-    g_param_spec_boolean ("shrink-end-child", NULL, NULL,
                           TRUE,
                           GTK_PARAM_READWRITE|G_PARAM_EXPLICIT_NOTIFY);
 
@@ -1267,13 +1206,11 @@ gdl_gtk_paned_buildable_add_child (GtkBuildable *buildable, GtkBuilder *builder,
     {
       gdl_gtk_paned_set_start_child (self, GTK_WIDGET (child));
       gdl_gtk_paned_set_resize_start_child (self, FALSE);
-      gdl_gtk_paned_set_shrink_start_child (self, TRUE);
     }
   else if (g_strcmp0 (type, "end") == 0)
     {
       gdl_gtk_paned_set_end_child (self, GTK_WIDGET (child));
       gdl_gtk_paned_set_resize_end_child (self, TRUE);
-      gdl_gtk_paned_set_shrink_end_child (self, TRUE);
     }
   else if (type == NULL && GTK_IS_WIDGET (child))
     {
@@ -1281,13 +1218,11 @@ gdl_gtk_paned_buildable_add_child (GtkBuildable *buildable, GtkBuilder *builder,
         {
           gdl_gtk_paned_set_start_child (self, GTK_WIDGET (child));
           gdl_gtk_paned_set_resize_start_child (self, FALSE);
-          gdl_gtk_paned_set_shrink_start_child (self, TRUE);
         }
       else if (self->end_child == NULL)
         {
           gdl_gtk_paned_set_end_child (self, GTK_WIDGET (child));
           gdl_gtk_paned_set_resize_end_child (self, TRUE);
-          gdl_gtk_paned_set_shrink_end_child (self, TRUE);
         }
       else
         g_warning ("GdlGtkPaned only accepts two widgets as children");
@@ -1415,22 +1350,11 @@ gdl_gtk_paned_set_property (GObject *object, guint prop_id, const GValue *value,
           g_object_notify_by_pspec (object, pspec);
         }
       break;
-    case PROP_WIDE_HANDLE:
-#if 0
-      gdl_gtk_paned_set_wide_handle (paned, g_value_get_boolean (value));
-#endif
-      break;
     case PROP_RESIZE_START_CHILD:
       gdl_gtk_paned_set_resize_start_child (paned, g_value_get_boolean (value));
       break;
     case PROP_RESIZE_END_CHILD:
       gdl_gtk_paned_set_resize_end_child (paned, g_value_get_boolean (value));
-      break;
-    case PROP_SHRINK_START_CHILD:
-      gdl_gtk_paned_set_shrink_start_child (paned, g_value_get_boolean (value));
-      break;
-    case PROP_SHRINK_END_CHILD:
-      gdl_gtk_paned_set_shrink_end_child (paned, g_value_get_boolean (value));
       break;
     case PROP_START_CHILD:
       gdl_gtk_paned_set_start_child (paned, g_value_get_object (value));
@@ -1466,20 +1390,11 @@ gdl_gtk_paned_get_property (GObject *object, guint prop_id, GValue *value, GPara
     case PROP_MAX_POSITION:
       g_value_set_int (value, paned->max_position);
       break;
-    case PROP_WIDE_HANDLE:
-      g_value_set_boolean (value, gdl_gtk_paned_get_wide_handle (paned));
-      break;
     case PROP_RESIZE_START_CHILD:
       g_value_set_boolean (value, paned->resize_start_child);
       break;
     case PROP_RESIZE_END_CHILD:
       g_value_set_boolean (value, paned->resize_end_child);
-      break;
-    case PROP_SHRINK_START_CHILD:
-      g_value_set_boolean (value, paned->shrink_start_child);
-      break;
-    case PROP_SHRINK_END_CHILD:
-      g_value_set_boolean (value, paned->shrink_end_child);
       break;
     case PROP_START_CHILD:
       g_value_set_object (value, gdl_gtk_paned_get_start_child (paned));
@@ -1509,14 +1424,10 @@ gdl_gtk_paned_dispose (GObject *object)
 }
 
 static void
-gdl_gtk_paned_compute_position (GdlGtkPaned *paned, int allocation, int start_child_req, int end_child_req, int *min_pos, int *max_pos, int *out_pos)
+gdl_gtk_paned_compute_position (GdlGtkPaned *paned, int allocation, int start_child_req, int end_child_req, int start_child_min, int end_child_min, int handle_size, int *min_pos, int *max_pos, int *out_pos)
 {
-  int min = paned->shrink_start_child ? 0 : start_child_req;
-
-  int max = allocation;
-  if (!paned->shrink_end_child)
-    max = MAX (1, max - end_child_req);
-  max = MAX (min, max);
+  int min = start_child_min;
+  int max = MAX (min, allocation - handle_size - end_child_min);
 
   int pos;
   if (!paned->position_set)
@@ -1550,14 +1461,11 @@ gdl_gtk_paned_compute_position (GdlGtkPaned *paned, int allocation, int start_ch
 
   pos = CLAMP (pos, min, max);
 
-  gboolean expand;
-  g_object_get ((GObject*)paned->start_child, "expand", &expand, NULL);
-  if (!expand) {
+  if (!gdl_dock_item_is_expandable (GDL_DOCK_ITEM(paned->start_child))) {
     pos = MIN(pos, start_child_req);
   }
 
-  g_object_get ((GObject*)paned->end_child, "expand", &expand, NULL);
-  if (!expand) {
+  if (!gdl_dock_item_is_expandable (GDL_DOCK_ITEM(paned->end_child))) {
     pos = MAX(pos, max - end_child_req);
   }
 
@@ -1626,7 +1534,7 @@ gdl_gtk_paned_get_preferred_size_for_opposite_orientation (GtkWidget *widget, in
       gtk_widget_measure (paned->start_child, paned->orientation, -1, &start_child_req, NULL, NULL, NULL);
       gtk_widget_measure (paned->end_child, paned->orientation, -1, &end_child_req, NULL, NULL, NULL);
 
-      gdl_gtk_paned_compute_position (paned, size - for_handle, start_child_req, end_child_req, NULL, NULL, &for_start_child);
+      gdl_gtk_paned_compute_position (paned, size - for_handle, start_child_req, end_child_req, 0, 0, for_handle, NULL, NULL, &for_start_child);
 
       for_end_child = size - for_start_child - for_handle;
 
@@ -1705,11 +1613,12 @@ gdl_gtk_paned_size_allocate (GtkWidget *widget, int width, int height, int basel
       if (paned->orientation == GTK_ORIENTATION_HORIZONTAL)
         {
           int start_child_width, end_child_width;
+          int start_child_natural_width, end_child_natural_width;
 
-          gtk_widget_measure (paned->start_child, GTK_ORIENTATION_HORIZONTAL, height, &start_child_width, NULL, NULL, NULL);
-          gtk_widget_measure (paned->end_child, GTK_ORIENTATION_HORIZONTAL, height, &end_child_width, NULL, NULL, NULL);
+          gtk_widget_measure (paned->start_child, GTK_ORIENTATION_HORIZONTAL, height, &start_child_width, &start_child_natural_width, NULL, NULL);
+          gtk_widget_measure (paned->end_child, GTK_ORIENTATION_HORIZONTAL, height, &end_child_width, &end_child_natural_width, NULL, NULL);
 
-          gdl_gtk_paned_calc_position (paned, MAX (1, width - handle_size), start_child_width, end_child_width);
+          gdl_gtk_paned_calc_position (paned, MAX (1, width - handle_size), start_child_width, end_child_width, 0, 0, handle_size);
 
           handle_allocation = (GdkRectangle){
             paned->start_child_size,
@@ -1749,12 +1658,25 @@ gdl_gtk_paned_size_allocate (GtkWidget *widget, int width, int height, int basel
         }
       else
         {
-          int start_child_height, end_child_height;
+          int start_child_min_height, end_child_min_height;
+          int start_child_natural_height, end_child_natural_height;
 
-          gtk_widget_measure (paned->start_child, GTK_ORIENTATION_VERTICAL, width, &start_child_height, NULL, NULL, NULL);
-          gtk_widget_measure (paned->end_child, GTK_ORIENTATION_VERTICAL, width, &end_child_height, NULL, NULL, NULL);
+          gtk_widget_measure (paned->start_child, GTK_ORIENTATION_VERTICAL, width, &start_child_min_height, &start_child_natural_height, NULL, NULL);
+          gtk_widget_measure (paned->end_child, GTK_ORIENTATION_VERTICAL, width, &end_child_min_height, &end_child_natural_height, NULL, NULL);
+          if (!start_child_min_height) {
+            // added for the case where start_child is hidden
+            if (GDL_IS_DOCK_PANED(paned->start_child)) {
+              void fn (GdlDockObject *object, gpointer start_child_min_height)
+              {
+                int min_height;
+                gtk_widget_measure ((GtkWidget*)object, GTK_ORIENTATION_VERTICAL, 100, &min_height, NULL, NULL, NULL);
+                *(int*)start_child_min_height += min_height;
+              }
+              GDL_DOCK_OBJECT_GET_CLASS (paned->start_child)->foreach_child (GDL_DOCK_OBJECT(paned->start_child), fn, &start_child_min_height);
+            }
+          }
 
-          gdl_gtk_paned_calc_position (paned, MAX (1, height - handle_size), start_child_height, end_child_height);
+          gdl_gtk_paned_calc_position (paned, MAX (1, height - handle_size), start_child_min_height, end_child_min_height, start_child_natural_height, end_child_natural_height, handle_size);
 
           handle_allocation = (GdkRectangle){
             0,
@@ -1771,14 +1693,8 @@ gdl_gtk_paned_size_allocate (GtkWidget *widget, int width, int height, int basel
           end_child_allocation.y = start_child_allocation.y + paned->start_child_size + handle_size;
           end_child_allocation.height = MAX (1, height - end_child_allocation.y);
 
-          if (start_child_height > start_child_allocation.height)
-            {
-              start_child_allocation.y -= start_child_height - start_child_allocation.height;
-              start_child_allocation.height = start_child_height;
-            }
-
-          if (end_child_height > end_child_allocation.height)
-            end_child_allocation.height = end_child_height;
+          if (end_child_min_height > end_child_allocation.height)
+            end_child_allocation.height = end_child_min_height;
         }
 
       gtk_widget_set_child_visible (paned->handle_widget, TRUE);
@@ -2019,6 +1935,7 @@ gdl_gtk_paned_get_resize_start_child (GdlGtkPaned *paned)
  *
  * Sets whether the [property@Gtk.Paned:start-child] can shrink.
  */
+#if 0
 void
 gdl_gtk_paned_set_shrink_start_child (GdlGtkPaned *paned, gboolean shrink)
 {
@@ -2031,6 +1948,7 @@ gdl_gtk_paned_set_shrink_start_child (GdlGtkPaned *paned, gboolean shrink)
 
   g_object_notify (G_OBJECT (paned), "shrink-start-child");
 }
+#endif
 
 /**
  * gdl_gtk_paned_get_shrink_start_child: (attributes org.gtk.Method.get_property=shrink-start-child)
@@ -2245,10 +2163,7 @@ gdl_gtk_paned_set_position (GdlGtkPaned *paned, int position)
 }
 
 static void
-gdl_gtk_paned_calc_position (GdlGtkPaned *paned,
-                         int       allocation,
-                         int       start_child_req,
-                         int       end_child_req)
+gdl_gtk_paned_calc_position (GdlGtkPaned *paned, int allocation, int start_child_min, int end_child_min, int start_child_req, int end_child_nat, int handle_size)
 {
   int old_position;
   int old_min_position;
@@ -2259,7 +2174,7 @@ gdl_gtk_paned_calc_position (GdlGtkPaned *paned,
   old_max_position = paned->max_position;
 
   gdl_gtk_paned_compute_position (paned,
-                              allocation, start_child_req, end_child_req,
+                              allocation, start_child_req, end_child_nat, start_child_min, end_child_min, handle_size,
                               &paned->min_position, &paned->max_position,
                               &paned->start_child_size);
 
@@ -2852,48 +2767,4 @@ gdl_gtk_paned_toggle_handle_focus (GdlGtkPaned *paned)
     gdl_gtk_paned_accept_position (paned);
 
   return FALSE;
-}
-
-/**
- * gdl_gtk_paned_set_wide_handle: (attributes org.gtk.Method.set_property=wide-handle)
- * @paned: a `GdlGtkPaned`
- * @wide: the new value for the [property@Gtk.Paned:wide-handle] property
- *
- * Sets whether the separator should be wide.
- */
-#if 0
-void
-gdl_gtk_paned_set_wide_handle (GdlGtkPaned *paned, gboolean wide)
-{
-  gboolean old_wide;
-
-  g_return_if_fail (GDL_IS_GTK_PANED (paned));
-
-  old_wide = gdl_gtk_paned_get_wide_handle (paned);
-  if (old_wide != wide)
-    {
-      if (wide)
-        gtk_widget_add_css_class (paned->handle_widget, "wide");
-      else
-        gtk_widget_remove_css_class (paned->handle_widget, "wide");
-
-      g_object_notify_by_pspec (G_OBJECT (paned), paned_props[PROP_WIDE_HANDLE]);
-    }
-}
-#endif
-
-/**
- * gdl_gtk_paned_get_wide_handle: (attributes org.gtk.Method.get_property=wide-handle)
- * @paned: a `GdlGtkPaned`
- *
- * Gets whether the separator should be wide.
- *
- * Returns: %TRUE if the paned should have a wide handle
- */
-gboolean
-gdl_gtk_paned_get_wide_handle (GdlGtkPaned *paned)
-{
-  g_return_val_if_fail (GDL_IS_GTK_PANED (paned), FALSE);
-
-  return gtk_widget_has_css_class (paned->handle_widget, "wide");
 }

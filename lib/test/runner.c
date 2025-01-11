@@ -47,11 +47,15 @@ main (int argc, char* argv[])
 
 	dbg(2, "n_tests=%i", TEST.n_tests);
 
-	gboolean fn(gpointer user_data) { next_test(); return G_SOURCE_REMOVE; }
+	gboolean fn (gpointer user_data) { next_test(); return G_SOURCE_REMOVE; }
 
 	g_idle_add(fn, NULL);
 
-	g_main_loop_run (g_main_loop_new (NULL, 0));
+	if (g_application_get_default()) {
+		g_application_run (G_APPLICATION (g_application_get_default()), argc, argv);
+	} else {
+		g_main_loop_run (g_main_loop_new (NULL, 0));
+	}
 
 	exit(1);
 }
@@ -239,3 +243,27 @@ find_widget_by_name (GtkWidget* root, const char* name)
 	return result;
 }
 
+
+GtkWidget*
+find_widget_by_type (GtkWidget* root, GType type)
+{
+	GtkWidget* result = NULL;
+
+	void find (GtkWidget* widget, GtkWidget** result)
+	{
+		GtkWidget* child = gtk_widget_get_first_child (widget);
+		for (; child; child = gtk_widget_get_next_sibling (child)) {
+			if (G_TYPE_CHECK_INSTANCE_TYPE((child), type)) {
+				*result = child;
+				break;
+			}
+			find(child, result);
+
+			if (*result) break;
+		}
+	}
+
+	find (root, &result);
+
+	return result;
+}

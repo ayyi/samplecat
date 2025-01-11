@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
- | copyright (C) 2016-2023 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2016-2024 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -36,7 +36,6 @@ static AGlActorClass actor_class = {0, "Panel", (AGlActorNew*)panel_view, panel_
 static int instance_count = 0;
 static AGliPt origin = {0,};
 static AGliPt mouse = {0,};
-static char* font = NULL;
 
 extern AGlMaterialClass ring_material_class;
 static AGlMaterial* ring_material = NULL;
@@ -56,9 +55,6 @@ _init ()
 {
 	if (!agl) {
 		agl = agl_get_instance();
-
-		font = g_strdup_printf("%s 10", APP_STYLE.font);
-		agl_set_font_string(font); // initialise the pango context
 
 		ring_material = ring_new();
 	}
@@ -87,7 +83,7 @@ panel_view (gpointer _)
 		agl_rect_((AGlRect){0, 0, agl_actor__width(actor), agl_actor__height(actor)});
 #endif
 
-		if(panel->title){
+		if (panel->title) {
 			IconMaterial* icon = (IconMaterial*)ring_material;
 
 			icon->chr = panel->title[0];
@@ -96,45 +92,45 @@ panel_view (gpointer _)
 
 			ring_material_class.render(ring_material);
 
-			agl_set_font_string(font);
+			agl_set_font_string((char*)STYLE.font);
 			agl_print(24, 0, 0, 0x777777ff, panel->title);
 		}
 
-		if(actor_context.grabbed == actor){
+		if (actor_context.grabbed == actor) {
 
 			AGliPt offset = {mouse.x - origin.x, mouse.y - origin.y};
-			if(ABS(offset.x) > 1 || ABS(offset.y) > 1){
+			if (ABS(offset.x) > 1 || ABS(offset.y) > 1) {
 				PLAIN_COLOUR2 (agl->shaders.plain) = 0x6677ff77;
 				agl_use_program (agl->shaders.plain);
 				agl_box (1, offset.x, offset.y, agl_actor__width(actor), agl_actor__height(actor));
 
 				// show drop point
 				AGliPt position2 = {(int)actor->region.x1 + offset.x, (int)actor->region.y1 + offset.y};
-				if(position2.y > -1){
+				if (position2.y > -1) {
 					AGlActor* picked = agl_actor__pick(actor, mouse);
 
 					if(picked){
 						OverlayView* overlay = (OverlayView*)agl_actor__find_by_class((AGlActor*)actor->root, overlay_view_get_class());
-						if(!overlay)
+						if (!overlay)
 							overlay = (OverlayView*)overlay_view (actor->root);
 
 						AGlActor* dock = NULL;
 						AGlActor* insert_at = NULL;
 						AGliPt dock_offset = {-1, -1};
 						get_drop_location(actor, picked, &dock, &dock_offset, &insert_at);
-						if(dock && insert_at){
+						if (dock && insert_at) {
 							overlay_set_insert_pos(overlay, (AGliRegion){
 								dock_offset.x + insert_at->region.x1,
 								dock_offset.y + insert_at->region.y1,
 								dock_offset.x + insert_at->region.x1 + agl_actor__width(insert_at),
 								dock_offset.y + insert_at->region.y1 + agl_actor__height(insert_at)
 							});
-						}else{
+						} else {
 							overlay_set_insert_pos(overlay, (AGliRegion){-1000, -1000, -1000, -1000});
 						}
 					}
 				}
-			}else{
+			} else {
 				PLAIN_COLOUR2 (agl->shaders.plain) = 0x6677ff33;
 				agl_use_program (agl->shaders.plain);
 				agl_rect (0, 0, agl_actor__width(actor), PANEL_DRAG_HANDLE_HEIGHT);
@@ -148,7 +144,7 @@ panel_view (gpointer _)
 	{
 		PanelView* panel = (PanelView*)actor;
 
-		if(panel->title){
+		if (panel->title) {
 			panel->layout = pango_layout_new (agl_pango_get_context());
 			char text[2] = {panel->title[0], 0};
 			pango_layout_set_text(panel->layout, text, -1);
@@ -164,7 +160,7 @@ panel_view (gpointer _)
 		}
 	}
 
-	void panel_set_size (AGlActor* actor)
+	void panel_layout (AGlActor* actor)
 	{
 		PanelView* panel = (PanelView*)actor;
 
@@ -241,7 +237,7 @@ panel_view (gpointer _)
 			.class = &actor_class,
 			.init = panel_init,
 			.paint = panel_paint,
-			.set_size = panel_set_size,
+			.set_size = panel_layout,
 			.on_event = panel_event,
 		},
 		.size_req = {
@@ -297,7 +293,7 @@ get_drop_location (AGlActor* actor, AGlActor* picked, AGlActor** dock, AGliPt* d
 				.mouse = {offset2.x + mouse.x, offset2.y + mouse.y}
 			};
 			int position_in_dock = abs.mouse.y - dock_offset.y;
-			for (GList* l = ((DockVView*)*dock)->panels; l; l = l->next) {
+			for (GList* l = (*dock)->children; l; l = l->next) {
 				AGlActor* a = l->data;
 				if (position_in_dock < (int)(a->region.y1 + agl_actor__height(a)) - MIN(40, (int)(agl_actor__height(a) / 2))) {
 					if (a != actor){

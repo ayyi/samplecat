@@ -1,0 +1,22 @@
+#!/bin/sh
+
+here=`dirname "$0"`
+
+suppression_dir=$here/../../test/suppressions
+
+export G_SLICE=always-malloc
+export G_DEBUG=gc-friendly
+
+gen='--gen-suppressions=all'
+gen='--gen-suppressions=yes'
+
+/usr/bin/valgrind \
+	--leak-check=full \
+	$gen \
+	--log-fd=2 \
+	--suppressions=$suppression_dir/mesa.supp \
+	--suppressions=$suppression_dir/glib.supp \
+	--suppressions=$suppression_dir/pango.supp \
+	--suppressions=$suppression_dir/fm.supp \
+	--num-callers=50 \
+	$@ $here/test/dock

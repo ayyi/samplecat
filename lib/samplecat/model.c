@@ -90,10 +90,18 @@ enum  {
 };
 static void     samplecat_idle_finalize   (SamplecatIdle* obj);
 
+enum  {
+	SAMPLECAT_MODEL_0_PROPERTY,
+	SAMPLECAT_MODEL_SELECTION_PROPERTY,
+	SAMPLECAT_MODEL_NUM_PROPERTIES
+};
+static GParamSpec* samplecat_model_properties[SAMPLECAT_MODEL_NUM_PROPERTIES];
+
 G_DEFINE_TYPE_WITH_PRIVATE (SamplecatModel, samplecat_model, G_TYPE_OBJECT)
 enum  {
 	SAMPLECAT_MODEL_DUMMY_PROPERTY
 };
+
 static gboolean samplecat_model_queue_selection_changed (gpointer);
 static void     g_cclosure_user_marshal_VOID__POINTER_INT_POINTER (GClosure*, GValue* return_value, guint n_param_values, const GValue* param_values, gpointer invocation_hint, gpointer marshal_data);
 static GObject* samplecat_model_constructor (GType type, guint n_construct_properties, GObjectConstructParam*);
@@ -478,8 +486,10 @@ samplecat_model_queue_selection_changed (gpointer _self)
 	g_return_val_if_fail (self != NULL, FALSE);
 
 	self->priv->selection_change_timeout = 0;
-	g_signal_emit_by_name (self, "selection-changed", self->selection);
-	return FALSE;
+	//g_signal_emit_by_name (self, "selection-changed", self->selection);
+	g_object_notify_by_pspec ((GObject *) self, samplecat_model_properties[SAMPLECAT_MODEL_SELECTION_PROPERTY]);
+
+	return G_SOURCE_REMOVE;
 }
 
 
@@ -775,6 +785,18 @@ g_cclosure_user_marshal_VOID__POINTER_INT_POINTER (GClosure* closure, GValue* re
 }
 
 
+static void
+samplecat_model_get_property (GObject* object, guint property_id, GValue* value, GParamSpec* pspec)
+{
+}
+
+
+static void
+samplecat_model_set_property (GObject* object, guint property_id, const GValue* value, GParamSpec* pspec)
+{
+}
+
+
 static GObject*
 samplecat_model_constructor (GType type, guint n_construct_properties, GObjectConstructParam* construct_properties)
 {
@@ -791,6 +813,13 @@ samplecat_model_class_init (SamplecatModelClass* klass)
 
 	G_OBJECT_CLASS (klass)->constructor = samplecat_model_constructor;
 	G_OBJECT_CLASS (klass)->finalize = samplecat_model_finalize;
+	G_OBJECT_CLASS (klass)->get_property = samplecat_model_get_property;
+	G_OBJECT_CLASS (klass)->set_property = samplecat_model_set_property;
+
+	g_object_class_install_property (G_OBJECT_CLASS (klass),
+		SAMPLECAT_MODEL_SELECTION_PROPERTY,
+		samplecat_model_properties[SAMPLECAT_MODEL_SELECTION_PROPERTY] = g_param_spec_pointer ("selection", "selection", "selection", G_PARAM_STATIC_STRINGS | G_PARAM_READABLE | G_PARAM_WRITABLE)
+	);
 
 	g_signal_new ("dir_list_changed", SAMPLECAT_TYPE_MODEL, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_VOID__VOID, G_TYPE_NONE, 0);
 	g_signal_new ("selection_changed", SAMPLECAT_TYPE_MODEL, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_VOID__POINTER, G_TYPE_NONE, 1, G_TYPE_POINTER);

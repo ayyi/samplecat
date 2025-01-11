@@ -5,8 +5,9 @@ extern int indent;
 extern int gdl_debug;
 
 #ifdef DEBUG
-#define ENTER {indent++;}
-#define LEAVE {indent--; indent = MAX(indent, 0); }
+#define ENTER \
+	g_auto(Enter) enter; \
+	{ indent++; }
 #define cdbg(A, B, ...) \
 	{ \
 		{ \
@@ -16,11 +17,18 @@ extern int gdl_debug;
 		} \
 		gdl_debug_printf(__func__, A, B, ##__VA_ARGS__); \
 	}
+
+typedef int Enter;
+void leave(int*);
+G_DEFINE_AUTO_CLEANUP_CLEAR_FUNC(Enter, leave)
+
 #else
-#define ENTER
-#define LEAVE
-#define cdbg(A, B, ...)
+# define ENTER
+# define cdbg(A, B, ...)
 #endif
 
+#ifdef DEBUG
 void gdl_debug_printf (const char* func, int level, const char* format, ...);
 void gdl_dock_print   (GdlDockMaster*);
+const char* gdl_dock_object_id (GdlDockObject*);
+#endif

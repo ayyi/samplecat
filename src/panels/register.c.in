@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of the Ayyi project. https://www.ayyi.org          |
- | copyright (C) 2004-2024 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2004-2025 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -21,8 +21,6 @@ extern NewPanelFn
 	waveform_panel_new
 #endif
 	;
-
-ShowPanelFn player_control_on_show_hide;
 
 #ifdef USE_OPENGL
 ShowPanelFn show_waveform;
@@ -52,7 +50,7 @@ Panel panels[] = {
    {"Inspector",   },
    {"Directories", dir_panel_new},
    {"Filemanager", fileview_new},
-   {"Player",      player_control_new, player_control_on_show_hide},
+   {"Player",      player_control_new},
 #ifdef USE_OPENGL
    {"Waveform",    waveform_panel_new, show_waveform},
 #endif

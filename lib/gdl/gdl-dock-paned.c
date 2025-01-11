@@ -319,8 +319,6 @@ gdl_dock_paned_add (GdlDockPaned *container, GtkWidget *widget)
 
 	if (pos != GDL_DOCK_NONE)
 		gdl_dock_object_dock (GDL_DOCK_OBJECT (container), GDL_DOCK_OBJECT (widget), pos, NULL);
-
-	LEAVE;
 }
 
 void
@@ -376,8 +374,10 @@ gdl_dock_paned_dock_request (GdlDockObject *object, gint x, gint y, GdlDockReque
     GdlDockItem* item = GDL_DOCK_ITEM (object);
 
     /* Get item's allocation. */
-    GtkAllocation alloc;
-    gtk_widget_get_allocation (GTK_WIDGET (object), &alloc);
+	graphene_rect_t alloc;
+#pragma GCC diagnostic ignored "-Wunused-result"
+	gtk_widget_compute_bounds(GTK_WIDGET(object), GTK_WIDGET(gtk_widget_get_root(GTK_WIDGET(object))), &alloc);
+#pragma GCC diagnostic warning "-Wunused-result"
 #ifdef GTK4_TODO
     guint bw = gtk_container_get_border_width (GTK_CONTAINER (object));
 #else
@@ -385,14 +385,14 @@ gdl_dock_paned_dock_request (GdlDockObject *object, gint x, gint y, GdlDockReque
 #endif
 
 	/* Get coordinates relative to our window. */
-	gint rel_x = x - alloc.x;
-	gint rel_y = y - alloc.y;
+	gint rel_x = x - alloc.origin.x;
+	gint rel_y = y - alloc.origin.y;
 
 	GdlDockRequest my_request = request ? *request : (GdlDockRequest){0,};
 
 	/* Check if coordinates are inside the widget. */
-	if (rel_x > 0 && rel_x < alloc.width &&
-		rel_y > 0 && rel_y < alloc.height) {
+	if (rel_x > 0 && rel_x < alloc.size.width &&
+		rel_y > 0 && rel_y < alloc.size.height) {
 		GtkRequisition my, other;
 		gint divider = -1;
 
@@ -403,7 +403,7 @@ gdl_dock_paned_dock_request (GdlDockObject *object, gint x, gint y, GdlDockReque
 		may_dock = TRUE;
 
 		/* Set docking indicator rectangle to the widget size. */
-		my_request.rect = (graphene_rect_t){ .origin = {bw, bw}, .size = {alloc.width - 2 * bw, alloc.height - 2 * bw} };
+		my_request.rect = (graphene_rect_t){ .origin = {bw, bw}, .size = {alloc.size.width - 2 * bw, alloc.size.height - 2 * bw} };
 
         my_request.target = object;
 
@@ -412,7 +412,7 @@ gdl_dock_paned_dock_request (GdlDockObject *object, gint x, gint y, GdlDockReque
             my_request.position = GDL_DOCK_LEFT;
             my_request.rect.size.width *= SPLIT_RATIO;
             divider = other.width;
-        } else if (rel_x > alloc.width - bw) {
+        } else if (rel_x > alloc.size.width - bw) {
             my_request.position = GDL_DOCK_RIGHT;
             my_request.rect.origin.x += my_request.rect.size.width * (1 - SPLIT_RATIO);
             my_request.rect.size.width *= SPLIT_RATIO;
@@ -421,7 +421,7 @@ gdl_dock_paned_dock_request (GdlDockObject *object, gint x, gint y, GdlDockReque
             my_request.position = GDL_DOCK_TOP;
             my_request.rect.size.height *= SPLIT_RATIO;
             divider = other.height;
-        } else if (rel_y > alloc.height - bw) {
+        } else if (rel_y > alloc.size.height - bw) {
             my_request.position = GDL_DOCK_BOTTOM;
             my_request.rect.origin.y += my_request.rect.size.height * (1 - SPLIT_RATIO);
             my_request.rect.size.height *= SPLIT_RATIO;
@@ -454,7 +454,7 @@ gdl_dock_paned_dock_request (GdlDockObject *object, gint x, gint y, GdlDockReque
                    or left/right */
                 may_dock = TRUE;
                 if (gdl_dock_item_get_orientation (item) == GTK_ORIENTATION_HORIZONTAL) {
-                    if (rel_y < alloc.height / 2) {
+                    if (rel_y < alloc.size.height / 2) {
                         my_request.position = GDL_DOCK_TOP;
                         my_request.rect.size.height *= SPLIT_RATIO;
                         divider = other.height;
@@ -465,7 +465,7 @@ gdl_dock_paned_dock_request (GdlDockObject *object, gint x, gint y, GdlDockReque
                         divider = MAX (0, my.height - other.height);
                     }
                 } else {
-                    if (rel_x < alloc.width / 2) {
+                    if (rel_x < alloc.size.width / 2) {
                         my_request.position = GDL_DOCK_LEFT;
                         my_request.rect.size.width *= SPLIT_RATIO;
                         divider = other.width;
@@ -487,10 +487,9 @@ gdl_dock_paned_dock_request (GdlDockObject *object, gint x, gint y, GdlDockReque
         }
 
         if (may_dock) {
-            /* adjust returned coordinates so they are relative to
-               our allocation */
-            my_request.rect.origin.x += alloc.x;
-            my_request.rect.origin.y += alloc.y;
+            /* adjust returned coordinates so they are relative to our allocation */
+            my_request.rect.origin.x += alloc.origin.x;
+            my_request.rect.origin.y += alloc.origin.y;
         }
     }
 
@@ -551,8 +550,6 @@ gdl_dock_paned_dock (GdlDockObject *object, GdlDockObject *requestor, GdlDockPla
         if (gtk_widget_get_visible (GTK_WIDGET (requestor)))
             gdl_dock_item_show_grip (GDL_DOCK_ITEM (requestor));
     }
-
-	LEAVE;
 }
 
 static void

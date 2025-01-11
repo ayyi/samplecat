@@ -17,6 +17,7 @@
 #include "file_manager/support.h" // to_utf8()
 #include "agl/behaviours/scrollable.h"
 #include "agl/fbo.h"
+#include "utils/behaviour_subject.h"
 #include "samplecat/support.h"
 #include "application.h"
 #include "views/inspector.h"
@@ -66,7 +67,7 @@ inspector_view (gpointer _)
 
 		int row = 0;
 
-		if(!sample) return true;
+		if (!sample) return true;
 
 #ifndef INSPECTOR_RENDER_CACHE
 		agl_enable_stencil(0, row_height * view->scroll_offset, actor->region.x2, agl_actor__height(actor));
@@ -117,7 +118,7 @@ inspector_view (gpointer _)
 #else
 		int r = view->scroll_offset;
 #endif
-		for(;r<G_N_ELEMENTS(rows);r++){
+		for (;r<G_N_ELEMENTS(rows);r++) {
 			PRINT_ROW(rows[r].name, rows[r].val);
 		}
 
@@ -166,16 +167,19 @@ inspector_view (gpointer _)
 		}
 	);
 
-	void inspector_on_selection_change (SamplecatModel* m, Sample* sample, gpointer actor)
+	void inspector_on_selection_change (SamplecatModel* m, GParamSpec* pspec, gpointer actor)
 	{
 		InspectorView* inspector = actor;
+		Sample* sample = m->selection;
+
 		dbg(1, "sample=%s", sample->name);
-		if(inspector->sample) sample_unref(inspector->sample);
-		inspector->sample = sample_ref(sample);
+		if (inspector->sample) sample_unref(inspector->sample);
+		inspector->sample = sample ? sample_ref(sample) : NULL;
 		inspector->cache.n_rows = 13; // TODO really count the number of rows needed for this sample
+
 		agl_actor__invalidate(actor);
 	}
-	g_signal_connect((gpointer)samplecat.model, "selection-changed", G_CALLBACK(inspector_on_selection_change), view);
+	behaviour_subject_connect ((GObject*)samplecat.model, "selection", (void*)inspector_on_selection_change, view);
 
 	return (AGlActor*)view;
 }
@@ -184,7 +188,7 @@ inspector_view (gpointer _)
 static void
 inspector_free (AGlActor* actor)
 {
-	if(!--instance_count){
+	if (!--instance_count) {
 	}
 
 	g_free(actor);

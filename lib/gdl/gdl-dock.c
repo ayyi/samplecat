@@ -899,7 +899,6 @@ gdl_dock_dock (GdlDockObject *object, GdlDockObject *requestor, GdlDockPlacement
         }
         gdl_dock_set_title (dock);
     }
-	LEAVE;
 }
 
 #ifdef GTK4_TODO
@@ -1140,7 +1139,6 @@ gdl_dock_find_best_placement_item (GdlDockItem *dock_item, GdlDockPlacement plac
     } else {
         g_warning ("%s: unexpected GdlDockItem type: %s", __func__, G_OBJECT_TYPE_NAME(dock_item));
     }
-	LEAVE;
 	return ret_item;
 }
 
@@ -1203,7 +1201,6 @@ gdl_dock_add_item (GdlDock *dock, GdlDockItem *item, GdlDockPlacement placement)
             gdl_dock_object_dock (GDL_DOCK_OBJECT (dock), GDL_DOCK_OBJECT (item), placement, NULL);
         }
     }
-	LEAVE;
 }
 
 /**

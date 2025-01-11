@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of the Ayyi project. https://www.ayyi.org          |
- | copyright (C) 2004-2023 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2004-2025 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -142,7 +142,7 @@ yaml_add_key_value_pair_pt (const char* key, AGliPt* pt)
 	gpointer tag = NULL;
 	EMIT(SEQUENCE_START_EVENT_INIT(event, anchor, tag, /*PLAIN_IMPLICIT*/TRUE, /*node->data.sequence.style*/YAML_FLOW_SEQUENCE_STYLE, mark, mark));
 
-	int i; for(i=0;i<2;i++){
+	for (int i=0;i<2;i++) {
 		snprintf(value, 15, "%i", i ? pt->y : pt->x);
 		EMIT(yaml_scalar_event_initialize(&event, NULL, str_tag, (guchar*)value, -1, 1, 0, YAML_ANY_SCALAR_STYLE));
 	}

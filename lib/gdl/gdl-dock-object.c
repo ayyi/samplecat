@@ -610,8 +610,6 @@ gdl_dock_object_real_reduce (GdlDockObject *object)
             gdl_dock_object_thaw (parent);
     }
     g_list_free (children);
-
-	LEAVE;
 }
 
 static void
@@ -684,7 +682,6 @@ gdl_dock_object_detach (GdlDockObject *object, gboolean recursive)
     gdl_dock_object_freeze (object);
     g_signal_emit (object, gdl_dock_object_signals [DETACH], 0, recursive);
     gdl_dock_object_thaw (object);
-	LEAVE;
 }
 
 void
@@ -712,7 +709,6 @@ gdl_dock_object_add_child (GdlDockObject* object, GtkWidget* child)
 		gdl_dock_add (GDL_DOCK (object), child);
 		gtk_widget_insert_before (child, GTK_WIDGET (object), NULL);
 	}
-	LEAVE;
 }
 
 void
@@ -732,8 +728,6 @@ gdl_dock_object_remove_child (GdlDockObject* object, GtkWidget* child)
 		gtk_widget_unparent(child);
 		gdl_dock_remove (GDL_DOCK (object), child);
 	}
-
-	LEAVE;
 }
 
 /**
@@ -956,8 +950,6 @@ gdl_dock_object_dock (GdlDockObject *object, GdlDockObject *requestor, GdlDockPl
         g_object_unref (parent);
     }
     gdl_dock_object_update_parent_visibility (GDL_DOCK_OBJECT (requestor));
-
-	LEAVE;
 }
 
 /**

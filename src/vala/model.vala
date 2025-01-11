@@ -1,14 +1,15 @@
-/**
-* +----------------------------------------------------------------------+
-* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2015 Tim Orford <tim@orford.org>                  |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-*
-*/
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
+ | copyright (C) 2007-2025 Tim Orford <tim@orford.org>                  |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
+ */
+
 using Config;
 using GLib;
 using Gtk;
@@ -79,7 +80,6 @@ public class Model : GLib.Object
 	public GLib.List<char*> backends;
 	public Filters filters;
 	public GLib.List<Filter*> filters_;
-	public Sample* selection;
 
 	private Idle idle;
 	private Idle sample_changed_idle;
@@ -91,11 +91,13 @@ public class Model : GLib.Object
 	public signal void selection_changed(Sample* sample);
 	public signal void sample_changed(Sample* sample, int what, void* data);
 
+	public Sample* selection { get; set; }
+
 	construct
 	{
 	}
 
-	public Model()
+	public Model ()
 	{
 		state = 1; //dummy
 		cache_dir = Path.build_filename(Environment.get_home_dir(), ".config", PACKAGE, "cache", null);
@@ -115,33 +117,32 @@ public class Model : GLib.Object
 		});
 	}
 
-	public bool add()
+	public bool add ()
 	{
-		// TODO actually add something
-
 		idle.queue();
 
 		return true;
 	}
 
-	public bool remove(int id)
+	public bool remove (int id)
 	{
 		idle.queue();
 
 		return Backend.remove(id);
 	}
 
-	public void set_search_dir(char* dir)
+	public void set_search_dir (char* dir)
 	{
 		//if string is empty, all directories are shown
 
 		filters.dir->set_value(dir);
 	}
 
-	public void set_selection(Sample* sample)
+	/*
+	public void set_selection (Sample* sample)
 	{
-		if(sample != selection){
-			if((bool)selection) selection->unref();
+		if (sample != selection) {
+			if ((bool)selection) selection->unref();
 
 			selection = (owned) sample;
 			selection->ref();
@@ -150,8 +151,9 @@ public class Model : GLib.Object
 			selection_change_timeout = GLib.Timeout.add(250, queue_selection_changed);
 		}
 	}
+	*/
 
-	private bool queue_selection_changed()
+	private bool queue_selection_changed ()
 	{
 		selection_change_timeout = 0;
 		selection_changed(selection);
@@ -161,7 +163,7 @@ public class Model : GLib.Object
 	private void queue_sample_changed(Sample* sample, int prop, void* val)
 	{
 		foreach (SampleChange* change in modified) {
-			if(change.sample == sample){
+			if (change.sample == sample) {
 				// when merging multiple change signals it is not possible to specify the change type
 				change.prop = -1;
 				change.val = null;
@@ -179,19 +181,19 @@ public class Model : GLib.Object
 		filters_.prepend(filter);
 	}
 
-	public void refresh_sample(Sample* sample, bool force_update)
+	public void refresh_sample (Sample* sample, bool force_update)
 	{
 		bool online = sample->online;
 
 		time_t mtime = file_mtime(sample->full_path);
-		if(mtime > 0){
+		if (mtime > 0) {
 			if (sample->mtime < mtime || force_update) {
 				/* file may have changed - FULL UPDATE */
 				//dbg(0, "file modified: full update: %s", sample->full_path);
 
 				// re-check mime-type
 				Sample test = new Sample.from_filename(sample->full_path);
-				if(!(bool)test) return;
+				if (!(bool)test) return;
 
 				if (sample->get_file_info()) {
 					sample->mtime = mtime;

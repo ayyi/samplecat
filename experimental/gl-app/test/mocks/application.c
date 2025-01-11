@@ -1,14 +1,12 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
- | copyright (C) 2007-2024 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2007-2025 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
  | as published by the Free Software Foundation.                        |
  +----------------------------------------------------------------------+
- |
- | This file is partially based on vala/application.vala but is manually synced.
  |
  */
 
@@ -18,11 +16,9 @@
 #include "support.h"
 #include "model.h"
 #include "db/db.h"
-#include "samplecat/samplecat.h"
-#include "player/player.h"
-#include "list_store.h"
+#include "samplecat.h"
 #include "behaviours/panel.h"
-#include "views/dock_v.h"
+#include "views/panel.h"
 #include "views/context_menu.h"
 #include "application.h"
 
@@ -47,9 +43,6 @@ application_construct (GType object_type)
 {
 	Application* app = g_object_new (object_type, NULL);
 	app->config_ctx.filename = g_strdup_printf("%s/.config/" PACKAGE "/" PACKAGE, g_get_home_dir());
-
-	//app->cache_dir = g_build_filename (g_get_home_dir(), ".config", PACKAGE, "cache", NULL);
-	//app->configctx.dir = g_build_filename (g_get_home_dir(), ".config", PACKAGE, NULL);
 
 	return app;
 }
@@ -81,21 +74,6 @@ application_new ()
 		agl_observable_subscribe_with_state (samplecat.model->filters3[i], on_filter_changed, NULL);
 	}
 
-	/*
-	void listmodel__sample_changed (SamplecatModel* m, Sample* sample, int prop, void* val, gpointer _app)
-	{
-		samplecat_list_store_on_sample_changed((SamplecatListStore*)samplecat.store, sample, prop, val);
-	}
-	g_signal_connect((gpointer)samplecat.model, "sample-changed", G_CALLBACK(listmodel__sample_changed), app);
-
-	void log_message (GObject* o, char* message, gpointer _)
-	{
-		dbg(1, "---> %s", message);
-		statusbar_print(1, PACKAGE_NAME". Version "PACKAGE_VERSION);
-	}
-	g_signal_connect(samplecat.logger, "message", G_CALLBACK(log_message), NULL);
-	*/
-
 	return app;
 }
 
@@ -115,14 +93,7 @@ application_class_init (ApplicationClass* klass)
 	application_parent_class = g_type_class_peek_parent (klass);
 	G_OBJECT_CLASS (klass)->constructor = application_constructor;
 	G_OBJECT_CLASS (klass)->finalize = application_finalize;
-	/*
-	g_signal_new ("config_loaded", TYPE_APPLICATION, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_VOID__VOID, G_TYPE_NONE, 0);
-	g_signal_new ("icon_theme", TYPE_APPLICATION, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_VOID__STRING, G_TYPE_NONE, 1, G_TYPE_STRING);
-	g_signal_new ("on_quit", TYPE_APPLICATION, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_VOID__VOID, G_TYPE_NONE, 0);
-	g_signal_new ("theme_changed", TYPE_APPLICATION, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_VOID__VOID, G_TYPE_NONE, 0);
-	g_signal_new ("layout_changed", TYPE_APPLICATION, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_VOID__VOID, G_TYPE_NONE, 0);
-	g_signal_new ("audio_ready", TYPE_APPLICATION, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_VOID__VOID, G_TYPE_NONE, 0);
-	*/
+
 	g_signal_new ("actor-added", TYPE_APPLICATION, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_VOID__POINTER, G_TYPE_NONE, 1, G_TYPE_POINTER);
 }
 
@@ -211,88 +182,6 @@ Menu menu = {
 void
 application_menu_init ()
 {
-	void panel_select (gpointer user_data)
-	{
-		AGlActorClass* k = (AGlActorClass*)user_data;
-		AGlActor* existing = agl_actor__find_by_class((AGlActor*)app->scene, k);
-		if (existing) {
-			application_remove_panel(k);
-		} else {
-			application_add_panel(k);
-		}
-	}
-
-	bool show_icon (gpointer user_data)
-	{
-		return !!agl_actor__find_by_class((AGlActor*)app->scene, (AGlActorClass*)user_data);
-	}
-
-	typedef struct
-	{
-		int i;
-	} A;
-
-	void foreach (gpointer key, gpointer value, gpointer user_data)
-	{
-		AGlActorClass* k = (AGlActorClass*)value;
-		A* a = user_data;
-
-		for (int i = 0; i < AGL_ACTOR_N_BEHAVIOURS; i++) {
-			AGlBehaviourClass* ki = k->behaviour_classes[i];
-			if (ki == panel_get_class()) {
-				if (a->i < menu.len) {
-					menu.items[a->i] = (MenuItem){
-						(char*)key,
-						"checkmark",
-						{0,},
-						panel_select,
-						show_icon,
-						k
-					};
-					a->i++;
-				}
-			}
-		}
-	}
-	g_hash_table_foreach(agl_actor_registry, foreach, &(A){.i = 3});
-}
-
-
-void
-application_add_panel (AGlActorClass* klass)
-{
-	float height = 80;
-
-	AGlActor* parent = agl_actor__find_by_name((AGlActor*)app->scene, "Dock H");
-	if (parent) {
-		if ((parent = agl_actor__find_by_name(parent, "Left"))) {
-			AGlActor* panel = panel_view_get_class()->new(NULL);
-			panel->region.y2 = height;
-			((PanelView*)panel)->size_req.min = (AGliPt){-1, 24};
-
-			AGlActor* actor = klass->new(NULL);
-			agl_actor__add_child(panel, actor);
-
-			for (GList* l = parent->children; l; l = l->next) {
-				((AGlActor*)l->data)->region.y2 += height;
-			}
-			dock_v_add_panel((DockVView*)parent, panel);
-			agl_actor__set_size(parent);
-		}
-	}
-	else pwarn("parent not found");
-}
-
-
-void
-application_remove_panel (AGlActorClass* klass)
-{
-	AGlActor* actor = agl_actor__find_by_class((AGlActor*)app->scene, klass);
-	if (actor) {
-		actor = actor->parent;
-		agl_actor__remove_child(actor->parent, actor);
-		agl_actor__set_size(actor->parent);
-	}
 }
 
 
@@ -333,17 +222,6 @@ application_play (Sample* sample)
 	}
 
 	if (sample) dbg(1, "%s", sample->name);
-
-	if (player_play(sample)) {
-#if 0
-		if(app->play.queue)
-			statusbar_print(1, "playing 1 of %i ...", g_list_length(app->play.queue) + 1);
-		else
-			statusbar_print(1, "");
-	}else{
-		statusbar_print(1, "File not playable");
-#endif
-	}
 }
 
 
@@ -358,4 +236,3 @@ application_play_selected ()
 
 	application_play(sample);
 }
-

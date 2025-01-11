@@ -12,7 +12,6 @@
 
 #include "config.h"
 #include "agl/utils.h"
-#include "agl/actor.h"
 #include "agl/event.h"
 #include "agl/text/renderer.h"
 #include "debug/debug.h"

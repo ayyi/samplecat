@@ -200,7 +200,7 @@ tagged_entry_set_tags_from_string (DemoTaggedEntry* entry, const char* str)
 		g_signal_emit (entry, entry_signals[SIGNAL_TAG_REMOVED], 0);
 	}
 
-	gchar** split = g_strsplit(str, " ", 100);
+	gchar** split = str ? g_strsplit(str, " ", 100) : NULL;
 	if (split) {
 		{
 			// remove obsolete tag buttons

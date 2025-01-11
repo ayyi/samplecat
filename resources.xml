@@ -2,5 +2,6 @@
 <gresources>
   <gresource prefix="/samplecat">
     <file>resources/style.css</file>
+    <file>resources/dark.css</file>
   </gresource>
 </gresources>

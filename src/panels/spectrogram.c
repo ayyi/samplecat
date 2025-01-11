@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
- | copyright (C) 2007-2024 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2007-2025 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -88,12 +88,12 @@ spectrogram_area_construct (GType object_type)
 	AGlActor* node = agl_actor__add_child ((AGlActor*)area->scene, texture_node(NULL));
 	node->behaviours[0] = fullsize();
 
-	void spectrogram_area_on_selection_change (SamplecatModel* m, Sample* sample, gpointer self)
+	void spectrogram_area_on_selection_change (SamplecatModel* m, GParamSpec* pspec, gpointer self)
 	{
-		spectrogram_area_set_file ((SpectrogramArea*)self, sample->full_path);
+		spectrogram_area_set_file ((SpectrogramArea*)self, m->selection->full_path);
 	}
 
-	g_signal_connect((gpointer)samplecat.model, "selection-changed", G_CALLBACK(spectrogram_area_on_selection_change), self);
+	g_signal_connect((gpointer)samplecat.model, "notify::selection", G_CALLBACK(spectrogram_area_on_selection_change), self);
 
 	return self;
 }

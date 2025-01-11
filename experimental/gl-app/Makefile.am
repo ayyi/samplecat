@@ -1,5 +1,5 @@
 
-SUBDIRS = shaders views behaviours
+SUBDIRS = shaders views behaviours test
 
 bin_PROGRAMS = samplecat_gl
 

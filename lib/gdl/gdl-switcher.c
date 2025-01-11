@@ -986,8 +986,6 @@ gdl_switcher_add_button (GdlSwitcher *switcher, const gchar *label, const gchar 
 	gtk_widget_set_parent (button_widget, GTK_WIDGET (switcher));
 	gdl_switcher_update_lone_button_visibility (switcher);
 	gtk_widget_queue_resize (GTK_WIDGET (switcher));
-
-	LEAVE;
 }
 
 #if 0
@@ -1056,7 +1054,6 @@ gdl_switcher_insert_page (GdlSwitcher *switcher, GtkWidget *page, GtkWidget *tab
     gtk_notebook_set_tab_reorderable (notebook, page, switcher->priv->tab_reorderable);
     g_signal_handlers_unblock_by_func (notebook, gdl_switcher_page_added_cb, switcher);
 
-	LEAVE;
     return ret_position;
 }
 
