@@ -595,7 +595,7 @@ gdl_dock_item_init (GdlDockItem *item)
 	//item->priv = gdl_dock_item_get_instance_private (item);
 	item->priv = (GdlDockItemPrivate*) g_type_instance_get_private ((GTypeInstance*)item, GDL_TYPE_DOCK_ITEM);
 
-	gtk_widget_set_can_focus (GTK_WIDGET (item), TRUE);
+	gtk_widget_set_focusable (GTK_WIDGET (item), TRUE);
 	gtk_widget_set_overflow (GTK_WIDGET (item), GTK_OVERFLOW_HIDDEN);
 
 	item->child = NULL;

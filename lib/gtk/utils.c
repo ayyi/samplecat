@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
- | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
- | copyright (C) 2007-2024 Tim Orford <tim@orford.org>                  |
+ | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
+ | copyright (C) 2007-2025 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -28,9 +28,9 @@
 		}
 
 		char indent[128];
-		snprintf(indent, 127, "%%%is%%s %%s %%p %s%%s%s %%s%%s %%s\n", *depth * 3, ayyi_bold, ayyi_white);
+		snprintf(indent, 127, "%%%is%%s %%s %%p %s%%s%s %%s%%s %%s", *depth * 3, ayyi_bold, ayyi_white);
 		GParamSpec* pspec = g_object_class_find_property (G_OBJECT_GET_CLASS(widget), "long-name");
-		char* long_name = NULL;
+		g_autofree char* long_name = NULL;
 		if (pspec) {
 			g_object_get(widget, "long-name", &long_name, NULL);
 		}
@@ -43,8 +43,12 @@
 		if (!strcmp(G_OBJECT_TYPE_NAME(widget), "GtkBox"))
 			printf("%s", ayyi_blue);
 		printf(indent, " ", G_OBJECT_CLASS_NAME(G_OBJECT_GET_CLASS(widget)), gtk_widget_get_name(widget), widget, long_name ? long_name : "", size, visible, text_content);
-		printf("%s", ayyi_white);
-		if (long_name) g_free(long_name);
+
+		const char* cssname = gtk_widget_class_get_css_name (GTK_WIDGET_GET_CLASS(widget));
+		if (cssname) printf(" %s%s", ayyi_yellow, cssname);
+
+		printf("%s\n", ayyi_white);
+
 
 		if (GDL_IS_DOCK_ITEM(widget)) {
 			GtkWidget* child = ((GdlDockItem*)widget)->child;

@@ -205,7 +205,7 @@ view_details_new (AyyiFilemanager* fm)
 		gtk_widget_add_controller (GTK_WIDGET(view_details), GTK_EVENT_CONTROLLER (drag_source));
 	}
 	{
-		void listview__on_row_clicked (GtkGestureClick* gesture, int n_press, double x, double y, gpointer widget)
+		void view_details__on_row_clicked (GtkGestureClick* gesture, int n_press, double x, double y, gpointer widget)
 		{
 			//if (((ViewDetails*)widget)->filer_window->menu)
 				//gtk_menu_popup(GTK_MENU(((ViewDetails*)widget)->filer_window->menu), NULL, NULL, NULL, NULL, (ev) ? ev->button : 0, gdk_event_get_time((GdkEvent*)ev));
@@ -213,7 +213,7 @@ view_details_new (AyyiFilemanager* fm)
 		}
 
 		GtkGesture* click = gtk_gesture_click_new ();
-		g_signal_connect (click, "pressed", G_CALLBACK (listview__on_row_clicked), view_details);
+		g_signal_connect (click, "pressed", G_CALLBACK (view_details__on_row_clicked), view_details);
 		gtk_gesture_single_set_button (GTK_GESTURE_SINGLE (click), 3);
 		gtk_widget_add_controller (GTK_WIDGET(view_details), GTK_EVENT_CONTROLLER (click));
 	}

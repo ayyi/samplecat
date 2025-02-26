@@ -1,6 +1,6 @@
 /*
   copyright (C) 2006, Thomas Leonard and others (see Rox-filer changelog for details).
-  copyright (C) 2007-2023 Tim Orford <tim@orford.org>
+  copyright (C) 2007-2025 Tim Orford <tim@orford.org>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License version 3
@@ -152,7 +152,8 @@ fm__make_context_menu ()
 
 	GMenuModel* model = fm->menu.model = (GMenuModel*)g_menu_new ();
 
-	GtkWidget* menu = fm->menu.widget = gtk_popover_menu_new_from_model (model);
+	GtkWidget* menu = fm->menu.widget = popover_menu_new_from_model (model);
+	gtk_widget_set_parent (menu, fm->window);
 	gtk_popover_set_has_arrow (GTK_POPOVER(menu), false);
 	gtk_popover_set_position (GTK_POPOVER(menu), GTK_POS_LEFT);
 
@@ -227,7 +228,7 @@ fm__make_subdir_menu (AyyiFilemanager* fm, GMenuModel* model)
 				int i = 0;
 				for (GList* l=items;l;l=l->next,i++) {
 					gchar* name = l->data;
-					add_icon_menu_item2 (GTK_POPOVER_MENU(fm->menu.widget), G_MENU(model), &(MenuDef){name, "fm.go-down-dir", "inode-directory-symbolic", i});
+					add_icon_menu_item2 (POPOVER_MENU(fm->menu.widget), G_MENU(model), &(MenuDef){name, "fm.go-down-dir", "inode-directory-symbolic", i});
 					g_free(name);
 				}
 				g_list_free(items);

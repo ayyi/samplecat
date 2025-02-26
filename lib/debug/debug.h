@@ -43,6 +43,7 @@ extern char ayyi_white [12];
 extern char ayyi_red   [10];
 extern char ayyi_blue  [10];
 extern char ayyi_green [10];
+extern char ayyi_yellow[10];
 extern char ayyi_grey  [12];
 extern char ayyi_bold  [12];
 extern char ayyi_warn  [32];

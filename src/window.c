@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
- | copyright (C) 2007-2024 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2007-2025 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -137,6 +137,9 @@ const char* preferred_height = "preferred-height";
 #define LAYOUTS_DIR "layouts2"
 
 
+/*
+ *	fn takes 500ms to run
+ */
 GtkWidget*
 window_new (GtkApplication* gtk, gpointer user_data)
 {
@@ -179,11 +182,13 @@ window_new (GtkApplication* gtk, gpointer user_data)
 	window.layout->dirs[1] = g_strdup_printf("%s/samplecat/"LAYOUTS_DIR, SYSCONFDIR);
 	window.layout->dirs[2] = g_strdup_printf("%s/"LAYOUTS_DIR, cwd);
 
-	GtkWidget* dockbar = gdl_dock_bar_new(gdl_dock_object_get_master(GDL_DOCK_OBJECT(dock)));
-	gdl_dock_bar_set_style(GDL_DOCK_BAR(dockbar), GDL_DOCK_BAR_TEXT);
-
 	gtk_box_append(GTK_BOX(window.vbox), dock);
-	gtk_box_append(GTK_BOX(window.vbox), dockbar);
+
+	gtk_box_append(GTK_BOX(window.vbox), ({
+		GtkWidget* dockbar = gdl_dock_bar_new(gdl_dock_object_get_master(GDL_DOCK_OBJECT(dock)));
+		gdl_dock_bar_set_style(GDL_DOCK_BAR(dockbar), GDL_DOCK_BAR_TEXT);
+		dockbar;
+	}));
 
 #ifdef GTK4_TODO
 	dock->requisition.height = 197; // the size must be set directly. using gtk_widget_set_size_request has no imediate effect.
@@ -338,6 +343,23 @@ window_new (GtkApplication* gtk, gpointer user_data)
 		else statusbar_print(2, "");
 	}
 	worker_register(on_worker_progress);
+
+	void on_focus (GtkWindow* root, GParamSpec* pspec, GtkWidget* widget)
+	{
+		static GtkWidget* prev = NULL;
+
+		GtkWidget* focused = gtk_window_get_focus (root);
+		if (focused) {
+			GtkWidget* panel = gtk_widget_get_ancestor (GTK_WIDGET (focused), GDL_TYPE_DOCK_ITEM);
+			dbg(1, "%s %s", G_OBJECT_CLASS_NAME(G_OBJECT_GET_CLASS(focused)), panel ? G_OBJECT_CLASS_NAME(G_OBJECT_GET_CLASS(panel)) : NULL);
+			if (panel != prev) {
+				if (prev) gtk_widget_remove_css_class (prev, "focused");
+				gtk_widget_add_css_class (panel, "focused");
+				prev = panel;
+			}
+		}
+	}
+	g_signal_connect(win, "notify::focus-widget", (void*)on_focus, NULL);
 
 	return GTK_WIDGET(win);
 }

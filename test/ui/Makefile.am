@@ -50,6 +50,7 @@ ui_test_LDADD = \
 	$(XML_LIBS) \
 	$(top_srcdir)/lib/file_manager/libfilemanager.a \
 	$(top_srcdir)/lib/gtk/libgtk.la \
+	$(top_srcdir)/lib/menu/libmenu.la \
 	$(top_srcdir)/src/panels/libpanels.la \
 	$(top_srcdir)/lib/utils/libutils.a \
 	$(top_srcdir)/src/widgets/.libs/libwidgets.a \

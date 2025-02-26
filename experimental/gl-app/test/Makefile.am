@@ -42,6 +42,7 @@ AM_LDFLAGS = \
 	$(top_srcdir)/lib/waveform/lib/agl/.libs/libagl.a \
 	$(top_srcdir)/lib/debug/libdebug.a \
 	$(top_srcdir)/lib/gtk/libgtk.la \
+	$(top_srcdir)/lib/menu/libmenu.la \
 	../views/libviews.la \
 	$(GRAPHENE_LDFLAGS) \
 	$(GMODULE_LDFLAGS) \

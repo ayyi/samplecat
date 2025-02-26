@@ -53,6 +53,7 @@ samplecat_gl_LDADD = \
 	$(top_srcdir)/lib/waveform/lib/agl/.libs/libagl.a \
 	$(top_srcdir)/lib/file_manager/libfilemanager.a \
 	$(top_srcdir)/lib/gtk/libgtk.la \
+	$(top_srcdir)/lib/menu/libmenu.la \
 	$(SAMPLECAT_LIBS) \
 	$(AYYI_LIBS) \
 	$(TRACKER_LIBS) \

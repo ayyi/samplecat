@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
- | copyright (C) 2007-2024 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2007-2025 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -79,10 +79,11 @@ add_menu_items_from_defn (GtkWidget* widget, GMenuModel* model, int size, MenuDe
 				break;
 			default:
 				if (item->icon) {
-					add_icon_menu_item(GTK_POPOVER_MENU(widget), G_MENU(section[s]), item->name, item->action, item->icon);
+					add_icon_menu_item(POPOVER_MENU(widget), G_MENU(section[s]), item->name, item->action, item->icon);
 				} else {
 					if (item->target) {
 						GMenuItem* mi = g_menu_item_new (item->name, "dummy");
+						//g_menu_item_set_action_and_target (mi, item->action, "i", item->target);
 						g_menu_item_set_action_and_target_value (mi, item->action, g_variant_new_int32(item->target));
 						g_menu_append_item (G_MENU(section[s]), mi);
 						g_object_unref(mi);
@@ -100,7 +101,7 @@ add_menu_items_from_defn (GtkWidget* widget, GMenuModel* model, int size, MenuDe
 
 
 void
-add_icon_menu_item (GtkPopoverMenu* widget, GMenu* menu, const char* name, const char* action, const char* icon)
+add_icon_menu_item (PopoverMenu* widget, GMenu* menu, const char* name, const char* action, const char* icon)
 {
 	GMenuItem* mi = g_menu_item_new (name, "dummy");
 	g_menu_item_set_attribute (mi, "custom", "s", action, NULL); // connect the menu item to the action
@@ -116,32 +117,45 @@ add_icon_menu_item (GtkPopoverMenu* widget, GMenu* menu, const char* name, const
 		gtk_box_append(GTK_BOX(box), image);
 		gtk_box_append(GTK_BOX(box), gtk_label_new(name));
 	}
+#ifdef CUSTOM_MENU
+	if (!ayyi_popover_menu_add_child(AYYI_POPOVER_MENU(widget), button, action)) dbg(0, "not added %s", action);
+#else
 	if (!gtk_popover_menu_add_child(GTK_POPOVER_MENU(widget), button, action)) dbg(0, "not added %s", action);
+#endif
 }
 
 
 void
-add_icon_menu_item2 (GtkPopoverMenu* widget, GMenu* menu, MenuDef* def)
+add_icon_menu_item2 (PopoverMenu* widget, GMenu* menu, MenuDef* def)
 {
 	GMenuItem* mi = g_menu_item_new (def->name, "dummy");
 	g_menu_item_set_attribute (mi, "custom", "s", def->action, NULL); // connect the menu item to the action
 	g_menu_append_item (menu, mi);
 	g_object_unref(mi);
 
-	GtkWidget* box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
-	GtkWidget* button = gtk_button_new();
-	void activate ( GtkButton* self, gpointer user_data)
-	{
-	}
-	g_signal_connect(button, "activate", (gpointer)activate, NULL);
-	gtk_actionable_set_action_name (GTK_ACTIONABLE(button), def->action);
-	gtk_button_set_child(GTK_BUTTON(button), box);
-	{
-		GtkWidget* image = gtk_image_new_from_icon_name(def->icon);
-		gtk_box_append(GTK_BOX(box), image);
-		gtk_box_append(GTK_BOX(box), gtk_label_new(def->name));
-	}
-	if (!gtk_popover_menu_add_child(GTK_POPOVER_MENU(widget), button, def->action)) pwarn("not added %s", def->action);
+	if (!gtk_popover_menu_add_child(
+		GTK_POPOVER_MENU(widget),
+		({
+			GtkWidget* button = gtk_button_new();
+
+			void activate (GtkButton* self, gpointer user_data)
+			{
+			}
+			g_signal_connect(button, "activate", (gpointer)activate, NULL);
+			gtk_actionable_set_action_name (GTK_ACTIONABLE(button), def->action);
+
+			gtk_button_set_child(GTK_BUTTON(button), ({
+				GtkWidget* box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
+				GtkWidget* image = gtk_image_new_from_icon_name(def->icon);
+				gtk_box_append(GTK_BOX(box), image);
+				gtk_box_append(GTK_BOX(box), gtk_label_new(def->name));
+				box;
+			}));
+
+			button;
+		}),
+		def->action)
+	) pwarn("not added %s", def->action);
 }
 
 
@@ -172,7 +186,7 @@ make_menu_actions (GtkWidget* widget, Accel keys[], int count, void (*add_to_men
 		Accel* key = &keys[k];
 
 		const GVariantType* parameter_type = NULL;
-		char* name = to_kebab_case(key->name);
+		g_autofree char* name = to_kebab_case(g_strdup(key->name));
 		GSimpleAction* action = g_simple_action_new(name, parameter_type);
 		g_signal_connect (action, "activate", key->callback, key->user_data);
 		g_action_map_add_action(G_ACTION_MAP(group), G_ACTION(action));

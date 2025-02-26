@@ -85,6 +85,7 @@ samplecat_LDADD = \
 	$(top_srcdir)/lib/waveform/.libs/libwaveformui.a \
 	$(top_srcdir)/lib/waveform/lib/agl/.libs/libagl.a \
 	$(top_srcdir)/lib/gtk/.libs/libgtk.a \
+	$(top_srcdir)/lib/menu/libmenu.la \
 	$(TRACKER_LIBS) \
 	$(SQLITE_LIBS) \
 	$(MYSQL_LDFLAGS) \

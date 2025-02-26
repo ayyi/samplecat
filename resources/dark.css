@@ -134,3 +134,23 @@ entry.tagged {
 .directories treeexpander label {
 	padding-left: 4px;
 }
+
+popover > contents {
+	border-radius: 3px;
+}
+
+popover button {
+	background-image: image(rgb(255,255,255));
+}
+
+popover button:hover {
+	background-image: image(rgb(240,240,240));
+}
+
+modelbutton {
+	color: #000;
+}
+
+modelbutton:hover {
+	background-image: image(rgb(240,240,240));
+}

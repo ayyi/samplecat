@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
- | copyright (C) 2007-2024 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2007-2025 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -16,7 +16,7 @@ make_context_menu (GtkWidget* widget)
 {
 	GMenuModel* model = (GMenuModel*)g_menu_new ();
 
-	GtkWidget* menu = gtk_popover_menu_new_from_model (model);
+	GtkWidget* menu = popover_menu_new_from_model (model);
 	gtk_widget_set_parent (menu, widget);
 	gtk_popover_set_has_arrow (GTK_POPOVER(menu), false);
 	gtk_popover_set_position (GTK_POPOVER(menu), GTK_POS_LEFT);
@@ -58,7 +58,9 @@ make_context_menu (GtkWidget* widget)
 				else
 					gdl_dock_item_show_item(item);
 			} else {
-				panel->widget = panel->new();
+				panel->widget = panel->gtype
+					? g_object_new(panel->gtype, NULL)
+					: panel->new();
 				GtkWidget* dock_item = gdl_dock_item_new (panel->name, panel->name, GDL_DOCK_ITEM_BEH_LOCKED);
 				gdl_dock_object_add_child(GDL_DOCK_OBJECT(dock_item), panel->widget);
 

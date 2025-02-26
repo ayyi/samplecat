@@ -70,7 +70,7 @@ main (int argc, char** argv)
 		if (!strcmp(argv[i], "--version") || !strcmp(argv[i], "-V")) {
 			printf ("%s %s\n\n", basename(argv[0]), PACKAGE_VERSION);
 			printf(
-				"Copyright (C) 2007-2023 Tim Orford\n"
+				"Copyright (C) 2007-2025 Tim Orford\n"
 				"Copyright (C) 2011 Robin Gareus\n"
 				"This is free software; see the source for copying conditions.  There is NO\n"
 				"warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n"

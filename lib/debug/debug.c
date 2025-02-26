@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of the Ayyi project. https://www.ayyi.org          |
- | copyright (C) 2013-2024 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2013-2025 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -29,6 +29,7 @@ char ayyi_white [12] = "\x1b[0;39m";
 char ayyi_red   [10] = "\x1b[1;31m";
 char ayyi_blue  [10] = "\x1b[1;34m";
 char ayyi_green [10] = "\x1b[1;32m";
+char ayyi_yellow[10] = "\x1b[1;33m";
 char ayyi_grey  [12] = "\x1b[0;90m";
 char ayyi_warn  [32] = "\x1b[1;33mwarning:\x1b[0;39m";
 char ayyi_err   [32] = "\x1b[1;31merror\x1b[0;39m";
