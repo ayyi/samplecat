@@ -19,8 +19,7 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#ifndef __GDL_DOCK_MASTER_H__
-#define __GDL_DOCK_MASTER_H__
+#pragma once
 
 #include <glib-object.h>
 #include <gtk/gtk.h>
@@ -117,5 +116,3 @@ void           gdl_dock_master_set_controller   (GdlDockMaster *master,
 gchar         *gdl_dock_master_get_dock_name    (GdlDockMaster *master);
 
 G_END_DECLS
-
-#endif /* __GDL_DOCK_MASTER_H__ */

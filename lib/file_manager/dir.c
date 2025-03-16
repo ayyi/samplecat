@@ -110,7 +110,7 @@ static gboolean   inotify_handler       (GIOChannel* source, GIOCondition, gpoin
  ****************************************************************/
 
 void
-dir_init(void)
+dir_init (void)
 {
 	dir_cache = g_fscache_new((GFSLoadFunc) dir_new, (GFSUpdateFunc) update, NULL);
 
@@ -221,14 +221,13 @@ dir_attach (Directory* dir, DirCallback callback, gpointer data)
  *   Undo the effect of dir_attach
  */
 void
-dir_detach(Directory* dir, DirCallback callback, gpointer data)
+dir_detach (Directory* dir, DirCallback callback, gpointer data)
 {
 	g_return_if_fail(dir);
 	g_return_if_fail(callback);
 	g_return_if_fail(in_callback == 0);
 
-	GList* l = dir->users;
-	for (;l;l=l->next) {
+	for (GList* l = dir->users;l;l=l->next) {
 		DirUser* user = (DirUser*)l->data;
 		if (user->callback == callback && user->data == data) {
 			g_free(user);
@@ -243,8 +242,7 @@ dir_detach(Directory* dir, DirCallback callback, gpointer data)
 # ifdef USE_DNOTIFY
 				close(dir->notify_fd);
 # endif
-				g_hash_table_remove(notify_fd_to_dir,
-					GINT_TO_POINTER(dir->notify_fd));
+				g_hash_table_remove(notify_fd_to_dir, GINT_TO_POINTER(dir->notify_fd));
 				dir->notify_fd = -1;
 			}
 # ifdef USE_INOTIFY
@@ -263,7 +261,7 @@ dir_detach(Directory* dir, DirCallback callback, gpointer data)
 
 
 void
-dir_update(Directory* dir, gchar* pathname)
+dir_update (Directory* dir, gchar* pathname)
 {
 	update(dir, pathname, NULL);
 }
@@ -397,7 +395,7 @@ free_recheck_list(Directory* dir)
  *  If scanning state has changed then notify all filer windows
  */
 static void
-dir_set_scanning(Directory* dir, gboolean scanning)
+dir_set_scanning (Directory* dir, gboolean scanning)
 {
 	if (scanning == dir->scanning) return;
 
@@ -1097,7 +1095,7 @@ dir_rescan (Directory* dir)
 	 * list at some point in the future.
 	 * If the item is new, put a blank place-holder item in the directory.
 	 */
-	guint i; for (i = 0; i < names->len; i++) {
+	for (guint i = 0; i < names->len; i++) {
 		guchar* name = names->pdata[i];
 
 		DirItem* old = g_hash_table_lookup(dir->known_items, name);

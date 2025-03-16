@@ -15,9 +15,61 @@
 #include "debug/debug.h"
 #include "gdl/gdl-dock-item.h"
 
-#define MAX_DEPTH 14
+/*
+ *  Width-first search. Searches imediate descendants before recursing
+ */
+GtkWidget*
+find_widget_by_type_wide (GtkWidget* root, GType type)
+{
+	GtkWidget* find_in_children (GtkWidget* widget)
+	{
+		for (GtkWidget* child = gtk_widget_get_first_child(root); child; child = gtk_widget_get_next_sibling(child)) {
+			if (G_OBJECT_TYPE(child) == type) {
+				return child;
+			}
+		}
+
+		for (GtkWidget* child = gtk_widget_get_first_child(root); child; child = gtk_widget_get_next_sibling(child)) {
+			GtkWidget* target = find_in_children(child);
+			if (target) return target;
+		}
+		return NULL;
+	}
+
+	return find_in_children(root);
+}
+
+
+/*
+ *  Depth-first search
+ */
+GtkWidget*
+find_widget_by_type_deep (GtkWidget* root, GType type)
+{
+	GtkWidget* result = NULL;
+
+	void find (GtkWidget* widget, GtkWidget** result)
+	{
+		GtkWidget* child = gtk_widget_get_first_child (widget);
+		for (; child; child = gtk_widget_get_next_sibling (child)) {
+			if (G_TYPE_CHECK_INSTANCE_TYPE((child), type)) {
+				*result = child;
+				break;
+			}
+			find(child, result);
+
+			if (*result) break;
+		}
+	}
+
+	find (root, &result);
+
+	return result;
+}
+
 
 #ifdef DEBUG
+#define MAX_DEPTH 14
 	static void print_children (GtkWidget* widget, int* depth);
 
 	static void print_item (GtkWidget* widget, int* depth)
@@ -28,7 +80,7 @@
 		}
 
 		char indent[128];
-		snprintf(indent, 127, "%%%is%%s %%s %%p %s%%s%s %%s%%s %%s", *depth * 3, ayyi_bold, ayyi_white);
+		snprintf(indent, 127, "%%%is%%s %%s %%p %s%%s%s %%s%%s", *depth * 3, ayyi_bold, ayyi_white);
 		GParamSpec* pspec = g_object_class_find_property (G_OBJECT_GET_CLASS(widget), "long-name");
 		g_autofree char* long_name = NULL;
 		if (pspec) {
@@ -39,18 +91,39 @@
 		char visible[16];
 		g_strlcpy(visible, gtk_widget_get_visible(widget) ? "" : " NOT VISIBLE", 15);
 		if (!strcmp(G_OBJECT_TYPE_NAME(widget), "GdlGtkPanedHandle"))
-			printf("%s", ayyi_grey);
+			fputs(ayyi_grey, stdout);
 		if (!strcmp(G_OBJECT_TYPE_NAME(widget), "GtkBox"))
-			printf("%s", ayyi_blue);
-		printf(indent, " ", G_OBJECT_CLASS_NAME(G_OBJECT_GET_CLASS(widget)), gtk_widget_get_name(widget), widget, long_name ? long_name : "", size, visible, text_content);
+			fputs(ayyi_blue, stdout);
+		if (!strcmp(G_OBJECT_TYPE_NAME(widget), "GtkLabel"))
+			fputs(ayyi_green, stdout);
+		if (!strcmp(G_OBJECT_TYPE_NAME(widget), "GtkImage") || !strcmp(G_OBJECT_TYPE_NAME(widget), "GdlDockItemButtonImage"))
+			fputs(ayyi_pink, stdout);
+		if (!strcmp(G_OBJECT_TYPE_NAME(widget), "GtkBuiltinIcon"))
+			fputs(ayyi_pink, stdout);
+
+		if (!gtk_widget_get_width(widget) || !gtk_widget_get_height(widget))
+			fputs(ayyi_grey, stdout);
+
+		printf(indent, " ", G_OBJECT_CLASS_NAME(G_OBJECT_GET_CLASS(widget)), gtk_widget_get_name(widget), widget, long_name ? long_name : "", size, visible);
+
+		if (text_content[0]) printf(" %s%s", ayyi_bold, text_content);
 
 		const char* cssname = gtk_widget_class_get_css_name (GTK_WIDGET_GET_CLASS(widget));
 		if (cssname) printf(" %s%s", ayyi_yellow, cssname);
+		g_auto(GStrv) classes = gtk_widget_get_css_classes (widget);
+		int i = 0;
+		while (classes[i]) {
+			printf(".%s", classes[i]);
+			i++;
+		}
 
 		printf("%s\n", ayyi_white);
 
-
+#if 0 // not always linked against libgdl
 		if (GDL_IS_DOCK_ITEM(widget)) {
+#else
+		if (false) {
+#endif
 			GtkWidget* child = ((GdlDockItem*)widget)->child;
 			if (child) {
 				(*depth)++;
@@ -62,7 +135,8 @@
 			}
 		}
 		else
-			if (*depth < MAX_DEPTH) print_children(widget, depth);
+			if (*depth < MAX_DEPTH && strcmp(G_OBJECT_TYPE_NAME(widget), "IgnoreMe"))
+				print_children(widget, depth);
 	}
 
 	static void print_children (GtkWidget* widget, int* depth)

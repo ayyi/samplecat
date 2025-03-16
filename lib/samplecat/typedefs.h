@@ -71,14 +71,6 @@ typedef struct {
 typedef struct { double x1, y1, x2, y2; } DRect;
 typedef struct { int start, end; } iRange;
 
-#ifndef true
-  #define true TRUE
-#endif
-
-#ifndef false
-  #define false FALSE
-#endif
-
 #ifndef bool
   #define bool gboolean
 #endif

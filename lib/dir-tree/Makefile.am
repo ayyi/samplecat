@@ -1,16 +1,15 @@
 
 AM_CFLAGS = \
 	-DPACKAGE_DATA_DIR=\""$(datadir)"\" \
-	-DPACKAGE_LOCALE_DIR=\""$(prefix)/$(DATADIRNAME)/locale"\" \
 	-DIMAGES_DIR=\"$(imagesdir)\" \
 	-DG_LOG_DOMAIN=\"DirTree\" \
 	-I$(top_srcdir)/lib \
 	-I$(top_srcdir)/lib/waveform/lib/agl \
 	$(GTK_CFLAGS)
 
-noinst_LIBRARIES = libdirtree.a
+noinst_LTLIBRARIES = libdirtree.la
 
-libdirtree_a_SOURCES = \
+libdirtree_la_SOURCES = \
 	view_dir_tree.c view_dir_tree.h \
 	gqview.h typedefs.h \
 	ui_fileops.c ui_fileops.h \

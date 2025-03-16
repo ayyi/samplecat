@@ -124,6 +124,7 @@ samplecat_application_local_command_line (GApplication* self, gchar*** arguments
 				break;
 			case 'h':
 				printf(usage, basename((*arguments)[0]));
+				exit(0);
 				return 1;
 			case 's':
 				printf("search: %s\n", optarg);

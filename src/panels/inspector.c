@@ -20,6 +20,7 @@
 #include "debug/debug.h"
 #include "file_manager/support.h" // to_utf8()
 #include "file_manager/mimetype.h"
+#include "gdl/gdl-dock-item.h"
 #include "support.h"
 #include "model.h"
 #include "application.h"
@@ -42,14 +43,11 @@ struct _Inspector
 	GtkScrolledWindow parent;
 	InspectorPrivate* priv;
 	gboolean          show_waveform;
-	int               preferred_height;
 };
 
 struct _InspectorClass {
 	GtkScrolledWindowClass parent_class;
 };
-
-#define _gtk_tree_row_reference_free0(var) ((var == NULL) ? NULL : (var = (gtk_tree_row_reference_free (var), NULL)))
 
 #define N_EBUR_ROWS 8
 #define MARGIN_LEFT 5
@@ -142,7 +140,6 @@ inspector_init (Inspector* inspector)
 {
 	inspector->priv = inspector_get_instance_private(inspector);
 
-	inspector->preferred_height = 200;
 	inspector->show_waveform = true;
 	InspectorPrivate* i = inspector->priv;
 	i->rows.a = rows;
@@ -301,6 +298,21 @@ inspector_init (Inspector* inspector)
 
 
 static void
+inspector_dispose (GObject* obj)
+{
+	InspectorPrivate* i = INSPECTOR(obj)->priv;
+
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+	g_clear_pointer(&i->row_ref, gtk_tree_row_reference_free);
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
+
+	g_signal_handlers_disconnect_matched(G_OBJECT(samplecat.model), G_SIGNAL_MATCH_DATA, 0, 0, NULL, NULL, obj);
+
+	G_OBJECT_CLASS (inspector_parent_class)->dispose (obj);
+}
+
+
+static void
 inspector_finalize (GObject* obj)
 {
 	G_OBJECT_CLASS (inspector_parent_class)->finalize (obj);
@@ -323,6 +335,7 @@ inspector_class_init (InspectorClass * klass)
 	((GtkWidgetClass *) klass)->size_allocate = inspector_size_allocate;
 
 	G_OBJECT_CLASS (klass)->constructor = inspector_constructor;
+	G_OBJECT_CLASS (klass)->dispose = inspector_dispose;
 	G_OBJECT_CLASS (klass)->finalize = inspector_finalize;
 }
 
@@ -603,7 +616,7 @@ inspector_set_labels (Inspector* inspector, Sample* sample)
 	// *** row_ref is deprecated. use database id instead.
 	i->row_id = sample->id;
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-	_gtk_tree_row_reference_free0(i->row_ref);
+	g_clear_pointer(&i->row_ref, gtk_tree_row_reference_free);
 #pragma GCC diagnostic warning "-Wdeprecated-declarations"
 	if (sample->row_ref) {
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -633,7 +646,7 @@ inspector_update (Inspector* inspector, Sample* sample)
 
 	// forget previous inspector item
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-	_gtk_tree_row_reference_free0(i->row_ref);
+	g_clear_pointer(&i->row_ref, gtk_tree_row_reference_free);
 #pragma GCC diagnostic warning "-Wdeprecated-declarations"
 	i->row_id = 0;
 

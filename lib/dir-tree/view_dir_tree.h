@@ -11,7 +11,7 @@
 
 #pragma once
 
-#include <dir_tree/typedefs.h>
+#include <dir-tree/typedefs.h>
 
 ViewDirTree* vdtree_new                  (const gchar* path, gint expand);
 void         vdtree_free                 (ViewDirTree*);

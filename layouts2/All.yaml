@@ -1,15 +1,14 @@
 ---
 layouts:
   dock:
-    name: '__dock_1'
+    name: __dock_1
     floating: 'no'
     width: '-1'
     height: '-1'
     floatx: '0'
     floaty: '0'
     paned:
-      orientation: 'vertical'
-      locked: 'no'
+      orientation: vertical
       position: '70'
       item:
         name: 'Search'
@@ -17,15 +16,12 @@ layouts:
         locked: 'yes'
       paned:
         orientation: 'vertical'
-        locked: 'no'
         position: '301'
         paned:
           orientation: 'horizontal'
-          locked: 'no'
           position: '253'
           paned:
             orientation: 'vertical'
-            locked: 'no'
             position: '94'
             item:
               name: 'Directories'
@@ -33,19 +29,15 @@ layouts:
               locked: 'no'
             paned:
               orientation: 'vertical'
-              locked: 'no'
               position: '94'
               item:
                 name: 'Inspector'
                 orientation: 'vertical'
-                locked: 'no'
               item:
                 name: 'Player'
                 orientation: 'vertical'
-                locked: 'no'
           notebook:
             orientation: 'vertical'
-            locked: 'no'
             page: '0'
             item:
               name: 'Library'
@@ -60,11 +52,9 @@ layouts:
           locked: 'no'
           position: '134'
           item:
-            name: 'Spectrogram'
+            name: Spectrogram
             orientation: 'vertical'
-            locked: 'no'
           item:
-            name: 'Waveform'
+            name: Waveform
             orientation: 'vertical'
-            locked: 'no'
 ...

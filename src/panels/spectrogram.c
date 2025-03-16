@@ -60,15 +60,15 @@ static gpointer spectrogram_area_parent_class = NULL;
 
 GType spectrogram_area_get_type (void) G_GNUC_CONST;
 
-static void spectrogram_area_real_unrealize (GtkWidget* base);
+static void spectrogram_area_unrealize (GtkWidget* base);
 static void spectrogram_area_finalize (GObject * obj);
 static GType spectrogram_area_get_type_once (void);
 
 static void spectrogram_area_set_file (SpectrogramArea*, gchar*);
 
-struct {
+static struct {
 	GtkWidget* widget;
-} instance = {0,};
+} instance;
 
 
 static inline gpointer
@@ -107,7 +107,7 @@ spectrogram_area_new (void)
 
 
 static void
-spectrogram_area_real_unrealize (GtkWidget* base)
+spectrogram_area_unrealize (GtkWidget* base)
 {
 	SpectrogramArea* self = (SpectrogramArea*) base;
 	GTK_WIDGET_CLASS (spectrogram_area_parent_class)->unrealize ((GtkWidget*) G_TYPE_CHECK_INSTANCE_CAST (self, AGL_TYPE_GTK_AREA, AGlGtkArea));
@@ -115,11 +115,23 @@ spectrogram_area_real_unrealize (GtkWidget* base)
 
 
 static void
+spectrogram_area_dispose (GObject* gobject)
+{
+	SpectrogramArea* self = (SpectrogramArea*) gobject;
+
+	g_signal_handlers_disconnect_matched(G_OBJECT(samplecat.model), G_SIGNAL_MATCH_DATA, 0, 0, NULL, NULL, gobject);
+
+	G_OBJECT_CLASS (spectrogram_area_parent_class)->dispose ((GObject*) G_TYPE_CHECK_INSTANCE_CAST (self, AGL_TYPE_GTK_AREA, AGlGtkArea));
+}
+
+static void
 spectrogram_area_class_init (SpectrogramAreaClass* klass, gpointer klass_data)
 {
 	spectrogram_area_parent_class = g_type_class_peek_parent (klass);
 	g_type_class_adjust_private_offset (klass, &SpectrogramArea_private_offset);
-	((GtkWidgetClass *) klass)->unrealize = (void (*) (GtkWidget*)) spectrogram_area_real_unrealize;
+
+	((GtkWidgetClass *) klass)->unrealize = (void (*) (GtkWidget*)) spectrogram_area_unrealize;
+	((GObjectClass *) klass)->dispose = spectrogram_area_dispose;
 	G_OBJECT_CLASS (klass)->finalize = spectrogram_area_finalize;
 }
 

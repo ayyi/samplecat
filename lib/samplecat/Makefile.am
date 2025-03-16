@@ -2,7 +2,6 @@ SUBDIRS = db player
 
 AM_CFLAGS = \
 	-DPACKAGE_DATA_DIR=\""$(datadir)"\" \
-	-DPACKAGE_LOCALE_DIR=\""$(prefix)/$(DATADIRNAME)/locale"\" \
 	-DG_LOG_DOMAIN=\"Samplecat\" \
 	-I$(top_srcdir)/lib \
 	-I$(top_srcdir)/lib/waveform \

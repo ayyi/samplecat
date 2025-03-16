@@ -13,7 +13,7 @@
 #include "stdio.h"
 
 extern NewPanelFn 
-	listview__new,
+	library__new,
 	dir_panel_new,
 	fileview_new,
 	player_control_new,
@@ -22,9 +22,6 @@ extern NewPanelFn
 #endif
 	;
 
-#ifdef USE_OPENGL
-ShowPanelFn show_waveform;
-#endif
 #ifdef HAVE_FFTW3
 ShowPanelFn spectrogram_on_show_hide;
 #ifdef USE_OPENGL
@@ -43,7 +40,7 @@ typedef enum {
 @REGISTER1
 
 Panel panels[] = {
-   {"Library",     listview__new},
+   {"Library",     library__new},
    {"Search",      },
    {"Tags",        },
    {"Filters",     filters_new},
@@ -52,7 +49,7 @@ Panel panels[] = {
    {"Filemanager", fileview_new},
    {"Player",      player_control_new},
 #ifdef USE_OPENGL
-   {"Waveform",    waveform_panel_new, show_waveform},
+   {"Waveform",    waveform_panel_new},
 #endif
 #ifdef HAVE_FFTW3
    {"Spectrogram", SPECTROGRAM_NEW, spectrogram_on_show_hide, GTK_ORIENTATION_HORIZONTAL},

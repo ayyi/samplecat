@@ -211,14 +211,13 @@ fm__make_subdir_menu (AyyiFilemanager* fm, GMenuModel* model)
 			GList* items = NULL;
 			while ((leaf = g_dir_read_name(dir))) {
 				if (leaf[0] == '.') continue;
-				gchar* filename = g_build_filename(fm->real_path, leaf, NULL);
+				g_autofree gchar* filename = g_build_filename(fm->real_path, leaf, NULL);
 				if (g_file_test(filename, G_FILE_TEST_IS_DIR)) {
 					strncpy(escaped, leaf, 255);
 					fm__escape_for_menu(escaped);
 
 					items = g_list_append(items, g_strdup(escaped));
 				}
-				g_free(filename);
 			}
 
 			g_dir_close(dir);
@@ -227,9 +226,8 @@ fm__make_subdir_menu (AyyiFilemanager* fm, GMenuModel* model)
 				items = g_list_sort(items, (GCompareFunc)g_ascii_strcasecmp);
 				int i = 0;
 				for (GList* l=items;l;l=l->next,i++) {
-					gchar* name = l->data;
-					add_icon_menu_item2 (POPOVER_MENU(fm->menu.widget), G_MENU(model), &(MenuDef){name, "fm.go-down-dir", "inode-directory-symbolic", i});
-					g_free(name);
+					g_autofree gchar* name = l->data;
+					add_icon_menu_item_from_defn (POPOVER_MENU(fm->menu.widget), G_MENU(model), &(MenuDef){name, "fm.go-down-dir", "inode-directory-symbolic", i});
 				}
 				g_list_free(items);
 
@@ -286,11 +284,12 @@ print_submenu (GMenuModel* menu)
 	gint n_items = g_menu_model_get_n_items (menu);
 
 	for (int i=0;i<n_items;i++) {
+		printf("%i\n", i);
 		g_autoptr(GMenuAttributeIter) attrs = g_menu_model_iterate_item_attributes (menu, i);
 		const gchar* name;
 		GVariant* value;
 		while (g_menu_attribute_iter_get_next (attrs, &name, &value)) {
-			const char* v = g_variant_get_string(value, NULL);
+			printf(" * attr: %s=%s\n", name, g_variant_print(value, true));
 		}
 
 		g_autoptr(GMenuLinkIter) iter = g_menu_model_iterate_item_links(menu, i);

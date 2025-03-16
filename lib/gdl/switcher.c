@@ -32,7 +32,7 @@
 #include "il8n.h"
 #include "utils.h"
 #include "debug.h"
-#include "gdl-switcher.h"
+#include "switcher.h"
 #include "libgdlmarshal.h"
 #include "libgdltypebuiltins.h"
 
@@ -65,7 +65,8 @@ static void gdl_switcher_add_button  (GdlSwitcher *switcher,
                                       const gchar *stock_id,
                                       GdkPixbuf *pixbuf_icon,
                                       gint switcher_id,
-                                      GtkWidget *page);
+                                      GtkWidget *page,
+                                      int position);
 /* static void gdl_switcher_remove_button    (GdlSwitcher *switcher, gint switcher_id); */
 static void gdl_switcher_select_page         (GdlSwitcher *switcher, gint switcher_id);
 static void gdl_switcher_select_button       (GdlSwitcher *switcher, gint switcher_id);
@@ -554,12 +555,9 @@ do_layout (GdlSwitcher *switcher)
 
 /* GtkContainer methods.  */
 
-#ifdef GTK4_TODO
-static void
-gdl_switcher_remove (GtkWidget *container, GtkWidget *widget)
+void
+gdl_switcher_remove (GdlSwitcher *switcher, GtkWidget *widget)
 {
-    GdlSwitcher *switcher = GDL_SWITCHER (container);
-
     gint switcher_id = gdl_switcher_get_page_id (widget);
     for (GSList* p = switcher->priv->buttons; p != NULL; p = p->next) {
         Button *b = (Button *) p->data;
@@ -573,11 +571,7 @@ gdl_switcher_remove (GtkWidget *container, GtkWidget *widget)
         }
     }
     gdl_switcher_update_lone_button_visibility (switcher);
-#ifdef GTK4_TODO
-    GTK_CONTAINER_CLASS (gdl_switcher_parent_class)->remove (GTK_CONTAINER (switcher), widget);
-#endif
 }
-#endif
 
 /* GtkWidget methods.  */
 
@@ -785,11 +779,9 @@ gdl_switcher_switch_page_cb (GtkNotebook *nb, GtkWidget *page_widget, gint page_
 static void
 gdl_switcher_page_added_cb (GtkNotebook *nb, GtkWidget *page, gint page_num, GdlSwitcher *switcher)
 {
-    (void)nb;
-    (void)page_num;
     gint switcher_id = gdl_switcher_get_page_id (page);
 
-    gdl_switcher_add_button (GDL_SWITCHER (switcher), NULL, NULL, NULL, NULL, switcher_id, page);
+    gdl_switcher_add_button (GDL_SWITCHER (switcher), NULL, NULL, NULL, NULL, switcher_id, page, page_num);
     gdl_switcher_select_button (GDL_SWITCHER (switcher), switcher_id);
 }
 
@@ -818,16 +810,12 @@ gdl_switcher_class_init (GdlSwitcherClass *klass)
     GtkWidgetClass *widget_class = GTK_WIDGET_CLASS (klass);
     GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
-#ifdef GTK4_TODO
-    container_class->remove = gdl_switcher_remove;
-#endif
-
 	widget_class->measure = gdl_switcher_measure;
     widget_class->size_allocate = gdl_switcher_size_allocate;
     widget_class->snapshot = gdl_switcher_snapshot;
     widget_class->map = gdl_switcher_map;
 
-    object_class->dispose  = gdl_switcher_dispose;
+    object_class->dispose = gdl_switcher_dispose;
     object_class->finalize = gdl_switcher_finalize;
     object_class->set_property = gdl_switcher_set_property;
     object_class->get_property = gdl_switcher_get_property;
@@ -925,7 +913,7 @@ gdl_switcher_new (void)
  * it is %NULL then a default incrementally numbered label is used instead.
  */
 static void
-gdl_switcher_add_button (GdlSwitcher *switcher, const gchar *label, const gchar *tooltips, const gchar *stock_id, GdkPixbuf *pixbuf_icon, gint switcher_id, GtkWidget* page)
+gdl_switcher_add_button (GdlSwitcher *switcher, const gchar *label, const gchar *tooltips, const gchar *stock_id, GdkPixbuf *pixbuf_icon, gint switcher_id, GtkWidget* page, int position)
 {
 	ENTER;
 
@@ -980,7 +968,11 @@ gdl_switcher_add_button (GdlSwitcher *switcher, const gchar *label, const gchar 
 #ifdef GTK4_TODO
 	switcher->priv->buttons = g_slist_append (switcher->priv->buttons, button_new (button_widget, label_widget, icon_widget, arrow, hbox, switcher_id, page));
 #else
-	switcher->priv->buttons = g_slist_append (switcher->priv->buttons, button_new (button_widget, label_widget, icon_widget, hbox, switcher_id, page));
+	if (position == 0) {
+		switcher->priv->buttons = g_slist_insert (switcher->priv->buttons, button_new (button_widget, label_widget, icon_widget, hbox, switcher_id, page), 0);
+	} else {
+		switcher->priv->buttons = g_slist_append (switcher->priv->buttons, button_new (button_widget, label_widget, icon_widget, hbox, switcher_id, page));
+	}
 #endif
 
 	gtk_widget_set_parent (button_widget, GTK_WIDGET (switcher));
@@ -1048,7 +1040,7 @@ gdl_switcher_insert_page (GdlSwitcher *switcher, GtkWidget *page, GtkWidget *tab
         if (gtk_widget_get_visible (page)) gtk_widget_set_visible (tab_widget, true);
     }
     gint switcher_id = gdl_switcher_get_page_id (page);
-    gdl_switcher_add_button (switcher, label, tooltips, stock_id, pixbuf_icon, switcher_id, page);
+    gdl_switcher_add_button (switcher, label, tooltips, stock_id, pixbuf_icon, switcher_id, page, position);
 
     gint ret_position = gtk_notebook_insert_page (notebook, page, tab_widget, position);
     gtk_notebook_set_tab_reorderable (notebook, page, switcher->priv->tab_reorderable);

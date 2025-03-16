@@ -38,7 +38,7 @@
 #include "gdl-dock-item.h"
 #include "gdl-dock-item-grip.h"
 #include "gdl-dock-item-button-image.h"
-#include "gdl-switcher.h"
+#include "switcher.h"
 
 /**
  * SECTION:gdl-dock-item-grip
@@ -211,20 +211,24 @@ gdl_dock_item_grip_item_notify (GObject *master, GParamSpec *pspec, gpointer dat
 static void
 gdl_dock_item_grip_dispose (GObject *object)
 {
-    GdlDockItemGrip *grip = GDL_DOCK_ITEM_GRIP (object);
-    GdlDockItemGripPrivate *priv = grip->priv;
+	GdlDockItemGrip *grip = GDL_DOCK_ITEM_GRIP (object);
+	GdlDockItemGripPrivate *priv = grip->priv;
 
-    if (priv->label) {
-        gtk_widget_unparent(priv->label);
-        priv->label = NULL;
-    }
+	g_clear_pointer(&priv->label, gtk_widget_unparent);
+	g_clear_pointer(&priv->close_button, gtk_widget_unparent);
+	g_clear_pointer(&priv->iconify_button, gtk_widget_unparent);
 
-    if (grip->priv->item) {
-        g_signal_handlers_disconnect_by_func (grip->priv->item, gdl_dock_item_grip_item_notify, grip);
-        grip->priv->item = NULL;
-    }
+	extern GtkWidget*   find_widget_by_type_deep  (GtkWidget*, GType);
+	GtkWidget* button = find_widget_by_type_deep(GTK_WIDGET(object), GTK_TYPE_TOGGLE_BUTTON);
+	if (button)
+		gtk_widget_unparent(button);
 
-    G_OBJECT_CLASS (gdl_dock_item_grip_parent_class)->dispose (object);
+	if (grip->priv->item) {
+		g_signal_handlers_disconnect_by_func (grip->priv->item, gdl_dock_item_grip_item_notify, grip);
+		grip->priv->item = NULL;
+	}
+
+	G_OBJECT_CLASS (gdl_dock_item_grip_parent_class)->dispose (object);
 }
 
 static void

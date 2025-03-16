@@ -46,7 +46,7 @@ register.c: register.c.in Makefile.am ../../config.status
 		sed -i -e "/_XX/d" __register.c.in && \
 		sed -i -e "s/spectrogram_n/spectrogram_area_n/" __register.c.in && \
 		sed -i -e "s/spectrogram_g/spectrogram_area_g/" __register.c.in && \
-		sed -i -e "/library_/d" __register.c.in && \
+		sed -i -e "/library_get_type/d" __register.c.in && \
 		sed -i -e "/filters_get_type/d" __register.c.in && \
 		sed -i -e "/player_get/d" __register.c.in && \
 		sed -i -e "/directories_/d" __register.c.in && \

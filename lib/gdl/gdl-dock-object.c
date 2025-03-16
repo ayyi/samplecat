@@ -40,7 +40,7 @@
 #include "gdl-dock-paned.h"
 #include "gdl-dock-notebook.h"
 #include "gdl-dock-placeholder.h"
-					#include "gdl-switcher.h"
+#include "switcher.h"
 
 /**
  * SECTION:gdl-dock-object
@@ -69,7 +69,9 @@ static void     gdl_dock_object_get_property       (GObject            *g_object
                                                     GParamSpec         *pspec);
 static void     gdl_dock_object_finalize           (GObject            *g_object);
 
-static void     gdl_dock_object_destroy            (GObject            *dock_object);
+static void     gdl_dock_object_dispose            (GObject            *dock_object);
+static void     gdl_dock_object_remove_widgets     (GdlDockObject      *dock_object);
+static void     gdl_dock_object_default_foreach_child (GdlDockObject      *object, GdlDockObjectFn fn, gpointer);
 
 static void     gdl_dock_object_show               (GtkWidget          *widget);
 static void     gdl_dock_object_hide               (GtkWidget          *widget);
@@ -81,6 +83,8 @@ static void     gdl_dock_object_dock_unimplemented (GdlDockObject      *object,
                                                     GdlDockObject      *requestor,
                                                     GdlDockPlacement    position,
                                                     GValue             *other_data);
+static void     gdl_dock_object_remove_unimplemented (GdlDockObject      *object,
+                                                    GtkWidget          *widget);
 static void     gdl_dock_object_real_present       (GdlDockObject      *object,
                                                     GdlDockObject      *child);
 static GList*   gdl_dock_object_children           (GdlDockObject      *object);
@@ -261,7 +265,7 @@ gdl_dock_object_class_init (GdlDockObjectClass *klass)
 
     g_object_class_install_property (object_class, PROP_MASTER, properties[PROP_MASTER]);
 
-    object_class->dispose = gdl_dock_object_destroy;
+    object_class->dispose = gdl_dock_object_dispose;
 
     widget_class->show = gdl_dock_object_show;
     widget_class->hide = gdl_dock_object_hide;
@@ -275,6 +279,9 @@ gdl_dock_object_class_init (GdlDockObjectClass *klass)
     klass->reorder = NULL;
     klass->present = gdl_dock_object_real_present;
     klass->child_placement = NULL;
+    klass->remove = gdl_dock_object_remove_unimplemented;
+    klass->remove_widgets = gdl_dock_object_remove_widgets;
+    klass->foreach_child = gdl_dock_object_default_foreach_child;
 
     /**
      * GdlDockObject::detach:
@@ -330,9 +337,6 @@ gdl_dock_object_init (GdlDockObject *object)
 
     object->priv->automatic = TRUE;
     object->priv->freeze_count = 0;
-#ifndef GDL_DISABLE_DEPRECATED
-    object->deprecated_flags = 0;
-#endif
 }
 
 static void
@@ -412,7 +416,7 @@ gdl_dock_object_foreach_detach (GdlDockObject *object, gpointer user_data)
 }
 
 static void
-gdl_dock_object_destroy (GObject* g_object)
+gdl_dock_object_dispose (GObject* g_object)
 {
 	GtkWidget *dock_object = (GtkWidget*)g_object;
 
@@ -434,6 +438,23 @@ gdl_dock_object_destroy (GObject* g_object)
         gdl_dock_object_unbind (object);
 
     G_OBJECT_CLASS(gdl_dock_object_parent_class)->dispose (g_object);
+}
+
+static void
+gdl_dock_object_remove_widgets (GdlDockObject* object)
+{
+}
+
+static void
+gdl_dock_object_default_foreach_child (GdlDockObject *object, GdlDockObjectFn fn, gpointer user_data)
+{
+	GtkWidget* child = gtk_widget_get_first_child (GTK_WIDGET (object));
+	if (child)
+		for (; child; child = gtk_widget_get_next_sibling (child)) {
+			if (GDL_IS_DOCK_OBJECT (child)) {
+				fn (GDL_DOCK_OBJECT (child), user_data);
+			}
+		}
 }
 
 static void
@@ -531,30 +552,33 @@ gdl_dock_object_real_detach (GdlDockObject *object, gboolean recursive)
 	{
     	GtkWidget* widget = GTK_WIDGET (object);
 		GtkWidget* parent = gtk_widget_get_parent (widget);
-	    if (parent) {
+		if (parent) {
 			if (GTK_IS_STACK(parent)) {
 				gtk_stack_remove(GTK_STACK (parent), widget);
+			} else if (GDL_IS_DOCK(parent)) {
+				gtk_widget_unparent(widget);
 			} else {
 				if (!GDL_IS_DOCK_OBJECT(parent))
 					parent = gtk_widget_get_parent(parent);
 				if (GTK_IS_NOTEBOOK (parent)) {
 					parent = gtk_widget_get_parent(parent);
 				}
-				gdl_dock_object_remove_child (GDL_DOCK_OBJECT (parent), widget);
+				if (GDL_IS_DOCK_OBJECT(parent))
+					gdl_dock_object_remove_child (GDL_DOCK_OBJECT (parent), widget);
 			}
 		}
 	}
 
 	{
-	    if (dock_parent)
-    	    gdl_dock_object_reduce (dock_parent);
+		if (dock_parent)
+			gdl_dock_object_reduce (dock_parent);
 	}
 }
 
 static void
 gdl_dock_object_real_reduce (GdlDockObject *object)
 {
-	 g_return_if_fail (object != NULL);
+	g_return_if_fail (object != NULL);
 
 	if (!gdl_dock_object_is_compound (object))
 		return;
@@ -562,9 +586,9 @@ gdl_dock_object_real_reduce (GdlDockObject *object)
 	ENTER;
 
 	GdlDockObject* parent = gdl_dock_object_get_parent_object (object);
-    GList* children = gdl_dock_object_get_children (object);
-    if (g_list_length (children) <= 1) {
-        GList *dchildren = NULL;
+	GList* children = gdl_dock_object_get_children (object);
+	if (g_list_length (children) <= 1) {
+		GList *dchildren = NULL;
 
         /* detach ourselves and then re-attach our children to our
            current parent.  if we are not currently attached, the
@@ -621,6 +645,14 @@ gdl_dock_object_dock_unimplemented (GdlDockObject *object, GdlDockObject *reques
 }
 
 static void
+gdl_dock_object_remove_unimplemented (GdlDockObject *object, GtkWidget *widget)
+{
+    g_warning (_("Call to gdl_dock_object_remove in a dock object %p "
+                 "(object type is %s) which hasn't implemented this method"),
+               object, G_OBJECT_TYPE_NAME (object));
+}
+
+static void
 gdl_dock_object_real_present (GdlDockObject *object, GdlDockObject *child)
 {
     gtk_widget_set_visible (GTK_WIDGET (object), true);
@@ -669,33 +701,48 @@ gdl_dock_object_is_compound (GdlDockObject *object)
 void
 gdl_dock_object_detach (GdlDockObject *object, gboolean recursive)
 {
-    g_return_if_fail (object != NULL);
+	g_return_if_fail (object);
 
-	ENTER;
-    if (!GDL_IS_DOCK_OBJECT (object))
-        return;
+	if (!GDL_IS_DOCK_OBJECT (object))
+		return;
 
-    if (!object->priv->attached && (gtk_widget_get_parent (GTK_WIDGET (object)) == NULL))
-        return;
+	if (!object->priv->attached && (gtk_widget_get_parent (GTK_WIDGET (object)) == NULL))
+		return;
 
-    /* freeze the object to avoid reducing while detaching children */
-    gdl_dock_object_freeze (object);
-    g_signal_emit (object, gdl_dock_object_signals [DETACH], 0, recursive);
-    gdl_dock_object_thaw (object);
+	/* freeze the object to avoid reducing while detaching children */
+	gdl_dock_object_freeze (object);
+	g_signal_emit (object, gdl_dock_object_signals [DETACH], 0, recursive);
+	gdl_dock_object_thaw (object);
+}
+
+/**
+ * gdl_dock_object_destroy:
+ * @object: A #GdlDockObject
+ *
+ * Dissociate a dock object from its parent, including its children.
+ */
+void
+gdl_dock_object_destroy (GdlDockObject *object)
+{
+	g_return_if_fail (object != NULL);
+
+	if (!GDL_IS_DOCK_OBJECT (object))
+		return;
+
+	if (!object->priv->attached && (gtk_widget_get_parent (GTK_WIDGET (object)) == NULL))
+		return;
+
+	GDL_DOCK_OBJECT_GET_CLASS(object)->remove_widgets(GDL_DOCK_OBJECT(object));
+
+	/* freeze the object to avoid reducing while detaching children */
+	gdl_dock_object_freeze (object);
+	g_signal_emit (object, gdl_dock_object_signals [DETACH], 0, true);
+	gdl_dock_object_thaw (object);
 }
 
 void
 gdl_dock_object_add_child (GdlDockObject* object, GtkWidget* child)
 {
-	ENTER;
-
-#if 0
-	if (GDL_IS_DOCK_PANED (object) && GDL_IS_DOCK_ITEM(child)) {
-		cdbg(0, "cannot put dock-item in a GdlPaned ?");
-		g_assert(false);
-	}
-#endif
-
 	if (GDL_IS_DOCK_PANED (object)) {
 		gdl_dock_paned_add (GDL_DOCK_PANED(object), child);
 	}
@@ -706,8 +753,7 @@ gdl_dock_object_add_child (GdlDockObject* object, GtkWidget* child)
 		gdl_dock_item_add (GDL_DOCK_ITEM (object), child);
 	}
 	else if (GDL_IS_DOCK (object)) {
-		gdl_dock_add (GDL_DOCK (object), child);
-		gtk_widget_insert_before (child, GTK_WIDGET (object), NULL);
+		gdl_dock_just_add_item (GDL_DOCK(object), GDL_DOCK_ITEM(child));
 	}
 }
 
@@ -716,18 +762,7 @@ gdl_dock_object_remove_child (GdlDockObject* object, GtkWidget* child)
 {
 	ENTER;
 
-	/*
-	if (GTK_IS_NOTEBOOK (object)) {
-		gdl_dock_notebook_remove (object, child);
-	} else */if (GDL_IS_DOCK_PANED (object)) {
-		gdl_dock_paned_remove_child (object, GDL_DOCK_ITEM (child));
-	} else if (GDL_IS_DOCK_ITEM (object)) {
-		gtk_widget_unparent(child);
-		gdl_dock_item_remove (GDL_DOCK_ITEM (object), child);
-	} else if (GDL_IS_DOCK (object)) {
-		gtk_widget_unparent(child);
-		gdl_dock_remove (GDL_DOCK (object), child);
-	}
+	GDL_DOCK_OBJECT_GET_CLASS (object)->remove(object, child);
 }
 
 /**
@@ -741,39 +776,30 @@ gdl_dock_object_remove_child (GdlDockObject* object, GtkWidget* child)
 GdlDockObject *
 gdl_dock_object_get_parent_object (GdlDockObject *object)
 {
-    g_return_val_if_fail (object != NULL, NULL);
+	g_return_val_if_fail (object != NULL, NULL);
 
-    GtkWidget* parent = gtk_widget_get_parent (GTK_WIDGET (object));
-    while (parent && !GDL_IS_DOCK_OBJECT (parent)) {
-        parent = gtk_widget_get_parent (parent);
-    }
+	GtkWidget* parent = gtk_widget_get_parent (GTK_WIDGET (object));
+	while (parent && !GDL_IS_DOCK_OBJECT (parent)) {
+		parent = gtk_widget_get_parent (parent);
+	}
 
-    return parent ? GDL_DOCK_OBJECT (parent) : NULL;
+	return parent ? GDL_DOCK_OBJECT (parent) : NULL;
 }
 
 GList*
 gdl_dock_object_get_children (GdlDockObject *object)
 {
-    return GDL_DOCK_OBJECT_GET_CLASS (object)->children (object);
+	return GDL_DOCK_OBJECT_GET_CLASS (object)->children (object);
 }
 
 void
 gdl_dock_object_foreach_child (GdlDockObject *object, GdlDockObjectFn fn, gpointer data)
 {
-    g_return_if_fail (object);
+	g_return_if_fail (object);
 
-	if (GDL_IS_DOCK_PANED (object)/* || GDL_DOCK_NOTEBOOK (object)*/) {
-		GDL_DOCK_OBJECT_GET_CLASS (object)->foreach_child (object, fn, data);
-		return;
-	}
-	GtkWidget* child = gtk_widget_get_first_child (GTK_WIDGET (object));
-	for (; child; child = gtk_widget_get_next_sibling (child)) {
-		if (GDL_IS_DOCK_OBJECT (child)) {
-			fn (GDL_DOCK_OBJECT (child), data);
-		} else if (GDL_IS_SWITCHER (child)) {
-			GDL_DOCK_OBJECT_GET_CLASS (object)->foreach_child (object, fn, data);
-		}
-	}
+	ENTER;
+
+	return GDL_DOCK_OBJECT_GET_CLASS (object)->foreach_child (object, fn, data);
 }
 
 /**
@@ -945,7 +971,7 @@ gdl_dock_object_dock (GdlDockObject *object, GdlDockObject *requestor, GdlDockPl
 #endif
     }
     /* Update visibility of automatic parents */
-    if (parent != NULL) {
+    if (parent) {
         gdl_dock_object_update_visibility (parent);
         g_object_unref (parent);
     }
@@ -991,6 +1017,9 @@ gdl_dock_object_bind (GdlDockObject *object, GObject *master)
 void
 gdl_dock_object_unbind (GdlDockObject *object)
 {
+	ENTER;
+	cdbg(1, "%s", gdl_dock_object_id(object));
+
     g_return_if_fail (object != NULL);
 
     g_object_ref (object);

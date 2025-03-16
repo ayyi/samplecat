@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
- | copyright (C) 2007-2024 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2007-2025 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -469,8 +469,8 @@ samplecat_model_set_selection (SamplecatModel* self, Sample* sample)
 		if (self->selection) {
 			sample_unref (self->selection);
 		}
-		self->selection = sample;
-		sample_ref (self->selection);
+		self->selection = sample_ref(sample);
+
 		if (self->priv->selection_change_timeout) {
 			g_source_remove (self->priv->selection_change_timeout);
 		}
@@ -486,7 +486,6 @@ samplecat_model_queue_selection_changed (gpointer _self)
 	g_return_val_if_fail (self != NULL, FALSE);
 
 	self->priv->selection_change_timeout = 0;
-	//g_signal_emit_by_name (self, "selection-changed", self->selection);
 	g_object_notify_by_pspec ((GObject *) self, samplecat_model_properties[SAMPLECAT_MODEL_SELECTION_PROPERTY]);
 
 	return G_SOURCE_REMOVE;
@@ -822,7 +821,6 @@ samplecat_model_class_init (SamplecatModelClass* klass)
 	);
 
 	g_signal_new ("dir_list_changed", SAMPLECAT_TYPE_MODEL, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_VOID__VOID, G_TYPE_NONE, 0);
-	g_signal_new ("selection_changed", SAMPLECAT_TYPE_MODEL, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_VOID__POINTER, G_TYPE_NONE, 1, G_TYPE_POINTER);
 	g_signal_new ("sample_changed", SAMPLECAT_TYPE_MODEL, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_user_marshal_VOID__POINTER_INT_POINTER, G_TYPE_NONE, 3, G_TYPE_POINTER, G_TYPE_INT, G_TYPE_POINTER);
 }
 

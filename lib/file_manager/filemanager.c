@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
- | This file is part of the Ayyi project. http://ayyi.org               |
- | copyright (C) 2011-2023 Tim Orford <tim@orford.org>                  |
+ | This file is part of the Ayyi project. https://www.ayyi.org          |
+ | copyright (C) 2011-2025 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -45,7 +45,7 @@ static void     detach                       (AyyiFilemanager*);
 static void     tidy_sympath                 (gchar*);
 static void     fm_next_thumb                (GObject*, const gchar* path);
 static void     start_thumb_scanning         (AyyiFilemanager*);
-static void     fm_add_signals               (AyyiFilemanager*);
+static void     fm_connect_signals           (AyyiFilemanager*);
 
 #ifdef GTK4_TODO
 static GdkCursor* crosshair = NULL; // TODO is never set
@@ -62,7 +62,7 @@ ayyi_filemanager_construct (GType object_type)
 	self->filter = FILER_SHOW_ALL;
 	self->window = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
 
-	fm_add_signals(self);
+	fm_connect_signals(self);
 
 #ifdef USE_MINIBUFFER
 	create_minibuffer(self);
@@ -113,8 +113,10 @@ static void
 ayyi_filemanager_class_init (AyyiFilemanagerClass* klass)
 {
 	ayyi_filemanager_parent_class = g_type_class_peek_parent (klass);
+
 	G_OBJECT_CLASS (klass)->constructor = ayyi_filemanager_constructor;
 	G_OBJECT_CLASS (klass)->finalize = ayyi_filemanager_finalize;
+
 	g_signal_new ("dir_changed", AYYI_TYPE_FILEMANAGER, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_VOID__STRING, G_TYPE_NONE, 1, G_TYPE_STRING);
 
 	klass->filetypes = g_hash_table_new(g_str_hash, g_direct_equal);
@@ -198,16 +200,11 @@ fm__change_to (AyyiFilemanager* fm, const char* path, const char* from)
 	//had_cursor = had_cursor || view_cursor_visible(fm->view);
 
 	//filer_set_title(filer_window);
-	//if (filer_window->window->window) gdk_window_set_role(filer_window->window->window, filer_window->sym_path);
 	view_cursor_to_iter(fm->view, NULL);
 
 	attach(fm);
 
 	//check_settings(filer_window);
-
-	//display_set_actual_size(filer_window, FALSE);
-
-	//if (o_filer_auto_resize.int_value == RESIZE_ALWAYS) view_autosize(fm->view);
 
 	//if (filer_window->mini_type == MINI_PATH) g_idle_add((GSourceFunc) minibuffer_show_cb, filer_window);
 
@@ -588,12 +585,14 @@ fm__create_thumbs (AyyiFilemanager* fm)
 
 
 /*static */void
-attach(AyyiFilemanager* fm)
+attach (AyyiFilemanager* fm)
 {
 	//gdk_window_set_cursor(filer_window->window->window, busy_cursor);
+
 	view_clear(fm->view);
 	fm->scanning = TRUE;
 	dir_attach(fm->directory, (DirCallback) update_display, fm);
+
 	//filer_set_title(filer_window);
 	//bookmarks_add_history(filer_window->sym_path);
 
@@ -618,8 +617,7 @@ detach (AyyiFilemanager* fm)
 	g_return_if_fail(fm->directory);
 
 	dir_detach(fm->directory, (DirCallback)update_display, fm);
-	g_object_unref(fm->directory);
-	fm->directory = NULL;
+	g_clear_pointer(&fm->directory, g_object_unref);
 }
 
 
@@ -948,7 +946,7 @@ filer_window_destroyed (GtkWidget* widget, AyyiFilemanager* fm)
 }
 
 static void
-fm_add_signals(AyyiFilemanager* fm)
+fm_connect_signals (AyyiFilemanager* fm)
 {
 #if 0
 	GtkTargetEntry 	target_table[] =

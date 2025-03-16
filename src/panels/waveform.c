@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
- | copyright (C) 2007-2024 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2007-2025 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -26,10 +26,9 @@ static void update_waveform_view        (Sample*);
 static void on_waveform_view_realise    (GtkWidget*, gpointer);
 static void on_waveform_view_show       (GtkWidget*, gpointer);
 static void on_waveform_view_set_parent (GObject*, GParamSpec*, gpointer);
+static void show_waveform               (bool);
 
-#ifdef WITH_VALGRIND
 static void on_waveform_view_finalize   (gpointer, GObject*);
-#endif
 
 typedef struct {
    gulong selection_handler;
@@ -42,12 +41,14 @@ static struct _window {
       AGlActor*   spp;
       AGlActor*   spinner;
    }              layers;
-} window = {0,};
+} window;
 
 
 GtkWidget*
 waveform_panel_new ()
 {
+	PF;
+
 	waveform_view_plus_set_gl(agl_get_gl_context());
 	WaveformViewPlus* view = waveform_view_plus_new(NULL);
 	window.waveform = (GtkWidget*)view;
@@ -64,16 +65,16 @@ waveform_panel_new ()
 	waveform_view_plus_set_show_grid(view, true);
 #endif
 
-	void _waveform_on_selection_change (SamplecatModel* m, Sample* sample, gpointer _c)
+	void _waveform_on_selection_change (SamplecatModel* m, GParamSpec* pspec, gpointer _c)
 	{
 		PF;
 		g_return_if_fail(window.waveform);
-		update_waveform_view(sample);
+		update_waveform_view(m->selection);
 	}
 
 	C* c = g_new0(C, 1);
 
-	c->selection_handler = g_signal_connect((gpointer)samplecat.model, "selection-changed", G_CALLBACK(_waveform_on_selection_change), c);
+	c->selection_handler = g_signal_connect((gpointer)samplecat.model, "notify::selection", G_CALLBACK(_waveform_on_selection_change), c);
 
 	g_signal_connect((gpointer)window.waveform, "realize", G_CALLBACK(on_waveform_view_realise), NULL);
 	g_signal_connect((gpointer)window.waveform, "show", G_CALLBACK(on_waveform_view_show), NULL);
@@ -120,29 +121,41 @@ waveform_panel_new ()
 	}
 	am_promise_add_callback(play->ready, waveform_on_audio_ready, NULL);
 
-#ifdef WITH_VALGRIND
 	g_object_weak_ref((GObject*)window.waveform, on_waveform_view_finalize, c);
-#endif
+
+	void waveform_on_show ()
+	{
+	}
+	g_signal_connect((gpointer)view, "show", G_CALLBACK(waveform_on_show), NULL);
+
+	void waveform_on_map (GtkWidget* widget, GtkWidget* _)
+	{
+		show_waveform(true);
+	}
+	g_signal_connect(G_OBJECT(view), "map", G_CALLBACK(waveform_on_map), NULL);
+
+	void waveform_on_unmap (GtkWidget* widget, GtkWidget* _)
+	{
+		show_waveform(false);
+	}
+	g_signal_connect(G_OBJECT(view), "unmap", G_CALLBACK(waveform_on_unmap), NULL);
 
 	return (GtkWidget*)view;
 }
 
 
-#ifdef WITH_VALGRIND
 static void
 on_waveform_view_finalize (gpointer _c, GObject* was)
 {
-	// in normal use, the waveform will never be finalised
-	// if DEBUG is enabled, it will occur at program exit.
+	// The panel will finalized when a new layout is loaded.
+	// if DEBUG is enabled, it will also occur at program exit.
+	// At exit, is freed in window_on_quit.
 
 	PF;
 	C* c = _c;
 
 	if (window.waveform) {
-#if 1
-		// normally is freed in window_on_quit, are there other cases?
-		pwarn("waveform unexpectedly not already destroyed");
-#else
+#if 0
 		if (window.layers.spinner ){
 			//agl_actor__remove_child(window.waveform, window.layers.spinner);
 			waveform_view_plus_remove_layer((WaveformViewPlus*)window.waveform, window.layers.spinner);
@@ -159,14 +172,13 @@ on_waveform_view_finalize (gpointer _c, GObject* was)
 				*layers[i] = NULL;
 			}
 		}
-		window.waveform = NULL;
 #endif
+		window.waveform = NULL;
 	}
 
 	g_signal_handler_disconnect((gpointer)samplecat.model, c->selection_handler);
 	g_free(c);
 }
-#endif
 
 
 static void
@@ -231,7 +243,7 @@ update_waveform_view (Sample* sample)
 /*
  *   Registered as the show/hide function for the panel
  */
-void
+static void
 show_waveform (bool enable)
 {
 	if (window.waveform) {
@@ -242,9 +254,11 @@ show_waveform (bool enable)
 				Sample* s;
 				if ((s = samplecat.model->selection)) {
 					WaveformViewPlus* view = (WaveformViewPlus*)window.waveform;
-					Waveform* w = view->waveform;
-					if (!w || strcmp(w->filename, s->full_path)) {
-						update_waveform_view(s);
+					if (view) {
+						Waveform* w = view->waveform;
+						if (!w || strcmp(w->filename, s->full_path)) {
+							update_waveform_view(s);
+						}
 					}
 				}
 				return G_SOURCE_REMOVE;

@@ -55,9 +55,20 @@ static GtkWidget* tag_selector_new ();
 
 
 static void
+tags_remove_widgets (GdlDockObject* object)
+{
+	g_clear_pointer(&panel.hbox1, gtk_widget_unparent);
+	g_clear_pointer(&panel.hbox2, gtk_widget_unparent);
+
+	GDL_DOCK_OBJECT_CLASS (tags_parent_class)->remove_widgets (object);
+}
+
+static void
 tags_class_init (TagsClass * klass, gpointer klass_data)
 {
 	tags_parent_class = g_type_class_peek_parent (klass);
+
+    GDL_DOCK_OBJECT_CLASS(klass)->remove_widgets = tags_remove_widgets;
 
 	G_OBJECT_CLASS (klass)->constructor = tags_constructor;
 }
@@ -153,7 +164,7 @@ tag_selector_new ()
 	GtkWidget* combo = gtk_combo_box_text_new_with_entry();
 
 	gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(combo), "no categories");
-	for (int i=0;i<G_N_ELEMENTS(samplecat.model->categories);i++) {
+	for (int i=0;samplecat.model->categories[i];i++) {
 		gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(combo), samplecat.model->categories[i]);
 	}
 

@@ -17,9 +17,7 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-
-#ifndef __GDL_DOCK_LAYOUT_H__
-#define __GDL_DOCK_LAYOUT_H__
+#pragma once
 
 #include <glib-object.h>
 #include <gdl/gdl-dock-master.h>
@@ -31,12 +29,12 @@ G_BEGIN_DECLS
 #define GDL_DOCK_XML_FALLBACK
 
 /* standard macros */
-#define	GDL_TYPE_DOCK_LAYOUT		  (gdl_dock_layout_get_type ())
-#define GDL_DOCK_LAYOUT(object)		  (G_TYPE_CHECK_INSTANCE_CAST ((object), GDL_TYPE_DOCK_LAYOUT, GdlDockLayout))
-#define GDL_DOCK_LAYOUT_CLASS(klass)	  (G_TYPE_CHECK_CLASS_CAST ((klass), GDL_TYPE_DOCK_LAYOUT, GdlDockLayoutClass))
-#define GDL_IS_DOCK_LAYOUT(object)	  (G_TYPE_CHECK_INSTANCE_TYPE ((object), GDL_TYPE_DOCK_LAYOUT))
+#define GDL_TYPE_DOCK_LAYOUT              (gdl_dock_layout_get_type ())
+#define GDL_DOCK_LAYOUT(object)           (G_TYPE_CHECK_INSTANCE_CAST ((object), GDL_TYPE_DOCK_LAYOUT, GdlDockLayout))
+#define GDL_DOCK_LAYOUT_CLASS(klass)      (G_TYPE_CHECK_CLASS_CAST ((klass), GDL_TYPE_DOCK_LAYOUT, GdlDockLayoutClass))
+#define GDL_IS_DOCK_LAYOUT(object)        (G_TYPE_CHECK_INSTANCE_TYPE ((object), GDL_TYPE_DOCK_LAYOUT))
 #define GDL_IS_DOCK_LAYOUT_CLASS(klass)	  (G_TYPE_CHECK_CLASS_TYPE ((klass), GDL_TYPE_DOCK_LAYOUT))
-#define	GDL_DOCK_LAYOUT_GET_CLASS(object) (G_TYPE_INSTANCE_GET_CLASS ((object), GDL_TYPE_DOCK_LAYOUT, GdlDockLayoutClass))
+#define GDL_DOCK_LAYOUT_GET_CLASS(object) (G_TYPE_INSTANCE_GET_CLASS ((object), GDL_TYPE_DOCK_LAYOUT, GdlDockLayoutClass))
 
 /* data types & structures */
 typedef struct _GdlDockLayout GdlDockLayout;
@@ -87,12 +85,14 @@ void             gdl_dock_layout_save_layout    (GdlDockLayout *layout,
 void             gdl_dock_layout_delete_layout  (GdlDockLayout *layout,
                                                  const gchar   *name);
 
-GList           *gdl_dock_layout_get_layouts    (GdlDockLayout *layout,
+GList           *gdl_dock_layout_get_xml_layouts(GdlDockLayout *layout,
                                                  gboolean       include_default);
+void             gdl_dock_layout_get_yaml_layouts(GdlDockLayout *layout,
+                                                  void (*foreach)(const char*, gpointer), gpointer user_data);
 
 gboolean         gdl_dock_layout_load_from_xml_file (GdlDockLayout *layout,
                                                  const gchar   *filename);
-bool             gdl_dock_layout_load_from_yaml_file (GdlDockLayout*, const gchar*);
+bool             gdl_dock_layout_load_from_file (GdlDockLayout*, const gchar*);
 gboolean         gdl_dock_layout_load_from_string (GdlDockLayout *layout,
                                                  const gchar   *str);
 
@@ -107,7 +107,3 @@ void             gdl_dock_layout_attach         (GdlDockLayout *layout,
 #endif
 
 G_END_DECLS
-
-#endif
-
-

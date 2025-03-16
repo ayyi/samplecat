@@ -28,7 +28,7 @@
 #include <gtk/gtk.h>
 #include "il8n.h"
 #include "utils.h"
-#include "debug.h"
+#include "gdl/debug.h"
 #include "gdl-dock-paned.h"
 
 #include "gdl-gtk-paned.c"
@@ -86,6 +86,8 @@ static GList*   gdl_dock_paned_children        (GdlDockObject*    object);
 static void     gdl_dock_paned_foreach_child   (GdlDockObject*    object,
                                                 GdlDockObjectFn   fn,
                                                 gpointer          user_data);
+static void     gdl_dock_paned_remove_child    (GdlDockObject*, GtkWidget*);
+static void     gdl_dock_paned_remove_widgets  (GdlDockObject*    object);
 #ifdef DEBUG
 static bool     gdl_dock_paned_validate        (GdlDockObject* object);
 #endif
@@ -127,6 +129,8 @@ gdl_dock_paned_class_init (GdlDockPanedClass *klass)
     object_class->child_placement = gdl_dock_paned_child_placement;
     object_class->children = gdl_dock_paned_children;
     object_class->foreach_child = gdl_dock_paned_foreach_child;
+    object_class->remove = gdl_dock_paned_remove_child;
+    object_class->remove_widgets = gdl_dock_paned_remove_widgets;
 #ifdef DEBUG
     object_class->validate = gdl_dock_paned_validate;
 #endif
@@ -231,17 +235,15 @@ gdl_dock_paned_create_child (GdlDockPaned *paned, GtkOrientation orientation)
 static GObject *
 gdl_dock_paned_constructor (GType type, guint n_construct_properties, GObjectConstructParam *construct_param)
 {
-    GObject* g_object = G_OBJECT_CLASS (gdl_dock_paned_parent_class)-> constructor (type, n_construct_properties, construct_param);
-    if (g_object) {
-        GdlDockItem *item = GDL_DOCK_ITEM (g_object);
+	GObject* g_object = G_OBJECT_CLASS (gdl_dock_paned_parent_class)-> constructor (type, n_construct_properties, construct_param);
+	GdlDockItem *item = GDL_DOCK_ITEM (g_object);
 
-        if (!gdl_dock_item_get_child (item))
-            gdl_dock_paned_create_child (GDL_DOCK_PANED (g_object), gdl_dock_item_get_orientation (item));
-        /* otherwise, the orientation was set as a construction
-           parameter and the child is already created */
-    }
+	if (!gdl_dock_item_get_child (item))
+		gdl_dock_paned_create_child (GDL_DOCK_PANED (g_object), gdl_dock_item_get_orientation (item));
+		/* otherwise, the orientation was set as a construction
+		   parameter and the child is already created */
 
-    return g_object;
+	return g_object;
 }
 
 static void
@@ -321,15 +323,15 @@ gdl_dock_paned_add (GdlDockPaned *container, GtkWidget *widget)
 		gdl_dock_object_dock (GDL_DOCK_OBJECT (container), GDL_DOCK_OBJECT (widget), pos, NULL);
 }
 
-void
-gdl_dock_paned_remove_child (GdlDockObject* object, GdlDockItem* child)
+static void
+gdl_dock_paned_remove_child (GdlDockObject* object, GtkWidget* child)
 {
 	GdlGtkPaned* paned = GDL_GTK_PANED (gdl_dock_item_get_child (GDL_DOCK_ITEM (object)));
 
-	if ((GtkWidget*)child == gdl_gtk_paned_get_start_child (paned))
-		gdl_gtk_paned_set_start_child (paned, NULL);
-	else if ((GtkWidget*)child == gdl_gtk_paned_get_end_child (paned))
+	if ((GtkWidget*)child == gdl_gtk_paned_get_end_child (paned))
 		gdl_gtk_paned_set_end_child (paned, NULL);
+	else if ((GtkWidget*)child == gdl_gtk_paned_get_start_child (paned))
+		gdl_gtk_paned_set_start_child (paned, NULL);
 }
 
 static void
@@ -502,8 +504,8 @@ gdl_dock_paned_dock_request (GdlDockObject *object, gint x, gint y, GdlDockReque
 static void
 gdl_dock_paned_dock (GdlDockObject *object, GdlDockObject *requestor, GdlDockPlacement position, GValue *other_data)
 {
-    gboolean  requestor_resize = FALSE;
-    gboolean  done = FALSE;
+    gboolean requestor_resize = FALSE;
+    gboolean done = FALSE;
 
     g_return_if_fail (GDL_IS_DOCK_PANED (object));
     g_return_if_fail (gdl_dock_item_get_child (GDL_DOCK_ITEM (object)) != NULL);
@@ -632,34 +634,21 @@ gdl_dock_paned_foreach_child (GdlDockObject *object, GdlDockObjectFn fn, gpointe
 {
 	GdlGtkPaned* paned = GDL_GTK_PANED(gdl_dock_item_get_child (GDL_DOCK_ITEM (object)));
 
-	fn (GDL_DOCK_OBJECT (gdl_gtk_paned_get_start_child(paned)), user_data);
+	GtkWidget* children[] = {
+		gdl_gtk_paned_get_start_child(paned),
+		gdl_gtk_paned_get_end_child(paned),
+	};
 
-	GtkWidget* child = gdl_gtk_paned_get_end_child(paned);
-	if (child)
-		fn (GDL_DOCK_OBJECT (child), user_data);
+	for (int i=0;i<2;i++)
+		if (children[i])
+			fn (GDL_DOCK_OBJECT (children[i]), user_data);
 }
 
-/* ----- Public interface ----- */
-
-/**
- * gdl_dock_paned_new:
- * @orientation: the pane's orientation.
- *
- * Creates a new manual #GdlDockPaned widget. This function is seldom useful as
- * such widget is normally created and destroyed automatically when needed by
- * the master.
- *
- * Returns: a new #GdlDockPaned.
- */
-GtkWidget*
-gdl_dock_paned_new (GtkOrientation orientation)
+static void
+gdl_dock_paned_remove_widgets (GdlDockObject* object)
 {
-    GdlDockPaned *paned = GDL_DOCK_PANED (g_object_new (GDL_TYPE_DOCK_PANED, "orientation", orientation, NULL));
-    gdl_dock_object_set_manual (GDL_DOCK_OBJECT (paned));
-
-    return GTK_WIDGET (paned);
+	// no direct widgets other than item->child
 }
-
 
 #ifdef DEBUG
 static bool

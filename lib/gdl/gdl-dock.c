@@ -106,6 +106,8 @@ static gboolean gdl_dock_child_placement  (GdlDockObject    *object,
 
 static void     gdl_dock_present          (GdlDockObject    *object,
                                            GdlDockObject    *child);
+static void     gdl_dock_remove           (GdlDockObject    *object,
+                                           GtkWidget        *widget);
 
 
 /* ----- Class variables and definitions ----- */
@@ -249,6 +251,7 @@ gdl_dock_class_init (GdlDockClass *klass)
     object_class->reorder = gdl_dock_reorder;
     object_class->child_placement = gdl_dock_child_placement;
     object_class->present = gdl_dock_present;
+    object_class->remove = gdl_dock_remove;
 
     /* signals */
 
@@ -683,9 +686,11 @@ gdl_dock_add (GdlDock *dock, GtkWidget *widget)
     gdl_dock_add_item (dock, GDL_DOCK_ITEM (widget), GDL_DOCK_TOP);  /* default position */
 }
 
-void
-gdl_dock_remove (GdlDock *dock, GtkWidget *widget)
+static void
+gdl_dock_remove (GdlDockObject *object, GtkWidget *widget)
 {
+	GdlDock* dock = GDL_DOCK(object);
+
     g_return_if_fail (dock);
     g_return_if_fail (widget);
 
@@ -697,7 +702,9 @@ gdl_dock_remove (GdlDock *dock, GtkWidget *widget)
 
         if (was_visible && gtk_widget_get_visible (GTK_WIDGET (dock)))
             gtk_widget_queue_resize (GTK_WIDGET (dock));
-    }
+    } else {
+		gtk_widget_unparent(widget);
+	}
 }
 
 void
@@ -709,12 +716,6 @@ gdl_dock_forall (GdlDock *dock, gboolean include_internals, GtkCallback callback
 
     if (dock->priv->root)
         (*callback) (GTK_WIDGET (dock->priv->root), callback_data);
-}
-
-GType
-gdl_dock_child_type (GdlDock *container)
-{
-    return GDL_TYPE_DOCK_ITEM;
 }
 
 static void
@@ -1103,6 +1104,8 @@ gdl_dock_select_larger_item (GdlDockItem *dock_item_1, GdlDockItem *dock_item_2,
 static GdlDockItem*
 gdl_dock_find_best_placement_item (GdlDockItem *dock_item, GdlDockPlacement placement, gint level /* for debugging */)
 {
+	g_return_val_if_fail(dock_item, NULL);
+
 	ENTER;
 
 	GdlDockItem *ret_item = NULL;
@@ -1152,7 +1155,7 @@ gdl_dock_find_best_placement_item (GdlDockItem *dock_item, GdlDockPlacement plac
  * function takes care of finding the right parent widget eventually creating
  * it if needed.
  */
-void
+GdlDockItem*
 gdl_dock_add_item (GdlDock *dock, GdlDockItem *item, GdlDockPlacement placement)
 {
 	ENTER;
@@ -1160,8 +1163,8 @@ gdl_dock_add_item (GdlDock *dock, GdlDockItem *item, GdlDockPlacement placement)
     GdlDockObject *parent = NULL;
     GdlDockPlacement place;
 
-    g_return_if_fail (dock != NULL);
-    g_return_if_fail (item != NULL);
+    g_return_val_if_fail (dock, item);
+    g_return_val_if_fail (item, item);
 
     /* Check if a placeholder widget already exist in the same dock */
     GdlDockObject* placeholder = gdl_dock_master_get_object (GDL_DOCK_MASTER (gdl_dock_object_get_master (GDL_DOCK_OBJECT (dock))), gdl_dock_object_get_name (GDL_DOCK_OBJECT (item)));
@@ -1201,6 +1204,15 @@ gdl_dock_add_item (GdlDock *dock, GdlDockItem *item, GdlDockPlacement placement)
             gdl_dock_object_dock (GDL_DOCK_OBJECT (dock), GDL_DOCK_OBJECT (item), placement, NULL);
         }
     }
+
+	return item;
+}
+
+void
+gdl_dock_just_add_item (GdlDock *dock, GdlDockItem *item)
+{
+	dock->priv->root = GDL_DOCK_OBJECT(item);
+	gtk_widget_insert_before (GTK_WIDGET(item), GTK_WIDGET (dock), NULL);
 }
 
 /**

@@ -25,3 +25,18 @@ gtk_widget_get_children (GtkWidget* widget)
 
 	return l;
 }
+
+
+gchar*
+gdl_remove_extension_from_path (const gchar* path)
+{
+	const gchar* ptr = path;
+
+	if (!path) return NULL;
+	if (strlen(path) < 2) return g_strdup(path);
+
+	int p = strlen(path) - 1;
+	while (ptr[p] != '.' && p > 0) p--;
+	if (p == 0) p = strlen(path) - 1;
+	return g_strndup(path, (guint)p);
+}

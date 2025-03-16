@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
- | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
- | copyright (C) 2017-2023 Tim Orford <tim@orford.org>                  |
+ | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
+ | copyright (C) 2017-2025 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -19,7 +19,7 @@
 #include "agl/actor.h"
 #include "agl/fbo.h"
 #include "agl/event.h"
-#include "sample.h"
+#include "samplecat/model.h"
 #include "audio_analysis/spectrogram/spectrogram.h"
 #include "views/spectrogram.h"
 
@@ -100,13 +100,14 @@ spectrogram_view (gpointer _)
 		}
 	);
 
-	void spectrogram_on_selection_change (SamplecatModel* m, Sample* sample, gpointer actor)
+	void spectrogram_on_selection_change (SamplecatModel* m, GParamSpec* pspec, gpointer actor)
 	{
 		SpectrogramView* view = (SpectrogramView*)actor;
+		Sample* sample = m->selection;
 
 		dbg(1, "sample=%s", sample->name);
 
-		if(view->sample) sample_unref(view->sample);
+		if (view->sample) sample_unref(view->sample);
 		view->sample = sample_ref(sample);
 
 		cancel_spectrogram(NULL);
@@ -126,7 +127,7 @@ spectrogram_view (gpointer _)
 		}
 		get_spectrogram(sample->full_path, spectrogram_ready, view);
 	}
-	g_signal_connect((gpointer)samplecat.model, "selection-changed", G_CALLBACK(spectrogram_on_selection_change), view);
+	g_signal_connect((gpointer)samplecat.model, "notify::selection", G_CALLBACK(spectrogram_on_selection_change), view);
 
 	AGlActor* actor = (AGlActor*)view;
 	return actor;

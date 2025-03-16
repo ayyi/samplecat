@@ -21,6 +21,7 @@
 #include "popovermenu.h"
 #include "popovermenuprivate.h"
 #include "menusectionboxprivate.h"
+#include "widgetfocus.h"
 #include "modelbutton.h"
 
 /**
@@ -419,7 +420,6 @@ ayyi_popover_menu_focus (GtkWidget *widget, GtkDirectionType direction)
           return FALSE;
         }
 
-		extern gboolean gtk_widget_focus_move (GtkWidget *widget, GtkDirectionType);
       if (gtk_widget_focus_move (widget, direction))
         return TRUE;
 

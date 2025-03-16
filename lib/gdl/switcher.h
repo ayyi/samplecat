@@ -63,6 +63,7 @@ gint       gdl_switcher_insert_page  (GdlSwitcher *switcher,
                                       const gchar *stock_id,
                                       GdkPixbuf *pixbuf_icon,
                                       gint position);
+void      gdl_switcher_remove        (GdlSwitcher *switcher, GtkWidget *page);
 G_END_DECLS
 
 #endif /* _GDL_SWITCHER_H_ */

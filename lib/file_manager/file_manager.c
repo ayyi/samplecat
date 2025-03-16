@@ -89,24 +89,14 @@ file_manager__new_window (const char* path)
 			fm__change_to_parent(fm);
 		}
 
-		void go_down_dir (GSimpleAction* action, GVariant* _target, gpointer fm)
+		void go_down_dir (GSimpleAction* action, GVariant* target, gpointer _fm)
 		{
-#ifdef GTK4_TODO
-			AyyiFilemanager* fm = file_manager__get();
+			AyyiFilemanager* fm = _fm;
+			const char* dir_name = g_variant_get_string(target, NULL);
 
-			GList* children = gtk_container_get_children(GTK_CONTAINER(menuitem));
-			for (;children;children=children->next) {
-				GtkWidget* child = children->data;
-				if (GTK_IS_LABEL(child)) {
-					const gchar* leaf = gtk_label_get_text((GtkLabel*)child);
-					gchar* filename = g_build_filename(fm->real_path, leaf, NULL);
+			g_autofree gchar* filename = g_build_filename(fm->real_path, dir_name, NULL);
 
-					fm__change_to(fm, filename, NULL);
-
-					g_free(filename);
-				}
-			}
-#endif
+			fm__change_to(fm, filename, NULL);
 		}
 
 		void refresh (GSimpleAction* action, GVariant* parameter, gpointer fm)
@@ -157,11 +147,10 @@ file_manager__new_window (const char* path)
 			}
 		}
 
-
 		GActionEntry entries[] = {
 			{ "delete", delete, NULL, NULL, NULL },
 			{ "go-up-dir", go_up_dir, NULL, NULL, NULL },
-			{ "go-down-dir", go_down_dir, NULL, NULL, NULL },
+			{ "go-down-dir", go_down_dir, "s", NULL, NULL },
 			{ "refresh", refresh, NULL, NULL, NULL },
 			{ "set-sort", set_sort, "i", NULL, NULL },
 			{ "minibuffer", minibuffer, "i", NULL, NULL },
@@ -170,7 +159,7 @@ file_manager__new_window (const char* path)
 		};
 		GSimpleActionGroup* action_group = g_simple_action_group_new ();
 		g_action_map_add_action_entries (G_ACTION_MAP (action_group), entries, G_N_ELEMENTS (entries), new_file_manager);
-		gtk_widget_insert_action_group (GTK_WIDGET(new_file_manager->view), "fm", G_ACTION_GROUP (action_group));
+		gtk_widget_insert_action_group (GTK_WIDGET(new_file_manager->window), "fm", G_ACTION_GROUP (action_group));
 	}
 	return new_file_manager->window;
 }

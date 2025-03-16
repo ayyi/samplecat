@@ -193,7 +193,7 @@ list_view (gpointer _)
 	{
 		PF;
 	}
-	g_signal_connect((gpointer)samplecat.model, "selection-changed", G_CALLBACK(on_selection_change), NULL);
+	g_signal_connect((gpointer)samplecat.model, "notify::selection", G_CALLBACK(on_selection_change), NULL);
 #endif
 
 	void list_on_search_filter_changed (GObject* _filter, gpointer _actor)

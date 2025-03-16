@@ -14,7 +14,6 @@ AM_CFLAGS = \
 	-I$(top_srcdir)/lib/waveform \
 	-I$(top_srcdir)/lib/waveform/lib/agl \
 	-I./panels \
-	-I./dir_tree \
 	$(SAMPLECAT_CFLAGS) \
 	$(FFTW3_CFLAGS) \
 	$(OPENGL_CFLAGS) \
@@ -67,7 +66,6 @@ samplecat_SOURCES = \
 	$(AYYI_SRC)
 
 samplecat_LDADD = \
-	$(top_srcdir)/lib/dir_tree/libdirtree.a \
 	$(top_srcdir)/lib/debug/libdebug.a \
 	$(top_srcdir)/lib/samplecat/.libs/libsamplecat.a \
 	$(top_srcdir)/lib/samplecat/db/libsamplecatdb.a \
@@ -76,16 +74,17 @@ samplecat_LDADD = \
 	$(top_srcdir)/lib/utils/libutils.a \
 	$(top_srcdir)/lib/gtk/libgtk.la \
 	$(top_srcdir)/src/panels/libpanels.la \
-	$(top_srcdir)/src/widgets/.libs/libwidgets.a \
 	$(SAMPLECAT_LIBS) \
 	$(AYYI_LIBS) \
 	$(DBUS_LIBS) \
 	$(top_srcdir)/lib/audio_analysis/libaudioanalysis.la \
+	$(top_srcdir)/src/widgets/.libs/libwidgets.a \
 	$(top_srcdir)/lib/waveform/.libs/libwaveformcore.a \
 	$(top_srcdir)/lib/waveform/.libs/libwaveformui.a \
 	$(top_srcdir)/lib/waveform/lib/agl/.libs/libagl.a \
 	$(top_srcdir)/lib/gtk/.libs/libgtk.a \
 	$(top_srcdir)/lib/menu/libmenu.la \
+	$(top_srcdir)/lib/dir-tree/libdirtree.la \
 	$(TRACKER_LIBS) \
 	$(SQLITE_LIBS) \
 	$(MYSQL_LDFLAGS) \

@@ -126,7 +126,6 @@ view_details_new (AyyiFilemanager* fm)
 	PF;
 	ViewDetails* view_details = g_object_new(view_details_get_type(), NULL);
 	view_details->filer_window = fm;
-	view_details->use_alt_colours = false;
 	view_details->filer_window->view = (ViewIface*)view_details;
 
 	view_details->filer_window->menu.widget = fm__make_context_menu();

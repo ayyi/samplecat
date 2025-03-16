@@ -22,11 +22,11 @@
 #include <config.h>
 #endif
 
-#include <gtk/gtk.h>
 #include "il8n.h"
 #include "utils.h"
-#include "gdl-switcher.h"
 #include "debug.h"
+#include "switcher.h"
+#include "placeholder.h"
 
 #include "gdl-dock-notebook.h"
 
@@ -89,6 +89,10 @@ static gboolean gdl_dock_notebook_reorder         (GdlDockObject    *object,
 static void     gdl_dock_notebook_foreach_child   (GdlDockObject*    object,
                                                    GdlDockObjectFn   fn,
                                                    gpointer          user_data);
+static void     gdl_dock_notebook_remove          (GdlDockObject*, GtkWidget*);
+#ifdef DEBUG
+static bool     gdl_dock_notebook_validate        (GdlDockObject* object);
+#endif
 
 
 /* Class variables and definitions */
@@ -135,7 +139,11 @@ gdl_dock_notebook_class_init (GdlDockNotebookClass *klass)
     object_class->child_placement = gdl_dock_notebook_child_placement;
     object_class->present = gdl_dock_notebook_present;
     object_class->reorder = gdl_dock_notebook_reorder;
-    object_class->foreach_child = gdl_dock_notebook_foreach_child;
+	object_class->foreach_child = gdl_dock_notebook_foreach_child;
+    object_class->remove = gdl_dock_notebook_remove;
+#ifdef DEBUG
+    object_class->validate = gdl_dock_notebook_validate;
+#endif
 
     gdl_dock_item_class_set_has_grip (item_class, FALSE);
     item_class->set_orientation = gdl_dock_notebook_set_orientation;
@@ -161,7 +169,7 @@ gdl_dock_notebook_class_init (GdlDockNotebookClass *klass)
 static void
 gdl_dock_notebook_notify_cb (GObject *g_object, GParamSpec *pspec, gpointer user_data)
 {
-    g_return_if_fail (user_data != NULL && GDL_IS_DOCK_NOTEBOOK (user_data));
+    g_return_if_fail (GDL_IS_DOCK_NOTEBOOK (user_data));
 
     /* chain the notify signal */
     g_object_notify (G_OBJECT (user_data), pspec->name);
@@ -235,6 +243,9 @@ gdl_dock_notebook_get_property (GObject *object, guint prop_id, GValue *value, G
 static void
 gdl_dock_notebook_dispose (GObject *object)
 {
+	ENTER;
+	cdbg(1, "...");
+
     GdlDockItem *item = GDL_DOCK_ITEM (object);
 
     /* we need to call the virtual first, since in GdlDockDestroy our children dock objects are detached */
@@ -247,20 +258,49 @@ gdl_dock_notebook_dispose (GObject *object)
 static void
 gdl_dock_notebook_switch_page_cb (GtkNotebook *nb, GtkWidget *page, gint page_num, gpointer data)
 {
-    GdlDockNotebook *notebook = GDL_DOCK_NOTEBOOK (data);
-    gint current_page = gtk_notebook_get_current_page (nb);
+	GdlDockNotebook *notebook = GDL_DOCK_NOTEBOOK (data);
+	gint current_page = gtk_notebook_get_current_page (nb);
 
-    if (gtk_gesture_is_active(notebook->priv->click))
-        gdl_dock_object_layout_changed_notify (GDL_DOCK_OBJECT (notebook));
+	if (gtk_gesture_is_active(notebook->priv->click))
+		gdl_dock_object_layout_changed_notify (GDL_DOCK_OBJECT (notebook));
 
-    /* Signal that the old dock has been deselected */
-    GdlDockItem* current_item = GDL_DOCK_ITEM (gtk_notebook_get_nth_page (nb, current_page));
+	/* Signal that the old dock has been deselected */
+	GdlDockItem* current_item = GDL_DOCK_ITEM (gtk_notebook_get_nth_page (nb, current_page));
 
-    gdl_dock_item_notify_deselected (current_item);
+	gdl_dock_item_notify_deselected (current_item);
 
-    /* Signal that a new dock item has been selected */
-    GdlDockItem* new_item = GDL_DOCK_ITEM (gtk_notebook_get_nth_page (nb, page_num));
-    gdl_dock_item_notify_selected (new_item);
+	/* Signal that a new dock item has been selected */
+	GdlDockItem* new_item = GDL_DOCK_ITEM (gtk_notebook_get_nth_page (nb, page_num));
+	if (page_num != current_page && DOCK_IS_PLACEHOLDER(new_item)) {
+		gboolean gdl_dock_notebook_swap_placeholder (gpointer data)
+		{
+			GtkNotebook* nb = data;
+			GdlSwitcher* switcher = GDL_SWITCHER(gtk_widget_get_parent(GTK_WIDGET(nb)));
+			GdlDockNotebook* notebook = GDL_DOCK_NOTEBOOK(gtk_widget_get_parent(GTK_WIDGET(switcher)));
+
+			gint page_num = gtk_notebook_get_current_page (nb);
+			GdlDockItem* placeholder = GDL_DOCK_ITEM (gtk_notebook_get_nth_page (nb, page_num));
+			if (!DOCK_IS_PLACEHOLDER(placeholder))
+				return G_SOURCE_REMOVE;
+
+			GdlDockItem* filled = dock_placeholder_fill (DOCK_PLACEHOLDER(placeholder));
+
+			GDL_DOCK_OBJECT_GET_CLASS(notebook)->remove(GDL_DOCK_OBJECT(notebook), GTK_WIDGET(placeholder));
+			gtk_notebook_remove_page(nb, page_num);
+
+			gchar *long_name, *stock_id;
+			GdkPixbuf *pixbuf_icon;
+			g_object_get (filled, "long-name", &long_name, "stock-id", &stock_id, "pixbuf-icon", &pixbuf_icon, NULL);
+
+			gdl_switcher_insert_page (switcher, GTK_WIDGET(filled), NULL, long_name, long_name, stock_id, pixbuf_icon, page_num);
+			gtk_notebook_set_current_page(nb, page_num);
+
+			return G_SOURCE_REMOVE;
+		}
+		g_idle_add(gdl_dock_notebook_swap_placeholder, nb);
+	}
+
+	gdl_dock_item_notify_selected (new_item);
 }
 
 void
@@ -277,9 +317,11 @@ gdl_dock_notebook_add (GdlDockObject *container, GtkWidget *widget)
     gdl_dock_object_dock (container, GDL_DOCK_OBJECT (widget), GDL_DOCK_CENTER, NULL);
 }
 
-void
+static void
 gdl_dock_notebook_remove (GdlDockObject* object, GtkWidget* widget)
 {
+	GtkWidget* child = gdl_dock_item_get_child (GDL_DOCK_ITEM(object));
+	gdl_switcher_remove(GDL_SWITCHER(child), widget);
 }
 
 static void
@@ -435,6 +477,8 @@ gdl_dock_notebook_reorder (GdlDockObject *object, GdlDockObject *requestor, GdlD
 static void
 gdl_dock_notebook_foreach_child (GdlDockObject *object, GdlDockObjectFn fn, gpointer user_data)
 {
+	ENTER;
+
 	GdlSwitcher* child = GDL_SWITCHER (gdl_dock_item_get_child (GDL_DOCK_ITEM (object)));
 
 	GtkNotebook* notebook = child->notebook;
@@ -465,3 +509,18 @@ gdl_dock_notebook_new (void)
 
     return GTK_WIDGET (notebook);
 }
+
+#ifdef DEBUG
+static bool
+gdl_dock_notebook_validate (GdlDockObject* object)
+{
+	GdlSwitcher* switcher = GDL_SWITCHER((GDL_DOCK_ITEM (object)->child));
+	if (!switcher) return false;
+
+	GtkNotebook* notebook = switcher->notebook;
+	int n_pages = gtk_notebook_get_n_pages(notebook);
+	if (n_pages < 1) return false;
+
+	return true;
+}
+#endif

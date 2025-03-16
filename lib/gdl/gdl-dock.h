@@ -18,8 +18,7 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#ifndef __GDL_DOCK_H__
-#define __GDL_DOCK_H__
+#pragma once
 
 #include <gtk/gtk.h>
 #include <gdl/gdl-dock-object.h>
@@ -55,21 +54,6 @@ struct _GdlDockClass {
     void  (* layout_changed)  (GdlDock *dock);    /* proxy signal for the master */
 };
 
-/* additional macros */
-#ifndef GDL_DISABLE_DEPRECATED
-/**
- * GDL_DOCK_IS_CONTROLLER:
- * @obj: A #GdlDockObject
- *
- * Evaluates to %TRUE if the dock is the controller.
- *
- * Deprecated: 3.6: Use gdl_dock_object_get_controller (dock) == dock
- */
-#define GDL_DOCK_IS_CONTROLLER(dock)  \
-    (gdl_dock_master_get_controller (GDL_DOCK_OBJECT_GET_MASTER (dock)) == \
-     GDL_DOCK_OBJECT (dock))
-#endif
-
 /* public interface */
 
 GtkWidget     *gdl_dock_new               (void);
@@ -79,20 +63,18 @@ GtkWidget     *gdl_dock_new_from          (GdlDock          *original,
 
 GType          gdl_dock_get_type          (void);
 
-void           gdl_dock_add_item          (GdlDock          *dock,
+GdlDockItem*   gdl_dock_add_item          (GdlDock          *dock,
                                            GdlDockItem      *item,
                                            GdlDockPlacement  placement);
+void           gdl_dock_just_add_item     (GdlDock          *dock,
+                                           GdlDockItem      *item);
 
 void           gdl_dock_add               (GdlDock          *container,
-                                           GtkWidget        *widget);
-void           gdl_dock_remove            (GdlDock          *container,
                                            GtkWidget        *widget);
 void           gdl_dock_forall            (GdlDock          *container,
                                            gboolean          include_internals,
                                            GtkCallback       callback,
                                            gpointer          callback_data);
-GType          gdl_dock_child_type        (GdlDock          *container);
-
 
 void           gdl_dock_add_floating_item (GdlDock          *dock,
                                            GdlDockItem      *item,
@@ -120,12 +102,6 @@ void           gdl_dock_set_skip_taskbar    (GdlDock       *dock,
 #ifndef GDL_DISABLE_DEPRECATED
 GdlDockPlaceholder *gdl_dock_get_placeholder_by_name (GdlDock     *dock,
                                                       const gchar *name);
-
-void           gdl_dock_xor_rect            (GdlDock       *dock,
-                                             GdkRectangle  *rect) G_GNUC_DEPRECATED_FOR(gdl_dock_show_preview);
-void           gdl_dock_xor_rect_hide        (GdlDock       *dock) G_GNUC_DEPRECATED_FOR(gdl_dock_hide_preview);
 #endif
 
 G_END_DECLS
-
-#endif

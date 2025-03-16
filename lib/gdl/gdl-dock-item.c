@@ -40,7 +40,7 @@
 #include "gdl-dock-item-grip.h"
 #include "gdl-dock-notebook.h"
 #include "gdl-dock-paned.h"
-#include "gdl-switcher.h"
+#include "switcher.h"
 #include "gdl-dock-master.h"
 #include "libgdltypebuiltins.h"
 #include "libgdlmarshal.h"
@@ -112,6 +112,9 @@ static void     gdl_dock_item_dock          (GdlDockObject    *object,
                                              GdlDockObject    *requestor,
                                              GdlDockPlacement  position,
                                              GValue           *other_data);
+static void     gdl_dock_item_remove        (GdlDockObject    *object,
+                                             GtkWidget        *widget);
+static void     gdl_dock_item_remove_widgets(GdlDockObject    *object);
 static void     gdl_dock_item_present       (GdlDockObject     *object,
                                              GdlDockObject     *child);
 
@@ -329,6 +332,8 @@ gdl_dock_item_class_init (GdlDockItemClass *klass)
     dock_object_class->dock_request = gdl_dock_item_dock_request;
     dock_object_class->dock = gdl_dock_item_dock;
     dock_object_class->present = gdl_dock_item_present;
+    dock_object_class->remove = gdl_dock_item_remove;
+    dock_object_class->remove_widgets = gdl_dock_item_remove_widgets;
 
     klass->priv->has_grip = TRUE;
     klass->dock_drag_begin = NULL;
@@ -617,12 +622,6 @@ gdl_dock_item_init (GdlDockItem *item)
 	item->priv->preferred_width = item->priv->preferred_height = -1;
 	item->priv->tab_label = NULL;
 	item->priv->intern_tab_label = FALSE;
-
-	item->priv->click = gtk_gesture_click_new ();
-	g_signal_connect (item->priv->click, "pressed", G_CALLBACK (gdl_dock_item_click_gesture_pressed), item);
-	g_signal_connect (item->priv->click, "released", G_CALLBACK (gdl_dock_item_click_gesture_released), item);
-	gtk_gesture_single_set_button (GTK_GESTURE_SINGLE (item->priv->click), 3);
-	gtk_widget_add_controller (GTK_WIDGET (item), GTK_EVENT_CONTROLLER (item->priv->click));
 }
 
 static void
@@ -656,6 +655,13 @@ gdl_dock_item_constructor (GType type, guint n_construct_properties, GObjectCons
             item->priv->grip_shown = TRUE;
             item->priv->grip = gdl_dock_item_grip_new (item);
             gtk_widget_set_parent (item->priv->grip, GTK_WIDGET (item));
+
+			item->priv->click = gtk_gesture_click_new ();
+			g_signal_connect (item->priv->click, "pressed", G_CALLBACK (gdl_dock_item_click_gesture_pressed), item);
+			g_signal_connect (item->priv->click, "released", G_CALLBACK (gdl_dock_item_click_gesture_released), item);
+			gtk_gesture_single_set_button (GTK_GESTURE_SINGLE (item->priv->click), 3);
+			gtk_widget_add_controller (GTK_WIDGET (item->priv->grip), GTK_EVENT_CONTROLLER (item->priv->click));
+
         } else {
             item->priv->grip_shown = FALSE;
         }
@@ -832,9 +838,16 @@ gdl_dock_item_dispose (GObject *object)
     }
 
     if (priv->grip) {
-        gdl_dock_item_remove (item, priv->grip);
-        priv->grip = NULL;
+		g_clear_pointer(&priv->grip, gtk_widget_unparent);
     }
+
+    if (item->child) {
+		g_clear_pointer(&item->child, gtk_widget_unparent);
+    }
+
+	if (!gdl_dock_object_is_compound(GDL_DOCK_OBJECT(object))) {
+		g_signal_emit_by_name(gdl_dock_object_get_master(GDL_DOCK_OBJECT(object)), "dock-item-removed", object);
+	}
 
     G_OBJECT_CLASS (gdl_dock_item_parent_class)->dispose (object);
 }
@@ -858,24 +871,36 @@ gdl_dock_item_add (GdlDockItem* item, GtkWidget *widget)
     item->child = widget;
 }
 
-void
-gdl_dock_item_remove (GdlDockItem *container, GtkWidget *widget)
+static void
+gdl_dock_item_remove_widgets (GdlDockObject* object)
+{
+    GdlDockItem* item = GDL_DOCK_ITEM (object);
+
+    if (item->priv->grip) {
+        gboolean grip_was_visible = gtk_widget_get_visible (item->priv->grip);
+        g_clear_pointer(&item->priv->grip, gtk_widget_unparent);
+        if (grip_was_visible)
+            gtk_widget_queue_resize (GTK_WIDGET (item));
+    }
+
+	if (!gdl_dock_object_is_compound(object))
+		g_clear_pointer(&item->child, gtk_widget_unparent);
+
+	GDL_DOCK_OBJECT_CLASS (gdl_dock_item_parent_class)->remove_widgets (object);
+}
+
+static void
+gdl_dock_item_remove (GdlDockObject *container, GtkWidget *widget)
 {
     g_return_if_fail (GDL_IS_DOCK_ITEM (container));
 
     GdlDockItem* item = GDL_DOCK_ITEM (container);
-    if (item->priv && widget == item->priv->grip) {
-        gboolean grip_was_visible = gtk_widget_get_visible (widget);
-        gtk_widget_unparent (widget);
-        item->priv->grip = NULL;
-        if (grip_was_visible)
-            gtk_widget_queue_resize (GTK_WIDGET (item));
-        return;
-    }
+
+	gdl_dock_item_remove_widgets (container);
 
     gdl_dock_item_drag_end (item, TRUE);
 
-    g_return_if_fail (item->child == widget);
+    g_return_if_fail (widget == item->child);
 
     gboolean was_visible = gtk_widget_get_visible (widget);
 
@@ -1069,14 +1094,9 @@ gdl_dock_item_map (GtkWidget *widget)
     g_return_if_fail (widget != NULL);
     g_return_if_fail (GDL_IS_DOCK_ITEM (widget));
  
-    //gtk_widget_set_mapped (widget, TRUE);
     GTK_WIDGET_CLASS (gdl_dock_item_parent_class)->map (widget);
 
     GdlDockItem* item = GDL_DOCK_ITEM (widget);
-
-#ifdef GTK4_TODO
-    gdk_window_show (gtk_widget_get_window (widget));
-#endif
 
     if (item->child
         && gtk_widget_get_visible (item->child)
@@ -1097,15 +1117,8 @@ gdl_dock_item_unmap (GtkWidget *widget)
 	g_return_if_fail (widget);
 	g_return_if_fail (GDL_IS_DOCK_ITEM (widget));
 
-#ifdef GTK4_TODO
-	gtk_widget_set_mapped (widget, FALSE);
-#endif
-
 	GdlDockItem *item = GDL_DOCK_ITEM (widget);
 
-#ifdef GTK4_TODO
-    gdk_window_hide (gtk_widget_get_window (widget));
-#endif
     GTK_WIDGET_CLASS (gdl_dock_item_parent_class)->unmap (widget);
 
 	if (item->child)
@@ -1624,12 +1637,12 @@ gdl_dock_item_popup_menu (GdlDockItem *item, guint button, double x, double y)
             g_signal_connect (action, "activate", G_CALLBACK (gdl_dock_item_lock_cb), item);
 			g_menu_append (menu, _("Lock"), "dock-item.lock");
         }
+	}
 
 #ifdef GTK4_TODO
-		gtk_popover_set_position (GTK_POPOVER(_item->menu), GTK_POS_LEFT);
+	gtk_popover_set_position (GTK_POPOVER(_item->menu), GTK_POS_LEFT);
 #endif
-		gtk_popover_popup(GTK_POPOVER(_item->menu));
-	}
+	gtk_popover_popup(GTK_POPOVER(_item->menu));
 
 #ifdef GTK4_TODO
 	const GdkRectangle rect = {0,};
@@ -1755,9 +1768,7 @@ gdl_dock_item_showhide_grip (GdlDockItem *item)
     gdl_dock_item_detach_menu (GTK_WIDGET (item), NULL);
 #endif
 
-    if (item->priv->grip && GDL_DOCK_ITEM_NOT_LOCKED(item) &&
-        GDL_DOCK_ITEM_HAS_GRIP(item)) {
-
+    if (item->priv->grip && GDL_DOCK_ITEM_NOT_LOCKED(item) && GDL_DOCK_ITEM_HAS_GRIP(item)) {
         if (item->priv->grip_shown) {
             gdl_dock_item_grip_show_handle (GDL_DOCK_ITEM_GRIP (item->priv->grip));
         } else {
@@ -1767,8 +1778,7 @@ gdl_dock_item_showhide_grip (GdlDockItem *item)
 }
 
 static void
-gdl_dock_item_real_set_orientation (GdlDockItem    *item,
-                                    GtkOrientation  orientation)
+gdl_dock_item_real_set_orientation (GdlDockItem *item, GtkOrientation orientation)
 {
     item->priv->orientation = orientation;
 
@@ -1789,7 +1799,7 @@ gdl_dock_item_real_set_orientation (GdlDockItem    *item,
  *            #GdlDockItemBehavior flags.
  *
  * Creates a new dock item widget.
- * Returns: The newly created dock item grip widget.
+ * Returns: The newly created dock item widget.
  **/
 GtkWidget *
 gdl_dock_item_new (const gchar *name, const gchar *long_name, GdlDockItemBehavior  behavior)
@@ -1809,8 +1819,8 @@ gdl_dock_item_new (const gchar *name, const gchar *long_name, GdlDockItemBehavio
  *            float, if it's locked, etc.), as specified by
  *            #GdlDockItemBehavior flags.
  *
- * Creates a new dock item grip widget with a given stock id.
- * Returns: The newly created dock item grip widget.
+ * Creates a new dock item widget with a given stock id.
+ * Returns: The newly created dock item widget.
  **/
 GtkWidget *
 gdl_dock_item_new_with_icon (const gchar *name, const gchar *long_name, const gchar *icon, GdlDockItemBehavior behavior)
@@ -1998,10 +2008,10 @@ gdl_dock_item_unset_behavior_flags (GdlDockItem *item, GdlDockItemBehavior behav
 GdlDockItemBehavior
 gdl_dock_item_get_behavior_flags (GdlDockItem *item)
 {
-    GdlDockItemBehavior behavior;
     g_return_val_if_fail (GDL_IS_DOCK_ITEM (item), GDL_DOCK_ITEM_BEH_NORMAL);
 
-    behavior = item->priv->behavior;
+    GdlDockItemBehavior behavior = item->priv->behavior;
+
     if (!(behavior & GDL_DOCK_ITEM_BEH_NO_GRIP) && !(GDL_DOCK_ITEM_GET_CLASS (item)->priv->has_grip))
         behavior |= GDL_DOCK_ITEM_BEH_NO_GRIP;
     if (behavior & GDL_DOCK_ITEM_BEH_LOCKED)

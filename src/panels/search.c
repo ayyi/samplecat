@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
- | copyright (C) 2007-2024 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2007-2025 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -14,6 +14,7 @@
 #include <gtk/gtk.h>
 #include "debug/debug.h"
 #include "gdl/gdl-dock-item.h"
+#include "gtk/utils.h"
 #include "support.h"
 #include "application.h"
 #include "widgets/suggestion_entry.h"
@@ -51,9 +52,34 @@ static void tagshow_selector_new ();
 
 
 static void
+search_remove_widgets (GdlDockObject* object)
+{
+	GtkWidget* entry = find_widget_by_type_deep(GTK_WIDGET(object), SUGGESTION_TYPE_ENTRY);
+	if (entry)
+		agl_observable_unsubscribe (samplecat.model->filters2.search, NULL, entry);
+
+	g_clear_pointer(&window.search, gtk_widget_unparent);
+	g_clear_pointer(&window.toolbar, gtk_widget_unparent);
+
+	GDL_DOCK_OBJECT_CLASS (search_parent_class)->remove_widgets (object);
+}
+
+static void
+search_dispose (GObject* obj)
+{
+	search_remove_widgets(GDL_DOCK_OBJECT(obj));
+
+	G_OBJECT_CLASS (search_parent_class)->dispose (obj);
+}
+
+
+static void
 search_class_init (SearchClass * klass, gpointer klass_data)
 {
 	search_parent_class = g_type_class_peek_parent (klass);
+
+	G_OBJECT_CLASS (klass)->dispose = search_dispose;
+    GDL_DOCK_OBJECT_CLASS(klass)->remove_widgets = search_remove_widgets;
 
 	window.recent = gtk_string_list_new(NULL);
 
@@ -86,7 +112,6 @@ search_instance_init (Search* self, gpointer klass)
 		gtk_widget_set_hexpand (entry, TRUE);
 		g_object_set (entry, "placeholder-text", "Search", NULL);
 		suggestion_entry_set_model(SUGGESTION_ENTRY (entry), G_LIST_MODEL (window.recent));
-		g_object_unref(window.recent);
 
 		gtk_box_append(GTK_BOX(row1), entry);
 

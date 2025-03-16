@@ -42,7 +42,6 @@ ui_test_LDADD = \
 	../../lib/gtk/icon_theme.o \
 	$(FFTW_LDADD) \
 	$(top_srcdir)/lib/test/libtest.la \
-	$(top_srcdir)/lib/dir_tree/libdirtree.a \
 	$(top_srcdir)/lib/debug/libdebug.a \
 	$(top_srcdir)/lib/samplecat/.libs/libsamplecat.a \
 	$(top_srcdir)/lib/samplecat/db/libsamplecatdb.a \
@@ -52,6 +51,7 @@ ui_test_LDADD = \
 	$(top_srcdir)/lib/gtk/libgtk.la \
 	$(top_srcdir)/lib/menu/libmenu.la \
 	$(top_srcdir)/src/panels/libpanels.la \
+	$(top_srcdir)/lib/dir-tree/libdirtree.la \
 	$(top_srcdir)/lib/utils/libutils.a \
 	$(top_srcdir)/src/widgets/.libs/libwidgets.a \
 	$(DBUS_LIBS) \

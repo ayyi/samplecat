@@ -28,6 +28,7 @@
 #define __GDL_DOCK_ITEM_H__
 
 #include <gdl/gdl-dock-object.h>
+#include <gdl/utils.h>
 
 G_BEGIN_DECLS
 
@@ -274,7 +275,6 @@ GtkWidget     *gdl_dock_item_new_with_pixbuf_icon  (const gchar      *name,
 
 GType          gdl_dock_item_get_type              (void);
 void           gdl_dock_item_add                   (GdlDockItem* item, GtkWidget *widget);
-void           gdl_dock_item_remove                (GdlDockItem* item, GtkWidget *widget);
 void           gdl_dock_item_set_child             (GdlDockItem*, GtkWidget*);
 
 void           gdl_dock_item_dock_to               (GdlDockItem      *item,

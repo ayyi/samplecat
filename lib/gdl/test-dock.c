@@ -10,8 +10,6 @@
 
 #include <glib.h>
 
-/* ---- end of debugging code */
-
 static void
 on_style_button_toggled (GtkCheckButton *button, GdlDock *dock)
 {
@@ -45,7 +43,6 @@ create_style_button (GtkWidget *dock, GtkWidget *box, GtkWidget *group, GdlSwitc
 static GtkWidget *
 create_styles_item (GtkWidget *dock)
 {
-
 	GtkWidget* vbox1 = gtk_box_new (GTK_ORIENTATION_VERTICAL, 0);
 
 	GtkWidget* group = NULL;
@@ -194,10 +191,16 @@ activate (GtkApplication* app, gpointer user_data)
 	gdl_dock_item_set_child (GDL_DOCK_ITEM (item1), create_text_item ());
 	gdl_dock_add_item (GDL_DOCK (dock), GDL_DOCK_ITEM (item1), GDL_DOCK_TOP);
 
-	GtkWidget* item2 = gdl_dock_item_new_with_icon ("item2", "Item #2: Select the switcher style for notebooks", "folder", GDL_DOCK_ITEM_BEH_NORMAL);
-	gdl_dock_item_set_child (GDL_DOCK_ITEM (item2), create_styles_item (dock));
-	gdl_dock_add_item (GDL_DOCK (dock), GDL_DOCK_ITEM (item2), GDL_DOCK_RIGHT);
-	g_object_set (item2, "expand", FALSE, NULL);
+	GtkWidget* item2 = GTK_WIDGET(gdl_dock_add_item (
+		GDL_DOCK (dock),
+		GDL_DOCK_ITEM ({
+			GtkWidget* item = gdl_dock_item_new_with_icon ("item2", "Item #2: Select the switcher style for notebooks", "folder", GDL_DOCK_ITEM_BEH_NORMAL);
+			gdl_dock_item_set_child (GDL_DOCK_ITEM (item), create_styles_item (dock));
+			g_object_set (item, "expand", FALSE, NULL);
+			item;
+		}),
+		GDL_DOCK_RIGHT
+	));
 
 	GtkWidget* item3 = gdl_dock_item_new_with_icon ("item3", "Item #3 has accented characters (áéíóúñ)", "document-save-symbolic", GDL_DOCK_ITEM_BEH_NORMAL | GDL_DOCK_ITEM_BEH_CANT_CLOSE);
 	GtkWidget* name_button = create_item ("Change name");
@@ -205,7 +208,7 @@ activate (GtkApplication* app, gpointer user_data)
 	g_signal_connect (name_button, "clicked", G_CALLBACK(on_change_name), item3);
 	gdl_dock_add_item (GDL_DOCK (dock), GDL_DOCK_ITEM (item3), GDL_DOCK_BOTTOM);
 
-	GtkWidget *items [4];
+	GtkWidget* items[4];
 	items [0] = gdl_dock_item_new_with_icon ("Item #4", "Item #4", "view-refresh-symbolic", GDL_DOCK_ITEM_BEH_NORMAL | GDL_DOCK_ITEM_BEH_CANT_ICONIFY);
 	gdl_dock_item_set_child (GDL_DOCK_ITEM (items [0]), create_text_item ());
 	gdl_dock_add_item (GDL_DOCK (dock), GDL_DOCK_ITEM (items [0]), GDL_DOCK_BOTTOM);
@@ -220,7 +223,6 @@ activate (GtkApplication* app, gpointer user_data)
 	};
 
 	/* tests: manually dock and move around some of the items */
-#ifdef GTK4_TODO
 	gdl_dock_item_dock_to (GDL_DOCK_ITEM (item3), GDL_DOCK_ITEM (item1), GDL_DOCK_TOP, -1);
 
 	gdl_dock_item_dock_to (GDL_DOCK_ITEM (item2), GDL_DOCK_ITEM (item3), GDL_DOCK_RIGHT, -1);
@@ -228,7 +230,6 @@ activate (GtkApplication* app, gpointer user_data)
 	gdl_dock_item_dock_to (GDL_DOCK_ITEM (item2), GDL_DOCK_ITEM (item3), GDL_DOCK_LEFT, -1);
 
 	gdl_dock_item_dock_to (GDL_DOCK_ITEM (item2), NULL, GDL_DOCK_FLOATING, -1);
-#endif
 
 	box = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 5);
 	gtk_box_set_homogeneous (GTK_BOX (box), TRUE);

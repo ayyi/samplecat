@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
- | copyright (C) 2007-2024 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2007-2025 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -15,6 +15,7 @@
  */
 
 #include "config.h"
+#define GDK_VERSION_MIN_REQUIRED GDK_VERSION_4_8
 #include <gtk/gtk.h>
 #include "debug/debug.h"
 #ifdef USE_AYYI
@@ -38,7 +39,7 @@ static LibraryView* instance;
 #define START_EDITING 1
 
 static void         listview__on_row_clicked          (GtkGestureClick*, int, double, double, gpointer);
-static void         listview__on_cursor_change        (GtkTreeView*, gpointer);
+static void         library__on_cursor_change         (GtkTreeView*, gpointer);
 static void         listview__on_store_changed        (GtkListStore*, LibraryView*);
 static GdkContentProvider*
                     listview__on_drag_prepare         (GtkDragSource*, double x, double y, GtkWidget*);
@@ -70,7 +71,7 @@ static bool         listview_item_set_colour          (GtkTreePath*, unsigned co
 
 
 GtkWidget*
-listview__new ()
+library__new ()
 {
 	LibraryView* lv = instance = g_new0(LibraryView, 1);
 
@@ -213,7 +214,14 @@ listview__new ()
 	gtk_gesture_single_set_button (GTK_GESTURE_SINGLE (click), 0);
 	gtk_widget_add_controller (view, GTK_EVENT_CONTROLLER (click));
 
-	g_signal_connect((gpointer)view, "cursor-changed", G_CALLBACK(listview__on_cursor_change), NULL);
+	void library_on_finalize (gpointer lv, GObject* was)
+	{
+		g_signal_handlers_disconnect_matched(((LibraryView*)lv)->widget, G_SIGNAL_MATCH_DATA, 0, 0, 0, NULL, lv);
+		g_signal_handlers_disconnect_matched(G_OBJECT(samplecat.store), G_SIGNAL_MATCH_DATA, 0, 0, 0, NULL, lv);
+	}
+	g_object_weak_ref(G_OBJECT(lv->scroll), library_on_finalize, lv);
+
+	g_signal_connect((gpointer)view, "cursor-changed", G_CALLBACK(library__on_cursor_change), lv);
 	g_signal_connect(G_OBJECT(samplecat.store), "content-changed", G_CALLBACK(listview__on_store_changed), lv);
 
 	void listview_on_play (GObject* _player, gpointer _)
@@ -435,7 +443,7 @@ listview__on_row_clicked (GtkGestureClick* gesture, int n_press, double x, doubl
 				gtk_tree_selection_select_path(selection, path);
 				gtk_tree_path_free(path);
 
-				listview__on_cursor_change(treeview, NULL);
+				library__on_cursor_change(treeview, NULL);
 			}
 		}
 		break;
@@ -447,7 +455,7 @@ listview__on_row_clicked (GtkGestureClick* gesture, int n_press, double x, doubl
 
 
 static void
-listview__on_cursor_change (GtkTreeView* widget, gpointer user_data)
+library__on_cursor_change (GtkTreeView* widget, gpointer user_data)
 {
 	PF2;
 
@@ -469,21 +477,14 @@ listview__on_store_changed (GtkListStore* store, LibraryView* view)
 
 	listview__unblock_motion_handler();
 
-	gboolean select_first (gpointer data)
-	{
-		LibraryView* view = data;
-
-		GtkTreeSelection* selection = gtk_tree_view_get_selection((GtkTreeView*)view->widget);
-		if (!gtk_tree_selection_count_selected_rows(selection)) {
-			GtkTreePath* path;
-			if (gtk_tree_view_get_visible_range((GtkTreeView*)view->widget, &path, NULL)) {
-				gtk_tree_view_set_cursor((GtkTreeView*)view->widget, path, NULL, 0);
-				gtk_tree_path_free(path);
-			}
+	GtkTreeSelection* selection = gtk_tree_view_get_selection((GtkTreeView*)view->widget);
+	if (!gtk_tree_selection_count_selected_rows(selection)) {
+		GtkTreePath* path;
+		if (gtk_tree_view_get_visible_range((GtkTreeView*)view->widget, &path, NULL)) {
+			gtk_tree_view_set_cursor((GtkTreeView*)view->widget, path, NULL, 0);
+			gtk_tree_path_free(path);
 		}
-		return G_SOURCE_REMOVE;
 	}
-	g_idle_add(select_first, view);
 }
 
 

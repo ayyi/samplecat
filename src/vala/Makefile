@@ -6,9 +6,8 @@ all:
 	valac -C -H spectrogram_widget.h --pkg gtk+-2.0 --pkg gmodule-2.0 spectrogram_widget.vala
 
 spectrogram-area.c: spectrogram-area.vala
-	valac -C -H spectrogram-area.h $(packages) --pkg gl \
-		../../lib/waveform/lib/agl/agl/agl.vapi  ../../lib/waveform/lib/agl/agl/gtk-area.vapi $(vapidir) \
-		spectrogram-area.vala
+	$(valac) -C -H $(basename $<).h $(packages) --pkg gl \
+		../../lib/waveform/lib/agl/agl/agl.vapi  ../../lib/waveform/lib/agl/agl/gtk-area.vapi $(vapidir) $<
 
 application.c: application.vala
 	valac -C -H application.h $(packages) --pkg samplecat $(vapidir) application.vala

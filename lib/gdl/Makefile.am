@@ -63,10 +63,14 @@ libgdl_4_la_SOURCES = \
 	gdl-dock-layout.c \
 	gdl-dock-placeholder.c \
 	gdl-dock-bar.c \
-	gdl-switcher.c \
-	gdl-switcher.h \
+	switcher.c \
+	switcher.h \
 	layoutmanager.c \
 	layoutmanager.h \
+	factory.c \
+	factory.h \
+	placeholder.c \
+	placeholder.h \
 	il8n.h \
 	registry.h registry.c \
 	utils.c utils.h \

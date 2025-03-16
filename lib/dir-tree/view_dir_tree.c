@@ -21,14 +21,14 @@
 #include "file_manager/file_manager.h"
 #include "samplecat/model.h"
 
-#include "dir_tree/gqview.h"
-#include "dir_tree/filelist.h"
-#include "dir_tree/layout_util.h"
-#include "dir_tree/utilops.h"
-#include "dir_tree/ui_fileops.h"
-#include "dir_tree/ui_menu.h"
-#include "dir_tree/ui_tree_edit.h"
-#include "dir_tree/view_dir_tree.h"
+#include "dir-tree/gqview.h"
+#include "dir-tree/filelist.h"
+#include "dir-tree/layout_util.h"
+#include "dir-tree/utilops.h"
+#include "dir-tree/ui_fileops.h"
+#include "dir-tree/ui_menu.h"
+#include "dir-tree/ui_tree_edit.h"
+#include "dir-tree/view_dir_tree.h"
 
 #include <gdk/gdkkeysyms.h> /* for keyboard values */
 
@@ -1386,7 +1386,6 @@ gint
 vdtree_set_path (ViewDirTree *vdt, const gchar *path)
 {
 	dbg(1, "path=%s", path);
-	FileData *fd;
 	GtkTreeIter iter;
 
 	if (!path) return FALSE;
@@ -1403,7 +1402,7 @@ vdtree_set_path (ViewDirTree *vdt, const gchar *path)
 	}
 	/* scroll to path - no matter if it changed */
 #endif
-	fd = vdtree_populate_path(vdt, vdt->path, TRUE, TRUE);
+	FileData* fd = vdtree_populate_path(vdt, vdt->path, TRUE, TRUE);
 
 	if (!fd) return FALSE;
 
@@ -1426,13 +1425,6 @@ vdtree_set_path (ViewDirTree *vdt, const gchar *path)
 
 	return TRUE;
 }
-
-#if 0
-const gchar *vdtree_get_path(ViewDirTree *vdt)
-{
-	return vdt->path;
-}
-#endif
 
 void vdtree_refresh(ViewDirTree *vdt)
 {
@@ -1893,7 +1885,7 @@ void vdtree_set_layout(ViewDirTree *vdt, LayoutWindow *layout)
 ViewDirTree *vdt1 = NULL; //temp
 
 static gboolean
-icon_foreach(GtkTreeModel *model, GtkTreePath  *path, GtkTreeIter *iter, gpointer _pixbuf)
+icon_foreach(GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *iter, gpointer _pixbuf)
 {
 	GdkPixbuf* pixbuf = _pixbuf;
 	vdtree_icon_set_by_iter(vdt1, iter, pixbuf);

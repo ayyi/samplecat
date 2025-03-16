@@ -13,6 +13,8 @@
 #include "config.h"
 #include "gtk/menu.h"
 #include "debug/debug.h"
+#include "gtk/utils.h"
+#include "samplecat/support.h"
 
 
 #ifdef GTK4_TODO
@@ -66,27 +68,25 @@ add_menu_items_from_defn (GtkWidget* widget, GMenuModel* model, int size, MenuDe
 				if (!item->action) {
 					g_menu_append_submenu (G_MENU(section[s-1]), item->name, section[s]);
 				} else {
-					GMenuItem* mi = g_menu_item_new_submenu(item->name,  section[s]);
+					g_autoptr(GMenuItem) mi = g_menu_item_new_submenu(item->name, section[s]);
 					g_menu_item_set_attribute (mi, "submenu-action", "s", item->action);
 					if (false && item->icon) {
 						g_menu_item_set_attribute (mi, "touch-icon", "s", item->icon);
 						g_menu_item_set_attribute (mi, "icon", "s", item->icon); // setting an icon changes the layout but does not show an icon
 					}
 					g_menu_append_item(G_MENU(section[s - 1]), mi);
-					g_object_unref(mi);
 				}
 
 				break;
 			default:
 				if (item->icon) {
-					add_icon_menu_item(POPOVER_MENU(widget), G_MENU(section[s]), item->name, item->action, item->icon);
+					add_icon_menu_item(POPOVER_MENU(widget), G_MENU(section[s]), item->name, item->action, NULL, item->icon);
 				} else {
 					if (item->target) {
-						GMenuItem* mi = g_menu_item_new (item->name, "dummy");
+						g_autoptr(GMenuItem) mi = g_menu_item_new (item->name, "dummy");
 						//g_menu_item_set_action_and_target (mi, item->action, "i", item->target);
 						g_menu_item_set_action_and_target_value (mi, item->action, g_variant_new_int32(item->target));
 						g_menu_append_item (G_MENU(section[s]), mi);
-						g_object_unref(mi);
 					} else {
 						g_menu_append (G_MENU(section[s]), item->name, item->action);
 					}
@@ -101,37 +101,79 @@ add_menu_items_from_defn (GtkWidget* widget, GMenuModel* model, int size, MenuDe
 
 
 void
-add_icon_menu_item (PopoverMenu* widget, GMenu* menu, const char* name, const char* action, const char* icon)
+add_icon_menu_item (PopoverMenu* widget, GMenu* menu, const char* name, const char* action, const char* target, const char* icon)
 {
-	GMenuItem* mi = g_menu_item_new (name, "dummy");
-	g_menu_item_set_attribute (mi, "custom", "s", action, NULL); // connect the menu item to the action
-	g_menu_append_item (menu, mi);
-	g_object_unref(mi);
+	typedef struct {
+		const char* name;
+		char* target;
+	} ActionData;
 
-	GtkWidget* box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
-	GtkWidget* button = gtk_button_new();
-	gtk_actionable_set_action_name (GTK_ACTIONABLE(button), action);
-	gtk_button_set_child(GTK_BUTTON(button), box);
+	void free_action_data (void* data)
 	{
-		GtkWidget* image = gtk_image_new_from_icon_name(icon);
-		gtk_box_append(GTK_BOX(box), image);
-		gtk_box_append(GTK_BOX(box), gtk_label_new(name));
+		g_free(((ActionData*)data)->target);
+		g_free(data);
 	}
-#ifdef CUSTOM_MENU
-	if (!ayyi_popover_menu_add_child(AYYI_POPOVER_MENU(widget), button, action)) dbg(0, "not added %s", action);
-#else
-	if (!gtk_popover_menu_add_child(GTK_POPOVER_MENU(widget), button, action)) dbg(0, "not added %s", action);
-#endif
+
+	const char* id = name;
+
+	g_autoptr(GMenuItem) mi = g_menu_item_new (name, "dummy");
+	g_menu_item_set_attribute (mi, "custom", "s", id, NULL); // connect the menu item to the action
+	g_menu_append_item (menu, mi);
+
+	if (!popover_menu_add_child(
+		POPOVER_MENU(widget),
+		({
+			GtkWidget* button = gtk_button_new();
+			g_object_set_data_full (G_OBJECT(button), "action", SC_NEW(ActionData, .name = action, g_strdup(target)), free_action_data);
+
+			/*
+			 *  Activating the action manually gives more flexibility with the target
+			 */
+			void button_activate (GtkWidget* button, gpointer popover)
+			{
+				ActionData* action = g_object_get_data (G_OBJECT(button), "action");
+
+				if (action->target)
+					gtk_widget_activate_action (button, action->name, "s", action->target);
+				else
+					gtk_widget_activate_action (button, action->name, NULL);
+
+				gtk_popover_popdown(GTK_POPOVER(popover));
+			}
+			g_signal_connect(button, "clicked", G_CALLBACK(button_activate), widget);
+
+			gtk_button_set_child(GTK_BUTTON(button), ({
+				GtkWidget* box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
+				gtk_box_append(GTK_BOX(box), gtk_image_new_from_icon_name(icon));
+				gtk_box_append(GTK_BOX(box), gtk_label_new(name));
+				box;
+			}));
+
+			button;
+		}),
+		id
+	)) dbg(0, "not added %s", action);
 }
 
 
 void
-add_icon_menu_item2 (PopoverMenu* widget, GMenu* menu, MenuDef* def)
+add_icon_menu_item_from_defn (PopoverMenu* widget, GMenu* menu, MenuDef* def)
 {
+	const char* id = def->name;
+
+#if 0
 	GMenuItem* mi = g_menu_item_new (def->name, "dummy");
-	g_menu_item_set_attribute (mi, "custom", "s", def->action, NULL); // connect the menu item to the action
+	g_menu_item_set_attribute (mi, "custom", "s", id, NULL); // connect the menu item to the action
 	g_menu_append_item (menu, mi);
 	g_object_unref(mi);
+#else
+	g_autoptr(GMenuItem) mi;
+	g_menu_append_item (menu, ({
+		mi = g_menu_item_new (def->name, "dummy");
+		g_menu_item_set_attribute (mi, "custom", "s", id, NULL); // connect the menu item to the action
+		mi;
+	}));
+#endif
 
 	if (!gtk_popover_menu_add_child(
 		GTK_POPOVER_MENU(widget),
@@ -154,7 +196,7 @@ add_icon_menu_item2 (PopoverMenu* widget, GMenu* menu, MenuDef* def)
 
 			button;
 		}),
-		def->action)
+		id)
 	) pwarn("not added %s", def->action);
 }
 

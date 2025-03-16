@@ -19,8 +19,9 @@
 #include "gdl/gdl-dock-layout.h"
 #include "gdl/gdl-dock-bar.h"
 #include "gdl/gdl-dock-paned.h"
+#include "gdl/placeholder.h"
 #include "gdl/registry.h"
-#include "debug/debug.h"
+#include "gdl/debug.h"
 #include "gtk/menu.h"
 #ifdef GTK4_TODO
 #include "gtk/gimpactiongroup.h"
@@ -82,6 +83,7 @@ struct _window {
    GtkWidget*     vbox;
    GtkWidget*     dock;
    GdlDockLayout* layout;
+   GtkWidget*     context_menu;
 } window = {0,};
 
 #ifdef GTK4_TODO
@@ -98,8 +100,6 @@ static Panel*     panel_lookup_by_name            (const char*);
 static Panel*     panel_lookup_by_gtype           (GType);
 
 #include "menu.c"
-
-static void       window_on_layout_changed        ();
 
 #ifdef GTK4_TODO
 static void       k_delete_row                    (GtkAccelGroup*, gpointer);
@@ -199,12 +199,12 @@ window_new (GtkApplication* gtk, gpointer user_data)
 
 	void item_added (GdlDockMaster* master, GdlDockObject* object, gpointer _)
 	{
-		dbg(1, "%s %s", G_OBJECT_CLASS_NAME(G_OBJECT_GET_CLASS(object)), gdl_dock_object_get_name(object));
+		dbg(1, "%s", gdl_dock_object_id(object));
 
 		const char* name = gdl_dock_object_get_name(object);
 		Panel* panel = name ? panel_lookup_by_name(name) : panel_lookup_by_gtype(G_OBJECT_TYPE(object));
 		g_return_if_fail(panel);
-		g_return_if_fail(!panel->dock_item);
+		g_return_if_fail(!panel->dock_item || G_OBJECT_TYPE(panel->dock_item) == DOCK_TYPE_PLACEHOLDER);
 
 		panel->dock_item = (GtkWidget*)object;
 		panel->widget = gdl_dock_item_get_child((GdlDockItem*)object);
@@ -213,7 +213,18 @@ window_new (GtkApplication* gtk, gpointer user_data)
 			panel->show(true);
 		}
 	}
+	void item_removed (GdlDockMaster* master, GdlDockObject* object, gpointer _)
+	{
+		dbg(1, "%s %s", G_OBJECT_CLASS_NAME(G_OBJECT_GET_CLASS(object)), gdl_dock_object_get_name(object));
+		const char* name = gdl_dock_object_get_name(object);
+		Panel* panel = name ? panel_lookup_by_name(name) : panel_lookup_by_gtype(G_OBJECT_TYPE(object));
+		g_return_if_fail(panel);
+
+		panel->dock_item = NULL;
+		panel->widget = NULL;
+	}
 	g_signal_connect(gdl_dock_object_get_master((GdlDockObject*)dock), "dock-item-added", (GCallback)item_added, NULL);
+	g_signal_connect(gdl_dock_object_get_master((GdlDockObject*)dock), "dock-item-removed", (GCallback)item_removed, NULL);
 
 	void _on_layout_changed (GObject* object, gpointer user_data)
 	{
@@ -286,7 +297,6 @@ window_new (GtkApplication* gtk, gpointer user_data)
 
 #ifdef WITH_VALGRIND
 #ifdef GTK4_TODO
-		g_clear_pointer(&window.waveform, gtk_widget_destroy);
 		g_clear_pointer(&window.file_man, gtk_widget_unparent);
 #endif
 		g_clear_pointer(&((Application*)app)->dir_treeview2, vdtree_free);
@@ -296,7 +306,8 @@ window_new (GtkApplication* gtk, gpointer user_data)
 	}
 	g_signal_connect((gpointer)app, "on-quit", G_CALLBACK(window_on_quit), NULL);
 
-	gboolean window_on_close_request (GtkWindow* window, gpointer user_data) {
+	gboolean window_on_close_request (GtkWindow* window, gpointer user_data)
+	{
 		window_on_quit((Application*)app, user_data);
 		return FALSE;
 	}
@@ -319,19 +330,21 @@ window_new (GtkApplication* gtk, gpointer user_data)
 	}
 	g_signal_connect(G_OBJECT(samplecat.store), "content-changed", G_CALLBACK(store_content_changed), NULL);
 
-	window_on_layout_changed();
+	g_signal_emit_by_name (app, "layout-changed");
 
-	void click_gesture_pressed (GtkGestureClick *gesture, int n_press, double x, double y, gpointer)
+	void on_right_click (GtkGestureClick *gesture, int n_press, double x, double y, gpointer widget)
 	{
-		if (((Application*)app)->context_menu) {
-			gtk_popover_set_position(GTK_POPOVER(((Application*)app)->context_menu), GTK_POS_BOTTOM);
-			gtk_popover_set_pointing_to(GTK_POPOVER(((Application*)app)->context_menu), &(GdkRectangle){ x, y, 1, 1 });
-			gtk_popover_set_offset(GTK_POPOVER(((Application*)app)->context_menu), 80, 0);
-			gtk_popover_popup(GTK_POPOVER(((Application*)app)->context_menu));
+		if (!window.context_menu) {
+			window.context_menu = make_context_menu(widget);
 		}
+
+		gtk_popover_set_position(GTK_POPOVER(window.context_menu), GTK_POS_BOTTOM);
+		gtk_popover_set_pointing_to(GTK_POPOVER(window.context_menu), &(GdkRectangle){ x, y, 1, 1 });
+		gtk_popover_set_offset(GTK_POPOVER(window.context_menu), 80, 0);
+		gtk_popover_popup(GTK_POPOVER(window.context_menu));
 	}
 	GtkGesture* click = gtk_gesture_click_new ();
-	g_signal_connect (click, "pressed", G_CALLBACK (click_gesture_pressed), NULL);
+	g_signal_connect (click, "pressed", G_CALLBACK (on_right_click), (GtkWidget*)win);
 	gtk_gesture_single_set_button (GTK_GESTURE_SINGLE (click), 3);
 	gtk_widget_add_controller (GTK_WIDGET (win), GTK_EVENT_CONTROLLER (click));
 
@@ -351,12 +364,14 @@ window_new (GtkApplication* gtk, gpointer user_data)
 		GtkWidget* focused = gtk_window_get_focus (root);
 		if (focused) {
 			GtkWidget* panel = gtk_widget_get_ancestor (GTK_WIDGET (focused), GDL_TYPE_DOCK_ITEM);
-			dbg(1, "%s %s", G_OBJECT_CLASS_NAME(G_OBJECT_GET_CLASS(focused)), panel ? G_OBJECT_CLASS_NAME(G_OBJECT_GET_CLASS(panel)) : NULL);
-			if (panel != prev) {
+			dbg(1, "%s panel=%s", G_OBJECT_CLASS_NAME(G_OBJECT_GET_CLASS(focused)), panel ? G_OBJECT_CLASS_NAME(G_OBJECT_GET_CLASS(panel)) : NULL);
+			if (panel && panel != prev) {
 				if (prev) gtk_widget_remove_css_class (prev, "focused");
 				gtk_widget_add_css_class (panel, "focused");
 				prev = panel;
 			}
+		} else {
+			prev = NULL;
 		}
 	}
 	g_signal_connect(win, "notify::focus-widget", (void*)on_focus, NULL);
@@ -534,8 +549,6 @@ window_on_configure (GtkWidget* widget, gpointer user_data)
 			}
 		}
 		window_activate_layout();
-
-		((Application*)app)->context_menu = make_context_menu(widget);
 	}
 
 	return false;
@@ -617,14 +630,6 @@ show_filemanager (bool enable)
 #endif
 
 
-static void
-window_on_layout_changed ()
-{
-	// scroll to current dir in the directory list
-	if (((Application*)app)->dir_treeview2) vdtree_set_path(((Application*)app)->dir_treeview2, ((Application*)app)->dir_treeview2->path);
-}
-
-
 #ifdef GTK4_TODO
 static void
 k_delete_row (GtkAccelGroup* _, gpointer user_data)
@@ -679,7 +684,7 @@ window_load_layout (const char* layout_name)
 		const char* dir = window.layout->dirs[i];
 		char* path = g_strdup_printf("%s/%s.yaml", dir, layout_name);
 		if (g_file_test(path, G_FILE_TEST_EXISTS)) {
-			if ((have_layout = gdl_dock_layout_load_from_yaml_file(window.layout, path))) {
+			if ((have_layout = gdl_dock_layout_load_from_file(window.layout, path))) {
 				g_free(path);
 				break;
 			}
@@ -735,14 +740,10 @@ window_save_layout ()
 	char* dir = g_build_filename(app->configctx.dir, LAYOUTS_DIR, NULL);
 	if (!g_mkdir_with_parents(dir, 488)) {
 
-#ifdef GDL_DOCK_YAML
-		char* filename = g_build_filename(app->configctx.dir, LAYOUTS_DIR, "__default__.yaml", NULL);
-#else
-		char* filename = g_build_filename(app->configctx.dir, LAYOUTS_DIR, "__default__.xml", NULL);
-#endif
+		g_autofree char* filename = g_build_filename(app->configctx.dir, LAYOUTS_DIR, "__default__.yaml", NULL);
+
 		if (gdl_dock_layout_save_to_file(window.layout, filename)) {
 		}
-		g_free(filename);
 
 	} else pwarn("failed to create layout directory: %s", dir);
 

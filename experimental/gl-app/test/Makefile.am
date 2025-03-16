@@ -24,7 +24,6 @@ AM_CFLAGS = \
 	-I$(top_srcdir)/lib \
 	-I$(top_srcdir)/lib/samplecat \
 	-I$(top_srcdir)/lib/waveform \
-	-I$(top_srcdir)/lib/waveform/gtkglext-1.0 \
 	-I$(top_srcdir)/lib/waveform/lib/agl \
 	$(OPENGL_CFLAGS) \
 	$(GDK_CFLAGS) \

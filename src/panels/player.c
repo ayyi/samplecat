@@ -101,6 +101,12 @@ player_control_new ()
 	}
 	g_signal_connect(pc->widget, "unmap", G_CALLBACK(pc_on_unmap), pc);
 
+	void pc_on_finalize (gpointer _c, GObject* was)
+	{
+		g_clear_pointer(&playercontrol, g_free);
+	}
+	g_object_weak_ref((GObject*)pc->widget, pc_on_finalize, NULL);
+
 	return pc->widget;
 }
 
@@ -109,6 +115,7 @@ static void
 pc_add_widgets ()
 {
 	PlayCtrl* pc = playercontrol;
+	if (!pc) return;
 
 	GtkWidget* vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
 	gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(pc->widget), vbox);

@@ -22,7 +22,7 @@ endif
 unit_test_LDADD = \
 	$(top_srcdir)/lib/test/libtest.la \
 	$(top_srcdir)/lib/utils/libutils.a \
-	$(top_srcdir)/lib/dir_tree/libdirtree.a \
+	$(top_srcdir)/lib/dir-tree/libdirtree.la \
 	$(top_srcdir)/lib/debug/libdebug.a \
 	$(top_srcdir)/lib/samplecat/.libs/libsamplecat.a \
 	$(top_srcdir)/lib/samplecat/db/libsamplecatdb.a \

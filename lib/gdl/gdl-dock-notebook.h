@@ -56,7 +56,6 @@ struct _GdlDockNotebookClass {
 
 GtkWidget     *gdl_dock_notebook_new               (void);
 void           gdl_dock_notebook_add               (GdlDockObject*, GtkWidget*);
-void           gdl_dock_notebook_remove            (GdlDockObject*, GtkWidget*);
 
 GType          gdl_dock_notebook_get_type          (void);
 

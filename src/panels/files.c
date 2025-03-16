@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
- | copyright (C) 2007-2024 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2007-2025 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -21,7 +21,7 @@
 #include "file_manager/menu.h"
 #include "file_manager/pixmaps.h"
 
-static void fileview_on_row_selected (GtkTreeView*, gpointer);
+static void fileview_on_row_selected (GtkTreeView*, AyyiFilemanager*);
 static void add_to_db_on_activate    (GSimpleAction*, GVariant*, gpointer);
 static void play_on_activate         (GSimpleAction*, GVariant*, gpointer);
 #ifdef GTK4_TODO
@@ -49,26 +49,46 @@ fileview_new ()
 		void dir_on_select (ViewDirTree* vdt, const gchar* path, gpointer data)
 		{
 			PF;
-			fm__change_to(file_manager__get(), path, NULL);
+
+			if (strcmp(path, vdt->path))
+				fm__change_to(file_manager__get(), path, NULL);
 		}
 
-		gint expand = TRUE;
-		ViewDirTree* dir_list = ((Application*)app)->dir_treeview2 = vdtree_new(initial_folder, expand); 
-		vdtree_set_select_func(dir_list, dir_on_select, NULL); //callback
-		gtk_paned_set_start_child(GTK_PANED(fman_hpaned), dir_list->widget);
+		#define expand TRUE
+		ViewDirTree* dir_tree = ((Application*)app)->dir_treeview2 = vdtree_new(initial_folder, expand); 
+		vdtree_set_select_func(dir_tree, dir_on_select, NULL);
+		gtk_paned_set_start_child(GTK_PANED(fman_hpaned), dir_tree->widget);
+
+		void dir_tree_on_dir_changed (GtkWidget* widget, const char* dir, gpointer dir_tree)
+		{
+			PF;
+			vdtree_set_path((ViewDirTree*)dir_tree, dir);
+		}
+		g_signal_connect(G_OBJECT(file_manager__get()), "dir-changed", G_CALLBACK(dir_tree_on_dir_changed), dir_tree);
 
 		void icon_theme_changed (Application* a, char* theme, gpointer _dir_tree)
 		{
 			vdtree_on_icon_theme_changed((ViewDirTree*)a->dir_treeview2);
 		}
-		g_signal_connect((gpointer)app, "icon-theme", G_CALLBACK(icon_theme_changed), dir_list);
+		g_signal_connect((gpointer)app, "icon-theme", G_CALLBACK(icon_theme_changed), dir_tree);
+
+		void dir_tree_on_layout_changed (GObject* object, gpointer user_data)
+		{
+			ViewDirTree* dir_tree = user_data;
+
+			// scroll to position
+			vdtree_set_path(dir_tree, dir_tree->path);
+		}
+
+		Idle* idle = idle_new(dir_tree_on_layout_changed, dir_tree);
+		g_signal_connect(app, "layout-changed", (GCallback)idle->run, idle);
 
 #ifdef GTK4_TODO
 		// TODO menu is created dynanically on demand, so we can't yet access the menu or the model
 		GMenuModel* section = (GMenuModel*)g_menu_new ();
-		GMenuModel* model = gtk_popover_menu_get_menu_model (GTK_POPOVER_MENU(dir_list->popup));
+		GMenuModel* model = gtk_popover_menu_get_menu_model (GTK_POPOVER_MENU(dir_tree->popup));
 		g_menu_append_section (G_MENU(model), NULL, section);
-		make_menu_actions(GTK_WIDGET(dir_list), fm_tree_keys, G_N_ELEMENTS(fm_tree_keys), vdtree_add_menu_item, section);
+		make_menu_actions(GTK_WIDGET(dir_tree), fm_tree_keys, G_N_ELEMENTS(fm_tree_keys), vdtree_add_menu_item, section);
 #endif
 	}
 
@@ -77,13 +97,13 @@ fileview_new ()
 		GtkWidget* file_view = ((Application*)app)->fm_view = file_manager__new_window(initial_folder);
 		AyyiFilemanager* fm = file_manager__get();
 		gtk_paned_set_end_child(GTK_PANED(fman_hpaned), file_view);
-		g_signal_connect(G_OBJECT(fm->view), "cursor-changed", G_CALLBACK(fileview_on_row_selected), NULL);
+		g_signal_connect(G_OBJECT(fm->view), "cursor-changed", G_CALLBACK(fileview_on_row_selected), fm);
 
-		void window_on_dir_changed (GtkWidget* widget, gpointer data)
+		void file_view_on_dir_changed (GtkWidget* widget, gpointer data)
 		{
 			PF;
 		}
-		g_signal_connect(G_OBJECT(file_manager__get()), "dir_changed", G_CALLBACK(window_on_dir_changed), NULL);
+		g_signal_connect(G_OBJECT(fm), "dir-changed", G_CALLBACK(file_view_on_dir_changed), NULL);
 
 		void icon_theme_changed (Application* a, char* theme, gpointer _dir_tree)
 		{
@@ -115,11 +135,13 @@ fileview_new ()
 
 
 static void
-fileview_on_row_selected (GtkTreeView* treeview, gpointer user_data)
+fileview_on_row_selected (GtkTreeView* treeview, AyyiFilemanager* fm)
 {
 	PF;
 
-	AyyiFilemanager* fm = file_manager__get();
+	if (fm->directory->needs_update) {
+		return;
+	}
 
 	ViewIter iter;
 	view_get_iter(fm->view, &iter, 0);
@@ -129,18 +151,6 @@ fileview_on_row_selected (GtkTreeView* treeview, gpointer user_data)
 		if (view_get_selected(fm->view, &iter)) {
 			gchar* full_path = g_build_filename(fm->real_path, item->leafname, NULL);
 			dbg(1, "%s", full_path);
-
-			/* TODO: do nothing if directory selected 
-			 * 
-			 * this happens when a dir is selected in the left tree-browser
-			 * while some file was previously selected in the right file-list
-			 * -> we get the new dir + old filename
-			 *
-			 * event-handling in window.c should use 
-			 *   gtk_tree_selection_set_select_function()
-			 * or block file-list events during updates after the
-			 * dir-tree brower selection changed.
-			 */
 
 			Sample* s = sample_new_from_filename(full_path, true);
 			if (s) {

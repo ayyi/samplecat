@@ -14,17 +14,19 @@
 
 #include <gtk/gtk.h>
 
-#define CUSTOM_MENU
+#undef CUSTOM_MENU
 
 #ifdef CUSTOM_MENU
-#include "menu/popovermenu.h"
-#define PopoverMenu AyyiPopoverMenu
-#define POPOVER_MENU AYYI_POPOVER_MENU
-#define popover_menu_new_from_model ayyi_popover_menu_new_from_model
+#  include "menu/popovermenu.h"
+#  define PopoverMenu AyyiPopoverMenu
+#  define POPOVER_MENU AYYI_POPOVER_MENU
+#  define popover_menu_new_from_model ayyi_popover_menu_new_from_model
+#  define popover_menu_add_child ayyi_popover_menu_add_child
 #else
 #define PopoverMenu GtkPopoverMenu
 #define POPOVER_MENU GTK_POPOVER_MENU
 #define popover_menu_new_from_model gtk_popover_menu_new_from_model
+#define popover_menu_add_child gtk_popover_menu_add_child
 #endif
 
 typedef struct
@@ -50,8 +52,8 @@ typedef struct {
 	gpointer      user_data;
 } Accel;
 
-GtkWidget* make_menu                (int size, MenuDef[size], gpointer);
-void       add_menu_items_from_defn (GtkWidget* menu, GMenuModel*, int size, MenuDef[size], gpointer);
-void       add_icon_menu_item       (PopoverMenu*, GMenu*, const char* name, const char* action, const char* icon);
-void       add_icon_menu_item2      (PopoverMenu*, GMenu*, MenuDef*);
-void       make_menu_actions        (GtkWidget*, Accel[], int, void (*add_to_menu)(GMenuModel*, GAction*, char*), GMenuModel*);
+GtkWidget* make_menu                    (int size, MenuDef[size], gpointer);
+void       add_menu_items_from_defn     (GtkWidget* menu, GMenuModel*, int size, MenuDef[size], gpointer);
+void       add_icon_menu_item           (PopoverMenu*, GMenu*, const char* name, const char* action, const char* target, const char* icon);
+void       add_icon_menu_item_from_defn (PopoverMenu*, GMenu*, MenuDef*);
+void       make_menu_actions            (GtkWidget*, Accel[], int, void (*add_to_menu)(GMenuModel*, GAction*, char*), GMenuModel*);

@@ -30,7 +30,7 @@
 #include "gdl-dock.h"
 #include "gdl-dock-item.h"
 #include "gdl-dock-notebook.h"
-#include "gdl-switcher.h"
+#include "switcher.h"
 #include "debug.h"
 #include "libgdlmarshal.h"
 #include "libgdltypebuiltins.h"
@@ -131,6 +131,7 @@ enum {
 enum {
     LAYOUT_CHANGED,
     DOCK_ITEM_ADDED,
+    DOCK_ITEM_REMOVED,
     LAST_SIGNAL
 };
 
@@ -261,6 +262,18 @@ gdl_dock_master_class_init (GdlDockMasterClass *klass)
                       G_TYPE_NONE, /* return type */
                       1, /* n params */
                       G_TYPE_POINTER);
+
+    master_signals [DOCK_ITEM_REMOVED] =
+        g_signal_new ("dock-item-removed",
+                      G_TYPE_FROM_CLASS (klass),
+                      G_SIGNAL_RUN_LAST,
+                      G_STRUCT_OFFSET (GdlDockMasterClass, dock_item_added),
+                      NULL, /* accumulator */
+                      NULL, /* accu_data */
+                      g_cclosure_marshal_VOID__POINTER,
+                      G_TYPE_NONE, /* return type */
+                      1, /* n params */
+                      G_TYPE_POINTER);
 }
 
 static void
@@ -319,8 +332,7 @@ _gdl_dock_master_remove (GdlDockObject *object, GdlDockMaster *master)
         }
     }
     /* disconnect dock object signals */
-    g_signal_handlers_disconnect_matched (object, G_SIGNAL_MATCH_DATA,
-                                          0, 0, NULL, NULL, master);
+    g_signal_handlers_disconnect_matched (object, G_SIGNAL_MATCH_DATA, 0, 0, NULL, NULL, master);
 
     /* unref the object from the hash if it's there */
     if (gdl_dock_object_get_name (object) != NULL) {
@@ -727,7 +739,6 @@ idle_emit_layout_changed (gpointer user_data)
     g_return_val_if_fail (master && GDL_IS_DOCK_MASTER (master), FALSE);
 
     master->priv->idle_layout_changed_id = 0;
-																	cdbg(0, "emitting layout-changed ...");
     g_signal_emit (master, master_signals [LAYOUT_CHANGED], 0);
 
     return FALSE;
@@ -753,9 +764,7 @@ item_dock_cb (GdlDockObject* object, GdlDockObject* requestor, GdlDockPlacement 
 }
 
 static void
-item_detach_cb (GdlDockObject *object,
-                gboolean       recursive,
-                gpointer       user_data)
+item_detach_cb (GdlDockObject *object, gboolean recursive, gpointer user_data)
 {
     GdlDockMaster *master = user_data;
 
@@ -771,9 +780,7 @@ item_detach_cb (GdlDockObject *object,
 }
 
 static void
-item_notify_cb (GdlDockObject *object,
-                GParamSpec    *pspec,
-                gpointer       user_data)
+item_notify_cb (GdlDockObject *object, GParamSpec *pspec, gpointer user_data)
 {
     GdlDockMaster *master = user_data;
     gint locked = COMPUTE_LOCKED (master);
@@ -917,9 +924,7 @@ gdl_dock_master_add (GdlDockMaster *master, GdlDockObject *object)
 
         /* If the item is notebook, set the switcher style and notebook
          * settings. */
-        if (GDL_IS_DOCK_NOTEBOOK (object) &&
-            GDL_IS_SWITCHER (gdl_dock_item_get_child (GDL_DOCK_ITEM (object))))
-        {
+        if (GDL_IS_DOCK_NOTEBOOK (object) && GDL_IS_SWITCHER (gdl_dock_item_get_child (GDL_DOCK_ITEM (object)))) {
             GtkWidget *child = gdl_dock_item_get_child (GDL_DOCK_ITEM (object));
             g_object_set (child, "switcher-style", master->priv->switcher_style, NULL);
             g_object_set (child, "tab-pos", master->priv->tab_pos, NULL);
@@ -930,8 +935,7 @@ gdl_dock_master_add (GdlDockMaster *master, GdlDockObject *object)
          * (since it should be added to the items model) */
         if (!gdl_dock_object_is_automatic (object)) {
             if (!master->priv->idle_layout_changed_id)
-                master->priv->idle_layout_changed_id =
-                    g_idle_add (idle_emit_layout_changed, master);
+                master->priv->idle_layout_changed_id = g_idle_add (idle_emit_layout_changed, master);
         }
     }
 }
@@ -1199,7 +1203,6 @@ set_tab_reorderable_foreach (GtkWidget *obj, gpointer user_data)
 
         GtkWidget *child = gdl_dock_item_get_child (GDL_DOCK_ITEM (obj));
         if (GDL_IS_SWITCHER (child)) {
-
             g_object_set (child, "tab-reorderable", tab_reorderable, NULL);
         }
     } else if (gdl_dock_object_is_compound (GDL_DOCK_OBJECT (obj))) {

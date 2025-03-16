@@ -122,3 +122,15 @@
    fun:_gtk_tree_view_column_get_cell_at_pos
    fun:gtk_tree_view_click_gesture_pressed
 }
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Cond
+   ...
+   fun:gtk_layout_manager_measure
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Cond
+   ...
+   fun:gtk_accessible_update_property
+}

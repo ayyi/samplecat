@@ -1,30 +1,25 @@
 ---
-layouts:
-  dock:
-    name: '__dock_1'
-    floating: 'no'
-    width: '-1'
-    height: '-1'
-    floatx: '0'
-    floaty: '0'
+dock:
+  name: __dock_1
+  floating: 'no'
+  width: '-1'
+  height: '-1'
+  floatx: '0'
+  floaty: '0'
+  paned:
+    orientation: vertical
+    position: '70'
+    item:
+      name: Search
+      orientation: vertical
     paned:
-      orientation: 'vertical'
-      locked: 'no'
-      position: '70'
+      orientation: vertical
+      position: '379'
       item:
-        name: 'Search'
-        orientation: 'vertical'
+        name: Library
+        orientation: vertical
         locked: 'no'
-      paned:
-        orientation: 'vertical'
-        locked: 'no'
-        position: '379'
-        item:
-          name: 'Library'
-          orientation: 'vertical'
-          locked: 'no'
-        item:
-          name: 'Inspector'
-          orientation: 'vertical'
-          locked: 'no'
+      item:
+        name: Inspector
+        orientation: vertical
 ...

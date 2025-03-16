@@ -17,6 +17,8 @@
 
 #pragma once
 
+#include <gtk/gtk.h>
+
 /*
  *   Substitute for deprecated GObject.Parameter
  */
@@ -25,8 +27,10 @@ typedef struct {
    GValue       value;
 } DockParameter;
 
-typedef void (*GtkCallback) (GtkWidget *widget, gpointer data);
+typedef void (*GtkCallback) (GtkWidget*, gpointer data);
 
 GList* gtk_widget_get_children (GtkWidget*);
+
+gchar* gdl_remove_extension_from_path (const gchar*);
 
 #define set_str(P, NAME) ({ if (P) g_free(P); P = NAME; })

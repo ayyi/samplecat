@@ -45,5 +45,10 @@ public class SpectrogramArea : AGlGtkArea
 	{
 		base.unrealize();
 	}
+
+	public override void dispose ()
+	{
+		base.dispose();
+	}
 }
 

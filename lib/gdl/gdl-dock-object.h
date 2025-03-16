@@ -19,22 +19,18 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#ifndef __GDL_DOCK_OBJECT_H__
-#define __GDL_DOCK_OBJECT_H__
+#pragma once
 
 #include <gtk/gtk.h>
 
 G_BEGIN_DECLS
 
-/* standard macros */
 #define GDL_TYPE_DOCK_OBJECT             (gdl_dock_object_get_type ())
 #define GDL_DOCK_OBJECT(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), GDL_TYPE_DOCK_OBJECT, GdlDockObject))
 #define GDL_DOCK_OBJECT_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), GDL_TYPE_DOCK_OBJECT, GdlDockObjectClass))
 #define GDL_IS_DOCK_OBJECT(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), GDL_TYPE_DOCK_OBJECT))
 #define GDL_IS_DOCK_OBJECT_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), GDL_TYPE_DOCK_OBJECT))
 #define GDL_DOCK_OBJECT_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), GTK_TYPE_DOCK_OBJECT, GdlDockObjectClass))
-
-/* data types & structures */
 
 /**
  * GdlDockParamFlags:
@@ -183,6 +179,12 @@ struct _GdlDockObjectClass {
     GList*   (* children)        (GdlDockObject    *object);
     void     (* foreach_child)   (GdlDockObject    *object,
                                   GdlDockObjectFn, gpointer);
+    void     (* remove)          (GdlDockObject    *object,
+                                  GtkWidget* widget);
+    /**
+     *  remove_widgets should remove private child widgets (not including any Dock widgets)
+     */
+    void     (* remove_widgets)  (GdlDockObject    *object);
 #ifdef DEBUG
     bool     (* validate)        (GdlDockObject    *object);
 #endif
@@ -282,18 +284,6 @@ struct _GdlDockObjectClass {
     G_STMT_START { (GDL_DOCK_OBJECT_FLAGS (obj) &= ~(flag)); } G_STMT_END
 #endif
 
-#ifndef GDL_DISABLE_DEPRECATED
-/**
- * GDL_DOCK_OBJECT_FROZEN:
- * @obj: A #GdlDockObject
- *
- * Evaluates to %TRUE if the object is frozen.
- *
- * Deprecated: 3.6: Use gdl_dock_object_is_frozen()
- */
-#define GDL_DOCK_OBJECT_FROZEN(obj) gdl_dock_object_is_frozen(GDL_DOCK_OBJECT (obj))
-#endif
-
 
 /* public interface */
 
@@ -303,6 +293,7 @@ gboolean       gdl_dock_object_is_compound       (GdlDockObject    *object);
 
 void           gdl_dock_object_detach            (GdlDockObject    *object,
                                                   gboolean          recursive);
+void           gdl_dock_object_destroy           (GdlDockObject    *object);
 void           gdl_dock_object_add_child         (GdlDockObject    *object, GtkWidget* child);
 void           gdl_dock_object_remove_child      (GdlDockObject    *object, GtkWidget* child);
 
@@ -367,8 +358,6 @@ void          gdl_dock_object_class_set_is_compound (GdlDockObjectClass *object_
                                                      gboolean           is_compound);
 
 
-/* other types */
-
 /* this type derives from G_TYPE_STRING and is meant to be the basic
    type for serializing object parameters which are exported
    (i.e. those that are needed for layout rebuilding) */
@@ -406,9 +395,4 @@ GType                 gdl_dock_object_set_type_for_nick (const gchar *nick,
            GDL_IS_DOCK_OBJECT (object) ? gdl_dock_object_is_frozen (GDL_DOCK_OBJECT (object)) : -1, \
 	   ##args); } G_STMT_END
 
-
-
 G_END_DECLS
-
-#endif  /* __GDL_DOCK_OBJECT_H__ */
-
