@@ -70,8 +70,8 @@ struct _SamplecatModelClass {
 GType             samplecat_model_get_type       () G_GNUC_CONST;
 SamplecatModel*   samplecat_model_new            ();
 SamplecatModel*   samplecat_model_construct      (GType);
-gboolean          samplecat_model_add            (SamplecatModel*);
-gboolean          samplecat_model_remove         (SamplecatModel*, gint id);
+bool              samplecat_model_add            (SamplecatModel*, Sample*);
+bool              samplecat_model_remove         (SamplecatModel*, gint id);
 void              samplecat_model_set_search_dir (SamplecatModel*, gchar* dir);
 void              samplecat_model_set_selection  (SamplecatModel*, Sample*);
 void              samplecat_model_refresh_sample (SamplecatModel*, Sample*, gboolean force_update);

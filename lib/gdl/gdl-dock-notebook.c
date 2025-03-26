@@ -272,19 +272,26 @@ gdl_dock_notebook_switch_page_cb (GtkNotebook *nb, GtkWidget *page, gint page_nu
 	/* Signal that a new dock item has been selected */
 	GdlDockItem* new_item = GDL_DOCK_ITEM (gtk_notebook_get_nth_page (nb, page_num));
 	if (page_num != current_page && DOCK_IS_PLACEHOLDER(new_item)) {
+		typedef struct {
+			GtkNotebook* notebook;
+			int          page_num;
+		} C;
+
 		gboolean gdl_dock_notebook_swap_placeholder (gpointer data)
 		{
-			GtkNotebook* nb = data;
+			GtkNotebook* nb = ((C*)data)->notebook;
+			int page_num = ((C*)data)->page_num;
+			g_free(data);
+
 			GdlSwitcher* switcher = GDL_SWITCHER(gtk_widget_get_parent(GTK_WIDGET(nb)));
 			GdlDockNotebook* notebook = GDL_DOCK_NOTEBOOK(gtk_widget_get_parent(GTK_WIDGET(switcher)));
 
-			gint page_num = gtk_notebook_get_current_page (nb);
 			GdlDockItem* placeholder = GDL_DOCK_ITEM (gtk_notebook_get_nth_page (nb, page_num));
 			if (!DOCK_IS_PLACEHOLDER(placeholder))
 				return G_SOURCE_REMOVE;
 
 			GdlDockItem* filled = dock_placeholder_fill (DOCK_PLACEHOLDER(placeholder));
-
+			gtk_widget_set_visible(GTK_WIDGET(filled), true);
 			GDL_DOCK_OBJECT_GET_CLASS(notebook)->remove(GDL_DOCK_OBJECT(notebook), GTK_WIDGET(placeholder));
 			gtk_notebook_remove_page(nb, page_num);
 
@@ -297,7 +304,7 @@ gdl_dock_notebook_switch_page_cb (GtkNotebook *nb, GtkWidget *page, gint page_nu
 
 			return G_SOURCE_REMOVE;
 		}
-		g_idle_add(gdl_dock_notebook_swap_placeholder, nb);
+		g_idle_add(gdl_dock_notebook_swap_placeholder, DOCK_NEW(C, nb, page_num));
 	}
 
 	gdl_dock_item_notify_selected (new_item);
@@ -390,9 +397,7 @@ gdl_dock_notebook_dock (GdlDockObject *object, GdlDockObject *requestor, GdlDock
 				/* Set current page to the newly docked widget. set current page
 				 * really doesn't work if the page widget is not shown
 				 */
-#ifdef GTK4_TODO
 				gtk_notebook_set_current_page (GDL_SWITCHER (gdl_dock_item_get_child (item))->notebook, position);
-#endif
 			}
 			g_free (long_name);
 			g_free (stock_id);

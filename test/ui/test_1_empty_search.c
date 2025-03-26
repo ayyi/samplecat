@@ -13,8 +13,8 @@ test_1_empty_search ()
 		print_widget_tree((GtkWidget*)gtk_application_get_active_window(GTK_APPLICATION(app)));
 #endif
 
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 		GdlDockItem* library = find_dock_item ("Library");
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 		int n_rows = gtk_tree_model_iter_n_children(gtk_tree_view_get_model((GtkTreeView*)find_widget_by_type((GtkWidget*)library, GTK_TYPE_TREE_VIEW)), NULL);
 #pragma GCC diagnostic warning "-Wdeprecated-declarations"
 		assert_and_stop(n_rows > 0, "no library items");

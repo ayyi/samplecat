@@ -67,13 +67,13 @@ samplecat_SOURCES = \
 
 samplecat_LDADD = \
 	$(top_srcdir)/lib/debug/libdebug.a \
-	$(top_srcdir)/lib/samplecat/.libs/libsamplecat.a \
 	$(top_srcdir)/lib/samplecat/db/libsamplecatdb.a \
 	$(top_srcdir)/lib/file_manager/libfilemanager.a \
 	$(DOCK_LDFLAGS) \
 	$(top_srcdir)/lib/utils/libutils.a \
 	$(top_srcdir)/lib/gtk/libgtk.la \
 	$(top_srcdir)/src/panels/libpanels.la \
+	$(top_srcdir)/lib/samplecat/.libs/libsamplecat.a \
 	$(SAMPLECAT_LIBS) \
 	$(AYYI_LIBS) \
 	$(DBUS_LIBS) \

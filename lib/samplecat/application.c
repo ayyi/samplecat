@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
- | copyright (C) 2023-2024 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2023-2025 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -393,8 +393,8 @@ samplecat_application_add_file (const char* path, ScanResults* result)
 #endif // END CHECK_SIMILAR
 
 	sample->online = 1;
-	sample->id = samplecat.model->backend.insert(sample);
-	if (sample->id < 0) {
+
+	if (!samplecat_model_add(samplecat.model, sample)) {
 		sample_unref(sample);
 		return false;
 	}
@@ -403,8 +403,6 @@ samplecat_application_add_file (const char* path, ScanResults* result)
 	dbg(1, "       %s", sample->full_path);
 
 	samplecat_list_store_add((SamplecatListStore*)samplecat.store, sample);
-
-	samplecat_model_add(samplecat.model);
 
 	result->n_added++;
 

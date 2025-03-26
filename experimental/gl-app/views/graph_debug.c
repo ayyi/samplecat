@@ -1,14 +1,15 @@
-/**
-* +----------------------------------------------------------------------+
-* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2012-2021 Tim Orford <tim@orford.org>                  |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-*
-*/
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
+ | copyright (C) 2012-2025 Tim Orford <tim@orford.org>                  |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
+ */
+
 #include "config.h"
 #include "debug/debug.h"
 #include "graph_debug.h"
@@ -36,7 +37,7 @@ graph_debug_window (AGlScene* _scene)
 {
 	target = _scene;
 
-	AGliPt size = {320, 120};
+	AGliPt size = {400, 120};
 	window = agl_window("Graph debug", 0, 0, size.x, size.y, false);
 
 	agl_actor__add_child(
@@ -44,7 +45,7 @@ graph_debug_window (AGlScene* _scene)
 		agl_actor__new(
 			AGlActor,
 			.paint = graph_debug_paint,
-			.region = {0, 0, 320, 120}
+			.region = {0, 0, size.x, size.y}
 		)
 	);
 
@@ -72,11 +73,18 @@ graph_debug_paint (AGlActor* actor)
 #endif
 
 		char scrollablex[32] = {0};
-		if(actor->scrollable.x1 || actor->scrollable.x2)
+		if (actor->scrollable.x1 || actor->scrollable.x2)
 			sprintf(scrollablex, " scrollable.x(%i,%i)", actor->scrollable.x1, actor->scrollable.x2);
 		char scrollabley[32] = {0};
-		if(actor->scrollable.y1 || actor->scrollable.y2)
+		if (actor->scrollable.y1 || actor->scrollable.y2)
 			sprintf(scrollabley, " scrollable.y(%i,%i)", actor->scrollable.y1, actor->scrollable.y2);
+
+		char cacheposition[32] = {0};
+		if (actor->cache.position.x || actor->cache.position.y)
+			sprintf(cacheposition, " position(%i,%i)", actor->cache.position.x, actor->cache.position.y);
+		char cacheoffset[32] = {0};
+		if (actor->cache.offset.x || actor->cache.offset.y)
+			sprintf(cacheoffset, " c-offset(%i,%i)", actor->cache.offset.x, actor->cache.offset.y);
 
 #ifdef AGL_ACTOR_RENDER_CACHE
 		uint32_t colour = !agl_actor__width(actor) || !is_onscreen
@@ -85,13 +93,13 @@ graph_debug_paint (AGlActor* actor)
 				? 0x999999ff
 				: 0xffffffff;
 		AGliPt offset = agl_actor__find_offset(actor);
-		if(actor->name) agl_print_with_cursor(indent * 20, y, 0, colour, "%s:%s%s%s%s cache(%i,%i) region(%.0f,%.0f,%.0f,%.0f) offset(%i,%i)%s%s", actor->name, offscreen, zero_size, negative_size, disabled, actor->cache.enabled, actor->cache.valid, actor->region.x1, actor->region.y1, actor->region.x2, actor->region.y2, offset.x, offset.y, scrollablex, scrollabley);
+		if (actor->name) agl_print_with_cursor(indent * 20, y, 0, colour, "%s:%s%s%s%s cache(%i,%i) region(%.0f,%.0f,%.0f,%.0f) offset(%i,%i)%s%s%s%s", actor->name, offscreen, zero_size, negative_size, disabled, actor->cache.enabled, actor->cache.valid, actor->region.x1, actor->region.y1, actor->region.x2, actor->region.y2, offset.x, offset.y, scrollablex, scrollabley, cacheposition, cacheoffset);
 #else
-		if(actor->name) agl_printf_with_cursor(indent * 20, y, 0, 0xffffffff, "%s", actor->name);
+		if (actor->name) agl_printf_with_cursor(indent * 20, y, 0, 0xffffffff, "%s", actor->name);
 #endif
-		if(!actor->name) agl_print_with_cursor(indent * 20, y, 0, 0xffffffff, "%s%s (%.0f,%.0f)\n", offscreen, zero_size, actor->region.x1, actor->region.y1);
+		if (!actor->name) agl_print_with_cursor(indent * 20, y, 0, 0xffffffff, "%s%s (%.0f,%.0f)\n", offscreen, zero_size, actor->region.x1, actor->region.y1);
 		indent++;
-		for(GList* l=actor->children;l;l=l->next){
+		for (GList* l=actor->children;l;l=l->next) {
 			AGlActor* child = l->data;
 			_print(child, y);
 		}

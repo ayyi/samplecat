@@ -4,13 +4,11 @@ dock:
   floating: no
   width: '-1'
   height: '-1'
-  floatx: '0'
-  floaty: '0'
   paned:
     position: 70
     item:
       name: Search
-      locked: 'yes'
+      locked: yes
     paned:
       orientation: horizontal
       position: 275
@@ -31,10 +29,10 @@ dock:
       paned:
         position: 500
         notebook:
-          page: '1'
+          page: 1
           item:
             name: Library
-            locked: 'yes'
+            locked: yes
           item:
             name: Filemanager
         item:

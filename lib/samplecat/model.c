@@ -97,6 +97,14 @@ enum  {
 };
 static GParamSpec* samplecat_model_properties[SAMPLECAT_MODEL_NUM_PROPERTIES];
 
+enum  {
+	SAMPLECAT_MODEL_DIR_LIST_CHANGED_SIGNAL,
+	SAMPLECAT_MODEL_SELECTION_CHANGED_SIGNAL,
+	SAMPLECAT_MODEL_SAMPLE_CHANGED_SIGNAL,
+	SAMPLECAT_MODEL_NUM_SIGNALS
+};
+static guint signals[SAMPLECAT_MODEL_NUM_SIGNALS] = {0};
+
 G_DEFINE_TYPE_WITH_PRIVATE (SamplecatModel, samplecat_model, G_TYPE_OBJECT)
 enum  {
 	SAMPLECAT_MODEL_DUMMY_PROPERTY
@@ -402,19 +410,16 @@ samplecat_model_construct (GType object_type)
 		}
 	}
 
-	gboolean samplecat_model_after_construct (gpointer self)
+	gboolean samplecat_model_on_change (gpointer _self)
 	{
-		dir_list_update();
-		g_signal_emit_by_name ((SamplecatModel*)self, "dir-list-changed");
+		SamplecatModel* self = _self;
+
+		g_signal_emit (self, signals[SAMPLECAT_MODEL_DIR_LIST_CHANGED_SIGNAL], 0, self->dir_tree);
 		return G_SOURCE_REMOVE;
 	}
 
 	_samplecat_idle_unref0 (self->priv->dir_idle);
-	self->priv->dir_idle = samplecat_idle_new (samplecat_model_after_construct, self);
-
-#if 0 // updating the directory list is not currently done until a consumer needs it
-	samplecat_idle_queue (self->priv->dir_idle);
-#endif
+	self->priv->dir_idle = samplecat_idle_new (samplecat_model_on_change, self);
 
 	self->priv->sample_changed_idle = samplecat_idle_new(__sample_changed_idle, self);
 
@@ -429,18 +434,21 @@ samplecat_model_new (void)
 }
 
 
-gboolean
-samplecat_model_add (SamplecatModel* self)
+bool
+samplecat_model_add (SamplecatModel* self, Sample* sample)
 {
 	g_return_val_if_fail (self, FALSE);
 
-	samplecat_idle_queue (self->priv->dir_idle);
+	if ((sample->id = backend.insert(sample)) >= 0) {
 
-	return TRUE;
+		samplecat_idle_queue (self->priv->dir_idle);
+		return true;
+	}
+	return false;
 }
 
 
-gboolean
+bool
 samplecat_model_remove (SamplecatModel* self, gint id)
 {
 	g_return_val_if_fail(self, FALSE);
@@ -766,12 +774,13 @@ static void
 g_cclosure_user_marshal_VOID__POINTER_INT_POINTER (GClosure* closure, GValue* return_value, guint n_param_values, const GValue* param_values, gpointer invocation_hint, gpointer marshal_data)
 {
 	typedef void (*GMarshalFunc_VOID__POINTER_INT_POINTER) (gpointer data1, gpointer arg_1, gint arg_2, gpointer arg_3, gpointer data2);
+
 	register GMarshalFunc_VOID__POINTER_INT_POINTER callback;
-	register GCClosure * cc;
 	register gpointer data1;
 	register gpointer data2;
-	cc = (GCClosure *) closure;
+	register GCClosure* cc = (GCClosure *) closure;
 	g_return_if_fail (n_param_values == 4);
+
 	if (G_CCLOSURE_SWAP_DATA (closure)) {
 		data1 = closure->data;
 		data2 = param_values->data[0].v_pointer;
@@ -820,7 +829,7 @@ samplecat_model_class_init (SamplecatModelClass* klass)
 		samplecat_model_properties[SAMPLECAT_MODEL_SELECTION_PROPERTY] = g_param_spec_pointer ("selection", "selection", "selection", G_PARAM_STATIC_STRINGS | G_PARAM_READABLE | G_PARAM_WRITABLE)
 	);
 
-	g_signal_new ("dir_list_changed", SAMPLECAT_TYPE_MODEL, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_VOID__VOID, G_TYPE_NONE, 0);
+	signals[SAMPLECAT_MODEL_DIR_LIST_CHANGED_SIGNAL] = g_signal_new ("dir-list-changed", SAMPLECAT_TYPE_MODEL, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_VOID__POINTER, G_TYPE_NONE, 1, G_TYPE_POINTER);
 	g_signal_new ("sample_changed", SAMPLECAT_TYPE_MODEL, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_user_marshal_VOID__POINTER_INT_POINTER, G_TYPE_NONE, 3, G_TYPE_POINTER, G_TYPE_INT, G_TYPE_POINTER);
 }
 

@@ -115,6 +115,7 @@ static void     gdl_dock_item_dock          (GdlDockObject    *object,
 static void     gdl_dock_item_remove        (GdlDockObject    *object,
                                              GtkWidget        *widget);
 static void     gdl_dock_item_remove_widgets(GdlDockObject    *object);
+static void     gdl_dock_item_destroy       (GdlDockObject    *object);
 static void     gdl_dock_item_present       (GdlDockObject     *object,
                                              GdlDockObject     *child);
 
@@ -334,6 +335,7 @@ gdl_dock_item_class_init (GdlDockItemClass *klass)
     dock_object_class->present = gdl_dock_item_present;
     dock_object_class->remove = gdl_dock_item_remove;
     dock_object_class->remove_widgets = gdl_dock_item_remove_widgets;
+    dock_object_class->destroy = gdl_dock_item_destroy;
 
     klass->priv->has_grip = TRUE;
     klass->dock_drag_begin = NULL;
@@ -890,6 +892,28 @@ gdl_dock_item_remove_widgets (GdlDockObject* object)
 }
 
 static void
+gdl_dock_item_destroy (GdlDockObject* object)
+{
+	GtkWidget* grip = gdl_dock_item_get_grip(GDL_DOCK_ITEM(object));
+	if (grip) {
+		GListModel* controllers = gtk_widget_observe_controllers(grip);
+		for (int i = 0; i < g_list_model_get_n_items(controllers); i++) {
+			GtkEventController* controller = g_list_model_get_item(controllers, i);
+			const char* name = gtk_event_controller_get_name(controller);
+			if (name && !strcmp(name, "drag")) {
+#if 0
+				gtk_widget_remove_controller(grip, controller);
+#else
+				g_object_unref(object); // workaround for ref_count not being reduced following removal of the controller
+#endif
+			}
+		}
+	}
+
+	GDL_DOCK_OBJECT_CLASS (gdl_dock_item_parent_class)->destroy (object);
+}
+
+static void
 gdl_dock_item_remove (GdlDockObject *container, GtkWidget *widget)
 {
     g_return_if_fail (GDL_IS_DOCK_ITEM (container));
@@ -905,7 +929,8 @@ gdl_dock_item_remove (GdlDockObject *container, GtkWidget *widget)
     gboolean was_visible = gtk_widget_get_visible (widget);
 
     gtk_widget_unparent (widget);
-    item->child = NULL;
+	if (widget == item->child)
+	    item->child = NULL;
 
     if (was_visible)
         gtk_widget_set_visible (GTK_WIDGET (container), false);

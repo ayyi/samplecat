@@ -1029,8 +1029,6 @@ gdl_switcher_select_button (GdlSwitcher *switcher, gint switcher_id)
 gint
 gdl_switcher_insert_page (GdlSwitcher *switcher, GtkWidget *page, GtkWidget *tab_widget, const gchar *label, const gchar *tooltips, const gchar *stock_id, GdkPixbuf *pixbuf_icon, gint position)
 {
-	ENTER;
-
     GtkNotebook *notebook = switcher->notebook;
 
     g_signal_handlers_block_by_func (notebook, gdl_switcher_page_added_cb, switcher);
@@ -1045,6 +1043,10 @@ gdl_switcher_insert_page (GdlSwitcher *switcher, GtkWidget *page, GtkWidget *tab
     gint ret_position = gtk_notebook_insert_page (notebook, page, tab_widget, position);
     gtk_notebook_set_tab_reorderable (notebook, page, switcher->priv->tab_reorderable);
     g_signal_handlers_unblock_by_func (notebook, gdl_switcher_page_added_cb, switcher);
+
+	if (ret_position == 0) {
+		gtk_widget_set_visible(page, true);
+	}
 
     return ret_position;
 }

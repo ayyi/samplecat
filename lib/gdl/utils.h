@@ -34,3 +34,4 @@ GList* gtk_widget_get_children (GtkWidget*);
 gchar* gdl_remove_extension_from_path (const gchar*);
 
 #define set_str(P, NAME) ({ if (P) g_free(P); P = NAME; })
+#define DOCK_NEW(T, ...) ({T* obj = g_new0(T, 1); *obj = (T){__VA_ARGS__}; obj;})

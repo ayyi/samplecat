@@ -25,8 +25,6 @@
 GtkWidget*
 dir_panel_new ()
 {
-	dir_list_update(); // because this is slow, it is not done until a consumer needs it.
-
 	GtkWidget* widget = scrolled_window_new();
 	gtk_widget_add_css_class(widget, "directories");
 
@@ -78,19 +76,18 @@ dir_panel_new ()
 			}
 		}
 
-		GListModel* create_store_for_node (GNode* nodes)
+		GListModel* create_store_for_node (GNode* root)
 		{
-			GNode* node = g_node_first_child (nodes);
-			if (!node)
-				return NULL;
-
 			GListStore* store = g_list_store_new (GTK_TYPE_STRING_OBJECT);
 
-			for (; node; node = g_node_next_sibling (node)) {
-				DhLink* link = (DhLink*) node->data;
-				g_autoptr(GtkStringObject) obj = gtk_string_object_new (link->name);
-				g_object_set_data (G_OBJECT(obj), "node", node);
-				g_list_store_append (store, obj);
+			GNode* node = root ? g_node_first_child (root) : NULL;
+			if (node) {
+				for (; node; node = g_node_next_sibling (node)) {
+					DhLink* link = (DhLink*) node->data;
+					g_autoptr(GtkStringObject) obj = gtk_string_object_new (link->name);
+					g_object_set_data (G_OBJECT(obj), "node", node);
+					g_list_store_append (store, obj);
+				}
 			}
 
 			return G_LIST_MODEL(store);
@@ -117,14 +114,14 @@ dir_panel_new ()
 		GtkSelectionModel* selection = GTK_SELECTION_MODEL(gtk_single_selection_new (G_LIST_MODEL(treemodel)));
 		GtkWidget* view = gtk_list_view_new (selection, create_factory());
 
-		void on_dir_list_changed (GObject* _model, gpointer view)
+		void on_dir_list_changed (GObject* _model, void* tree, gpointer store)
 		{
 			GtkSelectionModel* selection = gtk_list_view_get_model (GTK_LIST_VIEW(view));
 			GListStore* store = G_LIST_STORE (gtk_single_selection_get_model (GTK_SINGLE_SELECTION(selection)));
 			g_list_store_remove_all (store);
 			add_node_to_store (samplecat.model->dir_tree, store);
 		}
-		g_signal_connect(samplecat.model, "dir-list-changed", G_CALLBACK(on_dir_list_changed), view);
+		dir_list_register(on_dir_list_changed, store);
 
 		view;
 	}));

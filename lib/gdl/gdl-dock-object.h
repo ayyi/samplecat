@@ -185,6 +185,7 @@ struct _GdlDockObjectClass {
      *  remove_widgets should remove private child widgets (not including any Dock widgets)
      */
     void     (* remove_widgets)  (GdlDockObject    *object);
+    void     (* destroy)         (GdlDockObject    *object);
 #ifdef DEBUG
     bool     (* validate)        (GdlDockObject    *object);
 #endif

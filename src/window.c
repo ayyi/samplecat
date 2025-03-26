@@ -16,7 +16,7 @@
 #include <math.h>
 #include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
-#include "gdl/gdl-dock-layout.h"
+#include "gdl/layout.h"
 #include "gdl/gdl-dock-bar.h"
 #include "gdl/gdl-dock-paned.h"
 #include "gdl/placeholder.h"
@@ -99,8 +99,6 @@ static gboolean   window_on_configure             (GtkWidget*, gpointer);
 static Panel*     panel_lookup_by_name            (const char*);
 static Panel*     panel_lookup_by_gtype           (GType);
 
-#include "menu.c"
-
 #ifdef GTK4_TODO
 static void       k_delete_row                    (GtkAccelGroup*, gpointer);
 #endif
@@ -109,6 +107,8 @@ static void       k_show_layout_manager           (GtkAccelGroup*, gpointer);
 #endif
 static void       window_load_layout              (const char*);
 static void       window_save_layout              ();
+
+#include "menu.c"
 
 #ifdef ROTATOR
 GtkWidget*
@@ -491,9 +491,9 @@ window_on_configure (GtkWidget* widget, gpointer user_data)
 				gtk_paned_set_position(GTK_PANED(window.vpaned), inspector_y);
 			}
 */
-		}
 
-		window_load_layout(app->temp_view ? "File Manager" : app->args.layout ? app->args.layout : "__default__");
+			window_load_layout(app->temp_view ? "File Manager" : app->args.layout ? app->args.layout : "__default__");
+		}
 
 #ifdef DEBUG
 		gboolean on_idle ()
@@ -652,33 +652,8 @@ k_show_layout_manager (GtkAccelGroup* _, gpointer user_data)
 static void
 window_load_layout (const char* layout_name)
 {
-	// Try to load xml file from the users config dir, or fallback to using the built in default xml
-
 	PF;
 	bool have_layout = false;
-
-#ifdef GDL_DOCK_XML_FALLBACK
-	bool _load_xml_layout (const char* name)
-	{
-		if (gdl_dock_layout_load_layout(window.layout, name)) // name must match file contents
-			return true;
-		else
-			g_warning ("Loading layout failed");
-		return false;
-	}
-#endif
-
-#if 0
-	bool _load_layout_from_file (const char* path, const char* name)
-	{
-		bool ok = false;
-		if(gdl_dock_layout_load_from_yaml_file(window.layout, path)){
-			ok = true;
-		}
-		else pwarn("failed to load %s", path);
-		return ok;
-	}
-#endif
 
 	for (int i=0;i<N_LAYOUT_DIRS;i++) {
 		const char* dir = window.layout->dirs[i];
@@ -691,32 +666,6 @@ window_load_layout (const char* layout_name)
 		}
 		g_free(path);
 	}
-
-#ifdef GDL_DOCK_XML_FALLBACK
-	if (!have_layout) {
-		// fallback to using legacy xml file
-
-		GError* error = NULL;
-		GDir* dir = g_dir_open(window.layout->dirs[0], 0, &error);
-		if (!error) {
-			const gchar* filename;
-			while ((filename = g_dir_read_name(dir)) && !have_layout) {
-				if (g_str_has_suffix(filename, ".xml")) {
-					gchar* name = layout_name && strlen(layout_name)
-						? g_strdup(layout_name)
-						: g_strndup(filename, strlen(filename) - 4);
-					char* path = g_strdup_printf("%s/"LAYOUTS_DIR"/%s.xml", app->configctx.dir, name);
-					if (gdl_dock_layout_load_from_xml_file(window.layout, path)) {
-						if (!strcmp(name, "__default__")) { // only activate one layout
-							have_layout = _load_xml_layout(name);
-						}
-					}
-					g_free(path);
-				}
-			}
-		}
-	}
-#endif
 
 	if (!have_layout) {
 		if (app->temp_view) {

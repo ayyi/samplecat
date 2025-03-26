@@ -7,63 +7,35 @@ dock:
   floatx: '0'
   floaty: '0'
   paned:
-    orientation: vertical
-    locked: 'no'
     position: '70'
     item:
-      name: 'Search'
-      orientation: vertical
+      name: Search
       locked: 'yes'
     paned:
-      orientation: horizontal
-      locked: 'no'
+	  orientation: horizontal
       position: '275'
       paned:
-        orientation: vertical
-        locked: 'no'
         position: '159'
         paned:
-          orientation: vertical
-          locked: 'no'
           position: '101'
           item:
-            name: 'Tags'
-            orientation: vertical
-            locked: 'no'
+            name: Tags
           item:
-            name: 'Filters'
-            orientation: vertical
-            locked: 'no'
+            name: Filters
         paned:
-          orientation: vertical
-          locked: 'no'
           position: '197'
           item:
-            name: 'Directories'
-            orientation: vertical
-            locked: 'no'
+            name: Directories
           item:
-            name: 'Inspector'
-            orientation: vertical
-            locked: 'no'
+            name: Inspector
       paned:
-        orientation: vertical
-        locked: 'no'
         position: '443'
         notebook:
-          orientation: vertical
-          locked: 'no'
-          page: '1'
+          page: 1
           item:
-            name: 'Filemanager'
-            orientation: vertical
-            locked: 'no'
+            name: Filemanager
           item:
-            name: 'Library'
-            orientation: vertical
-            locked: 'yes'
+            name: Library
         item:
-          name: 'Waveform'
-          orientation: vertical
-          locked: 'no'
+          name: Waveform
 ...

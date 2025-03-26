@@ -12,20 +12,14 @@ extern int gdl_debug;
 
 #define cdbg(A, B, ...) \
 	do { \
-		{ \
-			int i; \
-			if (A <= gdl_debug) for(i=0;i<indent;i++) printf("  "); \
-			fflush(stdout); \
-		} \
+		if (A <= gdl_debug) for(int i=0;i<indent;i++) fprintf(stderr, "  "); \
 		gdl_debug_printf(__func__, A, B, ##__VA_ARGS__); \
 	} while(false)
 
 #define pdestroy(LVL, B, ...) \
 	do { \
 		{ \
-			int i; \
-			if (LVL <= gdl_debug) for(i=0;i<indent;i++) printf("  "); \
-			fflush(stderr); \
+			if (LVL <= gdl_debug) for(int i=0;i<indent;i++) fprintf(stderr, "  "); \
 		} \
 		gdl_debug_printf_colour(__func__, LVL, "\x1b[1;34m", B, ##__VA_ARGS__); \
 	} while(false)

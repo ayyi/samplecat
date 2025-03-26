@@ -16,7 +16,7 @@ application-samplecat.c: application-samplecat.vala
 	valac -C -H application-samplecat.h $(packages) $(vapidir) application-samplecat.vala
 
 model.c: model.vala
-	$(valac) -C -H model.h $(packages) --pkg samplecat $(vapidir) model.vala
+	$(valac) -C -H $(basename $<).h $(packages) --pkg samplecat $(vapidir) $<
 	@sed -i -e "/\#include <gobject\/gvaluecollector.h>/a#include <application.h>" model.c # append
 
 list_store.c: list_store.vala
@@ -47,3 +47,9 @@ inspector: inspector.vala
 
 search.c: search.vala
 	valac -C -H search.h --pkg config --pkg gtk4 --pkg gmodule-2.0 --pkg debug --vapidir=. --vapidir=../../lib/debug search.vala
+
+dock-item.c: dock-item.vala
+	$(valac) -C -H dock-item.h --pkg config --pkg gtk4 --pkg gmodule-2.0 --pkg debug --vapidir=. --vapidir=../../lib/debug dock-item.vala
+
+placeholder.c: placeholder.vala
+	$(valac) -C -H placeholder.h --pkg config --pkg gtk4 --pkg gmodule-2.0 --pkg debug --vapidir=. --vapidir=../../lib/debug $<

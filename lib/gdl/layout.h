@@ -79,7 +79,7 @@ GObject         *gdl_dock_layout_get_master     (GdlDockLayout *layout);
 gboolean         gdl_dock_layout_load_layout    (GdlDockLayout *layout,
                                                  const gchar   *name);
 
-void             gdl_dock_layout_save_layout    (GdlDockLayout *layout,
+void             gdl_dock_layout_save_layout_xml(GdlDockLayout *layout,
                                                  const gchar   *name);
 
 void             gdl_dock_layout_delete_layout  (GdlDockLayout *layout,

@@ -26,16 +26,15 @@
 #include <stdlib.h>
 #include <libxml/parser.h>
 #include <gtk/gtk.h>
+#include "yaml/load.h"
+#include "yaml/save.h"
 #include "il8n.h"
 #include "utils.h"
 #include "debug.h"
 #include "placeholder.h"
-#include "gdl-dock-layout.h"
+#include "layout.h"
 
-#ifdef GDL_DOCK_YAML
-#include "yaml/load.h"
 #include "registry.h"
-#endif
 
 /**
  * SECTION:gdl-dock-layout
@@ -544,7 +543,7 @@ static gboolean
 gdl_dock_layout_idle_save (GdlDockLayout *layout)
 {
     /* save default layout */
-    gdl_dock_layout_save_layout (layout, NULL);
+    gdl_dock_layout_save_layout_xml (layout, NULL);
 
     layout->priv->idle_save_pending = FALSE;
 
@@ -667,6 +666,7 @@ gdl_dock_layout_load_layout (GdlDockLayout *layout, const gchar *name)
         return FALSE;
 }
 
+
 /**
 * gdl_dock_layout_save_layout:
 * @layout: The dock item.
@@ -677,9 +677,8 @@ gdl_dock_layout_load_layout (GdlDockLayout *layout, const gchar *name)
 *
 * See also gdl_dock_layout_save_to_file().
 */
-
 void
-gdl_dock_layout_save_layout (GdlDockLayout *layout, const gchar *name)
+gdl_dock_layout_save_layout_xml (GdlDockLayout *layout, const gchar *name)
 {
     xmlNodePtr  node;
     gchar      *layout_name;
@@ -789,14 +788,12 @@ gdl_dock_layout_load_from_string (GdlDockLayout *layout, const gchar *str)
 {
     g_return_val_if_fail(str, FALSE);
 
-#ifdef GDL_DOCK_YAML
 	Stack builder = {.master = (GdlDockMaster*)layout->priv->master};
 
 	return yaml_load_string (str, (YamlMappingHandler[]){
 		{"dock", load_dock, &builder},
 		{NULL}
 	});
-#else
     gboolean retval = FALSE;
 
     if (layout->priv->doc) {
@@ -820,7 +817,6 @@ gdl_dock_layout_load_from_string (GdlDockLayout *layout, const gchar *str)
 //    else dbg(0, "xml parsed failed");
 
     return retval;
-#endif
 }
 
 /**
@@ -836,8 +832,7 @@ gdl_dock_layout_load_from_string (GdlDockLayout *layout, const gchar *str)
 gboolean
 gdl_dock_layout_save_to_file (GdlDockLayout *layout, const gchar *filename)
 {
-    int       bytes;
-    gboolean  retval = FALSE;
+    gboolean retval = FALSE;
 
     g_return_val_if_fail (layout != NULL, FALSE);
     g_return_val_if_fail (filename != NULL, FALSE);
@@ -848,7 +843,7 @@ gdl_dock_layout_save_to_file (GdlDockLayout *layout, const gchar *filename)
 
     FILE* file_handle = fopen (filename, "w");
     if (file_handle) {
-        bytes = xmlDocFormatDump (file_handle, layout->priv->doc, 1);
+        int bytes = xmlDocFormatDump (file_handle, layout->priv->doc, 1);
         if (bytes >= 0) {
             layout->priv->dirty = FALSE;
             g_object_notify (G_OBJECT (layout), "dirty");
@@ -857,11 +852,9 @@ gdl_dock_layout_save_to_file (GdlDockLayout *layout, const gchar *filename)
         fclose (file_handle);
     };
 
-#ifdef GDL_DOCK_YAML
 	if (!gdl_dock_layout_save_to_yaml (layout->priv->master, filename)) {
 		g_warning("yaml save failed");
 	}
-#endif
 
     return retval;
 }
@@ -944,11 +937,6 @@ gdl_dock_layout_get_yaml_layouts (GdlDockLayout* layout, void (*foreach)(const c
 }
 
 
-#ifdef GDL_DOCK_YAML
-#include "yaml/load.h"
-#include "yaml/save.h"
-
-
 static bool
 with_fp (const char* filename, const char* mode, bool (*fn)(FILE*, gpointer), gpointer user_data)
 {
@@ -1019,6 +1007,7 @@ static bool
 dock_handler (yaml_parser_t* parser, const yaml_event_t* event, const char* name, gpointer _builder)
 {
 	g_assert(event->type == YAML_MAPPING_START_EVENT);
+	g_return_val_if_fail(strcmp(name, "DockPlaceholder"), false);
 
 	Stack* builder = _builder;
 
@@ -1035,7 +1024,6 @@ dock_handler (yaml_parser_t* parser, const yaml_event_t* event, const char* name
 
 	// previous object finished. now handle the new one
 
-	GdlDockObject* parent = builder->parent;
 	builder->sp++;
 
 	Constructor* constructor = &builder->items[builder->sp];
@@ -1070,12 +1058,14 @@ dock_handler (yaml_parser_t* parser, const yaml_event_t* event, const char* name
 
 	// add the new object to the widget tree
 
-	parent = builder->objects[builder->sp - 1];
-
 	if ((object = builder->objects[builder->sp])) {
 		gdl_dock_object_freeze (object);
-		parent = builder->objects[builder->sp - 1];
+		GdlDockObject* parent = builder->objects[builder->sp - 1];
 		if (parent) {
+			if (DOCK_IS_PLACEHOLDER (object)) {
+				gtk_widget_set_visible(GTK_WIDGET(object), false);
+			}
+
 			if (GDL_IS_DOCK_PLACEHOLDER (object))
 				gdl_dock_placeholder_attach (GDL_DOCK_PLACEHOLDER (object), parent);
 			else if (gdl_dock_object_is_compound (parent)) {
@@ -1204,7 +1194,9 @@ gdl_dock_layout_save_to_yaml (GdlDockMaster *master, const char* filename)
 			Context* context = user_data;
 			g_auto(yaml_event_t) event;
 
-			const char* type = gdl_dock_object_nick_from_type (G_TYPE_FROM_INSTANCE (object));
+			const char* type = DOCK_IS_PLACEHOLDER(object)
+				? "item"
+				: gdl_dock_object_nick_from_type (G_TYPE_FROM_INSTANCE (object));
 			map_open(&event, type);
 
 			guint n_props;
@@ -1222,10 +1214,12 @@ gdl_dock_layout_save_to_yaml (GdlDockMaster *master, const char* filename)
 					g_value_init (&v, p->value_type);
 					g_object_get_property (G_OBJECT (object), p->name, &v);
 
-					// only save the object "name" if it is set (i.e. don't save the empty string)
-					if (strcmp (p->name, GDL_DOCK_NAME_PROPERTY) || g_value_get_string (&v)) {
-						if (g_value_transform (&v, &attr))
-							if (!yaml_add_key_value_pair(p->name, g_value_get_string(&attr))) goto error;
+					if (!g_param_value_defaults (p, &v)) {
+						// only save the object "name" if it is set (i.e. don't save the empty string)
+						if (strcmp (p->name, GDL_DOCK_NAME_PROPERTY) || g_value_get_string (&v)) {
+							if (g_value_transform (&v, &attr))
+								if (!yaml_add_key_value_pair(p->name, g_value_get_string(&attr))) goto error;
+						}
 					}
 
 					g_value_unset (&v);
@@ -1266,4 +1260,3 @@ gdl_dock_layout_save_to_yaml (GdlDockMaster *master, const char* filename)
 
 	return ok;
 }
-#endif

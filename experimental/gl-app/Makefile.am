@@ -41,8 +41,8 @@ samplecat_gl_LDADD = \
 	behaviours/libbehaviours.la \
 	$(top_srcdir)/lib/utils/libutils.a \
 	$(top_srcdir)/lib/dir-tree/libdirtree.la \
-	$(top_srcdir)/lib/samplecat/.libs/libsamplecat.a \
 	$(top_srcdir)/lib/samplecat/db/libsamplecatdb.a \
+	$(top_srcdir)/lib/samplecat/.libs/libsamplecat.a \
 	$(top_srcdir)/lib/audio_analysis/.libs/libaudioanalysis.a \
 	$(top_srcdir)/lib/debug/libdebug.a \
 	$(top_srcdir)/lib/icon/libicon.a \

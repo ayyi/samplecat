@@ -133,6 +133,8 @@ add_icon_menu_item (PopoverMenu* widget, GMenu* menu, const char* name, const ch
 			{
 				ActionData* action = g_object_get_data (G_OBJECT(button), "action");
 
+				dbg(1, "action=%s target='%s'", action->name, action->target);
+
 				if (action->target)
 					gtk_widget_activate_action (button, action->name, "s", action->target);
 				else

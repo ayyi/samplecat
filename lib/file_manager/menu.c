@@ -156,6 +156,7 @@ fm__make_context_menu ()
 	gtk_widget_set_parent (menu, fm->window);
 	gtk_popover_set_has_arrow (GTK_POPOVER(menu), false);
 	gtk_popover_set_position (GTK_POPOVER(menu), GTK_POS_LEFT);
+	gtk_popover_set_mnemonics_visible (GTK_POPOVER(menu), true);
 
 	// Show the current directory name
 	// Initially the dir path is not set. It is updated in the dir-changed callback.
@@ -227,13 +228,11 @@ fm__make_subdir_menu (AyyiFilemanager* fm, GMenuModel* model)
 				int i = 0;
 				for (GList* l=items;l;l=l->next,i++) {
 					g_autofree gchar* name = l->data;
-					add_icon_menu_item_from_defn (POPOVER_MENU(fm->menu.widget), G_MENU(model), &(MenuDef){name, "fm.go-down-dir", "inode-directory-symbolic", i});
+					add_icon_menu_item (POPOVER_MENU(fm->menu.widget), G_MENU(model), name, "fm.go-down-dir", name, "inode-directory-symbolic");
 				}
 				g_list_free(items);
 
 				return true;
-			} else {
-				//g_menu_item_set_submenu ( GMenuItem* menu_item, GMenuModel* submenu);
 			}
 		}
 	}
@@ -251,22 +250,6 @@ fm__add_menu_item (GMenuModel* section, GAction* action, char* title)
 	g_autofree gchar* detailed_name = g_strdup_printf("app.%s", name);
 	g_menu_append (G_MENU(section), title, detailed_name);
 }
-
-
-/*
- *  Append the given menu_item and its subtree to the file_manager context menu.
- *  The filemanager context menu is a public property so this fn can be bypassed if desired.
- */
-#ifdef GTK4_TODO
-void
-fm__add_submenu (GtkWidget* menu_item)
-{
-	AyyiFilemanager* fm = file_manager__get();
-
-	gtk_container_add(GTK_CONTAINER(fm->menu), menu_item);
-	gtk_widget_show(menu_item);
-}
-#endif
 
 
 #ifdef PRINT_MENUS

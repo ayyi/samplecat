@@ -42,7 +42,7 @@ libgdl_4_headers = \
 	gdl-dock-master.h \
 	gdl-dock-item.h \
 	gdl-dock-item-grip.h \
-	gdl-dock-layout.h \
+	layout.h \
 	gdl-dock-bar.h \
 	gdl-dock-placeholder.h
 	
@@ -60,7 +60,7 @@ libgdl_4_la_SOURCES = \
 	gdl-dock-notebook.c \
 	gdl-dock-paned.c \
 	gdl-dock-paned.h \
-	gdl-dock-layout.c \
+	layout.c \
 	gdl-dock-placeholder.c \
 	gdl-dock-bar.c \
 	switcher.c \

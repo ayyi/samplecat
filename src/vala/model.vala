@@ -25,7 +25,7 @@ public class Filter
 
 	public signal void changed();
 
-	public Filter(char* _name)
+	public Filter (char* _name)
 	{
 		name = _name;
 	}
@@ -49,14 +49,14 @@ public class Idle
 	uint id = 0;
 	SourceFunc fn;
 
-	public Idle(SourceFunc _fn)
+	public Idle (SourceFunc _fn)
 	{
 		fn = _fn;
 	}
 
 	public void queue()
 	{
-		if(!(bool)id){
+		if (!(bool)id) {
 			id = GLib.Idle.add(() => {
 				fn();
 				id = 0;
@@ -87,9 +87,9 @@ public class Model : GLib.Object
 	private static char unk[32];
 	private uint selection_change_timeout;
 
-	public signal void dir_list_changed();
-	public signal void selection_changed(Sample* sample);
-	public signal void sample_changed(Sample* sample, int what, void* data);
+	public signal void dir_list_changed (Node node);
+	public signal void selection_changed (Sample* sample);
+	public signal void sample_changed (Sample* sample, int what, void* data);
 
 	public Sample* selection { get; set; }
 
@@ -101,9 +101,10 @@ public class Model : GLib.Object
 	{
 		state = 1; //dummy
 		cache_dir = Path.build_filename(Environment.get_home_dir(), ".config", PACKAGE, "cache", null);
+		Node node = null;
 
 		idle = new Idle(() => {
-			dir_list_changed();
+			dir_list_changed(node);
 			return false;
 		});
 

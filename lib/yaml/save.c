@@ -29,10 +29,10 @@ yaml_add_key_value_pair (const char* key, const char* value)
 {
 	yaml_event_t event;
 
-	if(!value) value = "";
+	if (!value) value = "";
 
 	EMIT(yaml_scalar_event_initialize(&event, NULL, str_tag, (guchar*)key, -1, 1, 0, YAML_PLAIN_SCALAR_STYLE));
-	EMIT(yaml_scalar_event_initialize(&event, NULL, str_tag, (guchar*)value, -1, 0, 1, YAML_PLAIN_SCALAR_STYLE));
+	EMIT(yaml_scalar_event_initialize(&event, NULL, str_tag, (guchar*)value, -1, 1, 0, YAML_PLAIN_SCALAR_STYLE));
 
 	return true;
 }
@@ -59,10 +59,10 @@ yaml_add_key_value_pair_float (const char* key, float fval)
 	char value[256];
 	snprintf(value, 255, "%.2f", fval);
 
-	if(!yaml_scalar_event_initialize(&event, NULL, str_tag, (guchar*)key, -1, 1, 0, YAML_PLAIN_SCALAR_STYLE)) return FALSE;
-	if(!yaml_emitter_emit(&emitter, &event)) return FALSE;
-	if(!yaml_scalar_event_initialize(&event, NULL, str_tag, (guchar*)value, -1, 0, 1, YAML_PLAIN_SCALAR_STYLE)) return FALSE;
-	if(!yaml_emitter_emit(&emitter, &event)) return FALSE;
+	if (!yaml_scalar_event_initialize(&event, NULL, str_tag, (guchar*)key, -1, 1, 0, YAML_PLAIN_SCALAR_STYLE)) return false;
+	if (!yaml_emitter_emit(&emitter, &event)) return FALSE;
+	if (!yaml_scalar_event_initialize(&event, NULL, str_tag, (guchar*)value, -1, 0, 1, YAML_PLAIN_SCALAR_STYLE)) return false;
+	if (!yaml_emitter_emit(&emitter, &event)) return FALSE;
 
 	return true;
 }

@@ -446,7 +446,7 @@ load_settings ()
 {
 	PF;
 
-	if(!agl_actor_registry){
+	if (!agl_actor_registry) {
 		agl_actor_registry = g_hash_table_new(g_str_hash, g_str_equal);
 		agl_actor_register_class("Dock H", dock_h_get_class());
 		agl_actor_register_class("Dock V", dock_v_get_class());

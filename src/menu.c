@@ -23,6 +23,7 @@ make_context_menu (GtkWidget* widget)
 	gtk_widget_set_parent (menu, widget);
 	gtk_popover_set_has_arrow (GTK_POPOVER(menu), false);
 	gtk_popover_set_position (GTK_POPOVER(menu), GTK_POS_LEFT);
+	gtk_popover_set_mnemonics_visible (GTK_POPOVER(menu), true);
 
 	GSimpleActionGroup* group = g_simple_action_group_new ();
 	gtk_widget_insert_action_group (menu, "context-menu", G_ACTION_GROUP(group));
@@ -211,17 +212,14 @@ layout_menu (GtkWidget* menu, GMenuModel* model, GSimpleActionGroup* group)
 			{
 				void layout_save (GSimpleAction* action, GVariant* parameter, gpointer _panel_type)
 				{
-#ifdef GTK4_TODO
-					// will not be saved to disk until quit.
-					gdl_dock_layout_save_layout (window.layout, current_layout);
+					window_save_layout();
 					statusbar_print(1, "Layout %s saved", current_layout);
-#endif
 				}
 
 				GSimpleAction* action = g_simple_action_new ("layout-save", NULL);
 				g_action_map_add_action (G_ACTION_MAP (group), G_ACTION (action));
 				g_signal_connect (action, "activate", G_CALLBACK (layout_save), NULL);
-				add_menu_items_from_defn(menu, section, 1, (MenuDef[]){{"Save", "content-menu.layout-save", "document-save"}}, NULL);
+				add_menu_items_from_defn(menu, section, 1, (MenuDef[]){{"Save", "context-menu.layout-save", "document-save"}}, NULL);
 
 #ifdef GTK4_TODO
 				GList* children = gtk_container_get_children((GtkContainer*)sub);

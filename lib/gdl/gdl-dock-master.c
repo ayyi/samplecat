@@ -471,10 +471,7 @@ gdl_dock_master_set_property  (GObject *object, guint prop_id, const GValue *val
 }
 
 static void
-gdl_dock_master_get_property  (GObject      *object,
-                               guint         prop_id,
-                               GValue       *value,
-                               GParamSpec   *pspec)
+gdl_dock_master_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
     GdlDockMaster *master = GDL_DOCK_MASTER (object);
 
@@ -503,6 +500,8 @@ gdl_dock_master_get_property  (GObject      *object,
 static void
 gdl_dock_master_drag_begin (GdlDockItem *item, gpointer data)
 {
+	PF;
+
     g_return_if_fail (data != NULL);
     g_return_if_fail (item != NULL);
 
@@ -766,17 +765,15 @@ item_dock_cb (GdlDockObject* object, GdlDockObject* requestor, GdlDockPlacement 
 static void
 item_detach_cb (GdlDockObject *object, gboolean recursive, gpointer user_data)
 {
-    GdlDockMaster *master = user_data;
+	GdlDockMaster *master = user_data;
 
-    g_return_if_fail (object && GDL_IS_DOCK_OBJECT (object));
-    g_return_if_fail (master && GDL_IS_DOCK_MASTER (master));
+	g_return_if_fail (object && GDL_IS_DOCK_OBJECT (object));
+	g_return_if_fail (master && GDL_IS_DOCK_MASTER (master));
 
-    if (!gdl_dock_object_is_frozen (object) &&
-        !gdl_dock_object_is_automatic (object)) {
-        if (!master->priv->idle_layout_changed_id)
-            master->priv->idle_layout_changed_id =
-                g_idle_add (idle_emit_layout_changed, master);
-    }
+	if (!gdl_dock_object_is_frozen (object) && !gdl_dock_object_is_automatic (object)) {
+		if (!master->priv->idle_layout_changed_id)
+			master->priv->idle_layout_changed_id = g_idle_add (idle_emit_layout_changed, master);
+	}
 }
 
 static void
@@ -877,6 +874,7 @@ gdl_dock_master_add (GdlDockMaster *master, GdlDockObject *object)
 				GtkDragSource* src = gtk_drag_source_new ();
 				GdkContentProvider* content = gdk_content_provider_new_typed (GDL_TYPE_DOCK_ITEM, object);
 				gtk_drag_source_set_content (src, content);
+				gtk_event_controller_set_name(GTK_EVENT_CONTROLLER(src), "drag");
 				g_object_unref (content);
 				gtk_widget_add_controller (gdl_dock_item_get_grip(GDL_DOCK_ITEM (object)), GTK_EVENT_CONTROLLER (src));
 
@@ -925,10 +923,10 @@ gdl_dock_master_add (GdlDockMaster *master, GdlDockObject *object)
         /* If the item is notebook, set the switcher style and notebook
          * settings. */
         if (GDL_IS_DOCK_NOTEBOOK (object) && GDL_IS_SWITCHER (gdl_dock_item_get_child (GDL_DOCK_ITEM (object)))) {
-            GtkWidget *child = gdl_dock_item_get_child (GDL_DOCK_ITEM (object));
-            g_object_set (child, "switcher-style", master->priv->switcher_style, NULL);
-            g_object_set (child, "tab-pos", master->priv->tab_pos, NULL);
-            g_object_set (child, "tab-reorderable", master->priv->tab_reorderable, NULL);
+            GtkWidget *switcher = gdl_dock_item_get_child (GDL_DOCK_ITEM (object));
+            g_object_set (switcher, "switcher-style", master->priv->switcher_style, NULL);
+            g_object_set (switcher, "tab-pos", master->priv->tab_pos, NULL);
+            g_object_set (switcher, "tab-reorderable", master->priv->tab_reorderable, NULL);
         }
 
         /* post a layout_changed emission if the item is not automatic

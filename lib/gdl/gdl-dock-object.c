@@ -34,13 +34,11 @@
 #include "libgdltypebuiltins.h"
 #include "libgdlmarshal.h"
 
-/* for later use by the registry */
 #include "gdl-dock.h"
 #include "gdl-dock-item.h"
 #include "gdl-dock-paned.h"
 #include "gdl-dock-notebook.h"
 #include "gdl-dock-placeholder.h"
-#include "switcher.h"
 
 /**
  * SECTION:gdl-dock-object
@@ -71,6 +69,7 @@ static void     gdl_dock_object_finalize           (GObject            *g_object
 
 static void     gdl_dock_object_dispose            (GObject            *dock_object);
 static void     gdl_dock_object_remove_widgets     (GdlDockObject      *dock_object);
+static void     gdl_dock_object_real_destroy       (GdlDockObject      *dock_object);
 static void     gdl_dock_object_default_foreach_child (GdlDockObject      *object, GdlDockObjectFn fn, gpointer);
 
 static void     gdl_dock_object_show               (GtkWidget          *widget);
@@ -281,6 +280,7 @@ gdl_dock_object_class_init (GdlDockObjectClass *klass)
     klass->child_placement = NULL;
     klass->remove = gdl_dock_object_remove_unimplemented;
     klass->remove_widgets = gdl_dock_object_remove_widgets;
+    klass->destroy = gdl_dock_object_real_destroy;
     klass->foreach_child = gdl_dock_object_default_foreach_child;
 
     /**
@@ -401,6 +401,9 @@ gdl_dock_object_finalize (GObject *g_object)
 {
 	GdlDockObject *object = GDL_DOCK_OBJECT (g_object);
 
+	ENTER;
+	pdestroy(1, "name: \x1b[38;5;156m%s %s", object->priv->name, ayyi_white, object->priv->long_name);
+
 	g_free (object->priv->name);
 	g_free (object->priv->long_name);
 	g_free (object->priv->stock_id);
@@ -446,6 +449,25 @@ gdl_dock_object_remove_widgets (GdlDockObject* object)
 }
 
 static void
+gdl_dock_object_real_destroy (GdlDockObject* object)
+{
+	GDL_DOCK_OBJECT_GET_CLASS(object)->remove_widgets(object);
+
+    if (gdl_dock_object_is_compound (object)) {
+		void gdl_dock_object_fn (GdlDockObject *object, gboolean recursive)
+		{
+			GDL_DOCK_OBJECT_GET_CLASS(object)->destroy(object);
+		}
+        gdl_dock_object_foreach_child (object, (GdlDockObjectFn)gdl_dock_object_fn, NULL);
+    }
+
+	/* freeze the object to avoid reducing while detaching children */
+	gdl_dock_object_freeze (object);
+	g_signal_emit (object, gdl_dock_object_signals [DETACH], 0, false);
+	gdl_dock_object_thaw (object);
+}
+
+static void
 gdl_dock_object_default_foreach_child (GdlDockObject *object, GdlDockObjectFn fn, gpointer user_data)
 {
 	GtkWidget* child = gtk_widget_get_first_child (GTK_WIDGET (object));
@@ -475,12 +497,6 @@ gdl_dock_object_update_visibility (GdlDockObject *object)
 
 		gdl_dock_object_foreach_child (object, gdl_dock_object_foreach_is_visible, &visible);
 		object->priv->attached = visible;
-#ifndef GDL_DISABLE_DEPRECATED
-		if (visible)
-			object->deprecated_flags |= GDL_DOCK_ATTACHED;
-		else
-			object->deprecated_flags &= ~GDL_DOCK_ATTACHED;
-#endif
 		gtk_widget_set_visible (GTK_WIDGET (object), visible);
 	}
 	gdl_dock_object_layout_changed_notify (object);
@@ -719,7 +735,8 @@ gdl_dock_object_detach (GdlDockObject *object, gboolean recursive)
  * gdl_dock_object_destroy:
  * @object: A #GdlDockObject
  *
- * Dissociate a dock object from its parent, including its children.
+ * `gdl_dock_object_destroy` is only called on the top-level dock child
+ * and will trigger destruction of all children.
  */
 void
 gdl_dock_object_destroy (GdlDockObject *object)
@@ -732,12 +749,7 @@ gdl_dock_object_destroy (GdlDockObject *object)
 	if (!object->priv->attached && (gtk_widget_get_parent (GTK_WIDGET (object)) == NULL))
 		return;
 
-	GDL_DOCK_OBJECT_GET_CLASS(object)->remove_widgets(GDL_DOCK_OBJECT(object));
-
-	/* freeze the object to avoid reducing while detaching children */
-	gdl_dock_object_freeze (object);
-	g_signal_emit (object, gdl_dock_object_signals [DETACH], 0, true);
-	gdl_dock_object_thaw (object);
+	GDL_DOCK_OBJECT_GET_CLASS(object)->destroy(GDL_DOCK_OBJECT(object));
 }
 
 void

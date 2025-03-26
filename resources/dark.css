@@ -13,12 +13,23 @@ button {
 	border: 0;
 }
 
+switcher > button.toggle {
+	border-width: 2px;
+	border-style: solid;
+	border-color: rgb(100,200,100);
+}
+
+switcher > button.toggle:checked {
+	border-color: #fff;
+}
+
 treeview {
 	background-color: #666;
 }
 
-header button {
+header > button {
 	background-image: none;
+	background-color: #444;
 }
 
 /* no */
@@ -59,6 +70,12 @@ dock-grip button:hover {
 dock-item {
 	margin: 4px;
 	padding: 4px;
+	border: 1px solid transparent;
+	border-width: 0 0 0 4px;
+}
+
+dock-item.focused {
+	border-color: #5e5;
 }
 
 .vertical > dock-item, stack > dock-item {

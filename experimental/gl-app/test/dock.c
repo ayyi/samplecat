@@ -77,10 +77,13 @@ test1 ()
 		g_timeout_add(3000, (gpointer)send_quit, window);
 	}
 
-	AGlActor* text = agl_actor__add_child((AGlActor*)window->scene, text_node(NULL));
-	text_node_set_text((TextNode*)text, g_strdup("Dock test"));
-	text->colour = 0xbbbbbbff;
-	text->region = (AGlfRegion){.x2 = 80, .y2 = 30};
+	agl_actor__add_child((AGlActor*)window->scene, ({
+		AGlActor* text = text_node(NULL);
+		text_node_set_text((TextNode*)text, g_strdup("Dock test"));
+		text->colour = 0xbbbbbbff;
+		text->region = (AGlfRegion){.x2 = 80, .y2 = 30};
+		text;
+	}));
 
 	AGlActor* dock = agl_actor__add_child((AGlActor*)window->scene, dock_h_view(NULL));
 	dock->region = (AGlfRegion){.x2 = 360, .y2 = 150};
@@ -93,12 +96,21 @@ test1 ()
 
 	add_key_handlers(keys);
 
-	gboolean check ()
+	gboolean check (gpointer _dock)
 	{
-		// TODO check layout
+		AGlActor* dock = _dock;
+
+		assert_and_stop(g_list_length(dock->children) == 2, "n_children");
+
+		int i = 0;
+		for (GList* l = dock->children;l;l=l->next,i++) {
+			AGlActor* child = l->data;
+			assert_and_stop(ABS(agl_actor__width(child) - 173.) <= 1, "%i expected width %f, got %f", i, 173., agl_actor__width(child));
+		}
+
 		return G_SOURCE_REMOVE;
 	}
-	g_idle_add(check, NULL);
+	g_idle_add(check, dock);
 
 	g_main_loop_run(agl_main_loop_new());
 

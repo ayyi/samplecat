@@ -87,14 +87,14 @@ gdl_dock_foreach_object_print (GdlDockObject *object, gpointer user_data)
             g_value_init (&v, p->value_type);
             g_object_get_property (G_OBJECT (object), p->name, &v);
 
-            /* only save the object "name" if it is set (i.e. don't save the empty string) */
             if (strcmp (p->name, GDL_DOCK_NAME_PROPERTY) || g_value_get_string (&v)) {
-                if (g_value_transform (&v, &attr)) {
-					const char* value = g_value_get_string (&attr);
-					int len = strlen(p->name) + strlen(value) + 3;
-					snprintf(&attributes[ai], len, " %s=%s", p->name, value);
-					//cdbg(0, "  %s=%s (%s) %i", p->name, value, attributes, ai);
-					ai += len -1;
+				if (!g_param_value_defaults (p, &v)) {
+					if (g_value_transform (&v, &attr)) {
+						const char* value = g_value_get_string (&attr);
+						int len = strlen(p->name) + strlen(value) + 3;
+						snprintf(&attributes[ai], len, " %s=%s", p->name, value);
+						ai += len -1;
+					}
 				}
             }
 
@@ -144,7 +144,7 @@ gdl_dock_print (GdlDockMaster *master)
 	for (GList* l = named_items; l; l=l->next) {
 		GdlDockItem* item = l->data;
 		if (!g_hash_table_lookup(found, item)) {
-			gdl_dock_foreach_object_print (GDL_DOCK_OBJECT(item), NULL);
+			gdl_dock_foreach_object_print (GDL_DOCK_OBJECT(item), found);
 		}
 	}
 
