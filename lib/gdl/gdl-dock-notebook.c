@@ -302,6 +302,9 @@ gdl_dock_notebook_switch_page_cb (GtkNotebook *nb, GtkWidget *page, gint page_nu
 			gdl_switcher_insert_page (switcher, GTK_WIDGET(filled), NULL, long_name, long_name, stock_id, pixbuf_icon, page_num);
 			gtk_notebook_set_current_page(nb, page_num);
 
+			g_signal_emit_by_name(GDL_DOCK_OBJECT(notebook)->master, "dock-item-removed", placeholder);
+			g_signal_emit_by_name(GDL_DOCK_OBJECT(notebook)->master, "dock-item-added", filled);
+
 			return G_SOURCE_REMOVE;
 		}
 		g_idle_add(gdl_dock_notebook_swap_placeholder, DOCK_NEW(C, nb, page_num));
@@ -346,8 +349,6 @@ gdl_dock_notebook_dock_child (GdlDockObject *requestor, gpointer user_data)
 static void
 gdl_dock_notebook_dock (GdlDockObject *object, GdlDockObject *requestor, GdlDockPlacement position, GValue *other_data)
 {
-	ENTER;
-
 	g_return_if_fail (GDL_IS_DOCK_NOTEBOOK (object));
 	g_return_if_fail (GDL_IS_DOCK_ITEM (requestor));
 

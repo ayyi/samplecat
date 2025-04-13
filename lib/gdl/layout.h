@@ -20,7 +20,7 @@
 #pragma once
 
 #include <glib-object.h>
-#include <gdl/gdl-dock-master.h>
+#include <gdl/master.h>
 #include <gdl/gdl-dock.h>
 
 G_BEGIN_DECLS

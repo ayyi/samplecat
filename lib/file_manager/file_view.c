@@ -124,12 +124,13 @@ GtkWidget*
 view_details_new (AyyiFilemanager* fm)
 {
 	PF;
+
 	ViewDetails* view_details = g_object_new(view_details_get_type(), NULL);
 	view_details->filer_window = fm;
 	view_details->filer_window->view = (ViewIface*)view_details;
 
-	view_details->filer_window->menu.widget = fm__make_context_menu();
-	gtk_widget_set_parent (view_details->filer_window->menu.widget, GTK_WIDGET(view_details));
+	if (view_details->filer_window->menu.widget)
+		gtk_widget_set_parent (view_details->filer_window->menu.widget, GTK_WIDGET(view_details));
 
 	view_details->scroll_win = gtk_scrolled_window_new();
 	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(view_details->scroll_win), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
@@ -206,9 +207,12 @@ view_details_new (AyyiFilemanager* fm)
 	{
 		void view_details__on_row_clicked (GtkGestureClick* gesture, int n_press, double x, double y, gpointer widget)
 		{
-			//if (((ViewDetails*)widget)->filer_window->menu)
-				//gtk_menu_popup(GTK_MENU(((ViewDetails*)widget)->filer_window->menu), NULL, NULL, NULL, NULL, (ev) ? ev->button : 0, gdk_event_get_time((GdkEvent*)ev));
-				gtk_popover_popup(GTK_POPOVER(((ViewDetails*)widget)->filer_window->menu.widget));
+			ViewDetails* view = (ViewDetails*)widget;
+
+			if (!view->filer_window->menu.widget) {
+				view->filer_window->menu.widget = fm__make_context_menu(view->filer_window);
+			}
+			gtk_popover_popup(GTK_POPOVER(view->filer_window->menu.widget));
 		}
 
 		GtkGesture* click = gtk_gesture_click_new ();

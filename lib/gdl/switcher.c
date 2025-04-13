@@ -162,6 +162,10 @@ gdl_switcher_visible_changed (GObject* object, GParamSpec* spec, gpointer user_d
     }
     GdlSwitcher* switcher = GDL_SWITCHER (gtk_widget_get_parent (button->button_widget));
     gdl_switcher_update_lone_button_visibility (switcher);
+
+	int p = gtk_notebook_get_current_page (switcher->notebook);
+	int q = gtk_notebook_page_num (switcher->notebook, GTK_WIDGET(object));
+	if (p != q) gtk_notebook_set_current_page (switcher->notebook, q);
 }
 
 
@@ -529,7 +533,7 @@ do_layout (GdlSwitcher *switcher)
 
    	for (GSList* p = switcher->priv->buttons; p; p = p->next) {
         Button *button = p->data;
-		gtk_widget_set_visible(button->button_widget, allocation.height >= 40);
+		gtk_widget_set_visible(button->button_widget, allocation.height >= 40 && gtk_widget_get_visible(button->page));
 	}
 
     int y = 0;
@@ -645,24 +649,7 @@ gdl_switcher_measure (GtkWidget *widget, GtkOrientation orientation, int for_siz
 static void
 gdl_switcher_size_allocate (GtkWidget *widget, int width, int height, int baseline)
 {
-    do_layout (GDL_SWITCHER (widget));
-}
-
-static void
-gdl_switcher_snapshot (GtkWidget *widget, GtkSnapshot *snapshot)
-{
-#ifdef GTK4_TODO
-    GdlSwitcher *switcher = GDL_SWITCHER (widget);
-
-    if (switcher->priv->show) {
-        for (GSList* p = switcher->priv->buttons; p != NULL; p = p->next) {
-            GtkWidget *button = ((Button *) p->data)->button_widget;
-            gtk_container_propagate_draw (GTK_CONTAINER (widget), button, cr);
-        }
-    }
-#endif
-
-    GTK_WIDGET_CLASS (gdl_switcher_parent_class)->snapshot (widget, snapshot);
+	do_layout (GDL_SWITCHER (widget));
 }
 
 static void
@@ -812,7 +799,6 @@ gdl_switcher_class_init (GdlSwitcherClass *klass)
 
 	widget_class->measure = gdl_switcher_measure;
     widget_class->size_allocate = gdl_switcher_size_allocate;
-    widget_class->snapshot = gdl_switcher_snapshot;
     widget_class->map = gdl_switcher_map;
 
     object_class->dispose = gdl_switcher_dispose;
@@ -1048,7 +1034,7 @@ gdl_switcher_insert_page (GdlSwitcher *switcher, GtkWidget *page, GtkWidget *tab
 		gtk_widget_set_visible(page, true);
 	}
 
-    return ret_position;
+	return ret_position;
 }
 
 static void

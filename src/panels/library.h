@@ -12,25 +12,6 @@
 
 #pragma once
 
-#include "samplecat/list_store.h"
-
-struct _libraryview {
-   GtkWidget*         widget;         // treeview
-   GtkWidget*         scroll;
-
-   struct {
-      GtkCellRenderer* name;
-      GtkCellRenderer* tags;
-   }                   cells;
-   GtkTreeViewColumn* col_name;
-   GtkTreeViewColumn* col_path;
-   GtkTreeViewColumn* col_pixbuf;
-   GtkTreeViewColumn* col_tags;
-
-   int                  selected;
-   GtkTreeRowReference* mouseover_row_ref;
-};
-
 GList*      listview__get_selection        ();
 
 void        listview__block_motion_handler ();

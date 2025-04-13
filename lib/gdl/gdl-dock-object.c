@@ -27,10 +27,10 @@
 #include "il8n.h"
 #include <stdlib.h>
 #include <string.h>
-#include "debug.h"
+#include "gdl/debug.h"
 
 #include "gdl-dock-object.h"
-#include "gdl-dock-master.h"
+#include "master.h"
 #include "libgdltypebuiltins.h"
 #include "libgdlmarshal.h"
 
@@ -525,27 +525,21 @@ gdl_dock_object_foreach_automatic (GdlDockObject *object, gpointer user_data)
 static void
 gdl_dock_object_show (GtkWidget *widget)
 {
-    GDL_DOCK_OBJECT (widget)->priv->attached = TRUE;
-#ifndef GDL_DISABLE_DEPRECATED
-    GDL_DOCK_OBJECT (widget)->deprecated_flags |= GDL_DOCK_ATTACHED;
-#endif
-    GTK_WIDGET_CLASS (gdl_dock_object_parent_class)->show (widget);
+	GDL_DOCK_OBJECT (widget)->priv->attached = TRUE;
+	GTK_WIDGET_CLASS (gdl_dock_object_parent_class)->show (widget);
 
-    /* Update visibility of automatic parents */
-    gdl_dock_object_update_parent_visibility (GDL_DOCK_OBJECT (widget));
+	/* Update visibility of automatic parents */
+	gdl_dock_object_update_parent_visibility (GDL_DOCK_OBJECT (widget));
 }
 
 static void
 gdl_dock_object_hide (GtkWidget *widget)
 {
-    GDL_DOCK_OBJECT (widget)->priv->attached = FALSE;
-#ifndef GDL_DISABLE_DEPRECATED
-    GDL_DOCK_OBJECT (widget)->deprecated_flags &= ~GDL_DOCK_ATTACHED;
-#endif
-   GTK_WIDGET_CLASS (gdl_dock_object_parent_class)->hide (widget);
+	GDL_DOCK_OBJECT (widget)->priv->attached = FALSE;
+	GTK_WIDGET_CLASS (gdl_dock_object_parent_class)->hide (widget);
 
-    /* Update visibility of automatic parents */
-    gdl_dock_object_update_parent_visibility (GDL_DOCK_OBJECT (widget));
+	/* Update visibility of automatic parents */
+	gdl_dock_object_update_parent_visibility (GDL_DOCK_OBJECT (widget));
 }
 
 static void
@@ -772,8 +766,6 @@ gdl_dock_object_add_child (GdlDockObject* object, GtkWidget* child)
 void
 gdl_dock_object_remove_child (GdlDockObject* object, GtkWidget* child)
 {
-	ENTER;
-
 	GDL_DOCK_OBJECT_GET_CLASS (object)->remove(object, child);
 }
 

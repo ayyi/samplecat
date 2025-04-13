@@ -2,7 +2,6 @@
 void
 test_3_show_library ()
 {
-#ifdef GTK4_TODO
 	START_TEST;
 
 	assert(view_not_visible("Library"), "expected library panel not visible");
@@ -11,15 +10,20 @@ test_3_show_library ()
 	{
 		void on_submenu_visible (gpointer _)
 		{
-			GtkWidget* library_item = find_item_in_view_menu("Library");
+			select_view_menu_item ("Library");
 
 			void on_show (gpointer _)
 			{
+				GdlDockItem* library = find_panel("Library");
+				GtkWidget* notebook = gtk_widget_get_ancestor(GTK_WIDGET(library), GTK_TYPE_NOTEBOOK);
+				if (notebook) {
+					int p = gtk_notebook_get_current_page ((GtkNotebook*)notebook);
+					int q = gtk_notebook_page_num ((GtkNotebook*)notebook, GTK_WIDGET(library));
+					assert(p == q, "library is not current page expected %i but current page is %i", q, p);
+				}
+
 				FINISH_TEST;
 			}
-
-			click_on_menu_item(library_item);
-			gtk_menu_item_activate((GtkMenuItem*)library_item);
 
 			wait_for(view_is_visible, on_show, "Library");
 		}
@@ -28,5 +32,4 @@ test_3_show_library ()
 	}
 
 	open_menu(then, NULL);
-#endif
 }

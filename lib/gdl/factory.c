@@ -12,7 +12,7 @@
 
 #include "gdl/debug.h"
 #include "gdl-dock-item.h"
-#include "gdl-dock-master.h"
+#include "master.h"
 #include "registry.h"
 #include "factory.h"
 					#include "placeholder.h"

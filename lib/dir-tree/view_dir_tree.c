@@ -1737,7 +1737,6 @@ static void
 vdtree_destroy_cb (GtkWidget *widget, gpointer data)
 {
 	ViewDirTree *vdt = data;
-	GtkTreeModel *store;
 
 	if (vdt->popup)
 		{
@@ -1755,7 +1754,7 @@ vdtree_destroy_cb (GtkWidget *widget, gpointer data)
 	widget_auto_scroll_stop(vdt->treeview);
 #endif
 
-	store = gtk_tree_view_get_model(GTK_TREE_VIEW(vdt->treeview));
+	GtkTreeModel *store = gtk_tree_view_get_model(GTK_TREE_VIEW(vdt->treeview));
 	gtk_tree_model_foreach(store, vdtree_destroy_node_cb, vdt);
 
 	path_list_free(vdt->drop_list);

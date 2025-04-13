@@ -17,8 +17,7 @@ namespace FM {
 		public void destroy();
 		public bool update_dir(bool warning);
 	}
-	[CCode(cheader_filename = "file_manager/file_view.h", lower_case_cprefix = "", cprefix = "")]
-	[CCode(cname = "struct _ViewDetails")]
+	[CCode(cheader_filename = "file_manager/file_view.h", lower_case_cprefix = "", cprefix = "", cname = "struct _ViewDetails")]
 	public struct ViewDetails {
 		public Gtk.TreeView treeview;
 		[CCode(cname = "view_details_new")]

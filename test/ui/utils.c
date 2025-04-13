@@ -12,58 +12,8 @@
 
 #include "widgets/suggestion_entry.h"
 
-
-#ifdef GTK4_TODO
-void
-send_key (GdkWindow* window, int keyval, GdkModifierType modifiers)
-{
-	assert(gdk_test_simulate_key (window, -1, -1, keyval, modifiers, GDK_KEY_PRESS), "%i", keyval);
-	assert(gdk_test_simulate_key (window, -1, -1, keyval, modifiers, GDK_KEY_RELEASE), "%i", keyval);
-}
-#endif
-
-
-static GdlDockItem*
-find_dock_item (const char* name)
-{
-	typedef struct
-	{
-		const char*  name;
-		GdlDockItem* item;
-	} C;
-
-	void gdl_dock_layout_foreach_object (GdlDockObject* object, gpointer user_data)
-	{
-		g_return_if_fail (object && GDL_IS_DOCK_OBJECT (object));
-
-		C* c = user_data;
-		const char* name  = gdl_dock_object_get_name(object);
-
-		char* properties = NULL;
-		if (!name) {
-			name = (char*)G_OBJECT_CLASS_NAME(G_OBJECT_GET_CLASS(object));
-		}
-		if (!strcmp(name, c->name)) {
-			c->item = (GdlDockItem*)object;
-			return;
-		}
-
-		if (gdl_dock_object_is_compound (object)) {
-			gdl_dock_object_foreach_child(object, gdl_dock_layout_foreach_object, c);
-		}
-
-		if (properties) g_free(properties);
-	}
-
-	GtkWidget* window = (GtkWidget*)gtk_application_get_active_window(GTK_APPLICATION(app));
-	GtkWidget* vbox = gtk_widget_get_first_child(window);
-	GtkWidget* dock = gtk_widget_get_first_child(vbox);
-
-	C c = {name};
-	gdl_dock_master_foreach_toplevel((GdlDockMaster*)gdl_dock_object_get_master(GDL_DOCK_OBJECT(dock)), TRUE, (GFunc) gdl_dock_layout_foreach_object, &c);
-
-	return c.item;
-}
+extern GtkWidget* test_get_context_menu ();
+extern void print_widget_tree (GtkWidget* widget);
 
 
 bool
@@ -73,41 +23,75 @@ window_is_open ()
 }
 
 
-#ifdef GTK4_TODO
+GtkWidget*
+find_menuitem_by_name (GtkWidget* root, const char* name)
+{
+	GtkWidget* result = NULL;
+
+	void find (GtkWidget* widget, GtkWidget** result)
+	{
+		GtkWidget* child = gtk_widget_get_first_child (widget);
+		for (; child; child = gtk_widget_get_next_sibling (child)) {
+			if (!strcmp(G_OBJECT_CLASS_NAME(G_OBJECT_GET_CLASS(child)), "GtkModelButton")) {
+				GtkWidget* label = find_widget_by_type (child, GTK_TYPE_LABEL);
+				if (label && !strcmp(gtk_label_get_text(GTK_LABEL(label)), name)) {
+					*result = child;
+					break;
+				}
+			}
+			find(child, result);
+
+			if (*result) break;
+		}
+	}
+
+	find (root, &result);
+
+	return result;
+}
+
+
 GtkWidget*
 get_view_menu ()
 {
-	GList* menu_items = gtk_container_get_children((GtkContainer*)app->context_menu);
-	GtkWidget* item = g_list_nth_data(menu_items, 8);
-	assert_null(GTK_IS_MENU_ITEM(item), "not menu item");
-	g_list_free(menu_items);
+	GtkWidget* menu = test_get_context_menu ();
 
-	GList* items = gtk_container_get_children((GtkContainer*)item);
-	for(GList* l=items;l;l=l->next){
-		assert_null(!strcmp(gtk_label_get_text(l->data), "View"), "Expected View menu");
-	}
-	g_list_free(items);
+	return find_menuitem_by_name(menu, "View");
+}
 
-	return item;
+
+void
+select_view_menu_item (const char* name)
+{
+	GtkWidget* context_menu = test_get_context_menu();
+	GtkWidget* item = get_view_menu();
+
+	gtk_widget_activate(item);
+	GtkWidget* target = find_menuitem_by_name (context_menu, name);
+
+	gtk_widget_activate(target);
 }
 
 
 bool
 menu_is_visible (gpointer _)
 {
-	return gtk_widget_get_visible(app->context_menu);
+	GtkWidget* menu = test_get_context_menu ();
+	return gtk_widget_get_visible(menu);
 }
 
 
 bool
-submenu_is_visible (gpointer _)
+submenu_is_visible (gpointer name)
 {
-	GtkWidget* item = get_view_menu();
-	GtkWidget* submenu = gtk_menu_item_get_submenu((GtkMenuItem*)item);
-	return gtk_widget_get_visible(submenu);
+	GtkWidget* context_menu = test_get_context_menu();
+	GtkWidget* submenu_item = find_menuitem_by_name (context_menu, "Library");
+
+	return gtk_widget_get_visible(submenu_item) && gtk_widget_get_width(submenu_item) > 0;
 }
 
 
+#ifdef GTK4_TODO
 void
 click_on_menu_item (GtkWidget* item)
 {
@@ -116,15 +100,15 @@ click_on_menu_item (GtkWidget* item)
 		dbg(0, "click failed");
 	}
 }
+#endif
 
 
 void
 open_menu (WaitCallback callback, gpointer user_data)
 {
-	guint button = 3;
-	if (!gdk_test_simulate_button (app->window->window, 350, 250, button, 0, GDK_BUTTON_PRESS)) {
-		dbg(0, "click failed");
-	}
+	GtkWidget* context_menu = test_get_context_menu();
+
+	gtk_popover_popup(GTK_POPOVER(context_menu));
 
 	void then (gpointer _callback)
 	{
@@ -139,18 +123,13 @@ open_menu (WaitCallback callback, gpointer user_data)
 void
 open_submenu (WaitCallback callback, gpointer user_data)
 {
-	GtkWidget* item = get_view_menu();
-	GtkWidget* submenu = gtk_menu_item_get_submenu((GtkMenuItem*)item);
-
-	// open the View submenu
-	if(!gtk_widget_get_visible(submenu)){
-		click_on_menu_item(item);
-	}
-
-	wait_for(submenu_is_visible, callback, NULL);
+	GtkWidget* item1 = get_view_menu();
+	gtk_widget_activate(item1);
+	wait_for(submenu_is_visible, callback, "Library");
 }
 
 
+#ifdef GTK4_TODO
 GtkWidget*
 find_item_in_view_menu (const char* name)
 {
@@ -179,7 +158,7 @@ find_item_in_view_menu (const char* name)
 bool
 view_is_visible (gpointer name)
 {
-	GdlDockItem* item = find_dock_item(name);
+	GdlDockItem* item = find_panel(name);
 	return item && gtk_widget_get_visible((GtkWidget*)item);
 }
 
@@ -187,7 +166,7 @@ view_is_visible (gpointer name)
 bool
 view_not_visible (gpointer name)
 {
-	GdlDockItem* item = find_dock_item(name);
+	GdlDockItem* item = find_panel(name);
 	return !item || !gtk_widget_get_visible((GtkWidget*)item);
 }
 
@@ -195,19 +174,12 @@ view_not_visible (gpointer name)
 void
 search (const char* text)
 {
-	GtkWidget* search = find_widget_by_type((GtkWidget*)find_dock_item ("Search"), SUGGESTION_TYPE_ENTRY);
+	GtkWidget* search = find_widget_by_type((GtkWidget*)find_panel("Search"), SUGGESTION_TYPE_ENTRY);
 
-#if 0
-	send_key(search->window, GDK_KEY_H, 0);
-	send_key(search->window, GDK_KEY_E, 0);
-	send_key(search->window, GDK_KEY_Return, 0);
-#else
-#ifdef GTK4_TODO
-	gtk_test_text_set(search, text);
-#endif
-#endif
+	gtk_widget_grab_focus(search);
+	GtkEditable* editable = gtk_editable_get_delegate (GTK_EDITABLE(search));
+	GtkEntryBuffer* buffer = gtk_text_get_buffer (GTK_TEXT(editable));
+	gtk_entry_buffer_insert_text (buffer, -1, text, -1);
 
 	gtk_widget_activate(search);
 }
-
-

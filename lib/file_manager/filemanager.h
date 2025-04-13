@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of the Ayyi project. https://www.ayyi.org          |
- | copyright (C) 2011-2024 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2011-2025 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -21,7 +21,6 @@
 #include "file_manager/dir.h"
 
 G_BEGIN_DECLS
-
 
 #define AYYI_TYPE_FILEMANAGER            (ayyi_filemanager_get_type ())
 #define AYYI_FILEMANAGER(obj)            (G_TYPE_CHECK_INSTANCE_CAST ((obj), AYYI_TYPE_FILEMANAGER, AyyiFilemanager))
@@ -104,7 +103,6 @@ struct _AyyiFilemanager {
 
     gboolean                   show_thumbs;
     GList*                     thumb_queue;     // paths to thumbnail
-    //GtkWidget	*thumb_bar, *thumb_progress;
     int                        max_thumbs;      // total for this batch
 
 #if 0
@@ -116,18 +114,13 @@ struct _AyyiFilemanager {
        GMenuModel*             model;
     }                          menu;
 
-    TargetFunc	               target_cb;
-    gpointer	               target_data;
+    TargetFunc                 target_cb;
+    gpointer                   target_data;
 
     GtkWidget*                 toolbar;
     GtkWidget*                 toolbar_text;
-#if 0
-    GtkWidget*                 scrollbar;
 
-    char*                      window_id;       // For remote control
-#endif
-
-    AyyiFilemanagerPrivate* priv;
+    AyyiFilemanagerPrivate*    priv;
 };
 
 struct _AyyiFilemanagerClass {

@@ -23,14 +23,10 @@
 #include "gdl/registry.h"
 #include "gdl/debug.h"
 #include "gtk/menu.h"
-#ifdef GTK4_TODO
-#include "gtk/gimpactiongroup.h"
-#endif
 #include "file_manager.h"
 #include "file_manager/menu.h"
 #include "player/player.h"
 #include "audio_analysis/waveform/waveform.h"
-#include "src/typedefs.h"
 #include "sample.h"
 #include "support.h"
 #include "model.h"
@@ -109,6 +105,7 @@ static void       window_load_layout              (const char*);
 static void       window_save_layout              ();
 
 #include "menu.c"
+#include "test.c"
 
 #ifdef ROTATOR
 GtkWidget*
@@ -190,13 +187,6 @@ window_new (GtkApplication* gtk, gpointer user_data)
 		dockbar;
 	}));
 
-#ifdef GTK4_TODO
-	dock->requisition.height = 197; // the size must be set directly. using gtk_widget_set_size_request has no imediate effect.
-	int allocation = dock->allocation.height;
-	dock->allocation.height = 197; // nasty hack
-	dock->allocation.height = allocation;
-#endif
-
 	void item_added (GdlDockMaster* master, GdlDockObject* object, gpointer _)
 	{
 		dbg(1, "%s", gdl_dock_object_id(object));
@@ -229,17 +219,6 @@ window_new (GtkApplication* gtk, gpointer user_data)
 	void _on_layout_changed (GObject* object, gpointer user_data)
 	{
 		PF;
-
-#ifdef GTK4_TODO
-		if (panels[PANEL_TYPE_INSPECTOR].widget) {
-#ifdef USE_OPENGL
-			_INSPECTOR->show_waveform = !panels[PANEL_TYPE_WAVEFORM].dock_item || !gdl_dock_item_is_active((GdlDockItem*)panels[PANEL_TYPE_WAVEFORM].dock_item);
-#else
-			_INSPECTOR->show_waveform = true;
-#endif
-		}
-#endif
-
 		g_signal_emit_by_name (app, "layout-changed");
 	}
 	g_signal_connect(G_OBJECT(gdl_dock_object_get_master((GdlDockObject*)window.dock)), "layout-changed", G_CALLBACK(_on_layout_changed), NULL);
@@ -276,21 +255,6 @@ window_new (GtkApplication* gtk, gpointer user_data)
 
 	gtk_widget_set_visible((GtkWidget*)win, true);
 
-#ifndef USE_OPENGL
-	void window_on_selection_change (SamplecatModel* m, GParamSpec* pspec, gpointer user_data)
-	{
-		PF;
-#ifdef HAVE_FFTW3
-		if (window.spectrogram) {
-			if (gdl_dock_item_is_active((GdlDockItem*)panels[PANEL_TYPE_SPECTROGRAM].dock_item)) {
-				spectrogram_widget_set_file ((SpectrogramWidget*)window.spectrogram, m->selection->full_path);
-#endif
-			}
-		}
-	}
-	g_signal_connect((gpointer)samplecat.model, "notify::selection", G_CALLBACK(window_on_selection_change), NULL);
-#endif
-
 	void window_on_quit (Application* a, gpointer user_data)
 	{
 		window_save_layout();
@@ -298,8 +262,8 @@ window_new (GtkApplication* gtk, gpointer user_data)
 #ifdef WITH_VALGRIND
 #ifdef GTK4_TODO
 		g_clear_pointer(&window.file_man, gtk_widget_unparent);
-#endif
 		g_clear_pointer(&((Application*)app)->dir_treeview2, vdtree_free);
+#endif
 
 		gtk_widget_unparent(GTK_WIDGET(gtk_application_get_active_window(GTK_APPLICATION(app))));
 #endif
@@ -332,7 +296,7 @@ window_new (GtkApplication* gtk, gpointer user_data)
 
 	g_signal_emit_by_name (app, "layout-changed");
 
-	void on_right_click (GtkGestureClick *gesture, int n_press, double x, double y, gpointer widget)
+	void window_on_right_click (GtkGestureClick *gesture, int n_press, double x, double y, gpointer widget)
 	{
 		if (!window.context_menu) {
 			window.context_menu = make_context_menu(widget);
@@ -344,7 +308,7 @@ window_new (GtkApplication* gtk, gpointer user_data)
 		gtk_popover_popup(GTK_POPOVER(window.context_menu));
 	}
 	GtkGesture* click = gtk_gesture_click_new ();
-	g_signal_connect (click, "pressed", G_CALLBACK (on_right_click), (GtkWidget*)win);
+	g_signal_connect (click, "pressed", G_CALLBACK (window_on_right_click), (GtkWidget*)win);
 	gtk_gesture_single_set_button (GTK_GESTURE_SINGLE (click), 3);
 	gtk_widget_add_controller (GTK_WIDGET (win), GTK_EVENT_CONTROLLER (click));
 
@@ -723,4 +687,47 @@ panel_lookup_by_gtype (GType type)
 		}
 	}
 	return NULL;
+}
+
+
+GdlDockItem*
+find_panel (const char* name)
+{
+	typedef struct
+	{
+		const char*  name;
+		GdlDockItem* item;
+	} C;
+
+	void gdl_dock_layout_foreach_object (GdlDockObject* object, gpointer user_data)
+	{
+		g_return_if_fail (object && GDL_IS_DOCK_OBJECT (object));
+
+		C* c = user_data;
+		const char* name  = gdl_dock_object_get_name(object);
+
+		char* properties = NULL;
+		if (!name) {
+			name = (char*)G_OBJECT_CLASS_NAME(G_OBJECT_GET_CLASS(object));
+		}
+		if (!strcmp(name, c->name)) {
+			c->item = (GdlDockItem*)object;
+			return;
+		}
+
+		if (gdl_dock_object_is_compound (object)) {
+			gdl_dock_object_foreach_child(object, gdl_dock_layout_foreach_object, c);
+		}
+
+		if (properties) g_free(properties);
+	}
+
+	GtkWidget* window = (GtkWidget*)gtk_application_get_active_window(GTK_APPLICATION(app));
+	GtkWidget* vbox = gtk_widget_get_first_child(window);
+	GtkWidget* dock = gtk_widget_get_first_child(vbox);
+
+	C c = {name};
+	gdl_dock_master_foreach_toplevel((GdlDockMaster*)gdl_dock_object_get_master(GDL_DOCK_OBJECT(dock)), TRUE, (GFunc) gdl_dock_layout_foreach_object, &c);
+
+	return c.item;
 }

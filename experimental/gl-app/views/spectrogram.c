@@ -118,7 +118,7 @@ spectrogram_view (gpointer _)
 			SpectrogramView* view = (SpectrogramView*)_view;
 
 			if (pixbuf) {
-				if(view->pixbuf) g_object_unref(view->pixbuf);
+				if (view->pixbuf) g_object_unref(view->pixbuf);
 				view->pixbuf = pixbuf;
 				view->need_texture_change = true;
 

@@ -222,7 +222,6 @@ config_save (ConfigContext* ctx)
 				if(g_value_get_string(&option->val)) g_key_file_set_value(ctx->key_file, "Samplecat", option->name, g_value_get_string(&option->val));
 			} else if (G_VALUE_HOLDS_BOOLEAN(&option->val)) {
 				dbg(2, "option: %s=%i", option->name, g_value_get_boolean(&option->val));
-				//snprintf(value, 255, "%s", g_value_get_boolean(&option->val) ? "true" : "false");
 				g_key_file_set_boolean(ctx->key_file, "Samplecat", option->name, g_value_get_boolean(&option->val));
 			} else {
 				dbg(2, "option: [manual]");

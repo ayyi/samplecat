@@ -41,7 +41,7 @@
 #include "gdl-dock-notebook.h"
 #include "gdl-dock-paned.h"
 #include "switcher.h"
-#include "gdl-dock-master.h"
+#include "master.h"
 #include "libgdltypebuiltins.h"
 #include "libgdlmarshal.h"
 

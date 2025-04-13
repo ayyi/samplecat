@@ -34,7 +34,7 @@ libtool
 layouts2/layout_ui.c
 layouts2/layouts.c
 lib/yaml/test
-src/vala/*.[ch]
+**/vala/*.[ch]
 src/resources.c
 experimental/gl-app/samplecat_gl
 experimental/gl-app/shaders/shaders.c

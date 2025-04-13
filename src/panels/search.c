@@ -122,13 +122,12 @@ search_instance_init (Search* self, gpointer klass)
 		}
 		agl_observable_subscribe_with_state (filter, on_search_filter_changed, entry);
 
-		void on_text_changed (GtkEditable* editable, gpointer user_data)
+		void search_on_text_changed (GtkEditable* editable, gpointer user_data)
 		{
 			const char* text = gtk_editable_get_text(GTK_EDITABLE(editable));
 			observable_string_set(samplecat.model->filters2.search, g_strdup(text));
-
 		}
-		g_signal_connect(entry, "search-changed", (void*)on_text_changed, NULL);
+		g_signal_connect(entry, "search-changed", (void*)search_on_text_changed, NULL);
 
 		void on_activate (SuggestionEntry* self, gpointer user_data)
 		{

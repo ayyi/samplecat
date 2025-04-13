@@ -116,16 +116,19 @@ dir_panel_new ()
 
 		void on_dir_list_changed (GObject* _model, void* tree, gpointer store)
 		{
-			GtkSelectionModel* selection = gtk_list_view_get_model (GTK_LIST_VIEW(view));
-			GListStore* store = G_LIST_STORE (gtk_single_selection_get_model (GTK_SINGLE_SELECTION(selection)));
 			g_list_store_remove_all (store);
 			add_node_to_store (samplecat.model->dir_tree, store);
 		}
 		dir_list_register(on_dir_list_changed, store);
 
+		void dirs_on_finalize (gpointer store, GObject* was)
+		{
+			dir_list_unregister (store);
+		}
+		g_object_weak_ref(G_OBJECT(view), dirs_on_finalize, store);
+
 		view;
 	}));
-
 
 #ifdef GTK4_TODO
 	void dir_on_theme_changed (Application* a, char* theme, gpointer _tree)

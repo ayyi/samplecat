@@ -51,7 +51,6 @@ void               get_spectrogram_with_target    (gchar* path, RenderDoneFunc, 
 void               cancel_spectrogram             (gchar* path);
 GType              spectrogram_widget_get_type    (void) G_GNUC_CONST;
 void               spectrogram_widget_image_ready (SpectrogramWidget*, gchar* filename, GdkPixbuf*, void* user_data);
-void               spectrogram_widget_set_file    (SpectrogramWidget*, gchar* filename);
 
 
 G_END_DECLS

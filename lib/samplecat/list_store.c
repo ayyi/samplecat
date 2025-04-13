@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
- | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
- | copyright (C) 2007-2023 Tim Orford <tim@orford.org>                  |
+ | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
+ | copyright (C) 2007-2025 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -22,12 +22,12 @@
 #include <samplecat.h>
 #include <list_store.h>
 
-#define SAMPLECAT_TYPE_LIST_STORE (samplecat_list_store_get_type ())
-#define SAMPLECAT_LIST_STORE(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), SAMPLECAT_TYPE_LIST_STORE, SamplecatListStore))
-#define SAMPLECAT_LIST_STORE_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST ((klass), SAMPLECAT_TYPE_LIST_STORE, SamplecatListStoreClass))
-#define SAMPLECAT_IS_LIST_STORE(obj) (G_TYPE_CHECK_INSTANCE_TYPE ((obj), SAMPLECAT_TYPE_LIST_STORE))
+#define SAMPLECAT_TYPE_LIST_STORE            (samplecat_list_store_get_type ())
+#define SAMPLECAT_LIST_STORE(obj)            (G_TYPE_CHECK_INSTANCE_CAST ((obj), SAMPLECAT_TYPE_LIST_STORE, SamplecatListStore))
+#define SAMPLECAT_LIST_STORE_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST ((klass), SAMPLECAT_TYPE_LIST_STORE, SamplecatListStoreClass))
+#define SAMPLECAT_IS_LIST_STORE(obj)         (G_TYPE_CHECK_INSTANCE_TYPE ((obj), SAMPLECAT_TYPE_LIST_STORE))
 #define SAMPLECAT_IS_LIST_STORE_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), SAMPLECAT_TYPE_LIST_STORE))
-#define SAMPLECAT_LIST_STORE_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), SAMPLECAT_TYPE_LIST_STORE, SamplecatListStoreClass))
+#define SAMPLECAT_LIST_STORE_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS ((obj), SAMPLECAT_TYPE_LIST_STORE, SamplecatListStoreClass))
 
 #define _gtk_tree_row_reference_free0(var) ((var == NULL) ? NULL : (var = (gtk_tree_row_reference_free (var), NULL)))
 #define _gtk_tree_path_free0(var) ((var == NULL) ? NULL : (var = (gtk_tree_path_free (var), NULL)))
@@ -83,8 +83,8 @@ samplecat_list_store_clear_ (SamplecatListStore* self)
 	PF;
 	GtkTreeIter iter;
 	while (gtk_tree_model_get_iter_first(GTK_TREE_MODEL(self), &iter)) {
-		GdkPixbuf* pixbuf = NULL;
-		Sample* sample = NULL;
+		GdkPixbuf* pixbuf;
+		Sample* sample;
 		gtk_tree_model_get(GTK_TREE_MODEL(self), &iter, COL_OVERVIEW, &pixbuf, COL_SAMPLEPTR, &sample, -1);
 		gtk_list_store_remove((GtkListStore*)self, &iter);
 		if (pixbuf) g_object_unref(pixbuf);
@@ -131,14 +131,14 @@ samplecat_list_store_add (SamplecatListStore* self, Sample* sample)
 		gchar* fullpath = g_build_filename(sample->sample_dir, sample->name, NULL);
 		if (ayyi_song__have_file(fullpath)) {
 			dbg(1, "sample is used in current project TODO set icon");
-		} else dbg(2, "sample not used in current project");
+		}
 		g_free(fullpath);
 	}
 #endif
 
 #define NSTR(X) (X?X:"")
 
-	//icon (only shown if the sound file is currently available)
+	// icon (only shown if the sound file is currently available)
 	GdkPixbuf* iconbuf = sample->online ? get_iconbuf_from_mimetype(sample->mimetype) : NULL;
 
 	GtkTreeIter iter;
@@ -179,7 +179,7 @@ samplecat_list_store_add (SamplecatListStore* self, Sample* sample)
 
 
 void
-samplecat_list_store_on_sample_changed (SamplecatListStore* self, Sample* sample, gint prop, void* val)
+samplecat_list_store_on_sample_modified (SamplecatListStore* self, Sample* sample, gint prop, void* val)
 {
 	g_return_if_fail (self != NULL);
 	g_return_if_fail (sample->row_ref);
@@ -189,7 +189,6 @@ samplecat_list_store_on_sample_changed (SamplecatListStore* self, Sample* sample
 	GtkTreeIter iter;
 	gtk_tree_model_get_iter(GTK_TREE_MODEL(samplecat.store), &iter, path);
 	gtk_tree_path_free(path);
-
 
 	dbg(1, "prop=%i %s", prop, samplecat_model_print_col_name(prop));
 	switch (prop) {
@@ -333,7 +332,7 @@ samplecat_list_store_get_sample_by_iter (GtkTreeIter* iter)
 {
 	Sample* sample;
 	gtk_tree_model_get(GTK_TREE_MODEL(samplecat.store), iter, COL_SAMPLEPTR, &sample, -1);
-	if(sample) sample_ref(sample);
+	if (sample) sample_ref(sample);
 	return sample;
 }
 
@@ -345,7 +344,7 @@ Sample*
 samplecat_list_store_get_sample_by_row_index (int row)
 {
 	GtkTreePath* path = gtk_tree_path_new_from_indices (row, -1);
-	if(path){
+	if (path) {
 		Sample* sample = samplecat_list_store_get_sample_by_path(path);
 		gtk_tree_path_free(path);
 		return sample;

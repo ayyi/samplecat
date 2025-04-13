@@ -30,16 +30,6 @@ typedef struct _Application         Application;
 typedef struct _ApplicationClass    ApplicationClass;
 typedef struct _ApplicationPrivate  ApplicationPrivate;
 
-enum {
-	SHOW_PLAYER = 0,
-	SHOW_FILEMANAGER,
-	SHOW_WAVEFORM,
-#ifdef HAVE_FFTW3
-	SHOW_SPECTROGRAM,
-#endif
-	MAX_VIEW_OPTIONS
-};
-
 struct _Application
 {
    SamplecatApplication parent_instance;
@@ -49,17 +39,11 @@ struct _Application
    pthread_t            gui_thread;
    bool                 no_gui;
 
-   LibraryView*         libraryview;
-
 #if 0
    GtkWidget*           msg_panel;
 #endif
    GtkWidget*           statusbar;
    GtkWidget*           statusbar2;
-
-   GtkWidget*           dir_treeview;
-   ViewDirTree*         dir_treeview2;
-   GtkWidget*           fm_view;
 
 #ifdef GTK4_TODO
    GdkColor             fg_colour;
@@ -67,12 +51,6 @@ struct _Application
    GdkColor             bg_colour_mod1;
    GdkColor             base_colour;
    GdkColor             text_colour;
-#endif
-
-   //nasty!
-#ifdef GTK4_TODO
-   gint                 mouse_x;
-   gint                 mouse_y;
 #endif
 };
 

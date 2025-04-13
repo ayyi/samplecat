@@ -22,7 +22,7 @@
 #define __GDL_H__
 
 #include <gdl/gdl-dock-object.h>
-#include <gdl/gdl-dock-master.h>
+#include <gdl/master.h>
 #include <gdl/gdl-dock.h>
 #include <gdl/gdl-dock-item.h>
 #include <gdl/gdl-dock-item-grip.h>

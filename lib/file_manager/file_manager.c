@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
- | This file is part of the Ayyi project. http://ayyi.org               |
- | copyright (C) 2011-2024 Tim Orford <tim@orford.org>                  |
+ | This file is part of the Ayyi project. https://www.ayyi.org          |
+ | copyright (C) 2011-2025 Tim Orford <tim@orford.org>                  |
  | copyright (C) 2006, Thomas Leonard and others                        |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
@@ -28,10 +28,11 @@
 #include "minibuffer.h"
 #include "display.h"
 
+extern char theme_name[];
+
 GList* all_filer_windows = NULL;
 static AyyiFilemanager* new_file_manager = NULL;
-static gboolean initialised = FALSE;
-extern char theme_name[];
+static bool initialised = false;
 
 GSList* plugins = NULL;
 
@@ -54,14 +55,20 @@ file_manager__init ()
 
 	g_idle_add(_load_plugins, NULL);
 
-	initialised = TRUE;
+	initialised = true;
+
+	void library_on_finalize (gpointer _, GObject* was)
+	{
+		new_file_manager = NULL;
+	}
+	g_object_weak_ref(G_OBJECT(new_file_manager), library_on_finalize, NULL);
 }
 
 
 GtkWidget*
 file_manager__new_window (const char* path)
 {
-	if (!initialised) file_manager__init();
+	if (!initialised || !new_file_manager) file_manager__init();
 
 	GtkWidget* file_view = view_details_new(new_file_manager);
 	new_file_manager->view = (ViewIface*)file_view;
@@ -77,7 +84,7 @@ file_manager__new_window (const char* path)
 		void delete (GSimpleAction* action, GVariant* parameter, gpointer fm)
 		{
 			GList* paths = fm__selected_items(fm);
-			for(GList* l=paths;l;l=l->next){
+			for (GList* l=paths;l;l=l->next) {
 				dbg(1, "deleting file: %s\n", (char*)l->data);
 				unlink((char*)l->data);
 			}
@@ -99,9 +106,13 @@ file_manager__new_window (const char* path)
 			fm__change_to(fm, filename, NULL);
 		}
 
-		void refresh (GSimpleAction* action, GVariant* parameter, gpointer fm)
+		void refresh (GSimpleAction* action, GVariant* parameter, gpointer _fm)
 		{
-			file_manager__update_all();
+			AyyiFilemanager* fm = _fm;
+
+			if (fm->directory && !fm->directory->scanning) {
+				fm__update_dir(fm, true);
+			}
 		}
 
 		void set_sort (GSimpleAction* action, GVariant* sort_order, gpointer fm)
@@ -117,7 +128,7 @@ file_manager__new_window (const char* path)
 			switch (type) {
 				case MINI_SHELL:
 					// Item needs to remain selected
-					fm->temp_item_selected = FALSE;
+					fm->temp_item_selected = false;
 
 					minibuffer_show(fm, type);
 					break;
@@ -165,6 +176,7 @@ file_manager__new_window (const char* path)
 }
 
 
+#if 0
 void
 file_manager__update_all (void)
 {
@@ -187,6 +199,7 @@ file_manager__update_all (void)
 		}
 	}
 }
+#endif
 
 
 void
@@ -199,7 +212,7 @@ file_manager__on_dir_changed ()
 AyyiFilemanager*
 file_manager__get ()
 {
-	if (!initialised)
+	if (!initialised || !new_file_manager)
 		file_manager__init();
 	return new_file_manager;
 }
@@ -269,7 +282,7 @@ file_manager__load_plugins ()
 	FileTypePluginPtr plugin = NULL;
 	GError* error = NULL;
 
-	if(!g_module_supported()) g_error("Modules not supported! (%s)", g_module_error());
+	if (!g_module_supported()) g_error("Modules not supported! (%s)", g_module_error());
 
 	int found = 0;
 
@@ -278,8 +291,8 @@ file_manager__load_plugins ()
 	g_free(plugin_path);
 	char* path;
 	int i = 0;
-	while((path = paths[i++])){
-		if(!g_file_test(path, G_FILE_TEST_EXISTS)) continue;
+	while ((path = paths[i++])) {
+		if (!g_file_test(path, G_FILE_TEST_EXISTS)) continue;
 
 		dbg(1, "scanning for plugins (%s) ...", path);
 		GDir* dir = g_dir_open(path, 0, &error);
@@ -289,7 +302,7 @@ file_manager__load_plugins ()
 				dbg(1, "testing %s...", filename);
 				gchar* filepath = g_build_filename(path, filename, NULL);
 				// filter files with correct library suffix
-				if(!strncmp(G_MODULE_SUFFIX, filename + strlen(filename) - strlen(G_MODULE_SUFFIX), strlen(G_MODULE_SUFFIX))) {
+				if (!strncmp(G_MODULE_SUFFIX, filename + strlen(filename) - strlen(G_MODULE_SUFFIX), strlen(G_MODULE_SUFFIX))) {
 					// If we find one, try to load plugin info and if this was successful try to invoke the specific plugin
 					// type loader. If the second loading went well add the plugin to the plugin list.
 					if (!(plugin = file_manager__plugin_load(filepath))) {

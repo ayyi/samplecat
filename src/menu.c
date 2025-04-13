@@ -10,8 +10,10 @@
  |
  */
 
-static void prefs_menu  (GtkWidget*, GMenuModel*, GSimpleActionGroup*);
+static void play_menu   (GtkWidget*, GMenuModel*, GSimpleActionGroup*);
+static void view_menu   (GtkWidget*, GMenuModel*, GSimpleActionGroup*);
 static void layout_menu (GtkWidget*, GMenuModel*, GSimpleActionGroup*);
+static void prefs_menu  (GtkWidget*, GMenuModel*, GSimpleActionGroup*);
 
 
 static GtkWidget*
@@ -29,10 +31,6 @@ make_context_menu (GtkWidget* widget)
 	gtk_widget_insert_action_group (menu, "context-menu", G_ACTION_GROUP(group));
 
 	MenuDef menu_def[] = {
-		{"Delete",         "library.delete-rows",   "edit-delete-symbolic"},
-		{"Update",         "library.update-rows",   "view-refresh-symbolic"},
-		{"Reset Colours",  "library.reset-colours", ""},
-		{"Edit tags",      "library.edit-row",      "text-editor-symbolic"},
 #if 0
 		{"Open",           G_CALLBACK(listview__edit_row),      GTK_STOCK_OPEN},
 		{"Open Directory", G_CALLBACK(NULL),                    GTK_STOCK_OPEN},
@@ -44,10 +42,70 @@ make_context_menu (GtkWidget* widget)
 
 	add_menu_items_from_defn(menu, model, G_N_ELEMENTS(menu_def), menu_def, NULL);
 
-	//
-	// View menu
-	//
-	{
+	play_menu(menu, model, group);
+	view_menu(menu, model, group);
+	layout_menu(menu, model, group);
+	prefs_menu(menu, model, group);
+
+#ifdef GTK4_TODO
+	if (themes) {
+		GtkWidget* theme_menu = gtk_menu_item_new_with_label("Icon Themes");
+		gtk_container_add(GTK_CONTAINER(sub), theme_menu);
+
+		GtkWidget* sub_menu = themes->data;
+		gtk_menu_item_set_submenu(GTK_MENU_ITEM(theme_menu), sub_menu);
+	}
+#endif
+
+	return menu;
+}
+
+
+GtkWidget*
+make_panel_context_menu (GtkWidget* widget, int size, MenuDef defn[size])
+{
+	GMenuModel* model = (GMenuModel*)g_menu_new ();
+
+	GtkWidget* menu = popover_menu_new_from_model (model);
+	gtk_widget_set_parent (menu, widget);
+	gtk_popover_set_has_arrow (GTK_POPOVER(menu), false);
+	gtk_popover_set_position (GTK_POPOVER(menu), GTK_POS_LEFT);
+	gtk_popover_set_mnemonics_visible (GTK_POPOVER(menu), true);
+
+	GSimpleActionGroup* group = g_simple_action_group_new ();
+	gtk_widget_insert_action_group (menu, "context-menu", G_ACTION_GROUP(group));
+
+	add_menu_items_from_defn(menu, model, size, defn, NULL);
+
+	play_menu(menu, model, group);
+	view_menu(menu, model, group);
+	layout_menu(menu, model, group);
+	prefs_menu(menu, model, group);
+
+	return menu;
+}
+
+
+static void
+play_menu (GtkWidget* menu, GMenuModel* model, GSimpleActionGroup* group)
+{
+	MenuDef menu_def[] = {
+		{"-",                                                              },
+		{"Play All",       "app.play-all",           "media-playback-start"},
+		{"Stop Playback",  "app.player-stop",        "media-playback-stop"},
+		//{"Test",           "inspector.test-action",  "media-playback-stop"},
+	};
+
+	add_menu_items_from_defn(menu, model, G_N_ELEMENTS(menu_def), menu_def, NULL);
+}
+
+
+//
+//  View menu
+//
+static void
+view_menu (GtkWidget* menu, GMenuModel* model, GSimpleActionGroup* group)
+{
 		GMenuModel* view_model = (GMenuModel*)g_menu_new ();
 		g_menu_append_submenu (G_MENU(model), "View", view_model);
 
@@ -107,45 +165,6 @@ make_context_menu (GtkWidget* widget)
 		Idle* idle = idle_new(_view_menu_on_layout_changed, NULL);
 		g_signal_connect(G_OBJECT(gdl_dock_object_get_master((GdlDockObject*)window.dock)), "layout-changed", (GCallback)idle->run, idle);
 		_view_menu_on_layout_changed(NULL, NULL);
-	}
-
-	layout_menu(menu, model, group);
-	prefs_menu(menu, model, group);
-
-#ifdef GTK4_TODO
-	if (themes) {
-		GtkWidget* theme_menu = gtk_menu_item_new_with_label("Icon Themes");
-		gtk_container_add(GTK_CONTAINER(sub), theme_menu);
-
-		GtkWidget* sub_menu = themes->data;
-		gtk_menu_item_set_submenu(GTK_MENU_ITEM(theme_menu), sub_menu);
-	}
-#endif
-
-	return menu;
-}
-
-
-GtkWidget*
-make_panel_context_menu (GtkWidget* widget, int size, MenuDef defn[size])
-{
-	GMenuModel* model = (GMenuModel*)g_menu_new ();
-
-	GtkWidget* menu = popover_menu_new_from_model (model);
-	gtk_widget_set_parent (menu, widget);
-	gtk_popover_set_has_arrow (GTK_POPOVER(menu), false);
-	gtk_popover_set_position (GTK_POPOVER(menu), GTK_POS_LEFT);
-	gtk_popover_set_mnemonics_visible (GTK_POPOVER(menu), true);
-
-	GSimpleActionGroup* group = g_simple_action_group_new ();
-	gtk_widget_insert_action_group (menu, "context-menu", G_ACTION_GROUP(group));
-
-	add_menu_items_from_defn(menu, model, size, defn, NULL);
-
-	layout_menu(menu, model, group);
-	prefs_menu(menu, model, group);
-
-	return menu;
 }
 
 

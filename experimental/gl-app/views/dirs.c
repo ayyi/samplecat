@@ -194,6 +194,7 @@ directories_view (gpointer _)
 #if 0
 		// no, doesn't work when content changes because we lose the original allocation
 		actor->region.y2 = MIN(actor->region.y2, actor->region.y1 + (view->cache.n_rows + 1) * row_height);
+#endif
 	}
 
 	bool dirs_event (AGlActor* actor, AGlEvent* event, AGliPt xy)

@@ -31,7 +31,7 @@
 #include "gdl-dock-placeholder.h"
 #include "gdl-dock-item.h"
 #include "gdl-dock-paned.h"
-#include "gdl-dock-master.h"
+#include "master.h"
 #include "libgdltypebuiltins.h"
 
 /**

@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
- | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
- | copyright (C) 2007-2023 Tim Orford <tim@orford.org>                  |
+ | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
+ | copyright (C) 2007-2025 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -117,7 +117,7 @@ SamplecatListStore* samplecat_list_store_new                  (void);
 SamplecatListStore* samplecat_list_store_construct            (GType);
 void             samplecat_list_store_clear_                  (SamplecatListStore*);
 void             samplecat_list_store_add                     (SamplecatListStore*, Sample*);
-void             samplecat_list_store_on_sample_changed       (SamplecatListStore*, Sample*, gint prop, void* val);
+void             samplecat_list_store_on_sample_modified      (SamplecatListStore*, Sample*, gint prop, void* val);
 void             samplecat_list_store_do_search               (SamplecatListStore*);
 
 Sample*          samplecat_list_store_get_sample_by_iter      (GtkTreeIter*);

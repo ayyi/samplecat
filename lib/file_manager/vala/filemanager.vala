@@ -6,19 +6,24 @@ public class Ayyi.Libfilemanager : GLib.Object
 {
 	public FM.Filer* file_window;
 
-	public signal void dir_changed(string s);
+	public signal void dir_changed (string s);
 
 	construct
 	{
 	}
 
-	public Libfilemanager(FM.Filer* _file_window)
+	public Libfilemanager (FM.Filer* _file_window)
 	{
 		file_window = _file_window;
 	}
 
+	public override void dispose ()
+	{
+		base.dispose();
+	}
+
 	public Gtk.Widget
-	new_window(string path)
+	new_window (string path)
 	{
 		Gtk.Widget w = null;
 
@@ -27,13 +32,11 @@ public class Ayyi.Libfilemanager : GLib.Object
 
 		(*file_window).update_dir(true);
 
-		//file_window.window.hide();
-
 		return w;
 	}
 
 	public void
-	emit_dir_changed()
+	emit_dir_changed ()
 	{
 		dir_changed((*file_window).real_path);
 	}

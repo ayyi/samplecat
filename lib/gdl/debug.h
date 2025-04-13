@@ -1,5 +1,5 @@
 #include "debug/debug.h"
-#include "gdl-dock-master.h"
+#include "gdl/master.h"
 
 extern int indent;
 extern int gdl_debug;
@@ -31,11 +31,12 @@ G_DEFINE_AUTO_CLEANUP_CLEAR_FUNC(Enter, leave)
 #else
 # define ENTER
 # define cdbg(A, B, ...)
+# define pdestroy(LVL, B, ...)
 #endif
 
 #ifdef DEBUG
-void gdl_debug_printf (const char* func, int level, const char* format, ...);
-void gdl_debug_printf_colour (const char* func, int level, const char* colour, const char* format, ...);
-void gdl_dock_print   (GdlDockMaster*);
-const char* gdl_dock_object_id (GdlDockObject*);
+void        gdl_debug_printf        (const char* func, int level, const char* format, ...) __attribute__ ((format (printf, 3, 4)));
+void        gdl_debug_printf_colour (const char* func, int level, const char* colour, const char* format, ...);
+void        gdl_dock_print          (GdlDockMaster*);
+const char* gdl_dock_object_id      (GdlDockObject*);
 #endif

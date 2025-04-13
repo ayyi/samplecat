@@ -37,7 +37,7 @@ dir_list_register (void (*callback)(GObject*, gpointer, gpointer), gpointer user
 
 	subscribers = g_list_append(subscribers, SC_NEW(Subscriber, .callback = callback, .user_data = user_data ));
 
-	void on_dir_list_changed (GObject* model, void* tree, gpointer subscribers)
+	void on_dir_list_changed (GObject* model, void* tree, gpointer _)
 	{
 		if (subscribers) {
 			dir_list_update();
@@ -62,9 +62,11 @@ dir_list_unregister (gpointer key)
 		if (s->user_data == key) {
 			subscribers = g_list_remove(subscribers, s);
 			g_free(s);
-			break;
+			return;
 		}
 	}
+
+	pwarn("not found");
 }
 
 

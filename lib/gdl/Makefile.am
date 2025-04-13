@@ -39,7 +39,7 @@ libgdl_4_headers = \
 	gdl.h \
 	gdl-dock.h \
 	gdl-dock-object.h \
-	gdl-dock-master.h \
+	master.h \
 	gdl-dock-item.h \
 	gdl-dock-item-grip.h \
 	layout.h \
@@ -49,7 +49,7 @@ libgdl_4_headers = \
 libgdl_4_la_SOURCES = \
 	$(libgdl_4_headers) \
 	gdl-dock-object.c \
-	gdl-dock-master.c \
+	master.c \
 	gdl-dock.c \
 	gdl-dock-item.c \
 	gdl-dock-item-button-image.h \

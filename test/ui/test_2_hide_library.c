@@ -5,7 +5,6 @@
 void
 test_2_hide_library ()
 {
-#ifdef GTK4_TODO
 	START_TEST;
 
 	assert(view_is_visible("Library"), "expected library panel visible");
@@ -14,26 +13,26 @@ test_2_hide_library ()
 	{
 		// context menu is now open
 
-		GtkWidget* item = get_view_menu();
-
-		GtkWidget* submenu = gtk_menu_item_get_submenu((GtkMenuItem*)item);
-		assert(!gtk_widget_get_visible(submenu), "submenu unexpectedly visible");
+#if 0
+		extern void print_widget_tree (GtkWidget* widget);
+		print_widget_tree((GtkWidget*)item);
+#endif
 
 		void on_submenu_visible (gpointer _)
 		{
-			GtkWidget* submenu = gtk_menu_item_get_submenu ((GtkMenuItem*)get_view_menu());
-			assert (gtk_widget_get_visible (submenu), "submenu not visible");
+			GtkWidget* context_menu = test_get_context_menu();
+			GtkWidget* item = get_view_menu();
 
-			GtkWidget* library_item = find_item_in_view_menu("Library");
+			gtk_widget_activate(item);
+			GtkWidget* target = find_menuitem_by_name (context_menu, "Library");
+
+			gtk_widget_activate(target);
 
 			void on_library_hide (gpointer _)
 			{
 				FINISH_TEST;
 			}
 
-			// TODO why menu not closed ?
-			click_on_menu_item(library_item);
-			gtk_menu_item_activate((GtkMenuItem*)library_item);
 			wait_for(view_not_visible, on_library_hide, "Library");
 		}
 
@@ -41,6 +40,4 @@ test_2_hide_library ()
 	}
 
 	open_menu (then, NULL);
-#endif
 }
-

@@ -192,22 +192,25 @@ is_similar_rgb (unsigned colour1, unsigned colour2)
 #endif
 
 
+/*
+ *  return the row number for the cell with the given area.
+ */
 gint
 treecell_get_row (GtkWidget* treeview, GdkRectangle* cell_area)
 {
-	//return the row number for the cell with the given area.
-
 	GtkTreePath* path;
 	gint x = cell_area->x + 1;
 	gint y = cell_area->y + 1;
 	gint *cell_x = NULL; //not used.
 	gint *cell_y = NULL;
-	if(gtk_tree_view_get_path_at_pos(GTK_TREE_VIEW(treeview), x, y, &path, NULL, cell_x, cell_y)){
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+	if (gtk_tree_view_get_path_at_pos(GTK_TREE_VIEW(treeview), x, y, &path, NULL, cell_x, cell_y)) {
 		gint *i;
 		i = gtk_tree_path_get_indices(path);
 		dbg(1, "treecell_get_row() i[0]=%i", i[0]);
 		gint row = i[0];
 		gtk_tree_path_free(path);
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 		return row;
 	}
 	else pwarn("no row found.");
@@ -240,8 +243,10 @@ statusbar_print (int n, char* fmt, ...)
 
 	if(!statusbar) return; //window may not be open.
 
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 	gint cid = gtk_statusbar_get_context_id(GTK_STATUSBAR(statusbar), "dummy");
 	gtk_statusbar_push(GTK_STATUSBAR(statusbar), cid, s);
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 }
 
 

@@ -25,6 +25,7 @@
 #include "library.h"
 #include "progress_dialog.h"
 #include "window.h"
+#include "gtk/utils.h"
 #include "application.h"
 
 extern char theme_name[64];
@@ -222,11 +223,11 @@ application_instance_init (Application* self)
 	void icon_theme_changed(Application* application, char* theme, gpointer data){ application_search(); }
 	g_signal_connect((gpointer)app, "icon-theme", G_CALLBACK(icon_theme_changed), NULL);
 
-	void listmodel__sample_changed (SamplecatModel* m, Sample* sample, int prop, void* val, gpointer _app)
+	void listmodel__sample_modified (SamplecatModel* m, Sample* sample, int prop, void* val, gpointer _app)
 	{
-		samplecat_list_store_on_sample_changed((SamplecatListStore*)samplecat.store, sample, prop, val);
+		samplecat_list_store_on_sample_modified((SamplecatListStore*)samplecat.store, sample, prop, val);
 	}
-	g_signal_connect((gpointer)samplecat.model, "sample-changed", G_CALLBACK(listmodel__sample_changed), app);
+	g_signal_connect((gpointer)samplecat.model, "sample-changed", G_CALLBACK(listmodel__sample_modified), app);
 
 	void log_message (GObject* o, char* message, gpointer _)
 	{
@@ -338,8 +339,9 @@ application_set_ready ()
 
 		void get_col1_width (ConfigOption* option)
 		{
+			GtkWidget* library = find_widget_by_type_deep((GtkWidget*)find_panel("Library"), GTK_TYPE_TREE_VIEW);
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-			GtkTreeViewColumn* column = gtk_tree_view_get_column(GTK_TREE_VIEW(((Application*)app)->libraryview->widget), 1);
+			GtkTreeViewColumn* column = gtk_tree_view_get_column(GTK_TREE_VIEW(library), 1);
 #pragma GCC diagnostic warning "-Wdeprecated-declarations"
 			g_value_set_int(&option->val, gtk_tree_view_column_get_width(column));
 		}

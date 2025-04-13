@@ -169,10 +169,12 @@ iter_init (ViewIter* iter)
 	int i = -1;
 	if (flags & VIEW_ITER_FROM_CURSOR) {
 		GtkTreePath* path;
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 		gtk_tree_view_get_cursor((GtkTreeView*)dv, &path, NULL);
 		if (!path) return NULL;	// no cursor
 		i = gtk_tree_path_get_indices(path)[0];
 		gtk_tree_path_free(path);
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 	}
 	else if (flags & VIEW_ITER_FROM_BASE) i = dv->priv->cursor_base;
 

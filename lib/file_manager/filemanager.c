@@ -37,6 +37,7 @@ static gpointer ayyi_filemanager_parent_class = NULL;
 enum  {
 	AYYI_LIBFILEMANAGER_DUMMY_PROPERTY
 };
+
 static GObject* ayyi_filemanager_constructor (GType, guint n_construct_properties, GObjectConstructParam*);
 static void     ayyi_filemanager_finalize    (GObject*);
 
@@ -175,14 +176,6 @@ fm__change_to (AyyiFilemanager* fm, const char* path, const char* from)
 		return;
 	}
 
-#if 0
-	if (o_unique_filer_windows.int_value && !spring_in_progress)
-	{
-		Filer* fw = find_filer_window(sym_path, filer_window);
-		if (fw) gtk_widget_destroy(fw->window);
-	}
-#endif
-
 	char* from_dup = from && *from ? g_strdup(from) : NULL;
 
 	if (fm->directory) detach(fm);
@@ -206,8 +199,6 @@ fm__change_to (AyyiFilemanager* fm, const char* path, const char* from)
 
 	//check_settings(filer_window);
 
-	//if (filer_window->mini_type == MINI_PATH) g_idle_add((GSourceFunc) minibuffer_show_cb, filer_window);
-
 	fm__menu_on_view_change(fm);
 }
 
@@ -217,7 +208,7 @@ fm__change_to_parent (AyyiFilemanager* fm)
 {
 	const char* current = fm->sym_path;
 
-	if (current[0] == '/' && current[1] == '\0'){ // Already at root
+	if (current[0] == '/' && current[1] == '\0') { // Already at root
 		return;
 	}
 

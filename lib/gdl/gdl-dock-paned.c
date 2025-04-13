@@ -286,6 +286,9 @@ gdl_dock_paned_get_property (GObject *object, guint prop_id, GValue *value, GPar
 static void
 gdl_dock_paned_dispose (GObject *object)
 {
+	ENTER;
+	pdestroy(1, "...");
+
     GdlDockItem *item = GDL_DOCK_ITEM (object);
 
     /* we need to call the virtual first, since in GdlDockDestroy our children dock objects are detached */

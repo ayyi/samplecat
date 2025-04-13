@@ -27,7 +27,7 @@
 
 #include "il8n.h"
 #include "gdl-dock.h"
-#include "gdl-dock-master.h"
+#include "master.h"
 #include "gdl-dock-bar.h"
 #include "libgdltypebuiltins.h"
 

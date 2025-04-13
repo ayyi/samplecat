@@ -134,22 +134,27 @@ MenuDef fm_menu_def[] = {
 #endif
 
 
-static void
-menu_on_dir_changed (GtkWidget* widget, char* dir, gpointer menu_item)
-{
-	AyyiFilemanager* fm = file_manager__get();
-	dbg(2, "dir=%s name=%s", fm->real_path, dir);
-	g_return_if_fail(fm->real_path);
+typedef struct {
+	AyyiFilemanager* fm;
+	GMenuItem*       item;
+} MenuData;
 
-	g_menu_item_set_label (menu_item, fm->real_path);
+
+static void
+menu_on_dir_changed (GtkWidget* widget, char* dir, gpointer user_data)
+{
+	MenuData* data = user_data;
+
+	dbg(2, "dir=%s name=%s", data->fm->real_path, dir);
+	g_return_if_fail(data->fm->real_path);
+
+	g_menu_item_set_label (data->item, data->fm->real_path);
 }
 
 
 GtkWidget*
-fm__make_context_menu ()
+fm__make_context_menu (AyyiFilemanager* fm)
 {
-	AyyiFilemanager* fm = file_manager__get();
-
 	GMenuModel* model = fm->menu.model = (GMenuModel*)g_menu_new ();
 
 	GtkWidget* menu = fm->menu.widget = popover_menu_new_from_model (model);
@@ -174,7 +179,7 @@ fm__make_context_menu ()
 
 	fm__menu_on_view_change(fm);
 
-	g_signal_connect(file_manager__get(), "dir_changed", G_CALLBACK(menu_on_dir_changed), section_item);
+	g_signal_connect_data(fm, "dir_changed", G_CALLBACK(menu_on_dir_changed), FM_NEW(MenuData, fm, section_item), (GClosureNotify)g_free, 0);
 
 	return menu;
 }
@@ -289,6 +294,8 @@ print_submenu (GMenuModel* menu)
 void
 fm__menu_on_view_change (AyyiFilemanager* fm)
 {
+	if (!fm->menu.widget) return;
+
 	GMenuModel* model = gtk_popover_menu_get_menu_model (GTK_POPOVER_MENU(fm->menu.widget));
 	GMenuModel* top = g_menu_model_get_item_link (model, 0, "section");
 	gint n = g_menu_model_get_n_items (top);

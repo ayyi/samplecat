@@ -118,7 +118,7 @@ gdl_dock_foreach_object_print (GdlDockObject *object, gpointer user_data)
 void
 gdl_dock_print (GdlDockMaster *master)
 {
-	cdbg(0, "...");
+	cdbg(1, "...");
 	GHashTable* found = g_hash_table_new(g_direct_hash, g_direct_equal);
 
 	gdl_dock_master_foreach_toplevel (master, TRUE, (GFunc) gdl_dock_foreach_object_print, found);
@@ -140,7 +140,7 @@ gdl_dock_print (GdlDockMaster *master)
 	if (g_hash_table_size(found) != n) cdbg(0, "orphans=%i", n);
 
 	g_autoptr(GList) named_items = gdl_dock_get_named_items (GDL_DOCK(gdl_dock_master_get_controller(master)));
-	cdbg(0, "named=%i", g_list_length(named_items));
+	if (named_items) cdbg(0, "named=%i", g_list_length(named_items));
 	for (GList* l = named_items; l; l=l->next) {
 		GdlDockItem* item = l->data;
 		if (!g_hash_table_lookup(found, item)) {

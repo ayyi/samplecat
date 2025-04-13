@@ -290,6 +290,13 @@ inspector_init (Inspector* inspector)
 
 	void _inspector_on_layout_changed (GObject* object, gpointer user_data)
 	{
+#ifdef GTK4_TODO
+#ifdef USE_OPENGL
+			_INSPECTOR->show_waveform = !panels[PANEL_TYPE_WAVEFORM].dock_item || !gdl_dock_item_is_active((GdlDockItem*)panels[PANEL_TYPE_WAVEFORM].dock_item);
+#else
+			_INSPECTOR->show_waveform = true;
+#endif
+#endif
 	}
 
 	Idle* idle = idle_new(_inspector_on_layout_changed, NULL);

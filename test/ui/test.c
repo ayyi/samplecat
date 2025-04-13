@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
- | copyright (C) 2020-2024 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2020-2025 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -15,7 +15,7 @@
 #include <glib/gstdio.h>
 #include <gdk/gdkkeysyms.h>
 #include "gdl/gdl-dock-item.h"
-#include "gdl/gdl-dock-master.h"
+#include "gdl/master.h"
 #include "debug/debug.h"
 #include "gtk/icon_theme.h"
 #include "file_manager/pixmaps.h"

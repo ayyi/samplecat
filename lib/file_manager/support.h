@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of the Ayyi project. https://www.ayyi.org          |
- | copyright (C) 2011-2023 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2011-2025 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -18,6 +18,7 @@
 
 #define PRETTY_SIZE_LIMIT 10000
 #define TIME_FORMAT "%T %d %b %Y"
+#define FM_NEW(T, ...) ({T* obj = g_new0(T, 1); *obj = (T){__VA_ARGS__}; obj;})
 
 char*         pathdup               (const char* path);
 const guchar* make_path             (const char* dir, const char* leaf);

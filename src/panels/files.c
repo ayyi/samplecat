@@ -55,7 +55,7 @@ fileview_new ()
 		}
 
 		#define expand TRUE
-		ViewDirTree* dir_tree = ((Application*)app)->dir_treeview2 = vdtree_new(initial_folder, expand); 
+		ViewDirTree* dir_tree = vdtree_new(initial_folder, expand);
 		vdtree_set_select_func(dir_tree, dir_on_select, NULL);
 		gtk_paned_set_start_child(GTK_PANED(fman_hpaned), dir_tree->widget);
 
@@ -66,9 +66,9 @@ fileview_new ()
 		}
 		g_signal_connect(G_OBJECT(file_manager__get()), "dir-changed", G_CALLBACK(dir_tree_on_dir_changed), dir_tree);
 
-		void icon_theme_changed (Application* a, char* theme, gpointer _dir_tree)
+		void icon_theme_changed (Application* a, char* theme, gpointer dir_tree)
 		{
-			vdtree_on_icon_theme_changed((ViewDirTree*)a->dir_treeview2);
+			vdtree_on_icon_theme_changed((ViewDirTree*)dir_tree);
 		}
 		g_signal_connect((gpointer)app, "icon-theme", G_CALLBACK(icon_theme_changed), dir_tree);
 
@@ -83,6 +83,12 @@ fileview_new ()
 		Idle* idle = idle_new(dir_tree_on_layout_changed, dir_tree);
 		g_signal_connect(app, "layout-changed", (GCallback)idle->run, idle);
 
+		void files_on_dir_tree_finalize (gpointer idle, GObject* was)
+		{
+			g_signal_handlers_disconnect_matched(app, G_SIGNAL_MATCH_DATA, 0, 0, 0, NULL, ((Idle*)idle)->user_data);
+		}
+		g_object_weak_ref(G_OBJECT(dir_tree->widget), files_on_dir_tree_finalize, idle);
+
 #ifdef GTK4_TODO
 		// TODO menu is created dynanically on demand, so we can't yet access the menu or the model
 		GMenuModel* section = (GMenuModel*)g_menu_new ();
@@ -94,7 +100,7 @@ fileview_new ()
 
 	void fman_right (const char* initial_folder)
 	{
-		GtkWidget* file_view = ((Application*)app)->fm_view = file_manager__new_window(initial_folder);
+		GtkWidget* file_view = file_manager__new_window(initial_folder);
 		AyyiFilemanager* fm = file_manager__get();
 		gtk_paned_set_end_child(GTK_PANED(fman_hpaned), file_view);
 		g_signal_connect(G_OBJECT(fm->view), "cursor-changed", G_CALLBACK(fileview_on_row_selected), fm);
@@ -105,11 +111,15 @@ fileview_new ()
 		}
 		g_signal_connect(G_OBJECT(fm), "dir-changed", G_CALLBACK(file_view_on_dir_changed), NULL);
 
-		void icon_theme_changed (Application* a, char* theme, gpointer _dir_tree)
+		void icon_theme_changed (Application* a, char* theme, gpointer _fm)
 		{
-			file_manager__update_all();
+			AyyiFilemanager* fm = _fm;
+
+			if (fm->directory && !fm->directory->scanning) {
+				fm__update_dir(fm, true);
+			}
 		}
-		g_signal_connect((gpointer)app, "icon-theme", G_CALLBACK(icon_theme_changed), file_view);
+		g_signal_connect((gpointer)app, "icon-theme", G_CALLBACK(icon_theme_changed), fm);
 
 		GMenuModel* section = (GMenuModel*)g_menu_new ();
 		g_menu_append_section (G_MENU(fm->menu.model), NULL, section);

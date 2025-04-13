@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
- | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
- | copyright (C) 2007-2023 Tim Orford <tim@orford.org>                  |
+ | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
+ | copyright (C) 2007-2025 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -96,7 +96,7 @@ _spectrogram_widget_image_ready_render_done_func (const char* filename, GdkPixbu
 }
 
 
-void
+static void
 spectrogram_widget_set_file (SpectrogramWidget* self, gchar* filename)
 {
 	g_return_if_fail (self);
@@ -286,7 +286,6 @@ spectrogram_widget_real_expose_event (GtkWidget* base, GdkEventExpose* event)
 	gint _tmp18_;
 	gint _tmp19_;
 	guchar* _tmp20_;
-	GdkPixbuf* _tmp21_;
 	gint _tmp22_ = 0;
 	self = (SpectrogramWidget*) base;
 	g_return_val_if_fail (event != NULL, FALSE);
@@ -319,8 +318,7 @@ spectrogram_widget_real_expose_event (GtkWidget* base, GdkEventExpose* event)
 	_tmp18_ = width;
 	_tmp19_ = height;
 	_tmp20_ = image;
-	_tmp21_ = scaled;
-	_tmp22_ = gdk_pixbuf_get_rowstride (_tmp21_);
+	_tmp22_ = gdk_pixbuf_get_rowstride (scaled);
 	gdk_draw_rgb_image ((GdkDrawable*) _tmp13_, _tmp17_, 0, 0, _tmp18_, _tmp19_, GDK_RGB_DITHER_MAX, (guchar*) _tmp20_, _tmp22_);
 	result = TRUE;
 	return result;
@@ -330,8 +328,17 @@ spectrogram_widget_real_expose_event (GtkWidget* base, GdkEventExpose* event)
 SpectrogramWidget*
 spectrogram_widget_construct (GType object_type)
 {
-	SpectrogramWidget * self = NULL;
-	self = (SpectrogramWidget*) gtk_widget_new (object_type, NULL);
+	SpectrogramWidget* self = (SpectrogramWidget*) gtk_widget_new (object_type, NULL);
+
+	void window_on_selection_change (SamplecatModel* m, GParamSpec* pspec, gpointer user_data)
+	{
+		PF;
+		if (gdl_dock_item_is_active((GdlDockItem*)panels[PANEL_TYPE_SPECTROGRAM].dock_item)) {
+			spectrogram_widget_set_file (self, m->selection->full_path);
+		}
+	}
+	g_signal_connect((gpointer)samplecat.model, "notify::selection", G_CALLBACK(window_on_selection_change), NULL);
+
 	return self;
 }
 

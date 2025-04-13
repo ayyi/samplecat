@@ -107,4 +107,5 @@ samplecat_LDADD = \
 	-ldl
 
 EXTRA_DIST = \
-	menu.c
+	menu.c \
+	test.c

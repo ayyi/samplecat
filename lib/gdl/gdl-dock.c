@@ -29,7 +29,7 @@
 #include "debug.h"
 
 #include "gdl-dock.h"
-#include "gdl-dock-master.h"
+#include "master.h"
 #include "gdl-dock-paned.h"
 #include "gdl-dock-notebook.h"
 #include "layoutmanager.h"

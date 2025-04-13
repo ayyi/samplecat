@@ -57,7 +57,6 @@ dock_placeholder_remove_widgets (GdlDockObject* object)
 		gtk_widget_unparent(child);
 	}
 
-
 	GDL_DOCK_OBJECT_CLASS (dock_placeholder_parent_class)->remove_widgets (object);
 }
 

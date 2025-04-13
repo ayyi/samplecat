@@ -917,6 +917,9 @@ gdl_dock_layout_get_xml_layouts (GdlDockLayout *layout, gboolean include_default
 void
 gdl_dock_layout_get_yaml_layouts (GdlDockLayout* layout, void (*foreach)(const char*, gpointer), gpointer user_data)
 {
+	GHashTable* items = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
+
+	int n = 0;
 	for (int i=0;i<N_LAYOUT_DIRS && layout->dirs[i];i++) {
 		if (g_file_test(layout->dirs[i], G_FILE_TEST_EXISTS)) {
 			GError** error = NULL;
@@ -927,13 +930,19 @@ gdl_dock_layout_get_yaml_layouts (GdlDockLayout* layout, void (*foreach)(const c
 				char* xtn = g_strrstr(p, ".");
 				if (xtn && !strcmp(xtn + 1, "yaml")) {
 					g_autofree char* name = gdl_remove_extension_from_path(f);
-					foreach(name, user_data);
+					if (!g_hash_table_lookup(items, name)) {
+						foreach(name, user_data);
+						g_hash_table_insert(items, g_strdup(name), name);
+					}
 				}
 			}
 
-			break;
+			if (++n > 1)
+				break;
 		}
 	}
+
+	g_hash_table_destroy(items);
 }
 
 

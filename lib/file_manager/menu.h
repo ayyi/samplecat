@@ -15,7 +15,7 @@
 
 #include "file_manager/filemanager.h"
 
-GtkWidget*      fm__make_context_menu   ();
+GtkWidget*      fm__make_context_menu   (AyyiFilemanager*);
 void            fm__add_menu_item       (GMenuModel*, GAction*, char*);
 
 // private

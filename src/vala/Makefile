@@ -49,7 +49,10 @@ search.c: search.vala
 	valac -C -H search.h --pkg config --pkg gtk4 --pkg gmodule-2.0 --pkg debug --vapidir=. --vapidir=../../lib/debug search.vala
 
 dock-item.c: dock-item.vala
-	$(valac) -C -H dock-item.h --pkg config --pkg gtk4 --pkg gmodule-2.0 --pkg debug --vapidir=. --vapidir=../../lib/debug dock-item.vala
+	$(valac) -C -H dock-item.h --vapi=$(basename $<).vapi --pkg config --pkg gtk4 --pkg gmodule-2.0 --pkg debug --vapidir=. --vapidir=../../lib/debug dock-item.vala
 
 placeholder.c: placeholder.vala
 	$(valac) -C -H placeholder.h --pkg config --pkg gtk4 --pkg gmodule-2.0 --pkg debug --vapidir=. --vapidir=../../lib/debug $<
+
+library.c: library.vala
+	$(valac) -C -H $(basename $<).h --pkg config --pkg gtk4 --pkg gmodule-2.0 --pkg debug --pkg dock-item --vapidir=. --vapidir=../../lib/debug $<
