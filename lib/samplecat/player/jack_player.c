@@ -2,7 +2,7 @@
   JACK audio player
   This file is part of the Samplecat project.
 
-  copyright (C) 2006-2024 Tim Orford <tim@orford.org>
+  copyright (C) 2006-2025 Tim Orford <tim@orford.org>
   copyright (C) 2011 Robin Gareus <robin@gareus.org>
 
   written by Robin Gareus
@@ -640,10 +640,10 @@ JACKclose ()
 		for(i=0;i<myplayer->info.channels;i++) ladspah_free(myplugin[i]);
 		free(myplugin);
 	}
-	if (myplayer){
+	if (myplayer) {
 		ad_close(myplayer);
 		ad_free_nfo(&myplayer->info);
-		g_free0(myplayer);
+		g_clear_pointer(&myplayer, g_free);
 	}
 	myplugin = NULL;
 };

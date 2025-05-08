@@ -18,7 +18,7 @@ test_1_empty_search ()
 
 		search("Hello");
 
-		bool is_empty ()
+		bool is_empty (void* _)
 		{
 			return gtk_tree_model_iter_n_children(gtk_tree_view_get_model((GtkTreeView*)app->libraryview->widget), NULL) == 0;
 		}

@@ -1,17 +1,19 @@
 /**
-* +----------------------------------------------------------------------+
-* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2018 Tim Orford <tim@orford.org>                  |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-*
-*/
-#ifndef __samplecat_support_h__
-#define __samplecat_support_h__
+ +----------------------------------------------------------------------+
+ | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
+ | copyright (C) 2007-2025 Tim Orford <tim@orford.org>                  |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
+ */
+
+#pragma once
+
 #include <stdint.h>
+#include <stdbool.h>
 #include <gdk/gdk.h>
 #include "utils/ayyi_utils.h"
 #include "file_manager/mimetype.h"
@@ -24,10 +26,6 @@
 
 #ifndef __ayyi_h__
 #define g_error_clear(E) { if(E){ g_error_free(E); E = NULL; }}
-#endif
-
-#ifndef g_free0
-#define g_free0(A) (A = (g_free(A), NULL))
 #endif
 
 #ifndef g_list_free0
@@ -65,5 +63,3 @@ float        gain2db                   (float);
 char*        gain2dbstring             (float);
 
 gchar*       str_replace               (const gchar* string, const gchar* search, const gchar* replace);
-
-#endif

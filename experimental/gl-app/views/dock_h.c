@@ -84,7 +84,7 @@ dock_h_view (gpointer _)
 
 	void dock_init (AGlActor* a)
 	{
-		void panel_init(AGlActor* actor)
+		void panel_init (AGlActor* actor)
 		{
 			PanelView* panel = (PanelView*)actor;
 

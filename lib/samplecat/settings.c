@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
- | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
- | copyright (C) 2007-2024 Tim Orford <tim@orford.org>                  |
+ | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
+ | copyright (C) 2007-2025 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -155,22 +155,22 @@ config_load (ConfigContext* ctx, Config* config)
 
 			{
 				bool keyval = g_key_file_get_boolean(ctx->key_file, groupname, "add_recursive", &error);
-				if(error){
+				if (error) {
 					if(error->code != 3)
 						GERR_WARN;
 					g_error_clear(error)
-				}else{
+				} else {
 					config->add_recursive = keyval;
-					keyval = NULL;
+					keyval = 0;
 				}
 
 				keyval = g_key_file_get_boolean(ctx->key_file, groupname, "loop_playback", &error);
-				if(error){
-					if(error->code == 3) g_error_clear(error)
+				if (error) {
+					if (error->code == 3) g_error_clear(error)
 					else { GERR_WARN; }
-				}else{
+				} else {
 					play->config.loop = keyval;
-					keyval = NULL;
+					keyval = 0;
 				}
 			}
 

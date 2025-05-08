@@ -91,7 +91,7 @@ tagshow_selector_new ()
 		PF;
 
 		char* category = gtk_combo_box_get_active_text(GTK_COMBO_BOX(widget));
-		if (!strcmp(category, ALL_CATEGORIES)) g_free0(category);
+		if (!strcmp(category, ALL_CATEGORIES)) g_clear_pointer(&category, g_free);
 		observable_string_set(samplecat.model->filters2.category, category);
 	}
 	g_signal_connect(combo, "changed", G_CALLBACK(on_view_category_changed), NULL);

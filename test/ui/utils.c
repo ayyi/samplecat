@@ -73,7 +73,7 @@ find_dock_item (const char* name)
 
 
 bool
-window_is_open ()
+window_is_open (void* _)
 {
 	return gtk_widget_get_realized(app->window);
 }

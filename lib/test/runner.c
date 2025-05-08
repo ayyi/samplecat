@@ -95,8 +95,8 @@ next_test ()
 		gboolean (*test)() = tests[TEST.current.test];
 		dbg(2, "test %i of %i.", TEST.current.test + 1, TEST.n_tests);
 
-		if (TEST.before_each){
-			void ready ()
+		if (TEST.before_each) {
+			void ready (void* _)
 			{
 				g_timeout_add(1, run_test, tests[TEST.current.test]);
 			}
@@ -109,7 +109,7 @@ next_test ()
 	} else {
 		printf("finished all. passed=%s %i %s failed=%s %i %s\n", green, TEST.n_passed, white, (TEST.n_failed ? red : white), TEST.n_failed, white);
 		teardown();
-		g_timeout_add(TEST.n_failed ? 4000 : 1000, __exit, NULL);
+		g_timeout_add(TEST.n_failed ? 4000 : 1000, (GSourceFunc)__exit, NULL);
 	}
 }
 

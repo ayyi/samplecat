@@ -87,7 +87,7 @@ dir_is_empty(const char *path)
 }
 
 void
-file_extension(const char* path, char* extn)
+file_extension (const char* path, char* extn)
 {
 	g_return_if_fail(path);
 	g_return_if_fail(extn);
@@ -108,7 +108,7 @@ file_extension(const char* path, char* extn)
 }
 
 
-gboolean
+bool
 can_use (GList* l, const char* d)
 {
 	for(;l;l=l->next){
@@ -120,16 +120,16 @@ can_use (GList* l, const char* d)
 }
 
 
-gboolean
-mimestring_is_unsupported(char* mime_string)
+bool
+mimestring_is_unsupported (char* mime_string)
 {
 	MIME_type* mime_type = mime_type_lookup(mime_string);
 	return mimetype_is_unsupported(mime_type, mime_string);
 }
 
 
-gboolean
-mimetype_is_unsupported(MIME_type* mime_type, char* mime_string)
+bool
+mimetype_is_unsupported (MIME_type* mime_type, char* mime_string)
 {
 	g_return_val_if_fail(mime_type, true);
 
@@ -187,7 +187,7 @@ get_iconbuf_from_mimetype (char* mimetype)
 }
 
 
-gboolean
+bool
 ensure_config_dir ()
 {
 	static char* path = NULL;

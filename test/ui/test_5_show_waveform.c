@@ -21,6 +21,7 @@ test_5_show_waveform ()
 
 			click_on_menu_item(menu_item);
 			gtk_menu_item_activate((GtkMenuItem*)menu_item);
+			gtk_menu_popdown(GTK_MENU(app->context_menu));
 
 			wait_for(view_is_visible, on_show, "Waveform");
 		}

@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
- | copyright (C) 2007-2022 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2007-2025 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -296,6 +296,7 @@ application_set_ready()
 static int  auditioner_nullC() {return 0;}
 static void auditioner_null() {;}
 static bool auditioner_nullS(Sample* s) {return true;}
+static void auditioner_null_connect(ErrorCallback e, gpointer data){}
 
 static void
 _set_auditioner ()
@@ -304,7 +305,7 @@ _set_auditioner ()
 
 	const static Auditioner a_null = {
 		&auditioner_nullC,
-		&auditioner_null,
+		&auditioner_null_connect,
 		&auditioner_null,
 		&auditioner_nullS,
 		NULL,

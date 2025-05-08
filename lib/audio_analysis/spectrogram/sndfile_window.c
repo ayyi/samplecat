@@ -128,9 +128,8 @@ factorial (int val)
 	return memory [val] ;
 } /* factorial */
 
-/*==============================================================================
-*/
 
+#ifdef DEBUG
 static void init_test (void) __attribute__ ((constructor)) ;
 
 static void
@@ -150,5 +149,5 @@ init_test (void)
 	assert (fabs (besseli0 (2.0) - 2.27958530233607) < 1e-14) ;
 	assert (fabs (besseli0 (3.5) - 7.37820343222548) < 1e-14) ;
 
-} /* init_test */
-
+}
+#endif

@@ -24,12 +24,12 @@ test_6_update_waveform ()
 	static char* orig_sample;
 	orig_sample = g_strdup(samplecat.model->selection->name);
 
-	bool selection_changed ()
+	bool selection_changed (void* _)
 	{
 		return strcmp(orig_sample, samplecat.model->selection->name);
 	}
 
-	bool waveform_match ()
+	bool waveform_match (void* _)
 	{
 		WaveformViewPlus* wave_view = (WaveformViewPlus*)find_dock_item("Waveform")->child;
 		Sample* sample = samplecat.model->selection;
@@ -38,7 +38,7 @@ test_6_update_waveform ()
 		return g_strrstr(waveform->filename, sample->name);
 	}
 
-	waveform_match();
+	waveform_match(NULL);
 
 	assert (gtk_tree_model_iter_next (model, &iter), "failed to get 2nd row");
 	GtkTreePath* path = gtk_tree_model_get_path (model, &iter);
