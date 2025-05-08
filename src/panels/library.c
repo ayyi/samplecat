@@ -298,7 +298,7 @@ listview__on_row_clicked (GtkWidget* widget, GdkEventButton* event, gpointer use
 					g_autoptr(Sample) sample = samplecat_list_store_get_sample_by_path(path);
 					if (play->sample) {
 						(sample->id == play->sample->id)
-							? player_stop(sample)
+							? player_stop()
 							: application_play(sample);
 					} else {
 						application_play(sample);

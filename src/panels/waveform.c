@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
- | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
- | copyright (C) 2007-2022 Tim Orford <tim@orford.org>                  |
+ | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
+ | copyright (C) 2007-2025 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -18,7 +18,9 @@
 #include "gdl/gdl-dock.h"
 #include "debug/debug.h"
 #include "actors/spinner.h"
+#include "ui/actors/hover.h"
 #include "waveform/view_plus.h"
+#include "agl/behaviours/follow.h"
 #include "application.h"
 #include "support.h"
 
@@ -41,6 +43,7 @@ static struct _window {
       AGlActor*   text;
       AGlActor*   spp;
       AGlActor*   spinner;
+      AGlActor*   hover;
    }              layers;
 } window = {0,};
 
@@ -48,7 +51,6 @@ static struct _window {
 GtkWidget*
 waveform_panel_new ()
 {
-	waveform_view_plus_set_gl(agl_get_gl_context());
 	WaveformViewPlus* view = waveform_view_plus_new(NULL);
 	window.waveform = (GtkWidget*)view;
 
@@ -56,8 +58,10 @@ waveform_panel_new ()
 	text_actor_set_colour((TextActor*)window.layers.text, 0x000000bb, 0xffffffbb);
 
 	window.layers.spp = waveform_view_plus_add_layer(view, wf_spp_actor(waveform_view_plus_get_actor(view)), 0);
+	((FollowBehaviour*)window.layers.spp->behaviours[0])->to_follow = (AGlActor*)waveform_view_plus_get_actor(view);
 
 	window.layers.spinner = waveform_view_plus_add_layer(view, agl_spinner(NULL), 0);
+	window.layers.hover = waveform_view_plus_add_layer(view, hover_actor(waveform_view_plus_get_actor(view)), 4);
 
 	//waveform_view_plus_add_layer(view, grid_actor(waveform_view_plus_get_actor(view)), 0);
 #if 0
@@ -236,7 +240,7 @@ show_waveform (bool enable)
 		show_widget_if(window.waveform, enable);
 #endif
 		if (enable) {
-			gboolean show_wave ()
+			gboolean show_wave (void* _)
 			{
 				Sample* s;
 				if ((s = samplecat.model->selection)) {

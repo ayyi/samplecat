@@ -19,6 +19,7 @@ test_3_show_library ()
 
 			click_on_menu_item(library_item);
 			gtk_menu_item_activate((GtkMenuItem*)library_item);
+			gtk_menu_popdown(GTK_MENU(app->context_menu));
 
 			wait_for(view_is_visible, on_show, "Library");
 		}

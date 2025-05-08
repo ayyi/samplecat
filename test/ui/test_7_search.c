@@ -14,7 +14,7 @@ test_7_search ()
 
 		search("piano");
 
-		bool has_one_item ()
+		bool has_one_item (void* _)
 		{
 			return gtk_tree_model_iter_n_children(gtk_tree_view_get_model((GtkTreeView*)app->libraryview->widget), NULL) == 1;
 		}

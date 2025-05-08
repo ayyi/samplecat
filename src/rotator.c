@@ -1,7 +1,7 @@
 /**
 * +----------------------------------------------------------------------+
-* | This file is part of Samplecat. http://samplecat.orford.org          |
-* | copyright (C) 2007-2021 Tim Orford <tim@orford.org>                  |
+* | This file is part of Samplecat. https://samplecat.orford.org         |
+* | copyright (C) 2007-2025 Tim Orford <tim@orford.org>                  |
 * +----------------------------------------------------------------------+
 * | This program is free software; you can redistribute it and/or modify |
 * | it under the terms of the GNU General Public License version 3       |
@@ -37,6 +37,7 @@
 #include <gdk/gdkkeysyms.h>
 #include <GL/gl.h>
 #include "debug/debug.h"
+#include "agl/gtk.h"
 #include "waveform/actor.h"
 
 #include "application.h"
@@ -1462,7 +1463,7 @@ rotator_init (Rotator* tree_view)
 	g_return_if_fail(glconfig || __init(tree_view));
 	gtk_widget_set_gl_capability((GtkWidget*)widget, glconfig, agl_get_gl_context(), 1, GDK_GL_RGBA_TYPE);
 
-	_r->wfc = wf_context_new((AGlActor*)(_r->scene = (AGlScene*)agl_actor__new_root(widget)));
+	_r->wfc = wf_context_new((AGlActor*)(_r->scene = (AGlScene*)agl_new_scene_gtk(widget)));
 
 	_r->scene->user_data = widget;
 

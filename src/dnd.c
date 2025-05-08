@@ -85,8 +85,10 @@ drag_received (GtkWidget* widget, GdkDragContext* drag_context, gint x, gint y, 
 		if(gtk_tree_view_get_path_at_pos(GTK_TREE_VIEW(app->libraryview->widget), x, by, &path, NULL, NULL, NULL)){
 
 			gtk_tree_model_get_iter(GTK_TREE_MODEL(samplecat.store), &iter, path);
+#ifdef DEBUG
 			gchar* path_str = gtk_tree_model_get_string_from_iter(GTK_TREE_MODEL(samplecat.store), &iter);
 			dbg(2, "path=%s y=%i final_y=%i", path_str, y, y - treeview_top);
+#endif
 
 			listview_item_set_colour(path, colour_index);
 
