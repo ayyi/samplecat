@@ -84,7 +84,6 @@ ui_test_LDADD = \
 	$(OPENGL_LDFLAGS) \
 	$(GTK_LIBS) \
 	$(GRAPHENE_LIBS) \
-	$(LIBASS_LDFLAGS) \
 	$(X11_LDFLAGS) \
 	$(ZLIB_LIBS) \
 	$(GMODULE_LIBS) \

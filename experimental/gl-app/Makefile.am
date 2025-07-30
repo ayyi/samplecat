@@ -74,7 +74,6 @@ samplecat_gl_LDADD = \
 	$(ZLIB_LIBS) \
 	$(YAML_LIBS) \
 	$(FFMPEG_LIBS) \
-	$(LIBASS_LDFLAGS) \
 	$(FILEMANAGER_LDFLAGS) \
 	$(X11_LDFLAGS) \
 	$(XRANDR_LDFLAGS) \

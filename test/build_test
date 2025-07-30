@@ -22,7 +22,6 @@ options=(
 --enable-ayyi
 --enable-valgrind
 --disable-fftw
---disable-libass
 --disable-dnotify
 --enable-webkit
 --enable-gl-app

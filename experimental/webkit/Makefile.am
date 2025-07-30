@@ -61,6 +61,5 @@ samplecat_webkit_LDADD = \
 	$(FFMPEG_LIBS) \
 	$(WEBKIT_LIBS) \
 	$(X11_LDFLAGS) \
-	$(LIBASS_LDFLAGS) \
 	-lstdc++
 

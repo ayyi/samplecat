@@ -60,7 +60,6 @@ AC_ARG_ENABLE(webkit,   AS_HELP_STRING([--enable-webkit], [build with webkit sup
 AC_ARG_ENABLE(gl-app,   AS_HELP_STRING([--enable-gl_app], [build the gl application -- experimental]), enable_gl_app=$enableval, enable_gl_app="auto")
 AC_ARG_ENABLE(opengl,   AC_HELP_STRING([--disable-opengl], [disable use of OpenGL]),enable_opengl=$enableval,enable_opengl="auto")
 AC_ARG_ENABLE(fftw,     AC_HELP_STRING([--disable-fftw], [disable usage of FFTW ]),enable_fftw=$enableval,enable_fftw="auto")
-AC_ARG_ENABLE(libass,   AC_HELP_STRING([--disable-libass], [disable usage of libass ]),enable_libass=$enableval,enable_libass="auto")
 AC_ARG_ENABLE(dock,     AC_HELP_STRING([--disable-dock], [disable usage of Gdl-dock ]), enable_dock=$enableval, enable_dock="auto")
 AC_ARG_ENABLE(aubio,    AC_HELP_STRING([--enable-aubio], [enable use of aubio for bpm detection]), enable_aubio=$enableval, enable_aubio="auto")
 AC_ARG_ENABLE(system-gtkglext, AC_HELP_STRING([--enable-system-gtkglext], [disable local opengl extension for gtk]), enable_system_gtkglext=$enableval, enable_system_gtkglext="no")
@@ -475,21 +474,6 @@ AS_IF([test "$enable_fftw" != "no"], [
 AC_SUBST(FFTW3_CFLAGS)
 AC_SUBST(FFTW3_LIBS)
 AM_CONDITIONAL(ENABLE_FFTW3, test "$enable_fftw" = "yes")
-
-dnl -----------------------------------------------------------------------------
-
-AS_IF([test "$enable_libass" != "no"], [
-	PKG_CHECK_MODULES(LIBASS, libass, [AC_DEFINE(USE_LIBASS, 1, Use libass for text display) enable_libass="yes"],[
-	enable_libass="no"])
-])
-AM_CONDITIONAL(ENABLE_LIBASS, test "$enable_libass" = "yes")
-AC_SUBST(LIBASS_CFLAGS)
-dnl the libass pc file seems to be missing one dir:
-if test "$enable_libass" = "yes"; then
-	LIBASS_CFLAGS=${LIBASS_CFLAGS}" -I/usr/include/ass"
-	LIBASS_LDFLAGS=${LIBASS_LIBS}
-	AC_SUBST(LIBASS_LDFLAGS)
-fi
 
 dnl -----------------------------------------------------------------------------
 

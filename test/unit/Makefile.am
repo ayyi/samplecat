@@ -53,7 +53,6 @@ unit_test_LDADD = \
 	$(FFTW3_LIBS) \
 	$(OPENGL_LDFLAGS) \
 	$(GTK_LIBS) \
-	$(LIBASS_LDFLAGS) \
 	$(X11_LDFLAGS) \
 	$(GRAPHENE_LIBS) \
 	$(ZLIB_LIBS) \

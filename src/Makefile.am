@@ -120,7 +120,6 @@ samplecat_LDADD = \
 	$(FFTW3_LIBS) \
 	$(OPENGL_LDFLAGS) \
 	$(GTK_LIBS) \
-	$(LIBASS_LDFLAGS) \
 	$(ZLIB_LIBS) \
 	$(GMODULE_LIBS) \
 	$(X11_LDFLAGS) \
