@@ -347,7 +347,6 @@ samplecat_idle_unref (gpointer instance)
 
 	static gboolean ___lambda__gsource_func (gpointer self)
 	{
-		dir_list_update();
 		g_signal_emit_by_name ((SamplecatModel*)self, "dir-list-changed");
 		return G_SOURCE_REMOVE;
 	}

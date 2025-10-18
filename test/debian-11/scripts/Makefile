@@ -3,4 +3,4 @@ all:
 	cd samplecat && \
 		./autogen.sh && \
 		./configure && \
-		make
+		make -j3

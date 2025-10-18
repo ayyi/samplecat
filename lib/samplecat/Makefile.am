@@ -2,11 +2,10 @@ SUBDIRS = db player
 
 AM_CFLAGS = \
 	-DPACKAGE_DATA_DIR=\""$(datadir)"\" \
-	-DPACKAGE_LOCALE_DIR=\""$(prefix)/$(DATADIRNAME)/locale"\" \
 	-DG_LOG_DOMAIN=\"Samplecat\" \
 	-I$(top_srcdir)/lib \
 	-I$(top_srcdir)/lib/waveform \
-	-I$(top_srcdir)/lib/waveform/lib/agl \
+	-I$(top_srcdir)/lib/waveform/lib \
 	$(GTK_CFLAGS)
 
 noinst_LTLIBRARIES = libsamplecat.la
@@ -24,6 +23,7 @@ libsamplecat_la_SOURCES = \
 	logger.c logger.h \
 	settings.c settings.h \
 	observable.c observable.h \
+	throttle.c throttle.h \
 	support.c support.h
 
 libsamplecat_la_LIBADD = \

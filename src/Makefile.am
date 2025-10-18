@@ -18,6 +18,7 @@ AM_CFLAGS = \
 	-I$(top_srcdir)/lib/samplecat \
 	-I$(top_srcdir)/lib/file_manager \
 	-I$(top_srcdir)/lib/waveform \
+	-I$(top_srcdir)/lib/waveform/lib \
 	-I$(top_srcdir)/lib/waveform/lib/agl \
 	$(LOCAL_GTKGLEXT_CFLAGS) \
 	-I./panels \
@@ -97,18 +98,19 @@ samplecat_LDADD = \
 	$(top_srcdir)/lib/file_manager/libfilemanager.a \
 	$(top_srcdir)/lib/dir_tree/libdirtree.a \
 	$(top_srcdir)/lib/debug/libdebug.a \
+	$(top_srcdir)/src/panels/libpanels.la \
 	$(top_srcdir)/lib/samplecat/.libs/libsamplecat.a \
 	$(top_srcdir)/lib/samplecat/db/libsamplecatdb.a \
 	$(GDL_LDFLAGS) \
 	$(top_srcdir)/lib/utils/libutils.a \
 	$(top_srcdir)/lib/gtk/libgtk.la \
-	$(top_srcdir)/src/panels/libpanels.la \
 	$(SAMPLECAT_LIBS) \
 	$(AYYI_LIBS) \
 	$(DBUS_LIBS) \
 	$(top_srcdir)/lib/audio_analysis/libaudioanalysis.la \
 	$(top_srcdir)/lib/waveform/.libs/libwaveformcore.a \
 	$(top_srcdir)/lib/waveform/.libs/libwaveformui.a \
+	$(top_srcdir)/lib/waveform/lib/ayyi-utils/.libs/libayyiutils.a \
 	$(top_srcdir)/lib/waveform/lib/agl/.libs/libagl.a \
 	$(TRACKER_LIBS) \
 	$(SQLITE_LIBS) \

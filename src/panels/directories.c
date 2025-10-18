@@ -1,14 +1,15 @@
-/**
-* +----------------------------------------------------------------------+
-* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2020 Tim Orford <tim@orford.org>                  |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-*
-*/
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
+ | copyright (C) 2007-2025 Tim Orford <tim@orford.org>                  |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
+ */
+
 #include "config.h"
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <gtk/gtk.h>
@@ -30,14 +31,7 @@ static bool on_dir_tree_link_selected (GObject*, DhLink*, gpointer);
 GtkWidget*
 dir_panel_new ()
 {
-	GtkWidget* _dir_tree_new()
-	{
-		dir_list_update(); // because this is slow, it is not done until a consumer needs it.
-
-		return app->dir_treeview = dh_book_tree_new(&samplecat.model->dir_tree);
-	}
-
-	GtkWidget* tree = _dir_tree_new();
+	GtkWidget* tree = app->dir_treeview = dh_book_tree_new(&samplecat.model->dir_tree);
 	GtkWidget* widget = scrolled_window_new();
 	gtk_container_add((GtkContainer*)widget, tree);
 	g_signal_connect(tree, "link-selected", G_CALLBACK(on_dir_tree_link_selected), NULL);
@@ -50,22 +44,26 @@ dir_panel_new ()
 	g_signal_connect(samplecat.model->filters.dir, "changed", G_CALLBACK(on_dir_filter_changed), NULL);
 	*/
 
-	void on_dir_list_changed(GObject* _model, gpointer user_data)
+	void on_dir_list_changed (GObject* _model, void* _tree, gpointer tree)
 	{
 		/*
 		 * Refresh the directory tree.
-		 *
-		 * TODO make updates more efficient so the whole node tree doesnt have to be recreated
 		 */
 		dh_book_tree_reload((DhBookTree*)app->dir_treeview);
 	}
-	g_signal_connect(samplecat.model, "dir-list-changed", G_CALLBACK(on_dir_list_changed), NULL);
+	dir_list_register(on_dir_list_changed, tree);
 
-	void dir_on_theme_changed(Application* a, char* theme, gpointer _tree)
+	void dirs_on_finalize (gpointer tree, GObject* was)
+	{
+		dir_list_unregister (tree);
+	}
+	g_object_weak_ref(G_OBJECT(tree), dirs_on_finalize, tree);
+
+	void dir_on_theme_changed (Application* a, char* theme, gpointer _tree)
 	{
 		GtkWidget* container = gtk_widget_get_parent(app->dir_treeview);
 		gtk_widget_destroy(app->dir_treeview);
-		app->dir_treeview = _dir_tree_new();
+		app->dir_treeview = dh_book_tree_new(&samplecat.model->dir_tree);
 		gtk_container_add((GtkContainer*)container, app->dir_treeview);
 		gtk_widget_show(app->dir_treeview);
 	}

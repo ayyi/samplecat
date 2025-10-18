@@ -32,11 +32,17 @@ make
 ```
 Each time you do a git pull you will also need to update the submodules:
 ```
-	git submodule update --remote --merge --recursive
-	make clean
+  git submodule update --remote --merge --recursive
+  make clean
 ```
 
 See the file INSTALL more more details.
+
+
+Gtk-2 EOL
+---------
+
+If your system no longer supports Gtk-2, you can try the `gtk-4` branch of Samplecat. It is 'working' but very rough. The port to Gtk-4 is proving troublesome and is not as straightforward as expected.
 
 
 Usage

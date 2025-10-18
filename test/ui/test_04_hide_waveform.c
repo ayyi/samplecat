@@ -3,7 +3,7 @@
  *  Hide the Waveform view via the View menu.
  */
 void
-test_4_hide_waveform ()
+test_04_hide_waveform ()
 {
 	START_TEST;
 

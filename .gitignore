@@ -59,6 +59,10 @@ test/ubuntu-*/Dockerfile
 !test/arch/Makefile
 !test/arch/Dockerfile.in
 !test/arch/scripts/Makefile
+test/artix/Dockerfile
+!test/artix/Makefile
+!test/artix/Dockerfile.in
+!test/artix/scripts/Makefile
 !test/fedora-34/Makefile
 !test/fedora-34/Dockerfile.in
 !test/fedora-34/scripts/Makefile

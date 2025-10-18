@@ -64,7 +64,7 @@ make_overview(Sample* sample)
 	dbg(1, "NEW OVERVIEW");
 
 	GdkPixbuf* pixbuf = gdk_pixbuf_new(GDK_COLORSPACE_RGB, HAS_ALPHA_FALSE, BITS_PER_CHAR_8, OVERVIEW_WIDTH, OVERVIEW_HEIGHT);
-	Waveform* waveform = waveform_load_new(sample->full_path);
+	Waveform* waveform = waveform_load_new_sync(sample->full_path);
 	waveform_peak_to_pixbuf(waveform, pixbuf, NULL, color_gdk_to_rgba(&colour.text), color_gdk_to_rgba(&colour.base), true);
 	g_object_unref(waveform);
 

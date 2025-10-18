@@ -7,6 +7,7 @@ AM_CFLAGS = \
 	-I../../src \
 	-I../../lib \
 	-I../../lib/waveform \
+	-I../../lib/waveform/lib \
 	-I../../lib/waveform/lib/agl \
 	-I$(top_srcdir)/lib/waveform/gtkglext-1.0 \
 	$(DBUS_CFLAGS) \
@@ -47,6 +48,7 @@ unit_test_LDADD = \
 	$(top_srcdir)/lib/audio_analysis/libaudioanalysis.la \
 	$(top_srcdir)/lib/waveform/.libs/libwaveformcore.a \
 	$(top_srcdir)/lib/waveform/.libs/libwaveformui.a \
+	$(top_srcdir)/lib/waveform/lib/ayyi-utils/.libs/libayyiutils.a \
 	$(top_srcdir)/lib/waveform/lib/agl/.libs/libagl.a \
 	$(SNDFILE_LIBS) \
 	${SAMPLERATE_LIBS} \

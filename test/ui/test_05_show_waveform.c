@@ -1,6 +1,6 @@
 
 void
-test_5_show_waveform ()
+test_05_show_waveform ()
 {
 	START_TEST;
 
