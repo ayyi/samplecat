@@ -1,6 +1,6 @@
 
 void
-test_3_show_library ()
+test_03_show_library ()
 {
 	START_TEST;
 

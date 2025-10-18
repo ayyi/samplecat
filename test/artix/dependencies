@@ -1,0 +1,19 @@
+make \
+automake \
+autoconf \
+libtool \
+gcc \
+pkgconf \
+openssh \
+git \
+libsndfile \
+ffmpeg \
+ladspa \
+vim \
+glib2-devel \
+gtk2 \
+graphene \
+libyaml \
+sqlite \
+mesa \
+python3

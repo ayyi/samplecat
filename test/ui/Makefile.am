@@ -7,6 +7,7 @@ AM_CFLAGS = \
 	-I../../src \
 	-I../../lib \
 	-I../../lib/waveform \
+	-I../../lib/waveform/lib \
 	-I../../lib/waveform/lib/agl \
 	-I$(top_srcdir)/lib/waveform/gtkglext-1.0 \
 	$(DBUS_CFLAGS) \
@@ -61,11 +62,11 @@ ui_test_LDADD = \
 	$(top_srcdir)/lib/file_manager/libfilemanager.a \
 	$(top_srcdir)/lib/dir_tree/libdirtree.a \
 	$(top_srcdir)/lib/debug/libdebug.a \
+	$(top_srcdir)/src/panels/libpanels.la \
 	$(top_srcdir)/lib/samplecat/.libs/libsamplecat.a \
 	$(top_srcdir)/lib/samplecat/db/libsamplecatdb.a \
 	$(GDL_LDFLAGS) \
 	$(top_srcdir)/lib/gtk/libgtk.la \
-	$(top_srcdir)/src/panels/libpanels.la \
 	$(top_srcdir)/lib/utils/libutils.a \
 	$(DBUS_LIBS) \
 	$(DEBUG_LDFLAGS) \
@@ -74,6 +75,7 @@ ui_test_LDADD = \
 	$(top_srcdir)/lib/audio_analysis/libaudioanalysis.la \
 	$(top_srcdir)/lib/waveform/.libs/libwaveformcore.a \
 	$(top_srcdir)/lib/waveform/.libs/libwaveformui.a \
+	$(top_srcdir)/lib/waveform/lib/ayyi-utils/.libs/libayyiutils.a \
 	$(top_srcdir)/lib/waveform/lib/agl/.libs/libagl.a \
 	$(SQLITE_LIBS) \
 	$(MYSQL_LDFLAGS) \

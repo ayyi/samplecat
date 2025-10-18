@@ -7,7 +7,7 @@ AM_CFLAGS = \
 	-DPACKAGE_LOCALE_DIR=\""$(prefix)/$(DATADIRNAME)/locale"\" \
 	-I$(top_srcdir)/lib \
 	-I$(top_srcdir)/lib/samplecat \
-	-I$(top_srcdir)/lib/waveform/lib/agl \
+	-I$(top_srcdir)/lib/waveform/lib \
 	-I$(top_srcdir)/src \
 	$(SAMPLECAT_CFLAGS) \
 	$(FFTW3_CFLAGS) \

@@ -1949,7 +1949,7 @@ _add_by_iter(Rotator* tree_view, GtkTreeIter* iter)
 
 	if(!sample->online) return;
 
-	Waveform* w = waveform_load_new(sample->full_path);
+	Waveform* w = waveform_load_new_sync(sample->full_path);
 	int n_frames = waveform_get_n_frames(w);
 	dbg(0, "  %s %i", sample->name, n_frames);
 	WaveformActor* a = wf_context_add_new_actor (_r->wfc, w);

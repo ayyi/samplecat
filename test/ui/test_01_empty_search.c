@@ -1,6 +1,6 @@
 
 void
-test_1_empty_search ()
+test_01_empty_search ()
 {
 	START_TEST;
 

@@ -21,6 +21,7 @@ AM_CFLAGS = \
 	-I$(top_srcdir)/lib \
 	-I$(top_srcdir)/lib/samplecat \
 	-I$(top_srcdir)/lib/waveform \
+	-I$(top_srcdir)/lib/waveform/lib \
 	-I$(top_srcdir)/lib/waveform/lib/agl \
 	-I$(top_srcdir)/lib/waveform/gtkglext-1.0 \
 	-I$(top_srcdir)/experimental \
@@ -55,6 +56,7 @@ samplecat_gl_LDADD = \
 	$(top_srcdir)/lib/yaml/libyaml.a \
 	$(top_srcdir)/lib/waveform/.libs/libwaveformcore.a \
 	$(top_srcdir)/lib/waveform/.libs/libwaveformui.a \
+	$(top_srcdir)/lib/waveform/lib/ayyi-utils/.libs/libayyiutils.a \
 	$(top_srcdir)/lib/waveform/lib/agl/.libs/libagl.a \
 	$(top_srcdir)/lib/file_manager/libfilemanager.a \
 	$(top_srcdir)/lib/gtk/libgtk.la \

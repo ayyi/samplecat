@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
- | copyright (C) 2007-2024 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2007-2025 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -35,8 +35,7 @@ static guint player_signals[PLAYER_NUM_SIGNALS] = {0};
 Player*
 player_construct (GType object_type)
 {
-	Player* self = (Player*) g_object_new (object_type, NULL);
-	return self;
+	return (Player*) g_object_new (object_type, NULL);
 }
 
 
@@ -51,9 +50,7 @@ static GObject*
 player_constructor (GType type, guint n_construct_properties, GObjectConstructParam* construct_properties)
 {
 	GObjectClass* parent_class = G_OBJECT_CLASS (player_parent_class);
-	GObject* obj = parent_class->constructor (type, n_construct_properties, construct_properties);
-
-	return obj;
+	return parent_class->constructor (type, n_construct_properties, construct_properties);
 }
 
 
@@ -103,7 +100,7 @@ player_connect (ErrorCallback callback, gpointer user_data)
 		C* c = _;
 
 		am_promise_resolve(play->ready, NULL);
-		if(c->callback) c->callback(error, c->user_data);
+		if (c->callback) c->callback(error, c->user_data);
 
 		g_free(c);
 	}

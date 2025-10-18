@@ -1,4 +1,4 @@
-FROM archlinux
+FROM artixlinux/artixlinux:base
 
 /* FIXME lapsa should be optional - why is configure failing without it ? */
 /* note: python3 was added for gtkglext mkenums */

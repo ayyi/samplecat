@@ -3,7 +3,7 @@
  *  Hide the Library view via the View menu.
  */
 void
-test_2_hide_library ()
+test_02_hide_library ()
 {
 	START_TEST;
 
