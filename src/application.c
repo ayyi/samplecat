@@ -241,8 +241,8 @@ application_instance_init (Application* self)
 		dbg(1, "---> %s", g_enum_to_string (PLAYER_TYPE_STATE, play->state));
 		statusbar_print(1, "%s", g_enum_to_string (PLAYER_TYPE_STATE, play->state));
 
-		g_simple_action_set_enabled (G_SIMPLE_ACTION(g_action_map_lookup_action (G_ACTION_MAP(app), "player-stop")), play->state != PLAYER_STOPPED);
-		g_simple_action_set_enabled (G_SIMPLE_ACTION(g_action_map_lookup_action (G_ACTION_MAP(app), "player-play")), play->state < PLAYER_PLAY_PENDING);
+		g_simple_action_set_enabled (G_SIMPLE_ACTION(g_action_map_lookup_action (G_ACTION_MAP(app), "player-stop")), play->state > PLAYER_STOPPED);
+		g_simple_action_set_enabled (G_SIMPLE_ACTION(g_action_map_lookup_action (G_ACTION_MAP(app), "player-play")), play->state > PLAYER_UNAVAILABLE && play->state < PLAYER_PLAY_PENDING);
 		GAction* action = g_action_map_lookup_action (G_ACTION_MAP(app), "play-all");
 		if (action) {
 			g_simple_action_set_enabled (G_SIMPLE_ACTION(action), true);

@@ -31,6 +31,7 @@ cscope.*
 ltmain.sh
 libtool
 .libs
+.ccls-cache
 layouts2/layout_ui.c
 layouts2/layouts.c
 lib/yaml/test

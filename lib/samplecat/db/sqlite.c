@@ -115,14 +115,13 @@ int
 sqlite__connect ()
 {
 	PF;
-	int rc;
 
 	if (!ensure_config_dir()) {
 		return false;
 	}
 
 	char* db_name = g_strdup_printf("%s/.config/" PACKAGE "/" PACKAGE ".sqlite", g_get_home_dir());
-	rc = sqlite3_open(db_name, &db); //if the file doesnt exist, it will be created.
+	int rc = sqlite3_open(db_name, &db); // if the file doesnt exist, it will be created.
 	if (rc) {
 		fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
 		fprintf(stderr, "file=%s", db_name);
@@ -131,10 +130,10 @@ sqlite__connect ()
 	}
 	g_free(db_name);
 
-	int on_create_table (void* NotUsed, int argc, char** argv, char** azColName)
+	int on_create_table (void* _, int argc, char** argv, char** az_col_name)
 	{
 		for (int i=0; i<argc; i++) {
-			printf("%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
+			printf("%s = %s\n", az_col_name[i], argv[i] ? argv[i] : "NULL");
 		}
 		printf("\n");
 		return 0;

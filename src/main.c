@@ -48,9 +48,7 @@ SamplecatApplication* app = NULL;
 int 
 main (int argc, char** argv)
 {
-#ifdef HAVE_GTK_4_16
-	g_setenv ("GDK_DISABLE", "egl", false);
-#else
+#ifndef HAVE_GTK_4_16
 	g_setenv ("GDK_DEBUG", "gl-glx", false);
 #endif
 	g_setenv ("GDK_BACKEND", "x11", false);

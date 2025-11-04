@@ -206,6 +206,29 @@ AC_DEFINE(USE_GDK_PIXBUF, 1, [enable support for Gdk Pixbuf])
 
 dnl -----------------------------------------------------------------------------
 
+PKG_CHECK_MODULES(EGL, [egl], [
+	have_egl=yes
+], [
+	have_egl=no
+])
+
+if test "$HAVE_GTK_4_16" = "yes"; then
+	if test "$have_egl" = "no"; then
+		AC_MSG_ERROR([EGL is required when using GTK >= 4.16])
+	fi
+	enable_egl=yes
+fi
+if test "x$enable_egl" = "xyes"; then
+	AC_DEFINE(USE_EGL, 1, [Use EGL for OpenGL context management])
+	EGL_CFLAGS=`pkg-config --cflags egl`
+	EGL_LDFLAGS=`pkg-config --libs egl`
+	AC_SUBST(EGL_CFLAGS)
+	AC_SUBST(EGL_LDFLAGS)
+fi
+AM_CONDITIONAL(ENABLE_EGL, test "x$enable_egl" = "xyes")
+
+dnl -----------------------------------------------------------------------------
+
 if test x$enable_mysql = xno ; then
 	:
 else
@@ -475,7 +498,11 @@ AS_IF([test "$enable_system_gtkglext" = "yes"], [
 	PKG_CHECK_MODULES(OPENGL, gtkglext-1.0, [AC_DEFINE(USE_OPENGL, 1, Opengl features are enabled)])
 	GL_LDFLAGS=`pkg-config --libs gtkglext-1.0`
 ],[
-	GL_LDFLAGS=`pkg-config --libs gl`
+	AS_IF([test "x$enable_egl" = "xyes"], [
+		GL_LDFLAGS=`pkg-config --libs gl --libs egl`
+	],[
+		GL_LDFLAGS=`pkg-config --libs gl`
+	])
 ])
 
 AC_SUBST(OPENGL_CFLAGS)
@@ -634,6 +661,7 @@ AC_MSG_RESULT([Building valgrind:            $enable_valgrind])
 AC_MSG_RESULT([Extra debugging:              $enable_debug])
 AC_MSG_RESULT([Building profiling:           $profiling])
 AC_MSG_RESULT([Use system Gtk OpenGL:        $enable_system_gtkglext])
+AC_MSG_RESULT([Use egl:                      $enable_egl])
 AC_MSG_RESULT([])
 
 if test "$enable_mx" = "yes" -o "$enable_webkit" = "yes" -o "$enable_gl_app" = "yes" -o "$enable_sf2" = "yes" -o "$enable_nks" = "yes" -o "$enable_tracker" = "yes"; then

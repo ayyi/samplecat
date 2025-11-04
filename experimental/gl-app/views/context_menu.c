@@ -51,12 +51,20 @@ context_menu_open_new (AGlScene* parent, AGliPt xy, Menu* menu, AMPromise* promi
 	_promise = promise;
 	_menu = menu;
 
+#ifdef USE_EGL
+	Display* dpy = eglGetCurrentDisplay();
+#else
 	Display* dpy = glXGetCurrentDisplay();
+#endif
 	AGliPt size = {200, menu->len * 16 + 2 * BORDER};
 
 	int x, y;
 	Window child;
+#ifdef USE_EGL
+	Window window = parent->gl.egl.window;
+#else
 	Window window = parent->gl.glx.window;
+#endif
 	XWindowAttributes attr;
 	XGetWindowAttributes(dpy, window, &attr);
 	XTranslateCoordinates(dpy, window, attr.root, 0, 0, &x, &y, &child);

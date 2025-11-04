@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
- | copyright (C) 2007-2024 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2007-2025 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -38,9 +38,9 @@ enum  {
 
 static guint player_signals[PLAYER_NUM_SIGNALS] = {0};
 
-GType       player_state_get_type     (void);
-static void _vala_player_get_property (GObject * object, guint property_id, GValue * value, GParamSpec * pspec);
-static void _vala_player_set_property (GObject * object, guint property_id, const GValue * value, GParamSpec * pspec);
+GType       player_state_get_type (void);
+static void _player_get_property  (GObject * object, guint property_id, GValue * value, GParamSpec * pspec);
+static void _player_set_property  (GObject * object, guint property_id, const GValue * value, GParamSpec * pspec);
 
 
 static Player*
@@ -70,8 +70,8 @@ player_class_init (PlayerClass* klass)
 {
 	player_parent_class = g_type_class_peek_parent (klass);
 	G_OBJECT_CLASS (klass)->constructor = player_constructor;
-	G_OBJECT_CLASS (klass)->get_property = _vala_player_get_property;
-	G_OBJECT_CLASS (klass)->set_property = _vala_player_set_property;
+	G_OBJECT_CLASS (klass)->get_property = _player_get_property;
+	G_OBJECT_CLASS (klass)->set_property = _player_set_property;
 
 	g_object_class_install_property (G_OBJECT_CLASS (klass), PLAYER_STATE_PROPERTY, player_properties[PLAYER_STATE_PROPERTY] = g_param_spec_enum ("state", "state", "state", PLAYER_TYPE_STATE, 0, G_PARAM_STATIC_STRINGS | G_PARAM_READABLE | G_PARAM_WRITABLE));
 
@@ -116,17 +116,20 @@ player_connect (ErrorCallback callback, gpointer user_data)
 
 		am_promise_resolve(play->ready, NULL);
 		if (c->callback) c->callback(error, c->user_data);
-		player_set_state(PLAYER_STOPPED);
+		player_set_state(error ? PLAYER_UNAVAILABLE : PLAYER_STOPPED);
+
+		if (error) puts(error->message);
 
 		g_free(c);
 	}
 
+	g_return_if_fail(play->auditioner);
 	play->auditioner->connect(player_on_connected, SC_NEW(C, .callback = callback, .user_data = user_data));
 }
 
 
 static void
-_vala_player_get_property (GObject* object, guint property_id, GValue* value, GParamSpec* pspec)
+_player_get_property (GObject* object, guint property_id, GValue* value, GParamSpec* pspec)
 {
 	switch (property_id) {
 		case PLAYER_STATE_PROPERTY:
@@ -139,7 +142,7 @@ _vala_player_get_property (GObject* object, guint property_id, GValue* value, GP
 }
 
 static void
-_vala_player_set_property (GObject* object, guint property_id, const GValue* value, GParamSpec* pspec)
+_player_set_property (GObject* object, guint property_id, const GValue* value, GParamSpec* pspec)
 {
 	switch (property_id) {
 		case PLAYER_STATE_PROPERTY:
@@ -286,7 +289,7 @@ player_is_playing ()
 static GType
 player_state_get_type_once (void)
 {
-	static const GEnumValue values[] = {{PLAYER_INIT, "PLAYER_INIT", "init"}, {PLAYER_STOPPED, "PLAYER_STOPPED", "stopped"}, {PLAYER_PAUSED, "PLAYER_PAUSED", "paused"}, {PLAYER_PLAY_PENDING, "PLAYER_PLAY_PENDING", "play-pending"}, {PLAYER_PLAYING, "PLAYER_PLAYING", "playing"}, {0, NULL, NULL}};
+	static const GEnumValue values[] = {{PLAYER_INIT, "PLAYER_INIT", "init"}, {PLAYER_UNAVAILABLE, "PLAYER_UNAVAILABLE", "unavailable"}, {PLAYER_STOPPED, "PLAYER_STOPPED", "stopped"}, {PLAYER_PAUSED, "PLAYER_PAUSED", "paused"}, {PLAYER_PLAY_PENDING, "PLAYER_PLAY_PENDING", "play-pending"}, {PLAYER_PLAYING, "PLAYER_PLAYING", "playing"}, {0, NULL, NULL}};
 	return g_enum_register_static ("PlayerState", values);
 }
 

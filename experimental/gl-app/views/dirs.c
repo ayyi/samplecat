@@ -187,7 +187,7 @@ directories_view (gpointer _)
 		actor->scrollable.x2 = 100;
 		actor->scrollable.y2 = actor->scrollable.y1 + view->cache.n_rows * row_height;
 
-		// unfortunately the behaviour layout gets called before the actor, so it is called a 2nd time here to use the correct size
+		// unfortunately the scrollable behaviour layout gets called before the actor, so it is called a 2nd time here to use the correct size
 		AGlBehaviour* b = actor->behaviours[2];
 		actor->class->behaviour_classes[2]->layout(b, actor);
 

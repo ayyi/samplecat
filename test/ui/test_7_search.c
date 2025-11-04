@@ -52,5 +52,5 @@ test_7_search ()
 		wait_for(has_one_item, then, NULL);
 	}
 
-	g_timeout_add_once(250, _do_search, NULL);
+	g_timeout_add_once(150, _do_search, NULL);
 }

@@ -15,8 +15,14 @@ unit_test_SOURCES = \
 	test.c
 
 if ENABLE_OPENGL
+if ENABLE_EGL
+OPENGL_LDFLAGS = \
+	$(GL_LDFLAGS) \
+	$(EGL_LDFLAGS)
+else
 OPENGL_LDFLAGS = \
 	$(GL_LDFLAGS)
+endif
 endif
 
 unit_test_LDADD = \

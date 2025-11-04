@@ -25,8 +25,10 @@
  *  The test must provide the list of tests and the setup and teardown functions
  */
 extern gpointer tests[];
-extern void setup(char* argv[]);
-extern void teardown();
+
+extern int setup(char* argv[])__attribute__((weak));
+extern void teardown() __attribute__((weak));
+extern int  n_tests  () __attribute__((weak));
 
 void set_log_handlers ();
 static void next_test ();
@@ -35,15 +37,10 @@ static void next_test ();
 int
 main (int argc, char* argv[])
 {
-#if 0 // unfortunately, gtk_test_init causes apps to abort on warnings
-	const gchar* display = g_getenv("DISPLAY");
-	if(display && strlen(display))
-		gtk_test_init(&argc, &argv);
-#endif
-
 	set_log_handlers();
 
-	setup (argv);
+	int r = setup ? setup (argv) : 0;
+	if (r) return r;
 
 	dbg(2, "n_tests=%i", TEST.n_tests);
 
@@ -62,17 +59,17 @@ main (int argc, char* argv[])
 
 
 static gboolean
-__exit ()
+run_test (gpointer test)
 {
-	exit(TEST.n_failed ? EXIT_FAILURE : EXIT_SUCCESS);
+	((Test)test)();
 	return G_SOURCE_REMOVE;
 }
 
 
 static gboolean
-run_test (gpointer test)
+__exit ()
 {
-	((Test)test)();
+	exit(TEST.n_failed ? EXIT_FAILURE : EXIT_SUCCESS);
 	return G_SOURCE_REMOVE;
 }
 
@@ -91,7 +88,8 @@ next_test ()
 	printf("\n");
 
 	TEST.current.test++;
-	if (TEST.timeout) g_source_remove (TEST.timeout);
+	if (TEST.timeout)
+		g_source_remove (TEST.timeout);
 	if (TEST.current.test < TEST.n_tests) {
 		TEST.current.finished = false;
 		gboolean (*test)() = tests[TEST.current.test];
@@ -119,15 +117,15 @@ next_test ()
 void
 test_finish ()
 {
-	dbg(2, "... passed=%i", passed);
+	dbg(2, "... passed=%i", TEST.passed);
 
 	for (GList* l = TEST.current.timers; l; l = l->next) {
 		g_source_remove(GPOINTER_TO_INT(l->data));
 	}
 	g_clear_pointer(&TEST.current.timers, g_list_free);
 
-	if (passed) TEST.n_passed++; else TEST.n_failed++;
-	if (!passed && abort_on_fail) TEST.current.test = 1000;
+	if (TEST.passed) TEST.n_passed++; else TEST.n_failed++;
+	if (!TEST.passed && abort_on_fail) TEST.current.test = 1000;
 
 	next_test();
 }

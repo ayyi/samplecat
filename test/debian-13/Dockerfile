@@ -1,15 +1,9 @@
-FROM debian:trixie
+FROM registry.gitlab.com/ayyi.org/docker/debian-13
 RUN apt-get -y update && apt-get install -y \
-	openssh-client \
-	g++ make automake libtool pkg-config gdb \
-	git \
-	vim \
+	g++ \
 	libsqlite3-dev \
 	libsndfile1-dev \
-	libgl1-mesa-dev \
 	libxml2-dev \
-	libyaml-dev \
-	libgraphene-1.0-dev \
 	libgtk-4-dev
 
 RUN echo "alias ll='ls -l'" >> /root/.bashrc

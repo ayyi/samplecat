@@ -103,6 +103,7 @@ player_control_new ()
 
 	void pc_on_finalize (gpointer _c, GObject* was)
 	{
+		PF;
 		g_clear_pointer(&playercontrol, g_free);
 	}
 	g_object_weak_ref((GObject*)pc->widget, pc_on_finalize, NULL);

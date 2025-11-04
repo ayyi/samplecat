@@ -292,6 +292,7 @@ gdl_dock_notebook_switch_page_cb (GtkNotebook *nb, GtkWidget *page, gint page_nu
 
 			GdlDockItem* filled = dock_placeholder_fill (DOCK_PLACEHOLDER(placeholder));
 			gtk_widget_set_visible(GTK_WIDGET(filled), true);
+			g_object_ref(placeholder);
 			GDL_DOCK_OBJECT_GET_CLASS(notebook)->remove(GDL_DOCK_OBJECT(notebook), GTK_WIDGET(placeholder));
 			gtk_notebook_remove_page(nb, page_num);
 
@@ -304,6 +305,8 @@ gdl_dock_notebook_switch_page_cb (GtkNotebook *nb, GtkWidget *page, gint page_nu
 
 			g_signal_emit_by_name(GDL_DOCK_OBJECT(notebook)->master, "dock-item-removed", placeholder);
 			g_signal_emit_by_name(GDL_DOCK_OBJECT(notebook)->master, "dock-item-added", filled);
+
+			g_object_unref(placeholder);
 
 			return G_SOURCE_REMOVE;
 		}

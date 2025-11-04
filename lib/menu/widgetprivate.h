@@ -469,7 +469,7 @@ _gtk_widget_is_sensitive (GtkWidget *widget)
   return !(widget->priv->state_flags & GTK_STATE_FLAG_INSENSITIVE);
 }
 
-#ifdef HAVE_GTK_4_18
+#ifdef HAVE_GTK_4_20
 #warning Unexpected GTK version. May fail
 #endif
 static int GtkWidget_private_offset = -336;
