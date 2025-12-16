@@ -112,6 +112,7 @@ struct _AyyiFilemanager {
     struct {
        GtkWidget*              widget;
        GMenuModel*             model;
+       GMenuModel*             user;            // Users of the filer window can have their own items appended to the menu when the menu is created
     }                          menu;
 
     TargetFunc                 target_cb;

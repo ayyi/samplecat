@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
- | copyright (C) 2012-2025 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2012-2026 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -72,10 +72,10 @@ graph_debug_paint (AGlActor* actor)
 		char* disabled = agl_actor__is_disabled(actor) ?  " DISABLED" :  "";
 #endif
 
-		char scrollablex[32] = {0};
+		char scrollablex[48] = {0};
 		if (actor->scrollable.x1 || actor->scrollable.x2)
 			sprintf(scrollablex, " scrollable.x(%i,%i)", actor->scrollable.x1, actor->scrollable.x2);
-		char scrollabley[32] = {0};
+		char scrollabley[64] = {0};
 		if (actor->scrollable.y1 || actor->scrollable.y2)
 			sprintf(scrollabley, " scrollable.y(%i,%i)", actor->scrollable.y1, actor->scrollable.y2);
 

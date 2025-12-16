@@ -532,3 +532,22 @@
    ...
    fun:gsk_gl_compiler_compile
 }
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Value8
+   ...
+   fun:_mesa_TexImage2D
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Value8
+   ...
+   fun:_mesa_TexSubImage2D
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: possible
+   ...
+   fun:eglCreateContext
+}

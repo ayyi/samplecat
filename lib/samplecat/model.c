@@ -474,10 +474,7 @@ samplecat_model_set_selection (SamplecatModel* self, Sample* sample)
 	g_return_if_fail (self);
 
 	if (sample != self->selection) {
-		if (self->selection) {
-			sample_unref (self->selection);
-		}
-		self->selection = sample_ref(sample);
+		set_pointer(self->selection, sample_ref(sample), sample_unref);
 
 		if (self->priv->selection_change_timeout) {
 			g_source_remove (self->priv->selection_change_timeout);

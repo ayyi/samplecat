@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
- | copyright (C) 2016-2024 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2016-2026 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -14,6 +14,7 @@
 #include "agl/fbo.h"
 #include "agl/event.h"
 #include "agl/behaviours/key.h"
+#include "agl/behaviours/selectable.h"
 #include "actors/scrollbar.h"
 #include "debug/debug.h"
 #include "file_manager/file_manager.h"
@@ -22,8 +23,6 @@
 #include "application.h"
 #include "views/files.impl.h"
 #include "views/files.h"
-
-#define _g_free0(var) (var = (g_free (var), NULL))
 
 #define ROW_HEIGHT        LINE_HEIGHT
 #define header_height     row_height

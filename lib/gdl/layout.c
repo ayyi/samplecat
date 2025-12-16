@@ -224,7 +224,10 @@ gdl_dock_layout_build_doc (GdlDockLayout *layout)
 {
     g_return_if_fail (layout->priv->doc == NULL);
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
     xmlIndentTreeOutput = TRUE;
+#pragma GCC diagnostic pop
     layout->priv->doc = xmlNewDoc (BAD_CAST "1.0");
     layout->priv->doc->children = xmlNewDocNode (layout->priv->doc, NULL, BAD_CAST ROOT_ELEMENT, NULL);
 }

@@ -134,3 +134,106 @@
    ...
    fun:gtk_accessible_update_property
 }
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Cond
+   obj:/usr/lib64/libgtk-4.so*
+   obj:/usr/lib64/libgtk-4.so*
+   ...
+   fun:g_closure_invoke
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Cond
+   obj:/usr/lib64/libgtk-4.so*
+   fun:g_closure_invoke
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Cond
+   obj:/usr/lib64/libgtk-4.so*
+   obj:/usr/lib64/libgtk-4.so*
+   fun:gtk_widget_allocate
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Cond
+   obj:/usr/lib64/libgtk-4.so*
+   fun:gtk_widget_measure
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Cond
+   obj:/usr/lib64/libgtk-4.so*
+   ...
+   fun:gtk_widget_allocate
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Cond
+   obj:/usr/lib64/libgtk-4.so*
+   ...
+   fun:gtk_widget_snapshot_child
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Cond
+   fun:graphene_rect_union
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Cond
+   ...
+   fun:graphene_rect_equal
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Cond
+   ...
+   fun:graphene_rect_contains_rect
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Cond
+   ...
+   fun:gsk_transform_transform_bounds
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Value8
+   ...
+   fun:cairo_region_contains_rectangle
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Value8
+   ...
+   fun:cairo_region_subtract_rectangle
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Value8
+   fun:memset
+   fun:_cairo_tor_scan_converter_create
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Value8
+   fun:_cairo_tor_scan_converter_add_polygon
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Value8
+   fun:_cairo_tor_scan_converter_generate
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Value8
+   ...
+   fun:_cairo_tor_scan_converter_generate
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Cond
+   fun:iris_set_scissor_states
+}

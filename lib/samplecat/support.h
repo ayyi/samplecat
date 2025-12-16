@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
- | copyright (C) 2007-2023 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2007-2026 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -30,6 +30,8 @@
 #ifndef g_free0
 #define g_free0(A) (A = (g_free(A), NULL))
 #endif
+
+#define set_pointer(P, A, FREE) { if (P) FREE(P); P = A; }
 
 void         p_                        (int level, const char* format, ...);
 

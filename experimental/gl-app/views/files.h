@@ -16,7 +16,6 @@
 #include "../directory.h"
 typedef struct _FilesView FilesView;
 #include "views/files.impl.h"
-#include "agl/behaviours/selectable.h"
 #include "behaviours/state.h"
 #include "agl/observable.h"
 

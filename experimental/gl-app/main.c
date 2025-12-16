@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
- | copyright (C) 2007-2024 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2007-2026 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -11,6 +11,7 @@
  */
 
 #define __main_c__
+
 #include "config.h"
 #include <getopt.h>
 #include <libgen.h>
@@ -18,6 +19,9 @@
 #include <debug/debug.h>
 #include "agl/x11.h"
 #include "agl/event.h"
+#include "agl/behaviours/fullsize.h"
+#include "agl/behaviours/selectable.h"
+#include "views/graph_debug.h"
 #include "file_manager/mimetype.h"
 #include "file_manager/pixmaps.h"
 #include "file_manager/diritem.h"
@@ -122,6 +126,9 @@ main (int argc, char* argv[])
 				if (list) {
 					return list->on_event(list, event, xy);
 				}
+				if (((AGlEventKey*)event)->keyval == XK_d) {
+					graph_debug_window(actor->root);
+				}
 				break;
 			default:
 				break;
@@ -170,7 +177,7 @@ on_actor_added (Application* app, AGlActor* actor, gpointer data)
 	}
 
 	if (c == files_view_get_class()) {
-		SelectBehaviour* selectable = (SelectBehaviour*)actor->behaviours[1];
+		SelectBehaviour* selectable = (SelectBehaviour*)agl_actor__find_behaviour(actor, selectable_get_class());
 		g_return_if_fail(selectable);
 
 		void on_file_select (AGlObservable* o, AGlVal value, gpointer actor)
@@ -282,30 +289,25 @@ add_content (gpointer _)
 }
 
 
-		static void scene_set_size2 (AGlActor* scene)
-		{
-			dbg(2, "%.0f", ((AGlActor*)app->scene)->region.x2);
-
-			actors.files->region = (AGlfRegion){20, 20, agl_actor__width(scene) - 10, agl_actor__height(scene) - 20};
-
-#ifdef SHOW_FBO_DEBUG
-			actors.debug->region = (AGlfRegion){scene->region.x2/2, 10, scene->region.x2 - 10, scene->region.x2/2};
-#endif
-
-			agl_actor__invalidate((AGlActor*)app->scene);
-		}
-
 static gboolean
 show_directory (gpointer _)
 {
 	app->wfc = wf_context_new((AGlActor*)app->scene);
-	((AGlActor*)app->scene)->set_size = scene_set_size2;
 
-	AGlActor* view = actors.files = files_with_wav(NULL);
-	agl_actor__add_child((AGlActor*)app->scene, view);
+	actors.files = agl_actor__add_child((AGlActor*)app->scene, ({
+		AGlActor* view = files_with_wav(NULL);
+		((FilesWithWav*)view)->wfc = app->wfc;
+		files_with_wav_set_path((FilesWithWav*)view, app->config.browse_dir);
 
-	((FilesWithWav*)view)->wfc = app->wfc;
-	files_with_wav_set_path((FilesWithWav*)view, app->config.browse_dir);
+		agl_actor__add_behaviour(view, ({
+			AGlBehaviour* f = fullsize();
+			((FullsizeBehaviour*)f)->border = (AGliPt){20, 20};
+			f;
+		}));
+		view;
+	}));
+
+	agl_actor__add_behaviour((AGlActor*)app->scene, fullsize());
 
 	agl_actor__set_size((AGlActor*)app->scene);
 
@@ -339,5 +341,3 @@ void
 application_emit_icon_theme_changed (Application* app, const gchar* _)
 {
 }
-
-

@@ -589,10 +589,11 @@ gdl_dock_item_class_init (GdlDockItemClass *klass)
 	g_type_class_add_private (object_class, sizeof (GdlDockItemPrivate));
 #pragma GCC diagnostic warning "-Wdeprecated-declarations"
 
+	gtk_widget_class_set_accessible_role (widget_class, GTK_ACCESSIBLE_ROLE_REGION);
+
     /* set the style */
     klass->priv->css = gtk_css_provider_new ();
 	gtk_css_provider_load_from_string(klass->priv->css, style);
-
 	gtk_widget_class_set_css_name (widget_class, "dock-item");
 }
 
@@ -649,7 +650,7 @@ gdl_dock_item_constructor (GType type, guint n_construct_properties, GObjectCons
 {
     GObject* g_object = G_OBJECT_CLASS (gdl_dock_item_parent_class)-> constructor (type, n_construct_properties, construct_param);
     if (g_object) {
-        GdlDockItem *item = GDL_DOCK_ITEM (g_object);
+        GdlDockItem* item = GDL_DOCK_ITEM (g_object);
         gchar* long_name;
         gchar* stock_id;
 
@@ -986,6 +987,7 @@ gdl_dock_item_get_preferred_width (GtkWidget *widget, gint *minimum, gint *natur
 #pragma GCC diagnostic warning "-Wdeprecated-declarations"
 
     *minimum += padding.left + padding.right;
+    *minimum = 0; // this prevents gtk from complaining when the available space is small.
     *natural += padding.left + padding.right;
 }
 
@@ -1030,7 +1032,7 @@ gdl_dock_item_get_preferred_height (GtkWidget *widget, gint *minimum, gint *natu
     gtk_style_context_get_padding (context, &padding);
 #pragma GCC diagnostic warning "-Wdeprecated-declarations"
 
-    *minimum += padding.top + padding.bottom;
+    if (*minimum) *minimum += padding.top + padding.bottom;
     *natural += padding.top + padding.bottom;
 }
 

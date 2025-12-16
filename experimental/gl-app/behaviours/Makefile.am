@@ -4,7 +4,8 @@ noinst_LTLIBRARIES = libbehaviours.la
 libbehaviours_la_SOURCES = \
 	style.c style.h \
 	state.c state.h \
-	panel.c panel.h
+	panel.c panel.h \
+	dragzone.c dragzone.h
 
 AM_CFLAGS = \
 	-no-pie \

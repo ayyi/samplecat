@@ -3,7 +3,7 @@ all:
 	cd samplecat && \
 		./autogen.sh && \
 		./configure --enable-test && \
-		make && \
+		make -j5 && \
 		./src/samplecat --version
 	cd samplecat/lib/waveform && ./test/waveform
 	cd samplecat/test/unit && ./unit_test

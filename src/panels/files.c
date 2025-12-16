@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
- | copyright (C) 2007-2025 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2007-2026 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -81,7 +81,7 @@ fileview_new ()
 		}
 
 		Idle* idle = idle_new(dir_tree_on_layout_changed, dir_tree);
-		g_signal_connect(app, "layout-changed", (GCallback)idle->run, idle);
+		g_signal_connect_data(app, "layout-changed", (GCallback)idle->run, idle, (GClosureNotify)g_free, 0);
 
 		void files_on_dir_tree_finalize (gpointer idle, GObject* was)
 		{
@@ -121,10 +121,8 @@ fileview_new ()
 		}
 		g_signal_connect((gpointer)app, "icon-theme", G_CALLBACK(icon_theme_changed), fm);
 
-		GMenuModel* section = (GMenuModel*)g_menu_new ();
-		g_menu_append_section (G_MENU(fm->menu.model), NULL, section);
-
-		make_menu_actions(file_view, menu_keys, G_N_ELEMENTS(menu_keys), fm__add_menu_item, section);
+		fm->menu.user = (GMenuModel*)g_menu_new ();
+		make_menu_actions(file_view, menu_keys, G_N_ELEMENTS(menu_keys), fm__add_menu_item, fm->menu.user);
 
 		// set up fileview as dnd source
 #ifdef GTK4_TODO

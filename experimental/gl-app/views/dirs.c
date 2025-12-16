@@ -101,9 +101,6 @@ directories_view (gpointer _)
 	{
 		DirectoriesView* view = (DirectoriesView*)actor;
 
-#ifndef AGL_ACTOR_RENDER_CACHE
-		agl_enable_stencil(0, 0, actor->region.x2, actor->region.y2);
-#endif
 		void paint_node (DirectoriesView* view, int* row, int depth, DirNode* dirnode)
 		{
 			DhLink* link = (DhLink*)dirnode->node->data;
@@ -139,10 +136,6 @@ directories_view (gpointer _)
 		for (int i = 0; i < view->nodes->len; i++, row++) {
 			paint_node(view, &row, 0, dir_node_at(view->nodes, i));
 		}
-
-#ifndef AGL_ACTOR_RENDER_CACHE
-		agl_disable_stencil();
-#endif
 
 		return true;
 	}

@@ -76,6 +76,7 @@ ui_test_LDADD = \
 	$(ZLIB_LIBS) \
 	$(GMODULE_LIBS) \
 	$(FFMPEG_LIBS) \
+	$(XRANDR_LDFLAGS) \
 	$(MATH_LDFLAGS) \
 	$(YAML_LDFLAGS) \
 	-lstdc++ \

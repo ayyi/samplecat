@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
- | copyright (C) 2007-2025 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2007-2026 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -273,6 +273,14 @@ samplecat_list_store_do_search (SamplecatListStore* self)
 	samplecat.model->backend.search_iter_free();
 
 	((SamplecatListStore*)samplecat.store)->row_count = MAX(n_results, row_count);
+
+	if (!samplecat.model->selection) {
+		GtkTreeIter iter;
+		if (gtk_tree_model_get_iter_first(GTK_TREE_MODEL(samplecat.store), &iter)) {
+			Sample* sample = samplecat_list_store_get_sample_by_iter (&iter);
+			samplecat_model_set_selection (samplecat.model, sample);
+		}
+	}
 
 	g_signal_emit_by_name (self, "content-changed");
 }

@@ -58,6 +58,7 @@ unit_test_LDADD = \
 	$(ZLIB_LIBS) \
 	$(GMODULE_LIBS) \
 	$(FFMPEG_LIBS) \
+	$(XRANDR_LDFLAGS) \
 	$(MATH_LDFLAGS) \
 	-lstdc++ \
 	-ldl
@@ -69,7 +70,7 @@ list.c: Makefile test_*.c
 	@for i in test_*.c; do echo "#include \"$$i\"" >> $@; done
 	@echo >> $@
 	@echo "gpointer tests[] = {" >> $@
-	@for i in test_*.c; do echo "	$${i%.c}," >> $@; done
+	@for i in test_*.c; do cat $$i | grep ^test_ | sed 's/\(.*\) .*/  \1,/' >> $@; done
 	@echo "};" >> $@
 
 TESTS = \

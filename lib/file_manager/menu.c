@@ -177,6 +177,9 @@ fm__make_context_menu (AyyiFilemanager* fm)
 
 	add_menu_items_from_defn (menu, section, G_N_ELEMENTS(fm_menu_def), fm_menu_def, NULL);
 
+	if (fm->menu.user)
+		g_menu_append_section (G_MENU(fm->menu.model), NULL, fm->menu.user);
+
 	fm__menu_on_view_change(fm);
 
 	g_signal_connect_data(fm, "dir_changed", G_CALLBACK(menu_on_dir_changed), FM_NEW(MenuData, fm, section_item), (GClosureNotify)g_free, 0);

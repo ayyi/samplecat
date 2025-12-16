@@ -103,6 +103,7 @@ samplecat_LDADD = \
 	$(MATH_LDFLAGS) \
 	$(YAML_LDFLAGS) \
 	$(GRAPHENE_LIBS) \
+	$(XRANDR_LDFLAGS) \
 	-lstdc++ \
 	-ldl
 

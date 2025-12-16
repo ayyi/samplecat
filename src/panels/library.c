@@ -345,6 +345,23 @@ library_instance_init (Library* lv, gpointer klass)
 	}
 	g_signal_connect(G_OBJECT(app), "search-starting", G_CALLBACK(list_view_on_search_start), NULL);
 
+	void library_on_visible_change (GObject* object, GParamSpec* spec, gpointer user_data)
+	{
+		Library* lv = LIBRARY(object);
+
+		if (gtk_widget_get_visible(GTK_WIDGET(lv))) {
+			GtkTreeSelection* selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(lv->treeview));
+			if (gtk_tree_selection_count_selected_rows(selection) < 1) {
+				GtkTreeModel* model = gtk_tree_view_get_model(GTK_TREE_VIEW(lv->treeview));
+				GtkTreeIter iter;
+				gtk_tree_model_get_iter_first (model, &iter);
+				gtk_tree_selection_select_iter (selection, &iter);
+			}
+		}
+
+	}
+	g_signal_connect (lv, "notify::visible", G_CALLBACK (library_on_visible_change), lv);
+
 	{
 		GActionEntry entries[] = {
 			{ "edit-row", listview__edit_row, NULL, NULL, NULL },
