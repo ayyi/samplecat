@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
- | copyright (C) 2007-2025 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2007-2026 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -92,6 +92,7 @@ tags_instance_init (Tags* self, gpointer klass)
 
 	panel.hbox1 = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
 	panel.hbox2 = gtk_flow_box_new();
+	g_object_set(panel.hbox2, "accessible-role", GTK_ACCESSIBLE_ROLE_PRESENTATION, NULL);
 
 	panel.colour = colour_box_new(panel.hbox2);
 	panel.category = tag_selector_new();
@@ -110,6 +111,7 @@ on_category_set_clicked (GtkComboBox* widget, gpointer user_data)
 	PF;
 
 	// get the selected category
+#pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 	gchar* category = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(panel.category));
 #pragma GCC diagnostic warning "-Wdeprecated-declarations"
@@ -121,12 +123,15 @@ on_category_set_clicked (GtkComboBox* widget, gpointer user_data)
 	for (int i=0;i<g_list_length(selectionlist);i++) {
 		GtkTreePath* treepath_selection = g_list_nth_data(selectionlist, i);
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 		if (gtk_tree_model_get_iter(GTK_TREE_MODEL(samplecat.store), &iter, treepath_selection)) {
 			gchar* fname;
 			gchar* tags;
 			int id;
 			Sample* sample;
 			gtk_tree_model_get(GTK_TREE_MODEL(samplecat.store), &iter, COL_SAMPLEPTR, &sample, COL_NAME, &fname, COL_KEYWORDS, &tags, COL_IDX, &id, -1);
+#pragma GCC diagnostic pop
 			dbg(1, "id=%i name=%s", id, fname);
 
 			if (!strcmp(category, "no categories")) {
@@ -148,7 +153,10 @@ on_category_set_clicked (GtkComboBox* widget, gpointer user_data)
 
 		} else perr("bad iter! i=%i (<%i)\n", i, g_list_length(selectionlist));
 	}
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 	g_list_foreach(selectionlist, (GFunc)gtk_tree_path_free, NULL);
+#pragma GCC diagnostic pop
 	g_list_free(selectionlist);
 
 	g_free(category);
@@ -161,12 +169,15 @@ on_category_set_clicked (GtkComboBox* widget, gpointer user_data)
 static GtkWidget*
 tag_selector_new ()
 {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 	GtkWidget* combo = gtk_combo_box_text_new_with_entry();
 
 	gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(combo), "no categories");
 	for (int i=0;samplecat.model->categories[i];i++) {
 		gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(combo), samplecat.model->categories[i]);
 	}
+#pragma GCC diagnostic pop
 
 	gtk_box_append(GTK_BOX(panel.hbox1), combo);
 

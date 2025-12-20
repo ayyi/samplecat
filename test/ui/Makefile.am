@@ -1,7 +1,10 @@
 
 if BUILD_TESTS
 
-bin_PROGRAMS = ui_test
+if ENABLE_ATSPI
+ATSPI_PROGS = atspi
+endif
+bin_PROGRAMS = ui_test $(ATSPI_PROGS)
 
 AM_CFLAGS = \
 	-I../../src \
@@ -9,7 +12,8 @@ AM_CFLAGS = \
 	-I../../lib/waveform \
 	-I../../lib/waveform/lib/agl \
 	$(DBUS_CFLAGS) \
-	$(GTK_CFLAGS)
+	$(GTK_CFLAGS) \
+	$(ATSPI_CFLAGS)
 
 ui_test_SOURCES = \
 	test.c
@@ -17,11 +21,6 @@ ui_test_SOURCES = \
 if ENABLE_OPENGL
 OPENGL_LDFLAGS = \
 	$(GL_LDFLAGS)
-endif
-
-if ENABLE_FFTW3
-FFTW_LDADD = \
-	../../src/gl_spectrogram_view.o
 endif
 
 if ENABLE_YAML
@@ -40,7 +39,6 @@ ui_test_LDADD = \
 	../../src/window.o \
 	../../src/types.o \
 	../../lib/gtk/icon_theme.o \
-	$(FFTW_LDADD) \
 	$(top_srcdir)/lib/test/libtest.la \
 	$(top_srcdir)/lib/debug/libdebug.a \
 	$(top_srcdir)/lib/samplecat/db/libsamplecatdb.a \
@@ -82,7 +80,13 @@ ui_test_LDADD = \
 	-lstdc++ \
 	-ldl
 
-BUILT_SOURCES = list.c
+atspi_LDFLAGS = \
+	$(top_srcdir)/lib/debug/libdebug.a \
+	$(top_srcdir)/lib/test/.libs/libtest.a \
+	$(ATSPI_LDFLAGS) \
+	$(GTK_LDFLAGS)
+
+BUILT_SOURCES = list.c atspi.h
 
 list.c: Makefile test_*.c
 	@echo > $@
@@ -91,6 +95,24 @@ list.c: Makefile test_*.c
 	@echo "gpointer tests[] = {" >> $@
 	@for i in test_*.c; do echo "	$${i%.c}," >> $@; done
 	@echo "};" >> $@
+
+define build_header =
+	echo > $@
+	echo '#include "test/runner.h"' >> $@
+	echo >> $@
+	@echo "TestFn x" >> $@
+	@cat $(@:.h=.c) | grep ^test_ | sed 's/\(.*\) .*/  ,\1/' >> $@
+	@echo "  ;" >> $@
+	@echo >> $@
+	@echo "gpointer tests[] = {" >> $@
+	@cat $(@:.h=.c) | grep ^test_ | sed 's/\(.*\) .*/  \1,/' >> $@
+	@echo "};" >> $@
+	@echo >> $@
+	@echo "int n_tests () { return "`cat $(@:.h=.c) | grep ^test_ | wc -l`"; }" >> $@
+endef
+
+atspi.h: atspi.c Makefile
+	@$(build_header)
 
 TESTS = \
 	ui_test

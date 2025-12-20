@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
- | copyright (C) 2007-2025 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2007-2026 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -42,16 +42,15 @@ enum  {
 
 struct _SpectrogramArea {
 	AGlGtkArea parent_instance;
+	gchar* filename;
 	SpectrogramAreaPrivate* priv;
 };
 
 struct _SpectrogramAreaClass {
 	AGlGtkAreaClass parent_class;
-	AGl* agl;
 };
 
 struct _SpectrogramAreaPrivate {
-	gchar* _filename;
 	GdkPixbuf* pixbuf;
 };
 
@@ -148,7 +147,7 @@ static void
 spectrogram_area_finalize (GObject* obj)
 {
 	SpectrogramArea* self = G_TYPE_CHECK_INSTANCE_CAST (obj, TYPE_SPECTROGRAM_AREA, SpectrogramArea);
-	g_clear_pointer (&self->priv->_filename, g_free);
+	g_clear_pointer (&self->filename, g_free);
 	G_OBJECT_CLASS (spectrogram_area_parent_class)->finalize (obj);
 }
 
@@ -219,9 +218,7 @@ __spectrogram_ready (const char* filename, GdkPixbuf* pixbuf, gpointer _self)
 	SpectrogramArea* self = _self;
 
 	if (pixbuf) {
-		if (self->priv->pixbuf) {
-			g_object_unref ((GObject*) self->priv->pixbuf);
-		}
+		g_clear_object(&self->priv->pixbuf);
 		self->priv->pixbuf = pixbuf;
 		spectrogram_area_load_texture (self);
 		agl_gtk_area_queue_render (_self);
@@ -234,8 +231,8 @@ spectrogram_area_set_file (SpectrogramArea* self, gchar* filename)
 {
 	g_return_if_fail (self);
 
-	g_free (self->priv->_filename);
-	self->priv->_filename = g_strdup ((const gchar*) filename);
+	g_free (self->filename);
+	self->filename = g_strdup ((const gchar*) filename);
 	cancel_spectrogram (NULL);
 	get_spectrogram (filename, __spectrogram_ready, self);
 }

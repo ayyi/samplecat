@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
- | copyright (C) 2007-2025 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2007-2026 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -18,6 +18,7 @@
 #include "gdl/gdl-dock.h"
 #include "debug/debug.h"
 #include "actors/spinner.h"
+#include "ui/actors/hover.h"
 #include "waveform/view_plus.h"
 #include "application.h"
 #include "support.h"
@@ -40,6 +41,7 @@ static struct _window {
       AGlActor*   text;
       AGlActor*   spp;
       AGlActor*   spinner;
+      AGlActor*   hover;
    }              layers;
 } window;
 
@@ -59,6 +61,7 @@ waveform_panel_new ()
 	window.layers.spp = waveform_view_plus_add_layer(view, wf_spp_actor(waveform_view_plus_get_actor(view)), 0);
 
 	window.layers.spinner = waveform_view_plus_add_layer(view, agl_spinner(NULL), 0);
+	window.layers.hover = waveform_view_plus_add_layer(view, hover_actor(waveform_view_plus_get_actor(view)), 4);
 
 	//waveform_view_plus_add_layer(view, grid_actor(waveform_view_plus_get_actor(view)), 0);
 #if 0

@@ -24,7 +24,7 @@
  |                                                                      |
  |  It is designed to simplify the event handler by making behaviour    |
  |  uniform for each type of object.                                    |
- |                                                                      | 
+ |                                                                      |
  |  Usage of DragZone hides some low level details but it is quite      |
  |  complex and is not a complete winner.                               |
  |                                                                      |

@@ -3,6 +3,10 @@ SUBDIRS = shaders views behaviours test
 
 bin_PROGRAMS = samplecat_gl
 
+if ENABLE_ATSPI
+ATSPI_SOURCES = atspi.c atspi.h
+endif
+
 samplecat_gl_SOURCES = \
 	main.c \
 	application.c application.h \
@@ -12,7 +16,8 @@ samplecat_gl_SOURCES = \
 	layout.c layout.h \
 	utils.c utils.h \
 	keys.h \
-	action.h
+	action.h \
+	$(ATSPI_SOURCES)
 
 AM_CFLAGS = \
 	-no-pie \
@@ -32,6 +37,7 @@ AM_CFLAGS = \
 	$(FFMPEG_CFLAGS) \
 	$(ZLIB_CFLAGS) \
 	$(GTK_CFLAGS) \
+	$(ATSPI_CFLAGS) \
 	$(MYSQL_CFLAGS)
 
 AM_CXXFLAGS = $(AM_CFLAGS)
@@ -54,6 +60,7 @@ samplecat_gl_LDADD = \
 	$(top_srcdir)/lib/file_manager/libfilemanager.a \
 	$(top_srcdir)/lib/gtk/libgtk.la \
 	$(top_srcdir)/lib/menu/libmenu.la \
+	$(top_srcdir)/lib/atspi/libatspi.a \
 	$(SAMPLECAT_LIBS) \
 	$(AYYI_LIBS) \
 	$(TRACKER_LIBS) \

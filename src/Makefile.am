@@ -34,11 +34,7 @@ AYYI_SRC = ayyi.c ayyi.h ayyi_model.c ayyi_model.h
 endif
 
 if ENABLE_OPENGL
-if ENABLE_FFTW3
-OPENGL_FFTW_SRC = gl_spectrogram_view.c gl_spectrogram_view.h
-endif
 OPENGL_SRC = \
-	$(OPENGL_FFTW_SRC) \
 	rotator.c rotator.h
 OPENGL_LDFLAGS = \
 	$(GL_LDFLAGS)
