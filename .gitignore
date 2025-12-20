@@ -52,6 +52,8 @@ test/unit/unit_test
 test/unit/list.c
 test/ui/ui_test
 test/ui/list.c
+test/ui/atspi
+test/ui/atspi.h
 player.vala.c
 player.vala.h
 !test/debian*/Makefile

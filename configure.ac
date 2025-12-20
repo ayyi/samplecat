@@ -154,10 +154,14 @@ AC_SUBST(GMODULE_LIBS)
 PIXBUF_CFLAGS=`pkg-config gdk-pixbuf-2.0 --cflags`
 AC_SUBST(PIXBUF_CFLAGS)
 
-ATSPI_CFLAGS=`pkg-config atspi-2 --cflags`
-ATSPI_LDFLAGS=`pkg-config atspi-2 --libs`
-AC_SUBST(ATSPI_CFLAGS)
-AC_SUBST(ATSPI_LDFLAGS)
+PKG_CHECK_MODULES(ATSPI, [atspi-2], [enable_atspi=yes], [enable_atspi=no])
+
+if test "x$enable_atspi" = "xyes"; then
+	AC_DEFINE(USE_ATSPI, 1, [Use accessibility bus])
+	ATSPI_LDFLAGS=`pkg-config atspi-2 --libs`
+	AC_SUBST(ATSPI_LDFLAGS)
+fi
+AM_CONDITIONAL(ENABLE_ATSPI, test "x$enable_atspi" = "xyes")
 
 dnl -----------------------------------------------------------------------------
 
@@ -174,6 +178,8 @@ dnl ----------------------------------------------------------------------------
 
 GLIB_CFLAGS=`pkg-config --cflags glib-2.0`
 AC_SUBST(GLIB_CFLAGS)
+GLIB_LDFLAGS=`pkg-config --libs glib-2.0 gobject-2.0`
+AC_SUBST(GLIB_LDFLAGS)
 
 if `pkg-config glib-2.0 --atleast-version=2.58`; then
   HAVE_GLIB_2_58="yes"
@@ -605,6 +611,7 @@ AC_CONFIG_FILES([lib/audio_analysis/ebumeter/Makefile])
 AC_CONFIG_FILES([lib/audio_analysis/meter/Makefile])
 AC_CONFIG_FILES([lib/audio_analysis/spectrogram/Makefile])
 AC_CONFIG_FILES([lib/audio_analysis/waveform/Makefile])
+AC_CONFIG_FILES([lib/atspi/Makefile])
 AC_CONFIG_FILES([lib/gdl/Makefile])
 AC_CONFIG_FILES([lib/gtk/Makefile])
 AC_CONFIG_FILES([lib/menu/Makefile])
@@ -656,7 +663,7 @@ AC_MSG_RESULT([Building opengl support:      $enable_opengl])
 AC_MSG_RESULT([Building libass support:      $enable_libass])
 AC_MSG_RESULT([Building fftw support:        $enable_fftw])
 AC_MSG_RESULT([Building ayyi support:        $enable_ayyi])
-AC_MSG_RESULT([Building dock support:        $enable_dock])
+AC_MSG_RESULT([Building atspi support:       $enable_atspi])
 AC_MSG_RESULT([Building valgrind:            $enable_valgrind])
 AC_MSG_RESULT([Extra debugging:              $enable_debug])
 AC_MSG_RESULT([Building profiling:           $profiling])

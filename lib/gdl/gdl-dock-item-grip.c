@@ -254,6 +254,7 @@ gdl_dock_item_grip_set_property (GObject *object, guint prop_id, const GValue *v
 				if (gdl_dock_item_get_orientation (grip->priv->item) == GTK_ORIENTATION_VERTICAL) {
 					GtkWidget* collapse = gtk_toggle_button_new();
 					gtk_button_set_icon_name((GtkButton*)collapse, "go-next-symbolic");
+					g_object_set(collapse, "accessible-role", GTK_ACCESSIBLE_ROLE_PRESENTATION, NULL);
 					gtk_widget_insert_after (collapse, GTK_WIDGET (grip), NULL);
 					gtk_widget_set_size_request(collapse, 16, 16);
 

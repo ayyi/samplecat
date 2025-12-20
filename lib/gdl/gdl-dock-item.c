@@ -678,6 +678,7 @@ gdl_dock_item_constructor (GType type, guint n_construct_properties, GObjectCons
             gtk_image_set_from_icon_name (GTK_IMAGE (icon), stock_id);
         gtk_box_append (GTK_BOX (hbox), icon);
         gtk_box_append (GTK_BOX (hbox), label);
+        gtk_accessible_update_relation (GTK_ACCESSIBLE(g_object), GTK_ACCESSIBLE_RELATION_LABELLED_BY, label, NULL, -1);
 
         item->priv->notify_label = g_signal_connect (item, "notify::long-name", G_CALLBACK (on_long_name_changed), label);
         item->priv->notify_stock_id = g_signal_connect (item, "notify::stock-id", G_CALLBACK (on_stock_id_changed), icon);

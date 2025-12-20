@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. https://samplecat.orford.org         |
- | copyright (C) 2007-2024 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2007-2026 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -161,27 +161,27 @@ colour_box_new (GtkWidget* parent)
 static void
 colour_box_update ()
 {
-#ifdef GTK4_TODO
 	char colour_string[16];
-	for(int i=PALETTE_SIZE-1;i>=0;i--){
+	for (int i=PALETTE_SIZE-1;i>=0;i--) {
 		GtkWidget* widget = colour_button[i];
-		if (colour_button[i] && strlen(app->config.colour[i])) {
+		bool have_colour = colour_button[i] && strlen(app->config.colour[i]);
+		if (have_colour) {
 			snprintf(colour_string, 16, "#%s", app->config.colour[i]);
-			GdkColor colour;
-			if (!gdk_color_parse(colour_string, &colour)) {
-				warnprintf("%s(): %i: parsing of colour string failed. %s\n", __func__, i, colour_string);
+			GdkRGBA colour;
+			if (!gdk_rgba_parse(&colour, colour_string)) {
+				pwarn("%i: parsing of colour string failed. %s", i, colour_string);
 				continue;
 			}
-			dbg(2, "%i colour: %x %x %x", i, colour.red, colour.green, colour.blue);
+			dbg(2, "%i colour: %.2f %.2f %.2f", i, colour.red, colour.green, colour.blue);
 
-			//if(colour.red != colour_button[i]->style->bg[GTK_STATE_NORMAL].red) 
-				gtk_widget_modify_bg(colour_button[i], GTK_STATE_NORMAL, &colour);
-
-			gtk_widget_show(widget);
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+			gtk_color_chooser_set_rgba(GTK_COLOR_CHOOSER(colour_button[i]), &colour);
+#pragma GCC diagnostic pop
 		}
-		else gtk_widget_set_visible(widget, false);
+
+		gtk_widget_set_visible(widget, have_colour);
 	}
-#endif
 }
 
 

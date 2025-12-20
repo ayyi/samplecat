@@ -28,6 +28,7 @@
 #include "samplecat/samplecat.h"
 #include "icon/utils.h"
 #include "application.h"
+#include "atspi.h"
 #include "keys.h"
 #include "layout.h"
 #include "views/dock_h.h"
@@ -143,6 +144,10 @@ main (int argc, char* argv[])
 	((AGlActor*)app->scene)->on_event = on_event;
 
 	g_idle_add(app->temp_view ? show_directory : add_content, NULL);
+
+#ifdef USE_ATSPI
+	atspi_register(app->scene);
+#endif
 
 	g_main_loop_run(agl_main_loop_new(window->window));
 
