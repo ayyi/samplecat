@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
- | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
- | copyright (C) 2020-2023 Tim Orford <tim@orford.org>                  |
+ | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
+ | copyright (C) 2020-2026 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -96,7 +96,7 @@ next_test ()
 		dbg(2, "test %i of %i.", TEST.current.test + 1, TEST.n_tests);
 
 		if (TEST.before_each) {
-			void ready ()
+			void ready (void* _)
 			{
 				g_timeout_add(1, run_test, tests[TEST.current.test]);
 			}
@@ -109,7 +109,7 @@ next_test ()
 	} else {
 		printf("finished all. passed=%s %i %s failed=%s %i %s\n", ayyi_green, TEST.n_passed, ayyi_white, (TEST.n_failed ? ayyi_red : ayyi_white), TEST.n_failed, ayyi_white);
 		teardown();
-		g_timeout_add(TEST.n_failed ? 4000 : 1000, __exit, NULL);
+		g_timeout_add(TEST.n_failed ? 4000 : 1000, (GSourceFunc)__exit, NULL);
 	}
 }
 

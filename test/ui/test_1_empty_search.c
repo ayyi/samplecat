@@ -34,7 +34,7 @@ test_1_empty_search ()
 			FINISH_TEST;
 		}
 
-		wait_for(is_empty, then, NULL);
+		wait_for((ReadyTest)is_empty, then, NULL);
 
 		return G_SOURCE_REMOVE;
 	}

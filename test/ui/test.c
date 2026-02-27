@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
- | copyright (C) 2020-2025 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2020-2026 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -202,7 +202,7 @@ void
 setup (char* argv[])
 {
 	TEST.n_tests = G_N_ELEMENTS(tests);
-	TEST.before_each = window_is_open;
+	TEST.before_each = (ReadyTest)window_is_open;
 
 	application_main (0, argv);
 }

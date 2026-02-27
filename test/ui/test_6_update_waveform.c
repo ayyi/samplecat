@@ -37,7 +37,7 @@ test_6_update_waveform ()
 		assert(samplecat.model->selection, "model has no selection");
 		orig_sample = g_strdup(samplecat.model->selection->name);
 
-		bool selection_changed ()
+		bool selection_changed (void* _)
 		{
 			return strcmp(orig_sample, samplecat.model->selection->name);
 		}
@@ -72,10 +72,10 @@ test_6_update_waveform ()
 				FINISH_TEST;
 			}
 
-			wait_for(waveform_match, on_match, "Waveform match");
+			wait_for((ReadyTest)waveform_match, on_match, "Waveform match");
 		}
 
 		wait_for(selection_changed, on_change, "Selection change");
 	}
-	g_idle_add_once(idle, NULL);
+	g_idle_add_once((GSourceOnceFunc)idle, NULL);
 }

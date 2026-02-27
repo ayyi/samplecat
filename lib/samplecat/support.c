@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
- | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
- | copyright (C) 2007-2023 Tim Orford <tim@orford.org>                  |
+ | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
+ | copyright (C) 2007-2026 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -67,7 +67,7 @@ is_dir (const char *path)
 	return lstat(path, &info) == 0 && S_ISDIR(info.st_mode);
 }
 
-gboolean
+bool
 dir_is_empty (const char *path)
 {
 
@@ -76,7 +76,7 @@ dir_is_empty (const char *path)
 	DIR* dp = opendir (path);
 
 	int n = 0;
-	while(readdir(dp) != NULL){
+	while (readdir(dp) != NULL) {
 		n++;
 		if (n > 2) {
 			closedir(dp);
@@ -109,7 +109,7 @@ file_extension (const char* path, char* extn)
 }
 
 
-gboolean
+bool
 can_use (GList* l, const char* d)
 {
 	for (;l;l=l->next) {
@@ -121,7 +121,7 @@ can_use (GList* l, const char* d)
 }
 
 
-gboolean
+bool
 mimestring_is_unsupported (char* mime_string)
 {
 	MIME_type* mime_type = mime_type_lookup(mime_string);
@@ -129,7 +129,7 @@ mimestring_is_unsupported (char* mime_string)
 }
 
 
-gboolean
+bool
 mimetype_is_unsupported (MIME_type* mime_type, char* mime_string)
 {
 	g_return_val_if_fail(mime_type, true);
@@ -137,14 +137,14 @@ mimetype_is_unsupported (MIME_type* mime_type, char* mime_string)
 	char* supported[] = {
 		"application/ogg",
 	};
-	int i; for(i=0;i<G_N_ELEMENTS(supported);i++){
-		if(!strcmp(mime_string, supported[i])){
+	for (int i=0;i<G_N_ELEMENTS(supported);i++) {
+		if (!strcmp(mime_string, supported[i])) {
 			dbg(2, "mimetype ok: %s", mime_string);
 			return false;
 		}
 	}
 
-	if(strcmp(mime_type->media_type, "audio") && strcmp(mime_type->media_type, "video")){
+	if (strcmp(mime_type->media_type, "audio") && strcmp(mime_type->media_type, "video")) {
 		return true;
 	}
 
@@ -158,8 +158,8 @@ mimetype_is_unsupported (MIME_type* mime_type, char* mime_string)
 		"audio/x-musepack",
 		"audio/x-mpegurl",
 	};
-	for(i=0;i<G_N_ELEMENTS(unsupported);i++){
-		if(!strcmp(mime_string, unsupported[i])){
+	for (int i=0;i<G_N_ELEMENTS(unsupported);i++) {
+		if (!strcmp(mime_string, unsupported[i])) {
 			return true;
 		}
 	}
@@ -188,11 +188,11 @@ get_iconbuf_from_mimetype (char* mimetype)
 }
 
 
-gboolean
+bool
 ensure_config_dir ()
 {
 	static char* path = NULL;
-	if(!path) path = g_strdup_printf("%s/.config/" PACKAGE, g_get_home_dir()); // is static - don't free.
+	if (!path) path = g_strdup_printf("%s/.config/" PACKAGE, g_get_home_dir()); // is static - don't free.
 
 	return (!g_mkdir_with_parents(path, 488));
 }

@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
- | copyright (C) 2007-2025 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2007-2026 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -105,7 +105,7 @@ static void         listview__highlight_playing_by_ref(GtkTreeRowReference*);
 static void         listview__edit_row                (GSimpleAction*, GVariant*, gpointer);
 static void         listview__reset_colours           (GSimpleAction*, GVariant*, gpointer);
 static void         library__update_selected          (GSimpleAction*, GVariant*, gpointer);
-static void         library__delete_selected          ();
+static void         library__delete_selected          (GSimpleAction*, GVariant*, gpointer);
 
 static bool         listview_item_set_colour          (GtkTreePath*, unsigned colour_index);
 
@@ -511,7 +511,7 @@ library__on_row_clicked (GtkGestureClick* gesture, int n_press, double x, double
 					Sample* sample = samplecat_list_store_get_sample_by_path(path);
 					if (play->sample) {
 						(sample->id == play->sample->id)
-							? player_stop(sample)
+							? player_stop()
 							: application_play(sample);
 					} else {
 						application_play(sample);
@@ -1008,7 +1008,7 @@ listview__on_keywords_edited (GtkCellRendererText* cell, gchar* path_string, gch
 
 
 static void
-library__delete_selected ()
+library__delete_selected (GSimpleAction* action, GVariant* v, gpointer data)
 {
 	GtkTreeModel* model = gtk_tree_view_get_model(GTK_TREE_VIEW(instance->treeview));
 

@@ -17,7 +17,7 @@ test_7_search ()
 
 		search("piano");
 
-		bool has_one_item ()
+		bool has_one_item (void* _)
 		{
 			GtkTreeView* library = (GtkTreeView*)find_widget_by_type((GtkWidget*)find_panel ("Library"), GTK_TYPE_TREE_VIEW);
 			#pragma GCC diagnostic ignored "-Wdeprecated-declarations"

@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
- | copyright (C) 2007-2025 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2007-2026 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -69,11 +69,11 @@ clear_filter (GSimpleAction* action, GVariant* parameter, gpointer app)
 
 static GActionEntry app_entries[] =
 {
-	{ "play-all", application_play_all, },
-	{ "player-stop", player_stop, },
-	{ "player-play", application_play_selected, },
+	{ "play-all", (ActionFn)application_play_all, },
+	{ "player-stop", (ActionFn)player_stop, },
+	{ "player-play", (ActionFn)application_play_selected, },
 	{ "player-pause", pause_toggle_activate},
-	{ "player-next", next_activate},
+	{ "player-next", (ActionFn)next_activate},
 #ifdef GTK4_TODO
 	{ "clear-filter", clear_filter, }
 #endif
@@ -342,8 +342,8 @@ application_set_ready ()
 			GtkWidget* library = find_widget_by_type_deep((GtkWidget*)find_panel("Library"), GTK_TYPE_TREE_VIEW);
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 			GtkTreeViewColumn* column = gtk_tree_view_get_column(GTK_TREE_VIEW(library), 1);
-#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 			g_value_set_int(&option->val, gtk_tree_view_column_get_width(column));
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 		}
 		ctx->options[CONFIG_COL1_WIDTH] = config_option_new_int("col1_width", get_col1_width, 10, 1024);
 
@@ -390,7 +390,7 @@ _set_auditioner ()
 
 	const static Auditioner a_null = {
 		&auditioner_nullC,
-		&auditioner_null,
+		(void (*) (ErrorCallback, gpointer))&auditioner_null,
 		&auditioner_null,
 		&auditioner_nullS,
 		NULL,

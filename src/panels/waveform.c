@@ -252,7 +252,7 @@ show_waveform (bool enable)
 	if (window.waveform) {
 		gtk_widget_set_visible(gtk_widget_get_parent(window.waveform), enable);
 		if (enable) {
-			gboolean show_wave ()
+			gboolean show_wave (void* _)
 			{
 				Sample* s;
 				if ((s = samplecat.model->selection)) {

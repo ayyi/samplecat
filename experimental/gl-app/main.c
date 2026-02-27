@@ -149,7 +149,7 @@ main (int argc, char* argv[])
 	atspi_register(app->scene);
 #endif
 
-	g_main_loop_run(agl_main_loop_new(window->window));
+	g_main_loop_run(agl_main_loop_new());
 
 	if (!app->temp_view) {
 		save_settings();

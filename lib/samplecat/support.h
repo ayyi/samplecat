@@ -13,6 +13,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <stdbool.h>
 #include <gdk-pixbuf/gdk-pixbuf.h>
 #include "utils/ayyi_utils.h"
 #include "file_manager/mimetype.h"
@@ -38,7 +39,7 @@ void         p_                        (int level, const char* format, ...);
 gboolean     file_exists               (const char*);
 time_t       file_mtime                (const char*);
 gboolean     is_dir                    (const char*);
-gboolean     dir_is_empty              (const char*);
+bool         dir_is_empty              (const char*);
 void         file_extension            (const char*, char* extn);
 
 bool         mimestring_is_unsupported (char*);
