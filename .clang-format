@@ -1,0 +1,11 @@
+BasedOnStyle: GNU
+IndentWidth: 4
+TabWidth: 4
+AlignAfterOpenBracket: false
+ColumnLimit: 400
+BreakBeforeBraces: Linux
+UseTab: ForContinuationAndIndentation
+IndentCaseLabels: true
+AllowShortEnumsOnASingleLine: false
+SortIncludes: false
+PointerBindsToType: true

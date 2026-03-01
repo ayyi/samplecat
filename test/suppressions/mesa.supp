@@ -551,3 +551,21 @@
    ...
    fun:eglCreateContext
 }
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Cond
+   ...
+   fun:iris_draw_vbo
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Cond
+   ...
+   fun:iris_set_sampler_views
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Value8
+   ...
+   fun:xcb_send_request
+}

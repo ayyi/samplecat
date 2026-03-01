@@ -38,6 +38,7 @@ typedef enum {
 
 typedef struct _Samplecat         Samplecat;
 typedef struct _SamplecatModel    SamplecatModel;
+typedef struct _SamplecatListStore SamplecatListStore;
 typedef struct _Sample            Sample;
 typedef struct _SamplecatBackend  SamplecatBackend;
 typedef struct _SamplecatDBConfig SamplecatDBConfig;
@@ -49,11 +50,7 @@ typedef void   (*ErrorCallback)  (GError*, gpointer);
 
 struct _Samplecat {
    SamplecatModel*      model;
-#ifdef __GTK_H__
-   GtkListStore*        store;
-#else
-   gpointer             store;
-#endif
+   SamplecatListStore*  store;
    Logger*              logger;
 };
 #ifdef __samplecat_c__

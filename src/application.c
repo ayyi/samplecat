@@ -223,12 +223,6 @@ application_instance_init (Application* self)
 	void icon_theme_changed(Application* application, char* theme, gpointer data){ application_search(); }
 	g_signal_connect((gpointer)app, "icon-theme", G_CALLBACK(icon_theme_changed), NULL);
 
-	void listmodel__sample_modified (SamplecatModel* m, Sample* sample, int prop, void* val, gpointer _app)
-	{
-		samplecat_list_store_on_sample_modified((SamplecatListStore*)samplecat.store, sample, prop, val);
-	}
-	g_signal_connect((gpointer)samplecat.model, "sample-changed", G_CALLBACK(listmodel__sample_modified), app);
-
 	void log_message (GObject* o, char* message, gpointer _)
 	{
 		dbg(1, "---> %s", message);
@@ -262,14 +256,16 @@ application_instance_init (Application* self)
 	am_promise_add_callback(play->ready, menu_on_audio_ready, NULL);
 
 #ifdef DEBUG
-	char** actions = gtk_application_list_action_descriptions (GTK_APPLICATION(self));
-	if (!actions) dbg(0, "no actions found with accelerators");
-	printf("actions:\n");
-	char* action;
-	for (int i=0;(action = actions[i]);i++) {
-		printf("  * %s\n", action);
+	if (_debug_) {
+		char** actions = gtk_application_list_action_descriptions (GTK_APPLICATION(self));
+		g_assert(actions);
+		printf("actions:\n");
+		char* action;
+		for (int i=0;(action = actions[i]);i++) {
+			printf("  * %s\n", action);
+		}
+		g_strfreev(actions);
 	}
-	g_strfreev(actions);
 #endif
 }
 
@@ -339,11 +335,22 @@ application_set_ready ()
 
 		void get_col1_width (ConfigOption* option)
 		{
-			GtkWidget* library = find_widget_by_type_deep((GtkWidget*)find_panel("Library"), GTK_TYPE_TREE_VIEW);
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-			GtkTreeViewColumn* column = gtk_tree_view_get_column(GTK_TREE_VIEW(library), 1);
-			g_value_set_int(&option->val, gtk_tree_view_column_get_width(column));
-#pragma GCC diagnostic warning "-Wdeprecated-declarations"
+			GdlDockItem* panel = find_panel("Library");
+			if (!panel) return;
+
+			GtkWidget* library = find_widget_by_type_deep((GtkWidget*)panel, GTK_TYPE_COLUMN_VIEW);
+			if (!library) return;
+
+			int width = 0;
+			if (GTK_IS_COLUMN_VIEW(library)) {
+				GListModel* columns = gtk_column_view_get_columns(GTK_COLUMN_VIEW(library));
+				GtkColumnViewColumn* column = g_list_model_get_item(columns, 1);
+				if (column) {
+					width = gtk_column_view_column_get_fixed_width(column);
+					g_object_unref(column);
+				}
+			}
+			g_value_set_int(&option->val, width);
 		}
 		ctx->options[CONFIG_COL1_WIDTH] = config_option_new_int("col1_width", get_col1_width, 10, 1024);
 
@@ -475,7 +482,7 @@ application_search ()
 
 	g_signal_emit_by_name(app, "search-starting");
 
-	samplecat_list_store_do_search((SamplecatListStore*)samplecat.store);
+	samplecat_list_store_do_search();
 }
 
 
@@ -555,15 +562,14 @@ application_play_all ()
 		return;
 	}
 
-	gboolean foreach_func (GtkTreeModel* model, GtkTreePath* path, GtkTreeIter* iter, gpointer user_data)
-	{
-		//ADD_TO_QUEUE(samplecat_list_store_get_sample_by_path(path));
-		play->queue = g_list_append(play->queue, samplecat_list_store_get_sample_by_path(path)); // there is a ref already added, so another one is not needed when adding to the queue.
-		return G_SOURCE_CONTINUE;
+	/* Build queue by iterating GListModel-backed store */
+	guint n_items = g_list_model_get_n_items (G_LIST_MODEL (samplecat.store));
+	for (guint i = 0; i < n_items; i++) {
+		Sample *s = samplecat_list_store_get_sample_by_index (i);
+		if (s) {
+			play->queue = g_list_append (play->queue, s); /* s is already ref'ed */
+		}
 	}
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-	gtk_tree_model_foreach(GTK_TREE_MODEL(samplecat.store), foreach_func, NULL);
-#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 
 	if (play->queue) {
 		if (play->auditioner->play_all) play->auditioner->play_all(); // TODO remove this fn.

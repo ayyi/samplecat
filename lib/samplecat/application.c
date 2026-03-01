@@ -402,7 +402,7 @@ samplecat_application_add_file (const char* path, ScanResults* result)
 	dbg(1, "       %s", sample->sample_dir);
 	dbg(1, "       %s", sample->full_path);
 
-	samplecat_list_store_add((SamplecatListStore*)samplecat.store, sample);
+	samplecat_list_store_add(sample);
 
 	result->n_added++;
 

@@ -11,391 +11,270 @@
  */
 
 #include "config.h"
-#include <glib.h>
+#include <gio/gio.h>
 #include <glib-object.h>
-#include <gtk/gtk.h>
-#include <gdk-pixbuf/gdk-pixbuf.h>
+#include <debug/debug.h>
+#include <samplecat.h>
+#include <samplecat/list_store.h>
+#include <samplecat/model.h>
+#include <samplecat/sample_row.h>
 #include <file_manager/mimetype.h>
 #include <file_manager/pixmaps.h>
-#include <debug/debug.h>
-#include <db/db.h>
-#include <samplecat.h>
-#include <list_store.h>
 
-#define SAMPLECAT_TYPE_LIST_STORE            (samplecat_list_store_get_type ())
-#define SAMPLECAT_LIST_STORE(obj)            (G_TYPE_CHECK_INSTANCE_CAST ((obj), SAMPLECAT_TYPE_LIST_STORE, SamplecatListStore))
-#define SAMPLECAT_LIST_STORE_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST ((klass), SAMPLECAT_TYPE_LIST_STORE, SamplecatListStoreClass))
-#define SAMPLECAT_IS_LIST_STORE(obj)         (G_TYPE_CHECK_INSTANCE_TYPE ((obj), SAMPLECAT_TYPE_LIST_STORE))
-#define SAMPLECAT_IS_LIST_STORE_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), SAMPLECAT_TYPE_LIST_STORE))
-#define SAMPLECAT_LIST_STORE_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS ((obj), SAMPLECAT_TYPE_LIST_STORE, SamplecatListStoreClass))
+static void samplecat_list_store_list_model_init (GListModelInterface* iface);
+static void samplecat_list_store_on_sample_modified (SamplecatModel*, Sample*, gint prop, void* val, gpointer);
 
-#define _gtk_tree_row_reference_free0(var) ((var == NULL) ? NULL : (var = (gtk_tree_row_reference_free (var), NULL)))
-#define _gtk_tree_path_free0(var) ((var == NULL) ? NULL : (var = (gtk_tree_path_free (var), NULL)))
+G_DEFINE_TYPE_WITH_CODE (SamplecatListStore, samplecat_list_store, G_TYPE_OBJECT, G_IMPLEMENT_INTERFACE (G_TYPE_LIST_MODEL, samplecat_list_store_list_model_init))
 
-static gpointer samplecat_list_store_parent_class = NULL;
-
-enum  {
-	SAMPLECAT_LIST_STORE_DUMMY_PROPERTY
-};
-
-static void samplecat_list_store_finalize (GObject*);
+static void samplecat_list_store_clear (SamplecatListStore *self);
 
 
-SamplecatListStore*
-samplecat_list_store_construct (GType object_type)
+static GType
+samplecat_list_store_get_item_type (GListModel* list)
 {
-	SamplecatListStore* self = (SamplecatListStore*) g_object_new (object_type, NULL);
-
-	GType types[14] = {
-		GDK_TYPE_PIXBUF,
-		G_TYPE_INT,
-		G_TYPE_STRING,
-		G_TYPE_STRING,
-		G_TYPE_STRING,
-		GDK_TYPE_PIXBUF,
-		G_TYPE_STRING,
-		G_TYPE_STRING,
-		G_TYPE_INT,
-		G_TYPE_STRING,
-		G_TYPE_FLOAT,
-		G_TYPE_INT,
-		G_TYPE_POINTER,
-		G_TYPE_INT64,
-	};
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-	gtk_list_store_set_column_types ((GtkListStore*) self, 14, types);
-#pragma GCC diagnostic warning "-Wdeprecated-declarations"
-
-	return self;
+	(void)list;
+	return SAMPLECAT_TYPE_SAMPLE_ROW;
 }
 
+static guint
+samplecat_list_store_get_n_items (GListModel* list)
+{
+	SamplecatListStore* self = SAMPLECAT_LIST_STORE (list);
+	return self->rows ? g_list_model_get_n_items (G_LIST_MODEL (self->rows)) : 0;
+}
+
+static gpointer
+samplecat_list_store_get_item (GListModel* list, guint position)
+{
+	SamplecatListStore* self = SAMPLECAT_LIST_STORE (list);
+	if (!self->rows) return NULL;
+	return g_list_model_get_item (G_LIST_MODEL (self->rows), position);
+}
+
+static void
+samplecat_list_store_list_model_init (GListModelInterface* iface)
+{
+	iface->get_item_type = samplecat_list_store_get_item_type;
+	iface->get_n_items   = samplecat_list_store_get_n_items;
+	iface->get_item      = samplecat_list_store_get_item;
+}
+
+static void
+samplecat_list_store_dispose (GObject* object)
+{
+	SamplecatListStore* self = SAMPLECAT_LIST_STORE (object);
+
+	g_clear_object (&self->playing);
+	g_clear_object (&self->rows);
+
+	G_OBJECT_CLASS (samplecat_list_store_parent_class)->dispose (object);
+}
+
+static void
+samplecat_list_store_class_init (SamplecatListStoreClass* klass)
+{
+	GObjectClass* object_class = G_OBJECT_CLASS (klass);
+	object_class->dispose = samplecat_list_store_dispose;
+
+	g_signal_new ("content-changed", SAMPLECAT_TYPE_LIST_STORE, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_VOID__VOID, G_TYPE_NONE, 0);
+}
+
+static void
+samplecat_list_store_init (SamplecatListStore* self)
+{
+	self->rows = g_list_store_new (SAMPLECAT_TYPE_SAMPLE_ROW);
+	self->row_count = 0;
+	self->playing = NULL;
+
+	g_signal_connect((gpointer)samplecat.model, "sample-changed", G_CALLBACK(samplecat_list_store_on_sample_modified), NULL);
+}
+
+/* Public API */
 
 SamplecatListStore*
 samplecat_list_store_new (void)
 {
-	return samplecat_list_store_construct (SAMPLECAT_TYPE_LIST_STORE);
+	return g_object_new (SAMPLECAT_TYPE_LIST_STORE, NULL);
 }
 
-
-void
-samplecat_list_store_clear_ (SamplecatListStore* self)
+gint
+samplecat_list_store_get_row_count ()
 {
-	PF;
-	GtkTreeIter iter;
-	while (gtk_tree_model_get_iter_first(GTK_TREE_MODEL(self), &iter)) {
-		GdkPixbuf* pixbuf;
-		Sample* sample;
-		gtk_tree_model_get(GTK_TREE_MODEL(self), &iter, COL_OVERVIEW, &pixbuf, COL_SAMPLEPTR, &sample, -1);
-		gtk_list_store_remove((GtkListStore*)self, &iter);
-		if (pixbuf) g_object_unref(pixbuf);
-		if (sample) sample_unref(sample);
+	return samplecat.store->row_count;
+}
+
+SampleRow*
+samplecat_list_store_get_row (guint position)
+{
+	g_return_val_if_fail (samplecat.store->rows, NULL);
+
+	if (position >= g_list_model_get_n_items (G_LIST_MODEL (samplecat.store->rows))) {
+		return NULL;
 	}
 
+	return SAMPLECAT_SAMPLE_ROW (g_list_model_get_item (G_LIST_MODEL (samplecat.store->rows), position));
+}
+
+Sample*
+samplecat_list_store_get_sample_by_index (guint position)
+{
+	SampleRow* row = samplecat_list_store_get_row (position);
+	if (!row) return NULL;
+
+	Sample* sample = sample_row_get_sample (row);
+	g_object_unref (row);
+	return sample;
+}
+
+static void
+samplecat_list_store_clear (SamplecatListStore* self)
+{
+	g_return_if_fail (SAMPLECAT_IS_LIST_STORE (self));
+
+	guint old_count = self->rows ? g_list_model_get_n_items (G_LIST_MODEL (self->rows)) : 0;
+
+	if (self->rows) {
+		g_list_store_remove_all (self->rows);
+	}
 	self->row_count = 0;
+
+	g_list_model_items_changed (G_LIST_MODEL (self), 0, old_count, 0);
+	g_signal_emit_by_name (self, "content-changed");
 }
 
+static void
+samplecat_list_store_append_row (Sample* sample)
+{
+	SampleRow* row = sample_row_new (sample);
+	samplecat_list_store_set_row_ref (sample, row);
+	g_list_store_append (samplecat.store->rows, row);
+	g_object_unref (row);
+}
 
 void
-samplecat_list_store_add (SamplecatListStore* self, Sample* sample)
+samplecat_list_store_add (Sample* sample)
 {
-	if (!samplecat.store) return;
-	g_return_if_fail(sample);
+	g_return_if_fail (sample);
 
-#if 1
-	/* these has actualy been checked _before_ here
-	 * but backend may 'inject' mime types. ?!
-	 */
-	if (!sample->mimetype) {
-		dbg(0,"no mimetype given -- this should NOT happen: fix backend");
+	guint old_count = g_list_model_get_n_items (G_LIST_MODEL (samplecat.store->rows));
+	samplecat_list_store_append_row (sample);
+	samplecat.store->row_count = g_list_model_get_n_items (G_LIST_MODEL (samplecat.store->rows));
+
+	g_list_model_items_changed (G_LIST_MODEL (samplecat.store), old_count, 0, 1);
+	g_signal_emit_by_name (samplecat.store, "content-changed");
+}
+
+void
+samplecat_list_store_remove_at (guint position)
+{
+	g_return_if_fail (samplecat.store->rows);
+
+	if (position >= g_list_model_get_n_items (G_LIST_MODEL (samplecat.store->rows))) {
 		return;
 	}
-	if (mimestring_is_unsupported(sample->mimetype)) {
-		dbg(0, "unsupported MIME type: %s", sample->mimetype);
-		return;
-	}
-#endif
 
-	if (!sample->sample_rate) {
-		// needed w/ tracker backend.
-		sample_get_file_info(sample);
-	}
-
-	char samplerate_s[32]; samplerate_format(samplerate_s, sample->sample_rate);
-	char length_s[64]; format_smpte(length_s, sample->length);
-
-#ifdef USE_AYYI
-	GdkPixbuf* ayyi_icon = NULL;
-
-	//is the file loaded in the current Ayyi song?
-	if (ayyi.got_shm) {
-		gchar* fullpath = g_build_filename(sample->sample_dir, sample->name, NULL);
-		if (ayyi_song__have_file(fullpath)) {
-			dbg(1, "sample is used in current project TODO set icon");
+	SampleRow* row = SAMPLECAT_SAMPLE_ROW (g_list_model_get_item (G_LIST_MODEL (samplecat.store->rows), position));
+	if (row) {
+		Sample* sample = row->sample;
+		if (sample) {
+			if (sample->row_ref == row) {
+				g_clear_object (&sample->row_ref);
+			}
 		}
-		g_free(fullpath);
-	}
-#endif
-
-#define NSTR(X) (X?X:"")
-
-	// icon (only shown if the sound file is currently available)
-	GdkPixbuf* iconbuf = sample->online ? get_iconbuf_from_mimetype(sample->mimetype) : NULL;
-
-	GtkTreeIter iter;
-	gtk_list_store_append(samplecat.store, &iter);
-	gtk_list_store_set(samplecat.store, &iter,
-			COL_ICON,       iconbuf,
-			COL_NAME,       sample->name,
-			COL_FNAME,      sample->sample_dir,
-			COL_IDX,        sample->id,
-			COL_MIMETYPE,   sample->mimetype,
-			COL_KEYWORDS,   NSTR(sample->keywords),
-			COL_PEAKLEVEL,  sample->peaklevel,
-			COL_OVERVIEW,   sample->overview,
-			COL_LENGTH,     length_s,
-			COL_SAMPLERATE, samplerate_s,
-			COL_CHANNELS,   sample->channels,
-			COL_COLOUR,     sample->colour_index,
-#ifdef USE_AYYI
-			COL_AYYI_ICON,  ayyi_icon,
-#endif
-			COL_SAMPLEPTR,  sample,
-			COL_LEN,        sample->length,
-			-1);
-
-	GtkTreePath* treepath;
-	if ((treepath = gtk_tree_model_get_path(GTK_TREE_MODEL(samplecat.store), &iter))) {
-		sample->row_ref = gtk_tree_row_reference_new(GTK_TREE_MODEL(samplecat.store), treepath);
-		gtk_tree_path_free(treepath);
+		g_object_unref (row);
 	}
 
-	g_return_if_fail (self);
-	if (sample->row_ref && sample->online) {
-		request_analysis(sample);
-	}
+	g_list_store_remove (samplecat.store->rows, position);
+	samplecat.store->row_count = g_list_model_get_n_items (G_LIST_MODEL (samplecat.store->rows));
 
-	sample_ref (sample);
+	g_list_model_items_changed (G_LIST_MODEL (samplecat.store), position, 1, 0);
+	g_signal_emit_by_name (samplecat.store, "content-changed");
 }
 
-
-void
-samplecat_list_store_on_sample_modified (SamplecatListStore* self, Sample* sample, gint prop, void* val)
+guint
+samplecat_list_store_find_sample_index (Sample* sample)
 {
-	g_return_if_fail (self != NULL);
-	g_return_if_fail (sample->row_ref);
-
-	GtkTreePath* path = gtk_tree_row_reference_get_path(sample->row_ref);
-	if (!path) return;
-	GtkTreeIter iter;
-	gtk_tree_model_get_iter(GTK_TREE_MODEL(samplecat.store), &iter, path);
-	gtk_tree_path_free(path);
-
-	dbg(1, "prop=%i %s", prop, samplecat_model_print_col_name(prop));
-	switch (prop) {
-		case COL_ICON: // online/offline, mtime
-			{
-				GdkPixbuf* iconbuf = NULL;
-				if (sample->online) {
-					MIME_type* mime_type = mime_type_lookup(sample->mimetype);
-					type_to_icon(mime_type);
-					if (!mime_type->image) dbg(0, "no icon.");
-					iconbuf = mime_type->image->sm_pixbuf;
-				}
-				gtk_list_store_set(samplecat.store, &iter, COL_ICON, iconbuf, -1);
-			}
-			break;
-		case COL_KEYWORDS:
-			gtk_list_store_set(samplecat.store, &iter, COL_KEYWORDS, (char*)val, -1);
-			break;
-		case COL_OVERVIEW:
-			gtk_list_store_set((GtkListStore*)self, &iter, COL_OVERVIEW, sample->overview, -1);
-			break;
-		case COL_COLOUR:
-			gtk_list_store_set(samplecat.store, &iter, prop, *((guint*)val), -1);
-			break;
-		case COL_PEAKLEVEL:
-			gtk_list_store_set((GtkListStore*)self, &iter, COL_PEAKLEVEL, sample->peaklevel, -1);
-			break;
-		case COL_FNAME:
-			gtk_list_store_set(samplecat.store, &iter, COL_FNAME, sample->sample_dir, -1);
-			break;
-		case COL_X_EBUR:
-		case COL_X_NOTES:
-			// nothing to do.
-			break;
-		case COL_ALL:
-		case -1: // deprecated
-			{
-				//char* metadata = sample_get_metadata_str(s);
-
-				char samplerate_s[32]; samplerate_format(samplerate_s, sample->sample_rate);
-				char length_s[64]; format_smpte(length_s, sample->length);
-				gtk_list_store_set((GtkListStore*)samplecat.store, &iter,
-						COL_CHANNELS, sample->channels,
-						COL_SAMPLERATE, samplerate_s,
-						COL_LENGTH, length_s,
-						COL_PEAKLEVEL, sample->peaklevel,
-						COL_OVERVIEW, sample->overview,
-						-1);
-				dbg(1, "file info updated.");
-				//if(metadata) g_free(metadata);
-			}
-			break;
-		default:
-			dbg(0, "property not handled %i", prop);
-			break;
+	guint n = g_list_model_get_n_items (G_LIST_MODEL (samplecat.store->rows));
+	for (guint i = 0; i < n; i++) {
+		SampleRow* row = SAMPLECAT_SAMPLE_ROW (g_list_model_get_item (G_LIST_MODEL (samplecat.store->rows), i));
+		if (!row) continue;
+		Sample *s = row->sample;
+		bool match = (s == sample) || (s && sample && s->id == sample->id);
+		g_object_unref (row);
+		if (match) {
+			return i;
+		}
 	}
+	return G_MAXUINT;
 }
 
+static void
+samplecat_list_store_on_sample_modified (SamplecatModel* _, Sample* sample, gint prop, void* val, gpointer __)
+{
+	g_return_if_fail (sample);
+
+	guint idx = samplecat_list_store_find_sample_index (sample);
+	if (idx == G_MAXUINT) {
+		return;
+	}
+
+	/* Notify views that the row changed */
+	/*
+	 *  GListModel itself does not report changes to individual items. It only reports changes to the list membership.
+	 *  Hence this signal indicates that one row was removed and added
+	 */
+	g_list_model_items_changed (G_LIST_MODEL (samplecat.store), idx, 1, 1);
+
+	/* Playing colour tracking */
+	if (prop == COL_ICON || prop == COL_COLOUR || prop == COL_KEYWORDS || prop == COL_OVERVIEW || prop == COL_FNAME || prop == COL_PEAKLEVEL) {
+		/* already notified above; nothing else to do */
+	}
+
+	(void)val;
+}
 
 void
-samplecat_list_store_do_search (SamplecatListStore* self)
+samplecat_list_store_set_row_ref (Sample* sample, SampleRow* row)
 {
-	g_return_if_fail (self);
+	g_return_if_fail (sample);
+	g_return_if_fail (SAMPLECAT_IS_SAMPLE_ROW (row));
 
-	samplecat_list_store_clear_(self);
+	g_clear_object (&sample->row_ref);
+	sample->row_ref = g_object_ref (row);
+}
+
+void
+samplecat_list_store_do_search ()
+{
+	samplecat_list_store_clear (samplecat.store);
 
 	int n_results = 0;
-	if (!samplecat.model->backend.search_iter_new(&n_results)) {
+	if (!samplecat.model->backend.search_iter_new (&n_results)) {
 		return;
 	}
 
 	int row_count = 0;
 	unsigned long* lengths;
 	Sample* result;
-	while ((result = samplecat.model->backend.search_iter_next(&lengths)) && row_count < LIST_STORE_MAX_ROWS) {
-		Sample* s = sample_dup(result);
-		samplecat_list_store_add(self, s);
-		sample_unref(s);
+	while ((result = samplecat.model->backend.search_iter_next (&lengths)) && row_count < LIST_STORE_MAX_ROWS) {
+		Sample* s = sample_dup (result);
+		samplecat_list_store_add (s);
+		sample_unref (s);
 		row_count++;
 	}
 
-	samplecat.model->backend.search_iter_free();
+	samplecat.model->backend.search_iter_free ();
 
-	((SamplecatListStore*)samplecat.store)->row_count = MAX(n_results, row_count);
+	samplecat.store->row_count = MAX (n_results, row_count);
 
-	if (!samplecat.model->selection) {
-		GtkTreeIter iter;
-		if (gtk_tree_model_get_iter_first(GTK_TREE_MODEL(samplecat.store), &iter)) {
-			Sample* sample = samplecat_list_store_get_sample_by_iter (&iter);
-			samplecat_model_set_selection (samplecat.model, sample);
+	/* Ensure selection exists */
+	if (!samplecat.model->selection && g_list_model_get_n_items (G_LIST_MODEL (samplecat.store->rows)) > 0) {
+		Sample* first = samplecat_list_store_get_sample_by_index (0);
+		if (first) {
+			samplecat_model_set_selection (samplecat.model, first);
+			sample_unref (first);
 		}
 	}
 
-	g_signal_emit_by_name (self, "content-changed");
+	g_signal_emit_by_name (samplecat.store, "content-changed");
 }
-
-
-static void
-samplecat_list_store_class_init (SamplecatListStoreClass * klass)
-{
-	samplecat_list_store_parent_class = g_type_class_peek_parent (klass);
-	G_OBJECT_CLASS (klass)->finalize = samplecat_list_store_finalize;
-	g_signal_new ("content_changed", SAMPLECAT_TYPE_LIST_STORE, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_VOID__VOID, G_TYPE_NONE, 0);
-}
-
-
-static void
-samplecat_list_store_instance_init (SamplecatListStore * self)
-{
-	self->row_count = 0;
-
-	void list_store_on_icon_theme_changed (GtkIconTheme* self, gpointer data)
-	{
-		dbg(0, "TODO reload icons");
-	}
-	if (icon_theme)
-		g_signal_connect(icon_theme, "changed", (GCallback)list_store_on_icon_theme_changed, NULL);
-}
-
-
-static void
-samplecat_list_store_finalize (GObject* obj)
-{
-	SamplecatListStore* self = G_TYPE_CHECK_INSTANCE_CAST (obj, SAMPLECAT_TYPE_LIST_STORE, SamplecatListStore);
-	_gtk_tree_row_reference_free0 (self->playing);
-	G_OBJECT_CLASS (samplecat_list_store_parent_class)->finalize (obj);
-}
-
-
-GType
-samplecat_list_store_get_type (void)
-{
-	static volatile gsize samplecat_list_store_type_id__volatile = 0;
-	if (g_once_init_enter ((gsize*)&samplecat_list_store_type_id__volatile)) {
-		static const GTypeInfo g_define_type_info = { sizeof (SamplecatListStoreClass), (GBaseInitFunc) NULL, (GBaseFinalizeFunc) NULL, (GClassInitFunc) samplecat_list_store_class_init, (GClassFinalizeFunc) NULL, NULL, sizeof (SamplecatListStore), 0, (GInstanceInitFunc) samplecat_list_store_instance_init, NULL };
-		GType samplecat_list_store_type_id = g_type_register_static (GTK_TYPE_LIST_STORE, "SamplecatListStore", &g_define_type_info, 0);
-		g_once_init_leave (&samplecat_list_store_type_id__volatile, samplecat_list_store_type_id);
-	}
-	return samplecat_list_store_type_id__volatile;
-}
-
-
-/** samplecat_list_store_get_sample_by_iter returns a pointer to
- * the sample struct in the data model or NULL if not found.
- * @return needs to be sample_unref();
- */
-Sample*
-samplecat_list_store_get_sample_by_iter (GtkTreeIter* iter)
-{
-	Sample* sample;
-	gtk_tree_model_get(GTK_TREE_MODEL(samplecat.store), iter, COL_SAMPLEPTR, &sample, -1);
-	if (sample) sample_ref(sample);
-	return sample;
-}
-
-
-/**
- * @return needs to be sample_unref();
- */
-Sample*
-samplecat_list_store_get_sample_by_row_index (int row)
-{
-	GtkTreePath* path = gtk_tree_path_new_from_indices (row, -1);
-	if (path) {
-		Sample* sample = samplecat_list_store_get_sample_by_path(path);
-		gtk_tree_path_free(path);
-		return sample;
-	}
-
-	return NULL;
-}
-
-
-/** samplecat_list_store_get_sample_by_row_ref returns a pointer to
- * the sample struct in the data model or NULL if not found.
- * @return needs to be sample_unref();
- */
-Sample*
-samplecat_list_store_get_sample_by_row_ref (GtkTreeRowReference* ref)
-{
-	GtkTreePath* path;
-	if (!ref || !gtk_tree_row_reference_valid(ref)) return NULL;
-	if (!(path = gtk_tree_row_reference_get_path(ref))) return NULL;
-
-	Sample* sample = samplecat_list_store_get_sample_by_path(path);
-
-	gtk_tree_path_free(path);
-
-	return sample;
-}
-
-
-/** return a reference to the existing sample in the tree.
- * implies sample_ref()
- * @return needs to be sample_unref();
- */
-Sample*
-samplecat_list_store_get_sample_by_path (GtkTreePath* path)
-{
-	GtkTreeModel* model = GTK_TREE_MODEL(samplecat.store);
-	GtkTreeIter iter;
-	if (!gtk_tree_model_get_iter(model, &iter, path)) return NULL;
-
-	Sample* sample = samplecat_list_store_get_sample_by_iter(&iter);
-	if (sample && !sample->row_ref) sample->row_ref = gtk_tree_row_reference_new(GTK_TREE_MODEL(samplecat.store), path);
-
-	return sample;
-}
-
-

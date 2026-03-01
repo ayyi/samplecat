@@ -152,6 +152,38 @@ entry.tagged {
 	padding-left: 4px;
 }
 
+/* Library view: playing row highlight */
+.playing {
+	background-color: rgba(255, 215, 0, 0.20);
+}
+
+.library-view listview > row {
+	padding-top: 1px;
+	padding-bottom: 1px;
+	min-height: 0;
+}
+
+.library-view listview > row > * {
+	padding-top: 1px;
+	padding-bottom: 1px;
+}
+
+.library-colour-swatch {
+	min-width: 32px;
+	min-height: 12px;
+	border-radius: 2px;
+	border: 1px solid rgba(255, 255, 255, 0.35);
+}
+
+.tag-link {
+	text-decoration-line: none;
+	color: inherit;
+}
+
+.tag-link label {
+	text-decoration-line: inherit;
+}
+
 popover > contents {
 	border-radius: 3px;
 }

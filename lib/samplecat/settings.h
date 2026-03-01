@@ -1,18 +1,19 @@
-/**
-* +----------------------------------------------------------------------+
-* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2020 Tim Orford <tim@orford.org>                  |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-*
-*/
-#ifndef __settings_h__
-#define __settings_h__
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
+ | copyright (C) 2007-2026 Tim Orford <tim@orford.org>                  |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
+ */
+
+#pragma once
 
 #include <stdbool.h>
+#include "palette.h"
 #ifdef USE_MYSQL
 #include "db/mysql.h"
 #endif
@@ -52,7 +53,7 @@ struct _Config
 	char      auditioner[16];
 	char      window_width[8];
 	char      window_height[8];
-	char      colour[/*PALETTE_SIZE*/17][8];
+	char      colour[PALETTE_SIZE][8];
 	bool      add_recursive;
 	char      column_widths[4][8];
 	char      browse_dir[PATH_MAX];
@@ -68,5 +69,3 @@ ConfigOption* config_option_new_int    (char* name, void (*save)(ConfigOption*),
 ConfigOption* config_option_new_string (char* name, void (*save)(ConfigOption*));
 ConfigOption* config_option_new_bool   (char* name, void (*save)(ConfigOption*));
 ConfigOption* config_option_new_manual (void (*save)(ConfigOption*));
-
-#endif

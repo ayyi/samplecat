@@ -31,6 +31,8 @@ make_context_menu (GtkWidget* widget)
 	gtk_widget_insert_action_group (menu, "context-menu", G_ACTION_GROUP(group));
 
 	MenuDef menu_def[] = {
+		{"Delete",         "app.delete-selected",     "delete"},
+		{"Update",         "app.update-selected",     "update"},
 #if 0
 		{"Open",           G_CALLBACK(listview__edit_row),      GTK_STOCK_OPEN},
 		{"Open Directory", G_CALLBACK(NULL),                    GTK_STOCK_OPEN},

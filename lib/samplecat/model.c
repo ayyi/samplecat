@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
- | copyright (C) 2007-2025 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2007-2026 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -17,7 +17,8 @@
 #include <gdk-pixbuf/gdk-pixbuf.h>
 #include <gobject/gvaluecollector.h>
 #include <debug/debug.h>
-#include <samplecat.h>
+#include <samplecat/support.h>
+#include <samplecat/work.h>
 #include <db/db.h>
 
 #define backend samplecat.model->backend
@@ -371,7 +372,7 @@ __sample_changed_idle (gpointer _self)
 	GList* l = self->modified;
 	for (;l;l=l->next) {
 		SamplecatSampleChange* change = l->data;
-		g_signal_emit_by_name (self, "sample-changed", change->sample, change->prop, change->val);
+		g_signal_emit (self, signals[SAMPLECAT_MODEL_SAMPLE_CHANGED_SIGNAL], 0, change->sample, change->prop, change->val);
 		sample_unref(change->sample);
 		g_free (change);
 	}
@@ -410,7 +411,7 @@ samplecat_model_construct (GType object_type)
 		}
 	}
 
-	gboolean samplecat_model_on_change (gpointer _self)
+	gboolean samplecat_model_on_dir_change (gpointer _self)
 	{
 		SamplecatModel* self = _self;
 
@@ -419,7 +420,7 @@ samplecat_model_construct (GType object_type)
 	}
 
 	_samplecat_idle_unref0 (self->priv->dir_idle);
-	self->priv->dir_idle = samplecat_idle_new (samplecat_model_on_change, self);
+	self->priv->dir_idle = samplecat_idle_new (samplecat_model_on_dir_change, self);
 
 	self->priv->sample_changed_idle = samplecat_idle_new(__sample_changed_idle, self);
 
@@ -662,7 +663,7 @@ samplecat_model_update_sample (SamplecatModel* self, Sample* sample, gint prop, 
 }
 
 
-gchar*
+const gchar*
 samplecat_model_print_col_name (guint prop_type)
 {
 	gchar* result = NULL;
@@ -827,7 +828,7 @@ samplecat_model_class_init (SamplecatModelClass* klass)
 	);
 
 	signals[SAMPLECAT_MODEL_DIR_LIST_CHANGED_SIGNAL] = g_signal_new ("dir-list-changed", SAMPLECAT_TYPE_MODEL, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_VOID__POINTER, G_TYPE_NONE, 1, G_TYPE_POINTER);
-	g_signal_new ("sample_changed", SAMPLECAT_TYPE_MODEL, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_user_marshal_VOID__POINTER_INT_POINTER, G_TYPE_NONE, 3, G_TYPE_POINTER, G_TYPE_INT, G_TYPE_POINTER);
+	signals[SAMPLECAT_MODEL_SAMPLE_CHANGED_SIGNAL] = g_signal_new ("sample_changed", SAMPLECAT_TYPE_MODEL, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_user_marshal_VOID__POINTER_INT_POINTER, G_TYPE_NONE, 3, G_TYPE_POINTER, G_TYPE_INT, G_TYPE_POINTER);
 }
 
 

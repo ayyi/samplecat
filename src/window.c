@@ -194,7 +194,6 @@ window_new (GtkApplication* gtk, gpointer user_data)
 		const char* name = gdl_dock_object_get_name(object);
 		Panel* panel = name ? panel_lookup_by_name(name) : panel_lookup_by_gtype(G_OBJECT_TYPE(object));
 		g_return_if_fail(panel);
-		g_return_if_fail(!panel->dock_item || G_OBJECT_TYPE(panel->dock_item) == DOCK_TYPE_PLACEHOLDER);
 
 		panel->dock_item = (GtkWidget*)object;
 		panel->widget = gdl_dock_item_get_child((GdlDockItem*)object);

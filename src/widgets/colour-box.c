@@ -24,24 +24,10 @@ typedef struct
 	GtkWidget* menu;
 } ColourBox;
 
-#ifdef GTK4_TODO
-static GtkWidget*  clicked_widget = NULL;
-#endif
-
-static void        colour_box_update               ();
-static bool        colour_box_add                  (uint32_t);
-#ifdef GTK4_TODO
-static void        colour_box__set_colour          (int, uint32_t);
-static gboolean    colour_box__on_event            (GtkWidget*, GdkEvent*, gpointer);
-static GtkWidget*  colour_box__make_context_menu   ();
-static int         colour_box__lookup_idx          (GtkWidget*);
-#endif
-#ifdef GTK4_TODO
-static void        menu__open_selector             (GtkMenuItem*, gpointer);
-#endif
-#if 0
-static gboolean    colour_box__exists              (GdkColor*);
-#endif
+static void   colour_box_update    ();
+static bool   colour_box_add       (uint32_t colour);
+static void   on_palette_press     (GtkGestureClick*, int n_press, double x, double y, gpointer);
+static void   on_palette_release   (GtkGestureClick*, int n_press, double x, double y, gpointer);
 
 ColourBox self = {NULL};
 
@@ -96,19 +82,22 @@ colour_box_new (GtkWidget* parent)
 
 		gtk_widget_add_controller (e, GTK_EVENT_CONTROLLER (drag_source));
 
-#ifdef GTK4_TODO
-#if 1 // do not allow to change 'neutral' colour.
-		if (i > 0)
-#endif
-		g_signal_connect(G_OBJECT(e), "event", G_CALLBACK(colour_box__on_event), GUINT_TO_POINTER(i));
-#endif
+		if (i > 0) { // do not allow to change 'neutral' colour.
+			GtkGesture* click = gtk_gesture_click_new ();
+			gtk_gesture_single_set_button (GTK_GESTURE_SINGLE (click), GDK_BUTTON_PRIMARY);
+			g_signal_connect (click, "pressed", G_CALLBACK (on_palette_press), GINT_TO_POINTER (i));
+			g_signal_connect (click, "released", G_CALLBACK (on_palette_release), GINT_TO_POINTER (i));
+			gtk_widget_add_controller (e, GTK_EVENT_CONTROLLER (click));
+		}
 
 #ifdef GTK4_TODO
+		// only show if the colour is set
 		gtk_widget_set_visible(e, false);
 #endif
 
 		gtk_flow_box_prepend(GTK_FLOW_BOX(parent), e);
 	}
+
 #ifdef GTK4_TODO
 	if (!self.menu) self.menu = colour_box__make_context_menu();
 #endif
@@ -161,15 +150,13 @@ colour_box_new (GtkWidget* parent)
 static void
 colour_box_update ()
 {
-	char colour_string[16];
 	for (int i=PALETTE_SIZE-1;i>=0;i--) {
 		GtkWidget* widget = colour_button[i];
 		bool have_colour = colour_button[i] && strlen(app->config.colour[i]);
 		if (have_colour) {
-			snprintf(colour_string, 16, "#%s", app->config.colour[i]);
 			GdkRGBA colour;
-			if (!gdk_rgba_parse(&colour, colour_string)) {
-				pwarn("%i: parsing of colour string failed. %s", i, colour_string);
+			if (!palette_rgba_from_index (i, &colour)) {
+				pwarn("%i: parsing of colour string failed. %s", i, app->config.colour[i]);
 				continue;
 			}
 			dbg(2, "%i colour: %.2f %.2f %.2f", i, colour.red, colour.green, colour.blue);
@@ -187,11 +174,11 @@ colour_box_update ()
 
 #if NEVER
 static gboolean
-colour_box__exists (GdkColor* colour)
+colour_box__exists (Color* colour)
 {
 	//returns true if a similar colour already exists in the colour_box.
 
-	GdkColor existing_colour;
+	Color existing_colour;
 	char string[8];
 	for (int i=0;i<PALETTE_SIZE;i++) {
 		if (strlen(app->config.colour[i])) {
@@ -231,41 +218,6 @@ colour_box_add (uint32_t colour)
 
 
 #ifdef GTK4_TODO
-static void
-colour_box__set_colour (int i, uint32_t colour)
-{
-	g_return_if_fail(i < PALETTE_SIZE);
-	g_return_if_fail(colour_button[i]);
-	hexstring_from_gdkcolor(app->config.colour[i], colour);
-	gtk_widget_modify_bg(colour_button[i], GTK_STATE_NORMAL, colour);
-}
-#endif
-
-
-#ifdef GTK4_TODO
-static gboolean
-colour_box__on_event (GtkWidget* widget, GdkEvent* event, gpointer user_data)
-{
-	switch (event->type){
-		case GDK_BUTTON_PRESS:
-			dbg (1, "button=%i", event->button.type);
-			clicked_widget = widget;
-			if (event->button.button == 3) {
-				gtk_menu_popup(GTK_MENU(self.menu), NULL, NULL, 0, event, event->button.button, (guint32)(event->button.time));
-				return HANDLED;
-			} else {
-				dbg (1, "normal button press...");
-			}
-			break;
-		default:
-			break;
-	}
-	return NOT_HANDLED;
-}
-#endif
-
-
-#ifdef GTK4_TODO
 static GtkWidget*
 colour_box__make_context_menu ()
 {
@@ -278,88 +230,54 @@ colour_box__make_context_menu ()
 #endif
 
 
-#ifdef GTK4_TODO
-static int
-colour_box__lookup_idx (GtkWidget* widget)
-{
-	for (int i=0;i<PALETTE_SIZE;i++) {
-		if (colour_button[i] == widget) return i;
-	}
-	return -1;
-}
-#endif
-
-
-#ifdef GTK4_TODO
 static void
-menu__open_selector (GtkMenuItem* menuitem, gpointer user_data)
+on_palette_press (GtkGestureClick* gesture, int n_press, double x, double y, gpointer user_data)
 {
-	static bool colour_editing = false;
-	dbg(2, "data=%p", user_data);
-
-	if (colour_editing) return;
-	colour_editing = true;
-
-	void on_colour_change (GtkColorSelection* colorselection, gpointer user_data)
-	{
-		int box_idx = colour_box__lookup_idx(clicked_widget);
-		if (box_idx > -1) {
-			GdkColor colour;
-			gtk_color_selection_get_current_color (colorselection, &colour);
-			colour_box__set_colour(box_idx, &colour);
-		}
-	}
-
-	void on_ok (GtkButton* button, gpointer user_data)
-	{
-		dbg(1, "...");
-		gtk_widget_destroy(gtk_widget_get_toplevel((GtkWidget*)button));
-	}
-
-	void on_destroy (GtkButton* button, gpointer user_data)
-	{
-		dbg(1, "...");
-		colour_editing = false;
-	}
-	GtkWidget* window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-	GtkWidget* v = gtk_vbox_new(NON_HOMOGENOUS, 2);
-	gtk_container_add((GtkContainer*)window, v);
-	GtkWidget* sel = gtk_color_selection_new();
-#if 1
-	int box_idx = colour_box__lookup_idx(clicked_widget);
-	GtkStyle *curstyle = gtk_widget_get_style(colour_button[box_idx]);
-	gtk_color_selection_set_current_color(GTK_COLOR_SELECTION(sel), &curstyle->bg[GTK_STATE_NORMAL]);
-#endif
-	GtkWidget* b = gtk_button_new_with_label("Ok");
-	gtk_box_pack_start((GtkBox*)v, sel, EXPAND_FALSE, FILL_FALSE, 0);
-	gtk_box_pack_start((GtkBox*)v, b, EXPAND_FALSE, FILL_FALSE, 0);
-	gtk_widget_show_all(window);
-
-	g_signal_connect (G_OBJECT(b), "clicked", G_CALLBACK(on_ok), user_data);
-	g_signal_connect (G_OBJECT(b), "destroy", G_CALLBACK(on_destroy), user_data);
-	g_signal_connect (G_OBJECT(sel), "color-changed", G_CALLBACK(on_colour_change), user_data);
+	(void)n_press; (void)x; (void)y; (void)user_data;
+	gtk_gesture_set_state (GTK_GESTURE (gesture), GTK_EVENT_SEQUENCE_CLAIMED);
 }
-#endif
 
 
-typedef struct 
+static void
+on_palette_release (GtkGestureClick* gesture, int n_press, double x, double y, gpointer user_data)
 {
-  guint32 pixel;
-  guint16 red;
-  guint16 green;
-  guint16 blue;
-} GdkColor;
+	(void)x; (void)y;
+	gint colour_index = GPOINTER_TO_INT (user_data);
+
+	if (n_press == 2) {
+		GtkWidget* widget = gtk_event_controller_get_widget (GTK_EVENT_CONTROLLER (gesture));
+		gtk_widget_activate (widget); /* open the chooser */
+		return;
+	}
+
+	gtk_gesture_set_state (GTK_GESTURE (gesture), GTK_EVENT_SEQUENCE_CLAIMED);
+
+	Sample* s = samplecat.model->selection;
+	if (s) {
+		samplecat_model_update_sample (samplecat.model, s, COL_COLOUR, &colour_index);
+	}
+}
+
+
+typedef struct
+{
+	guint32 pixel;
+	guint16 red;
+	guint16 green;
+	guint16 blue;
+} Color;
 
 static uint32_t
-colour_from_gdk (GdkColor* colour)
+colour_from_gdk (Color* colour)
 {
 	return colour->red >> 8;
 }
 
+
 void
 colour_box_colourise ()
 {
-	GdkColor colour;
+	Color colour;
 #if 0 // tim
 	//put the style colours into the palette:
 	if(colour_darker (&colour, &app->fg_colour)) colour_box_add(&colour);
@@ -386,28 +304,28 @@ colour_box_colourise ()
 	if(colour_lighter(&colour, &colour)) colour_box_add(&colour);
 #else // tom
 	float hue (float m1, float m2, float h) {
-		if (h<0)   { h = h+1.0; }
-		if (h>1)   { h = h-1.0; }
-		if (h*6<1) { return m1+(m2-m1)*h*6.0; }
-		if (h*2<1) { return m2; }
-		if (h*3<2) { return m1+(m2-m1)*((2/3.0)-h)*6.0; }
+		if (h < 0)     { h = h + 1.0; }
+		if (h > 1)     { h = h - 1.0; }
+		if (h * 6 < 1) { return m1 + (m2 - m1) * h * 6.0; }
+		if (h * 2 < 1) { return m2; }
+		if (h * 3 < 2) { return m1 + (m2 - m1) * ((2/3.0) - h) * 6.0; }
 		return m1;
 	}
 
-	void hsl2rgb (float h, float s, float l, GdkColor *c) {
+	void hsl2rgb (float h, float s, float l, Color *c) {
 		float mr, mg, mb, m1, m2;
 		if (s == 0.0) { mr = mg = mb = l; }
 		else {
-			if (l<=0.5) { m2 = l*(s+1.0); }
-			else        { m2 = l+s-(l*s); }
-			m1 = l*2.0 - m2;
-			mr = hue(m1, m2, (h+(1/3.0)));
-			mg = hue(m1, m2, h);
-			mb = hue(m1, m2, (h-(1/3.0)));
+			if (l <= 0.5) { m2 = l * (s + 1.0); }
+			else          { m2 = l + s - (l * s); }
+			m1 = l * 2.0 - m2;
+			mr = hue (m1, m2, (h + (1/3.0)));
+			mg = hue (m1, m2, h);
+			mb = hue (m1, m2, (h - (1/3.0)));
 		}
-		c->red   = rintf(65536.0*mr);
-		c->green = rintf(65536.0*mg);
-		c->blue  = rintf(65536.0*mb);
+		c->red   = rintf (65536.0 * mr);
+		c->green = rintf (65536.0 * mg);
+		c->blue  = rintf (65536.0 * mb);
 	}
 
 #define LUMSHIFT (0)
@@ -416,10 +334,10 @@ colour_box_colourise ()
 #endif
 
 	for (int i=0;i<PALETTE_SIZE-1;i++) {
-		float h, s, l; 
+		float h, s, l;
 		l = 1.0; h = (float)i / ((float)PALETTE_SIZE - 1.0);
 		s = (i % 2) ? .6 : .9;
-		l = 0.3 + ((i + LUMSHIFT)%4) / 6.0; /* 0.3 .. 0.8 */
+		l = 0.3 + ((i + LUMSHIFT) % 4) / 6.0; /* 0.3 .. 0.8 */
 		hsl2rgb(h, s, l, &colour);
 		if (!colour_box_add(colour_from_gdk(&colour))) {
 			fprintf(stderr, "WTF %d\n", i);
@@ -427,4 +345,3 @@ colour_box_colourise ()
 	}
 #endif
 }
-

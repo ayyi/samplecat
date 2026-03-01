@@ -14,5 +14,5 @@ export G_DEBUG=gc-friendly
 	--suppressions=test/suppressions/fm.supp \
 	--suppressions=test/suppressions/samplecat.supp \
 	--gen-suppressions=yes \
-	--num-callers=50 \
+	--num-callers=100 \
 	$@ ./src/samplecat

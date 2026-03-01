@@ -6,7 +6,6 @@ AM_CFLAGS = \
 noinst_LTLIBRARIES = libgtk.la
 
 libgtk_la_SOURCES = \
-	cellrenderer_hypertext.c cellrenderer_hypertext.h \
 	icon_theme.c icon_theme.h \
 	menu.c menu.h \
 	utils.c utils.h \

@@ -862,7 +862,7 @@ gdl_dock_item_add (GdlDockItem* item, GtkWidget *widget)
     g_return_if_fail (GDL_IS_DOCK_ITEM (item));
 
     if (GDL_IS_DOCK_ITEM (widget)) {
-        g_warning (_("You can't add a dock object (%p of type %s) inside a %s. Use a GdlDock or some other compound dock object."), widget, G_OBJECT_TYPE_NAME (widget), G_OBJECT_TYPE_NAME (item));
+        g_warning (_("You can't add a dock object (%p of type %s) inside a %s (%s). Use a GdlDock or some other compound dock object."), widget, G_OBJECT_TYPE_NAME (widget), G_OBJECT_TYPE_NAME (item), gdl_dock_object_get_name(GDL_DOCK_OBJECT(item)));
         return;
     }
 

@@ -172,7 +172,7 @@ application_search ()
 	PF;
 	if(BACKEND_IS_NULL) return;
 
-	samplecat_list_store_do_search((SamplecatListStore*)samplecat.store);
+	samplecat_list_store_do_search();
 }
 
 

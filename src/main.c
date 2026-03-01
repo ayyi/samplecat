@@ -45,7 +45,7 @@ void on_quit (GtkMenuItem*, gpointer);
 
 SamplecatApplication* app = NULL;
 
-int 
+int
 main (int argc, char** argv)
 {
 #ifndef HAVE_GTK_4_16

@@ -15,6 +15,7 @@
 #include <gtk/gtk.h>
 #include "gtk/menu.h"
 #include "debug/debug.h"
+#include "dir-tree/view_dir_tree.h"
 #include "application.h"
 #include "support.h"
 #include "file_manager/file_manager.h"

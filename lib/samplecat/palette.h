@@ -12,9 +12,9 @@
 
 #pragma once
 
-#include <gio/gio.h>
-#include "typedefs.h"
+#include <glib.h>
+#include <gdk/gdk.h>
 
-extern GType AYYI_TYPE_COLOUR;
+#define PALETTE_SIZE 17
 
-void types_init ();
+gboolean palette_rgba_from_index (gint, GdkRGBA*);

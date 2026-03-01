@@ -303,10 +303,11 @@ gdl_dock_notebook_switch_page_cb (GtkNotebook *nb, GtkWidget *page, gint page_nu
 			gdl_switcher_insert_page (switcher, GTK_WIDGET(filled), NULL, long_name, long_name, stock_id, pixbuf_icon, page_num);
 			gtk_notebook_set_current_page(nb, page_num);
 
+#if 0 // will be emitted from `dispose`
 			g_signal_emit_by_name(GDL_DOCK_OBJECT(notebook)->master, "dock-item-removed", placeholder);
-			g_signal_emit_by_name(GDL_DOCK_OBJECT(notebook)->master, "dock-item-added", filled);
-
+#endif
 			g_object_unref(placeholder);
+			g_signal_emit_by_name(GDL_DOCK_OBJECT(notebook)->master, "dock-item-added", filled);
 
 			return G_SOURCE_REMOVE;
 		}

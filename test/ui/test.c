@@ -39,9 +39,7 @@ static void set_home_dir (char** argv);
 int
 application_main (int argc, char** argv)
 {
-#ifdef HAVE_GTK_4_16
-	g_setenv ("GDK_DISABLE", "egl", false);
-#else
+#ifndef HAVE_GTK_4_16
 	g_setenv ("GDK_DEBUG", "gl-glx", false);
 #endif
 	g_setenv ("GDK_BACKEND", "x11", false);
@@ -49,10 +47,6 @@ application_main (int argc, char** argv)
 	g_log_set_default_handler (log_handler, NULL);
 
 	set_home_dir (argv);
-
-#ifdef GTK4_TODO
-	gtk_init_check (&argc, &argv);
-#endif
 
 	app = SAMPLECAT_APPLICATION(application_new());
 	SamplecatModel* model = samplecat.model;
@@ -107,7 +101,7 @@ application_main (int argc, char** argv)
 	}
 
 	if (!player_opt) {
-		if(can_use(app->players, app->config.auditioner)){
+		if (can_use(app->players, app->config.auditioner)) {
 			g_clear_pointer(&app->players, g_list_free);
 			ADD_PLAYER(app->config.auditioner);
 		}
@@ -174,7 +168,7 @@ on_quit ()
 	if (play->auditioner) {
 #ifdef HAVE_AYYIDBUS
 		extern Auditioner a_ayyidbus;
-		if (play->auditioner != & a_ayyidbus){
+		if (play->auditioner != & a_ayyidbus) {
 #else
 		if (true) {
 #endif

@@ -1,5 +1,5 @@
 {
-   <insert_a_suppression_name_here>
+   This is a suppression name
    Memcheck:Cond
    obj:/usr/lib64/gtk-2.0/*/engines/libpixmap.so
 }
@@ -60,4 +60,49 @@
    writev(vector[...])
    ...
    fun:xcb_writev
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Value8
+   fun:g_hash_table_lookup
+   ...
+   fun:gsk_renderer_render
+}
+{
+   <this does not work>
+   Memcheck:Param
+   writev(vector[...])
+   ...
+   fun:xcb_flush
+   ...
+   fun:gsk_renderer_render
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Param
+   writev(vector[0])
+   ...
+   fun:xcb_flush
+   ...
+   fun:gsk_renderer_render
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Cond
+   ...
+   fun:cairo_region_union_rectangle
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Value8
+   ...
+   fun:cairo_region_intersect_rectangle
+   ...
+   fun:gsk_renderer_render
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Value8
+   ...
+   fun:cairo_region_copy
 }

@@ -75,7 +75,7 @@ no_gui_application_activate (GApplication* base)
 {
 	G_APPLICATION_CLASS (no_gui_application_parent_class)->activate(base);
 
-	samplecat_list_store_do_search((SamplecatListStore*)samplecat.store);
+	samplecat_list_store_do_search();
 }
 
 
@@ -98,26 +98,22 @@ no_gui_application_instance_init (NoGuiApplication* self, gpointer klass)
 	play = player_new();
 	pixmaps_init();
 
-	void store_content_changed (GtkListStore* store, gpointer self)
+	void store_content_changed (SamplecatListStore* store, gpointer self)
 	{
 		PF;
-		GtkTreeIter iter;
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-		if (!gtk_tree_model_get_iter_first((GtkTreeModel*)store, &iter)) { gerr ("cannot get iter."); return; }
-#pragma GCC diagnostic warning "-Wdeprecated-declarations"
-		int row_count = 0;
-		do {
-			if (++row_count < 100) {
-				Sample* sample = samplecat_list_store_get_sample_by_iter(&iter);
-				if (sample) {
-					console__show_result(sample);
-					sample_unref(sample);
-				}
-			}
-		} while (gtk_tree_model_iter_next((GtkTreeModel*)store, &iter));
+		guint n_items = g_list_model_get_n_items (G_LIST_MODEL (store));
+		int row_count = (int)n_items;
 
-		console__show_result_footer(row_count);
-		g_application_release(self);
+		for (guint i = 0; i < n_items && i < 100; i++) {
+			Sample* sample = samplecat_list_store_get_sample_by_index (i);
+			if (sample) {
+				console__show_result (sample);
+				sample_unref (sample);
+			}
+		}
+
+		console__show_result_footer (row_count);
+		g_application_release (self);
 	}
 
 	if (!((SamplecatApplication*)self)->args.add) {

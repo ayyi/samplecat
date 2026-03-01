@@ -10,11 +10,22 @@
  |
  */
 
-#pragma once
+#include "config.h"
+#include <glib.h>
+#include "samplecat/application.h"
+#include "palette.h"
 
-#include <gio/gio.h>
-#include "typedefs.h"
+extern SamplecatApplication* app;
 
-extern GType AYYI_TYPE_COLOUR;
+gboolean
+palette_rgba_from_index (gint idx, GdkRGBA* rgba)
+{
+	if (!rgba) return FALSE;
+	if (idx < 0 || idx >= PALETTE_SIZE) return FALSE;
+	const char *hex = app->config.colour[idx];
+	if (!hex || !strlen (hex)) return FALSE;
+	char buf[16];
+	g_snprintf (buf, sizeof buf, "#%s", hex);
+	return gdk_rgba_parse (rgba, buf);
+}
 
-void types_init ();

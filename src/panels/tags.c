@@ -8,11 +8,10 @@
  | as published by the Free Software Foundation.                        |
  +----------------------------------------------------------------------+
  |
+ |  Edit tags and colour metadata
+ |
  */
 
-/*
- *  Edit tags and colour metadata
- */
 #include "config.h"
 #include <gtk/gtk.h>
 #include "debug/debug.h"
@@ -113,53 +112,37 @@ on_category_set_clicked (GtkComboBox* widget, gpointer user_data)
 	// get the selected category
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-	gchar* category = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(panel.category));
+	g_autofree gchar* category = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(panel.category));
 #pragma GCC diagnostic warning "-Wdeprecated-declarations"
 
 	GList* selectionlist = application_get_selection();
 	if (!selectionlist) { statusbar_print(1, "no files selected."); return; }
 
-	GtkTreeIter iter;
-	for (int i=0;i<g_list_length(selectionlist);i++) {
-		GtkTreePath* treepath_selection = g_list_nth_data(selectionlist, i);
+	for (GList* l = selectionlist; l; l = l->next) {
+		Sample* sample = l->data;
+		if (!sample) continue;
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-		if (gtk_tree_model_get_iter(GTK_TREE_MODEL(samplecat.store), &iter, treepath_selection)) {
-			gchar* fname;
-			gchar* tags;
-			int id;
-			Sample* sample;
-			gtk_tree_model_get(GTK_TREE_MODEL(samplecat.store), &iter, COL_SAMPLEPTR, &sample, COL_NAME, &fname, COL_KEYWORDS, &tags, COL_IDX, &id, -1);
-#pragma GCC diagnostic pop
-			dbg(1, "id=%i name=%s", id, fname);
+		const gchar* tags = sample->keywords;
+		dbg(1, "id=%i name=%s", sample->id, sample->name);
 
-			if (!strcmp(category, "no categories")) {
-				if (samplecat_model_update_sample(samplecat.model, sample, COL_KEYWORDS, "")) {
+		if (!strcmp(category, "no categories")) {
+			samplecat_model_update_sample(samplecat.model, sample, COL_KEYWORDS, "");
+		} else {
+			if (!keyword_is_dupe(category, tags)) {
+				char tags_new[1024];
+				snprintf(tags_new, 1024, "%s %s", tags ? tags : "", category);
+				g_strstrip(tags_new); // trim
+
+				if (samplecat_model_update_sample(samplecat.model, sample, COL_KEYWORDS, (void*)tags_new)) {
+					statusbar_print(1, "category set");
 				}
 			} else {
-				if (!keyword_is_dupe(category, tags)) {
-					char tags_new[1024];
-					snprintf(tags_new, 1024, "%s %s", tags ? tags : "", category);
-					g_strstrip(tags_new); // trim
-
-					if (samplecat_model_update_sample(samplecat.model, sample, COL_KEYWORDS, (void*)tags_new)) {
-						statusbar_print(1, "category set");
-					}
-				} else {
-					statusbar_print(1, "ignoring duplicate keyword.");
-				}
+				statusbar_print(1, "ignoring duplicate keyword.");
 			}
-
-		} else perr("bad iter! i=%i (<%i)\n", i, g_list_length(selectionlist));
+		}
 	}
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-	g_list_foreach(selectionlist, (GFunc)gtk_tree_path_free, NULL);
-#pragma GCC diagnostic pop
-	g_list_free(selectionlist);
 
-	g_free(category);
+	g_list_free_full(selectionlist, (GDestroyNotify)sample_unref);
 }
 
 

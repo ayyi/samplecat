@@ -981,15 +981,17 @@ struct find_filename {
 
 
 static bool
-filter_id (GtkTreeModel* model, GtkTreePath* path, GtkTreeIter* iter, gpointer data) {
-	struct find_filename* ff = (struct find_filename*) data;
-	Sample* s = samplecat_list_store_get_sample_by_iter(iter);
+filter_id (SamplecatListStore* store, guint index, struct find_filename* ff) {
+	(void)store;
+
+	Sample* s = samplecat_list_store_get_sample_by_index (index);
+	if (!s) return false;
 	if (s->id == ff->id) {
-		ff->rv = strdup(s->full_path);
-		sample_unref(s);
+		ff->rv = g_strdup (s->full_path);
+		sample_unref (s);
 		return true;
 	}
-	sample_unref(s);
+	sample_unref (s);
 	return false;
 }
 
@@ -1000,8 +1002,12 @@ listmodel__get_filename_from_id(int id)
 	struct find_filename ff;
 	ff.id = id;
 	ff.rv = NULL;
-	GtkTreeModel* model = GTK_TREE_MODEL(app->store);
-	gtk_tree_model_foreach(model, &filter_id, &ff);
+
+	SamplecatListStore* store = (SamplecatListStore*) app->store;
+	guint n = g_list_model_get_n_items (G_LIST_MODEL (store));
+	for (guint i = 0; i < n; i++) {
+		if (filter_id (store, i, &ff)) break;
+	}
 	return ff.rv;
 }
 #endif //USE_TRACKER

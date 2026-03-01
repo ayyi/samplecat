@@ -16,7 +16,6 @@
 ViewDirTree* vdtree_new                  (const gchar* path, gint expand);
 void         vdtree_free                 (ViewDirTree*);
 void         vdtree_set_select_func      (ViewDirTree*, void (*func)(ViewDirTree*, const gchar* path, gpointer data), gpointer data);
-void         vdtree_set_layout           (ViewDirTree*, LayoutWindow*);
 gint         vdtree_set_path             (ViewDirTree*, const gchar *path);
 void         vdtree_refresh              (ViewDirTree*);
 const gchar* vdtree_row_get_path         (ViewDirTree*, gint row);

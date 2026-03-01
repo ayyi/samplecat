@@ -34,7 +34,8 @@ EXTRA_DIST = samplecat.1 \
 	icons/samplecat.xpm \
 	samples.sql \
 	resources.xml \
-	resources/style.css
+	resources/style.css \
+	resources/dark.css
 
 tags: dummy
 	ctags -R --languages=c --exclude=*.x .

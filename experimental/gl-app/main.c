@@ -243,7 +243,7 @@ add_content (gpointer _)
 		return EXIT_FAILURE;
 	}
 
-	samplecat_list_store_do_search((SamplecatListStore*)samplecat.store);
+	samplecat_list_store_do_search();
 
 	application_set_auditioner();
 
@@ -262,7 +262,7 @@ add_content (gpointer _)
 
 		application_menu_init();
 
-		Sample* sample = samplecat_list_store_get_sample_by_row_index(0);
+		Sample* sample = samplecat_list_store_get_sample_by_index(0);
 		if (sample) {
 			samplecat_model_set_selection(samplecat.model, sample);
 			sample_unref(sample);

@@ -1,14 +1,14 @@
-/**
-* +----------------------------------------------------------------------+
-* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2016 Tim Orford <tim@orford.org>                  |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-*
-*/
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
+ | copyright (C) 2007-2026 Tim Orford <tim@orford.org>                  |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
+ */
 
 #pragma once
 
@@ -17,6 +17,8 @@
 #include <stdint.h>
 #include <gdk-pixbuf/gdk-pixbuf.h>
 #include "typedefs.h"
+
+typedef struct _SampleRow SampleRow;
 
 struct _Sample
 {
@@ -47,7 +49,7 @@ struct _Sample
 
 	GdkPixbuf*   overview;
 
-	void*        row_ref;
+	SampleRow*   row_ref;
 };
 
 
@@ -69,3 +71,5 @@ bool        sample_get_file_info     (Sample*);
 
 char*       sample_get_metadata_str  (Sample*);
 void        sample_set_metadata      (Sample*, const char*);
+
+G_DEFINE_AUTOPTR_CLEANUP_FUNC (Sample, sample_unref)

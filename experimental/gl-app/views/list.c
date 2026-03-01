@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
- | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
- | copyright (C) 2012-2023 Tim Orford <tim@orford.org>                  |
+ | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
+ | copyright (C) 2012-2026 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -93,24 +93,18 @@ list_view (gpointer _)
 		int col[] = {0, 150, 260, 360, 420};
 		col[4] = MAX(col[4], actor->region.x2);
 
-		GtkTreeIter iter;
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-		if (!gtk_tree_model_get_iter_first((GtkTreeModel*)samplecat.store, &iter)) return true;
-#pragma GCC diagnostic warning "-Wdeprecated-declarations"
+		guint n_items = g_list_model_get_n_items (G_LIST_MODEL (samplecat.store));
+		if (n_items == 0 || view->scroll_offset >= (int)n_items) return true;
 
-		int i = 0;
-		for (;i<view->scroll_offset;i++) {
-			gtk_tree_model_iter_next((GtkTreeModel*)samplecat.store, &iter);
-		}
 		int row_count = 0;
-		do {
+		for (guint idx = view->scroll_offset; row_count < n_rows && idx < n_items; idx++, row_count++) {
 			if (row_count == view->selection - view->scroll_offset) {
 				PLAIN_COLOUR2 (agl->shaders.plain) = STYLE.selection;
 				agl_use_program((AGlShader*)agl->shaders.plain);
 				agl_rect_((AGlRect){0, row_count * row_height - 2, agl_actor__width(actor), row_height});
 			}
 
-			Sample* sample = samplecat_list_store_get_sample_by_iter(&iter);
+			Sample* sample = samplecat_list_store_get_sample_by_index (idx);
 			if (sample) {
 				char* len[32]; format_smpte((char*)len, sample->frames);
 				char* f[32]; samplerate_format((char*)f, sample->sample_rate);
@@ -129,7 +123,7 @@ list_view (gpointer _)
 				}
 				sample_unref(sample);
 			}
-		} while (++row_count < n_rows && gtk_tree_model_iter_next((GtkTreeModel*)samplecat.store, &iter));
+		}
 
 		return true;
 	}
@@ -220,7 +214,7 @@ list_view_free (AGlActor* actor)
 static void
 list_view_select (ListView* list, int row)
 {
-	int n_rows_total = ((SamplecatListStore*)samplecat.store)->row_count;
+	int n_rows_total = g_list_model_get_n_items (G_LIST_MODEL (samplecat.store));
 
 	if (row >= 0 && row < n_rows_total) {
 		list->selection = row;
@@ -232,7 +226,7 @@ list_view_select (ListView* list, int row)
 
 		agl_actor__invalidate((AGlActor*)list);
 
-		Sample* sample = samplecat_list_store_get_sample_by_row_index(list->selection);
+		Sample* sample = samplecat_list_store_get_sample_by_index (list->selection);
 		if (sample) {
 			samplecat_model_set_selection (samplecat.model, sample);
 			sample_unref(sample);

@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
- | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
- | copyright (C) 2007-2025 Tim Orford <tim@orford.org>                  |
+ | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
+ | copyright (C) 2007-2026 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -112,7 +112,6 @@ struct _InspectorPrivate
 	GtkWidget*     vbox;
 	GtkWidget*     text;
 	GtkTextBuffer* notes;
-	GtkTreeRowReference* row_ref; // TODO remove
 
 	bool           wide;
 };
@@ -307,11 +306,8 @@ inspector_init (Inspector* inspector)
 static void
 inspector_dispose (GObject* obj)
 {
-	InspectorPrivate* i = INSPECTOR(obj)->priv;
 
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-	g_clear_pointer(&i->row_ref, gtk_tree_row_reference_free);
-#pragma GCC diagnostic warning "-Wdeprecated-declarations"
+
 
 	g_signal_handlers_disconnect_matched(G_OBJECT(samplecat.model), G_SIGNAL_MATCH_DATA, 0, 0, NULL, NULL, obj);
 
@@ -361,13 +357,7 @@ inspector_size_allocate (GtkWidget* base, int width, int height, int baseline)
 		inspector_remove_cells(inspector, &i->ebur);
 		if (wide) i->meta.start = 3;
 		i->wide = wide;
-		if (i->row_ref) {
-			Sample* sample = samplecat_list_store_get_sample_by_row_ref(i->row_ref);
-			if (sample) {
-				inspector_set_labels(inspector, sample);
-				sample_unref(sample);
-			}
-		}
+
 	}
 
 #ifdef GTK4_TODO
@@ -617,25 +607,9 @@ inspector_set_labels (Inspector* inspector, Sample* sample)
 	g_free(level);
 	g_free(ch_str);
 
-	//store a reference to the row id in the inspector widget:
-	// needed to later updated "notes" for that sample
-	// as well to check for updates
-	// *** row_ref is deprecated. use database id instead.
 	i->row_id = sample->id;
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-	g_clear_pointer(&i->row_ref, gtk_tree_row_reference_free);
-#pragma GCC diagnostic warning "-Wdeprecated-declarations"
-	if (sample->row_ref) {
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-		i->row_ref = gtk_tree_row_reference_copy(sample->row_ref);
-#pragma GCC diagnostic warning "-Wdeprecated-declarations"
-	} else {
-		dbg(2, "setting row_ref failed");
-		i->row_ref = NULL;
-		/* can not edit tags or notes w/o reference */
-		gtk_widget_set_visible(GTK_WIDGET(i->text), false);
-		gtk_widget_set_visible(GTK_WIDGET(i->rows.a.tags.widget), false);
-	}
+	gtk_widget_set_visible(GTK_WIDGET(i->text), true);
+	gtk_widget_set_visible(GTK_WIDGET(i->rows.a.tags.widget), true);
 }
 
 
@@ -651,10 +625,6 @@ inspector_update (Inspector* inspector, Sample* sample)
 		return;
 	}
 
-	// forget previous inspector item
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-	g_clear_pointer(&i->row_ref, gtk_tree_row_reference_free);
-#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 	i->row_id = 0;
 
 #ifdef USE_TRACKER

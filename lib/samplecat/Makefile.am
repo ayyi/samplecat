@@ -16,6 +16,7 @@ libsamplecat_la_SOURCES = \
 	model.c model.h \
 	application.c application.h \
 	list_store.c list_store.h \
+	sample_row.c sample_row.h \
 	sample.c sample.h \
 	dir_list.c dir_list.h \
 	dh_link.c dh_link.h \
@@ -25,6 +26,7 @@ libsamplecat_la_SOURCES = \
 	settings.c settings.h \
 	observable.c observable.h \
 	throttle.c throttle.h \
+	palette.c palette.h \
 	support.c support.h
 
 libsamplecat_la_LIBADD = \

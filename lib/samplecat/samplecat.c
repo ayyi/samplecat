@@ -20,7 +20,7 @@ samplecat_init ()
 
 	samplecat.model = samplecat_model_new();
 
-	samplecat.store = (GtkListStore*)samplecat_list_store_new();
+	samplecat.store = samplecat_list_store_new();
 
 #ifdef USE_MYSQL
 	samplecat_model_add_backend("mysql");

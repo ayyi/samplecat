@@ -10,36 +10,28 @@ test_6_update_waveform ()
 
 	observable_string_set(samplecat.model->filters2.search, g_strdup(""));
 
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-	GtkTreeView* library = (GtkTreeView*)find_widget_by_type((GtkWidget*)find_panel("Library"), GTK_TYPE_TREE_VIEW);
-	GtkTreeSelection* selection = gtk_tree_view_get_selection(library);
-	GtkTreeModel* model = gtk_tree_view_get_model(library);
-
-	GtkTreeIter iter;
-	if (gtk_tree_selection_count_selected_rows(selection) < 1) {
-		assert (gtk_tree_model_get_iter_first (model, &iter), "failed to get iter - libaryview has no rows?");
-		gtk_tree_selection_select_iter (selection, &iter);
+	int n_rows = samplecat.store->row_count;
+	assert(n_rows > 0, "failed to get rows - library has no rows?");
+	g_autoptr(Sample) first = samplecat_list_store_get_sample_by_index(0);
+	assert(first, "failed to get first row");
+	if (!samplecat.model->selection) {
+		samplecat_model_set_selection(samplecat.model, first);
 	}
-#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 
 	void idle ()
 	{
 		static char* orig_sample;
 
-		GtkTreeView* library = (GtkTreeView*)find_widget_by_type((GtkWidget*)find_panel("Library"), GTK_TYPE_TREE_VIEW);
-		#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-		GtkTreeModel* model = gtk_tree_view_get_model(library);
-
-		GtkTreeIter iter;
-		assert (gtk_tree_model_get_iter_first (model, &iter), "failed to get iter - libaryview has no rows?");
-		#pragma GCC diagnostic warning "-Wdeprecated-declarations"
+		int n_rows = samplecat.store->row_count;
+		assert(n_rows > 1, "failed to get iter - libraryview has less than 2 rows?");
 
 		assert(samplecat.model->selection, "model has no selection");
 		orig_sample = g_strdup(samplecat.model->selection->name);
 
 		bool selection_changed (void* _)
 		{
-			return strcmp(orig_sample, samplecat.model->selection->name);
+			Sample* sel = samplecat.model->selection;
+			return sel && strcmp(orig_sample, sel->name);
 		}
 
 		bool waveform_match ()
@@ -57,12 +49,9 @@ test_6_update_waveform ()
 
 		assert(waveform_match(), "unable to match waveform");
 
-		#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-		assert (gtk_tree_model_iter_next (model, &iter), "failed to get 2nd row");
-		GtkTreePath* path = gtk_tree_model_get_path (model, &iter);
-		gtk_tree_view_set_cursor (library, path, NULL, false);
-		gtk_tree_path_free (path);
-		#pragma GCC diagnostic warning "-Wdeprecated-declarations"
+		g_autoptr(Sample) next = samplecat_list_store_get_sample_by_index(1);
+		assert(next, "failed to get 2nd row");
+		samplecat_model_set_selection(samplecat.model, next);
 
 		void on_change (gpointer _)
 		{

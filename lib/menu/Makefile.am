@@ -22,4 +22,8 @@ libmenu_la_SOURCES = \
 	utils.c utils.h
 
 EXTRA_DIST = \
-	gdkarrayimpl.c
+	gdkarrayimpl.c \
+	popovermenuprivate.h \
+	bitmaskprivate.h \
+	bitmaskprivateimpl.h \
+	sizerequestcacheprivate.h

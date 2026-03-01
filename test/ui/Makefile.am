@@ -31,7 +31,6 @@ endif
 
 ui_test_LDADD = \
 	../../src/application.o \
-	../../lib/gtk/cellrenderer_hypertext.o \
 	../../src/panels/library.o \
 	../../src/progress_dialog.o \
 	../../src/resources.o \

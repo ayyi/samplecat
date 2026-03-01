@@ -11,7 +11,8 @@
  */
 
 #include "config.h"
-#include <gtk/gtk.h>
+#include <gio/gio.h>
+#include <glib-object.h>
 #include "debug/debug.h"
 #include "decoder/ad.h"
 #include "file_manager/support.h" // to_utf8()
@@ -120,9 +121,7 @@ sample_free (Sample* sample)
 	if (sample->ref_count > 0) {
 		pwarn("freeing sample with refcount: %d", sample->ref_count);
 	}
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-	if (sample->row_ref) gtk_tree_row_reference_free(sample->row_ref);
-#pragma GCC diagnostic warning "-Wdeprecated-declarations"
+	g_clear_object(&sample->row_ref);
 	if (sample->name) g_free(sample->name);
 	if (sample->full_path) g_free(sample->full_path);
 	if (sample->mimetype) g_free(sample->mimetype);
@@ -130,7 +129,6 @@ sample_free (Sample* sample)
 	if (sample->notes) g_free(sample->notes);
 	if (sample->sample_dir) g_free(sample->sample_dir);
 	if (sample->meta_data) g_ptr_array_unref(sample->meta_data);
-	//if(sample->overview) g_free(sample->overview); // check how to free that!
 	g_free(sample);
 }
 
@@ -197,30 +195,17 @@ sample_get_file_info (Sample* sample)
 Sample*
 sample_get_by_filename (const char* abspath)
 {
-	struct find_sample {
-		Sample*     rv;
-		const char* abspath;
-	};
-
-	gboolean filter_sample (GtkTreeModel* model, GtkTreePath* path, GtkTreeIter* iter, gpointer data)
-	{
-		struct find_sample* fs = (struct find_sample*) data;
-		Sample* s = samplecat_list_store_get_sample_by_iter(iter);
-		if (!strcmp(s->full_path, fs->abspath)) {
-			fs->rv = s;
-			return true;
+	guint n = g_list_model_get_n_items (G_LIST_MODEL (samplecat.store));
+	for (guint i = 0; i < n; i++) {
+		Sample* s = samplecat_list_store_get_sample_by_index (i);
+		if (!s) continue;
+		if (!strcmp(s->full_path, abspath)) {
+			return s;
 		}
-		sample_unref(s);
-		return false;
+		sample_unref (s);
 	}
 
-	struct find_sample fs = {
-		.abspath = abspath
-	};
-
-	gtk_tree_model_foreach(GTK_TREE_MODEL(samplecat.store), &filter_sample, &fs);
-
-	return fs.rv;
+	return NULL;
 }
 
 
