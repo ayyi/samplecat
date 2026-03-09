@@ -102,14 +102,16 @@ warnprintf2 (const char* func, char* format, ...)
 void
 errprintf (char* format, ...)
 {
-	// print an error string, then pass arguments on to vprintf.
+	// print red 'error' string, then pass arguments on to vprintf.
 
-	printf("%s ", ayyi_err);
+	fprintf(stderr, "%s ", ayyi_err);
 
-	va_list argp;           //points to each unnamed arg in turn
-	va_start(argp, format); //make ap (arg pointer) point to 1st unnamed arg
-	vprintf(format, argp);
-	va_end(argp);           //clean up
+	va_list argp;
+	va_start(argp, format);
+	vfprintf(stderr, format, argp);
+	va_end(argp);
+
+	fprintf(stderr, "\n");
 }
 
 

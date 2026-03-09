@@ -11,7 +11,7 @@ static const char* const usage =
 	"  -p, --player <name>    select audio player (jack, ayyi, cli).\n"
 	"  -s, --search <txt>     search using this phrase.\n"
 	"  -l, --layout           load the named window layout.\n"
-	"  -c, --cwd              show contents of current directory (temporary view, state not saved).\n"
+	"  -d, --dir              show contents of directory (temporary view, state not saved).\n"
 	"  -v, --verbose <level>  show more information.\n"
 	"  -V, --version          print version and exit.\n"
 	"\n"

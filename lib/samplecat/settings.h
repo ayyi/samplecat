@@ -17,6 +17,9 @@
 #ifdef USE_MYSQL
 #include "db/mysql.h"
 #endif
+#ifdef USE_SQLITE
+#include "db/sqlite.h"
+#endif
 
 typedef struct _Config       Config;
 typedef struct _ConfigOption ConfigOption;
@@ -48,7 +51,10 @@ struct _Config
 {
 	char      database_backend[64];
 #ifdef USE_MYSQL
-	SamplecatDBConfig mysql;
+	SamplecatMysqlConfig mysql;
+#endif
+#ifdef USE_SQLITE
+	SamplecatSqliteConfig sqlite;
 #endif
 	char      auditioner[16];
 	char      window_width[8];
@@ -56,7 +62,6 @@ struct _Config
 	char      colour[PALETTE_SIZE][8];
 	bool      add_recursive;
 	char      column_widths[4][8];
-	char      browse_dir[PATH_MAX];
 	char      show_player[8];
 	char      show_waveform[8];
 	char      show_spectrogram[8];
@@ -69,3 +74,6 @@ ConfigOption* config_option_new_int    (char* name, void (*save)(ConfigOption*),
 ConfigOption* config_option_new_string (char* name, void (*save)(ConfigOption*));
 ConfigOption* config_option_new_bool   (char* name, void (*save)(ConfigOption*));
 ConfigOption* config_option_new_manual (void (*save)(ConfigOption*));
+
+#define config_is_mysql() (!strcmp(app->config.database_backend, "mysql"))
+#define config_is_sqlite() (!strcmp(app->config.database_backend, "sqlite"))

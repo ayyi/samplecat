@@ -56,3 +56,6 @@ placeholder.c: placeholder.vala
 
 library.c: library.vala
 	$(valac) -C -H $(basename $<).h --pkg config --pkg gtk4 --pkg gmodule-2.0 --pkg debug --pkg dock-item --vapidir=. --vapidir=../../lib/debug $<
+
+files.c: files.vala
+	$(valac) -C -H $(basename $<).h --pkg config --pkg gtk4 --pkg gmodule-2.0 --pkg debug --pkg dock-item --vapidir=. --vapidir=../../lib/debug $<

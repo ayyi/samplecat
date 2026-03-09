@@ -978,10 +978,8 @@ add_param (const yaml_event_t* event, const char* prop, gpointer _stack)
 
 	GParamSpec* param = g_object_class_find_property (constructor->spec.class, prop);
 	if (param) {
-		if (!(param->flags & GDL_DOCK_PARAM_EXPORT)){
-#ifdef GTK4_TODO
+		if (!(param->flags & GDL_DOCK_PARAM_EXPORT)) {
 			INDENT; pwarn("not export");
-#endif
 		} else {
 			/* initialize value used for transformations */
 			GValue serialized = {0,};

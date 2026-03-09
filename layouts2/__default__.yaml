@@ -6,7 +6,7 @@ dock:
   height: '-1'
   paned:
     position: 70
-    item:
+    Search:
       name: Search
       locked: yes
     paned:
@@ -18,7 +18,7 @@ dock:
           position: 150
           item:
             name: Player
-          item:
+          Tags:
             name: Tags
         paned:
           position: 150
@@ -30,10 +30,10 @@ dock:
         position: 500
         notebook:
           page: 1
-          item:
+          Library:
             name: Library
             locked: yes
-          item:
+          Filemanager:
             name: Filemanager
         item:
           name: Waveform

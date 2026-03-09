@@ -84,17 +84,22 @@ main (int argc, char** argv)
 			g_signal_emit_by_name (app, "config-loaded");
 	}
 
-	db_init(
+	if (app->config.database_backend[0]) {
+		db_init(
+			false ? NULL
 #ifdef USE_MYSQL
-		&app->config.mysql
-#else
-		NULL
+			: config_is_mysql() ? (void*)&app->config.mysql
 #endif
-	);
+#ifdef USE_SQLITE
+			: config_is_sqlite() ? (void*)&app->config.sqlite
+#endif
+			: NULL
+		);
 
-	if (app->config.database_backend[0] && can_use(samplecat.model->backends, app->config.database_backend)) {
-		g_clear_pointer(&samplecat.model->backends, g_list_free);
-		samplecat_model_add_backend(app->config.database_backend);
+		if (can_use(samplecat.model->backends, app->config.database_backend)) {
+			g_clear_pointer(&samplecat.model->backends, g_list_free);
+			samplecat_model_add_backend(app->config.database_backend);
+		}
 	}
 
 #ifdef __APPLE__
@@ -133,11 +138,6 @@ main (int argc, char** argv)
 		}
 	}
 #endif
-
-	if (app->temp_view) {
-		g_autofree gchar* dir = g_get_current_dir();
-		g_strlcpy(app->config.browse_dir, dir, PATH_MAX);
-	}
 
 #ifndef DEBUG_NO_THREADS
 	worker_thread_init();

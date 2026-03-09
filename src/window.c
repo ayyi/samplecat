@@ -198,6 +198,12 @@ window_new (GtkApplication* gtk, gpointer user_data)
 		panel->dock_item = (GtkWidget*)object;
 		panel->widget = gdl_dock_item_get_child((GdlDockItem*)object);
 
+		if (app->temp_view) {
+			if (!strcmp(name, "Filemanager")) {
+				fm__change_to(file_manager__get(), app->args.dir, NULL);
+			}
+		}
+
 		if (panel->show) {
 			panel->show(true);
 		}
@@ -205,6 +211,7 @@ window_new (GtkApplication* gtk, gpointer user_data)
 	void item_removed (GdlDockMaster* master, GdlDockObject* object, gpointer _)
 	{
 		dbg(1, "%s %s", G_OBJECT_CLASS_NAME(G_OBJECT_GET_CLASS(object)), gdl_dock_object_get_name(object));
+
 		const char* name = gdl_dock_object_get_name(object);
 		Panel* panel = name ? panel_lookup_by_name(name) : panel_lookup_by_gtype(G_OBJECT_TYPE(object));
 		g_return_if_fail(panel);
@@ -439,23 +446,9 @@ window_on_configure (GtkWidget* widget, gpointer user_data)
 		if (!window_height) window_height = 480; //MIN(app->libraryview->widget->requisition.height, 900);  -- ignore the treeview height, is meaningless
 
 		if (width && window_height) {
-			dbg(2, "setting size: width=%i height=%i", width, window_height);
-#ifdef GTK4_TODO
-			gtk_window_resize(GTK_WINDOW(app->window), width, window_height);
-#endif
 			window_size_set = true;
 
-			//set the position of the left pane elements.
-			//As the allocation is somehow bigger than its container, we just do it v approximately.
-/*
-			if(window.vpaned && GTK_WIDGET_REALIZED(window.vpaned)){
-				//dbg(0, "height=%i %i %i", app->hpaned->allocation.height, app->statusbar->allocation.y, _INSPECTOR->widget->allocation.height);
-				guint inspector_y = height - app->hpaned->allocation.y - 210;
-				gtk_paned_set_position(GTK_PANED(window.vpaned), inspector_y);
-			}
-*/
-
-			window_load_layout(app->temp_view ? "File Manager" : app->args.layout ? app->args.layout : "__default__");
+			window_load_layout(app->temp_view ? "File_Manager" : app->args.layout ? app->args.layout : "__default__");
 		}
 
 #ifdef DEBUG

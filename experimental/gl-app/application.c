@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
- | copyright (C) 2007-2024 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2007-2026 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -45,11 +45,14 @@ extern Auditioner a_ayyidbus;
 Application*
 application_construct (GType object_type)
 {
+	const char* xdg_config_home = getenv("XDG_CONFIG_HOME");
+	g_autofree char* config_dir = xdg_config_home ? g_strdup(xdg_config_home) : g_build_filename (g_get_home_dir (), ".config", NULL);
+
 	Application* app = g_object_new (object_type, NULL);
-	app->config_ctx.filename = g_strdup_printf("%s/.config/" PACKAGE "/" PACKAGE, g_get_home_dir());
+	app->config_ctx.dir = g_build_filename (config_dir, PACKAGE, NULL);
+	app->config_ctx.filename = g_strdup_printf("%s/" PACKAGE "/" PACKAGE, config_dir);
 
 	//app->cache_dir = g_build_filename (g_get_home_dir(), ".config", PACKAGE, "cache", NULL);
-	//app->configctx.dir = g_build_filename (g_get_home_dir(), ".config", PACKAGE, NULL);
 
 	return app;
 }

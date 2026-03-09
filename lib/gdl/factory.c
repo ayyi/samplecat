@@ -87,8 +87,9 @@ dock_item_factory (Stack* stack)
 			// notebook items are not created until the page is selected
 			need_child = false;
 
+			// only the name param is used for placeholder
 			#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-			DockPlaceholder* p = g_object_newv (DOCK_TYPE_PLACEHOLDER, spec->n_params, (GParameter*)spec->params);
+			DockPlaceholder* p = g_object_newv (DOCK_TYPE_PLACEHOLDER, 1, (GParameter*)spec->params);
 			#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 
 			void move_spec (DockItemSpec* dest, DockItemSpec* src)

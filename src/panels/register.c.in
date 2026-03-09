@@ -45,7 +45,7 @@ Panel panels[] = {
    {"Filters",     filters_new},
    {"Inspector",   },
    {"Directories", dir_panel_new},
-   {"Filemanager", fileview_new},
+   {"Filemanager", },
    {"Player",      player_control_new},
 #ifdef USE_OPENGL
    {"Waveform",    waveform_panel_new},

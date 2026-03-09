@@ -80,6 +80,8 @@ application_main (int argc, char** argv)
 		g_signal_emit_by_name (app, "config-loaded");
 	}
 
+	icon_theme_init();
+
 	// Pick a valid icon theme
 	// Preferably from the config file, otherwise from the hardcoded list
 	const char* themes[] = {NULL, "oxygen", "breeze", NULL};
@@ -87,12 +89,17 @@ application_main (int argc, char** argv)
 	const char* theme = find_icon_theme(themes[0] ? &themes[0] : &themes[1]);
 	icon_theme_set_theme(theme);
 
+	pixmaps_init();
+
 	db_init(
+		false ? NULL
 #ifdef USE_MYSQL
-		&app->config.mysql
-#else
-		NULL
+			: config_is_mysql() ? (void*)&app->config.mysql
 #endif
+#ifdef USE_SQLITE
+			: !strcmp(app->config.database_backend, "sqlite") ? (void*)&app->config.sqlite
+#endif
+			: NULL
 	);
 
 	if (can_use(model->backends, app->config.database_backend)) {
@@ -109,9 +116,6 @@ application_main (int argc, char** argv)
 
 	if (player_opt) g_strlcpy(app->config.auditioner, app->players->data, 8);
 
-	icon_theme_init();
-	pixmaps_init();
-
 	if (!db_connect()) {
 		g_warning("cannot connect to any database.");
 #ifdef QUIT_WITHOUT_DB
@@ -121,12 +125,11 @@ application_main (int argc, char** argv)
 
 #ifdef USE_SQLITE
 	{
-		char* files[] = {"piano", "short"};
+		char* files[] = {"piano.wav", "short.wav"};
 		ScanResults results = {0,};
 		for (int i=0;i<G_N_ELEMENTS(files);i++) {
-			char* path = g_strdup_printf ("%s/../lib/waveform/test/data/%s.wav", home, files[i]);
+			g_autofree char* path = find_wav (files[i]);
 			samplecat_application_add_file (path, &results);
-			g_free(path);
 		}
 	}
 #endif
@@ -221,13 +224,10 @@ teardown ()
 static void
 set_home_dir (char** argv)
 {
-	char _cwd[PATH_MAX];
-	char* cwd = getcwd(_cwd, PATH_MAX);
-	char* argv0 = g_strdup(argv[0]);
-	char* r = g_strrstr(argv0, "/");
-	if (r) *r = 0;
-	home = g_strdup_printf("%s/%s/..", cwd, argv0);
+	home = g_build_filename(g_get_tmp_dir(), PACKAGE, NULL);
 	g_setenv ("HOME", home, true);
+	g_autofree char* configdir = g_build_filename(home, ".config", NULL);
+	g_setenv ("XDG_CONFIG_HOME", configdir, true);
 
 #ifdef USE_SQLITE
 	char* sqlite_db = g_strdup_printf("%s/.config/samplecat/samplecat.sqlite", home);

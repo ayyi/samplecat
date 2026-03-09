@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
- | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
- | copyright (C) 2007-2022 Tim Orford <tim@orford.org> and others       |
+ | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
+ | copyright (C) 2007-2026 Tim Orford <tim@orford.org> and others       |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -21,6 +21,9 @@
 
 #define backend() (samplecat.model->backend)
 
+static SamplecatSqliteConfig* config;
+
+static bool     sqlite__connect          ();
 static void     sqlite__disconnect       ();
 
 static bool     sqlite__search_iter_new  (int* n_results);
@@ -74,7 +77,7 @@ enum {
 void
 sqlite__init (void* _config)
 {
-	//config = _config;
+	config = _config;
 }
 
 
@@ -82,6 +85,9 @@ void
 sqlite__set_as_backend (SamplecatBackend* backend)
 {
 	backend->init             = sqlite__init;
+
+	backend->connect          = sqlite__connect;
+	backend->disconnect       = sqlite__disconnect;
 
 	backend->search_iter_new  = sqlite__search_iter_new;
 	backend->search_iter_next = sqlite__search_iter_next;
@@ -100,35 +106,19 @@ sqlite__set_as_backend (SamplecatBackend* backend)
 	backend->remove           = sqlite__delete_row;
 	backend->file_exists      = sqlite__file_exists;
 	backend->filter_by_audio  = sqlite__filter_by_audio;
-
-	backend->disconnect       = sqlite__disconnect;
 }
 
 
-void
-sqlite__create_db ()
-{
-}
-
-
-int
+static bool
 sqlite__connect ()
 {
 	PF;
 
-	if (!ensure_config_dir()) {
+	if (sqlite3_open(config->path, &db)) { // if the file doesnt exist, it will be created, as long as the path is valid.
+		errprintf("%s (%s)", sqlite3_errmsg(db), config->path);
+		sqlite3_close(db);
 		return false;
 	}
-
-	char* db_name = g_strdup_printf("%s/.config/" PACKAGE "/" PACKAGE ".sqlite", g_get_home_dir());
-	int rc = sqlite3_open(db_name, &db); // if the file doesnt exist, it will be created.
-	if (rc) {
-		fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
-		fprintf(stderr, "file=%s", db_name);
-		sqlite3_close(db);
-		return FALSE;
-	}
-	g_free(db_name);
 
 	int on_create_table (void* _, int argc, char** argv, char** az_col_name)
 	{
@@ -183,7 +173,7 @@ sqlite__connect ()
 			ensure_column(table, "meta_data TEXT");
 		}
 	} else {
-		if (errmsg) dbg(0, "SQL: %s", errmsg);
+		if (errmsg) pwarn("SQL: %s", errmsg);
 	}
 	if (table) sqlite3_free_table(table);
 	if (errmsg) sqlite3_free(errmsg);

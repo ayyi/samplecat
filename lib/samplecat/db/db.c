@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
- | copyright (C) 2007-2024 Tim Orford <tim@orford.org> and others       |
+ | copyright (C) 2007-2026 Tim Orford <tim@orford.org> and others       |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -32,13 +32,13 @@
 
 #define backend samplecat.model->backend
 
-static SamplecatDBConfig* mysql_config;
+static void* db_config;
 
 
 void
-db_init (SamplecatDBConfig* _mysql)
+db_init (void* _config)
 {
-	mysql_config = _mysql;
+	db_config = _config;
 }
 
 
@@ -54,9 +54,8 @@ db_connect ()
 #endif
 #ifdef USE_SQLITE
 	if (!connected && can_use(samplecat.model->backends, "sqlite")) {
-		if (sqlite__connect()) {
-			connected = samplecat_set_backend(BACKEND_SQLITE);
-		}
+		samplecat_set_backend(BACKEND_SQLITE);
+		connected = backend.connect();
 	}
 #endif
 
@@ -72,8 +71,8 @@ samplecat_set_backend (BackendType type)
 	switch (type) {
 		case BACKEND_MYSQL:
 			#ifdef USE_MYSQL
-			mysql__set_as_backend(&backend, mysql_config);
-			if(mysql__connect()){
+			mysql__set_as_backend(&backend, db_config);
+			if (backend.connect()) {
 				printf("database is mysql.\n");
 				return true;
 			}
@@ -116,13 +115,7 @@ samplecat_set_backend (BackendType type)
 			break;
 	}
 
-	backend.init(
-#ifdef USE_MYSQL
-		mysql_config
-#else
-		NULL
-#endif
-	);
+	backend.init(db_config);
 
 	return true;
 }

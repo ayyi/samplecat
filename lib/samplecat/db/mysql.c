@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
- | copyright (C) 2007-2024 Tim Orford <tim@orford.org> and others       |
+ | copyright (C) 2007-2026 Tim Orford <tim@orford.org> and others       |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -50,13 +50,14 @@ MYSQL mysql = {{NULL}, NULL, NULL};
 
 static SamplecatBackend* db = NULL;
 static gboolean is_connected = FALSE;
-static SamplecatDBConfig* config = NULL;
+static SamplecatMysqlConfig* config;
 static MYSQL_RES* dir_iter_result = NULL;
 static MYSQL_RES* search_result = NULL;
 static Sample result;
 
 static void      mysql__init             (void* config);
 
+static bool      mysql__connect          ();
 static void      mysql__disconnect       ();
 static int       mysql__insert           (Sample*);
 static bool      mysql__delete_row       (int id);
@@ -122,11 +123,14 @@ mysql__init(void* _config)
 
 
 void
-mysql__set_as_backend (SamplecatBackend* backend, SamplecatDBConfig* config)
+mysql__set_as_backend (SamplecatBackend* backend, SamplecatMysqlConfig* config)
 {
 	db = backend;
 
 	backend->init             = mysql__init;
+
+	backend->connect          = mysql__connect;
+	backend->disconnect       = mysql__disconnect;
 
 	backend->search_iter_new  = mysql__search_iter_new;
 	backend->search_iter_next = mysql__search_iter_next_;
@@ -146,13 +150,11 @@ mysql__set_as_backend (SamplecatBackend* backend, SamplecatDBConfig* config)
 	backend->update_int       = mysql__update_int;
 	backend->update_blob      = mysql__update_blob;
 
-	backend->disconnect       = mysql__disconnect;
-
 	mysql__init(config);
 }
 
 
-gboolean
+static bool
 mysql__connect ()
 {
 	g_return_val_if_fail(samplecat.model, false);
@@ -183,7 +185,7 @@ mysql__connect ()
 	if (_debug_) printf("MySQL Server Version is %s\n", mysql_get_server_info(&mysql));
 
 	if (mysql_select_db(&mysql, config->name)) {
-		errprintf("Failed to connect to Database: %s\n", mysql_error(&mysql));
+		errprintf("Failed to connect to Database: %s", mysql_error(&mysql));
 		return false;
 	}
 	// check if table exists
@@ -195,7 +197,7 @@ mysql__connect ()
 	sprintf(sql, "SELECT column_name from INFORMATION_SCHEMA.COLUMNS where table_schema='%s' AND table_name='samples';", config->name);
 	if (mysql_query(&mysql, sql)) {
 		// probably out of disc space.
-		errprintf("Failed to get column_name: %s\n", mysql_error(&mysql));
+		errprintf("Failed to get column_name: %s", mysql_error(&mysql));
 		free(dbname);
 		g_free(sql);
 		return false;

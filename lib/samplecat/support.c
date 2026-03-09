@@ -189,12 +189,9 @@ get_iconbuf_from_mimetype (char* mimetype)
 
 
 bool
-ensure_config_dir ()
+ensure_config_dir (const char* path)
 {
-	static char* path = NULL;
-	if (!path) path = g_strdup_printf("%s/.config/" PACKAGE, g_get_home_dir()); // is static - don't free.
-
-	return (!g_mkdir_with_parents(path, 488));
+	return !g_mkdir_with_parents(path, 488);
 }
 
 

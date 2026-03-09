@@ -64,14 +64,14 @@ static const struct option long_options[] = {
   { "no-gui",           0, NULL, 'G' },
   { "verbose",          1, NULL, 'v' },
   { "search",           1, NULL, 's' },
-  { "cwd",              0, NULL, 'c' },
   { "add",              1, NULL, 'a' },
   { "layout",           1, NULL, 'l' },
+  { "dir",              1, NULL, 'd' },
   { "help",             0, NULL, 'h' },
   { "version",          0, NULL, 'V' },
 };
 
-static const char* const short_options = "b:Gv:s:a:p:chV";
+static const char* const short_options = "b:Gv:s:a:p:d:hV";
 
 static gboolean
 samplecat_application_local_command_line (GApplication* self, gchar*** arguments, int* exit_status)
@@ -130,9 +130,6 @@ samplecat_application_local_command_line (GApplication* self, gchar*** arguments
 				printf("search: %s\n", optarg);
 				observable_string_set(samplecat.model->filters2.search, g_strdup(optarg));
 				break;
-			case 'c':
-				app->temp_view = true;
-				break;
 			case 'a':
 				dbg(1, "add=%s", optarg);
 				app->args.add = remove_trailing_slash(g_strdup(optarg));
@@ -140,6 +137,11 @@ samplecat_application_local_command_line (GApplication* self, gchar*** arguments
 			case 'l':
 				dbg(1, "layout=%s", optarg);
 				app->args.layout = g_strdup(optarg);
+				break;
+			case 'd':
+				dbg(1, "directory=%s", optarg);
+				app->args.dir = g_strdup(optarg);
+				app->temp_view = true;
 				break;
 			case 'G':
 			case 'V':
@@ -234,9 +236,13 @@ samplecat_application_instance_init (SamplecatApplication* self, gpointer klass)
 {
 	app = self;
 
-	self->cache_dir = g_build_filename (g_get_home_dir (), ".config", PACKAGE, "cache", NULL);
-	self->configctx.dir = g_build_filename (g_get_home_dir(), ".config", PACKAGE, NULL);
-	self->configctx.filename = g_strdup_printf("%s/.config/" PACKAGE "/" PACKAGE, g_get_home_dir());
+	const char* xdg_config_home = getenv("XDG_CONFIG_HOME");
+	g_autofree char* config_dir = xdg_config_home ? g_strdup(xdg_config_home) : g_build_filename (g_get_home_dir (), ".config", NULL);
+
+	self->cache_dir = g_build_filename (config_dir, PACKAGE, "cache", NULL);
+	self->configctx.dir = g_build_filename (config_dir, PACKAGE, NULL);
+	self->configctx.filename = g_strdup_printf("%s/" PACKAGE "/" PACKAGE, config_dir);
+	ensure_config_dir(self->configctx.dir);
 
 	samplecat_init();
 

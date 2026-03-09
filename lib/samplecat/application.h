@@ -38,6 +38,7 @@ struct _SamplecatApplication {
    struct _args {
       char* add;
       char* layout;
+      char* dir;
    }                            args;
 
    enum {

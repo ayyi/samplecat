@@ -41,7 +41,8 @@ typedef struct _SamplecatModel    SamplecatModel;
 typedef struct _SamplecatListStore SamplecatListStore;
 typedef struct _Sample            Sample;
 typedef struct _SamplecatBackend  SamplecatBackend;
-typedef struct _SamplecatDBConfig SamplecatDBConfig;
+typedef struct _SamplecatMysqlConfig SamplecatMysqlConfig;
+typedef struct _SamplecatSqliteConfig SamplecatSqliteConfig;
 typedef struct _Logger            Logger;
 
 typedef void   (*Callback)       (gpointer);

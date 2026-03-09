@@ -43,7 +43,7 @@ static void destructor (void) __attribute__ ((destructor));
 static char*
 get_bus_address ()
 {
-	dbg(0, "Acquiring a11y bus via DBus...");
+	dbg(1, "Acquiring a11y bus via DBus...");
 
 	g_autoptr(GError) error = NULL;
 	g_autoptr(GDBusConnection) connection = g_bus_get_sync (G_BUS_TYPE_SESSION, NULL, &error);
@@ -479,7 +479,6 @@ destructor ()
 	g_clear_pointer (&event_listeners, g_hash_table_unref);
 
 	g_free (bus_address);
-	g_free (base_path);
 	g_free (desktop_name);
 	g_free (desktop_path);
 }

@@ -25,7 +25,9 @@
 #include "file_manager/mimetype.h"
 #include "file_manager/pixmaps.h"
 #include "file_manager/diritem.h"
-#include "samplecat/samplecat.h"
+#include "samplecat/application.h"
+#include "samplecat/list_store.h"
+#include "samplecat/support.h"
 #include "icon/utils.h"
 #include "application.h"
 #include "atspi.h"
@@ -87,7 +89,7 @@ main (int argc, char* argv[])
 				break;
 			case 'd':
 				app->temp_view = true;
-				g_strlcpy(app->config.browse_dir, optarg, PATH_MAX);
+				((SamplecatApplication*)app)->args.dir = g_strdup(optarg);
 				dbg(1, "dir=%s", optarg);
 				break;
 			case 'h':
@@ -101,14 +103,13 @@ main (int argc, char* argv[])
 		}
 	}
 
-	pixmaps_init();
-
 	g_log_set_default_handler(log_handler, NULL);
 
 	const char* themes[] = {"breeze", NULL};
 	const char* theme = find_icon_theme(themes);
 	if (theme)
 		set_icon_theme(theme);
+	pixmaps_init();
 
 	Display* dpy = XOpenDisplay(NULL);
 	if (!dpy) {
@@ -225,22 +226,26 @@ add_content (gpointer _)
 
 	config_load(&app->config_ctx, &app->config);
 
+	db_init(
+#ifdef USE_MYSQL
+		config_is_mysql() ? (void*)&app->config.mysql
+#else
+		false ? NULL
+#endif
+#ifdef USE_SQLITE
+		: config_is_sqlite() ? (void*)&app->config.sqlite
+#endif
+		: NULL
+	);
 	if (can_use(samplecat.model->backends, app->config.database_backend)) {
 		#define list_clear(L) g_list_free(L); L = NULL;
 		list_clear(samplecat.model->backends);
 		samplecat_model_add_backend(app->config.database_backend);
 	}
 
-	db_init(
-#ifdef USE_MYSQL
-		&app->config.mysql
-#else
-		NULL
-#endif
-	);
 	if (!db_connect()) {
 		g_warning("cannot connect to any database.");
-		return EXIT_FAILURE;
+		return G_SOURCE_REMOVE;
 	}
 
 	samplecat_list_store_do_search();
@@ -284,10 +289,6 @@ add_content (gpointer _)
 		}
 	}
 
-	if (actors.files) {
-		files_view_set_path((FilesView*)actors.files, app->config.browse_dir);
-	}
-
 	((AGlActor*)app->scene)->set_size = scene_set_size;
 
 	return G_SOURCE_REMOVE;
@@ -302,7 +303,7 @@ show_directory (gpointer _)
 	actors.files = agl_actor__add_child((AGlActor*)app->scene, ({
 		AGlActor* view = files_with_wav(NULL);
 		((FilesWithWav*)view)->wfc = app->wfc;
-		files_with_wav_set_path((FilesWithWav*)view, app->config.browse_dir);
+		files_with_wav_set_path((FilesWithWav*)view, ((SamplecatApplication*)app)->args.dir);
 
 		agl_actor__add_behaviour(view, ({
 			AGlBehaviour* f = fullsize();

@@ -15,13 +15,45 @@
 #include <gtk/gtk.h>
 #include "gtk/menu.h"
 #include "debug/debug.h"
+#include "gdl/gdl-dock-item.h"
 #include "dir-tree/view_dir_tree.h"
-#include "application.h"
-#include "support.h"
 #include "file_manager/file_manager.h"
 #include "file_manager/menu.h"
 #include "file_manager/pixmaps.h"
+#include "application.h"
+#include "support.h"
 
+#define TYPE_FILEMANAGER            (filemanager_get_type ())
+#define FILEMANAGER(obj)            (G_TYPE_CHECK_INSTANCE_CAST ((obj), TYPE_FILEMANAGER, Filemanager))
+#define FILEMANAGER_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST ((klass), TYPE_FILEMANAGER, FilemanagerClass))
+#define IS_FILEMANAGER(obj)         (G_TYPE_CHECK_INSTANCE_TYPE ((obj), TYPE_FILEMANAGER))
+#define IS_FILEMANAGER_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), TYPE_FILEMANAGER))
+#define FILEMANAGER_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS ((obj), TYPE_FILEMANAGER, FilemanagerClass))
+
+typedef struct _Filemanager Filemanager;
+typedef struct _FilemanagerClass FilemanagerClass;
+
+struct _Filemanager {
+	GdlDockItem parent_instance;
+	gchar* path;
+};
+
+struct _FilemanagerClass {
+	GdlDockItemClass parent_class;
+};
+
+enum {
+    PROP_0,
+    PROP_PATH,
+    PROP_LAST
+};
+
+static GParamSpec* properties[PROP_LAST];
+
+G_DEFINE_TYPE (Filemanager, filemanager, GDL_TYPE_DOCK_ITEM);
+
+static void filemanager_get_property (GObject*, guint, GValue*, GParamSpec*);
+static void filemanager_set_property (GObject*, guint, const GValue*, GParamSpec*);
 static void fileview_on_row_selected (GtkTreeView*, AyyiFilemanager*);
 static void add_to_db_on_activate    (GSimpleAction*, GVariant*, gpointer);
 static void play_on_activate         (GSimpleAction*, GVariant*, gpointer);
@@ -39,11 +71,43 @@ Accel menu_keys[] = {
 };
 
 
-GtkWidget*
-fileview_new ()
+Filemanager*
+construct (GType object_type)
 {
-	GtkWidget* fman_hpaned = gtk_paned_new(GTK_ORIENTATION_HORIZONTAL);
-	gtk_paned_set_position(GTK_PANED(fman_hpaned), 210);
+	return (Filemanager*) g_object_new (object_type, NULL);
+}
+
+
+static void
+filemanager_constructed (GObject* base)
+{
+	Filemanager* self = (Filemanager*) base;
+	G_OBJECT_CLASS (filemanager_parent_class)->constructed ((GObject*) G_TYPE_CHECK_INSTANCE_CAST (self, GDL_TYPE_DOCK_ITEM, GdlDockItem));
+}
+
+static void
+filemanager_class_init (FilemanagerClass* klass)
+{
+    GObjectClass* object_class = G_OBJECT_CLASS (klass);
+
+	filemanager_parent_class = g_type_class_peek_parent (klass);
+
+	object_class->constructed = filemanager_constructed;
+	G_OBJECT_CLASS (klass)->get_property = filemanager_get_property;
+	G_OBJECT_CLASS (klass)->set_property = filemanager_set_property;
+
+    properties[PROP_PATH] = g_param_spec_string ("path", "Path", "Current directory", NULL, G_PARAM_READWRITE | GDL_DOCK_PARAM_EXPORT);
+
+    g_object_class_install_property (object_class, PROP_PATH, properties[PROP_PATH]);
+}
+
+
+static void
+filemanager_init (Filemanager* self)
+{
+	GtkWidget* hpaned = gtk_paned_new(GTK_ORIENTATION_HORIZONTAL);
+	gtk_paned_set_position(GTK_PANED(hpaned), 210);
+	gdl_dock_item_set_child(GDL_DOCK_ITEM(self), hpaned);
 
 	void fman_left (const char* initial_folder)
 	{
@@ -58,7 +122,7 @@ fileview_new ()
 		#define expand TRUE
 		ViewDirTree* dir_tree = vdtree_new(initial_folder, expand);
 		vdtree_set_select_func(dir_tree, dir_on_select, NULL);
-		gtk_paned_set_start_child(GTK_PANED(fman_hpaned), dir_tree->widget);
+		gtk_paned_set_start_child(GTK_PANED(hpaned), dir_tree->widget);
 
 		void dir_tree_on_dir_changed (GtkWidget* widget, const char* dir, gpointer dir_tree)
 		{
@@ -99,18 +163,20 @@ fileview_new ()
 #endif
 	}
 
-	void fman_right (const char* initial_folder)
+	void fman_right (Filemanager* self)
 	{
-		GtkWidget* file_view = file_manager__new_window(initial_folder);
+		GtkWidget* file_view = file_manager__new_window(self->path);
 		AyyiFilemanager* fm = file_manager__get();
-		gtk_paned_set_end_child(GTK_PANED(fman_hpaned), file_view);
+		gtk_paned_set_end_child(GTK_PANED(hpaned), file_view);
 		g_signal_connect(G_OBJECT(fm->view), "cursor-changed", G_CALLBACK(fileview_on_row_selected), fm);
 
-		void file_view_on_dir_changed (GtkWidget* widget, gpointer data)
+		void file_view_on_dir_changed (GtkWidget* widget, const char* dir, gpointer self)
 		{
 			PF;
+			set_pointer(((Filemanager*)self)->path, g_strdup(dir), g_free);
 		}
-		g_signal_connect(G_OBJECT(fm), "dir-changed", G_CALLBACK(file_view_on_dir_changed), NULL);
+		set_pointer(self->path, g_strdup(fm->real_path), g_free);
+		g_signal_connect(G_OBJECT(fm), "dir-changed", G_CALLBACK(file_view_on_dir_changed), self);
 
 		void icon_theme_changed (Application* a, char* theme, gpointer _fm)
 		{
@@ -132,14 +198,42 @@ fileview_new ()
 #endif
 	}
 
-	const char* dir = (app->config.browse_dir[0] && g_file_test(app->config.browse_dir, G_FILE_TEST_IS_DIR))
-		? app->config.browse_dir
-		: g_get_home_dir();
+	if (!self->path)
+		self->path = (char*)g_get_home_dir();
+	if (app->args.dir)
+		set_pointer(self->path, g_strdup(app->args.dir), g_free);
 
-	fman_left(dir);
-	fman_right(dir);
+	fman_left(self->path);
+	fman_right(self);
+}
 
-	return fman_hpaned;
+
+static void
+filemanager_get_property (GObject* object, guint property_id, GValue* value, GParamSpec* pspec)
+{
+	Filemanager* self = G_TYPE_CHECK_INSTANCE_CAST (object, TYPE_FILEMANAGER, Filemanager);
+
+	switch (property_id) {
+		case PROP_PATH:
+			g_value_set_string (value, self->path);
+			break;
+		default:
+			G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
+			break;
+	}
+}
+
+static void
+filemanager_set_property (GObject* object, guint property_id, const GValue* value, GParamSpec* pspec)
+{
+	switch (property_id) {
+		case PROP_PATH:
+			fm__change_to(file_manager__get(), g_value_get_string (value), NULL);
+			break;
+		default:
+			G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
+			break;
+	}
 }
 
 

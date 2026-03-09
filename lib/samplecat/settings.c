@@ -38,11 +38,11 @@ config_new (ConfigContext* ctx)
 		"mysql_host=localhost\n"
 		"mysql_user=username\n"
 		"mysql_pass=pass\n"
-		"mysql_name=samplelib\n"
-		"show_dir=\n"
 		"auditioner=\n"
 		"jack_autoconnect=system:playback_\n"
 		"jack_midiconnect=DISABLED\n"
+		"window_width=1024\n"
+		"window_height=800\n"
 	);
 
 	if (!g_key_file_load_from_data(ctx->key_file, data, strlen(data), G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS, &error)) {
@@ -63,6 +63,10 @@ config_load (ConfigContext* ctx, Config* config)
 
 #ifdef USE_MYSQL
 	strcpy(config->mysql.name, "samplecat");
+#endif
+#ifdef USE_SQLITE
+	g_autofree char* dbpath = g_strdup_printf("%s/" PACKAGE ".sqlite", ctx->dir);
+	strcpy(config->sqlite.path, dbpath);
 #endif
 
 	for (int i=0;i<PALETTE_SIZE;i++) {
@@ -85,11 +89,17 @@ config_load (ConfigContext* ctx, Config* config)
 					g_free(str);
 				}
 			}
-#ifdef USE_MYSQL
-#define num_keys (15)
+#ifdef USE_SQLITE
+#define N_SQLITE_KEYS 1
 #else
-#define num_keys (11)
+#define N_SQLITE_KEYS 0
 #endif
+#ifdef USE_MYSQL
+#define N_MYSQL_KEYS 4
+#else
+#define N_MYSQL_KEYS 0
+#endif
+#define num_keys (10 + N_MYSQL_KEYS + N_SQLITE_KEYS)
 			char  keys[num_keys+(PALETTE_SIZE-1)][32];
 			char*  loc[num_keys+(PALETTE_SIZE-1)];
 			size_t siz[num_keys+(PALETTE_SIZE-1)];
@@ -108,10 +118,12 @@ config_load (ConfigContext* ctx, Config* config)
 			ADD_CONFIG_KEY (config->mysql.pass,       "mysql_pass");
 			ADD_CONFIG_KEY (config->mysql.name,       "mysql_name");
 #endif
+#ifdef USE_SQLITE
+			ADD_CONFIG_KEY (config->sqlite.path,      "sqlite_path");
+#endif
 			ADD_CONFIG_KEY (config->window_height,    "window_height");
 			ADD_CONFIG_KEY (config->window_width,     "window_width");
 			ADD_CONFIG_KEY (config->column_widths[0], "col1_width");
-			ADD_CONFIG_KEY (config->browse_dir,       "browse_dir");
 			ADD_CONFIG_KEY (config->show_player,      "show_player");
 			ADD_CONFIG_KEY (config->show_waveform,    "show_waveform");
 			ADD_CONFIG_KEY (config->show_spectrogram, "show_spectrogram");
@@ -227,20 +239,15 @@ config_save (ConfigContext* ctx)
 		}
 	}
 
-	AyyiFilemanager* fm = file_manager__get();
-	if (fm && fm->real_path) {
-		g_key_file_set_value(ctx->key_file, "Samplecat", "browse_dir", fm->real_path);
-	}
-
 	GError* error = NULL;
 	gsize length;
 	gchar* string = g_key_file_to_data(ctx->key_file, &length, &error);
 	if (error) {
-		dbg (0, "error saving config file: %s", error->message);
+		perr("error saving config file: %s", error->message);
 		g_error_free(error);
 	}
 
-	if (ensure_config_dir()) {
+	if (ensure_config_dir(app->configctx.dir)) {
 
 		FILE* fp;
 		if (!(fp = fopen(ctx->filename, "w"))) {

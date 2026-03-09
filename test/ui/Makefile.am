@@ -120,5 +120,19 @@ EXTRA_DIST = \
 	utils.c \
 	test_*.c
 
+suppression_dir = $(top_srcdir)/test/suppressions
+
+valgrind:
+	/usr/bin/valgrind \
+		--leak-check=full \
+		--gen-suppressions=yes \
+		--log-fd=2 \
+		--suppressions=$(suppression_dir)/suppressions_ \
+		--suppressions=$(suppression_dir)/mesa.supp \
+		--suppressions=$(suppression_dir)/glib.supp \
+		--suppressions=$(suppression_dir)/pango.supp \
+		--suppressions=$(suppression_dir)/fm.supp \
+		--num-callers=50 \
+		./ui_test
 endif
 

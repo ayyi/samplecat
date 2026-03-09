@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
- | copyright (C) 2020-2025 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2020-2026 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -182,4 +182,28 @@ search (const char* text)
 	gtk_entry_buffer_insert_text (buffer, -1, text, -1);
 
 	gtk_widget_activate(search);
+}
+
+
+char*
+find_wav (const char* wav)
+{
+	if (wav[0] == '/') {
+		return g_strdup(wav);
+	}
+
+	char* filename = g_build_filename("../../lib/waveform/test/data", wav, NULL);
+	if (g_file_test(filename, G_FILE_TEST_EXISTS)) {
+		return filename;
+	}
+	g_free(filename);
+
+	filename = g_build_filename("lib/waveform/test/data", wav, NULL);
+							dbg(0, "filename=%s", filename);
+	if (g_file_test(filename, G_FILE_TEST_EXISTS)) {
+		return filename;
+	}
+	g_free(filename);
+
+	return NULL;
 }

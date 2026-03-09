@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
- | copyright (C) 2007-2025 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2007-2026 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -192,15 +192,16 @@ layout_menu (GtkWidget* menu, GMenuModel* model, GSimpleActionGroup* group)
 					gtk_window_set_focus(root, NULL);
 
 					const char* target = g_variant_get_string(parameter, NULL);
-					gdl_dock_layout_load_layout(window.layout, current_layout = target);
+					if (gdl_dock_layout_load_layout(window.layout, current_layout = target)) {
 
 #ifdef GTK4_TODO
-					GList* menu_items = gtk_container_get_children((GtkContainer*)sub);
-					gtk_widget_set_sensitive(g_list_last(menu_items)->data, true); // enable the Save menu
-					g_list_free(menu_items);
+						GList* menu_items = gtk_container_get_children((GtkContainer*)sub);
+						gtk_widget_set_sensitive(g_list_last(menu_items)->data, true); // enable the Save menu
+						g_list_free(menu_items);
 #endif
 
-					statusbar_print(1, "Layout %s loaded", current_layout);
+						statusbar_print(1, "Layout %s loaded", current_layout);
+					}
 				}
 
 				g_action_map_add_action (G_ACTION_MAP (group), G_ACTION (({

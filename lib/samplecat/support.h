@@ -46,7 +46,7 @@ bool         mimestring_is_unsupported (char*);
 bool         mimetype_is_unsupported   (MIME_type*, char* mime_string);
 GdkPixbuf*   get_iconbuf_from_mimetype (char* mimetype);
 
-bool         ensure_config_dir         ();
+bool         ensure_config_dir         (const char*);
 
 uint8_t*     pixbuf_to_blob            (GdkPixbuf* in, guint* len);
 
