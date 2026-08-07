@@ -7,7 +7,7 @@ all:
 		./autogen.sh && \
 		./configure --enable-test && \
 		cat lib/waveform/config.h | grep GLIB && \
-		make && \
+		make -j5 && \
 		./src/samplecat --version
 	cd samplecat/test/unit && make check
 	cd samplecat/lib/waveform && ./test/waveform

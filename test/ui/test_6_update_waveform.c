@@ -9,7 +9,7 @@ test_6_update_waveform ()
 	assert(view_is_visible("Waveform"), "expected waveform panel visible");
 	assert(view_is_visible("Library"), "expected library panel visible");
 
-	observable_string_set(samplecat.model->filters2.search, g_strdup(""));
+	ayyi_observable_set_string(samplecat.model->filters2.search, g_strdup(""));
 
 	GtkTreeView* library = (GtkTreeView*)gtk_bin_get_child ((GtkBin*)find_dock_item("Library")->child);
 	GtkTreeSelection* selection = gtk_tree_view_get_selection(library);

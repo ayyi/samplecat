@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
- | copyright (C) 2017-2025 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2017-2026 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -12,11 +12,10 @@
 
 #include "config.h"
 #include <gdk/gdkkeysyms.h>
-#include <GL/gl.h>
 #include "debug/debug.h"
 #include "file_manager/support.h" // to_utf8()
 #include "agl/behaviours/scrollable.h"
-#include "agl/fbo.h"
+#include "agl/text.h"
 #include "samplecat.h"
 #include "behaviours/style.h"
 #include "views/inspector.h"

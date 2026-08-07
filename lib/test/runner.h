@@ -1,14 +1,15 @@
-/**
-* +----------------------------------------------------------------------+
-* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2020 Tim Orford <tim@orford.org>                  |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-*
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
+ | copyright (C) 2007-2026 Tim Orford <tim@orford.org>                  |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
 */
+
 #include <stdbool.h>
 #include <glib.h>
 #include <glib-object.h>
@@ -108,6 +109,7 @@ void       test_finish      ();
 
 #define assert(A, B, ...) \
 	{bool __ok_ = ((A) != 0); \
+	{if(!__ok_) printf("line %i: ", __LINE__); } \
 	{if(!__ok_) perr(B, ##__VA_ARGS__); } \
 	{if(!__ok_) FAIL_TEST("assertion failed") }}
 

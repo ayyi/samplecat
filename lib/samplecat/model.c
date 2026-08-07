@@ -1,14 +1,15 @@
-/**
-* +----------------------------------------------------------------------+
-* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2020 Tim Orford <tim@orford.org>                  |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-*
-*/
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
+ | copyright (C) 2007-2026 Tim Orford <tim@orford.org>                  |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
+ */
+
 #include "config.h"
 #include <glib.h>
 #include <glib-object.h>
@@ -393,7 +394,7 @@ samplecat_model_construct (GType object_type)
 		if(true || i == FILTER_CATEGORY){
 			self->filters3[i] = named_observable_new(names[i]);
 		}else{
-			observable_string_set(self->filters3[i] = named_observable_new(names[i]), g_strdup(""));
+			ayyi_observable_set_string(self->filters3[i] = named_observable_new(names[i]), g_strdup(""));
 		}
 	}
 
@@ -447,7 +448,7 @@ samplecat_model_set_search_dir (SamplecatModel* self, gchar* dir)
 {
 	g_return_if_fail (self);
 
-	observable_string_set (self->filters2.dir, dir);
+	ayyi_observable_set_string (self->filters2.dir, dir);
 }
 
 
@@ -848,7 +849,7 @@ samplecat_model_finalize (GObject* obj)
 
 	for (int i = 0; i < N_FILTERS; i++) {
 		g_free (self->filters3[i]->value.c);
-		agl_observable_free (self->filters3[i]);
+		ayyi_observable_free (self->filters3[i]);
 	}
 
 	_samplecat_idle_unref0 (self->priv->dir_idle);

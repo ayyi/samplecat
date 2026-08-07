@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
- | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
- | copyright (C) 2007-2021 Tim Orford <tim@orford.org>                  |
+ | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
+ | copyright (C) 2007-2026 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -41,7 +41,8 @@ enum  {
 	SAMPLECAT_LIST_STORE_DUMMY_PROPERTY
 };
 
-static void samplecat_list_store_finalize (GObject*);
+static void samplecat_list_store_finalize          (GObject*);
+static void samplecat_list_store_on_sample_changed (SamplecatListStore*, Sample*, gint prop, void* val);
 
 
 SamplecatListStore*
@@ -293,6 +294,13 @@ static void
 samplecat_list_store_instance_init (SamplecatListStore * self)
 {
 	self->row_count = 0;
+
+	void listmodel__sample_changed(SamplecatModel* m, Sample* sample, int prop, void* val, gpointer _)
+	{
+		samplecat_list_store_on_sample_changed((SamplecatListStore*)samplecat.store, sample, prop, val);
+	}
+	g_signal_connect((gpointer)samplecat.model, "sample-changed", G_CALLBACK(listmodel__sample_changed), NULL);
+
 }
 
 

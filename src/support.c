@@ -1,14 +1,15 @@
-/**
-* +----------------------------------------------------------------------+
-* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2020 Tim Orford <tim@orford.org>                  |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-*
-*/
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
+ | copyright (C) 2007-2026 Tim Orford <tim@orford.org>                  |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
+ */
+
 #include "config.h"
 #include <sys/stat.h>
 #include <stdarg.h>
@@ -16,9 +17,6 @@
 #include <dirent.h>
 #include <sys/param.h>
 #include <errno.h>
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#include <gtk/gtk.h>
-#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 #include <gdk-pixbuf/gdk-pixdata.h>
 
 #include "debug/debug.h"
@@ -242,32 +240,6 @@ is_similar_rgb (unsigned colour1, unsigned colour2)
 	return FALSE;
 }
 #endif
-
-
-char*
-str_array_join (const char** array, const char* separator)
-{
-	//result must be freed using g_free()
-	g_return_val_if_fail(separator, NULL);
-
-	int sep_len = strlen(separator);
-	int i = 0;
-	int len = 0;
-	while(array[i]){
-		len += strlen(array[i]) + sep_len;
-		i++;
-	}
-	if(!len) return NULL;
-	char* s = g_new0(char, len);
-	char* t = s;
-	i = 0;
-	while(array[i]){
-		strcat(s, array[i]);
-		strcat(s, separator);
-		i++;
-	}
-	return t;
-}
 
 
 gint
@@ -668,11 +640,10 @@ uri_list_to_glist (const char* uri_list)
 {
 	GList* list = NULL;
 
-	while (*uri_list){
-		char* linebreak;
+	while (*uri_list) {
 		int	length;
 
-		linebreak = strchr(uri_list, 13);
+		const char* linebreak = strchr(uri_list, 13);
 
 		if (!linebreak){ errprintf ("uri_list_to_glist(): %s: %s", "missing line break in text/uri-list data", uri_list); return list; }
 		if (linebreak[1] != 10){

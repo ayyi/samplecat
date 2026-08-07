@@ -24,6 +24,7 @@ libsamplecat_la_SOURCES = \
 	settings.c settings.h \
 	observable.c observable.h \
 	throttle.c throttle.h \
+	palette.c palette.h \
 	support.c support.h
 
 libsamplecat_la_LIBADD = \

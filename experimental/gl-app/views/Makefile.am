@@ -33,7 +33,7 @@ AM_CFLAGS = \
 	-I$(top_srcdir)/lib/waveform/ \
 	-I$(top_srcdir)/lib/waveform/lib \
 	-I$(top_srcdir)/lib/waveform/lib/agl \
-	-I$(top_srcdir)/lib/waveform/gtkglext-1.0 \
+	-I$(top_srcdir)/lib/waveform/lib/agl/gtkglext-1.0 \
 	-I$(top_srcdir)/experimental/gl-app \
 	-I$(top_srcdir) \
 	$(SAMPLECAT_CFLAGS) \

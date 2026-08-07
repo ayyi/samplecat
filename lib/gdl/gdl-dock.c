@@ -38,6 +38,19 @@
 
 #include "libgdlmarshal.h"
 
+/**
+ * SECTION:gdl-dock
+ * @title: GdlDock
+ * @short_description: A docking area widget.
+ * @see_also: #GdlDockItem, #GdlDockMaster
+ * @stability: Unstable
+ *
+ * A #GdlDock is the toplevel widget which in turn hold a tree of #GdlDockItem
+ * widgets.
+ *
+ * Several dock widgets can exchange widgets if they share the same master.
+ */
+
 #ifndef __FUNCTION__
 #define __FUNCTION__ __func__
 #endif
@@ -119,7 +132,7 @@ struct _GdlDockPrivate
     gboolean            floating;
     GtkWidget          *window;
     gboolean            auto_title;
-    
+
     gint                float_x;
     gint                float_y;
     gint                width;
@@ -161,17 +174,17 @@ gdl_dock_class_init (GdlDockClass *klass)
     GtkWidgetClass     *widget_class;
     GtkContainerClass  *container_class;
     GdlDockObjectClass *object_class;
-    
+
     g_object_class = G_OBJECT_CLASS (klass);
     gtk_object_class = GTK_OBJECT_CLASS (klass);
     widget_class = GTK_WIDGET_CLASS (klass);
     container_class = GTK_CONTAINER_CLASS (klass);
     object_class = GDL_DOCK_OBJECT_CLASS (klass);
-    
+
     g_object_class->constructor = gdl_dock_constructor;
     g_object_class->set_property = gdl_dock_set_property;
     g_object_class->get_property = gdl_dock_get_property;
-    
+
     /* properties */
 
     g_object_class_install_property (
@@ -181,14 +194,14 @@ gdl_dock_class_init (GdlDockClass *klass)
                               FALSE,
                               G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |
                               GDL_DOCK_PARAM_EXPORT));
-    
+
     g_object_class_install_property (
         g_object_class, PROP_DEFAULT_TITLE,
         g_param_spec_string ("default-title", _("Default title"),
                              _("Default title for the newly created floating docks"),
                              NULL,
                              G_PARAM_READWRITE));
-    
+
     g_object_class_install_property (
         g_object_class, PROP_WIDTH,
         g_param_spec_int ("width", _("Width"),
@@ -196,7 +209,7 @@ gdl_dock_class_init (GdlDockClass *klass)
                           -1, G_MAXINT, -1,
                           G_PARAM_READWRITE | G_PARAM_CONSTRUCT |
                           GDL_DOCK_PARAM_EXPORT));
-    
+
     g_object_class_install_property (
         g_object_class, PROP_HEIGHT,
         g_param_spec_int ("height", _("Height"),
@@ -204,7 +217,7 @@ gdl_dock_class_init (GdlDockClass *klass)
                           -1, G_MAXINT, -1,
                           G_PARAM_READWRITE | G_PARAM_CONSTRUCT |
                           GDL_DOCK_PARAM_EXPORT));
-    
+
     g_object_class_install_property (
         g_object_class, PROP_FLOAT_X,
         g_param_spec_int ("floatx", _("Float X"),
@@ -212,7 +225,7 @@ gdl_dock_class_init (GdlDockClass *klass)
                           G_MININT, G_MAXINT, 0,
                           G_PARAM_READWRITE | G_PARAM_CONSTRUCT |
                           GDL_DOCK_PARAM_EXPORT));
-    
+
     g_object_class_install_property (
         g_object_class, PROP_FLOAT_Y,
         g_param_spec_int ("floaty", _("Float Y"),
@@ -229,26 +242,26 @@ gdl_dock_class_init (GdlDockClass *klass)
     widget_class->unmap = gdl_dock_unmap;
     widget_class->show = gdl_dock_show;
     widget_class->hide = gdl_dock_hide;
-    
+
     container_class->add = gdl_dock_add;
     container_class->remove = gdl_dock_remove;
     container_class->forall = gdl_dock_forall;
     container_class->child_type = gdl_dock_child_type;
-    
+
     object_class->is_compound = TRUE;
-    
+
     object_class->detach = gdl_dock_detach;
     object_class->reduce = gdl_dock_reduce;
     object_class->dock_request = gdl_dock_dock_request;
     object_class->dock = gdl_dock_dock;
-    object_class->reorder = gdl_dock_reorder;    
+    object_class->reorder = gdl_dock_reorder;
     object_class->child_placement = gdl_dock_child_placement;
     object_class->present = gdl_dock_present;
-    
+
     /* signals */
 
-    dock_signals [LAYOUT_CHANGED] = 
-        g_signal_new ("layout-changed", 
+    dock_signals [LAYOUT_CHANGED] =
+        g_signal_new ("layout-changed",
                       G_TYPE_FROM_CLASS (klass),
                       G_SIGNAL_RUN_LAST,
                       G_STRUCT_OFFSET (GdlDockClass, layout_changed),
@@ -272,22 +285,18 @@ gdl_dock_instance_init (GdlDock *dock)
     dock->_priv->height = -1;
 }
 
-static gboolean 
-gdl_dock_floating_configure_event_cb (GtkWidget         *widget,
-                                      GdkEventConfigure *event,
-                                      gpointer           user_data)
+static gboolean
+gdl_dock_floating_configure_event_cb (GtkWidget *widget, GdkEventConfigure *event, gpointer user_data)
 {
-    GdlDock *dock;
-    
-    g_return_val_if_fail (user_data != NULL && GDL_IS_DOCK (user_data), TRUE);
+	g_return_val_if_fail (user_data != NULL && GDL_IS_DOCK (user_data), TRUE);
 
-    dock = GDL_DOCK (user_data);
-    dock->_priv->float_x = event->x;
-    dock->_priv->float_y = event->y;
-    dock->_priv->width = event->width;
-    dock->_priv->height = event->height;
+	GdlDock* dock = GDL_DOCK (user_data);
+	dock->_priv->float_x = event->x;
+	dock->_priv->float_y = event->y;
+	dock->_priv->width = event->width;
+	dock->_priv->height = event->height;
 
-    return FALSE;
+	return FALSE;
 }
 
 static GObject *
@@ -295,20 +304,12 @@ gdl_dock_constructor (GType                  type,
                       guint                  n_construct_properties,
                       GObjectConstructParam *construct_param)
 {
-    GObject *g_object;
-    
-    g_object = GDL_CALL_PARENT_WITH_DEFAULT (G_OBJECT_CLASS, 
-                                               constructor, 
-                                               (type,
-                                                n_construct_properties,
-                                                construct_param),
-                                               NULL);
-    if (g_object) {
-        GdlDock *dock = GDL_DOCK (g_object);
-        GdlDockMaster *master;
+	GObject *g_object = GDL_CALL_PARENT_WITH_DEFAULT (G_OBJECT_CLASS, constructor,  (type, n_construct_properties, construct_param), NULL);
+	if (g_object) {
+		GdlDock *dock = GDL_DOCK (g_object);
         
         /* create a master for the dock if none was provided in the construction */
-        master = GDL_DOCK_OBJECT_GET_MASTER (GDL_DOCK_OBJECT (dock));
+        GdlDockMaster* master = GDL_DOCK_OBJECT_GET_MASTER (GDL_DOCK_OBJECT (dock));
         if (!master) {
             GDL_DOCK_OBJECT_UNSET_FLAGS (dock, GDL_DOCK_AUTOMATIC);
             master = g_object_new (GDL_TYPE_DOCK_MASTER, NULL);
@@ -928,7 +929,7 @@ gdl_dock_dock (GdlDockObject    *object,
         gdl_dock_set_title (dock);
     }
 }
-    
+
 static gboolean
 gdl_dock_floating_window_delete_event_cb (GtkWidget *widget)
 {
@@ -946,13 +947,12 @@ gdl_dock_floating_window_delete_event_cb (GtkWidget *widget)
 }
 
 static void
-_gdl_dock_foreach_build_list (GdlDockObject *object,
-                              gpointer       user_data)
+_gdl_dock_foreach_build_list (GdlDockObject *object, gpointer user_data)
 {
-    GList **l = (GList **) user_data;
+	GList **l = (GList **) user_data;
 
-    if (GDL_IS_DOCK_ITEM (object))
-        *l = g_list_prepend (*l, object);
+	if (GDL_IS_DOCK_ITEM (object))
+		*l = g_list_prepend (*l, object);
 }
 
 static gboolean
@@ -961,25 +961,21 @@ gdl_dock_reorder (GdlDockObject    *object,
                   GdlDockPlacement  new_position,
                   GValue           *other_data)
 {
-    GdlDock *dock = GDL_DOCK (object);
-    gboolean handled = FALSE;
-    
-    if (dock->_priv->floating &&
-        new_position == GDL_DOCK_FLOATING &&
-        dock->root == requestor) {
-        
-        if (other_data && G_VALUE_HOLDS (other_data, GDK_TYPE_RECTANGLE)) {
-            GdkRectangle *rect;
+	GdlDock *dock = GDL_DOCK (object);
+	gboolean handled = FALSE;
 
-            rect = g_value_get_boxed (other_data);
-            gtk_window_move (GTK_WINDOW (dock->_priv->window),
-                             rect->x,
-                             rect->y);
-            handled = TRUE;
-        }
-    }
-    
-    return handled;
+	if (dock->_priv->floating && new_position == GDL_DOCK_FLOATING && dock->root == requestor) {
+
+		if (other_data && G_VALUE_HOLDS (other_data, GDK_TYPE_RECTANGLE)) {
+			GdkRectangle *rect;
+
+			rect = g_value_get_boxed (other_data);
+			gtk_window_move (GTK_WINDOW (dock->_priv->window), rect->x, rect->y);
+			handled = TRUE;
+		}
+	}
+
+	return handled;
 }
 
 static gboolean 
@@ -1025,6 +1021,15 @@ gdl_dock_new (void)
     return GTK_WIDGET (dock);
 }
 
+/**
+ * gdl_dock_new_from:
+ * @original: The original #GdlDock
+ * @floating: %TRUE to create a floating dock
+ *
+ * Create a new dock widget having the same master than @original.
+ *
+ * Returns: (transfer full): A new #GdlDock widget
+ */
 GtkWidget *
 gdl_dock_new_from (GdlDock  *original,
                    gboolean  floating)
@@ -1191,10 +1196,18 @@ gdl_dock_find_best_placement_item (GdlDockItem *dock_item,
     return ret_item;
 }
 
+/**
+ * gdl_dock_add_item:
+ * @dock: A #GdlDock widget
+ * @item: A #GdlDockItem widget
+ * @placement: A position for the widget
+ *
+ * Dock in @dock, the widget @item at the position defined by @placement. The
+ * function takes care of finding the right parent widget eventually creating
+ * it if needed.
+ */
 void
-gdl_dock_add_item (GdlDock          *dock,
-                   GdlDockItem      *item,
-                   GdlDockPlacement  placement)
+gdl_dock_add_item (GdlDock *dock, GdlDockItem *item, GdlDockPlacement placement)
 {
     g_return_if_fail (dock != NULL);
     g_return_if_fail (item != NULL);
@@ -1261,9 +1274,18 @@ gdl_dock_add_floating_item (GdlDock        *dock,
     gdl_dock_add_item (GDL_DOCK (new_dock), item, GDL_DOCK_TOP);
 }
 
+/**
+ * gdl_dock_get_item_by_name:
+ * @dock: A #GdlDock widget
+ * @name: An item name
+ *
+ * Looks for an #GdlDockItem widget bound to the master of the dock item. It
+ * does not search only in the children of this particular dock widget.
+ *
+ * Returns: (transfer none): A #GdlDockItem widget or %NULL
+ */
 GdlDockItem *
-gdl_dock_get_item_by_name (GdlDock     *dock,
-                           const gchar *name)
+gdl_dock_get_item_by_name (GdlDock *dock, const gchar *name)
 {
     GdlDockObject *found;
     

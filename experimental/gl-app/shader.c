@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of the Ayyi project. https://www.ayyi.org          |
- | copyright (C) 2015-2024 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2015-2026 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -21,9 +21,9 @@
 #include "gl-app/shader.h"
 #include "gl-app/shaders/shaders.c"
 
-static void _button_set_uniforms      ();
-static void _ring_set_uniforms        ();
-static void _circle_set_uniforms      ();
+static void _button_set_uniforms      (AGlShader*);
+static void _ring_set_uniforms        (AGlShader*);
+static void _circle_set_uniforms      (AGlShader*);
 
 
 ButtonShader button_shader = {{
@@ -74,7 +74,7 @@ set_uniform_f (AGlShader* shader, int u, float* prev)
 	glUniform4fv(glGetUniformLocation((SHADER)->shader.program, "colour"), 1, colour);
 
 static void
-_button_set_uniforms ()
+_button_set_uniforms (AGlShader* _)
 {
 	float btn_size[2] = {button_shader.uniform.btn_size.x, button_shader.uniform.btn_size.y};
 	glUniform2fv(glGetUniformLocation(button_shader.shader.program, "btn_size"), 1, btn_size);
@@ -102,7 +102,7 @@ _button_set_uniforms ()
 
 
 static void
-_ring_set_uniforms ()
+_ring_set_uniforms (AGlShader* _)
 {
 	glUniform4fv(ring.uniforms[3].location, 1, ring.uniforms[3].value);
 	glUniform4fv(ring.uniforms[2].location, 1, ring.uniforms[2].value);
@@ -110,7 +110,7 @@ _ring_set_uniforms ()
 
 
 static void
-_circle_set_uniforms ()
+_circle_set_uniforms (AGlShader* _)
 {
 	float centre[2] = {circle_shader.uniform.centre.x, circle_shader.uniform.centre.y};
 	glUniform2fv(glGetUniformLocation(circle_shader.shader.program, "centre"), 1, centre);

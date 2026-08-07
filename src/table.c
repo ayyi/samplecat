@@ -40,9 +40,8 @@
  */
 
 #include "config.h"
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#define GLIB_DISABLE_DEPRECATION_WARNINGS
 #include <gtk/gtk.h>
-#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 #include "debug/debug.h"
 #include "typedefs.h"
 #include "table.h"

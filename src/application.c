@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
- | copyright (C) 2007-2025 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2007-2026 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -100,24 +100,18 @@ application_new ()
 		ctx->options[CONFIG_ICON_THEME] = config_option_new_string("icon_theme", get_theme_name);
 	}
 
-	void on_filter_changed (Observable* filter, AGlVal value, gpointer user_data)
+	void on_filter_changed (Observable* filter, AyyiVal value, gpointer user_data)
 	{
 		application_search();
 	}
 	for(int i = 0; i < N_FILTERS; i++){
-		agl_observable_subscribe (samplecat.model->filters3[i], on_filter_changed, NULL);
+		ayyi_observable_subscribe (samplecat.model->filters3[i], on_filter_changed, NULL);
 	}
 
 	application_set_auditioner(app);
 
 	void icon_theme_changed(Application* application, char* theme, gpointer data){ application_search(); }
 	g_signal_connect((gpointer)app, "icon-theme", G_CALLBACK(icon_theme_changed), NULL);
-
-	void listmodel__sample_changed(SamplecatModel* m, Sample* sample, int prop, void* val, gpointer _app)
-	{
-		samplecat_list_store_on_sample_changed((SamplecatListStore*)samplecat.store, sample, prop, val);
-	}
-	g_signal_connect((gpointer)samplecat.model, "sample-changed", G_CALLBACK(listmodel__sample_changed), app);
 
 	void log_message(GObject* o, char* message, gpointer _)
 	{

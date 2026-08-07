@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
- | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
- | copyright (C) 2007-2022 Tim Orford <tim@orford.org>                  |
+ | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
+ | copyright (C) 2007-2026 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -28,6 +28,7 @@
 #include "gtk/gimpactiongroup.h"
 #include "file_manager.h"
 #include "file_manager/menu.h"
+#include "dir_tree/view_dir_tree.h"
 #include "samplecat/worker.h"
 #include "player/player.h"
 #include "audio_analysis/waveform/waveform.h"
@@ -844,7 +845,7 @@ filters_new ()
 
 		void on_filter_button_clicked (GtkButton* button, gpointer _filter)
 		{
-			observable_string_set((Observable*)_filter, g_strdup(""));
+			ayyi_observable_set_string((Observable*)_filter, g_strdup(""));
 		}
 
 		g_signal_connect(button, "clicked", G_CALLBACK(on_filter_button_clicked), filter);
@@ -859,13 +860,13 @@ filters_new ()
 			}
 		}
 
-		void on_filter_changed (Observable* filter, AGlVal value, gpointer user_data)
+		void on_filter_changed (Observable* filter, AyyiVal value, gpointer user_data)
 		{
 			dbg(1, "value=%s", value.c);
 			set_label(filter, g_hash_table_lookup(buttons, filter));
 		}
 
-		agl_observable_subscribe (filter, on_filter_changed, NULL);
+		ayyi_observable_subscribe (filter, on_filter_changed, NULL);
 	}
 	return hbox;
 }
@@ -1254,7 +1255,7 @@ window_load_layout (const char* layout_name)
 
 	if (!have_layout) {
 		if (app->temp_view) {
-			perr("unable to find File Manger layout");
+			perr("unable to find File Manager layout");
 			exit(1);
 		}
 

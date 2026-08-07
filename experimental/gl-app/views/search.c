@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
- | copyright (C) 2012-2024 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2012-2026 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -128,7 +128,7 @@ search_view (gpointer _)
 
 	AGlActor* input = agl_actor__add_child((AGlActor*)view, text_input(NULL));
 	text_input_set_placeholder((TextInput*)input, "Search");
-	agl_observable_set_int (((TextInput*)input)->font, FONT_SIZE);
+	ayyi_observable_set_int (((TextInput*)input)->font, FONT_SIZE);
 
 	CacheBehaviour* cache = (CacheBehaviour*)((AGlActor*)view)->behaviours[0];
 	cache->on_invalidate = (AGlActorFn)search_layout;
@@ -168,7 +168,7 @@ search_enter (AGlActor* actor, GdkModifierType modifiers)
 {
 	const gchar* text = text_input_get_text((TextInput*)actor->children->data);
 
-	observable_set(samplecat.model->filters2.search, (AGlVal){.c = (char*)text});
+	ayyi_observable_set(samplecat.model->filters2.search, (AyyiVal){.c = (char*)text});
 
 	return AGL_HANDLED;
 }

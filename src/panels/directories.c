@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
- | copyright (C) 2007-2025 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2007-2026 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -80,7 +80,7 @@ on_dir_tree_link_selected (GObject* _, DhLink* link, gpointer data)
 
 	dbg(1, "dir=%s", link->uri);
 
-	observable_string_set(samplecat.model->filters2.dir, g_strdup(link->uri));
+	ayyi_observable_set_string(samplecat.model->filters2.dir, g_strdup(link->uri));
 
 	return false;
 }

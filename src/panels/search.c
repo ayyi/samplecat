@@ -1,14 +1,14 @@
-/**
-* +----------------------------------------------------------------------+
-* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2020 Tim Orford <tim@orford.org>                  |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-*
-*/
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
+ | copyright (C) 2007-2026 Tim Orford <tim@orford.org>                  |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
+ */
 
 #include "config.h"
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -44,7 +44,7 @@ search_new ()
 	{
 		PF;
 		const gchar* text = gtk_entry_get_text(GTK_ENTRY(window.search));
-		observable_string_set(samplecat.model->filters2.search, g_strdup(text));
+		ayyi_observable_set_string(samplecat.model->filters2.search, g_strdup(text));
 		return NOT_HANDLED;
 	}
 
@@ -59,11 +59,11 @@ search_new ()
 	gtk_entry_set_activates_default(GTK_ENTRY(entry), TRUE);
 	g_signal_connect(G_OBJECT(entry), "activate", G_CALLBACK(on_focus_out), NULL);
 
-	void on_search_filter_changed (Observable* _filter, AGlVal value, gpointer _entry)
+	void on_search_filter_changed (Observable* _filter, AyyiVal value, gpointer _entry)
 	{
 		gtk_entry_set_text(GTK_ENTRY(_entry), value.c);
 	}
-	agl_observable_subscribe (filter, on_search_filter_changed, entry);
+	ayyi_observable_subscribe (filter, on_search_filter_changed, entry);
 
 	tagshow_selector_new();
 
@@ -92,11 +92,11 @@ tagshow_selector_new ()
 
 		char* category = gtk_combo_box_get_active_text(GTK_COMBO_BOX(widget));
 		if (!strcmp(category, ALL_CATEGORIES)) g_clear_pointer(&category, g_free);
-		observable_string_set(samplecat.model->filters2.category, category);
+		ayyi_observable_set_string(samplecat.model->filters2.category, category);
 	}
 	g_signal_connect(combo, "changed", G_CALLBACK(on_view_category_changed), NULL);
 
-	void on_category_filter_changed (Observable* filter, AGlVal value, gpointer user_data)
+	void on_category_filter_changed (Observable* filter, AyyiVal value, gpointer user_data)
 	{
 		GtkComboBox* combo = user_data;
 
@@ -105,5 +105,5 @@ tagshow_selector_new ()
 		}
 	}
 
-	agl_observable_subscribe (samplecat.model->filters2.category, on_category_filter_changed, combo);
+	ayyi_observable_subscribe (samplecat.model->filters2.category, on_category_filter_changed, combo);
 }

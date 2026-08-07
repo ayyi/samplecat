@@ -5,7 +5,7 @@ SUBDIRS = panels $(VALA_DIR)
 
 if !ENABLE_SYSTEM_GTKGLEXT
 LOCAL_GTKGLEXT_CFLAGS = \
-	-I$(top_srcdir)/lib/waveform/gtkglext-1.0
+	-I$(top_srcdir)/lib/waveform/lib/agl/gtkglext-1.0
 endif
 
 AM_CFLAGS = \
@@ -53,7 +53,7 @@ endif
 if ENABLE_SYSTEM_GTKGLEXT
 else
 GTKGLEXT_LDFLAGS = \
-	$(top_srcdir)/lib/waveform/gtkglext-1.0/.libs/libgtkglext.a
+	$(top_srcdir)/lib/waveform/lib/agl/gtkglext-1.0/.libs/libgtkglext.a
 endif
 OPENGL_SRC = \
 	$(OPENGL_FFTW_SRC) \

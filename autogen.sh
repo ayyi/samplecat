@@ -7,15 +7,13 @@ SETCOLOR_NORMAL="echo -en \\033[0;39m"
 echo 'Generating files...'
 libtoolize --automake
 aclocal
-autoheader -Wall
-automake --gnu --add-missing -Wall -Wno-override
-autoconf
 
 if [ ! -f lib/waveform/autogen.sh ]; then
 	${SETCOLOR_WARN}
 	echo "libwaveform submodule missing, will fetch"
 	${SETCOLOR_NORMAL}
 	if [ ! -d .git ]; then
+		# tarball
 		echo "attempting to download libwaveform ..."
 		dir=`pwd`
 		cd lib/waveform && git clone https://github.com/ayyi/libwaveform.git || exit 1
@@ -28,9 +26,13 @@ if [ ! -f lib/waveform/autogen.sh ]; then
 		mv libwaveform/* libwaveform/.git . && rmdir libwaveform
 		cd "$dir"
 	else
-		git submodule update --init
+		git submodule update --init --recursive
 	fi
 fi
+
+autoheader -Wall
+automake --gnu --add-missing -Wall -Wno-override
+autoconf
 
 cd lib/waveform && \
 	./autogen.sh && \

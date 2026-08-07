@@ -24,7 +24,7 @@ AM_CFLAGS = \
 	-I$(top_srcdir)/lib \
 	-I$(top_srcdir)/lib/samplecat \
 	-I$(top_srcdir)/lib/waveform \
-	-I$(top_srcdir)/lib/waveform/gtkglext-1.0 \
+	-I$(top_srcdir)/lib/waveform/lib/agl/gtkglext-1.0 \
 	-I$(top_srcdir)/lib/waveform/lib \
 	-I$(top_srcdir)/lib/waveform/lib/agl \
 	$(OPENGL_CFLAGS) \
@@ -34,7 +34,7 @@ AM_CFLAGS = \
 
 if !ENABLE_SYSTEM_GTKGLEXT
 LOCAL_GTK_LIBS = \
-	$(top_srcdir)/lib/waveform/gtkglext-1.0/.libs/libgtkglext.a
+	$(top_srcdir)/lib/waveform/lib/agl/gtkglext-1.0/.libs/libgtkglext.a
 endif
 
 AM_LDFLAGS = \

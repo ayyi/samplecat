@@ -2,6 +2,8 @@
 
 export G_SLICE=always-malloc
 export G_DEBUG=gc-friendly
+export XDG_CACHE_HOME=/tmp/XDG_CACHE_HOME
+rm -f /tmp/XDG_CACHE_HOME/*.peak
 
 /usr/bin/valgrind \
 	--leak-check=full \

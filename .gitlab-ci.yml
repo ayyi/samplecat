@@ -13,12 +13,13 @@ ubuntu build:
   script:
     - cd test/ubuntu-20 && ./build && ./run
 
-arch build:
-  before_script:
-    - apk add --update make gcc && rm -rf /var/cache/apk/*
-  script:
-    - echo $CI_COMMIT_BRANCH
-    - cd test/artix && make build && ./run
+# temporarily disabled due to unexplained download errors
+#arch build:
+#  before_script:
+#    - apk add --update make gcc && rm -rf /var/cache/apk/*
+#  script:
+#    - echo $CI_COMMIT_BRANCH
+#    - cd test/artix && make build && ./run
 
 services:
   - docker:dind
