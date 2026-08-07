@@ -9,7 +9,7 @@ AM_CFLAGS = \
 	-I../../lib/waveform \
 	-I../../lib/waveform/lib \
 	-I../../lib/waveform/lib/agl \
-	-I$(top_srcdir)/lib/waveform/gtkglext-1.0 \
+	-I$(top_srcdir)/lib/waveform/lib/agl/gtkglext-1.0 \
 	$(DBUS_CFLAGS) \
 	$(GTK_CFLAGS)
 
@@ -20,7 +20,7 @@ if ENABLE_OPENGL
 if ENABLE_SYSTEM_GTKGLEXT
 else
 GTKGLEXT_LDFLAGS = \
-	$(top_srcdir)/lib/waveform/gtkglext-1.0/.libs/libgtkglext.a
+	$(top_srcdir)/lib/waveform/lib/agl/gtkglext-1.0/.libs/libgtkglext.a
 endif
 OPENGL_LDFLAGS = \
 	$(GTKGLEXT_LDFLAGS) \

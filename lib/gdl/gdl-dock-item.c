@@ -23,9 +23,7 @@
  * Library General Public License for more details.
  *
  * You should have received a copy of the GNU Library General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library; if not, see <http://www.gnu.org/licenses/>.
  */
 
 
@@ -49,6 +47,20 @@
 #include "gdl-dock-master.h"
 #include "libgdltypebuiltins.h"
 #include "libgdlmarshal.h"
+
+/**
+ * SECTION:gdl-dock-item
+ * @title: GdlDockItem
+ * @short_description: Adds docking capability to its child widget.
+ * @see_also: #GdlDockItem
+ * @stability: Unstable
+ *
+ * A dock item is a container widget that can be docked at different place.
+ * It accepts a single child and adds a grip allowing the user to click on it
+ * to drag and drop the widget.
+ *
+ * The grip is implemented as a #GdlDockItemGrip.
+ */
 
 #define NEW_DOCK_ITEM_RATIO 0.3
 
@@ -110,7 +122,7 @@ static void     gdl_dock_item_dock         (GdlDockObject    *object,
                                             GdlDockPlacement  position,
                                             GValue           *other_data);
 
-static void  gdl_dock_item_popup_menu    (GdlDockItem *item, 
+static void  gdl_dock_item_popup_menu    (GdlDockItem *item,
                                           guint        button,
                                           guint32      time);
 static void  gdl_dock_item_drag_start    (GdlDockItem *item);
@@ -120,7 +132,7 @@ static void  gdl_dock_item_drag_end      (GdlDockItem *item,
 static void  gdl_dock_item_tab_button    (GtkWidget      *widget,
                                           GdkEventButton *event,
                                           gpointer        data);
-                                          
+
 static void  gdl_dock_item_hide_cb       (GtkWidget   *widget,
                                           GdlDockItem *item);
 
@@ -165,7 +177,7 @@ enum {
 static guint gdl_dock_item_signals [LAST_SIGNAL] = { 0 };
 
 #define GDL_DOCK_ITEM_GRIP_SHOWN(item) \
-    (GDL_DOCK_ITEM_HAS_GRIP (item)) 
+    (GDL_DOCK_ITEM_HAS_GRIP (item))
 
 struct _GdlDockItemPrivate {
     GtkWidget *menu;
@@ -173,7 +185,7 @@ struct _GdlDockItemPrivate {
     gboolean   grip_shown;
     GtkWidget *grip;
     guint      grip_size;
-    
+
     GtkWidget *tab_label;
 
     gint       preferred_width;
@@ -197,7 +209,7 @@ static void
 gdl_dock_item_class_init (GdlDockItemClass *klass)
 {
     static gboolean style_initialized = FALSE;
-    
+
     GObjectClass       *g_object_class;
     GtkObjectClass     *gtk_object_class;
     GtkWidgetClass     *widget_class;
@@ -227,7 +239,7 @@ gdl_dock_item_class_init (GdlDockItemClass *klass)
     widget_class->button_release_event = gdl_dock_item_button_changed;
     widget_class->motion_notify_event = gdl_dock_item_motion;
     widget_class->key_press_event = gdl_dock_item_key_press;
-    
+
     container_class->add = gdl_dock_item_add;
     container_class->remove = gdl_dock_item_remove;
     container_class->forall = gdl_dock_item_forall;
@@ -265,7 +277,7 @@ gdl_dock_item_class_init (GdlDockItemClass *klass)
     g_value_register_transform_func (GDL_TYPE_DOCK_PARAM, GTK_TYPE_ORIENTATION,
                                      gdl_dock_param_import_gtk_orientation);
     /* --- end of registration */
-    
+
     g_object_class_install_property (
         g_object_class, PROP_RESIZE,
         g_param_spec_boolean ("resize", _("Resizable"),
@@ -273,7 +285,7 @@ gdl_dock_item_class_init (GdlDockItemClass *klass)
                                 "docked in a GtkPanel widget"),
                               TRUE,
                               G_PARAM_READWRITE));
-                                     
+
     g_object_class_install_property (
         g_object_class, PROP_BEHAVIOR,
         g_param_spec_flags ("behavior", _("Item behavior"),
@@ -282,7 +294,7 @@ gdl_dock_item_class_init (GdlDockItemClass *klass)
                             GDL_TYPE_DOCK_ITEM_BEHAVIOR,
                             GDL_DOCK_ITEM_BEH_NORMAL,
                             G_PARAM_READWRITE));
-                                     
+
     g_object_class_install_property (
         g_object_class, PROP_LOCKED,
         g_param_spec_boolean ("locked", _("Locked"),
@@ -311,10 +323,10 @@ gdl_dock_item_class_init (GdlDockItemClass *klass)
     /**
      * GdlDockItem::dock-drag-begin:
      * @item: The dock item which is being dragged.
-     * 
+     *
      * Signals that the dock item has begun to be dragged.
      **/
-    gdl_dock_item_signals [DOCK_DRAG_BEGIN] = 
+    gdl_dock_item_signals [DOCK_DRAG_BEGIN] =
         g_signal_new ("dock-drag-begin",
                       G_TYPE_FROM_CLASS (klass),
                       G_SIGNAL_RUN_FIRST,
@@ -330,10 +342,10 @@ gdl_dock_item_class_init (GdlDockItemClass *klass)
      * @item: The dock item which is being dragged.
      * @x: The x-position that the dock item has been dragged to.
      * @y: The y-position that the dock item has been dragged to.
-     * 
+     *
      * Signals that a dock item dragging motion event has occured.
      **/
-    gdl_dock_item_signals [DOCK_DRAG_MOTION] = 
+    gdl_dock_item_signals [DOCK_DRAG_MOTION] =
         g_signal_new ("dock-drag-motion",
                       G_TYPE_FROM_CLASS (klass),
                       G_SIGNAL_RUN_FIRST,
@@ -341,7 +353,7 @@ gdl_dock_item_class_init (GdlDockItemClass *klass)
                       NULL, /* accumulator */
                       NULL, /* accu_data */
                       gdl_marshal_VOID__INT_INT,
-                      G_TYPE_NONE, 
+                      G_TYPE_NONE,
                       2,
                       G_TYPE_INT,
                       G_TYPE_INT);
@@ -351,10 +363,10 @@ gdl_dock_item_class_init (GdlDockItemClass *klass)
      * @item: The dock item which is no longer being dragged.
      * @cancel: This value is set to TRUE if the drag was cancelled by
      * the user. #cancel is set to FALSE if the drag was accepted.
-     * 
+     *
      * Signals that the dock item dragging has ended.
      **/
-    gdl_dock_item_signals [DOCK_DRAG_END] = 
+    gdl_dock_item_signals [DOCK_DRAG_END] =
         g_signal_new ("dock_drag_end",
                       G_TYPE_FROM_CLASS (klass),
                       G_SIGNAL_RUN_FIRST,
@@ -362,7 +374,7 @@ gdl_dock_item_class_init (GdlDockItemClass *klass)
                       NULL, /* accumulator */
                       NULL, /* accu_data */
                       gdl_marshal_VOID__BOOLEAN,
-                      G_TYPE_NONE, 
+                      G_TYPE_NONE,
                       1,
                       G_TYPE_BOOLEAN);
 
@@ -407,7 +419,7 @@ gdl_dock_item_instance_init (GdlDockItem *item)
     GTK_WIDGET_UNSET_FLAGS (GTK_WIDGET (item), GTK_NO_WINDOW);
 
     item->child = NULL;
-    
+
     item->orientation = GTK_ORIENTATION_VERTICAL;
     item->behavior = GDL_DOCK_ITEM_BEH_NORMAL;
 
@@ -425,14 +437,10 @@ gdl_dock_item_instance_init (GdlDockItem *item)
 }
 
 static GObject *
-gdl_dock_item_constructor (GType                  type,
-                           guint                  n_construct_properties,
-                           GObjectConstructParam *construct_param)
+gdl_dock_item_constructor (GType type, guint n_construct_properties, GObjectConstructParam *construct_param)
 {
-    GObject *g_object;
-    
-    g_object = GDL_CALL_PARENT_WITH_DEFAULT (G_OBJECT_CLASS, 
-                                               constructor, 
+    GObject* g_object = GDL_CALL_PARENT_WITH_DEFAULT (G_OBJECT_CLASS,
+                                               constructor,
                                                (type,
                                                 n_construct_properties,
                                                 construct_param),
@@ -477,8 +485,7 @@ gdl_dock_item_set_property  (GObject      *g_object,
 
             if ((old_beh ^ item->behavior) & GDL_DOCK_ITEM_BEH_LOCKED) {
                 if (GDL_DOCK_OBJECT_GET_MASTER (item))
-                    g_signal_emit_by_name (GDL_DOCK_OBJECT_GET_MASTER (item),
-                                           "layout-changed");
+                    g_signal_emit_by_name (GDL_DOCK_OBJECT_GET_MASTER (item), "layout-changed");
                 g_object_notify (g_object, "locked");
                 gdl_dock_item_showhide_grip (item);
             }
@@ -499,8 +506,7 @@ gdl_dock_item_set_property  (GObject      *g_object,
                 g_object_notify (g_object, "behavior");
 
                 if (GDL_DOCK_OBJECT_GET_MASTER (item))
-                    g_signal_emit_by_name (GDL_DOCK_OBJECT_GET_MASTER (item),
-                                           "layout-changed");
+                    g_signal_emit_by_name (GDL_DOCK_OBJECT_GET_MASTER (item), "layout-changed");
             }
             break;
         }
@@ -523,7 +529,7 @@ gdl_dock_item_get_property  (GObject      *g_object,
                              GParamSpec   *pspec)
 {
     GdlDockItem *item = GDL_DOCK_ITEM (g_object);
-    
+
     switch (prop_id) {
         case PROP_ORIENTATION:
             g_value_set_enum (value, item->orientation);
@@ -580,9 +586,8 @@ gdl_dock_item_destroy (GtkObject *object)
     GDL_CALL_PARENT (GTK_OBJECT_CLASS, destroy, (object));
 }
 
-static void 
-gdl_dock_item_add (GtkContainer *container,
-                   GtkWidget    *widget)
+static void
+gdl_dock_item_add (GtkContainer *container, GtkWidget *widget)
 {
     g_return_if_fail (GDL_IS_DOCK_ITEM (container));
 
@@ -609,7 +614,7 @@ gdl_dock_item_add (GtkContainer *container,
     item->child = widget;
 }
 
-static void  
+static void
 gdl_dock_item_remove (GtkContainer *container,
                       GtkWidget    *widget)
 {
@@ -626,18 +631,18 @@ gdl_dock_item_remove (GtkContainer *container,
             gtk_widget_queue_resize (GTK_WIDGET (item));
         return;
     }
-    
+
     if (GDL_DOCK_ITEM_IN_DRAG (item)) {
         gdl_dock_item_drag_end (item, TRUE);
     }
-    
+
     g_return_if_fail (item->child == widget);
 
     bool was_visible = GTK_WIDGET_VISIBLE (widget);
 
     gtk_widget_unparent (widget);
     item->child = NULL;
-    
+
     if (was_visible)
         gtk_widget_queue_resize (GTK_WIDGET (container));
 }
@@ -649,12 +654,12 @@ gdl_dock_item_forall (GtkContainer *container,
                       gpointer      callback_data)
 {
     GdlDockItem *item = (GdlDockItem *) container;
-    
+
     g_return_if_fail (callback != NULL);
-    
+
     if (include_internals && item->_priv->grip)
         (* callback) (item->_priv->grip, callback_data);
-    
+
     if (item->child)
         (* callback) (item->child, callback_data);
 }
@@ -663,7 +668,7 @@ static GType
 gdl_dock_item_child_type (GtkContainer *container)
 {
     g_return_val_if_fail (GDL_IS_DOCK_ITEM (container), G_TYPE_NONE);
-    
+
     if (!GDL_DOCK_ITEM (container)->child)
         return GTK_TYPE_WIDGET;
     else
@@ -730,10 +735,10 @@ gdl_dock_item_size_allocate (GtkWidget     *widget,
                              GtkAllocation *allocation)
 {
     GdlDockItem *item;
-  
+
     g_return_if_fail (GDL_IS_DOCK_ITEM (widget));
     g_return_if_fail (allocation != NULL);
-  
+
     item = GDL_DOCK_ITEM (widget);
 
     widget->allocation = *allocation;
@@ -741,7 +746,7 @@ gdl_dock_item_size_allocate (GtkWidget     *widget,
     /* Once size is allocated, preferred size is no longer necessary */
     item->_priv->preferred_height = -1;
     item->_priv->preferred_width = -1;
-    
+
     if (GTK_WIDGET_REALIZED (widget))
         gdk_window_move_resize (widget->window,
                                 widget->allocation.x,
@@ -971,15 +976,13 @@ gdl_dock_item_button_changed (GtkWidget      *widget,
             item->_priv->start_y = event->y;
 
             GDL_DOCK_ITEM_SET_FLAGS (item, GDL_DOCK_IN_PREDRAG);
-            
-            cursor = gdk_cursor_new_for_display (gtk_widget_get_display (widget),
-                                                 GDK_FLEUR);
-            gdk_window_set_cursor (GDL_DOCK_ITEM_GRIP (item->_priv->grip)->title_window,
-                                   cursor);
+
+            cursor = gdk_cursor_new_for_display (gtk_widget_get_display (widget), GDK_FLEUR);
+            gdk_window_set_cursor (GDL_DOCK_ITEM_GRIP (item->_priv->grip)->title_window, cursor);
             gdk_cursor_unref (cursor);
-        
+
             event_handled = TRUE;
-        };
+        }
         
     } else if (!locked &&event->type == GDK_BUTTON_RELEASE && event->button == 1) {
         if (GDL_DOCK_ITEM_IN_DRAG (item)) {

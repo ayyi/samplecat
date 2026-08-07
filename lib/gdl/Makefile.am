@@ -14,7 +14,7 @@ AM_CFLAGS = \
 	-I$(includedir) \
 	-I$(top_srcdir)/lib \
 	-I$(top_srcdir)/lib/waveform/lib/agl \
-	-I$(top_srcdir)/lib/waveform/gtkglext-1.0 \
+	-I$(top_srcdir)/lib/waveform/lib/agl/gtkglext-1.0 \
 	$(GTK_CFLAGS) \
 	$(XML_CFLAGS)
 

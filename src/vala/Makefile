@@ -1,19 +1,19 @@
 packages=--pkg config --pkg posix --pkg gdk-2.0 --pkg gtk+-2.0 --pkg gmodule-2.0 --pkg debug
 vapidir=--vapidir=. --vapidir=../../lib/debug
+valac=valac-0.56
 
 all:
 	valac -C -H spectrogram_widget.h --pkg gtk+-2.0 --pkg gmodule-2.0 spectrogram_widget.vala
 
 spectrogram-area.c: spectrogram-area.vala
-	valac -C -H spectrogram-area.h $(packages) --pkg gl --pkg gtkglext-1.0 \
-		../../lib/waveform/lib/agl/agl/agl.vapi  ../../lib/waveform/lib/agl/agl/gtk-area.vapi $(vapidir) \
-		spectrogram-area.vala
+	$(valac) -C -H spectrogram-area.h $(packages) --pkg gl --pkg gtkglext-1.0 \
+		../../lib/waveform/lib/agl/agl/agl.vapi  ../../lib/waveform/lib/agl/agl/gtk-area.vapi $(vapidir) $<
 
 application.c: application.vala
 	valac -C -H application.h $(packages) --pkg samplecat $(vapidir) application.vala
 
 model.c: model.vala
-	valac -C -H model.h $(packages) --pkg samplecat $(vapidir)
+	$(valac) -C -H $(basename $<).h $(packages) --pkg samplecat $(vapidir) $<
 	@sed -i -e "/\#include <gobject\/gvaluecollector.h>/a#include <application.h>" model.c # append
 
 list_store.c: list_store.vala
@@ -41,3 +41,6 @@ directory: directory.vala
 
 inspector: inspector.vala
 	valac -C -H inspector.h --pkg config --pkg gtk+-2.0 --pkg gdk-2.0 --pkg gmodule-2.0 --pkg debug --vapidir=. --vapidir=../../lib/debug inspector.vala
+
+dock-item.c: dock-item.vala
+	$(valac) -C -H dock-item.h --vapi=$(basename $<).vapi --pkg config --pkg gtk4 --pkg gmodule-2.0 --pkg debug --vapidir=. --vapidir=../../lib/debug dock-item.vala

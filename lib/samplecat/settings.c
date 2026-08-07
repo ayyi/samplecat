@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
- | copyright (C) 2007-2025 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2007-2026 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -19,8 +19,6 @@
 #include "settings.h"
 
 extern char theme_name[64];
-
-#define PALETTE_SIZE 17 // FIXME temporary - also in src/types.h
 
 
 static void
@@ -149,7 +147,7 @@ config_load (ConfigContext* ctx, Config* config)
 				keyval = NULL;
 			}
 			if((keyval = g_key_file_get_string(ctx->key_file, groupname, "filter", &error))){
-				observable_string_set(samplecat.model->filters2.search, keyval);
+				ayyi_observable_set_string(samplecat.model->filters2.search, keyval);
 				keyval = NULL;
 			}
 

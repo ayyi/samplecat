@@ -30,7 +30,6 @@
 
 G_BEGIN_DECLS
 
-/* standard macros */
 #define GDL_TYPE_DOCK_OBJECT             (gdl_dock_object_get_type ())
 #define GDL_DOCK_OBJECT(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), GDL_TYPE_DOCK_OBJECT, GdlDockObject))
 #define GDL_DOCK_OBJECT_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), GDL_TYPE_DOCK_OBJECT, GdlDockObjectClass))
@@ -98,7 +97,7 @@ struct _GdlDockObjectClass {
     GtkContainerClass parent_class;
 
     gboolean          is_compound;
-    
+
     void     (* detach)          (GdlDockObject    *object,
                                   gboolean          recursive);
     void     (* reduce)          (GdlDockObject    *object);
@@ -112,7 +111,7 @@ struct _GdlDockObjectClass {
                                   GdlDockObject    *requestor,
                                   GdlDockPlacement  position,
                                   GValue           *other_data);
-    
+
     gboolean (* reorder)         (GdlDockObject    *object,
                                   GdlDockObject    *child,
                                   GdlDockPlacement  new_position,
@@ -141,12 +140,12 @@ struct _GdlDockObjectClass {
     G_STMT_START { (GDL_DOCK_OBJECT_FLAGS (obj) |= (flag)); } G_STMT_END
 #define GDL_DOCK_OBJECT_UNSET_FLAGS(obj,flag) \
     G_STMT_START { (GDL_DOCK_OBJECT_FLAGS (obj) &= ~(flag)); } G_STMT_END
- 
+
 #define GDL_DOCK_OBJECT_FROZEN(obj) (GDL_DOCK_OBJECT (obj)->freeze_count > 0)
 
 
 /* public interface */
- 
+
 GType          gdl_dock_object_get_type          (void);
 
 gboolean       gdl_dock_object_is_compound       (GdlDockObject    *object);
@@ -215,8 +214,7 @@ GType        gdl_dock_object_set_type_for_nick (const gchar*, GType);
            G_OBJECT (object)->ref_count, \
            (GTK_IS_OBJECT (object) && g_object_is_floating (object)) ? "(float)" : "", \
            GDL_IS_DOCK_OBJECT (object) ? GDL_DOCK_OBJECT (object)->freeze_count : -1, \
-	   ##args); } G_STMT_END                   
-    
+	   ##args); } G_STMT_END
 
 
 G_END_DECLS

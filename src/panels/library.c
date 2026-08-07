@@ -1,14 +1,15 @@
-/**
-* +----------------------------------------------------------------------+
-* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2020 Tim Orford <tim@orford.org>                  |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-*
-*/
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
+ | copyright (C) 2007-2026 Tim Orford <tim@orford.org>                  |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
+ */
+
 #include "config.h"
 #include <stdlib.h>
 #include <string.h>
@@ -317,7 +318,7 @@ listview__on_row_clicked (GtkWidget* widget, GdkEventButton* event, gpointer use
 					gtk_tree_model_get(model, &iter, COL_KEYWORDS, &tags, COL_IDX, &id, -1);
 
 					if (tags && strlen(tags)) {
-						observable_string_set(samplecat.model->filters2.search, g_strdup(tags));
+						ayyi_observable_set_string(samplecat.model->filters2.search, g_strdup(tags));
 					}
 				}
 			}

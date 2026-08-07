@@ -480,8 +480,8 @@ tracker__search_iter_next()
 			gwarn("keywords error: %s", error->message);
 			g_error_free (error);
 		}
-		else if(tags) {
-			char* t = str_array_join((const char**)tags, " ");
+		else if (tags) {
+			char* t = g_strjoinv(" ", (const char**)tags);
 			result.keywords = t;
 		} else {
 			dbg(0, "no tags");

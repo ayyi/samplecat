@@ -37,7 +37,7 @@ G_BEGIN_DECLS
 #define GDL_DOCK_MASTER_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), GDL_TYPE_DOCK_MASTER, GdlDockMasterClass))
 #define GDL_IS_DOCK_MASTER(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), GDL_TYPE_DOCK_MASTER))
 #define GDL_IS_DOCK_MASTER_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), GDL_TYPE_DOCK_MASTER))
-#define GDL_DOCK_MASTER_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), GTK_TYPE_DOCK_MASTER, GdlDockMasterClass))
+#define GDL_DOCK_MASTER_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), GDL_TYPE_DOCK_MASTER, GdlDockMasterClass))
 
 /* data types & structures */
 typedef struct _GdlDockMaster        GdlDockMaster;

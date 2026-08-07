@@ -11,7 +11,6 @@ AM_PROG_AR
 
 AC_PROG_CXX
 AC_PROG_CC_C99
-AC_C_CONST
 AC_C_INLINE
 AC_HEADER_STDBOOL
 AC_TYPE_SIZE_T
@@ -566,6 +565,7 @@ AC_CONFIG_FILES([experimental/gl-app/shaders/Makefile])
 AC_CONFIG_FILES([experimental/gl-app/views/Makefile])
 AC_CONFIG_FILES([experimental/gl-app/behaviours/Makefile])
 AC_CONFIG_FILES([experimental/gl-app/test/Makefile])
+AC_CONFIG_FILES([experimental/gl-app/test/mocks/Makefile])
 AC_OUTPUT
 
 jplayer="no"

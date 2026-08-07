@@ -1,14 +1,15 @@
-/**
-* +----------------------------------------------------------------------+
-* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2020 Tim Orford <tim@orford.org>                  |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-*
-*/
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
+ | copyright (C) 2007-2026 Tim Orford <tim@orford.org>                  |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
+ */
+
 #include "config.h"
 #define __USE_GNU
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -131,7 +132,6 @@ sample_free (Sample* sample)
 	if(sample->notes) g_free(sample->notes);
 	if(sample->sample_dir) g_free(sample->sample_dir);
 	if(sample->meta_data) g_ptr_array_unref(sample->meta_data);
-	//if(sample->overview) g_free(sample->overview); // check how to free that!
 	g_free(sample);
 }
 

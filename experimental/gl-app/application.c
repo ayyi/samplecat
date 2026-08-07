@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
- | copyright (C) 2007-2022 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2007-2026 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -72,21 +72,15 @@ application_new ()
 		ctx->options[CONFIG_ICON_THEME] = config_option_new_string("icon_theme", get_theme_name);
 	}
 
-	void on_filter_changed (Observable* filter, AGlVal value, gpointer user_data)
+	void on_filter_changed (Observable* filter, AyyiVal value, gpointer user_data)
 	{
 		application_search();
 	}
 	for (int i = 0; i < N_FILTERS; i++) {
-		agl_observable_subscribe_with_state (samplecat.model->filters3[i], on_filter_changed, NULL);
+		ayyi_observable_subscribe_with_state (samplecat.model->filters3[i], on_filter_changed, NULL);
 	}
 
 	/*
-	void listmodel__sample_changed(SamplecatModel* m, Sample* sample, int prop, void* val, gpointer _app)
-	{
-		samplecat_list_store_on_sample_changed((SamplecatListStore*)samplecat.store, sample, prop, val);
-	}
-	g_signal_connect((gpointer)samplecat.model, "sample-changed", G_CALLBACK(listmodel__sample_changed), app);
-
 	void log_message(GObject* o, char* message, gpointer _)
 	{
 		dbg(1, "---> %s", message);
@@ -288,7 +282,7 @@ application_remove_panel (AGlActorClass* klass)
 	AGlActor* actor = agl_actor__find_by_class((AGlActor*)app->scene, klass);
 	if (actor) {
 		actor = actor->parent;
-		agl_actor__remove_child(actor->parent, actor);
+		agl_actor__remove(actor);
 		agl_actor__set_size(actor->parent);
 	}
 }

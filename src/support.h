@@ -1,16 +1,16 @@
-/**
-* +----------------------------------------------------------------------+
-* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2020 Tim Orford <tim@orford.org>                  |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-*
-*/
-#ifndef __support_h__
-#define __support_h__
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
+ | copyright (C) 2007-2026 Tim Orford <tim@orford.org>                  |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
+ */
+
+#pragma once
 
 #include <stdint.h>
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -62,8 +62,6 @@ gboolean     is_dark                   (GdkColor*);
 gboolean     is_similar                (GdkColor* colour1, GdkColor* colour2, int min_diff);
 gboolean     is_similar_rgb            (unsigned colour1, unsigned colour2);
 
-char*        str_array_join            (const char**, const char*);
-
 gint         treecell_get_row          (GtkWidget*, GdkRectangle*);
 void         statusbar_print           (int n, char* fmt, ...);
 
@@ -108,6 +106,4 @@ void         idle_free                 (Idle*);
 
 #if 0
 void         print_widget_tree         (GtkWidget*);
-#endif
-
 #endif

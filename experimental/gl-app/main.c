@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
- | copyright (C) 2007-2024 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2007-2026 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -11,6 +11,7 @@
  */
 
 #define __main_c__
+
 #include "config.h"
 #include <getopt.h>
 #include <libgen.h>
@@ -132,14 +133,13 @@ main (int argc, char* argv[])
 	}
 
 	AGliPt size = get_window_size_from_settings();
-	int screen = DefaultScreen(dpy);
-	AGlWindow* window = agl_window("Samplecat", (XDisplayWidth(dpy, screen) - size.x) / 2, (XDisplayHeight(dpy, screen) - size.y) / 2, size.x, size.y, 0);
+	AGlWindow* window = agl_window("Samplecat", -1, -1, size.x, size.y, 0);
 	app->scene = window->scene;
 	((AGlActor*)app->scene)->on_event = on_event;
 
 	g_idle_add(app->temp_view ? show_directory : add_content, NULL);
 
-	g_main_loop_run(agl_main_loop_new(window->window));
+	g_main_loop_run(agl_main_loop_new());
 
 	if (!app->temp_view) {
 		save_settings();
@@ -174,7 +174,7 @@ on_actor_added (Application* app, AGlActor* actor, gpointer data)
 		SelectBehaviour* selectable = (SelectBehaviour*)actor->behaviours[1];
 		g_return_if_fail(selectable);
 
-		void on_file_select (AGlObservable* o, AGlVal value, gpointer actor)
+		void on_file_select (AyyiObservable* o, AyyiVal value, gpointer actor)
 		{
 			AGlActor* wa = agl_actor__find_by_class ((AGlActor*)((AGlActor*)actor)->root, wf_actor_get_class());
 			if (wa) {
@@ -189,7 +189,7 @@ on_actor_added (Application* app, AGlActor* actor, gpointer data)
 				g_free(path);
 			}
 		}
-		agl_observable_subscribe (selectable->observable, on_file_select, actor);
+		ayyi_observable_subscribe (selectable->observable, on_file_select, actor);
 	}
 }
 
@@ -340,5 +340,3 @@ void
 application_emit_icon_theme_changed (Application* app, const gchar* _)
 {
 }
-
-

@@ -70,7 +70,7 @@ test1 ()
 
 	agl_scene_get_class()->behaviour_classes[0] = style_get_class();
 
-	AGlWindow* window = agl_window("Text test", 0, 0, width, height, 0);
+	AGlWindow* window = agl_window("Dock test", -1, -1, width, height, 0);
 	XMapWindow(dpy, window->window);
 
 	if (g_getenv("NON_INTERACTIVE")) {

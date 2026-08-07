@@ -1,18 +1,18 @@
-/**
-* +----------------------------------------------------------------------+
-* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2014-2020 Tim Orford <tim@orford.org>                  |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-* |                                                                      |
-* | GtkTable but with homogenous row-height and differing size columns   |
-* |                                                                      |
-* +----------------------------------------------------------------------+
-*
-*/
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
+ | copyright (C) 2014-2026 Tim Orford <tim@orford.org>                  |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |                                                                      |
+ | GtkTable but with homogenous row-height and differing size columns   |
+ |                                                                      |
+ +----------------------------------------------------------------------+
+ |
+ */
 /* GTK - The GIMP Toolkit
  * Copyright (C) 1995-1997 Peter Mattis, Spencer Kimball and Josh MacDonald
  *
@@ -40,9 +40,8 @@
  */
 
 #include "config.h"
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#define GLIB_DISABLE_DEPRECATION_WARNINGS
 #include <gtk/gtk.h>
-#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 #include "debug/debug.h"
 #include "typedefs.h"
 #include "table.h"
@@ -1344,7 +1343,6 @@ simple_table_size_allocate_pass2 (GtkSimpleTable *table)
 	GtkAllocation allocation;
 	GtkWidget *widget = GTK_WIDGET (table);
 
-	int c = 0;
 	GList* children = table->children;
 	while (children) {
 		child = children->data;
@@ -1403,7 +1401,6 @@ simple_table_size_allocate_pass2 (GtkSimpleTable *table)
 			gtk_widget_size_allocate (child->widget, &allocation);
 			//dbg(0, "%i: %i-%i requisition=%i allocation.width=%i", child->top_attach, child->left_attach, child->right_attach, child_requisition.width, allocation.width);
 		}
-		c++;
 	}
 }
 

@@ -1,23 +1,19 @@
-/**
-* +----------------------------------------------------------------------+
-* | This file is part of the Ayyi project. http://ayyi.org               |
-* | copyright (C) 2011-2020 Tim Orford <tim@orford.org>                  |
-* +----------------------------------------------------------------------+
-* | ROX-Filer, filer for the ROX desktop project, v2.3                   |
-* | Copyright (C) 2005, the ROX-Filer team.                              |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-*
-*/
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of the Ayyi project. https://ayyi.org              |
+ | copyright (C) 2011-2026 Tim Orford <tim@orford.org>                  |
+ +----------------------------------------------------------------------+
+ | ROX-Filer, filer for the ROX desktop project, v2.3                   |
+ | Copyright (C) 2005, the ROX-Filer team.                              |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
+ */
+
 #include "config.h"
-#include <stdlib.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <errno.h>
-#include <ctype.h>
 #include <time.h>
 #include <sys/param.h>
 #include <fnmatch.h>
@@ -176,7 +172,7 @@ get_mime_type (const gchar* type_name, gboolean can_create)
 	if (mtype || !can_create) return mtype;
 	dbg(2, "not found in cache: %s", type_name);
 
-	gchar* slash = strchr(type_name, '/');
+	const gchar* slash = strchr(type_name, '/');
 	if (slash == NULL) {
 		g_warning("MIME type '%s' does not contain a '/' character!", type_name);
 		return NULL;

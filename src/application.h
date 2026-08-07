@@ -1,22 +1,22 @@
-/**
-* +----------------------------------------------------------------------+
-* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2020 Tim Orford <tim@orford.org>                  |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-*
-*/
-#ifndef __application_h__
-#define __application_h__
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
+ | copyright (C) 2007-2026 Tim Orford <tim@orford.org>                  |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
+ */
+
+#pragma once
 
 #include "config.h"
 #include <glib-object.h>
 #include "samplecat/samplecat.h"
 #include "types.h"
-#include "dir_tree/view_dir_tree.h"
+#include "dir_tree/typedefs.h"
 #include "samplecat/settings.h"
 
 G_BEGIN_DECLS
@@ -137,5 +137,3 @@ void         application_free                    (Application*);
 #endif
 
 G_END_DECLS
-
-#endif

@@ -1,14 +1,15 @@
-/**
-* +----------------------------------------------------------------------+
-* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2007-2020 Tim Orford <tim@orford.org>                  |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-*
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
+ | copyright (C) 2007-2026 Tim Orford <tim@orford.org>                  |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ |
 */
+
 #include <stdbool.h>
 #include <glib.h>
 #include <glib-object.h>
@@ -22,10 +23,8 @@ typedef bool (*ReadyTest)    (gpointer);
 typedef void (*WaitCallback) (gpointer);
 
 #ifdef __runner_c__
-bool passed = false;
 bool abort_on_fail = true;
 #else
-extern bool passed;
 extern bool abort_on_fail;
 #endif
 
@@ -34,6 +33,7 @@ typedef struct {
 	int n_passed;
 	int n_failed;
 	int timeout;
+	bool passed;
 	ReadyTest before_each;
 	struct {
 		int    test;
@@ -74,40 +74,41 @@ void       test_finish      ();
 	if(__test_idx != TEST.current.test) return; \
 	printf("%s: finish\n", TEST.current.name); \
 	TEST.current.finished = true; \
-	passed = true; \
+	TEST.passed = true; \
 	test_finish(); \
 	return;
 
 #define FINISH_TEST_TIMER_STOP \
 	if(__test_idx != TEST.current.test) return G_SOURCE_REMOVE; \
 	TEST.current.finished = true; \
-	passed = true; \
+	TEST.passed = true; \
 	test_finish(); \
 	return G_SOURCE_REMOVE;
 
 #define FAIL_TEST(msg, ...) \
 	{TEST.current.finished = true; \
-	passed = false; \
+	TEST.passed = false; \
 	test_errprintf(msg, ##__VA_ARGS__); \
 	test_finish(); \
 	return; }
 
 #define FAIL_TEST_TIMER(msg) \
 	{TEST.current.finished = true; \
-	passed = false; \
+	TEST.passed = false; \
 	printf("%s%s%s\n", red, msg, white); \
 	test_finish(); \
 	return G_SOURCE_REMOVE;}
 
 #define FAIL_TEST_NULL(msg) \
 	{TEST.current.finished = true; \
-	passed = false; \
+	TEST.passed = false; \
 	printf("%s%s%s\n", red, msg, white); \
 	test_finish(); \
 	return NULL;}
 
 #define assert(A, B, ...) \
 	{bool __ok_ = ((A) != 0); \
+	{if(!__ok_) printf("line %i: ", __LINE__); } \
 	{if(!__ok_) perr(B, ##__VA_ARGS__); } \
 	{if(!__ok_) FAIL_TEST("assertion failed") }}
 

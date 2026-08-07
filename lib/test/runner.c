@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
- | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
- | copyright (C) 2020-2020 Tim Orford <tim@orford.org>                  |
+ | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
+ | copyright (C) 2020-2026 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -27,8 +27,10 @@
  *  The test must provide the list of tests and the setup and teardown functions
  */
 extern gpointer tests[];
-extern void setup(char* argv[]);
-extern void teardown();
+
+extern void setup    (char* argv[]) __attribute__((weak));
+extern void teardown () __attribute__((weak));
+extern int  n_tests  () __attribute__((weak));
 
 void set_log_handlers ();
 static void next_test ();
@@ -45,13 +47,14 @@ main (int argc, char* argv[])
 
 	set_log_handlers();
 
-	setup (argv);
+	gboolean run (gpointer user_data) { next_test(); return G_SOURCE_REMOVE; }
 
+	g_idle_add(run, NULL);
+
+	if (n_tests) TEST.n_tests = n_tests();
 	dbg(2, "n_tests=%i", TEST.n_tests);
 
-	gboolean fn(gpointer user_data) { next_test(); return G_SOURCE_REMOVE; }
-
-	g_idle_add(fn, NULL);
+	if (setup) setup (argv);
 
 	g_main_loop_run (g_main_loop_new (NULL, 0));
 
@@ -108,7 +111,7 @@ next_test ()
 		TEST.timeout = g_timeout_add(20000, on_test_timeout, NULL);
 	} else {
 		printf("finished all. passed=%s %i %s failed=%s %i %s\n", green, TEST.n_passed, white, (TEST.n_failed ? red : white), TEST.n_failed, white);
-		teardown();
+		if (teardown) teardown();
 		g_timeout_add(TEST.n_failed ? 4000 : 1000, (GSourceFunc)__exit, NULL);
 	}
 }
@@ -117,15 +120,15 @@ next_test ()
 void
 test_finish ()
 {
-	dbg(2, "... passed=%i", passed);
+	dbg(2, "... passed=%i", TEST.passed);
 
-	for(GList* l = TEST.current.timers; l; l = l->next){
+	for (GList* l = TEST.current.timers; l; l = l->next) {
 		g_source_remove(GPOINTER_TO_INT(l->data));
 	}
 	g_clear_pointer(&TEST.current.timers, g_list_free);
 
-	if(passed) TEST.n_passed++; else TEST.n_failed++;
-	if(!passed && abort_on_fail) TEST.current.test = 1000;
+	if (TEST.passed) TEST.n_passed++; else TEST.n_failed++;
+	if (!TEST.passed && abort_on_fail) TEST.current.test = 1000;
 
 	next_test();
 }

@@ -1,17 +1,18 @@
-/**
-* +----------------------------------------------------------------------+
-* | This file is part of Samplecat. http://ayyi.github.io/samplecat/     |
-* | copyright (C) 2016-2021 Tim Orford <tim@orford.org>                  |
-* +----------------------------------------------------------------------+
-* | This program is free software; you can redistribute it and/or modify |
-* | it under the terms of the GNU General Public License version 3       |
-* | as published by the Free Software Foundation.                        |
-* +----------------------------------------------------------------------+
-* | DockH                                                                |
-* | A container with 2 or more children arranged in a horizontal row     |
-* +----------------------------------------------------------------------+
-*
-*/
+/*
+ +----------------------------------------------------------------------+
+ | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
+ | copyright (C) 2016-2026 Tim Orford <tim@orford.org>                  |
+ +----------------------------------------------------------------------+
+ | This program is free software; you can redistribute it and/or modify |
+ | it under the terms of the GNU General Public License version 3       |
+ | as published by the Free Software Foundation.                        |
+ +----------------------------------------------------------------------+
+ | DockH                                                                |
+ | A container with 2 or more children arranged in a horizontal row     |
+ +----------------------------------------------------------------------+
+ |
+ */
+
 #include "config.h"
 #undef USE_GTK
 #include "debug/debug.h"
@@ -41,12 +42,8 @@ dock_h_get_class ()
 static void
 _init ()
 {
-	static bool init_done = false;
-
-	if(!init_done){
+	if (!agl) {
 		agl = agl_get_instance();
-
-		init_done = true;
 	}
 }
 
@@ -63,7 +60,7 @@ dock_h_view (gpointer _)
 		DockHView* dock = (DockHView*)actor;
 
 		float x = 0.;
-		for(GList* l=dock->panels;l;l=l->next){
+		for (GList* l=dock->panels;l;l=l->next) {
 			AGlActor* a = l->data;
 			if(x){
 				x = a->region.x1;
@@ -72,7 +69,7 @@ dock_h_view (gpointer _)
 			x = a->region.x2;
 		}
 
-		if(dock->handle.opacity > 0.0){
+		if (dock->handle.opacity > 0.0) {
 			float alpha = dock->handle.opacity;
 			SET_PLAIN_COLOUR (agl->shaders.plain, (0x999999ff & 0xffffff00) + (uint32_t)(alpha * 0xff));
 			agl_use_program((AGlShader*)agl->shaders.plain);
@@ -106,23 +103,23 @@ dock_h_view (gpointer _)
 		float height = agl_actor__height(actor);
 
 		typedef struct {
-			AGlActor* actor;
-			int       width;
+			AGlActor*   actor;
+			int         width;
+			SizeRequest req;
+			int         amount;
+			bool        full;
 		} Item;
 		Item items[g_list_length(dock->panels)];
 
-		int req = 0;
-		GList* l = dock->panels;
 		int i = 0;
-		for (;l;l=l->next,i++) {
-			items[i] = (Item){l->data, 0};
-			PanelView* panel = (PanelView*)items[i].actor;
-			if (panel->size_req.preferred.x > -1) req += panel->size_req.preferred.x;
+		for (GList* l = dock->panels;l;l=l->next,i++) {
+			PanelView* panel = (PanelView*)l->data;
+			items[i] = (Item){ .actor = l->data, .req = panel->size_req };
 		}
 
 		// if the allocated horizontal size is correct, it should be preserved
 		if (items[G_N_ELEMENTS(items) - 1].actor->region.x2 == agl_actor__width(actor)) {
-			dbg(2, "width already correct: %f", agl_actor__width(actor));
+			dbg(2, "width already correct: %.0f", agl_actor__width(actor));
 
 			for (GList* l=actor->children;l;l=l->next) {
 				AGlActor* child = l->data;
@@ -134,7 +131,7 @@ dock_h_view (gpointer _)
 
 		int hspace = agl_actor__width(actor) - SPACING * (g_list_length(dock->panels) - 1);
 		int n_flexible = g_list_length(dock->panels);
-		for (i=0;i<G_N_ELEMENTS(items);i++) {
+		for (int i=0;i<G_N_ELEMENTS(items);i++) {
 			Item* item = &items[i];
 			PanelView* panel = (PanelView*)item->actor;
 
@@ -147,14 +144,15 @@ dock_h_view (gpointer _)
 
 		int each_unallocated = n_flexible ? hspace / n_flexible : 0;
 		int x = 0;
+		// initial allocation for actors with no preferred size
 		for (i=0;i<G_N_ELEMENTS(items);i++) {
 			Item* item = &items[i];
 			PanelView* panel = (PanelView*)item->actor;
 
 			if (each_unallocated > 0) {
 				if (panel->size_req.preferred.x < 0) { // -1 means no preference
-							// TODO should be += ?
 					item->width = each_unallocated;
+					if (panel->size_req.max.x > -1) item->width = MIN(item->width, panel->size_req.max.x);
 				}
 			}
 			x += item->width + SPACING;
@@ -173,9 +171,7 @@ dock_h_view (gpointer _)
 				}
 			}
 			if (n_resizable) {
-				typedef struct {PanelView* panel; int w; int amount; bool full;} A; // TODO just use Item
-
-				void distribute(A L[], int _to_distribute, int n_resizable, int iter)
+				void distribute (Item items[], int len, int _to_distribute, int n_resizable, int iter)
 				{
 					if (!n_resizable) return;
 					g_return_if_fail(_to_distribute > 0);
@@ -184,48 +180,39 @@ dock_h_view (gpointer _)
 					int each = to_distribute / n_resizable;
 					int remainder = to_distribute % n_resizable;
 
-					#define CHECK_FULL(A) if(width + amount == max){ A->full = true; n_resizable--; }
+					#define CHECK_FULL(A) if (width + amount == max) { A->full = true; n_resizable--; }
 
-					for (int i=0;i<20;i++) {
-						A* a = &L[i];
-						if (a->panel) {
-							if (!a->full) {
-								PanelView* panel = a->panel;
-								int max = panel->size_req.max.x < 0 ? 10000 : panel->size_req.max.x;
-								int width = a->w + a->amount;
-								int amount = MIN(max - width, each);
-								//dbg(0, "   panel=%s width=%i max=%i possible=%i amount=%i (%i)", ((AGlActor*)a->panel)->name, width, max, max - width, amount, width + amount);
-								CHECK_FULL(a)
-								else if(remainder){
-									amount++;
-									remainder--;
-									CHECK_FULL(a)
-								}
-								to_distribute -= amount;
-								a->amount += amount;
+					for (int i=0;i<len;i++) {
+						Item* itm = &items[i];
+						if (!itm->full) {
+							int max = itm->req.max.x < 0 ? 10000 : itm->req.max.x;
+							int width = itm->width + itm->amount;
+							int amount = MIN(max - width, each);
+							dbg(1, "   panel=%s width=%i max=%i possible=%i amount=%i (%i)", itm->actor->name, width, max, max - width, amount, width + amount);
+							CHECK_FULL(itm)
+							else if (remainder) {
+								amount++;
+								remainder--;
+								CHECK_FULL(itm)
 							}
-						} else break;
+							to_distribute -= amount;
+							itm->amount += amount;
+						}
 					}
-					if(to_distribute && (to_distribute != _to_distribute) && iter++ < 5) distribute(L, to_distribute, n_resizable, iter);
-					if(iter == 5) pwarn("failed to distribute");
+					if (to_distribute && (to_distribute != _to_distribute) && iter++ < 5) distribute(items, len, to_distribute, n_resizable, iter);
+					if (iter == 5) pwarn("failed to distribute");
 				}
-				A L[G_N_ELEMENTS(items) + 1];
-				for(i=0;i<G_N_ELEMENTS(items);i++){
-					Item* item = &items[i];
-					L[i] = (A){(PanelView*)item->actor,item->width,};
-				}
-				L[i] = (A){NULL,};
-				distribute(L, remaining, n_resizable, 0);
 
-				for(i=0;i<G_N_ELEMENTS(items);i++){
+				distribute(items, G_N_ELEMENTS(items), remaining, n_resizable, 0);
+
+				for (i=0;i<G_N_ELEMENTS(items);i++) {
 					Item* item = &items[i];
-					A* a = &L[i];
-					item->width += a->amount;
+					item->width += item->amount;
 				}
 			}
 		}
-		else if(x > agl_actor__width(actor)){
-			dbg(0, "over allocated");
+		else if (x > agl_actor__width(actor)) {
+			dbg(1, "%s: over allocated", actor->name);
 			/*
 			int over = y - agl_actor__height(actor);
 			if(n_flexible){
@@ -241,15 +228,15 @@ dock_h_view (gpointer _)
 			}
 			*/
 			int gain = (1000 * x) / agl_actor__width(actor);
-			for(i=0;i<G_N_ELEMENTS(items);i++){
+			for (int i=0;i<G_N_ELEMENTS(items);i++) {
 				items[i].width = (1000 * items[i].width) / gain;
 			}
 		}
 
 		x = 0;
-		for(l=dock->panels,i=0;l;l=l->next,i++){
-			AGlActor* a = (AGlActor*)l->data;
+		for (int i=0;i<G_N_ELEMENTS(items);i++) {
 			Item* item = &items[i];
+			AGlActor* a = item->actor;
 			PanelView* panel = (PanelView*)item->actor;
 			a->region = (AGlfRegion){
 				.x1 = x,
@@ -259,11 +246,11 @@ dock_h_view (gpointer _)
 			};
 			x += items[i].width + SPACING;
 		}
-		dbg(2, "-> total=%i / %f", x - SPACING, agl_actor__width(actor));
+		dbg(2, "-> total=%i / %.0f", x - SPACING, agl_actor__width(actor));
 
 		// copynpaste - PanelView set_size
 		// single child takes all space of panel
-		if(g_list_length(actor->children) == 1){
+		if (g_list_length(actor->children) == 1) {
 			AGlActor* child = actor->children->data;
 			child->region = (AGlfRegion){0, PANEL_DRAG_HANDLE_HEIGHT, agl_actor__width(actor), height};
 			agl_actor__set_size(child);
@@ -278,27 +265,27 @@ dock_h_view (gpointer _)
 		{
 		}
 
-		switch (event->type){
+		switch (event->type) {
 			case GDK_BUTTON_PRESS:
 				agl_actor__grab(actor);
 				//set_cursor(arrange->canvas->widget->window, CURSOR_H_DOUBLE_ARROW);
 				return AGL_HANDLED;
 			case GDK_MOTION_NOTIFY:
-				if(actor_context.grabbed == actor){
+				if (actor_context.grabbed == actor) {
 					AGlActor* a2 = dock->handle.actor;
 					GList* l = g_list_find(dock->panels, a2);
 					AGlActor* a1 = l->prev->data;
 
 					int min_diff = -agl_actor__width(a1);
 					int max_diff = 1000;
-					if(((PanelView*)a1)->size_req.min.x > -1){
+					if (((PanelView*)a1)->size_req.min.x > -1) {
 						min_diff = ((PanelView*)a1)->size_req.min.x - agl_actor__width(a1);
 					}
-					if(((PanelView*)a1)->size_req.max.x > -1){
+					if (((PanelView*)a1)->size_req.max.x > -1) {
 						max_diff = ((PanelView*)a1)->size_req.max.x - agl_actor__width(a1);
 					}
 					int diff = CLAMP(xy.x - a2->region.x1, min_diff, max_diff);
-					if(diff){
+					if (diff) {
 						a2->region.x1 += diff;
 						agl_actor__set_size(a2);
 						agl_actor__invalidate(a2);
@@ -415,11 +402,11 @@ dock_h_move_panel_to_index (DockHView* dock, AGlActor* panel, int i)
 void
 dock_h_move_panel_to_y (DockHView* dock, AGlActor* panel, int y)
 {
-	int find_index(DockHView* dock, int y)
+	int find_index (DockHView* dock, int y)
 	{
 		GList* l = ((AGlActor*)dock)->children;
 		int i = 0;
-		for(;l;l=l->next){
+		for (;l;l=l->next) {
 			AGlActor* a = l->data;
 			dbg(0, "  %.0f", a->region.y1);
 			if(a->region.y1 > y) return i;
@@ -432,5 +419,3 @@ dock_h_move_panel_to_y (DockHView* dock, AGlActor* panel, int y)
 	int i = find_index(dock, y);
 	dock_h_move_panel_to_index(dock, panel, i);
 }
-
-

@@ -66,12 +66,12 @@ application_new ()
 		ctx->options[CONFIG_ICON_THEME] = config_option_new_string("icon_theme", get_theme_name);
 	}
 
-	void on_filter_changed (Observable* filter, AGlVal value, gpointer user_data)
+	void on_filter_changed (Observable* filter, AyyiVal value, gpointer user_data)
 	{
 		application_search();
 	}
 	for (int i = 0; i < N_FILTERS; i++) {
-		agl_observable_subscribe_with_state (samplecat.model->filters3[i], on_filter_changed, NULL);
+		ayyi_observable_subscribe_with_state (samplecat.model->filters3[i], on_filter_changed, NULL);
 	}
 
 	return app;

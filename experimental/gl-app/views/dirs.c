@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
- | copyright (C) 2016-2025 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2016-2026 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -11,7 +11,7 @@
  */
 
 #include "config.h"
-#include "agl/utils.h"
+#include "agl/text.h"
 #include "agl/actor.h"
 #include "agl/behaviours/cache.h"
 #include "agl/behaviours/scrollable.h"
@@ -186,7 +186,7 @@ directories_view (gpointer _)
 		actor->scrollable.x2 = 100;
 		actor->scrollable.y2 = actor->scrollable.y1 + view->cache.n_rows * row_height;
 
-		// unfortunately the behaviour layout gets called before the actor, so it is called a 2nd time here to use the correct size
+		// unfortunately the scrollable behaviour layout gets called before the actor, so it is called a 2nd time here to use the correct size
 		AGlBehaviour* b = actor->behaviours[2];
 		actor->class->behaviour_classes[2]->layout(b, actor);
 
@@ -229,7 +229,7 @@ directories_view (gpointer _)
 		int depth;
 		DirNode* dirnode = find_node_by_row(view, view->selection, &depth);
 
-		observable_string_set(samplecat.model->filters2.dir, g_strdup(((DhLink*)dirnode->node->data)->uri));
+		ayyi_observable_set_string(samplecat.model->filters2.dir, g_strdup(((DhLink*)dirnode->node->data)->uri));
 	}
 
 	DirectoriesView* view = agl_actor__new(DirectoriesView,
@@ -286,11 +286,11 @@ dirs_select (DirectoriesView* view, int row, DirNode* dirnode)
 
 	int position = row * row_height;
 	int bottom = (int)agl_actor__height(actor) - actor->scrollable.y1;
-	AGlObservable* scroll_value = SCROLLABLE(view)->scroll;
+	AyyiObservable* scroll_value = SCROLLABLE(view)->scroll;
 	if (position > bottom - 30) {
-		agl_observable_set_int (scroll_value, (row + 2) * row_height - agl_actor__height(actor));
+		ayyi_observable_set_int (scroll_value, (row + 2) * row_height - agl_actor__height(actor));
 	} else if (position < - actor->scrollable.y1 + 20) {
-		agl_observable_set_int (scroll_value, (row - 1) * row_height);
+		ayyi_observable_set_int (scroll_value, (row - 1) * row_height);
 	}
 
 	throttle_queue(&view->change);

@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
- | copyright (C) 2016-2024 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2016-2026 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -12,7 +12,7 @@
 
 #include "config.h"
 #include "debug/debug.h"
-#include "agl/utils.h"
+#include "agl/text.h"
 #include "agl/shader.h"
 #include "agl/x11.h"
 #include "wf/promise.h"
@@ -164,7 +164,7 @@ context_menu_event (AGlActor* actor, GdkEvent* event, AGliPt xy)
 						if (item->action) item->action(item->user_data);
 					}
 
-					g_idle_add(popup_destroy, NULL);
+					g_idle_add((GSourceFunc)popup_destroy, NULL);
 					return AGL_HANDLED;
 			}
 			return AGL_HANDLED;
@@ -185,7 +185,7 @@ context_menu_event (AGlActor* actor, GdkEvent* event, AGliPt xy)
 			}
 			break;
 		case GDK_FOCUS_CHANGE:
-			g_idle_add(popup_destroy, NULL);
+			g_idle_add((GSourceFunc)popup_destroy, NULL);
 			break;
 		default:
 			break;

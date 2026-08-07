@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
- | copyright (C) 2016-2024 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2016-2026 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -12,9 +12,8 @@
 
 #include "config.h"
 #include <gdk/gdkkeysyms.h>
-#include <GL/gl.h>
 #include "agl/ext.h"
-#include "agl/utils.h"
+#include "agl/text.h"
 #include "agl/behaviours/key.h"
 #include "agl/behaviours/cache.h"
 #include "agl/text/renderer.h"
@@ -65,7 +64,7 @@ static int sort_types[] = {F_COL_ICON, F_COL_NAME, 0, F_COL_DATE, F_COL_SIZE, F_
 static int col[] = {0, 24, 260, 360, 490, 530, 575};
 
 static gboolean files_scan_dir           (AGlActor*);
-static void     files_with_wav_on_scroll (AGlObservable*, AGlVal row, gpointer view);
+static void     files_with_wav_on_scroll (AyyiObservable*, AyyiVal row, gpointer view);
 static bool     not_audio                (const char* path);
 static AGlActor*filelist_view            (void*);
 
@@ -121,7 +120,7 @@ files_with_wav (gpointer _)
 	{
 		FilesWithWav* view = (FilesWithWav*)a;
 
-		agl_observable_set_int (view->files.scroll, 0);
+		ayyi_observable_set_int (view->files.scroll, 0);
 
 		g_idle_add((GSourceFunc)files_scan_dir, a);
 
@@ -156,7 +155,7 @@ files_with_wav (gpointer _)
 		FilesWithWav* view = (FilesWithWav*)actor;
 
 		if (view->files.scroll->value.i > max_scroll((FilesView*)view)) {
-			agl_observable_set_int (view->files.scroll, max_scroll((FilesView*)view));
+			ayyi_observable_set_int (view->files.scroll, max_scroll((FilesView*)view));
 		}
 	}
 
@@ -169,13 +168,13 @@ files_with_wav (gpointer _)
 				switch (event->button.button) {
 					case 4:
 						dbg(1, "! scroll up");
-						agl_observable_set_int (view->files.scroll, MAX(0, view->files.scroll->value.i - 1));
+						ayyi_observable_set_int (view->files.scroll, MAX(0, view->files.scroll->value.i - 1));
 						break;
 					case 5:
 						dbg(1, "! scroll down");
 						if (scrollable_height > N_ROWS_VISIBLE(actor)) {
-							if(view->files.scroll->value.i < max_scroll((FilesView*)view))
-								agl_observable_set_int (view->files.scroll, view->files.scroll->value.i + 1);
+							if (view->files.scroll->value.i < max_scroll((FilesView*)view))
+								ayyi_observable_set_int (view->files.scroll, view->files.scroll->value.i + 1);
 						}
 						break;
 				}
@@ -221,7 +220,7 @@ files_with_wav (gpointer _)
 				.on_event = files_event,
 			},
 			.viewmodel = vm_directory_new(),
-			.scroll = agl_observable_new(),
+			.scroll = ayyi_observable_new(),
 			.row_height = ROW_HEIGHT
 		}
 	);
@@ -234,7 +233,7 @@ files_with_wav (gpointer _)
 	agl_actor__add_child (actor, view->files.filelist = filelist_view (actor));
 	agl_actor__add_child (actor, view->files.scrollbar = scrollbar_view (view->files.filelist, GTK_ORIENTATION_VERTICAL, view->files.scroll, NULL, ROW_HEIGHT));
 
-	agl_observable_subscribe (view->files.scroll, files_with_wav_on_scroll, view);
+	ayyi_observable_subscribe (view->files.scroll, files_with_wav_on_scroll, view);
 
 	return (AGlActor*)view;
 }
@@ -313,10 +312,10 @@ files_with_wav_select (FilesWithWav* view, int row)
 
 		iRange range = {view->files.scroll->value.i, view->files.scroll->value.i + N_ROWS_VISIBLE(view) - 1};
 		if (row > range.end) {
-			agl_observable_set_int (view->files.scroll, row - N_ROWS_VISIBLE(view) + 1);
+			ayyi_observable_set_int (view->files.scroll, row - N_ROWS_VISIBLE(view) + 1);
 		}
 		if (row < range.start) {
-			agl_observable_set_int (view->files.scroll, row);
+			ayyi_observable_set_int (view->files.scroll, row);
 		}
 
 		agl_actor__invalidate ((AGlActor*)view);
@@ -334,7 +333,7 @@ files_with_wav_select (FilesWithWav* view, int row)
 
 
 static void
-files_with_wav_on_scroll (AGlObservable* observable, AGlVal row, gpointer _view)
+files_with_wav_on_scroll (AyyiObservable* observable, AyyiVal row, gpointer _view)
 {
 	FilesWithWav* view = (FilesWithWav*)_view;
 	AGlActor* actor = view->files.filelist;

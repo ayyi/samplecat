@@ -23,7 +23,7 @@ AM_CFLAGS = \
 	-I$(top_srcdir)/lib/waveform \
 	-I$(top_srcdir)/lib/waveform/lib \
 	-I$(top_srcdir)/lib/waveform/lib/agl \
-	-I$(top_srcdir)/lib/waveform/gtkglext-1.0 \
+	-I$(top_srcdir)/lib/waveform/lib/agl/gtkglext-1.0 \
 	-I$(top_srcdir)/experimental \
 	$(SAMPLECAT_CFLAGS) \
 	$(FFTW3_CFLAGS) \
@@ -39,7 +39,7 @@ AM_CXXFLAGS = $(AM_CFLAGS)
 
 if !ENABLE_SYSTEM_GTKGLEXT
 LOCAL_GTK_LIBS = \
-	$(top_srcdir)/lib/waveform/gtkglext-1.0/.libs/libgtkglext.a
+	$(top_srcdir)/lib/waveform/lib/agl/gtkglext-1.0/.libs/libgtkglext.a
 endif
 
 samplecat_gl_LDADD = \

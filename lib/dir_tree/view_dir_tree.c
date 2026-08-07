@@ -1851,12 +1851,6 @@ void vdtree_set_click_func(ViewDirTree *vdt,
 }
 #endif
 
-void vdtree_set_layout(ViewDirTree *vdt, LayoutWindow *layout)
-{
-	vdt->layout = layout;
-}
-
-
 ViewDirTree *vdt1 = NULL; //temp
 
 static gboolean

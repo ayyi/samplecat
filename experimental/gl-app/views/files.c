@@ -1,7 +1,7 @@
 /*
  +----------------------------------------------------------------------+
  | This file is part of Samplecat. https://ayyi.github.io/samplecat/    |
- | copyright (C) 2016-2024 Tim Orford <tim@orford.org>                  |
+ | copyright (C) 2016-2026 Tim Orford <tim@orford.org>                  |
  +----------------------------------------------------------------------+
  | This program is free software; you can redistribute it and/or modify |
  | it under the terms of the GNU General Public License version 3       |
@@ -12,6 +12,7 @@
 
 #include "config.h"
 #include "agl/fbo.h"
+#include "agl/text.h"
 #include "agl/behaviours/key.h"
 #include "actors/scrollbar.h"
 #include "debug/debug.h"
@@ -42,8 +43,8 @@ static bool files_event (AGlActor*, GdkEvent*, AGliPt);
 static AGlActorClass actor_class = {0, "Files", (AGlActorNew*)files_view, files_free};
 
 static bool files_scan_dir  (AGlActor*);
-static void files_on_scroll (AGlObservable*, AGlVal row, gpointer view);
-static void files_on_select (AGlObservable*, AGlVal row, gpointer);
+static void files_on_scroll (AyyiObservable*, AyyiVal row, gpointer view);
+static void files_on_select (AyyiObservable*, AyyiVal row, gpointer);
 
 static AGlActor* filelist_view (void*);
 
@@ -171,7 +172,7 @@ files_view (void* _)
 		FilesView* view = (FilesView*)actor;
 
 		if (view->scroll->value.i > max_scroll(view)) {
-			agl_observable_set_int (view->scroll, max_scroll(view));
+			ayyi_observable_set_int (view->scroll, max_scroll(view));
 		}
 	}
 
@@ -185,7 +186,7 @@ files_view (void* _)
 			.on_event = files_event,
 		},
 		.viewmodel = vm_directory_new(),
-		.scroll = agl_observable_new(),
+		.scroll = ayyi_observable_new(),
 		.row_height = ROW_HEIGHT,
 	);
 	AGlActor* actor = (AGlActor*)view;
@@ -197,7 +198,7 @@ files_view (void* _)
 	agl_actor__add_child (actor, view->filelist = filelist_view (actor));
 	agl_actor__add_child (actor, view->scrollbar = scrollbar_view (view->filelist, GTK_ORIENTATION_VERTICAL, view->scroll, NULL, ROW_HEIGHT));
 
-	agl_observable_subscribe (view->scroll, files_on_scroll, view);
+	ayyi_observable_subscribe (view->scroll, files_on_scroll, view);
 
 	return (AGlActor*)view;
 }
@@ -209,7 +210,7 @@ files_free (AGlActor* actor)
 	FilesView* view = (FilesView*)actor;
 
 	g_object_unref(view->view);
-	g_clear_pointer(&view->scroll, agl_observable_free);
+	g_clear_pointer(&view->scroll, ayyi_observable_free);
 
 	if (!--instance_count) {
 	}
@@ -284,7 +285,7 @@ files_scan_dir (AGlActor* a)
 
 
 static void
-files_on_scroll (AGlObservable* observable, AGlVal val, gpointer _view)
+files_on_scroll (AyyiObservable* observable, AyyiVal val, gpointer _view)
 {
 	FilesView* view = (FilesView*)_view;
 	AGlActor* actor = view->filelist;
@@ -302,22 +303,22 @@ files_on_scroll (AGlObservable* observable, AGlVal val, gpointer _view)
 
 
 static void
-files_on_select (AGlObservable* o, AGlVal row, gpointer _actor)
+files_on_select (AyyiObservable* o, AyyiVal row, gpointer _actor)
 {
 	AGlActor* actor = _actor;
 	FilesView* files = (FilesView*)_actor;
 	DirectoryView* dv = files->view;
 	GPtrArray* items = dv->items;
-	AGlObservable* scroll = files->scroll;
+	AyyiObservable* scroll = files->scroll;
 
 	if (row.i > -1 && row.i < items->len && row.i != dv->selection) {
 		dv->selection = row.i;
 
 		if (row.i > scroll->value.i + N_ROWS_VISIBLE(files->filelist) - 2) {
-			agl_observable_set_int (scroll, row.i - (N_ROWS_VISIBLE(files->filelist) - 2));
+			ayyi_observable_set_int (scroll, row.i - (N_ROWS_VISIBLE(files->filelist) - 2));
 		}
 		else if (row.i < scroll->value.i + 1){
-			agl_observable_set_int (scroll, row.i - 1);
+			ayyi_observable_set_int (scroll, row.i - 1);
 		}
 
 		VIEW_IFACE_GET_CLASS((ViewIface*)files->view)->set_selected((ViewIface*)files->view, &(ViewIter){.i = row.i}, true);
@@ -333,9 +334,9 @@ files_nav (AGlActor* actor, int offset)
 	FilesView* files = (FilesView*)actor;
 	DirectoryView* dv = files->view;
 	GPtrArray* items = dv->items;
-	AGlObservable* observable = SELECTABLE(actor)->observable;
+	AyyiObservable* observable = SELECTABLE(actor)->observable;
 
-	agl_observable_set_int (observable, CLAMP(observable->value.i + offset, 0, (int)items->len - 1));
+	ayyi_observable_set_int (observable, CLAMP(observable->value.i + offset, 0, (int)items->len - 1));
 
 	return AGL_HANDLED;
 }
@@ -471,13 +472,13 @@ filelist_view (void* _)
 				switch (event->button.button) {
 					case 4:
 						dbg(1, "! scroll up");
-						agl_observable_set_int (view->scroll, view->scroll->value.i - 1);
+						ayyi_observable_set_int (view->scroll, view->scroll->value.i - 1);
 						break;
 					case 5:
 						dbg(1, "! scroll down");
 						if (scrollable_height > N_ROWS_VISIBLE(actor)) {
 							if (view->scroll->value.i < max_scroll(view))
-								agl_observable_set_int (view->scroll, view->scroll->value.i + 1);
+								ayyi_observable_set_int (view->scroll, view->scroll->value.i + 1);
 						}
 						break;
 				}
@@ -488,7 +489,7 @@ filelist_view (void* _)
 				dbg(1, "RELEASE button=%i y=%.0f row=%i", event->button.button, xy.y - actor->region.y1, row);
 				switch (event->button.button) {
 					case 1:
-						agl_observable_set_int (SELECTABLE((AGlActor*)view)->observable, row);
+						ayyi_observable_set_int (SELECTABLE((AGlActor*)view)->observable, row);
 				}
 				return AGL_HANDLED;
 			default:
